@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VLS Online — Course Page CMS</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1a1a1a;min-height:100vh}
+:root{
+  --blue:#204280;--blue-light:#1a5fa8;--purple:#534AB7;--purple-light:#EEEDFE;
+  --border:#e2e6ed;--bg:#f4f6f9;--white:#fff;--text:#1a1a1a;--muted:#6b7280;
+  --red:#e63946;--green:#22c55e;
+}
+
+/* ── Layout ── */
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{background:var(--white);border-bottom:1.5px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:0;flex-shrink:0;height:52px}
+.topbar-logo{font-size:15px;font-weight:700;color:var(--blue);margin-right:32px;letter-spacing:-0.01em;white-space:nowrap}
+.nav-tab{font-size:13px;font-weight:500;padding:0 18px;height:52px;display:flex;align-items:center;border-bottom:2.5px solid transparent;color:var(--muted);cursor:pointer;white-space:nowrap;transition:color .15s}
+.nav-tab.active{color:var(--blue);border-bottom-color:var(--purple)}
+.nav-tab:hover:not(.active){color:var(--text)}
+.workspace{display:flex;flex:1;overflow:hidden}
+
+/* ── Form panel ── */
+.form-panel{width:420px;flex-shrink:0;background:var(--white);border-right:1.5px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+.form-inner{padding:20px;display:flex;flex-direction:column;gap:14px;flex:1}
+.section-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding-bottom:8px;border-bottom:1px solid var(--border);margin-top:4px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:12px;font-weight:500;color:#374151}
+.field input,.field textarea,.field select{font-family:'Poppins',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--text);width:100%;outline:none;transition:border-color .15s}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--purple)}
+.field textarea{resize:vertical;line-height:1.6}
+.hint{font-size:11px;color:var(--muted)}
+.btn-gen{background:var(--purple);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:600;cursor:pointer;width:100%;margin-top:4px;transition:background .15s}
+.btn-gen:hover{background:#3C3489}
+
+/* ── Block builder ── */
+.block-list{display:flex;flex-direction:column;gap:8px}
+.block-item{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.block-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f9fafb;cursor:pointer;user-select:none}
+.block-header-label{font-size:12px;font-weight:600;color:var(--blue);flex:1}
+.block-type-badge{font-size:10px;padding:2px 7px;border-radius:999px;background:var(--purple-light);color:var(--purple);font-weight:500}
+.block-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border)}
+.block-body.collapsed{display:none}
+.block-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:4px}
+.btn-sm{font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:var(--white);cursor:pointer;font-family:'Poppins',sans-serif;color:var(--muted);transition:all .1s}
+.btn-sm:hover{background:#f3f4f6;color:var(--text)}
+.btn-sm.danger:hover{background:#fef2f2;color:var(--red);border-color:#fca5a5}
+.btn-add-block{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:1.5px dashed var(--border);border-radius:8px;background:transparent;font-family:'Poppins',sans-serif;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;width:100%;transition:all .15s}
+.btn-add-block:hover{border-color:var(--purple);color:var(--purple);background:var(--purple-light)}
+
+/* ── Feature items (intro) ── */
+.feature-item{display:flex;gap:6px;align-items:center}
+.feature-item input{flex:1}
+.btn-icon{width:28px;height:28px;border-radius:4px;border:1px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;flex-shrink:0;transition:all .1s}
+.btn-icon:hover{background:#f3f4f6;color:var(--red)}
+
+/* ── Tab items ── */
+.tab-item{border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px}
+.tab-item-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f9fafb;cursor:pointer}
+.tab-item-title{font-size:12px;font-weight:600;color:var(--blue);flex:1}
+.tab-item-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border)}
+.tab-item-body.collapsed{display:none}
+
+/* ── Enrolment / Info items ── */
+.step-item{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden}
+.step-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f9fafb;cursor:pointer}
+.step-title{font-size:12px;font-weight:600;color:var(--blue);flex:1}
+.step-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border)}
+.step-body.collapsed{display:none}
+
+/* ── More cards ── */
+.more-card{border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.more-card-label{font-size:11px;font-weight:600;color:var(--purple);text-transform:uppercase;letter-spacing:.06em}
+
+/* ── Output panel ── */
+.output-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.output-topbar{display:flex;align-items:center;gap:0;background:var(--white);border-bottom:1px solid var(--border);padding:0 20px;flex-shrink:0;height:44px}
+.out-tab{font-size:12px;font-weight:500;padding:0 16px;height:44px;display:flex;align-items:center;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer}
+.out-tab.active{color:var(--purple);border-bottom-color:var(--purple)}
+.output-body{flex:1;overflow:auto;padding:20px}
+.preview-wrap{background:var(--white);border-radius:10px;border:1px solid var(--border);padding:28px 32px;min-height:300px}
+.code-wrap{position:relative}
+.code-box{background:#1e1e2e;color:#cdd6f4;font-family:'Courier New',monospace;font-size:12px;line-height:1.7;padding:20px;border-radius:10px;white-space:pre-wrap;word-break:break-all;min-height:300px;tab-size:2}
+.btn-copy{position:absolute;top:12px;right:12px;background:rgba(255,255,255,0.1);color:#cdd6f4;border:1px solid rgba(255,255,255,0.2);border-radius:5px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;transition:all .15s}
+.btn-copy:hover{background:rgba(255,255,255,0.2)}
+.btn-copy.copied{background:rgba(34,197,94,0.2);color:#86efac;border-color:rgba(34,197,94,0.3)}
+.screen{display:none}
+.screen.active{display:flex;flex:1;overflow:hidden}
+
+/* ── Tabs editor nav ── */
+.tabs-editor-nav{display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--white)}
+.ted-tab{font-size:12px;font-weight:500;padding:8px 14px;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
+.ted-tab.active{color:var(--purple);border-bottom-color:var(--purple)}
+.ted-section{display:none}
+.ted-section.active{display:flex;flex-direction:column;gap:14px}
+
+/* ── Drag handle ── */
+.drag-handle{cursor:grab;color:#9ca3af;font-size:12px;padding:2px 4px}
+.drag-handle:active{cursor:grabbing}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Top nav -->
+  <div class="topbar">
+    <span class="topbar-logo">VLS Online CMS</span>
+    <div class="nav-tab active" onclick="switchScreen('intro')">1 · Course Introduction</div>
+    <div class="nav-tab" onclick="switchScreen('desc')">2 · Course Description</div>
+    <div class="nav-tab" onclick="switchScreen('tabs')">3 · Course Tabs</div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       SCREEN 1 — COURSE INTRODUCTION
+  ══════════════════════════════════════ -->
+  <div id="screen-intro" class="screen active">
+    <div class="form-panel">
+      <div class="form-inner">
+        <div class="section-label">Template</div>
+        <div class="field">
+          <label>Introduction type</label>
+          <select id="intro-type" onchange="loadIntroTemplate()">
+            <option value="course">Online Course</option>
+            <option value="notes">Study Notes</option>
+          </select>
+        </div>
+
+        <div class="section-label">Page headings</div>
+        <div class="field">
+          <label>H1 — Course title</label>
+          <input type="text" id="intro-h1" value="ACCA FA1 Recording Financial Transactions">
+        </div>
+        <div class="field">
+          <label>H2 — Subtitle / strapline</label>
+          <textarea id="intro-h2" rows="3">Master the foundations of bookkeeping and pass your FA1 exam with confidence expert-led, exam-focused, and built for complete beginners.</textarea>
+        </div>
+
+        <div class="section-label">Features section</div>
+        <div class="field">
+          <label>Features heading</label>
+          <input type="text" id="intro-feat-heading" value="Detailed Study Notes">
+        </div>
+        <div class="field">
+          <label>Feature items <span class="hint">(tick list — 2 columns)</span></label>
+          <div id="intro-features" class="block-list"></div>
+          <button class="btn-add-block" style="margin-top:6px" onclick="addFeature()">+ Add feature item</button>
+        </div>
+
+        <div class="section-label">Call to action</div>
+        <div class="field">
+          <label>Button label</label>
+          <input type="text" id="intro-cta-text" value="Enroll Now">
+        </div>
+        <div class="field">
+          <label>Button URL</label>
+          <input type="text" id="intro-cta-url" value="https://vls-online.com/courses/fa1/buy/?preview=on&themeid=0">
+        </div>
+
+        <button class="btn-gen" onclick="generateIntro()">Generate HTML</button>
+      </div>
+    </div>
+    <div class="output-panel">
+      <div class="output-topbar">
+        <div class="out-tab active" onclick="switchOut('intro','preview')">Preview</div>
+        <div class="out-tab" onclick="switchOut('intro','html')">HTML</div>
+      </div>
+      <div class="output-body">
+        <div id="intro-preview-wrap" class="preview-wrap"></div>
+        <div id="intro-html-wrap" class="code-wrap" style="display:none">
+          <button class="btn-copy" onclick="copyHTML('intro-code')">Copy</button>
+          <pre id="intro-code" class="code-box"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       SCREEN 2 — COURSE DESCRIPTION
+  ══════════════════════════════════════ -->
+  <div id="screen-desc" class="screen">
+    <div class="form-panel">
+      <div class="form-inner">
+        <div class="section-label">Above "Read More" — always visible</div>
+        <div class="field">
+          <label>Bold intro line</label>
+          <input type="text" id="desc-intro-bold" value="Start your ACCA journey with the qualification's first building block.">
+        </div>
+        <div class="field">
+          <label>Paragraph 1</label>
+          <textarea id="desc-intro-p1" rows="3">FA1 Recording Financial Transactions is the entry point into the ACCA Foundations in Accountancy (FIA) pathway. Whether you're brand new to accounting or returning to formalise your skills, this course gives you everything you need to understand how financial information flows through a business from the very first document all the way to the trial balance.</textarea>
+        </div>
+        <div class="field">
+          <label>Paragraph 2 <span class="hint">(optional)</span></label>
+          <textarea id="desc-intro-p2" rows="2">No prior accounting knowledge is required. This is deliberately designed as a clean starting point.</textarea>
+        </div>
+
+        <div class="section-label">Below "Read More" — expandable blocks</div>
+        <div id="desc-blocks" class="block-list"></div>
+        <button class="btn-add-block" onclick="showBlockTypePicker()">+ Add block</button>
+
+        <!-- Block type picker -->
+        <div id="block-type-picker" style="display:none;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+          <div style="padding:8px 12px;background:#f9fafb;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Choose block type</div>
+          <div style="display:flex;flex-direction:column;gap:0">
+            <button onclick="addDescBlock('paragraph')" style="text-align:left;padding:9px 14px;border:none;border-top:1px solid var(--border);background:var(--white);font-family:'Poppins',sans-serif;font-size:13px;cursor:pointer;color:var(--text)">Paragraph</button>
+            <button onclick="addDescBlock('heading-paragraph')" style="text-align:left;padding:9px 14px;border:none;border-top:1px solid var(--border);background:var(--white);font-family:'Poppins',sans-serif;font-size:13px;cursor:pointer;color:var(--text)">Heading + Paragraph</button>
+            <button onclick="addDescBlock('heading-bullets')" style="text-align:left;padding:9px 14px;border:none;border-top:1px solid var(--border);background:var(--white);font-family:'Poppins',sans-serif;font-size:13px;cursor:pointer;color:var(--text)">Heading + Bullet list</button>
+            <button onclick="addDescBlock('bullets')" style="text-align:left;padding:9px 14px;border:none;border-top:1px solid var(--border);background:var(--white);font-family:'Poppins',sans-serif;font-size:13px;cursor:pointer;color:var(--text)">Bullet list (no heading)</button>
+            <button onclick="addDescBlock('items')" style="text-align:left;padding:9px 14px;border:none;border-top:1px solid var(--border);background:var(--white);font-family:'Poppins',sans-serif;font-size:13px;cursor:pointer;color:var(--text)">Item list (heading + para per item)</button>
+            <button onclick="addDescBlock('note')" style="text-align:left;padding:9px 14px;border:none;border-top:1px solid var(--border);background:var(--white);font-family:'Poppins',sans-serif;font-size:13px;cursor:pointer;color:var(--text)">Note / callout</button>
+          </div>
+        </div>
+
+        <button class="btn-gen" onclick="generateDesc()">Generate HTML</button>
+      </div>
+    </div>
+    <div class="output-panel">
+      <div class="output-topbar">
+        <div class="out-tab active" onclick="switchOut('desc','preview')">Preview</div>
+        <div class="out-tab" onclick="switchOut('desc','html')">HTML</div>
+      </div>
+      <div class="output-body">
+        <div id="desc-preview-wrap" class="preview-wrap"></div>
+        <div id="desc-html-wrap" class="code-wrap" style="display:none">
+          <button class="btn-copy" onclick="copyHTML('desc-code')">Copy</button>
+          <pre id="desc-code" class="code-box"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       SCREEN 3 — COURSE TABS
+  ══════════════════════════════════════ -->
+  <div id="screen-tabs" class="screen">
+    <div class="form-panel">
+      <div class="form-inner">
+        <div class="section-label">Tab navigation labels</div>
+        <div style="display:flex;flex-direction:column;gap:6px" id="tab-nav-labels">
+          <div class="field"><label>Tab 1 label</label><input type="text" id="tlabel-0" value="About Course Package"></div>
+          <div class="field"><label>Tab 2 label</label><input type="text" id="tlabel-1" value="After Enrolment"></div>
+          <div class="field"><label>Tab 3 label</label><input type="text" id="tlabel-2" value="Additional Information"></div>
+          <div class="field"><label>Tab 4 label</label><input type="text" id="tlabel-3" value="More"></div>
+        </div>
+
+        <div class="tabs-editor-nav" style="margin:0 -20px;padding:0 20px">
+          <div class="ted-tab active" onclick="switchTed('about')">About</div>
+          <div class="ted-tab" onclick="switchTed('enrol')">After Enrolment</div>
+          <div class="ted-tab" onclick="switchTed('info')">Additional Info</div>
+          <div class="ted-tab" onclick="switchTed('more')">More</div>
+        </div>
+
+        <!-- About tab editor -->
+        <div id="ted-about" class="ted-section active">
+          <div class="section-label">Numbered list items</div>
+          <div id="about-items" class="block-list"></div>
+          <button class="btn-add-block" onclick="addAboutItem()">+ Add item</button>
+          <div class="section-label">Assurance box</div>
+          <div class="field"><label>Assurance heading</label><input type="text" id="about-assurance-h" value="Vertex assurance"></div>
+          <div class="field"><label>Assurance text</label><textarea id="about-assurance-p" rows="3">Once you join the Vertex family of thousands of ACCA students and alumni from around the world, we assure you that you will have a capable and committed team standing behind you, making it possible for you to complete the ACCA qualification in minimum time and at minimum cost.</textarea></div>
+        </div>
+
+        <!-- After Enrolment editor -->
+        <div id="ted-enrol" class="ted-section">
+          <div class="section-label">Steps / items</div>
+          <div id="enrol-items"></div>
+          <button class="btn-add-block" onclick="addStepItem('enrol')">+ Add item</button>
+        </div>
+
+        <!-- Additional Info editor -->
+        <div id="ted-info" class="ted-section">
+          <div class="section-label">Steps / items</div>
+          <div id="info-items"></div>
+          <button class="btn-add-block" onclick="addStepItem('info')">+ Add item</button>
+        </div>
+
+        <!-- More editor -->
+        <div id="ted-more" class="ted-section">
+          <div class="section-label">Cards (3-column grid)</div>
+          <div id="more-cards"></div>
+          <button class="btn-add-block" onclick="addMoreCard()">+ Add card</button>
+        </div>
+
+        <button class="btn-gen" onclick="generateTabs()">Generate HTML</button>
+      </div>
+    </div>
+    <div class="output-panel">
+      <div class="output-topbar">
+        <div class="out-tab active" onclick="switchOut('tabs','preview')">Preview</div>
+        <div class="out-tab" onclick="switchOut('tabs','html')">HTML</div>
+      </div>
+      <div class="output-body">
+        <div id="tabs-preview-wrap" class="preview-wrap"></div>
+        <div id="tabs-html-wrap" class="code-wrap" style="display:none">
+          <button class="btn-copy" onclick="copyHTML('tabs-code')">Copy</button>
+          <pre id="tabs-code" class="code-box"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- .app -->
+
+<script>
+// ── Screen & output switching ──────────────────────────────────
+
+function switchScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  var tabs=document.querySelectorAll('.nav-tab');
+  var map={intro:0,desc:1,tabs:2};
+  tabs[map[name]].classList.add('active');
+}
+
+function switchOut(screen,mode){
+  var pw=document.getElementById(screen+'-preview-wrap');
+  var hw=document.getElementById(screen+'-html-wrap');
+  var otabs=document.querySelectorAll('#screen-'+screen+' .out-tab');
+  otabs.forEach(t=>t.classList.remove('active'));
+  if(mode==='preview'){pw.style.display='';hw.style.display='none';otabs[0].classList.add('active');}
+  else{pw.style.display='none';hw.style.display='';otabs[1].classList.add('active');}
+}
+
+function switchTed(name){
+  document.querySelectorAll('.ted-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.ted-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('ted-'+name).classList.add('active');
+  var map={about:0,enrol:1,info:2,more:3};
+  document.querySelectorAll('.ted-tab')[map[name]].classList.add('active');
+}
+
+function copyHTML(id){
+  var el=document.getElementById(id);
+  navigator.clipboard.writeText(el.textContent).then(function(){
+    var btn=el.parentElement.querySelector('.btn-copy');
+    btn.textContent='Copied!';btn.classList.add('copied');
+    setTimeout(function(){btn.textContent='Copy';btn.classList.remove('copied');},2000);
+  });
+}
+
+function escAttr(s){return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN 1 — INTRODUCTION
+// ══════════════════════════════════════════════════════════════
+
+var introTemplates={
+  course:['Syllabus topic videos - 46 hours','Exam focused study notes','Kit question videos - 42 hours','Active tutor support over WhatsApp','Quizzes for each chapter','Bonus - Weekly live sessions','ACCA exam questions & solutions','Exam style mock exam'],
+  notes:['Approximately 150 pages','Substitutes the lengthy study texts','Downloadable as PDF','Online view as ebook','HD Quality view','Zoom in function','Topic Indexing','Search word or term in online view']
+};
+
+var introFeatHeadings={course:'Detailed Study Notes',notes:'Detailed Study Notes'};
+
+function loadIntroTemplate(){
+  var type=document.getElementById('intro-type').value;
+  document.getElementById('intro-feat-heading').value=introFeatHeadings[type];
+  var container=document.getElementById('intro-features');
+  container.innerHTML='';
+  introTemplates[type].forEach(function(item){addFeature(item);});
+}
+
+function addFeature(val){
+  var container=document.getElementById('intro-features');
+  var id='feat-'+Date.now()+Math.random();
+  var div=document.createElement('div');
+  div.className='feature-item';
+  div.innerHTML='<input type="text" value="'+escAttr(val||'')+'"><button class="btn-icon" onclick="this.parentElement.remove()" title="Remove">✕</button>';
+  container.appendChild(div);
+}
+
+function generateIntro(){
+  var h1=document.getElementById('intro-h1').value;
+  var h2=document.getElementById('intro-h2').value;
+  var featH=document.getElementById('intro-feat-heading').value;
+  var ctaText=document.getElementById('intro-cta-text').value;
+  var ctaUrl=document.getElementById('intro-cta-url').value;
+  var features=[];
+  document.querySelectorAll('#intro-features .feature-item input').forEach(function(i){if(i.value.trim())features.push(i.value.trim());});
+
+  var featureHTML=features.map(function(f){
+    return '<div style="display:flex;align-items:flex-start;gap:8px;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;color:#222;">'
+      +'<span style="color:#e63946;font-size:18px;line-height:25px;flex-shrink:0;">✓</span>'
+      +escHtml(f)+'</div>';
+  }).join('\n                                ');
+
+  var html='<div>\n'
+    +'    <div data-content="true">\n'
+    +'        <h1 class="margin-top-10 margin-bottom-10" style="z-index:99999999;text-align:left;color:rgb(32,66,128);font-family:Poppins;font-weight:600;font-style:normal;font-size:40px;margin-top:35px;">\n'
+    +'            '+escHtml(h1)+'</h1>\n'
+    +'    </div>\n'
+    +'    <div data-content="true">\n'
+    +'        <h2 class="margin-top-10 margin-bottom-10" style="z-index:99999999;font-weight:500;font-style:normal;font-family:Poppins;color:rgb(32,66,128);text-align:left;font-size:24px;letter-spacing:0px;">\n'
+    +'            '+escHtml(h2)+'</h2>\n'
+    +'    </div>\n'
+    +'    <div class="row v-center margin-top-10 margin-bottom-10" style="margin-left:0px;margin-right:0px;">\n'
+    +'        <div class="col-md-7" style="position:relative;">\n'
+    +'            <div>\n'
+    +'                <div class="custom-html margin-top-10 margin-bottom-10">\n'
+    +'                    <div style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;color:#1a1a1a;text-align:left;">\n'
+    +'                        <div style="padding:20px 0;">\n'
+    +'                            <h3 style="font-family:\'Poppins\',sans-serif;font-size:20px;font-weight:700;line-height:25px;color:rgb(26,95,168);margin:0 0 12px 0;text-align:left;">'
+    +escHtml(featH)+'</h3>\n'
+    +'                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">\n'
+    +'                                '+featureHTML+'\n'
+    +'                            </div>\n'
+    +'                        </div>\n'
+    +'                    </div>\n'
+    +'                </div>\n'
+    +'            </div>\n'
+    +'            <form class="zen-custom-form">\n'
+    +'                <div class="form-group" style="position:relative;text-align:left;">'
+    +'<a href="'+escAttr(ctaUrl)+'" class="btn btn-primary zen-custom-elm" style="padding:15px 40px;font-size:16px;background-color:rgb(52,152,219);border:1px solid transparent;font-family:Poppins;font-weight:500;font-style:normal;border-radius:0px;color:rgb(255,255,255);box-shadow:none;text-shadow:none;">'
+    +escHtml(ctaText)+'<span class="fas fa-arrow-circle-right btn-icon-after" style="margin-left:10px;"></span></a>'
+    +'</div>\n'
+    +'            </form>\n'
+    +'        </div>\n'
+    +'        <div class="col-md-5" style="min-height:60px;"><div></div></div>\n'
+    +'    </div>\n'
+    +'</div>';
+
+  document.getElementById('intro-code').textContent=html;
+  document.getElementById('intro-preview-wrap').innerHTML=html;
+  switchOut('intro','preview');
+}
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN 2 — DESCRIPTION
+// ══════════════════════════════════════════════════════════════
+
+var descBlockCounter=0;
+
+function showBlockTypePicker(){
+  var p=document.getElementById('block-type-picker');
+  p.style.display=p.style.display==='none'?'block':'none';
+}
+
+function addDescBlock(type,data){
+  document.getElementById('block-type-picker').style.display='none';
+  var id='blk-'+Date.now()+descBlockCounter++;
+  var container=document.getElementById('desc-blocks');
+  var typeLabels={paragraph:'Paragraph','heading-paragraph':'Heading + Paragraph','heading-bullets':'Heading + Bullets',bullets:'Bullet list',items:'Item list',note:'Note / callout'};
+
+  var bodyHTML='';
+  if(type==='paragraph'){
+    bodyHTML='<div class="field"><label>Paragraph text</label><textarea rows="3" id="'+id+'-p">'+(data&&data.p?escAttr(data.p):'')+'</textarea></div>';
+  } else if(type==='heading-paragraph'){
+    bodyHTML='<div class="field"><label>Heading</label><input type="text" id="'+id+'-h" value="'+(data&&data.h?escAttr(data.h):'')+'"></div>'
+      +'<div class="field"><label>Paragraph text</label><textarea rows="3" id="'+id+'-p">'+(data&&data.p?escAttr(data.p):'')+'</textarea></div>';
+  } else if(type==='heading-bullets'){
+    var bulletsHtml='';
+    if(data&&data.bullets){data.bullets.forEach(function(b){bulletsHtml+=buildBulletRow(id,b);});}
+    bodyHTML='<div class="field"><label>Heading</label><input type="text" id="'+id+'-h" value="'+(data&&data.h?escAttr(data.h):'')+'"></div>'
+      +'<div class="field"><label>Bullet items</label><div id="'+id+'-bullets" class="block-list">'+bulletsHtml+'</div>'
+      +'<button class="btn-add-block" style="margin-top:4px" onclick="addBulletRow(\''+id+'\')">+ Add bullet</button></div>';
+  } else if(type==='bullets'){
+    var bulletsHtml='';
+    if(data&&data.bullets){data.bullets.forEach(function(b){bulletsHtml+=buildBulletRow(id,b);});}
+    bodyHTML='<div class="field"><label>Bullet items</label><div id="'+id+'-bullets" class="block-list">'+bulletsHtml+'</div>'
+      +'<button class="btn-add-block" style="margin-top:4px" onclick="addBulletRow(\''+id+'\')">+ Add bullet</button></div>';
+  } else if(type==='items'){
+    var itemsHtml='';
+    if(data&&data.items){data.items.forEach(function(it){itemsHtml+=buildItemRow(id,it.h,it.p);});}
+    bodyHTML='<div class="field"><label>Section heading</label><input type="text" id="'+id+'-h" value="'+(data&&data.h?escAttr(data.h):'')+'"></div>'
+      +'<div id="'+id+'-items">'+itemsHtml+'</div>'
+      +'<button class="btn-add-block" onclick="addItemRow(\''+id+'\')">+ Add item</button>';
+  } else if(type==='note'){
+    bodyHTML='<div class="field"><label>Note text</label><textarea rows="3" id="'+id+'-p">'+(data&&data.p?escAttr(data.p):'')+'</textarea></div>';
+  }
+
+  var div=document.createElement('div');
+  div.className='block-item';
+  div.id=id;
+  div.dataset.type=type;
+  div.innerHTML='<div class="block-header" onclick="toggleBlock(\''+id+'\')">'
+    +'<span class="block-header-label">'+typeLabels[type]+'</span>'
+    +'<span class="block-type-badge">'+typeLabels[type]+'</span>'
+    +'</div>'
+    +'<div class="block-body" id="'+id+'-body">'+bodyHTML
+    +'<div class="block-actions">'
+    +'<button class="btn-sm" onclick="moveBlock(\''+id+'\',-1)">↑</button>'
+    +'<button class="btn-sm" onclick="moveBlock(\''+id+'\',1)">↓</button>'
+    +'<button class="btn-sm danger" onclick="document.getElementById(\''+id+'\').remove()">Remove block</button>'
+    +'</div></div>';
+  container.appendChild(div);
+}
+
+function buildBulletRow(blockId,val){
+  var rid='br-'+Date.now()+Math.random();
+  return '<div class="feature-item" id="'+rid+'"><input type="text" value="'+escAttr(val||'')+'"><button class="btn-icon" onclick="document.getElementById(\''+rid+'\').remove()">✕</button></div>';
+}
+
+function addBulletRow(blockId){
+  var container=document.getElementById(blockId+'-bullets');
+  var rid='br-'+Date.now();
+  var div=document.createElement('div');
+  div.className='feature-item';div.id=rid;
+  div.innerHTML='<input type="text" value=""><button class="btn-icon" onclick="document.getElementById(\''+rid+'\').remove()">✕</button>';
+  container.appendChild(div);
+}
+
+function buildItemRow(blockId,h,p){
+  var rid='ir-'+Date.now()+Math.random();
+  return '<div class="block-item" id="'+rid+'" style="margin-bottom:6px">'
+    +'<div class="field" style="padding:8px 12px 0"><label>Item heading</label><input type="text" class="item-h" value="'+escAttr(h||'')+'"></div>'
+    +'<div class="field" style="padding:0 12px 8px"><label>Item paragraph</label><textarea rows="2" class="item-p">'+escAttr(p||'')+'</textarea></div>'
+    +'<div style="text-align:right;padding:0 12px 8px"><button class="btn-sm danger" onclick="document.getElementById(\''+rid+'\').remove()">Remove</button></div>'
+    +'</div>';
+}
+
+function addItemRow(blockId){
+  var container=document.getElementById(blockId+'-items');
+  var rid='ir-'+Date.now();
+  var div=document.createElement('div');
+  div.className='block-item';div.id=rid;div.style.marginBottom='6px';
+  div.innerHTML='<div class="field" style="padding:8px 12px 0"><label>Item heading</label><input type="text" class="item-h" value=""></div>'
+    +'<div class="field" style="padding:0 12px 8px"><label>Item paragraph</label><textarea rows="2" class="item-p"></textarea></div>'
+    +'<div style="text-align:right;padding:0 12px 8px"><button class="btn-sm danger" onclick="document.getElementById(\''+rid+'\').remove()">Remove</button></div>';
+  container.appendChild(div);
+}
+
+function toggleBlock(id){
+  var body=document.getElementById(id+'-body');
+  body.classList.toggle('collapsed');
+}
+
+function moveBlock(id,dir){
+  var el=document.getElementById(id);
+  var parent=el.parentElement;
+  if(dir===-1&&el.previousElementSibling){parent.insertBefore(el,el.previousElementSibling);}
+  else if(dir===1&&el.nextElementSibling){parent.insertBefore(el.nextElementSibling,el);}
+}
+
+function generateDesc(){
+  var boldLine=document.getElementById('desc-intro-bold').value;
+  var p1=document.getElementById('desc-intro-p1').value;
+  var p2=document.getElementById('desc-intro-p2').value;
+
+  var aboveHTML='<p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;text-align:left;"><strong>'+escHtml(boldLine)+'</strong></p>\n\n'
+    +'<p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;text-align:left;">'+escHtml(p1)+'</p>\n';
+  if(p2.trim()) aboveHTML+='\n<p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;text-align:left;">'+escHtml(p2)+'</p>\n';
+
+  var blocksHTML='';
+  var pStyle='font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;text-align:left;';
+  var h3Style='font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:600;line-height:25px;margin:1.25rem 0 0;text-align:left;';
+  var h4Style='font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;margin-bottom:0.5rem;text-align:left;';
+
+  document.querySelectorAll('#desc-blocks .block-item').forEach(function(block){
+    var id=block.id;
+    var type=block.dataset.type;
+    if(type==='paragraph'){
+      var p=document.getElementById(id+'-p').value;
+      blocksHTML+='\n<p style="'+pStyle+'">'+escHtml(p)+'</p>\n';
+    } else if(type==='heading-paragraph'){
+      var h=document.getElementById(id+'-h').value;
+      var p=document.getElementById(id+'-p').value;
+      blocksHTML+='\n<h3 style="'+h3Style+'">'+escHtml(h)+'</h3>\n<p style="'+pStyle+'">'+escHtml(p)+'</p>\n';
+    } else if(type==='heading-bullets'){
+      var h=document.getElementById(id+'-h')?document.getElementById(id+'-h').value:'';
+      var bullets=[];
+      block.querySelectorAll('#'+id+'-bullets .feature-item input').forEach(function(i){if(i.value.trim())bullets.push(i.value.trim());});
+      if(h) blocksHTML+='\n<h3 style="'+h3Style+'">'+escHtml(h)+'</h3>\n';
+      blocksHTML+='<ul style="padding-left:0;margin:0 0 1rem;text-align:left;list-style:none;">\n';
+      bullets.forEach(function(b){blocksHTML+='  <li style="'+pStyle+'margin-bottom:0.5rem;">&bull; '+escHtml(b)+'</li>\n';});
+      blocksHTML+='</ul>\n';
+    } else if(type==='bullets'){
+      var bullets=[];
+      block.querySelectorAll('#'+id+'-bullets .feature-item input').forEach(function(i){if(i.value.trim())bullets.push(i.value.trim());});
+      blocksHTML+='<ul style="padding-left:0;margin:0 0 1rem;text-align:left;list-style:none;">\n';
+      bullets.forEach(function(b){blocksHTML+='  <li style="'+pStyle+'margin-bottom:0.5rem;">&bull; '+escHtml(b)+'</li>\n';});
+      blocksHTML+='</ul>\n';
+    } else if(type==='items'){
+      var h=document.getElementById(id+'-h')?document.getElementById(id+'-h').value:'';
+      if(h) blocksHTML+='\n<h3 style="'+h3Style+'">'+escHtml(h)+'</h3>\n';
+      blocksHTML+='<div style="padding-left:0;margin:0 0 1rem;text-align:left;">\n';
+      block.querySelectorAll('#'+id+'-items .block-item').forEach(function(item){
+        var ih=item.querySelector('.item-h').value;
+        var ip=item.querySelector('.item-p').value;
+        blocksHTML+='  <h4 style="'+h4Style+'">'+escHtml(ih)+'</h4><p style="'+pStyle+'">'+escHtml(ip)+'</p>\n';
+      });
+      blocksHTML+='</div>\n';
+    } else if(type==='note'){
+      var p=document.getElementById(id+'-p').value;
+      blocksHTML+='\n<p style="font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:400;line-height:22px;color:#666;border-left:3px solid #ddd;padding-left:12px;margin-top:1.25rem;text-align:left;">'+escHtml(p)+'</p>\n';
+    }
+  });
+
+  var uid='desc'+Date.now();
+  var html='<div style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;color:#1a1a1a;text-align:left;">\n\n'
+    +aboveHTML
+    +'\n<button id="'+uid+'RmBtn" onclick="'+uid+'Toggle()" style="display:inline-flex;align-items:center;gap:6px;margin-top:4px;font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:600;color:#0057b8;background:none;border:none;cursor:pointer;padding:0;">\n'
+    +'  Read more\n'
+    +'  <svg id="'+uid+'Arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style="transition:transform 0.3s ease;"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>\n'
+    +'</button>\n\n'
+    +'<div id="'+uid+'More" style="overflow:hidden;max-height:0;transition:max-height 0.45s ease;">\n'
+    +'  <div style="padding-top:1rem;text-align:left;">\n'
+    +blocksHTML
+    +'  </div>\n'
+    +'</div>\n\n'
+    +'</div>\n\n'
+    +'<script type="text/javascript">\n'
+    +'function '+uid+'Toggle(){\n'
+    +'  var el=document.getElementById(\''+uid+'More\');\n'
+    +'  var btn=document.getElementById(\''+uid+'RmBtn\');\n'
+    +'  var arrow=document.getElementById(\''+uid+'Arrow\');\n'
+    +'  var isOpen=el.style.maxHeight!==\'0px\'&&el.style.maxHeight!==\'\';\n'
+    +'  if(isOpen){el.style.maxHeight=\'0px\';arrow.style.transform=\'rotate(0deg)\';btn.childNodes[0].textContent=\'Read more\';}\n'
+    +'  else{el.style.maxHeight=\'2000px\';arrow.style.transform=\'rotate(180deg)\';btn.childNodes[0].textContent=\'Read less\';}\n'
+    +'}\n'
+    +'<\/script>';
+
+  document.getElementById('desc-code').textContent=html;
+
+  // preview — render with working toggle
+  var previewDiv=document.getElementById('desc-preview-wrap');
+  previewDiv.innerHTML=html.replace(/<script[\s\S]*?<\/script>/gi,'');
+  var s=document.createElement('script');
+  s.textContent='function '+uid+'Toggle(){'
+    +'var el=document.getElementById(\''+uid+'More\');'
+    +'var btn=document.getElementById(\''+uid+'RmBtn\');'
+    +'var arrow=document.getElementById(\''+uid+'Arrow\');'
+    +'var isOpen=el.style.maxHeight!==\'0px\'&&el.style.maxHeight!==\'\';'
+    +'if(isOpen){el.style.maxHeight=\'0px\';arrow.style.transform=\'rotate(0deg)\';btn.childNodes[0].textContent=\'Read more\';}'
+    +'else{el.style.maxHeight=\'2000px\';arrow.style.transform=\'rotate(180deg)\';btn.childNodes[0].textContent=\'Read less\';}'
+    +'}';
+  previewDiv.appendChild(s);
+  switchOut('desc','preview');
+}
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN 3 — TABS
+// ══════════════════════════════════════════════════════════════
+
+// About tab items
+var aboutItemsData=[
+  'Lecture videos for complete syllabus',
+  'Extensive practice question videos',
+  'Complete study notes',
+  'Customized study plan with mobile app',
+  'Chapter-by-chapter quizzes',
+  'Active tutor support over WhatsApp groups',
+  'Pre exam live session for additional practice (recordings available after the lesson)',
+  'Final mock exam with feedback'
+];
+
+function addAboutItem(val){
+  var container=document.getElementById('about-items');
+  var id='ai-'+Date.now()+Math.random();
+  var div=document.createElement('div');
+  div.className='feature-item';div.id=id;
+  div.innerHTML='<input type="text" value="'+escAttr(val||'')+'"><button class="btn-icon" onclick="document.getElementById(\''+id+'\').remove()">✕</button>';
+  container.appendChild(div);
+}
+
+// Step items (enrol / info)
+var enrolItemsData=[
+  {h:'Access to course resources',p:'Once you enroll and pay, the system automatically grants you access to all course materials. Log in and go to My Courses in the top menu. You\'ll also receive onboarding emails about the WhatsApp group, how to prepare your study plan, and how to use the VLS portal effectively.'},
+  {h:'Addition to WhatsApp group',p:'After enrolling, send an email to office@vls-online.com to join the study group and receive tutor support. Please include your WhatsApp number (with country code) and the name of your course.'},
+  {h:'Prepare your customized study plan',p:'Use the software link in the Resources section of the course curriculum to create your personalized study plan. Save it as a PDF and follow it consistently. Engage actively in the WhatsApp group, submit assignments, and download the mobile app to track daily progress and receive notifications.'},
+  {h:'Live online sessions',p:'We offer weekly and pre-exam live online sessions for answering student queries and doing additional practice questions. Sessions are recorded and made available to students who cannot attend due to time zone differences or other reasons.'},
+  {h:'Tutor support and advice',p:'Many ACCA students need guidance on career counselling, the qualification itself, student registration, booking exams, or managing their studies. Our experienced tutors and academic support team are always available. Students can book one-on-one meetings with the team to get the help they need.'}
+];
+var infoItemsData=[
+  {h:'Live online sessions',p:'We offer weekly and pre-exam live online sessions for answering student queries and doing additional practice questions. Sessions are recorded and made available to students who cannot attend due to time zone differences or other reasons.'},
+  {h:'Tutor support and advice',p:'Many ACCA students need guidance on career counselling, the qualification itself, student registration, booking exams, or managing their studies. Our experienced tutors and academic support team are always available. Students can book one-on-one meetings with the team to get the help they need.'}
+];
+
+function addStepItem(section,h,p){
+  var container=document.getElementById(section+'-items');
+  var id='si-'+Date.now()+Math.random();
+  var div=document.createElement('div');
+  div.className='step-item';div.id=id;
+  div.innerHTML='<div class="step-header" onclick="document.getElementById(\''+id+'-body\').classList.toggle(\'collapsed\')">'
+    +'<span class="step-title">'+(h||'New item')+'</span>'
+    +'<span style="font-size:10px;color:var(--muted)">▾</span>'
+    +'</div>'
+    +'<div class="step-body" id="'+id+'-body">'
+    +'<div class="field"><label>Heading</label><input type="text" class="step-h" value="'+escAttr(h||'')+'" oninput="document.querySelector(\'#'+id+' .step-title\').textContent=this.value"></div>'
+    +'<div class="field"><label>Paragraph</label><textarea rows="3" class="step-p">'+escAttr(p||'')+'</textarea></div>'
+    +'<div class="block-actions"><button class="btn-sm danger" onclick="document.getElementById(\''+id+'\').remove()">Remove</button></div>'
+    +'</div>';
+  container.appendChild(div);
+}
+
+// More cards
+var moreCardsData=[
+  {h:'Testimonials',p:'Our students have always shown outstanding results in ACCA final exams. See results and reviews.',cta:'Testimonials',url:'/testimonials/'},
+  {h:'Book a meeting',p:'Book a free online meeting to get more information about the ACCA qualification and Vertex courses.',cta:'Book now',url:'/bookmeeting/'},
+  {h:'Special offer',p:'Annual access is the best option for exam preparation, providing access to all ACCA courses in one plan.',cta:'Annual plan',url:'/fullaccess/'}
+];
+
+function addMoreCard(h,p,cta,url){
+  var container=document.getElementById('more-cards');
+  var id='mc-'+Date.now()+Math.random();
+  var div=document.createElement('div');
+  div.className='more-card';div.id=id;
+  div.innerHTML='<span class="more-card-label">Card</span>'
+    +'<div class="field"><label>Heading</label><input type="text" class="mc-h" value="'+escAttr(h||'')+'"></div>'
+    +'<div class="field"><label>Description</label><textarea rows="2" class="mc-p">'+escAttr(p||'')+'</textarea></div>'
+    +'<div class="field"><label>Button label</label><input type="text" class="mc-cta" value="'+escAttr(cta||'')+'"></div>'
+    +'<div class="field"><label>Button URL</label><input type="text" class="mc-url" value="'+escAttr(url||'')+'"></div>'
+    +'<div class="block-actions"><button class="btn-sm danger" onclick="document.getElementById(\''+id+'\').remove()">Remove</button></div>';
+  container.appendChild(div);
+}
+
+// SVG icons map for enrol/info items (cycles through set)
+var stepIcons=[
+  '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>',
+  '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  '<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>',
+  '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
+];
+var moreIcons=[
+  '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>',
+  '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>'
+];
+
+function generateTabs(){
+  var labels=[0,1,2,3].map(function(i){return document.getElementById('tlabel-'+i)?document.getElementById('tlabel-'+i).value:'Tab '+(i+1);});
+  var tabIds=['about','enrol','info','more'];
+  var uid='tabs'+Date.now();
+
+  // Build style block
+  var styleHTML='<style>\n'
+    +'*{box-sizing:border-box;margin:0;padding:0}\n'
+    +'.'+uid+'-panel{display:none;animation:'+uid+'FadeIn .2s ease}\n'
+    +'.'+uid+'-panel.active{display:block}\n'
+    +'@keyframes '+uid+'FadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}\n'
+    +'.'+uid+'-btn::after{content:\'\';position:absolute;bottom:-1.5px;left:0;right:0;height:2px;background:transparent;transition:background .2s}\n'
+    +'.'+uid+'-btn.active::after{background:#534AB7}\n'
+    +'.'+uid+'-btn:hover:not(.active){color:#000}\n'
+    +'@media(max-width:600px){.'+uid+'-grid{grid-template-columns:1fr!important}.'+uid+'-nav{gap:16px!important}.'+uid+'-btn{font-size:14px!important}}\n'
+    +'</style>\n\n';
+
+  // Tab nav
+  var navHTML='<div class="'+uid+'-nav" style="display:flex;gap:32px;border-bottom:1.5px solid #e5e7eb;margin-bottom:1.5rem;">\n';
+  labels.forEach(function(label,i){
+    navHTML+='  <button class="'+uid+'-btn'+(i===0?' active':'')+'" onclick="'+uid+'switchTab(\''+tabIds[i]+'\')" style="background:none;border:none;padding:10px 0;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#000;cursor:pointer;position:relative;transition:color .2s;white-space:nowrap;letter-spacing:0.01em">'+escHtml(label)+'</button>\n';
+  });
+  navHTML+='</div>\n\n';
+
+  // About tab
+  var aboutItems=[];
+  document.querySelectorAll('#about-items .feature-item input').forEach(function(i){if(i.value.trim())aboutItems.push(i.value.trim());});
+  var assH=document.getElementById('about-assurance-h').value;
+  var assP=document.getElementById('about-assurance-p').value;
+
+  var aboutHTML='  <!-- Tab: '+labels[0]+' -->\n'
+    +'  <div id="'+uid+'-about" class="'+uid+'-panel active">\n'
+    +'    <div style="margin-bottom:1.25rem">\n'
+    +'      <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:500;color:#000;margin-bottom:0.5rem;text-align:left;line-height:25px;">Following are included</h3>\n'
+    +'      <ol style="padding-left:0;list-style:none;counter-reset:item;margin:0.6rem 0">\n';
+  aboutItems.forEach(function(item,i){
+    aboutHTML+='        <li style="counter-increment:item;display:flex;gap:10px;align-items:center;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;padding:2px 0;text-align:left">'
+      +'<span style="min-width:22px;height:22px;border-radius:50%;background:#EEEDFE;color:#534AB7;font-family:\'Poppins\',sans-serif;font-size:12px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">'+(i+1)+'</span>'
+      +escHtml(item)+'</li>\n';
+  });
+  aboutHTML+='      </ol>\n    </div>\n'
+    +'    <div style="background:#f9fafb;border-left:3px solid #534AB7;border-radius:0 8px 8px 0;padding:0.75rem 1.25rem;margin-top:1.25rem">\n'
+    +'      <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:500;color:#534AB7;margin-bottom:0.3rem;text-align:left;line-height:25px">'+escHtml(assH)+'</h3>\n'
+    +'      <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#374151;line-height:25px;text-align:left">'+escHtml(assP)+'</p>\n'
+    +'    </div>\n'
+    +'  </div>\n\n';
+
+  // Step-based tabs (enrol + info)
+  function buildStepTab(section,label,tabId){
+    var items=[];
+    document.querySelectorAll('#'+section+'-items .step-item').forEach(function(item,idx){
+      var h=item.querySelector('.step-h').value;
+      var p=item.querySelector('.step-p').value;
+      items.push({h:h,p:p,icon:stepIcons[idx%stepIcons.length]});
+    });
+    var out='  <!-- Tab: '+label+' -->\n  <div id="'+uid+'-'+tabId+'" class="'+uid+'-panel">\n';
+    items.forEach(function(item,i){
+      var isLast=i===items.length-1;
+      out+='    <div style="display:flex;gap:12px;align-items:center;padding:0.65rem 0;'+(isLast?'':' border-bottom:0.5px solid #e5e7eb;')+'">\n'
+        +'      <div style="width:30px;height:30px;border-radius:8px;background:#EEEDFE;display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+        +'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+item.icon+'</svg></div>\n'
+        +'      <div style="text-align:left;flex:1">\n'
+        +'        <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#204280;letter-spacing:0.03em;line-height:25px;text-align:left;margin-bottom:2px">'+escHtml(item.h)+'</h3>\n'
+        +'        <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;text-align:left">'+escHtml(item.p)+'</p>\n'
+        +'      </div>\n    </div>\n';
+    });
+    out+='  </div>\n\n';
+    return out;
+  }
+
+  var enrolHTML=buildStepTab('enrol',labels[1],'enrol');
+  var infoHTML=buildStepTab('info',labels[2],'info');
+
+  // More tab
+  var moreCards=[];
+  document.querySelectorAll('#more-cards .more-card').forEach(function(card,idx){
+    moreCards.push({
+      h:card.querySelector('.mc-h').value,
+      p:card.querySelector('.mc-p').value,
+      cta:card.querySelector('.mc-cta').value,
+      url:card.querySelector('.mc-url').value,
+      icon:moreIcons[idx%moreIcons.length]
+    });
+  });
+  var moreHTML='  <!-- Tab: '+labels[3]+' -->\n  <div id="'+uid+'-more" class="'+uid+'-panel">\n'
+    +'    <div class="'+uid+'-grid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">\n';
+  moreCards.forEach(function(card){
+    moreHTML+='      <div style="background:#fff;border:0.5px solid #e5e7eb;border-radius:12px;padding:1.25rem;display:flex;flex-direction:column;gap:10px;text-align:center">\n'
+      +'        <div style="width:38px;height:38px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;margin:0 auto 2px">'
+      +'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+card.icon+'</svg></div>\n'
+      +'        <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:500;color:#000;line-height:25px">'+escHtml(card.h)+'</h3>\n'
+      +'        <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;flex:1">'+escHtml(card.p)+'</p>\n'
+      +'        <a href="'+escAttr(card.url)+'" style="display:inline-block;padding:8px 20px;background:#534AB7;color:#fff;font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:500;border-radius:6px;text-decoration:none;align-self:center">'+escHtml(card.cta)+'</a>\n'
+      +'      </div>\n';
+  });
+  moreHTML+='    </div>\n  </div>\n\n';
+
+  // switchTab script
+  var scriptHTML='<script>\nfunction '+uid+'switchTab(id){\n'
+    +'  var ids='+JSON.stringify(tabIds)+';\n'
+    +'  var btns=document.querySelectorAll(\'.'+uid+'-btn\');\n'
+    +'  btns.forEach(function(b,i){if(ids[i]===id){b.classList.add(\'active\');b.style.color=\'#000\';}else{b.classList.remove(\'active\');b.style.color=\'#6b7280\';}})\n'
+    +'  document.querySelectorAll(\'.'+uid+'-panel\').forEach(function(p){p.classList.toggle(\'active\',p.id===\''+uid+'-\'+id);});\n'
+    +'}\n<\/script>';
+
+  var html=styleHTML
+    +'<div style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;color:#000;width:100%;padding:1.5rem 0;box-sizing:border-box">\n\n'
+    +navHTML
+    +aboutHTML
+    +enrolHTML
+    +infoHTML
+    +moreHTML
+    +'</div>\n\n'
+    +scriptHTML;
+
+  document.getElementById('tabs-code').textContent=html;
+
+  // Preview
+  var previewDiv=document.getElementById('tabs-preview-wrap');
+  previewDiv.innerHTML=html.replace(/<script[\s\S]*?<\/script>/gi,'');
+  var s=document.createElement('script');
+  s.textContent='function '+uid+'switchTab(id){'
+    +'var ids='+JSON.stringify(tabIds)+';'
+    +'var btns=document.querySelectorAll(\'.'+uid+'-btn\');'
+    +'btns.forEach(function(b,i){if(ids[i]===id){b.classList.add(\'active\');b.style.color=\'#000\';}else{b.classList.remove(\'active\');b.style.color=\'#6b7280\';}});'
+    +'document.querySelectorAll(\'.'+uid+'-panel\').forEach(function(p){p.classList.toggle(\'active\',p.id===\''+uid+'-\'+id);});'
+    +'}';
+  previewDiv.appendChild(s);
+  switchOut('tabs','preview');
+}
+
+// ── Initialise all pre-populated data ──────────────────────────
+
+window.addEventListener('DOMContentLoaded',function(){
+  // Intro — load course template features
+  introTemplates.course.forEach(function(f){addFeature(f);});
+
+  // Description — pre-load blocks from FA1 content
+  addDescBlock('heading-paragraph',{h:'What this course covers',p:'The FA1 syllabus is structured around five core capability areas, and our course walks you through each one systematically.'});
+  addDescBlock('items',{h:'',items:[
+    {h:'Business transactions and documentation',p:'Understand the types of transactions that occur in a business and the source documents that capture them: invoices, receipts, credit notes, and more. You\'ll learn how to identify and process these documents accurately.'},
+    {h:'The double entry system',p:'The heart of bookkeeping. You\'ll master the concept of duality: every transaction has two sides: and learn to apply double entry rules across a wide range of transaction types with confidence.'},
+    {h:'The banking system and cash handling',p:'Covers how businesses interact with the banking system, including how to maintain and reconcile cash books and petty cash records. You\'ll understand bank statements, deposits, and payments in a professional context.'},
+    {h:'Ledger accounts, payroll, and control accounts',p:'Learn how to post transactions to ledger accounts, understand the payroll cycle and its accounting entries, and prepare sales and purchases control accounts to ensure your records are complete and accurate.'},
+    {h:'Trial balance preparation and error correction',p:'Bring it all together by preparing a trial balance from your ledger entries. You\'ll also learn to identify common bookkeeping errors and correct them using journal entries.'}
+  ]});
+  addDescBlock('heading-paragraph',{h:'Exam format',p:'The FA1 exam is a two-hour computer-based assessment consisting of 50 objective test questions, each worth two marks. The pass mark is 50%. Our course is structured to prepare you specifically for this format with topic-by-topic coverage, worked examples, and practice questions aligned to the ACCA examining style.'});
+  addDescBlock('heading-bullets',{h:'Who this course is for',bullets:[
+    'Completely new to accounting and want a structured, recognised starting point',
+    'Pursuing the ACCA FIA qualification as a route into the full ACCA programme',
+    'Working in an accounts or finance role and want a formal qualification to match your practical experience',
+    'Based anywhere in the world — FA1 is an international qualification with no regional restrictions'
+  ]});
+  addDescBlock('heading-paragraph',{h:'Why study FA1 with VLS Online?',p:'Our tutors have deep ACCA exam expertise and know exactly where students lose marks. The course is structured for efficient, focused study with no padding, no filler. You\'ll study at your own pace, revisit difficult topics as many times as you need, and arrive at your exam having practised the exact skills the examiner is testing.'});
+  addDescBlock('note',{p:'Note: Exam registration is handled directly through ACCA. Students must apply to ACCA separately for student membership and exam entry.'});
+
+  // Tabs — about items
+  aboutItemsData.forEach(function(item){addAboutItem(item);});
+
+  // Tabs — enrol items
+  enrolItemsData.forEach(function(item){addStepItem('enrol',item.h,item.p);});
+
+  // Tabs — info items
+  infoItemsData.forEach(function(item){addStepItem('info',item.h,item.p);});
+
+  // Tabs — more cards
+  moreCardsData.forEach(function(card){addMoreCard(card.h,card.p,card.cta,card.url);});
+});
+</script>
+</body>
+</html>
