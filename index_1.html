@@ -169,34 +169,9 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       </div>
       <div class="output-body">
         <div id="intro-preview-wrap" class="preview-wrap"></div>
-        <div id="intro-html-wrap" style="display:none;display:flex;flex-direction:column;gap:16px">
-          <div style="background:#1a2235;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">
-            <span style="font-size:12px;color:#94a3b8;line-height:1.5">The Introduction section outputs <strong style="color:#e2e8f0">3 separate blocks</strong> — paste each into its matching Zenler element in order.</span>
-          </div>
-          <!-- Block 1: H1 -->
-          <div style="border:1px solid #2d3748;border-radius:8px;overflow:hidden">
-            <div style="background:#1e2d3d;padding:8px 14px;display:flex;align-items:center;justify-content:space-between">
-              <span style="font-size:12px;font-weight:600;color:#63b3ed">① Zenler H1 element — paste as plain text</span>
-              <button class="btn-copy" style="position:static" onclick="copyEl('intro-code-h1')">Copy</button>
-            </div>
-            <pre id="intro-code-h1" class="code-box" style="border-radius:0;margin:0"></pre>
-          </div>
-          <!-- Block 2: H2 -->
-          <div style="border:1px solid #2d3748;border-radius:8px;overflow:hidden">
-            <div style="background:#1e2d3d;padding:8px 14px;display:flex;align-items:center;justify-content:space-between">
-              <span style="font-size:12px;font-weight:600;color:#63b3ed">② Zenler H2 element — paste as plain text</span>
-              <button class="btn-copy" style="position:static" onclick="copyEl('intro-code-h2')">Copy</button>
-            </div>
-            <pre id="intro-code-h2" class="code-box" style="border-radius:0;margin:0"></pre>
-          </div>
-          <!-- Block 3: Custom HTML -->
-          <div style="border:1px solid #2d3748;border-radius:8px;overflow:hidden">
-            <div style="background:#1e2d3d;padding:8px 14px;display:flex;align-items:center;justify-content:space-between">
-              <span style="font-size:12px;font-weight:600;color:#63b3ed">③ Zenler Custom HTML block — paste full HTML</span>
-              <button class="btn-copy" style="position:static" onclick="copyEl('intro-code-html')">Copy</button>
-            </div>
-            <pre id="intro-code-html" class="code-box" style="border-radius:0;margin:0"></pre>
-          </div>
+        <div id="intro-html-wrap" class="code-wrap" style="display:none">
+          <button class="btn-copy" onclick="copyHTML('intro-code')">Copy</button>
+          <pre id="intro-code" class="code-box"></pre>
         </div>
       </div>
     </div>
@@ -345,24 +320,9 @@ function switchOut(screen,mode){
   var pw=document.getElementById(screen+'-preview-wrap');
   var hw=document.getElementById(screen+'-html-wrap');
   var otabs=document.querySelectorAll('#screen-'+screen+' .out-tab');
-  otabs.forEach(function(t){t.classList.remove('active');});
-  if(mode==='preview'){
-    pw.style.display='';
-    if(hw){hw.style.display='none';}
-    otabs[0].classList.add('active');
-  } else {
-    pw.style.display='none';
-    if(hw){hw.style.display='flex';hw.style.flexDirection='column';}
-    otabs[1].classList.add('active');
-  }
-}
-
-function copyEl(id){
-  var el=document.getElementById(id);
-  navigator.clipboard.writeText(el.textContent).then(function(){
-    var btn=el.closest('[style*="border"]').querySelector('.btn-copy');
-    if(btn){btn.textContent='Copied!';btn.classList.add('copied');setTimeout(function(){btn.textContent='Copy';btn.classList.remove('copied');},2000);}
-  });
+  otabs.forEach(t=>t.classList.remove('active'));
+  if(mode==='preview'){pw.style.display='';hw.style.display='none';otabs[0].classList.add('active');}
+  else{pw.style.display='none';hw.style.display='';otabs[1].classList.add('active');}
 }
 
 function switchTed(name){
@@ -424,43 +384,47 @@ function generateIntro(){
 
   var featureHTML=features.map(function(f){
     return '<div style="display:flex;align-items:flex-start;gap:8px;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;color:#222;">'
-      +'<span style="color:#e63946;font-size:18px;line-height:25px;flex-shrink:0;">&#10003;</span>'
+      +'<span style="color:#e63946;font-size:18px;line-height:25px;flex-shrink:0;">✓</span>'
       +escHtml(f)+'</div>';
-  }).join('\n      ');
+  }).join('\n                                ');
 
-  // Block 1 — H1 plain text only
-  var htmlH1=h1;
-
-  // Block 2 — H2 plain text only
-  var htmlH2=h2;
-
-  // Block 3 — Custom HTML block (features grid + CTA)
-  var htmlBlock='<div style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;color:#1a1a1a;text-align:left;">\n'
-    +'  <div style="padding:20px 0;">\n'
-    +'    <h3 style="font-family:\'Poppins\',sans-serif;font-size:20px;font-weight:700;line-height:25px;color:rgb(26,95,168);margin:0 0 12px 0;text-align:left;">'+escHtml(featH)+'</h3>\n'
-    +'    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">\n'
-    +'      '+featureHTML+'\n'
+  var html='<div>\n'
+    +'    <div data-content="true">\n'
+    +'        <h1 class="margin-top-10 margin-bottom-10" style="z-index:99999999;text-align:left;color:rgb(32,66,128);font-family:Poppins;font-weight:600;font-style:normal;font-size:40px;margin-top:35px;">\n'
+    +'            '+escHtml(h1)+'</h1>\n'
     +'    </div>\n'
-    +'  </div>\n'
-    +'</div>\n'
-    +'<form class="zen-custom-form">\n'
-    +'  <div class="form-group" style="position:relative;text-align:left;">'
+    +'    <div data-content="true">\n'
+    +'        <h2 class="margin-top-10 margin-bottom-10" style="z-index:99999999;font-weight:500;font-style:normal;font-family:Poppins;color:rgb(32,66,128);text-align:left;font-size:24px;letter-spacing:0px;">\n'
+    +'            '+escHtml(h2)+'</h2>\n'
+    +'    </div>\n'
+    +'    <div class="row v-center margin-top-10 margin-bottom-10" style="margin-left:0px;margin-right:0px;">\n'
+    +'        <div class="col-md-7" style="position:relative;">\n'
+    +'            <div>\n'
+    +'                <div class="custom-html margin-top-10 margin-bottom-10">\n'
+    +'                    <div style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;color:#1a1a1a;text-align:left;">\n'
+    +'                        <div style="padding:20px 0;">\n'
+    +'                            <h3 style="font-family:\'Poppins\',sans-serif;font-size:20px;font-weight:700;line-height:25px;color:rgb(26,95,168);margin:0 0 12px 0;text-align:left;">'
+    +escHtml(featH)+'</h3>\n'
+    +'                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">\n'
+    +'                                '+featureHTML+'\n'
+    +'                            </div>\n'
+    +'                        </div>\n'
+    +'                    </div>\n'
+    +'                </div>\n'
+    +'            </div>\n'
+    +'            <form class="zen-custom-form">\n'
+    +'                <div class="form-group" style="position:relative;text-align:left;">'
     +'<a href="'+escAttr(ctaUrl)+'" class="btn btn-primary zen-custom-elm" style="padding:15px 40px;font-size:16px;background-color:rgb(52,152,219);border:1px solid transparent;font-family:Poppins;font-weight:500;font-style:normal;border-radius:0px;color:rgb(255,255,255);box-shadow:none;text-shadow:none;">'
     +escHtml(ctaText)+'<span class="fas fa-arrow-circle-right btn-icon-after" style="margin-left:10px;"></span></a>'
     +'</div>\n'
-    +'</form>';
-
-  document.getElementById('intro-code-h1').textContent=htmlH1;
-  document.getElementById('intro-code-h2').textContent=htmlH2;
-  document.getElementById('intro-code-html').textContent=htmlBlock;
-
-  // Preview — render all together
-  var previewHTML='<div>'
-    +'<h1 style="text-align:left;color:rgb(32,66,128);font-family:Poppins;font-weight:600;font-size:40px;margin-top:35px;margin-bottom:10px;">'+escHtml(h1)+'</h1>'
-    +'<h2 style="font-weight:500;font-family:Poppins;color:rgb(32,66,128);text-align:left;font-size:24px;letter-spacing:0px;margin-bottom:20px;">'+escHtml(h2)+'</h2>'
-    +'<div style="max-width:680px">'+htmlBlock+'</div>'
+    +'            </form>\n'
+    +'        </div>\n'
+    +'        <div class="col-md-5" style="min-height:60px;"><div></div></div>\n'
+    +'    </div>\n'
     +'</div>';
-  document.getElementById('intro-preview-wrap').innerHTML=previewHTML;
+
+  document.getElementById('intro-code').textContent=html;
+  document.getElementById('intro-preview-wrap').innerHTML=html;
   switchOut('intro','preview');
 }
 
