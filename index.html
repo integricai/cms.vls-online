@@ -1349,7 +1349,7 @@ function updateInjectScript(rawUrl) {
   lines.push('    var s=document.createElement("style");');
   lines.push('    s.id="vls-banner-style";');
   lines.push('    s.textContent=[');
-  lines.push('      "#vls-banner{position:relative;width:100%;z-index:9999;box-sizing:border-box;}",');
+  lines.push('      "#vls-banner{position:sticky;top:0;width:100%;z-index:9999;box-sizing:border-box;}",');
   lines.push('      "#vls-banner *{box-sizing:border-box;}",');
   lines.push('      "#vls-banner-inner{display:flex;align-items:center;justify-content:space-between;');
   lines.push('        padding:12px 24px;gap:16px;flex-wrap:wrap;}",');
