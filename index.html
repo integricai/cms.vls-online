@@ -1245,7 +1245,7 @@ function updateInjectScript(rawUrl) {
   lines.push('  }else{loadConfig();}');
   lines.push('})();');
 
-  el.textContent = lines.join('\n');
+  el.textContent = '<script>\n' + lines.join('\n') + '\n<\/script>';
 }
 
 // Extend DOMContentLoaded to also init banner
