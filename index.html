@@ -631,9 +631,9 @@ function generateDesc() {
   var p1       = document.getElementById('desc-intro-p1').value;
   var p2       = document.getElementById('desc-intro-p2').value;
 
-  var PS  = "font-family:'Poppins',sans-serif;font-size:16px;font-weight:400;line-height:25px;text-align:left;";
-  var H3S = "font-family:'Poppins',sans-serif;font-size:16px;font-weight:600;line-height:25px;margin:1.25rem 0 0;text-align:left;";
-  var H4S = "font-family:'Poppins',sans-serif;font-size:16px;font-weight:400;line-height:25px;margin-bottom:0.5rem;text-align:left;";
+  var PS  = "font-family:'Poppins',sans-serif;font-size:16px;font-weight:400;line-height:25px;text-align:left;overflow-wrap:break-word;word-break:break-word;";
+  var H3S = "font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;line-height:1.3;margin:1.5rem 0 0.4rem;text-align:left;color:#204280;";
+  var H4S = "font-family:'Poppins',sans-serif;font-size:16px;font-weight:700;line-height:25px;color:#204280;margin:1rem 0 0.25rem;text-align:left;";
 
   var uid = 'rm' + Date.now();
 
@@ -696,7 +696,7 @@ function generateDesc() {
     + 'else{e.style.maxHeight="2000px";a.style.transform="rotate(180deg)";b.childNodes[0].textContent="Read less";}'
     + '}';
 
-  var html = '<div style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;color:#1a1a1a;text-align:left;">\n\n'
+  var html = '<div style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;color:#1a1a1a;text-align:left;overflow-wrap:break-word;word-break:break-word;max-width:100%;">\n\n'
            + above
            + '\n<button id="' + uid + 'B" onclick="' + uid + 'T()" style="' + btnStyle + '">\n'
            + 'Read more\n' + svgArrow + '\n</button>\n\n'
@@ -986,7 +986,7 @@ function generateTabs() {
     + '}'
     + '</style>\n\n';
   var out = css;
-  out += '<div data-vlstabs="1" style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;color:#000;width:100%;padding:1.5rem 0;box-sizing:border-box;">\n\n';
+  out += '<div data-vlstabs="1" style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;color:#000;width:100%;padding:1.5rem 0;box-sizing:border-box;text-align:left;">\n\n';
   out += '<div class="' + uid + '-nav" style="display:flex;gap:16px;border-bottom:1.5px solid #e5e7eb;margin-bottom:1.5rem;flex-wrap:wrap;align-items:flex-start;">\n';
 
   vlsTabs.forEach(function(tab, i) {
@@ -999,41 +999,42 @@ function generateTabs() {
 
   vlsTabs.forEach(function(tab, i) {
     var pid = uid + '-' + i;
-    out += '<div id="' + pid + '" data-vlspanel="1" style="display:' + (i === 0 ? 'block' : 'none') + ';">\n';
+    out += '<div id="' + pid + '" data-vlspanel="1" style="display:' + (i === 0 ? 'block' : 'none') + ';text-align:left;">\n';
 
     tab.blocks.forEach(function(blk) {
       // All data comes from saved state — works for every tab, not just the active one
       var d = blk.data || blk.prefill || {};
 
       if (blk.type === 'heading-para') {
-        out += '  <div style="margin-bottom:1.25rem;">\n';
-        if (d.heading) out += '    <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#204280;line-height:25px;margin-bottom:0.4rem;">' + xH(d.heading) + '</h3>\n';
-        if (d.para)    out += '    <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;">' + xH(d.para) + '</p>\n';
+        // Rendered as a white callout card with purple left accent — stands out against page background
+        out += '  <div style="background:#fff;border:1px solid #e5e7eb;border-left:3px solid #534AB7;border-radius:0 8px 8px 0;padding:0.85rem 1.25rem;margin-bottom:1.25rem;">\n';
+        if (d.heading) out += '    <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#534AB7;line-height:25px;margin:0 0 0.4rem;text-align:left;">' + xH(d.heading) + '</h3>\n';
+        if (d.para)    out += '    <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#374151;line-height:25px;margin:0;text-align:left;">' + xH(d.para) + '</p>\n';
         out += '  </div>\n';
 
       } else if (blk.type === 'bullets') {
         var items = d.items || [];
-        out += '  <div style="margin-bottom:1.25rem;">\n';
-        if (d.heading) out += '    <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#204280;line-height:25px;margin-bottom:0.4rem;">' + xH(d.heading) + '</h3>\n';
+        out += '  <div style="margin-bottom:1.25rem;text-align:left;">\n';
+        if (d.heading) out += '    <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#204280;line-height:25px;margin-bottom:0.4rem;text-align:left;">' + xH(d.heading) + '</h3>\n';
         out += '    <ul style="padding-left:0;list-style:none;margin:0.6rem 0;">\n';
         items.forEach(function(item) {
-          out += '      <li style="display:flex;gap:8px;align-items:flex-start;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;padding:2px 0;">'
+          out += '      <li style="display:flex;gap:8px;align-items:flex-start;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;padding:2px 0;text-align:left;">'
             + '<span style="color:#534AB7;font-weight:700;flex-shrink:0;margin-top:1px;">•</span>' + xH(item) + '</li>\n';
         });
         out += '    </ul>\n  </div>\n';
 
       } else if (blk.type === 'paragraph') {
-        if (d.para) out += '  <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;margin-bottom:1.25rem;">' + xH(d.para) + '</p>\n';
+        if (d.para) out += '  <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;margin-bottom:1.25rem;text-align:left;">' + xH(d.para) + '</p>\n';
 
       } else if (blk.type === 'promo-cards') {
         var cards = d.cards || [];
         if (cards.length) {
           out += '  <div class="' + uid + '-grid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:1.25rem;">\n';
           cards.forEach(function(card) {
-            out += '    <div style="background:#fff;border:0.5px solid #e5e7eb;border-radius:12px;padding:1.25rem;display:flex;flex-direction:column;gap:10px;text-align:left;">\n';
-            if (card.h)   out += '      <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:500;color:#000;line-height:25px;text-align:left;">' + xH(card.h) + '</h3>\n';
-            if (card.p)   out += '      <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;flex:1;text-align:left;">' + xH(card.p) + '</p>\n';
-            if (card.cta) out += '      <a href="' + xA(card.url) + '" style="display:inline-block;padding:8px 20px;background:#534AB7;color:#fff;font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:500;border-radius:6px;text-decoration:none;align-self:flex-start;">' + xH(card.cta) + '</a>\n';
+            out += '    <div style="background:#fff;border:0.5px solid #e5e7eb;border-radius:12px;padding:1.25rem;display:flex;flex-direction:column;gap:10px;text-align:center;">\n';
+            if (card.h)   out += '      <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:500;color:#000;line-height:25px;text-align:center;">' + xH(card.h) + '</h3>\n';
+            if (card.p)   out += '      <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;flex:1;text-align:center;">' + xH(card.p) + '</p>\n';
+            if (card.cta) out += '      <a href="' + xA(card.url) + '" style="display:inline-block;padding:8px 20px;background:#534AB7;color:#fff;font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:500;border-radius:6px;text-decoration:none;align-self:center;">' + xH(card.cta) + '</a>\n';
             out += '    </div>\n';
           });
           out += '  </div>\n';
