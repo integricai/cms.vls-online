@@ -82,6 +82,14 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 .pw-btn{width:100%;background:#534AB7;color:#fff;border:none;border-radius:8px;padding:11px;font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
 .pw-btn:hover{background:#3C3489}
 .pw-error{font-size:12px;color:#e63946;text-align:center;min-height:16px}
+
+/* ── Dynamic tab pills ── */
+.tab-pills{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tab-pill{display:flex;align-items:center;gap:4px;padding:5px 10px 5px 12px;border-radius:20px;border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:500;color:var(--text);white-space:nowrap}
+.tab-pill.active{border-color:var(--purple);background:var(--purple-light);color:var(--purple)}
+.tab-pill span{cursor:pointer}
+.tab-pill-del{width:16px;height:16px;border-radius:50%;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:11px;padding:0;display:inline-flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0}
+.tab-pill-del:hover{background:#fee2e2;color:var(--red)}
 </style>
 </head>
 <body>
@@ -194,46 +202,12 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 ═══════════════════════════════════════ -->
 <div id="screen-tabs" class="screen">
   <div class="form-panel"><div class="form-inner">
-    <div class="section-label">Tab navigation labels</div>
-    <div class="field"><label>Tab 1 label</label><input type="text" id="tlabel-0" value="About Course Package"></div>
-    <div class="field"><label>Tab 2 label</label><input type="text" id="tlabel-1" value="After Enrolment"></div>
-    <div class="field"><label>Tab 3 label</label><input type="text" id="tlabel-2" value="Additional Information"></div>
-    <div class="field"><label>Tab 4 label</label><input type="text" id="tlabel-3" value="More"></div>
-
-    <div class="ted-nav">
-      <div class="ted-tab active" onclick="switchTed('about')">About</div>
-      <div class="ted-tab" onclick="switchTed('enrol')">After Enrolment</div>
-      <div class="ted-tab" onclick="switchTed('info')">Additional Info</div>
-      <div class="ted-tab" onclick="switchTed('more')">More</div>
+    <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+      Tabs
+      <button class="btn-sm" onclick="tabsAddTab()">+ Add tab</button>
     </div>
-
-    <div id="ted-about" class="ted-section active">
-      <div class="section-label">Numbered list items</div>
-      <div id="about-items" class="block-list"></div>
-      <button class="btn-add-block" onclick="addAboutItem()">+ Add item</button>
-      <div class="section-label">Assurance box</div>
-      <div class="field"><label>Assurance heading</label><input type="text" id="about-assurance-h" value="Vertex assurance"></div>
-      <div class="field"><label>Assurance text</label><textarea id="about-assurance-p" rows="3">Once you join the Vertex family of thousands of ACCA students and alumni from around the world, we assure you that you will have a capable and committed team standing behind you, making it possible for you to complete the ACCA qualification in minimum time and at minimum cost.</textarea></div>
-    </div>
-
-    <div id="ted-enrol" class="ted-section">
-      <div class="section-label">Steps / items</div>
-      <div id="enrol-items"></div>
-      <button class="btn-add-block" onclick="addStepItem('enrol','','')">+ Add item</button>
-    </div>
-
-    <div id="ted-info" class="ted-section">
-      <div class="section-label">Steps / items</div>
-      <div id="info-items"></div>
-      <button class="btn-add-block" onclick="addStepItem('info','','')">+ Add item</button>
-    </div>
-
-    <div id="ted-more" class="ted-section">
-      <div class="section-label">Cards (3-column grid)</div>
-      <div id="more-cards"></div>
-      <button class="btn-add-block" onclick="addMoreCard('','','','')">+ Add card</button>
-    </div>
-
+    <div id="tabs-pill-bar" class="tab-pills"></div>
+    <div id="tabs-editor-area" style="display:flex;flex-direction:column;gap:14px;"></div>
     <button class="btn-gen" onclick="generateTabs()">Generate HTML</button>
   </div></div>
   <div class="output-panel">
@@ -410,13 +384,7 @@ function switchOut(screen, mode) {
   }
 }
 
-function switchTed(name) {
-  document.querySelectorAll('.ted-section').forEach(function(s) { s.classList.remove('active'); });
-  document.querySelectorAll('.ted-tab').forEach(function(t) { t.classList.remove('active'); });
-  document.getElementById('ted-' + name).classList.add('active');
-  var map = { about: 0, enrol: 1, info: 2, more: 3 };
-  document.querySelectorAll('.ted-tab')[map[name]].classList.add('active');
-}
+// switchTed removed — replaced by dynamic tab system (tabsSwitchTo)
 
 // ── SCREEN 1: INTRODUCTION ─────────────────────────────────────
 
@@ -709,162 +677,302 @@ function generateDesc() {
 
 // ── SCREEN 3: TABS ─────────────────────────────────────────────
 
-function addAboutItem(val) {
-  var container = document.getElementById('about-items');
-  var id = 'ai' + Date.now() + Math.random().toString(36).slice(2);
+// ── SCREEN 3: COURSE TABS — dynamic tab + block system ────────
+
+var vlsTabs = [];
+var vlsActiveTab = 0;
+
+function tabsMakeId() {
+  return 'id' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function tabsInit(defaultTabs) {
+  vlsTabs = defaultTabs || [];
+  vlsActiveTab = 0;
+  tabsRender();
+}
+
+function tabsAddTab() {
+  tabsSaveActiveLabel();
+  vlsTabs.push({ id: tabsMakeId(), label: 'New Tab', blocks: [] });
+  vlsActiveTab = vlsTabs.length - 1;
+  tabsRender();
+  setTimeout(function() {
+    var inp = document.getElementById('tabs-active-label');
+    if (inp) { inp.focus(); inp.select(); }
+  }, 50);
+}
+
+function tabsRemoveTab(i) {
+  if (vlsTabs.length <= 1) return;
+  vlsTabs.splice(i, 1);
+  if (vlsActiveTab >= vlsTabs.length) vlsActiveTab = vlsTabs.length - 1;
+  tabsRender();
+}
+
+function tabsSwitchTo(i) {
+  tabsSaveActiveLabel();
+  vlsActiveTab = i;
+  tabsRender();
+}
+
+function tabsSaveActiveLabel() {
+  var inp = document.getElementById('tabs-active-label');
+  if (inp && vlsTabs[vlsActiveTab]) {
+    vlsTabs[vlsActiveTab].label = inp.value;
+  }
+}
+
+function tabsRender() {
+  tabsRenderPills();
+  tabsRenderEditor();
+}
+
+function tabsRenderPills() {
+  var bar = document.getElementById('tabs-pill-bar');
+  if (!bar) return;
+  bar.innerHTML = '';
+  vlsTabs.forEach(function(tab, i) {
+    var pill = document.createElement('div');
+    pill.className = 'tab-pill' + (i === vlsActiveTab ? ' active' : '');
+    var inner = '<span onclick="tabsSwitchTo(' + i + ')">' + xH(tab.label || 'Tab ' + (i + 1)) + '</span>';
+    if (vlsTabs.length > 1) {
+      inner += '<button class="tab-pill-del" onclick="tabsRemoveTab(' + i + ')" title="Remove tab">&#x2715;</button>';
+    }
+    pill.innerHTML = inner;
+    bar.appendChild(pill);
+  });
+}
+
+function tabsRenderEditor() {
+  var area = document.getElementById('tabs-editor-area');
+  if (!area) return;
+  var tab = vlsTabs[vlsActiveTab];
+  if (!tab) { area.innerHTML = ''; return; }
+
+  area.innerHTML =
+    '<div class="field"><label>Tab label</label>'
+    + '<input type="text" id="tabs-active-label" value="' + xA(tab.label) + '" oninput="tabsSaveActiveLabel();tabsRenderPills();">'
+    + '</div>'
+    + '<div class="section-label">Content blocks</div>'
+    + '<div id="tabs-blocks-list" class="block-list"></div>'
+    + '<div style="display:flex;gap:8px;margin-top:4px;">'
+    + '<select id="tabs-blk-type" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);">'
+    + '<option value="">— choose content type —</option>'
+    + '<option value="heading-para">Text with heading</option>'
+    + '<option value="bullets">Bullet list</option>'
+    + '<option value="paragraph">Simple paragraph</option>'
+    + '<option value="promo-cards">Promotional cards</option>'
+    + '</select>'
+    + '<button class="btn-sm" onclick="tabsAddBlock()" style="flex-shrink:0;padding:0 14px;">+ Add block</button>'
+    + '</div>';
+
+  tab.blocks.forEach(function(blk) {
+    tabsRenderBlock(blk, blk.prefill);
+  });
+}
+
+var TAB_BLK_LABELS = {
+  'heading-para': 'Text with heading',
+  'bullets':      'Bullet list',
+  'paragraph':    'Simple paragraph',
+  'promo-cards':  'Promotional cards'
+};
+
+function tabsAddBlock() {
+  var sel = document.getElementById('tabs-blk-type');
+  var type = sel ? sel.value : '';
+  if (!type) return;
+  var tab = vlsTabs[vlsActiveTab];
+  if (!tab) return;
+  var blk = { id: tabsMakeId(), type: type };
+  tab.blocks.push(blk);
+  tabsRenderBlock(blk, null);
+  if (sel) sel.value = '';
+}
+
+function tabsRemoveBlock(blkId) {
+  var tab = vlsTabs[vlsActiveTab];
+  if (!tab) return;
+  tab.blocks = tab.blocks.filter(function(b) { return b.id !== blkId; });
+  var el = document.getElementById('blk-' + blkId);
+  if (el) el.remove();
+}
+
+function tabsRenderBlock(blk, pf) {
+  var list = document.getElementById('tabs-blocks-list');
+  if (!list) return;
+  pf = pf || {};
+
+  var bodyHtml = '';
+
+  if (blk.type === 'heading-para') {
+    bodyHtml =
+      '<div class="field"><label>Heading</label><input type="text" class="blk-heading" value="' + xA(pf.heading || '') + '"></div>'
+      + '<div class="field"><label>Paragraph</label><textarea rows="3" class="blk-para">' + xH(pf.para || '') + '</textarea></div>';
+
+  } else if (blk.type === 'bullets') {
+    var bListId = 'blist-' + blk.id;
+    bodyHtml =
+      '<div class="field"><label>Heading <span class="hint">(optional)</span></label><input type="text" class="blk-heading" value="' + xA(pf.heading || '') + '"></div>'
+      + '<div class="field"><label>Bullet items</label>'
+      + '<div id="' + bListId + '" class="block-list" style="gap:6px;"></div>'
+      + '<button class="btn-add-block" style="margin-top:6px;" onclick="tabsAddBulletItem(\'' + bListId + '\')">+ Add item</button>'
+      + '</div>';
+
+  } else if (blk.type === 'paragraph') {
+    bodyHtml =
+      '<div class="field"><label>Paragraph</label><textarea rows="4" class="blk-para">' + xH(pf.para || '') + '</textarea></div>';
+
+  } else if (blk.type === 'promo-cards') {
+    var cListId = 'clist-' + blk.id;
+    bodyHtml =
+      '<div id="' + cListId + '" class="block-list"></div>'
+      + '<button class="btn-add-block" style="margin-top:6px;" onclick="tabsAddCardItem(\'' + cListId + '\')">+ Add card</button>';
+  }
+
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = 'blk-' + blk.id;
+  div.innerHTML =
+    '<div class="block-header">'
+    + '<span class="block-header-label">' + (TAB_BLK_LABELS[blk.type] || blk.type) + '</span>'
+    + '<span class="block-type-badge">' + (TAB_BLK_LABELS[blk.type] || blk.type) + '</span>'
+    + '<button class="btn-sm danger" style="margin-left:auto;" onclick="tabsRemoveBlock(\'' + blk.id + '\')">Remove</button>'
+    + '</div>'
+    + '<div class="block-body">' + bodyHtml + '</div>';
+  list.appendChild(div);
+
+  // Pre-fill bullet items and cards after insertion
+  if (blk.type === 'bullets' && pf.items) {
+    pf.items.forEach(function(val) { tabsAddBulletItem('blist-' + blk.id, val); });
+  }
+  if (blk.type === 'promo-cards' && pf.cards) {
+    pf.cards.forEach(function(c) { tabsAddCardItem('clist-' + blk.id, c); });
+  }
+}
+
+function tabsAddBulletItem(listId, val) {
+  var list = document.getElementById(listId);
+  if (!list) return;
+  var id = tabsMakeId();
   var div = document.createElement('div');
   div.className = 'feature-item';
-  div.id = id;
-  div.innerHTML = '<input type="text" value="' + xA(val || '') + '"><button class="btn-icon" onclick="document.getElementById(\'' + id + '\').remove()">&#x2715;</button>';
-  container.appendChild(div);
+  div.id = 'bi-' + id;
+  div.innerHTML =
+    '<input type="text" class="blk-bullet-item" value="' + xA(val || '') + '">'
+    + '<button class="btn-icon" onclick="document.getElementById(\'bi-' + id + '\').remove()">&#x2715;</button>';
+  list.appendChild(div);
 }
 
-function addStepItem(section, h, p) {
-  var container = document.getElementById(section + '-items');
-  var id = 'si' + Date.now() + Math.random().toString(36).slice(2);
-  var div = document.createElement('div');
-  div.className = 'step-item';
-  div.id = id;
-  div.innerHTML = '<div class="step-header" onclick="document.getElementById(\'' + id + '-body\').classList.toggle(\'collapsed\')">'
-    + '<span class="step-title">' + xH(h || 'New item') + '</span>'
-    + '</div>'
-    + '<div class="step-body" id="' + id + '-body">'
-    + '<div class="field"><label>Heading</label><input type="text" class="step-h" value="' + xA(h || '') + '" oninput="this.closest(\'.step-item\').querySelector(\'.step-title\').textContent=this.value"></div>'
-    + '<div class="field"><label>Paragraph</label><textarea rows="3" class="step-p">' + xA(p || '') + '</textarea></div>'
-    + '<div class="block-actions"><button class="btn-sm danger" onclick="document.getElementById(\'' + id + '\').remove()">Remove</button></div>'
-    + '</div>';
-  container.appendChild(div);
-}
-
-function addMoreCard(h, p, cta, url) {
-  var container = document.getElementById('more-cards');
-  var id = 'mc' + Date.now() + Math.random().toString(36).slice(2);
+function tabsAddCardItem(listId, data) {
+  var list = document.getElementById(listId);
+  if (!list) return;
+  var d = data || {};
+  var id = tabsMakeId();
   var div = document.createElement('div');
   div.className = 'more-card';
-  div.id = id;
-  div.innerHTML = '<span class="more-card-label">Card</span>'
-    + '<div class="field"><label>Heading</label><input type="text" class="mc-h" value="' + xA(h || '') + '"></div>'
-    + '<div class="field"><label>Description</label><textarea rows="2" class="mc-p">' + xA(p || '') + '</textarea></div>'
-    + '<div class="field"><label>Button label</label><input type="text" class="mc-cta" value="' + xA(cta || '') + '"></div>'
-    + '<div class="field"><label>Button URL</label><input type="text" class="mc-url" value="' + xA(url || '') + '"></div>'
-    + '<div class="block-actions"><button class="btn-sm danger" onclick="document.getElementById(\'' + id + '\').remove()">Remove</button></div>';
-  container.appendChild(div);
+  div.id = 'pc-' + id;
+  div.innerHTML =
+    '<span class="more-card-label">Card</span>'
+    + '<div class="field"><label>Heading</label><input type="text" class="pc-h" value="' + xA(d.h || '') + '"></div>'
+    + '<div class="field"><label>Description</label><textarea rows="2" class="pc-p">' + xH(d.p || '') + '</textarea></div>'
+    + '<div class="field"><label>Button label</label><input type="text" class="pc-cta" value="' + xA(d.cta || '') + '"></div>'
+    + '<div class="field"><label>Button URL</label><input type="text" class="pc-url" value="' + xA(d.url || '') + '"></div>'
+    + '<div class="block-actions"><button class="btn-sm danger" onclick="document.getElementById(\'pc-' + id + '\').remove()">Remove</button></div>';
+  list.appendChild(div);
 }
 
 function generateTabs() {
-  var labels = [0,1,2,3].map(function(i) {
-    var el = document.getElementById('tlabel-' + i);
-    return el ? el.value : 'Tab ' + (i + 1);
-  });
+  tabsSaveActiveLabel();
 
-  // Unique prefix for CSS classes & IDs — no JS function names, no script tags needed
-  var uid = 'vt' + Date.now();
+  var uid = 'vt' + Date.now().toString(36);
 
-  // Tab switching is 100% inline onclick — no external function, Zenler-safe
-  // We use display:block/none toggling driven entirely by the onclick attribute on each button
   function makeClick(panelId) {
-    var js = '';
-    js += 'var w=this.closest("[data-vlstabs]");';
+    var js = 'var w=this.closest("[data-vlstabs]");';
     js += 'w.querySelectorAll("[data-vlsbtn]").forEach(function(b){b.style.borderBottom="2px solid transparent";b.style.color="#6b7280";});';
     js += 'this.style.borderBottom="2px solid #534AB7";this.style.color="#000";';
     js += 'w.querySelectorAll("[data-vlspanel]").forEach(function(p){p.style.display="none";});';
     js += 'document.getElementById("' + panelId + '").style.display="block";';
-    // Replace " with &quot; so it sits safely inside an HTML attribute
     return js.replace(/"/g, '&quot;');
   }
 
-  var tabIds = ['about', 'enrol', 'info', 'more'];
-
-  // ── Style ──
   var css = '<style>@media(max-width:600px){.' + uid + '-grid{grid-template-columns:1fr!important}}</style>\n\n';
-
-  // ── Wrapper + nav ──
   var out = css;
   out += '<div data-vlstabs="1" style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;color:#000;width:100%;padding:1.5rem 0;box-sizing:border-box;">\n\n';
-  out += '<div style="display:flex;gap:32px;border-bottom:1.5px solid #e5e7eb;margin-bottom:1.5rem;">\n';
+  out += '<div style="display:flex;gap:32px;border-bottom:1.5px solid #e5e7eb;margin-bottom:1.5rem;flex-wrap:wrap;">\n';
 
-  labels.forEach(function(label, i) {
-    var pid = uid + '-' + tabIds[i];
-    var bc  = i === 0 ? '#534AB7' : 'transparent';
-    var tc  = i === 0 ? '#000' : '#6b7280';
-    out += '<button data-vlsbtn="1" onclick="' + makeClick(pid) + '" style="background:none;border:none;border-bottom:2px solid ' + bc + ';padding:10px 0;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:' + tc + ';cursor:pointer;white-space:nowrap;letter-spacing:0.01em;">' + xH(label) + '</button>\n';
+  vlsTabs.forEach(function(tab, i) {
+    var pid = uid + '-' + i;
+    var bc = i === 0 ? '#534AB7' : 'transparent';
+    var tc = i === 0 ? '#000' : '#6b7280';
+    out += '<button data-vlsbtn="1" onclick="' + makeClick(pid) + '" style="background:none;border:none;border-bottom:2px solid ' + bc + ';padding:10px 0;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:' + tc + ';cursor:pointer;white-space:nowrap;letter-spacing:0.01em;">' + xH(tab.label || 'Tab ' + (i + 1)) + '</button>\n';
   });
   out += '</div>\n\n';
 
-  // ── About panel ──
-  var aboutItems = [];
-  document.querySelectorAll('#about-items .feature-item input').forEach(function(inp) {
-    if (inp.value.trim()) aboutItems.push(inp.value.trim());
-  });
-  var assH = document.getElementById('about-assurance-h').value;
-  var assP = document.getElementById('about-assurance-p').value;
+  vlsTabs.forEach(function(tab, i) {
+    var pid = uid + '-' + i;
+    out += '<div id="' + pid + '" data-vlspanel="1" style="display:' + (i === 0 ? 'block' : 'none') + ';">\n';
 
-  out += '<div id="' + uid + '-about" data-vlspanel="1" style="display:block;">\n';
-  out += '  <div style="margin-bottom:1.25rem;">\n';
-  out += '    <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:500;color:#000;margin-bottom:0.5rem;text-align:left;line-height:25px;">Following are included</h3>\n';
-  out += '    <ol style="padding-left:0;list-style:none;margin:0.6rem 0;">\n';
-  aboutItems.forEach(function(item, i) {
-    out += '      <li style="display:flex;gap:10px;align-items:center;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;padding:2px 0;text-align:left;">'
-         + '<span style="min-width:22px;height:22px;border-radius:50%;background:#EEEDFE;color:#534AB7;font-family:\'Poppins\',sans-serif;font-size:12px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">' + (i+1) + '</span>'
-         + xH(item) + '</li>\n';
-  });
-  out += '    </ol>\n  </div>\n';
-  out += '  <div style="background:#f9fafb;border-left:3px solid #534AB7;border-radius:0 8px 8px 0;padding:0.75rem 1.25rem;margin-top:1.25rem;">\n';
-  out += '    <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:500;color:#534AB7;margin-bottom:0.3rem;text-align:left;line-height:25px;">' + xH(assH) + '</h3>\n';
-  out += '    <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#374151;line-height:25px;text-align:left;">' + xH(assP) + '</p>\n';
-  out += '  </div>\n</div>\n\n';
+    tab.blocks.forEach(function(blk) {
+      var el = document.getElementById('blk-' + blk.id);
+      if (!el) return;
 
-  // ── Step tab builder ──
-  var stepIcons = [
-    '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>',
-    '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
-    '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
-    '<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>',
-    '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
-  ];
+      if (blk.type === 'heading-para') {
+        var h = (el.querySelector('.blk-heading') || {}).value || '';
+        var p = (el.querySelector('.blk-para') || {}).value || '';
+        out += '  <div style="margin-bottom:1.25rem;">\n';
+        if (h) out += '    <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#204280;line-height:25px;margin-bottom:0.4rem;">' + xH(h) + '</h3>\n';
+        if (p) out += '    <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;">' + xH(p) + '</p>\n';
+        out += '  </div>\n';
 
-  ['enrol', 'info'].forEach(function(section, si) {
-    var items = [];
-    document.querySelectorAll('#' + section + '-items .step-item').forEach(function(item, idx) {
-      items.push({ h: item.querySelector('.step-h').value, p: item.querySelector('.step-p').value, icon: stepIcons[idx % stepIcons.length] });
+      } else if (blk.type === 'bullets') {
+        var h = (el.querySelector('.blk-heading') || {}).value || '';
+        var items = [];
+        el.querySelectorAll('.blk-bullet-item').forEach(function(inp) {
+          if (inp.value.trim()) items.push(inp.value.trim());
+        });
+        out += '  <div style="margin-bottom:1.25rem;">\n';
+        if (h) out += '    <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#204280;line-height:25px;margin-bottom:0.4rem;">' + xH(h) + '</h3>\n';
+        out += '    <ul style="padding-left:0;list-style:none;margin:0.6rem 0;">\n';
+        items.forEach(function(item) {
+          out += '      <li style="display:flex;gap:8px;align-items:flex-start;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;padding:2px 0;">'
+            + '<span style="color:#534AB7;font-weight:700;flex-shrink:0;margin-top:1px;">•</span>' + xH(item) + '</li>\n';
+        });
+        out += '    </ul>\n  </div>\n';
+
+      } else if (blk.type === 'paragraph') {
+        var p = (el.querySelector('.blk-para') || {}).value || '';
+        if (p) out += '  <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;margin-bottom:1.25rem;">' + xH(p) + '</p>\n';
+
+      } else if (blk.type === 'promo-cards') {
+        var cards = [];
+        el.querySelectorAll('.more-card').forEach(function(card) {
+          cards.push({
+            h:   (card.querySelector('.pc-h')   || {}).value || '',
+            p:   (card.querySelector('.pc-p')   || {}).value || '',
+            cta: (card.querySelector('.pc-cta') || {}).value || '',
+            url: (card.querySelector('.pc-url') || {}).value || ''
+          });
+        });
+        if (cards.length) {
+          out += '  <div class="' + uid + '-grid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:1.25rem;">\n';
+          cards.forEach(function(card) {
+            out += '    <div style="background:#fff;border:0.5px solid #e5e7eb;border-radius:12px;padding:1.25rem;display:flex;flex-direction:column;gap:10px;text-align:center;">\n';
+            if (card.h)   out += '      <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:500;color:#000;line-height:25px;">' + xH(card.h) + '</h3>\n';
+            if (card.p)   out += '      <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;flex:1;">' + xH(card.p) + '</p>\n';
+            if (card.cta) out += '      <a href="' + xA(card.url) + '" style="display:inline-block;padding:8px 20px;background:#534AB7;color:#fff;font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:500;border-radius:6px;text-decoration:none;align-self:center;">' + xH(card.cta) + '</a>\n';
+            out += '    </div>\n';
+          });
+          out += '  </div>\n';
+        }
+      }
     });
-    out += '<div id="' + uid + '-' + section + '" data-vlspanel="1" style="display:none;">\n';
-    items.forEach(function(item, i) {
-      var border = i < items.length - 1 ? 'border-bottom:0.5px solid #e5e7eb;' : '';
-      out += '  <div style="display:flex;gap:12px;align-items:center;padding:0.65rem 0;' + border + '">\n';
-      out += '    <div style="width:30px;height:30px;border-radius:8px;background:#EEEDFE;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
-           + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + item.icon + '</svg></div>\n';
-      out += '    <div style="text-align:left;flex:1;">\n';
-      out += '      <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#204280;letter-spacing:0.03em;line-height:25px;text-align:left;margin-bottom:2px;">' + xH(item.h) + '</h3>\n';
-      out += '      <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;text-align:left;">' + xH(item.p) + '</p>\n';
-      out += '    </div>\n  </div>\n';
-    });
+
     out += '</div>\n\n';
   });
 
-  // ── More panel ──
-  var moreIcons = [
-    '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>',
-    '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
-    '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>'
-  ];
-  var moreCards = [];
-  document.querySelectorAll('#more-cards .more-card').forEach(function(card, idx) {
-    moreCards.push({ h: card.querySelector('.mc-h').value, p: card.querySelector('.mc-p').value, cta: card.querySelector('.mc-cta').value, url: card.querySelector('.mc-url').value, icon: moreIcons[idx % moreIcons.length] });
-  });
-
-  out += '<div id="' + uid + '-more" data-vlspanel="1" style="display:none;">\n';
-  out += '  <div class="' + uid + '-grid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;">\n';
-  moreCards.forEach(function(card) {
-    out += '    <div style="background:#fff;border:0.5px solid #e5e7eb;border-radius:12px;padding:1.25rem;display:flex;flex-direction:column;gap:10px;text-align:center;">\n';
-    out += '      <div style="width:38px;height:38px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;margin:0 auto 2px;">'
-         + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + card.icon + '</svg></div>\n';
-    out += '      <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:500;color:#000;line-height:25px;">' + xH(card.h) + '</h3>\n';
-    out += '      <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;flex:1;">' + xH(card.p) + '</p>\n';
-    out += '      <a href="' + xA(card.url) + '" style="display:inline-block;padding:8px 20px;background:#534AB7;color:#fff;font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:500;border-radius:6px;text-decoration:none;align-self:center;">' + xH(card.cta) + '</a>\n';
-    out += '    </div>\n';
-  });
-  out += '  </div>\n</div>\n\n</div>';
+  out += '</div>';
 
   document.getElementById('tabs-code').textContent = out;
   document.getElementById('tabs-preview-wrap').innerHTML = out;
@@ -901,30 +1009,55 @@ window.addEventListener('DOMContentLoaded', function() {
   addDescBlock('heading-paragraph', { h: 'Why study FA1 with VLS Online?', p: 'Our tutors have deep ACCA exam expertise and know exactly where students lose marks. The course is structured for efficient, focused study with no padding, no filler. You\'ll study at your own pace, revisit difficult topics as many times as you need, and arrive at your exam having practised the exact skills the examiner is testing.' });
   addDescBlock('note', { p: 'Note: Exam registration is handled directly through ACCA. Students must apply to ACCA separately for student membership and exam entry.' });
 
-  // About items
-  ['Lecture videos for complete syllabus','Extensive practice question videos','Complete study notes','Customized study plan with mobile app','Chapter-by-chapter quizzes','Active tutor support over WhatsApp groups','Pre exam live session for additional practice (recordings available after the lesson)','Final mock exam with feedback'].forEach(function(item) { addAboutItem(item); });
-
-  // Enrol items
-  [
-    { h: 'Access to course resources', p: 'Once you enroll and pay, the system automatically grants you access to all course materials. Log in and go to My Courses in the top menu. You\'ll also receive onboarding emails about the WhatsApp group, how to prepare your study plan, and how to use the VLS portal effectively.' },
-    { h: 'Addition to WhatsApp group', p: 'After enrolling, send an email to office@vls-online.com to join the study group and receive tutor support. Please include your WhatsApp number (with country code) and the name of your course.' },
-    { h: 'Prepare your customized study plan', p: 'Use the software link in the Resources section of the course curriculum to create your personalized study plan. Save it as a PDF and follow it consistently. Engage actively in the WhatsApp group, submit assignments, and download the mobile app to track daily progress and receive notifications.' },
-    { h: 'Live online sessions', p: 'We offer weekly and pre-exam live online sessions for answering student queries and doing additional practice questions. Sessions are recorded and made available to students who cannot attend due to time zone differences or other reasons.' },
-    { h: 'Tutor support and advice', p: 'Many ACCA students need guidance on career counselling, the qualification itself, student registration, booking exams, or managing their studies. Our experienced tutors and academic support team are always available. Students can book one-on-one meetings with the team to get the help they need.' }
-  ].forEach(function(item) { addStepItem('enrol', item.h, item.p); });
-
-  // Info items
-  [
-    { h: 'Live online sessions', p: 'We offer weekly and pre-exam live online sessions for answering student queries and doing additional practice questions. Sessions are recorded and made available to students who cannot attend due to time zone differences or other reasons.' },
-    { h: 'Tutor support and advice', p: 'Many ACCA students need guidance on career counselling, the qualification itself, student registration, booking exams, or managing their studies. Our experienced tutors and academic support team are always available. Students can book one-on-one meetings with the team to get the help they need.' }
-  ].forEach(function(item) { addStepItem('info', item.h, item.p); });
-
-  // More cards
-  [
-    { h: 'Testimonials', p: 'Our students have always shown outstanding results in ACCA final exams. See results and reviews.', cta: 'Testimonials', url: '/testimonials/' },
-    { h: 'Book a meeting', p: 'Book a free online meeting to get more information about the ACCA qualification and Vertex courses.', cta: 'Book now', url: '/bookmeeting/' },
-    { h: 'Special offer', p: 'Annual access is the best option for exam preparation, providing access to all ACCA courses in one plan.', cta: 'Annual plan', url: '/fullaccess/' }
-  ].forEach(function(c) { addMoreCard(c.h, c.p, c.cta, c.url); });
+  // Course Tabs — dynamic system
+  tabsInit([
+    {
+      id: tabsMakeId(), label: 'About Course Package',
+      blocks: [
+        { id: tabsMakeId(), type: 'bullets', prefill: { heading: '', items: [
+          'Lecture videos for complete syllabus',
+          'Extensive practice question videos',
+          'Complete study notes',
+          'Customized study plan with mobile app',
+          'Chapter-by-chapter quizzes',
+          'Active tutor support over WhatsApp groups',
+          'Pre exam live session for additional practice (recordings available after the lesson)',
+          'Final mock exam with feedback'
+        ]}},
+        { id: tabsMakeId(), type: 'heading-para', prefill: {
+          heading: 'Vertex assurance',
+          para: 'Once you join the Vertex family of thousands of ACCA students and alumni from around the world, we assure you that you will have a capable and committed team standing behind you, making it possible for you to complete the ACCA qualification in minimum time and at minimum cost.'
+        }}
+      ]
+    },
+    {
+      id: tabsMakeId(), label: 'After Enrolment',
+      blocks: [
+        { id: tabsMakeId(), type: 'heading-para', prefill: { heading: 'Access to course resources', para: 'Once you enroll and pay, the system automatically grants you access to all course materials. Log in and go to My Courses in the top menu. You\'ll also receive onboarding emails about the WhatsApp group, how to prepare your study plan, and how to use the VLS portal effectively.' }},
+        { id: tabsMakeId(), type: 'heading-para', prefill: { heading: 'Addition to WhatsApp group', para: 'After enrolling, send an email to office@vls-online.com to join the study group and receive tutor support. Please include your WhatsApp number (with country code) and the name of your course.' }},
+        { id: tabsMakeId(), type: 'heading-para', prefill: { heading: 'Prepare your customized study plan', para: 'Use the software link in the Resources section of the course curriculum to create your personalized study plan. Save it as a PDF and follow it consistently. Engage actively in the WhatsApp group, submit assignments, and download the mobile app to track daily progress and receive notifications.' }},
+        { id: tabsMakeId(), type: 'heading-para', prefill: { heading: 'Live online sessions', para: 'We offer weekly and pre-exam live online sessions for answering student queries and doing additional practice questions. Sessions are recorded and made available to students who cannot attend due to time zone differences or other reasons.' }},
+        { id: tabsMakeId(), type: 'heading-para', prefill: { heading: 'Tutor support and advice', para: 'Many ACCA students need guidance on career counselling, the qualification itself, student registration, booking exams, or managing their studies. Our experienced tutors and academic support team are always available. Students can book one-on-one meetings with the team to get the help they need.' }}
+      ]
+    },
+    {
+      id: tabsMakeId(), label: 'Additional Information',
+      blocks: [
+        { id: tabsMakeId(), type: 'heading-para', prefill: { heading: 'Live online sessions', para: 'We offer weekly and pre-exam live online sessions for answering student queries and doing additional practice questions. Sessions are recorded and made available to students who cannot attend due to time zone differences or other reasons.' }},
+        { id: tabsMakeId(), type: 'heading-para', prefill: { heading: 'Tutor support and advice', para: 'Many ACCA students need guidance on career counselling, the qualification itself, student registration, booking exams, or managing their studies. Our experienced tutors and academic support team are always available. Students can book one-on-one meetings with the team to get the help they need.' }}
+      ]
+    },
+    {
+      id: tabsMakeId(), label: 'More',
+      blocks: [
+        { id: tabsMakeId(), type: 'promo-cards', prefill: { cards: [
+          { h: 'Testimonials', p: 'Our students have always shown outstanding results in ACCA final exams. See results and reviews.', cta: 'Testimonials', url: '/testimonials/' },
+          { h: 'Book a meeting', p: 'Book a free online meeting to get more information about the ACCA qualification and Vertex courses.', cta: 'Book now', url: '/bookmeeting/' },
+          { h: 'Special offer', p: 'Annual access is the best option for exam preparation, providing access to all ACCA courses in one plan.', cta: 'Annual plan', url: '/fullaccess/' }
+        ]}}
+      ]
+    }
+  ]);
 });
 
 
@@ -1138,8 +1271,6 @@ function updateInjectScript(rawUrl) {
   var lines = [];
   lines.push('(function(){');
   lines.push('  var BANNER_URL="' + url + '";');
-  lines.push('  var CACHE_KEY="vlsBannerCfg";');
-  lines.push('  var CACHE_TTL=60000;');
   lines.push('  function injectStyles(){');
   lines.push('    if(document.getElementById("vls-banner-style"))return;');
   lines.push('    var s=document.createElement("style");');
@@ -1225,19 +1356,9 @@ function updateInjectScript(rawUrl) {
   lines.push('    _timer=setInterval(tick,1000);');
   lines.push('  }');
   lines.push('  function loadConfig(){');
-  lines.push('    var cached=null;');
-  lines.push('    try{');
-  lines.push('      var c=JSON.parse(sessionStorage.getItem(CACHE_KEY)||"null");');
-  lines.push('      if(c&&c._ts&&Date.now()-c._ts<CACHE_TTL)cached=c;');
-  lines.push('    }catch(e){}');
-  lines.push('    if(cached){renderBanner(cached);return;}');
   lines.push('    fetch(BANNER_URL+"?t="+Date.now())');
   lines.push('      .then(function(r){return r.json();})');
-  lines.push('      .then(function(cfg){');
-  lines.push('        cfg._ts=Date.now();');
-  lines.push('        try{sessionStorage.setItem(CACHE_KEY,JSON.stringify(cfg));}catch(e){}');
-  lines.push('        renderBanner(cfg);');
-  lines.push('      })');
+  lines.push('      .then(function(cfg){renderBanner(cfg);})');
   lines.push('      .catch(function(e){console.warn("VLS Banner: failed to load config",e);});');
   lines.push('  }');
   lines.push('  if(document.readyState==="loading"){');
