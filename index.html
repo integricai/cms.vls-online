@@ -70,9 +70,10 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 .ted-section{display:none;flex-direction:column;gap:14px}
 .ted-section.active{display:flex}
 
-/* ── Password gate ── */
-#pw-gate{position:fixed;inset:0;background:#f4f6f9;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:'Poppins',sans-serif}
-#pw-gate.hidden{display:none}
+/* ── Banner auth gate ── */
+#banner-auth-gate{position:absolute;inset:0;background:#f4f6f9;display:flex;align-items:center;justify-content:center;z-index:10;font-family:'Poppins',sans-serif}
+#banner-auth-gate.hidden{display:none}
+#screen-banner{position:relative}
 .pw-card{background:#fff;border:1.5px solid #e2e6ed;border-radius:12px;padding:40px 36px;width:360px;display:flex;flex-direction:column;gap:20px;align-items:center}
 .pw-logo{font-size:16px;font-weight:700;color:#204280;letter-spacing:-0.01em}
 .pw-title{font-size:15px;font-weight:600;color:#1a1a1a;text-align:center}
@@ -94,17 +95,6 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 </head>
 <body>
 
-<!-- Password gate -->
-<div id="pw-gate">
-  <div class="pw-card">
-    <div class="pw-logo">VLS Online CMS</div>
-    <div class="pw-title">Sign in to continue</div>
-    <div class="pw-sub">This tool is for internal use only</div>
-    <input class="pw-input" type="password" id="pw-input" placeholder="Enter password" onkeydown="if(event.key==='Enter')checkPw()">
-    <button class="pw-btn" onclick="checkPw()">Continue</button>
-    <div class="pw-error" id="pw-error"></div>
-  </div>
-</div>
 
 <div class="app">
 
@@ -230,6 +220,20 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
      SCREEN 4 — BANNER
 ═══════════════════════════════════════ -->
 <div id="screen-banner" class="screen">
+
+  <!-- Auth gate — only shown when not signed in -->
+  <div id="banner-auth-gate">
+    <div class="pw-card">
+      <div class="pw-logo">VLS Online CMS</div>
+      <div class="pw-title">Banner access</div>
+      <div class="pw-sub">Sign in to edit and publish the banner</div>
+      <input class="pw-input" type="email" id="banner-email" placeholder="Email address" autocomplete="email">
+      <input class="pw-input" type="password" id="banner-password" placeholder="Password" onkeydown="if(event.key==='Enter')bannerLogin()">
+      <button class="pw-btn" onclick="bannerLogin()">Sign in</button>
+      <div class="pw-error" id="banner-auth-error"></div>
+    </div>
+  </div>
+
   <div class="form-panel"><div class="form-inner">
 
     <div class="section-label">Connection status</div>
@@ -303,39 +307,62 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 </div><!-- .app -->
 <script>
 
-// ── Password gate ──────────────────────────────────────────────
+// ── Banner auth ────────────────────────────────────────────────
 
-var PW_HASH = '9194ef26293c386b5a8ef887ee8feceac9f8d1f6c094804946f78239c07d425f';
-var SESSION_KEY = 'vls_cms_auth';
+var BANNER_AUTH_KEY = 'vls_banner_auth';
 
-async function sha256(str) {
-  var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
-}
-
-async function checkPw() {
-  var val = document.getElementById('pw-input').value;
-  var hash = await sha256(val);
-  if (hash === PW_HASH) {
-    sessionStorage.setItem(SESSION_KEY, '1');
-    document.getElementById('pw-gate').classList.add('hidden');
-    document.getElementById('pw-input').value = '';
-    document.getElementById('pw-error').textContent = '';
+function bannerCheckAuth() {
+  var gate = document.getElementById('banner-auth-gate');
+  if (!gate) return;
+  if (sessionStorage.getItem(BANNER_AUTH_KEY) === '1') {
+    gate.classList.add('hidden');
   } else {
-    document.getElementById('pw-error').textContent = 'Incorrect password. Please try again.';
-    document.getElementById('pw-input').value = '';
-    document.getElementById('pw-input').focus();
+    gate.classList.remove('hidden');
+    setTimeout(function() { var e = document.getElementById('banner-email'); if (e) e.focus(); }, 80);
   }
 }
 
-// Check session on load
+async function bannerLogin() {
+  var emailEl = document.getElementById('banner-email');
+  var passEl  = document.getElementById('banner-password');
+  var errEl   = document.getElementById('banner-auth-error');
+  var btn     = document.querySelector('#banner-auth-gate .pw-btn');
+
+  var email    = emailEl.value.trim();
+  var password = passEl.value;
+  if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; return; }
+
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+
+  try {
+    var resp = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, password: password })
+    });
+    var data = await resp.json();
+    if (resp.ok) {
+      sessionStorage.setItem(BANNER_AUTH_KEY, '1');
+      document.getElementById('banner-auth-gate').classList.add('hidden');
+      passEl.value = '';
+    } else {
+      errEl.textContent = data.error || 'Invalid email or password.';
+      passEl.value = '';
+      passEl.focus();
+    }
+  } catch(e) {
+    errEl.textContent = 'Network error. Please try again.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign in';
+  }
+}
+
+// Check banner auth whenever the banner screen becomes visible
 window.addEventListener('DOMContentLoaded', function() {
-  if (sessionStorage.getItem(SESSION_KEY) === '1') {
-    document.getElementById('pw-gate').classList.add('hidden');
-  } else {
-    document.getElementById('pw-gate').classList.remove('hidden');
-    setTimeout(function(){ document.getElementById('pw-input').focus(); }, 100);
-  }
+  // Banner screen auth state is handled by bannerCheckAuth() called from switchScreen
 });
 
 
@@ -364,6 +391,7 @@ function switchScreen(name) {
   document.getElementById('screen-' + name).classList.add('active');
   var map = { intro: 0, desc: 1, tabs: 2, banner: 3 };
   document.querySelectorAll('.nav-tab')[map[name]].classList.add('active');
+  if (name === 'banner') bannerCheckAuth();
 }
 
 function switchOut(screen, mode) {
@@ -1389,7 +1417,7 @@ function updateInjectScript(rawUrl) {
   lines.push('  }else{loadConfig();}');
   lines.push('})();');
 
-  el.textContent = '<script>\n' + lines.join('\n') + '\n<\/script>';
+  el.textContent = '<script>' + lines.map(function(l){return l.trim();}).join('') + '<\/script>';
 }
 
 // Extend DOMContentLoaded to also init banner
