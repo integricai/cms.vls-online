@@ -469,6 +469,7 @@ function generateIntro() {
   var featH   = document.getElementById('intro-feat-heading').value;
   var ctaTxt  = document.getElementById('intro-cta-text').value;
   var ctaUrl  = document.getElementById('intro-cta-url').value;
+  var uid     = 'vi' + Date.now().toString(36);
 
   var features = [];
   document.querySelectorAll('#intro-features .feature-item input').forEach(function(inp) {
@@ -482,18 +483,32 @@ function generateIntro() {
   }).join('\n        ');
 
   var lines = [];
+  lines.push('<style>');
+  lines.push('.' + uid + '-outer{display:flex;gap:40px;align-items:flex-start;}');
+  lines.push('.' + uid + '-col{flex:0 0 60%;min-width:0;}');
+  lines.push('.' + uid + '-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;}');
+  lines.push('@media(max-width:700px){');
+  lines.push('.' + uid + '-outer{flex-direction:column;}');
+  lines.push('.' + uid + '-col{flex:0 0 100%;width:100%;}');
+  lines.push('.' + uid + '-right{display:none;}');
+  lines.push('.' + uid + '-grid{grid-template-columns:1fr;}');
+  lines.push('.' + uid + '-h1{font-size:26px!important;margin:20px 0 8px 0!important;}');
+  lines.push('.' + uid + '-h2{font-size:18px!important;margin:0 0 16px 0!important;}');
+  lines.push('}');
+  lines.push('</style>');
+  lines.push('');
   lines.push('<div style="font-family:\'Poppins\',sans-serif;color:#1a1a1a;text-align:left;">');
   lines.push('');
-  lines.push('  <h1 style="font-family:\'Poppins\',sans-serif;font-size:40px;font-weight:600;color:rgb(32,66,128);text-align:left;margin:35px 0 10px 0;line-height:1.2;">' + xH(h1) + '</h1>');
+  lines.push('  <h1 class="' + uid + '-h1" style="font-family:\'Poppins\',sans-serif;font-size:40px;font-weight:600;color:rgb(32,66,128);text-align:left;margin:35px 0 10px 0;line-height:1.2;">' + xH(h1) + '</h1>');
   lines.push('');
-  lines.push('  <h2 style="font-family:\'Poppins\',sans-serif;font-size:24px;font-weight:500;color:rgb(32,66,128);text-align:left;margin:0 0 24px 0;line-height:1.4;letter-spacing:0;">' + xH(h2) + '</h2>');
+  lines.push('  <h2 class="' + uid + '-h2" style="font-family:\'Poppins\',sans-serif;font-size:24px;font-weight:500;color:rgb(32,66,128);text-align:left;margin:0 0 24px 0;line-height:1.4;letter-spacing:0;">' + xH(h2) + '</h2>');
   lines.push('');
-  lines.push('  <div style="display:flex;gap:40px;align-items:flex-start;">');
+  lines.push('  <div class="' + uid + '-outer">');
   lines.push('');
-  lines.push('    <div style="flex:0 0 60%;min-width:0;">');
+  lines.push('    <div class="' + uid + '-col">');
   lines.push('      <div style="padding:20px 0;">');
   lines.push('        <h3 style="font-family:\'Poppins\',sans-serif;font-size:20px;font-weight:700;line-height:25px;color:rgb(26,95,168);margin:0 0 12px 0;text-align:left;">' + xH(featH) + '</h3>');
-  lines.push('        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">');
+  lines.push('        <div class="' + uid + '-grid">');
   lines.push('        ' + ticksHtml);
   lines.push('        </div>');
   lines.push('      </div>');
@@ -502,7 +517,7 @@ function generateIntro() {
   lines.push('      </div>');
   lines.push('    </div>');
   lines.push('');
-  lines.push('    <div style="flex:0 0 40%;min-width:0;min-height:60px;"></div>');
+  lines.push('    <div class="' + uid + '-right" style="flex:0 0 40%;min-width:0;min-height:60px;"></div>');
   lines.push('');
   lines.push('  </div>');
   lines.push('');
@@ -963,16 +978,22 @@ function generateTabs() {
     return js.replace(/"/g, '&quot;');
   }
 
-  var css = '<style>@media(max-width:600px){.' + uid + '-grid{grid-template-columns:1fr!important}}</style>\n\n';
+  var css = '<style>'
+    + '@media(max-width:600px){'
+    + '.' + uid + '-grid{grid-template-columns:1fr!important}'
+    + '.' + uid + '-nav{gap:12px!important;overflow-x:auto;-webkit-overflow-scrolling:touch;}'
+    + '.' + uid + '-navbtn{font-size:13px!important;padding:8px 0!important;white-space:nowrap;}'
+    + '}'
+    + '</style>\n\n';
   var out = css;
   out += '<div data-vlstabs="1" style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;color:#000;width:100%;padding:1.5rem 0;box-sizing:border-box;">\n\n';
-  out += '<div style="display:flex;gap:32px;border-bottom:1.5px solid #e5e7eb;margin-bottom:1.5rem;flex-wrap:wrap;">\n';
+  out += '<div class="' + uid + '-nav" style="display:flex;gap:32px;border-bottom:1.5px solid #e5e7eb;margin-bottom:1.5rem;flex-wrap:nowrap;">\n';
 
   vlsTabs.forEach(function(tab, i) {
     var pid = uid + '-' + i;
     var bc = i === 0 ? '#534AB7' : 'transparent';
     var tc = i === 0 ? '#000' : '#6b7280';
-    out += '<button data-vlsbtn="1" onclick="' + makeClick(pid) + '" style="background:none;border:none;border-bottom:2px solid ' + bc + ';padding:10px 0;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:' + tc + ';cursor:pointer;white-space:nowrap;letter-spacing:0.01em;">' + xH(tab.label || 'Tab ' + (i + 1)) + '</button>\n';
+    out += '<button data-vlsbtn="1" class="' + uid + '-navbtn" onclick="' + makeClick(pid) + '" style="background:none;border:none;border-bottom:2px solid ' + bc + ';padding:10px 0;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:' + tc + ';cursor:pointer;white-space:nowrap;letter-spacing:0.01em;flex-shrink:0;">' + xH(tab.label || 'Tab ' + (i + 1)) + '</button>\n';
   });
   out += '</div>\n\n';
 
