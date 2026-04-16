@@ -694,6 +694,7 @@ function tabsInit(defaultTabs) {
 
 function tabsAddTab() {
   tabsSaveActiveLabel();
+  tabsSaveActiveBlocks();
   vlsTabs.push({ id: tabsMakeId(), label: 'New Tab', blocks: [] });
   vlsActiveTab = vlsTabs.length - 1;
   tabsRender();
@@ -705,6 +706,8 @@ function tabsAddTab() {
 
 function tabsRemoveTab(i) {
   if (vlsTabs.length <= 1) return;
+  tabsSaveActiveLabel();
+  tabsSaveActiveBlocks();
   vlsTabs.splice(i, 1);
   if (vlsActiveTab >= vlsTabs.length) vlsActiveTab = vlsTabs.length - 1;
   tabsRender();
@@ -712,6 +715,7 @@ function tabsRemoveTab(i) {
 
 function tabsSwitchTo(i) {
   tabsSaveActiveLabel();
+  tabsSaveActiveBlocks();
   vlsActiveTab = i;
   tabsRender();
 }
@@ -721,6 +725,38 @@ function tabsSaveActiveLabel() {
   if (inp && vlsTabs[vlsActiveTab]) {
     vlsTabs[vlsActiveTab].label = inp.value;
   }
+}
+
+function tabsSaveActiveBlocks() {
+  var tab = vlsTabs[vlsActiveTab];
+  if (!tab) return;
+  tab.blocks.forEach(function(blk) {
+    var el = document.getElementById('blk-' + blk.id);
+    if (!el) return;
+    blk.data = blk.data || {};
+    if (blk.type === 'heading-para') {
+      blk.data.heading = (el.querySelector('.blk-heading') || {}).value || '';
+      blk.data.para    = (el.querySelector('.blk-para')    || {}).value || '';
+    } else if (blk.type === 'bullets') {
+      blk.data.heading = (el.querySelector('.blk-heading') || {}).value || '';
+      blk.data.items   = [];
+      el.querySelectorAll('.blk-bullet-item').forEach(function(inp) {
+        if (inp.value.trim()) blk.data.items.push(inp.value.trim());
+      });
+    } else if (blk.type === 'paragraph') {
+      blk.data.para = (el.querySelector('.blk-para') || {}).value || '';
+    } else if (blk.type === 'promo-cards') {
+      blk.data.cards = [];
+      el.querySelectorAll('.more-card').forEach(function(card) {
+        blk.data.cards.push({
+          h:   (card.querySelector('.pc-h')   || {}).value || '',
+          p:   (card.querySelector('.pc-p')   || {}).value || '',
+          cta: (card.querySelector('.pc-cta') || {}).value || '',
+          url: (card.querySelector('.pc-url') || {}).value || ''
+        });
+      });
+    }
+  });
 }
 
 function tabsRender() {
@@ -768,7 +804,7 @@ function tabsRenderEditor() {
     + '</div>';
 
   tab.blocks.forEach(function(blk) {
-    tabsRenderBlock(blk, blk.prefill);
+    tabsRenderBlock(blk, blk.data || blk.prefill);
   });
 }
 
@@ -884,7 +920,9 @@ function tabsAddCardItem(listId, data) {
 }
 
 function generateTabs() {
+  // Save active tab state to JS before generating — all tabs then read from state, not DOM
   tabsSaveActiveLabel();
+  tabsSaveActiveBlocks();
 
   var uid = 'vt' + Date.now().toString(36);
 
@@ -915,25 +953,19 @@ function generateTabs() {
     out += '<div id="' + pid + '" data-vlspanel="1" style="display:' + (i === 0 ? 'block' : 'none') + ';">\n';
 
     tab.blocks.forEach(function(blk) {
-      var el = document.getElementById('blk-' + blk.id);
-      if (!el) return;
+      // All data comes from saved state — works for every tab, not just the active one
+      var d = blk.data || blk.prefill || {};
 
       if (blk.type === 'heading-para') {
-        var h = (el.querySelector('.blk-heading') || {}).value || '';
-        var p = (el.querySelector('.blk-para') || {}).value || '';
         out += '  <div style="margin-bottom:1.25rem;">\n';
-        if (h) out += '    <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#204280;line-height:25px;margin-bottom:0.4rem;">' + xH(h) + '</h3>\n';
-        if (p) out += '    <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;">' + xH(p) + '</p>\n';
+        if (d.heading) out += '    <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#204280;line-height:25px;margin-bottom:0.4rem;">' + xH(d.heading) + '</h3>\n';
+        if (d.para)    out += '    <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;">' + xH(d.para) + '</p>\n';
         out += '  </div>\n';
 
       } else if (blk.type === 'bullets') {
-        var h = (el.querySelector('.blk-heading') || {}).value || '';
-        var items = [];
-        el.querySelectorAll('.blk-bullet-item').forEach(function(inp) {
-          if (inp.value.trim()) items.push(inp.value.trim());
-        });
+        var items = d.items || [];
         out += '  <div style="margin-bottom:1.25rem;">\n';
-        if (h) out += '    <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#204280;line-height:25px;margin-bottom:0.4rem;">' + xH(h) + '</h3>\n';
+        if (d.heading) out += '    <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#204280;line-height:25px;margin-bottom:0.4rem;">' + xH(d.heading) + '</h3>\n';
         out += '    <ul style="padding-left:0;list-style:none;margin:0.6rem 0;">\n';
         items.forEach(function(item) {
           out += '      <li style="display:flex;gap:8px;align-items:flex-start;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;padding:2px 0;">'
@@ -942,19 +974,10 @@ function generateTabs() {
         out += '    </ul>\n  </div>\n';
 
       } else if (blk.type === 'paragraph') {
-        var p = (el.querySelector('.blk-para') || {}).value || '';
-        if (p) out += '  <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;margin-bottom:1.25rem;">' + xH(p) + '</p>\n';
+        if (d.para) out += '  <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;margin-bottom:1.25rem;">' + xH(d.para) + '</p>\n';
 
       } else if (blk.type === 'promo-cards') {
-        var cards = [];
-        el.querySelectorAll('.more-card').forEach(function(card) {
-          cards.push({
-            h:   (card.querySelector('.pc-h')   || {}).value || '',
-            p:   (card.querySelector('.pc-p')   || {}).value || '',
-            cta: (card.querySelector('.pc-cta') || {}).value || '',
-            url: (card.querySelector('.pc-url') || {}).value || ''
-          });
-        });
+        var cards = d.cards || [];
         if (cards.length) {
           out += '  <div class="' + uid + '-grid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:1.25rem;">\n';
           cards.forEach(function(card) {
