@@ -7,13 +7,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Basic origin check — only allow requests from your own CMS domain
-  const origin = req.headers.origin || '';
-  const allowed = ['https://cms.vls-online.com', 'http://localhost:3000'];
-  if (!allowed.includes(origin)) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
-
   const token  = process.env.GITHUB_TOKEN;
   const gistId = process.env.GIST_ID;
 
@@ -54,6 +47,5 @@ export default async function handler(req, res) {
 
   // Return the raw URL so the CMS can show the inject script
   const rawUrl = data.files['vls-banner.json'].raw_url;
-  res.setHeader('Access-Control-Allow-Origin', origin);
   return res.status(200).json({ rawUrl });
 }
