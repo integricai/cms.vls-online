@@ -981,19 +981,19 @@ function generateTabs() {
   var css = '<style>'
     + '@media(max-width:600px){'
     + '.' + uid + '-grid{grid-template-columns:1fr!important}'
-    + '.' + uid + '-nav{gap:12px!important;overflow-x:auto;-webkit-overflow-scrolling:touch;}'
-    + '.' + uid + '-navbtn{font-size:13px!important;padding:8px 0!important;white-space:nowrap;}'
+    + '.' + uid + '-nav{gap:12px!important;flex-wrap:wrap!important;justify-content:flex-start!important;overflow-x:hidden!important;}'
+    + '.' + uid + '-navbtn{font-size:13px!important;padding:8px 0!important;white-space:normal!important;flex:1 1 calc(50% - 12px)!important;min-width:140px!important;max-width:100%!important;}'
     + '}'
     + '</style>\n\n';
   var out = css;
   out += '<div data-vlstabs="1" style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;line-height:25px;color:#000;width:100%;padding:1.5rem 0;box-sizing:border-box;">\n\n';
-  out += '<div class="' + uid + '-nav" style="display:flex;gap:32px;border-bottom:1.5px solid #e5e7eb;margin-bottom:1.5rem;flex-wrap:nowrap;">\n';
+  out += '<div class="' + uid + '-nav" style="display:flex;gap:16px;border-bottom:1.5px solid #e5e7eb;margin-bottom:1.5rem;flex-wrap:wrap;align-items:flex-start;">\n';
 
   vlsTabs.forEach(function(tab, i) {
     var pid = uid + '-' + i;
     var bc = i === 0 ? '#534AB7' : 'transparent';
     var tc = i === 0 ? '#000' : '#6b7280';
-    out += '<button data-vlsbtn="1" class="' + uid + '-navbtn" onclick="' + makeClick(pid) + '" style="background:none;border:none;border-bottom:2px solid ' + bc + ';padding:10px 0;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:' + tc + ';cursor:pointer;white-space:nowrap;letter-spacing:0.01em;flex-shrink:0;">' + xH(tab.label || 'Tab ' + (i + 1)) + '</button>\n';
+    out += '<button data-vlsbtn="1" class="' + uid + '-navbtn" onclick="' + makeClick(pid) + '" style="background:none;border:none;border-bottom:2px solid ' + bc + ';padding:10px 0;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:' + tc + ';cursor:pointer;white-space:normal;word-break:break-word;letter-spacing:0.01em;flex:0 1 220px;min-width:140px;max-width:280px;">' + xH(tab.label || 'Tab ' + (i + 1)) + '</button>\n';
   });
   out += '</div>\n\n';
 
@@ -1030,10 +1030,10 @@ function generateTabs() {
         if (cards.length) {
           out += '  <div class="' + uid + '-grid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:1.25rem;">\n';
           cards.forEach(function(card) {
-            out += '    <div style="background:#fff;border:0.5px solid #e5e7eb;border-radius:12px;padding:1.25rem;display:flex;flex-direction:column;gap:10px;text-align:center;">\n';
-            if (card.h)   out += '      <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:500;color:#000;line-height:25px;">' + xH(card.h) + '</h3>\n';
-            if (card.p)   out += '      <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;flex:1;">' + xH(card.p) + '</p>\n';
-            if (card.cta) out += '      <a href="' + xA(card.url) + '" style="display:inline-block;padding:8px 20px;background:#534AB7;color:#fff;font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:500;border-radius:6px;text-decoration:none;align-self:center;">' + xH(card.cta) + '</a>\n';
+            out += '    <div style="background:#fff;border:0.5px solid #e5e7eb;border-radius:12px;padding:1.25rem;display:flex;flex-direction:column;gap:10px;text-align:left;">\n';
+            if (card.h)   out += '      <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:500;color:#000;line-height:25px;text-align:left;">' + xH(card.h) + '</h3>\n';
+            if (card.p)   out += '      <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#6b7280;line-height:25px;flex:1;text-align:left;">' + xH(card.p) + '</p>\n';
+            if (card.cta) out += '      <a href="' + xA(card.url) + '" style="display:inline-block;padding:8px 20px;background:#534AB7;color:#fff;font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:500;border-radius:6px;text-decoration:none;align-self:flex-start;">' + xH(card.cta) + '</a>\n';
             out += '    </div>\n';
           });
           out += '  </div>\n';
