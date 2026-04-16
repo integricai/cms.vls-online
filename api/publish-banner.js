@@ -45,7 +45,8 @@ export default async function handler(req, res) {
     return res.status(ghRes.status).json({ error: data.message || 'GitHub error' });
   }
 
-  // Return the raw URL so the CMS can show the inject script
-  const rawUrl = data.files['vls-banner.json'].raw_url;
+  // Use the non-versioned raw URL so the inject script always fetches the latest banner
+  // (versioned raw_url changes on every publish — this format always points to current)
+  const rawUrl = `https://gist.githubusercontent.com/${data.owner.login}/${data.id}/raw/vls-banner.json`;
   return res.status(200).json({ rawUrl });
 }
