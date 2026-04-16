@@ -69,9 +69,35 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 .ted-tab.active{color:var(--purple);border-bottom-color:var(--purple)}
 .ted-section{display:none;flex-direction:column;gap:14px}
 .ted-section.active{display:flex}
+
+/* ── Password gate ── */
+#pw-gate{position:fixed;inset:0;background:#f4f6f9;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:'Poppins',sans-serif}
+#pw-gate.hidden{display:none}
+.pw-card{background:#fff;border:1.5px solid #e2e6ed;border-radius:12px;padding:40px 36px;width:360px;display:flex;flex-direction:column;gap:20px;align-items:center}
+.pw-logo{font-size:16px;font-weight:700;color:#204280;letter-spacing:-0.01em}
+.pw-title{font-size:15px;font-weight:600;color:#1a1a1a;text-align:center}
+.pw-sub{font-size:13px;color:#6b7280;text-align:center;margin-top:-12px}
+.pw-input{width:100%;font-family:'Poppins',sans-serif;font-size:14px;padding:10px 14px;border:1px solid #e2e6ed;border-radius:8px;outline:none;color:#1a1a1a}
+.pw-input:focus{border-color:#534AB7}
+.pw-btn{width:100%;background:#534AB7;color:#fff;border:none;border-radius:8px;padding:11px;font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
+.pw-btn:hover{background:#3C3489}
+.pw-error{font-size:12px;color:#e63946;text-align:center;min-height:16px}
 </style>
 </head>
 <body>
+
+<!-- Password gate -->
+<div id="pw-gate">
+  <div class="pw-card">
+    <div class="pw-logo">VLS Online CMS</div>
+    <div class="pw-title">Sign in to continue</div>
+    <div class="pw-sub">This tool is for internal use only</div>
+    <input class="pw-input" type="password" id="pw-input" placeholder="Enter password" onkeydown="if(event.key==='Enter')checkPw()">
+    <button class="pw-btn" onclick="checkPw()">Continue</button>
+    <div class="pw-error" id="pw-error"></div>
+  </div>
+</div>
+
 <div class="app">
 
 <div class="topbar">
@@ -79,6 +105,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
   <div class="nav-tab active" onclick="switchScreen('intro')">1 · Course Introduction</div>
   <div class="nav-tab" onclick="switchScreen('desc')">2 · Course Description</div>
   <div class="nav-tab" onclick="switchScreen('tabs')">3 · Course Tabs</div>
+  <div class="nav-tab" onclick="switchScreen('banner')">4 · Banner</div>
 </div>
 
 <!-- ═══════════════════════════════════════
@@ -224,8 +251,119 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
   </div>
 </div>
 
+
+<!-- ═══════════════════════════════════════
+     SCREEN 4 — BANNER
+═══════════════════════════════════════ -->
+<div id="screen-banner" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <div class="section-label">Connection status</div>
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px 14px;font-size:12px;color:#166534;line-height:1.6;">
+      &#x2713; Banner updates are published securely via the server. No credentials needed here — the GitHub token is stored as a Vercel environment variable and never exposed to the browser.
+    </div>
+
+    <div class="section-label">Banner settings</div>
+    <div class="field"><label>Banner title / message</label><input type="text" id="banner-title" placeholder="e.g. ACCA March 2025 Exam — Last chance to enrol!"></div>
+    <div class="field"><label>Sub-message <span class="hint">(optional)</span></label><input type="text" id="banner-sub" placeholder="e.g. Offer ends soon. Secure your place now."></div>
+    <div class="field"><label>CTA button label</label><input type="text" id="banner-cta-text" placeholder="e.g. Enrol Now"></div>
+    <div class="field"><label>CTA button URL</label><input type="text" id="banner-cta-url" placeholder="https://vls-online.com/courses/..."></div>
+
+    <div class="section-label">Countdown timer</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">
+      <div class="field"><label>Days</label><input type="number" id="banner-days" min="0" value="0"></div>
+      <div class="field"><label>Hours</label><input type="number" id="banner-hours" min="0" max="23" value="0"></div>
+      <div class="field"><label>Minutes</label><input type="number" id="banner-mins" min="0" max="59" value="0"></div>
+      <div class="field"><label>Seconds</label><input type="number" id="banner-secs" min="0" max="59" value="0"></div>
+    </div>
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;font-size:12px;color:#166534;line-height:1.6;">
+      Timer counts down from <strong>now + the values above</strong>. When it expires the banner stays visible but the timer stops. You can reset it anytime by publishing new values.
+    </div>
+
+    <div class="section-label">Visibility</div>
+    <div class="field">
+      <label>Banner status</label>
+      <select id="banner-visible">
+        <option value="true">Visible — show on all pages</option>
+        <option value="false">Hidden — do not show</option>
+      </select>
+    </div>
+
+    <div class="section-label">Banner colours</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div class="field"><label>Background</label><input type="color" id="banner-bg" value="#204280" style="height:36px;padding:2px 4px;cursor:pointer;"></div>
+      <div class="field"><label>Text colour</label><input type="color" id="banner-fg" value="#ffffff" style="height:36px;padding:2px 4px;cursor:pointer;"></div>
+      <div class="field"><label>Button background</label><input type="color" id="banner-btn-bg" value="#e63946" style="height:36px;padding:2px 4px;cursor:pointer;"></div>
+      <div class="field"><label>Button text</label><input type="color" id="banner-btn-fg" value="#ffffff" style="height:36px;padding:2px 4px;cursor:pointer;"></div>
+    </div>
+
+    <button class="btn-gen" onclick="publishBanner()">&#x25B6; Publish banner</button>
+    <div id="banner-pub-status" style="font-size:12px;text-align:center;min-height:16px;color:var(--muted);"></div>
+
+    <div class="section-label">Inject script</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.6;">
+      Paste this script <strong>once</strong> into each Zenler course page custom HTML block. All future banner updates via "Publish" apply automatically — no need to re-paste.
+    </div>
+    <div style="position:relative;">
+      <button class="btn-copy" style="position:absolute;top:8px;right:8px;" onclick="doCopy('banner-inject-code',this)">Copy</button>
+      <pre id="banner-inject-code" class="code-box" style="min-height:80px;font-size:11px;padding-top:36px;"></pre>
+    </div>
+
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="banner-ot-preview">Banner preview</div>
+    </div>
+    <div class="output-body">
+      <div id="banner-preview-wrap" style="background:#fff;border-radius:10px;border:1px solid var(--border);overflow:hidden;min-height:300px;">
+        <div id="banner-live-preview" style="padding:0;"></div>
+        <div style="padding:32px;color:var(--muted);font-size:13px;text-align:center;margin-top:8px;">
+          &#x2191; Live banner preview — updates as you type
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div><!-- .app -->
 <script>
+
+// ── Password gate ──────────────────────────────────────────────
+
+var PW_HASH = '9194ef26293c386b5a8ef887ee8feceac9f8d1f6c094804946f78239c07d425f';
+var SESSION_KEY = 'vls_cms_auth';
+
+async function sha256(str) {
+  var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+}
+
+async function checkPw() {
+  var val = document.getElementById('pw-input').value;
+  var hash = await sha256(val);
+  if (hash === PW_HASH) {
+    sessionStorage.setItem(SESSION_KEY, '1');
+    document.getElementById('pw-gate').classList.add('hidden');
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-error').textContent = '';
+  } else {
+    document.getElementById('pw-error').textContent = 'Incorrect password. Please try again.';
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+// Check session on load
+window.addEventListener('DOMContentLoaded', function() {
+  if (sessionStorage.getItem(SESSION_KEY) === '1') {
+    document.getElementById('pw-gate').classList.add('hidden');
+  } else {
+    document.getElementById('pw-gate').classList.remove('hidden');
+    setTimeout(function(){ document.getElementById('pw-input').focus(); }, 100);
+  }
+});
+
 
 // ── Utilities ──────────────────────────────────────────────────
 
@@ -250,7 +388,7 @@ function switchScreen(name) {
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
   document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
   document.getElementById('screen-' + name).classList.add('active');
-  var map = { intro: 0, desc: 1, tabs: 2 };
+  var map = { intro: 0, desc: 1, tabs: 2, banner: 3 };
   document.querySelectorAll('.nav-tab')[map[name]].classList.add('active');
 }
 
@@ -285,11 +423,29 @@ function switchTed(name) {
 var introData = {
   course: {
     heading: 'Detailed Study Notes',
-    items: ['Syllabus topic videos - 46 hours','Exam focused study notes','Kit question videos - 42 hours','Active tutor support over WhatsApp','Quizzes for each chapter','Bonus - Weekly live sessions','ACCA exam questions & solutions','Exam style mock exam']
+    items: [
+      'Syllabus topic videos - 46 hours',
+      'Exam focused study notes',
+      'Kit question videos - 42 hours',
+      'Active tutor support over WhatsApp',
+      'Quizzes for each chapter',
+      'Bonus - Weekly live sessions',
+      'ACCA exam questions & solutions',
+      'Exam style mock exam'
+    ]
   },
   notes: {
     heading: 'Detailed Study Notes',
-    items: ['Approximately 150 pages','Substitutes the lengthy study texts','Downloadable as PDF','Online view as ebook','HD Quality view','Zoom in function','Topic Indexing','Search word or term in online view']
+    items: [
+      'Approximately 150 pages',
+      'Substitutes the lengthy study texts',
+      'Downloadable as PDF',
+      'Online view as ebook',
+      'HD Quality view',
+      'Zoom in function',
+      'Topic Indexing',
+      'Search word or term in online view'
+    ]
   }
 };
 
@@ -721,6 +877,10 @@ window.addEventListener('DOMContentLoaded', function() {
 
   // Intro
   introData.course.items.forEach(function(f) { addFeature(f); });
+  // Banner
+  loadBannerCredentials();
+  loadBannerConfig();
+  setTimeout(initBannerListeners, 100);
 
   // Description blocks
   addDescBlock('heading-paragraph', { h: 'What this course covers', p: 'The FA1 syllabus is structured around five core capability areas, and our course walks you through each one systematically.' });
@@ -766,6 +926,329 @@ window.addEventListener('DOMContentLoaded', function() {
     { h: 'Special offer', p: 'Annual access is the best option for exam preparation, providing access to all ACCA courses in one plan.', cta: 'Annual plan', url: '/fullaccess/' }
   ].forEach(function(c) { addMoreCard(c.h, c.p, c.cta, c.url); });
 });
+
+
+// ── SCREEN 4: BANNER ───────────────────────────────────────────
+
+var BANNER_LS_KEY   = 'vls_banner_config';
+var BANNER_CRED_KEY = 'vls_gh_credentials';
+
+// Load saved credentials on DOMContentLoaded (appended to existing listener below)
+function loadBannerCredentials() {
+  // No credentials to load — token lives in Vercel env vars
+  updateInjectScript();
+}
+
+function loadBannerConfig() {
+  var cfg = {};
+  try { cfg = JSON.parse(localStorage.getItem(BANNER_LS_KEY) || '{}'); } catch(e) {}
+  if (cfg.title)    document.getElementById('banner-title').value    = cfg.title    || '';
+  if (cfg.sub)      document.getElementById('banner-sub').value      = cfg.sub      || '';
+  if (cfg.ctaText)  document.getElementById('banner-cta-text').value = cfg.ctaText  || '';
+  if (cfg.ctaUrl)   document.getElementById('banner-cta-url').value  = cfg.ctaUrl   || '';
+  if (cfg.days    !== undefined) document.getElementById('banner-days').value  = cfg.days;
+  if (cfg.hours   !== undefined) document.getElementById('banner-hours').value = cfg.hours;
+  if (cfg.mins    !== undefined) document.getElementById('banner-mins').value  = cfg.mins;
+  if (cfg.secs    !== undefined) document.getElementById('banner-secs').value  = cfg.secs;
+  if (cfg.visible !== undefined) document.getElementById('banner-visible').value = String(cfg.visible);
+  if (cfg.bg)      document.getElementById('banner-bg').value      = cfg.bg      || '#204280';
+  if (cfg.fg)      document.getElementById('banner-fg').value      = cfg.fg      || '#ffffff';
+  if (cfg.btnBg)   document.getElementById('banner-btn-bg').value  = cfg.btnBg   || '#e63946';
+  if (cfg.btnFg)   document.getElementById('banner-btn-fg').value  = cfg.btnFg   || '#ffffff';
+  updateBannerPreview();
+  updateInjectScript();
+}
+
+function saveGhCredentials() {
+  // No-op — credentials are managed server-side via Vercel env vars
+}
+
+function getBannerFormData() {
+  return {
+    title:   document.getElementById('banner-title').value.trim(),
+    sub:     document.getElementById('banner-sub').value.trim(),
+    ctaText: document.getElementById('banner-cta-text').value.trim(),
+    ctaUrl:  document.getElementById('banner-cta-url').value.trim(),
+    days:    parseInt(document.getElementById('banner-days').value)  || 0,
+    hours:   parseInt(document.getElementById('banner-hours').value) || 0,
+    mins:    parseInt(document.getElementById('banner-mins').value)  || 0,
+    secs:    parseInt(document.getElementById('banner-secs').value)  || 0,
+    visible: document.getElementById('banner-visible').value === 'true',
+    bg:      document.getElementById('banner-bg').value,
+    fg:      document.getElementById('banner-fg').value,
+    btnBg:   document.getElementById('banner-btn-bg').value,
+    btnFg:   document.getElementById('banner-btn-fg').value
+  };
+}
+
+// Live preview — attach input listeners once screen is loaded
+function initBannerListeners() {
+  var ids = ['banner-title','banner-sub','banner-cta-text','banner-cta-url',
+             'banner-days','banner-hours','banner-mins','banner-secs',
+             'banner-visible','banner-bg','banner-fg','banner-btn-bg','banner-btn-fg'];
+  ids.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', updateBannerPreview);
+    if (el) el.addEventListener('change', updateBannerPreview);
+  });
+}
+
+var bannerPreviewTimer = null;
+
+function updateBannerPreview() {
+  var cfg = getBannerFormData();
+  var wrap = document.getElementById('banner-live-preview');
+  if (!wrap) return;
+
+  // Calculate deadline from now + form values
+  var totalMs = ((cfg.days * 86400) + (cfg.hours * 3600) + (cfg.mins * 60) + cfg.secs) * 1000;
+  var deadline = Date.now() + totalMs;
+
+  if (!cfg.visible) {
+    wrap.innerHTML = '<div style="padding:20px 24px;text-align:center;font-size:13px;color:#6b7280;background:#f9fafb;">Banner is set to hidden — it will not appear on pages.</div>';
+    return;
+  }
+
+  wrap.innerHTML = buildBannerHTML(cfg, deadline);
+
+  // Run live countdown in preview
+  if (bannerPreviewTimer) clearInterval(bannerPreviewTimer);
+  bannerPreviewTimer = setInterval(function() {
+    var remaining = Math.max(0, deadline - Date.now());
+    var d = Math.floor(remaining / 86400000);
+    var h = Math.floor((remaining % 86400000) / 3600000);
+    var m = Math.floor((remaining % 3600000)  / 60000);
+    var s = Math.floor((remaining % 60000)    / 1000);
+    var dEl = document.getElementById('vprev-d');
+    var hEl = document.getElementById('vprev-h');
+    var mEl = document.getElementById('vprev-m');
+    var sEl = document.getElementById('vprev-s');
+    if (dEl) dEl.textContent = String(d).padStart(2,'0');
+    if (hEl) hEl.textContent = String(h).padStart(2,'0');
+    if (mEl) mEl.textContent = String(m).padStart(2,'0');
+    if (sEl) sEl.textContent = String(s).padStart(2,'0');
+    if (remaining <= 0) clearInterval(bannerPreviewTimer);
+  }, 1000);
+}
+
+function buildBannerHTML(cfg, deadline) {
+  var bg    = cfg.bg    || '#204280';
+  var fg    = cfg.fg    || '#ffffff';
+  var btnBg = cfg.btnBg || '#e63946';
+  var btnFg = cfg.btnFg || '#ffffff';
+
+  var remaining = Math.max(0, deadline - Date.now());
+  var d = Math.floor(remaining / 86400000);
+  var h = Math.floor((remaining % 86400000) / 3600000);
+  var m = Math.floor((remaining % 3600000)  / 60000);
+  var s = Math.floor((remaining % 60000)    / 1000);
+  function pad(n) { return String(n).padStart(2,'0'); }
+
+  var unitStyle = 'display:flex;flex-direction:column;align-items:center;gap:2px;';
+  var numStyle  = 'font-size:28px;font-weight:700;line-height:1;font-family:\'Poppins\',sans-serif;color:' + fg + ';';
+  var lblStyle  = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;opacity:0.75;font-family:\'Poppins\',sans-serif;color:' + fg + ';';
+  var sepStyle  = 'font-size:24px;font-weight:700;line-height:1;padding:0 4px;margin-top:-4px;color:' + fg + ';opacity:0.6;';
+
+  var html = '<div style="background:' + bg + ';padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">';
+
+  // Left: title + sub
+  html += '<div style="flex:1;min-width:180px;">';
+  if (cfg.title) html += '<div style="font-family:\'Poppins\',sans-serif;font-size:15px;font-weight:600;color:' + fg + ';line-height:1.3;">' + cfg.title + '</div>';
+  if (cfg.sub)   html += '<div style="font-family:\'Poppins\',sans-serif;font-size:12px;color:' + fg + ';opacity:0.8;margin-top:3px;">' + cfg.sub + '</div>';
+  html += '</div>';
+
+  // Centre: countdown
+  html += '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">';
+  html += '<div style="' + unitStyle + '"><span id="vprev-d" style="' + numStyle + '">' + pad(d) + '</span><span style="' + lblStyle + '">Days</span></div>';
+  html += '<span style="' + sepStyle + '">:</span>';
+  html += '<div style="' + unitStyle + '"><span id="vprev-h" style="' + numStyle + '">' + pad(h) + '</span><span style="' + lblStyle + '">Hours</span></div>';
+  html += '<span style="' + sepStyle + '">:</span>';
+  html += '<div style="' + unitStyle + '"><span id="vprev-m" style="' + numStyle + '">' + pad(m) + '</span><span style="' + lblStyle + '">Mins</span></div>';
+  html += '<span style="' + sepStyle + '">:</span>';
+  html += '<div style="' + unitStyle + '"><span id="vprev-s" style="' + numStyle + '">' + pad(s) + '</span><span style="' + lblStyle + '">Secs</span></div>';
+  html += '</div>';
+
+  // Right: CTA
+  if (cfg.ctaText) {
+    html += '<div style="flex-shrink:0;">';
+    html += '<a href="' + (cfg.ctaUrl || '#') + '" style="display:inline-block;padding:10px 22px;background:' + btnBg + ';color:' + btnFg + ';font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:600;border-radius:6px;text-decoration:none;white-space:nowrap;">' + cfg.ctaText + '</a>';
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+async function publishBanner() {
+  var statusEl = document.getElementById('banner-pub-status');
+  statusEl.style.color = '#6b7280';
+  statusEl.textContent = 'Publishing...';
+
+  var cfg = getBannerFormData();
+
+  // Convert days/hours/mins/secs into an absolute deadline timestamp
+  var totalMs = ((cfg.days * 86400) + (cfg.hours * 3600) + (cfg.mins * 60) + cfg.secs) * 1000;
+  cfg.deadline = Date.now() + totalMs;
+
+  // Save locally for next time the CMS is opened
+  localStorage.setItem(BANNER_LS_KEY, JSON.stringify(cfg));
+
+  try {
+    // Call our own secure proxy — token never touches the browser
+    var resp = await fetch('/api/publish-banner', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg)
+    });
+
+    var data = await resp.json();
+
+    if (!resp.ok) {
+      statusEl.style.color = '#e63946';
+      statusEl.textContent = 'Error: ' + (data.error || resp.status);
+      return;
+    }
+
+    statusEl.style.color = '#16a34a';
+    statusEl.textContent = 'Published! All pages with the inject script will update automatically.';
+    setTimeout(function() { statusEl.textContent = ''; }, 5000);
+
+    updateInjectScript(data.rawUrl);
+
+  } catch(e) {
+    statusEl.style.color = '#e63946';
+    statusEl.textContent = 'Network error: ' + e.message;
+  }
+}
+
+function updateInjectScript(rawUrl) {
+  var url = rawUrl || localStorage.getItem('vls_banner_raw_url') || '';
+  if (rawUrl) localStorage.setItem('vls_banner_raw_url', rawUrl);
+
+  var el = document.getElementById('banner-inject-code');
+  if (!el) return;
+
+  if (!url) {
+    el.textContent = '// Save your GitHub credentials and publish the banner first.\n// The inject script will appear here once the Gist is connected.';
+    return;
+  }
+
+  // Build the inject script — this is what gets pasted into Zenler
+  // Written as a string with no closing script tag inside
+  var lines = [];
+  lines.push('(function(){');
+  lines.push('  var BANNER_URL="' + url + '";');
+  lines.push('  var CACHE_KEY="vlsBannerCfg";');
+  lines.push('  var CACHE_TTL=60000;');
+  lines.push('  function injectStyles(){');
+  lines.push('    if(document.getElementById("vls-banner-style"))return;');
+  lines.push('    var s=document.createElement("style");');
+  lines.push('    s.id="vls-banner-style";');
+  lines.push('    s.textContent=[');
+  lines.push('      "#vls-banner{position:relative;width:100%;z-index:9999;box-sizing:border-box;}",');
+  lines.push('      "#vls-banner *{box-sizing:border-box;}",');
+  lines.push('      "#vls-banner-inner{display:flex;align-items:center;justify-content:space-between;');
+  lines.push('        padding:12px 24px;gap:16px;flex-wrap:wrap;}",');
+  lines.push('      "#vls-banner-msg{flex:1;min-width:160px;}",');
+  lines.push('      "#vls-banner-title{font-size:15px;font-weight:600;line-height:1.3;',
+             '        font-family:Poppins,sans-serif;}",');
+  lines.push('      "#vls-banner-sub{font-size:12px;opacity:0.8;margin-top:3px;',
+             '        font-family:Poppins,sans-serif;}",');
+  lines.push('      "#vls-banner-timer{display:flex;align-items:center;gap:6px;flex-shrink:0;}",');
+  lines.push('      ".vls-unit{display:flex;flex-direction:column;align-items:center;gap:2px;}",');
+  lines.push('      ".vls-num{font-size:28px;font-weight:700;line-height:1;',
+             '        font-family:Poppins,sans-serif;}",');
+  lines.push('      ".vls-lbl{font-size:10px;font-weight:500;text-transform:uppercase;',
+             '        letter-spacing:0.08em;opacity:0.75;font-family:Poppins,sans-serif;}",');
+  lines.push('      ".vls-sep{font-size:24px;font-weight:700;line-height:1;padding:0 4px;',
+             '        margin-top:-4px;opacity:0.6;}",');
+  lines.push('      "#vls-banner-cta a{display:inline-block;padding:10px 22px;font-size:14px;',
+             '        font-weight:600;border-radius:6px;text-decoration:none;',
+             '        font-family:Poppins,sans-serif;white-space:nowrap;flex-shrink:0;}",');
+  lines.push('      "@media(max-width:600px){#vls-banner-inner{flex-direction:column;text-align:center;}',
+             '        #vls-banner-msg{min-width:0;width:100%;} }"');
+  lines.push('    ].join("");');
+  lines.push('    document.head.appendChild(s);');
+  lines.push('  }');
+  lines.push('  function pad(n){return String(n).padStart(2,"0");}');
+  lines.push('  function renderBanner(cfg){');
+  lines.push('    if(!cfg.visible){');
+  lines.push('      var b=document.getElementById("vls-banner");');
+  lines.push('      if(b)b.style.display="none";');
+  lines.push('      return;');
+  lines.push('    }');
+  lines.push('    injectStyles();');
+  lines.push('    var banner=document.getElementById("vls-banner");');
+  lines.push('    if(!banner){');
+  lines.push('      banner=document.createElement("div");');
+  lines.push('      banner.id="vls-banner";');
+  lines.push('      document.body.insertBefore(banner,document.body.firstChild);');
+  lines.push('    }');
+  lines.push('    banner.style.background=cfg.bg||"#204280";');
+  lines.push('    banner.style.color=cfg.fg||"#fff";');
+  lines.push('    banner.innerHTML=');
+  lines.push('      \'<div id="vls-banner-inner">\'');
+  lines.push('      +\'<div id="vls-banner-msg">\'');
+  lines.push('      +(cfg.title?\'<div id="vls-banner-title" style="color:\'+( cfg.fg||"#fff")+\'">\'+cfg.title+"<\\/div>":"")');
+  lines.push('      +(cfg.sub?\'<div id="vls-banner-sub" style="color:\'+(cfg.fg||"#fff")+\'">\'+cfg.sub+"<\\/div>":"")');
+  lines.push('      +"<\\/div>"');
+  lines.push('      +\'<div id="vls-banner-timer" style="color:\'+(cfg.fg||"#fff")+\'">\'');
+  lines.push('      +\'<div class="vls-unit"><span class="vls-num" id="vls-d">00</span><span class="vls-lbl">Days</span></div>\'');
+  lines.push('      +\'<span class="vls-sep">:</span>\'');
+  lines.push('      +\'<div class="vls-unit"><span class="vls-num" id="vls-h">00</span><span class="vls-lbl">Hours</span></div>\'');
+  lines.push('      +\'<span class="vls-sep">:</span>\'');
+  lines.push('      +\'<div class="vls-unit"><span class="vls-num" id="vls-m">00</span><span class="vls-lbl">Mins</span></div>\'');
+  lines.push('      +\'<span class="vls-sep">:</span>\'');
+  lines.push('      +\'<div class="vls-unit"><span class="vls-num" id="vls-s">00</span><span class="vls-lbl">Secs</span></div>\'');
+  lines.push('      +"<\\/div>"');
+  lines.push('      +(cfg.ctaText?\'<div id="vls-banner-cta"><a href="\'+(cfg.ctaUrl||"#")+\'" style="background:\'+(cfg.btnBg||"#e63946")+\';color:\'+(cfg.btnFg||"#fff")+\';">\'+cfg.ctaText+"<\\/a><\\/div>":"")');
+  lines.push('      +"<\\/div>";');
+  lines.push('    startCountdown(cfg.deadline||0);');
+  lines.push('  }');
+  lines.push('  var _timer=null;');
+  lines.push('  function startCountdown(deadline){');
+  lines.push('    if(_timer)clearInterval(_timer);');
+  lines.push('    function tick(){');
+  lines.push('      var r=Math.max(0,deadline-Date.now());');
+  lines.push('      var dEl=document.getElementById("vls-d");');
+  lines.push('      var hEl=document.getElementById("vls-h");');
+  lines.push('      var mEl=document.getElementById("vls-m");');
+  lines.push('      var sEl=document.getElementById("vls-s");');
+  lines.push('      if(!dEl)return;');
+  lines.push('      dEl.textContent=pad(Math.floor(r/86400000));');
+  lines.push('      hEl.textContent=pad(Math.floor((r%86400000)/3600000));');
+  lines.push('      mEl.textContent=pad(Math.floor((r%3600000)/60000));');
+  lines.push('      sEl.textContent=pad(Math.floor((r%60000)/1000));');
+  lines.push('      if(r<=0)clearInterval(_timer);');
+  lines.push('    }');
+  lines.push('    tick();');
+  lines.push('    _timer=setInterval(tick,1000);');
+  lines.push('  }');
+  lines.push('  function loadConfig(){');
+  lines.push('    var cached=null;');
+  lines.push('    try{');
+  lines.push('      var c=JSON.parse(sessionStorage.getItem(CACHE_KEY)||"null");');
+  lines.push('      if(c&&c._ts&&Date.now()-c._ts<CACHE_TTL)cached=c;');
+  lines.push('    }catch(e){}');
+  lines.push('    if(cached){renderBanner(cached);return;}');
+  lines.push('    fetch(BANNER_URL+"?t="+Date.now())');
+  lines.push('      .then(function(r){return r.json();})');
+  lines.push('      .then(function(cfg){');
+  lines.push('        cfg._ts=Date.now();');
+  lines.push('        try{sessionStorage.setItem(CACHE_KEY,JSON.stringify(cfg));}catch(e){}');
+  lines.push('        renderBanner(cfg);');
+  lines.push('      })');
+  lines.push('      .catch(function(e){console.warn("VLS Banner: failed to load config",e);});');
+  lines.push('  }');
+  lines.push('  if(document.readyState==="loading"){');
+  lines.push('    document.addEventListener("DOMContentLoaded",loadConfig);');
+  lines.push('  }else{loadConfig();}');
+  lines.push('})();');
+
+  el.textContent = lines.join('\n');
+}
+
+// Extend DOMContentLoaded to also init banner
 
 </script>
 </body>
