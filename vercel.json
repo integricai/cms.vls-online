@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/publish-banner.js": {
-      "runtime": "edge"
-    }
-  },
   "headers": [
     {
       "source": "/api/(.*)",
