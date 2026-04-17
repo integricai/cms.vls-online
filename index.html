@@ -155,6 +155,24 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 .tab-pill span{cursor:pointer}
 .tab-pill-del{width:16px;height:16px;border-radius:50%;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:11px;padding:0;display:inline-flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0}
 .tab-pill-del:hover{background:#fee2e2;color:var(--red)}
+
+/* ── Dropdown nav ── */
+.nav-dropdown{position:relative;display:inline-flex;align-items:center;}
+.nav-dd-arrow{font-size:9px;margin-left:5px;display:inline-block;transition:transform .15s;}
+.nav-dropdown.open .nav-dd-arrow{transform:rotate(180deg);}
+.nav-dd-menu{position:absolute;top:52px;left:0;background:#fff;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);min-width:170px;z-index:50;display:none;padding:4px 0;}
+.nav-dd-menu.open{display:block;}
+.nav-dd-item{padding:9px 18px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap;display:block;}
+.nav-dd-item:hover{background:#f9fafb;color:var(--text);}
+.nav-dd-item.active{color:var(--purple);font-weight:600;}
+
+/* ── FAQ screen ── */
+.faq-block{border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:6px;}
+.faq-block-hd{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f9fafb;cursor:pointer;user-select:none;}
+.faq-block-num{font-size:11px;font-weight:700;color:#fff;background:var(--purple);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.faq-block-q{font-size:12px;font-weight:600;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.faq-block-body{padding:12px;display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--border);}
+.faq-block-body.collapsed{display:none;}
 </style>
 </head>
 <body>
@@ -177,11 +195,18 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 
 <div class="topbar">
   <span class="topbar-logo">VLS Online CMS</span>
-  <div class="nav-tab active" id="nav-intro" onclick="switchScreen('intro')">1 · Course Introduction</div>
-  <div class="nav-tab" id="nav-desc" onclick="switchScreen('desc')">2 · Course Description</div>
-  <div class="nav-tab" id="nav-tabs" onclick="switchScreen('tabs')">3 · Course Tabs</div>
-  <div class="nav-tab" id="nav-banner" onclick="switchScreen('banner')">4 · Banner</div>
-  <div class="nav-tab hidden" id="nav-events" onclick="switchScreen('events')">5 · Events</div>
+  <!-- Course dropdown -->
+  <div class="nav-dropdown" id="nav-course-dd">
+    <div class="nav-tab active" id="nav-course" onclick="toggleCourseDropdown(event)">Course <span class="nav-dd-arrow">▾</span></div>
+    <div class="nav-dd-menu" id="nav-course-menu">
+      <div class="nav-dd-item active" id="nav-intro" onclick="switchScreen('intro')">Introduction</div>
+      <div class="nav-dd-item" id="nav-desc" onclick="switchScreen('desc')">Description</div>
+      <div class="nav-dd-item" id="nav-tabs" onclick="switchScreen('tabs')">Tabs</div>
+    </div>
+  </div>
+  <div class="nav-tab" id="nav-faq" onclick="switchScreen('faq')">FAQs</div>
+  <div class="nav-tab hidden" id="nav-banner" onclick="switchScreen('banner')">Banner</div>
+  <div class="nav-tab hidden" id="nav-events" onclick="switchScreen('events')">Events</div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
 </div>
 
@@ -510,6 +535,42 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 
 </div>
 
+<!-- ═══════════════════════════════════════
+     SCREEN — FAQ
+═══════════════════════════════════════ -->
+<div id="screen-faq" class="screen">
+
+  <!-- Left: FAQ editor -->
+  <div class="form-panel" style="width:460px;">
+    <div class="form-inner">
+      <div class="section-label">FAQ items</div>
+      <div id="faq-list">
+        <div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No FAQs yet. Click + Add FAQ to get started.</div>
+      </div>
+      <button class="btn-add-block" onclick="addFaqItem()">+ Add FAQ</button>
+      <button class="btn-gen" onclick="generateFaq()">&#x25B6; Generate</button>
+    </div>
+  </div>
+
+  <!-- Right: preview + code -->
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div id="faq-ot-preview" class="out-tab active" onclick="switchFaqOut('preview')">Preview</div>
+      <div id="faq-ot-code" class="out-tab" onclick="switchFaqOut('code')">Code</div>
+    </div>
+    <div class="output-body">
+      <div id="faq-preview-wrap" class="preview-wrap">
+        <div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Add FAQ items and click Generate to preview.</div>
+      </div>
+      <div id="faq-code-wrap" style="display:none;position:relative;">
+        <button class="btn-copy" style="position:absolute;top:12px;right:12px;" onclick="doCopy('faq-code-box',this)">Copy</button>
+        <div class="code-box" id="faq-code-box" style="min-height:300px;"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
 </div><!-- .app -->
 
 <!-- ── Event embed code modal ── -->
@@ -563,6 +624,34 @@ function applyRole(role) {
     }
   }
 }
+
+// ── Course dropdown ────────────────────────────────────────────
+
+function toggleCourseDropdown(e) {
+  if (e) e.stopPropagation();
+  var dd = document.getElementById('nav-course-dd');
+  var menu = document.getElementById('nav-course-menu');
+  var isOpen = dd.classList.contains('open');
+  if (isOpen) {
+    dd.classList.remove('open');
+    menu.classList.remove('open');
+  } else {
+    dd.classList.add('open');
+    menu.classList.add('open');
+  }
+}
+
+function closeCourseDropdown() {
+  var dd = document.getElementById('nav-course-dd');
+  var menu = document.getElementById('nav-course-menu');
+  if (dd) dd.classList.remove('open');
+  if (menu) menu.classList.remove('open');
+}
+
+document.addEventListener('click', function(e) {
+  var dd = document.getElementById('nav-course-dd');
+  if (dd && !dd.contains(e.target)) closeCourseDropdown();
+});
 
 function globalCheckAuth() {
   var role = sessionStorage.getItem(AUTH_ROLE_KEY);
@@ -643,13 +732,27 @@ function doCopy(id, btn) {
 
 // ── Screen switching ───────────────────────────────────────────
 
+var COURSE_SCREENS = ['intro', 'desc', 'tabs'];
+
 function switchScreen(name) {
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
   document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.nav-dd-item').forEach(function(t) { t.classList.remove('active'); });
+
   document.getElementById('screen-' + name).classList.add('active');
-  var tab = document.getElementById('nav-' + name);
-  if (tab) tab.classList.add('active');
+
+  if (COURSE_SCREENS.indexOf(name) >= 0) {
+    document.getElementById('nav-course').classList.add('active');
+    var item = document.getElementById('nav-' + name);
+    if (item) item.classList.add('active');
+  } else {
+    var tab = document.getElementById('nav-' + name);
+    if (tab) tab.classList.add('active');
+  }
+
+  closeCourseDropdown();
   if (name === 'events') eventsOnOpen();
+  if (name === 'faq') faqOnOpen();
 }
 
 function switchOut(screen, mode) {
@@ -2286,6 +2389,282 @@ function buildEvtEmbedCode(evtId, rawUrl) {
   L.push('})();');
   L.push('<\/script>');
   return L.join('\n');
+}
+
+// ── SCREEN: FAQ ────────────────────────────────────────────────
+
+var faqItems = [];
+var faqIdCounter = 0;
+
+function faqOnOpen() {
+  if (faqItems.length > 0) generateFaq();
+}
+
+function addFaqItem() {
+  var id = 'fq' + (++faqIdCounter);
+  faqItems.push({ id: id, type: 'paragraph' });
+  renderFaqBlocks();
+  setTimeout(function() {
+    var el = document.getElementById('faq-block-' + id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 50);
+}
+
+function removeFaqItem(id) {
+  faqItems = faqItems.filter(function(f) { return f.id !== id; });
+  renderFaqBlocks();
+  generateFaq();
+}
+
+function renderFaqBlocks() {
+  var list = document.getElementById('faq-list');
+  if (!list) return;
+  if (!faqItems.length) {
+    list.innerHTML = '<div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No FAQs yet. Click + Add FAQ to get started.</div>';
+    return;
+  }
+  list.innerHTML = faqItems.map(function(f, idx) { return buildFaqBlockHtml(f, idx + 1); }).join('');
+}
+
+function buildFaqBlockHtml(f, num) {
+  var id = f.id;
+  var typeOpts = [
+    ['paragraph',       'Paragraph'],
+    ['heading-para',    'Heading + Paragraph'],
+    ['bullets',         'Bullet list'],
+    ['heading-bullets', 'Heading + Bullet list']
+  ].map(function(o) {
+    return '<option value="' + o[0] + '"' + (f.type === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+  }).join('');
+
+  return '<div class="faq-block" id="faq-block-' + id + '">'
+    + '<div class="faq-block-hd" onclick="toggleFaqBlock(\'' + id + '\')">'
+    +   '<span class="faq-block-num">' + num + '</span>'
+    +   '<span class="faq-block-q" id="faq-qlbl-' + id + '">' + (f.question ? xH(f.question) : '<em style="color:var(--muted)">Untitled question</em>') + '</span>'
+    +   '<button class="btn-sm danger" onclick="removeFaqItem(\'' + id + '\');event.stopPropagation()">Remove</button>'
+    + '</div>'
+    + '<div class="faq-block-body" id="faq-body-' + id + '">'
+    +   '<div class="field"><label>Question</label><input type="text" id="faq-q-' + id + '" value="' + xA(f.question || '') + '" placeholder="e.g. What is included in the course?" oninput="faqUpdateLabel(\'' + id + '\')"></div>'
+    +   '<div class="field"><label>Answer type</label><select id="faq-type-' + id + '" onchange="faqChangeType(\'' + id + '\')">' + typeOpts + '</select></div>'
+    +   '<div id="faq-answer-' + id + '">' + buildFaqAnswerHtml(id, f.type || 'paragraph', f) + '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+function buildFaqAnswerHtml(id, type, f) {
+  var html = '';
+  if (type === 'heading-para' || type === 'heading-bullets') {
+    html += '<div class="field"><label>Heading</label><input type="text" id="faq-h-' + id + '" value="' + xA((f && f.heading) || '') + '" placeholder="Answer heading"></div>';
+  }
+  if (type === 'paragraph' || type === 'heading-para') {
+    html += '<div class="field"><label>Paragraph</label><textarea id="faq-p-' + id + '" rows="3" placeholder="Enter answer text...">' + xH((f && f.para) || '') + '</textarea></div>';
+  }
+  if (type === 'bullets' || type === 'heading-bullets') {
+    var items = (f && f.items && f.items.length) ? f.items : [''];
+    var rows = items.map(function(v) {
+      return '<div class="feature-item"><input type="text" value="' + xA(v) + '" placeholder="Bullet item"><button class="btn-icon" onclick="this.parentNode.remove()" title="Remove">&#x2715;</button></div>';
+    }).join('');
+    html += '<div class="field"><label>Bullet items</label>'
+          + '<div id="faq-items-' + id + '" style="display:flex;flex-direction:column;gap:6px;">' + rows + '</div>'
+          + '<button class="btn-add-block" style="margin-top:4px" onclick="faqAddBullet(\'' + id + '\')">+ Add bullet</button></div>';
+  }
+  return html;
+}
+
+function toggleFaqBlock(id) {
+  var body = document.getElementById('faq-body-' + id);
+  if (body) body.classList.toggle('collapsed');
+}
+
+function faqUpdateLabel(id) {
+  var q = document.getElementById('faq-q-' + id);
+  var lbl = document.getElementById('faq-qlbl-' + id);
+  if (q && lbl) lbl.innerHTML = q.value.trim() ? xH(q.value.trim()) : '<em style="color:var(--muted)">Untitled question</em>';
+}
+
+function faqChangeType(id) {
+  var type = document.getElementById('faq-type-' + id).value;
+  var div  = document.getElementById('faq-answer-' + id);
+  if (div) div.innerHTML = buildFaqAnswerHtml(id, type, null);
+}
+
+function faqAddBullet(id) {
+  var list = document.getElementById('faq-items-' + id);
+  if (!list) return;
+  var d = document.createElement('div');
+  d.className = 'feature-item';
+  d.innerHTML = '<input type="text" placeholder="Bullet item"><button class="btn-icon" onclick="this.parentNode.remove()" title="Remove">&#x2715;</button>';
+  list.appendChild(d);
+}
+
+function collectFaqData() {
+  return faqItems.map(function(f) {
+    var id   = f.id;
+    var type = (document.getElementById('faq-type-' + id) || {}).value || 'paragraph';
+    var q    = ((document.getElementById('faq-q-' + id) || {}).value || '').trim();
+    var h    = ((document.getElementById('faq-h-' + id) || {}).value || '').trim();
+    var p    = ((document.getElementById('faq-p-' + id) || {}).value || '').trim();
+    var items = [];
+    var itemsEl = document.getElementById('faq-items-' + id);
+    if (itemsEl) {
+      itemsEl.querySelectorAll('input').forEach(function(inp) {
+        if (inp.value.trim()) items.push(inp.value.trim());
+      });
+    }
+    return { id: id, type: type, question: q, heading: h, para: p, items: items };
+  }).filter(function(f) { return f.question; });
+}
+
+function generateFaq() {
+  var items = collectFaqData();
+  renderFaqPreview(items);
+  renderFaqCode(items);
+}
+
+function faqAnswerInnerHtml(f) {
+  var e = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var h = '';
+  var HS  = 'font-family:Poppins,sans-serif;font-size:16px;font-weight:700;color:#204280;margin:0 0 8px;text-align:left;';
+  var PS  = 'font-family:Poppins,sans-serif;font-size:15px;color:#374151;line-height:1.7;margin:0 0 8px;text-align:left;';
+  var ULS = 'padding-left:0;list-style:none;margin:0 0 4px;';
+  var LIS = 'font-family:Poppins,sans-serif;font-size:15px;color:#374151;line-height:1.7;display:flex;gap:8px;align-items:flex-start;padding:2px 0;text-align:left;';
+  if (f.heading) h += '<h3 style="' + HS + '">' + e(f.heading) + '</h3>';
+  if (f.para)    h += '<p style="' + PS + '">' + e(f.para) + '</p>';
+  if (f.items && f.items.length) {
+    h += '<ul style="' + ULS + '">';
+    f.items.forEach(function(item) {
+      h += '<li style="' + LIS + '"><span style="color:#534AB7;font-weight:700;flex-shrink:0;margin-top:2px;">•</span>' + e(item) + '</li>';
+    });
+    h += '</ul>';
+  }
+  return h;
+}
+
+function faqAnswerPlainText(f) {
+  var parts = [];
+  if (f.heading) parts.push(f.heading);
+  if (f.para)    parts.push(f.para);
+  if (f.items && f.items.length) parts.push(f.items.join('. '));
+  return parts.join(' ');
+}
+
+function renderFaqPreview(items) {
+  var wrap = document.getElementById('faq-preview-wrap');
+  if (!wrap) return;
+  if (!items.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Add FAQ items and click Generate to preview.</div>';
+    return;
+  }
+  var html = '<div style="max-width:800px;width:100%;font-family:Poppins,sans-serif;">';
+  items.forEach(function(f, i) {
+    var bid = 'fqprev' + i;
+    html += '<div style="border-bottom:1.5px solid #e5e7eb;' + (i === 0 ? 'border-top:1.5px solid #e5e7eb;' : '') + '">';
+    html += '<button style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;background:none;border:none;cursor:pointer;font-family:Poppins,sans-serif;font-size:16px;font-weight:600;color:#1a1a1a;"'
+          + ' onclick="(function(btn){'
+          + 'var a=document.getElementById(\'' + bid + '\');'
+          + 'var svg=btn.querySelector(\'svg\');'
+          + 'var open=a.style.display===\'block\';'
+          + 'a.style.display=open?\'none\':\'block\';'
+          + 'svg.style.transform=open?\'\':\' rotate(180deg)\';'
+          + '})(this)">'
+          + '<span style="text-align:left;">' + xH(f.question) + '</span>'
+          + '<svg style="width:18px;height:18px;flex-shrink:0;transition:transform .2s;" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>'
+          + '</button>';
+    html += '<div id="' + bid + '" style="display:none;padding:0 0 16px;">' + faqAnswerInnerHtml(f) + '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+function renderFaqCode(items) {
+  var box = document.getElementById('faq-code-box');
+  if (!box) return;
+  box.textContent = buildFaqCode(items);
+}
+
+function buildFaqCode(items) {
+  if (!items.length) return '<!-- Add FAQ items and click Generate -->';
+
+  var jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map(function(f) {
+      return {
+        '@type': 'Question',
+        name: f.question,
+        acceptedAnswer: { '@type': 'Answer', text: faqAnswerPlainText(f) }
+      };
+    })
+  };
+
+  var uid = 'vlsfaq' + Math.random().toString(36).slice(2, 7);
+  var L = [];
+
+  L.push('<script type="application/ld+json">');
+  L.push(JSON.stringify(jsonLd, null, 2));
+  L.push('<\/script>');
+  L.push('');
+  L.push('<style>');
+  L.push('.' + uid + '{font-family:Poppins,sans-serif;max-width:800px;width:100%;}');
+  L.push('.' + uid + '-item{border-bottom:1.5px solid #e5e7eb;}');
+  L.push('.' + uid + '-item:first-child{border-top:1.5px solid #e5e7eb;}');
+  L.push('.' + uid + '-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;background:none;border:none;cursor:pointer;font-family:Poppins,sans-serif;font-size:16px;font-weight:600;color:#1a1a1a;}');
+  L.push('.' + uid + '-btn:hover{color:#534AB7;}');
+  L.push('.' + uid + '-ico{width:18px;height:18px;flex-shrink:0;transition:transform .2s;stroke:#534AB7;fill:none;stroke-width:2.5;}');
+  L.push('.' + uid + '-btn[aria-expanded="true"] .' + uid + '-ico{transform:rotate(180deg);}');
+  L.push('.' + uid + '-ans{display:none;padding:0 0 16px;}');
+  L.push('.' + uid + '-ans.open{display:block;}');
+  L.push('</style>');
+  L.push('');
+  L.push('<div class="' + uid + '">');
+  items.forEach(function(f) {
+    L.push('  <div class="' + uid + '-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">');
+    L.push('    <button class="' + uid + '-btn" aria-expanded="false" onclick="' + uid + 'T(this)">');
+    L.push('      <span itemprop="name">' + xH(f.question) + '</span>');
+    L.push('      <svg class="' + uid + '-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>');
+    L.push('    </button>');
+    L.push('    <div class="' + uid + '-ans" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">');
+    L.push('      <div itemprop="text">');
+    L.push('        ' + faqAnswerInnerHtml(f));
+    L.push('      </div>');
+    L.push('    </div>');
+    L.push('  </div>');
+  });
+  L.push('</div>');
+  L.push('');
+  L.push('<script>');
+  L.push('(function(){');
+  L.push('  function ' + uid + 'T(btn){');
+  L.push('    var open=btn.getAttribute("aria-expanded")==="true";');
+  L.push('    var wrap=btn.closest(".' + uid + '");');
+  L.push('    wrap.querySelectorAll(".' + uid + '-btn").forEach(function(b){b.setAttribute("aria-expanded","false");});');
+  L.push('    wrap.querySelectorAll(".' + uid + '-ans").forEach(function(a){a.classList.remove("open");});');
+  L.push('    if(!open){btn.setAttribute("aria-expanded","true");btn.nextElementSibling.classList.add("open");}');
+  L.push('  }');
+  L.push('  window.' + uid + 'T=' + uid + 'T;');
+  L.push('})();');
+  L.push('<\/script>');
+
+  return L.join('\n');
+}
+
+function switchFaqOut(mode) {
+  var pw = document.getElementById('faq-preview-wrap');
+  var cw = document.getElementById('faq-code-wrap');
+  var tp = document.getElementById('faq-ot-preview');
+  var tc = document.getElementById('faq-ot-code');
+  if (mode === 'preview') {
+    pw.style.display = '';
+    cw.style.display = 'none';
+    tp.classList.add('active');
+    tc.classList.remove('active');
+  } else {
+    pw.style.display = 'none';
+    cw.style.display = '';
+    tc.classList.add('active');
+    tp.classList.remove('active');
+  }
 }
 
 </script>
