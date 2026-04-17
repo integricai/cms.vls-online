@@ -1,10 +1,13 @@
 import { createHash } from 'crypto';
 
-function checkUsers(envVar, email, hash) {
-  let users = {};
-  try { users = JSON.parse(process.env[envVar] || '{}'); } catch(e) { return false; }
-  const stored = users[email];
-  return stored && stored === hash;
+function parseUsers(envVar) {
+  const raw = process.env[envVar];
+  if (!raw) return { users: {}, error: null };
+  try {
+    return { users: JSON.parse(raw), error: null };
+  } catch(e) {
+    return { users: null, error: `${envVar} env var is not valid JSON` };
+  }
 }
 
 export default async function handler(req, res) {
@@ -27,10 +30,16 @@ export default async function handler(req, res) {
   const key = email.toLowerCase().trim();
   const hash = createHash('sha256').update(password).digest('hex');
 
-  if (checkUsers('ADMIN_AUTH_USERS', key, hash)) {
+  const admin = parseUsers('ADMIN_AUTH_USERS');
+  if (admin.error) return res.status(500).json({ error: `Server misconfigured — ${admin.error}` });
+
+  const regular = parseUsers('AUTH_USERS');
+  if (regular.error) return res.status(500).json({ error: `Server misconfigured — ${regular.error}` });
+
+  if (admin.users[key] && admin.users[key] === hash) {
     return res.status(200).json({ ok: true, role: 'admin' });
   }
-  if (checkUsers('AUTH_USERS', key, hash)) {
+  if (regular.users[key] && regular.users[key] === hash) {
     return res.status(200).json({ ok: true, role: 'user' });
   }
 
