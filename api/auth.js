@@ -1,8 +1,11 @@
-// Vercel serverless function — verifies banner credentials against AUTH_USERS env var
-// AUTH_USERS format (set in Vercel dashboard): {"email@example.com":"sha256hash", ...}
-// Generate a password hash: https://emn178.github.io/online-tools/sha256.html
-
 import { createHash } from 'crypto';
+
+function checkUsers(envVar, email, hash) {
+  let users = {};
+  try { users = JSON.parse(process.env[envVar] || '{}'); } catch(e) { return false; }
+  const stored = users[email];
+  return stored && stored === hash;
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -21,22 +24,15 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Email and password required' });
   }
 
-  let users = {};
-  try {
-    users = JSON.parse(process.env.AUTH_USERS || '{}');
-  } catch(e) {
-    return res.status(500).json({ error: 'Server misconfigured — AUTH_USERS env var is not valid JSON' });
-  }
-
-  const storedHash = users[email.toLowerCase().trim()];
-  if (!storedHash) {
-    return res.status(401).json({ error: 'Invalid email or password' });
-  }
-
+  const key = email.toLowerCase().trim();
   const hash = createHash('sha256').update(password).digest('hex');
-  if (hash !== storedHash) {
-    return res.status(401).json({ error: 'Invalid email or password' });
+
+  if (checkUsers('ADMIN_AUTH_USERS', key, hash)) {
+    return res.status(200).json({ ok: true, role: 'admin' });
+  }
+  if (checkUsers('AUTH_USERS', key, hash)) {
+    return res.status(200).json({ ok: true, role: 'user' });
   }
 
-  return res.status(200).json({ ok: true });
+  return res.status(401).json({ error: 'Invalid email or password' });
 }

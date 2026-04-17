@@ -70,10 +70,10 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 .ted-section{display:none;flex-direction:column;gap:14px}
 .ted-section.active{display:flex}
 
-/* ── Banner auth gate ── */
-#banner-auth-gate{position:absolute;inset:0;background:#f4f6f9;display:flex;align-items:center;justify-content:center;z-index:10;font-family:'Poppins',sans-serif}
-#banner-auth-gate.hidden{display:none}
-#screen-banner{position:relative}
+/* ── Global auth gate ── */
+#global-auth-gate{position:fixed;inset:0;background:#f4f6f9;display:flex;align-items:center;justify-content:center;z-index:100;font-family:'Poppins',sans-serif}
+#global-auth-gate.hidden{display:none}
+.nav-tab.hidden{display:none}
 .pw-card{background:#fff;border:1.5px solid #e2e6ed;border-radius:12px;padding:40px 36px;width:360px;display:flex;flex-direction:column;gap:20px;align-items:center}
 .pw-logo{font-size:16px;font-weight:700;color:#204280;letter-spacing:-0.01em}
 .pw-title{font-size:15px;font-weight:600;color:#1a1a1a;text-align:center}
@@ -96,6 +96,19 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 <body>
 
 
+<!-- Global auth gate -->
+<div id="global-auth-gate">
+  <div class="pw-card">
+    <div class="pw-logo">VLS Online CMS</div>
+    <div class="pw-title">Sign in</div>
+    <div class="pw-sub">Enter your credentials to access the CMS</div>
+    <input class="pw-input" type="email" id="global-email" placeholder="Email address" autocomplete="email">
+    <input class="pw-input" type="password" id="global-password" placeholder="Password" onkeydown="if(event.key==='Enter')globalLogin()">
+    <button class="pw-btn" onclick="globalLogin()">Sign in</button>
+    <div class="pw-error" id="global-auth-error"></div>
+  </div>
+</div>
+
 <div class="app">
 
 <div class="topbar">
@@ -103,7 +116,8 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
   <div class="nav-tab active" onclick="switchScreen('intro')">1 · Course Introduction</div>
   <div class="nav-tab" onclick="switchScreen('desc')">2 · Course Description</div>
   <div class="nav-tab" onclick="switchScreen('tabs')">3 · Course Tabs</div>
-  <div class="nav-tab" onclick="switchScreen('banner')">4 · Banner</div>
+  <div class="nav-tab" id="nav-banner" onclick="switchScreen('banner')">4 · Banner</div>
+  <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
 </div>
 
 <!-- ═══════════════════════════════════════
@@ -221,19 +235,6 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 ═══════════════════════════════════════ -->
 <div id="screen-banner" class="screen">
 
-  <!-- Auth gate — only shown when not signed in -->
-  <div id="banner-auth-gate">
-    <div class="pw-card">
-      <div class="pw-logo">VLS Online CMS</div>
-      <div class="pw-title">Banner access</div>
-      <div class="pw-sub">Sign in to edit and publish the banner</div>
-      <input class="pw-input" type="email" id="banner-email" placeholder="Email address" autocomplete="email">
-      <input class="pw-input" type="password" id="banner-password" placeholder="Password" onkeydown="if(event.key==='Enter')bannerLogin()">
-      <button class="pw-btn" onclick="bannerLogin()">Sign in</button>
-      <div class="pw-error" id="banner-auth-error"></div>
-    </div>
-  </div>
-
   <div class="form-panel"><div class="form-inner">
 
     <div class="section-label">Connection status</div>
@@ -307,26 +308,39 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 </div><!-- .app -->
 <script>
 
-// ── Banner auth ────────────────────────────────────────────────
+// ── Global auth ────────────────────────────────────────────────
 
-var BANNER_AUTH_KEY = 'vls_banner_auth';
+var AUTH_ROLE_KEY = 'vls_auth_role';
 
-function bannerCheckAuth() {
-  var gate = document.getElementById('banner-auth-gate');
-  if (!gate) return;
-  if (sessionStorage.getItem(BANNER_AUTH_KEY) === '1') {
-    gate.classList.add('hidden');
+function applyRole(role) {
+  var bannerNav = document.getElementById('nav-banner');
+  if (role === 'admin') {
+    bannerNav.classList.remove('hidden');
   } else {
-    gate.classList.remove('hidden');
-    setTimeout(function() { var e = document.getElementById('banner-email'); if (e) e.focus(); }, 80);
+    bannerNav.classList.add('hidden');
+    // If banner screen is currently active, redirect to intro
+    if (document.getElementById('screen-banner').classList.contains('active')) {
+      switchScreen('intro');
+    }
   }
 }
 
-async function bannerLogin() {
-  var emailEl = document.getElementById('banner-email');
-  var passEl  = document.getElementById('banner-password');
-  var errEl   = document.getElementById('banner-auth-error');
-  var btn     = document.querySelector('#banner-auth-gate .pw-btn');
+function globalCheckAuth() {
+  var role = sessionStorage.getItem(AUTH_ROLE_KEY);
+  if (role) {
+    document.getElementById('global-auth-gate').classList.add('hidden');
+    applyRole(role);
+  } else {
+    document.getElementById('global-auth-gate').classList.remove('hidden');
+    setTimeout(function() { var e = document.getElementById('global-email'); if (e) e.focus(); }, 80);
+  }
+}
+
+async function globalLogin() {
+  var emailEl = document.getElementById('global-email');
+  var passEl  = document.getElementById('global-password');
+  var errEl   = document.getElementById('global-auth-error');
+  var btn     = document.querySelector('#global-auth-gate .pw-btn');
 
   var email    = emailEl.value.trim();
   var password = passEl.value;
@@ -344,9 +358,10 @@ async function bannerLogin() {
     });
     var data = await resp.json();
     if (resp.ok) {
-      sessionStorage.setItem(BANNER_AUTH_KEY, '1');
-      document.getElementById('banner-auth-gate').classList.add('hidden');
+      sessionStorage.setItem(AUTH_ROLE_KEY, data.role);
+      document.getElementById('global-auth-gate').classList.add('hidden');
       passEl.value = '';
+      applyRole(data.role);
     } else {
       errEl.textContent = data.error || 'Invalid email or password.';
       passEl.value = '';
@@ -360,9 +375,13 @@ async function bannerLogin() {
   }
 }
 
-// Check banner auth whenever the banner screen becomes visible
+function globalSignOut() {
+  sessionStorage.removeItem(AUTH_ROLE_KEY);
+  globalCheckAuth();
+}
+
 window.addEventListener('DOMContentLoaded', function() {
-  // Banner screen auth state is handled by bannerCheckAuth() called from switchScreen
+  globalCheckAuth();
 });
 
 
@@ -391,7 +410,6 @@ function switchScreen(name) {
   document.getElementById('screen-' + name).classList.add('active');
   var map = { intro: 0, desc: 1, tabs: 2, banner: 3 };
   document.querySelectorAll('.nav-tab')[map[name]].classList.add('active');
-  if (name === 'banner') bannerCheckAuth();
 }
 
 function switchOut(screen, mode) {
