@@ -2051,32 +2051,22 @@ function showEvtCode() {
   var ev = vlsEvents.find(function(e) { return e.id === editingEvtId; });
   if (!ev) return;
 
-  var url = eventsRawUrl || localStorage.getItem('vls_events_raw_url') || '';
-  if (!url) {
-    alert('No events URL found. Please save the event first.');
-    return;
-  }
-
+  var apiUrl = window.location.origin + '/api/publish-events';
   document.getElementById('evt-code-modal-title').textContent = 'Event Card';
   document.getElementById('evt-embed-desc').textContent = 'Paste this into your Zenler page. The card updates automatically when you edit the event in the CMS.';
   document.getElementById('evt-card-preview').innerHTML = renderEvtCardHtml(ev);
-  document.getElementById('evt-embed-code').textContent = buildEvtEmbedCode(ev.id, url);
+  document.getElementById('evt-embed-code').textContent = buildEvtEmbedCode(ev.id, apiUrl);
 
   eccSwitchTab('preview');
   document.getElementById('evt-code-modal').classList.add('open');
 }
 
 function showEvtListCode() {
-  var url = eventsRawUrl || localStorage.getItem('vls_events_raw_url') || '';
-  if (!url) {
-    alert('No events URL found. Please create and save an event first.');
-    return;
-  }
-
+  var apiUrl = window.location.origin + '/api/publish-events';
   document.getElementById('evt-code-modal-title').textContent = 'All Events List';
   document.getElementById('evt-embed-desc').textContent = 'Paste this once into your Zenler page. It automatically shows all upcoming events — no changes needed when you add new events in the CMS.';
   document.getElementById('evt-card-preview').innerHTML = renderEvtListPreviewHtml();
-  document.getElementById('evt-embed-code').textContent = buildEvtListEmbedCode(url);
+  document.getElementById('evt-embed-code').textContent = buildEvtListEmbedCode(apiUrl);
 
   eccSwitchTab('preview');
   document.getElementById('evt-code-modal').classList.add('open');

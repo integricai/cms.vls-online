@@ -22,6 +22,10 @@ export default async function handler(req, res) {
 
   // ── GET: read current events ────────────────────────────────
   if (req.method === 'GET') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Cache-Control', 'no-store');
+
     const ghRes = await getGist(token, gistId);
     const data  = await ghRes.json();
     if (!ghRes.ok) return res.status(ghRes.status).json({ error: data.message || 'GitHub error' });
@@ -33,6 +37,13 @@ export default async function handler(req, res) {
     }
     const rawUrl = `https://gist.githubusercontent.com/${data.owner.login}/${data.id}/raw/vls-events.json`;
     return res.status(200).json({ events, rawUrl });
+  }
+
+  // ── OPTIONS: CORS preflight ─────────────────────────────────
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    return res.status(204).end();
   }
 
   // ── POST: save events ───────────────────────────────────────
