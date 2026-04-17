@@ -131,6 +131,23 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 /* Code modal */
 .code-modal-card{background:#fff;border-radius:14px;width:740px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.18);}
 
+/* ── Event list panel ── */
+.evt-left{width:380px;flex-shrink:0;display:flex;flex-direction:column;border-right:1.5px solid var(--border);background:#fff;overflow:hidden;}
+.evt-left-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;background:#fff;}
+.evt-list{flex:0 0 220px;overflow-y:auto;border-bottom:1.5px solid var(--border);}
+.evt-list-item{padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:3px;}
+.evt-list-item:hover{background:#f9fafb;}
+.evt-list-item.active{background:var(--purple-light);border-left:3px solid var(--purple);}
+.evt-list-item.active .evt-li-name{color:var(--purple);}
+.evt-li-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.evt-li-date{font-size:11px;color:var(--muted);}
+.evt-li-badge{font-size:10px;padding:1px 7px;border-radius:999px;font-weight:600;align-self:flex-start;}
+.evt-li-badge.upcoming{background:#dcfce7;color:#16a34a;}
+.evt-li-badge.past{background:#f3f4f6;color:#9ca3af;}
+.evt-form-wrap{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.evt-form-hdr{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;background:#f9fafb;}
+.evt-form-body{padding:14px 16px;display:flex;flex-direction:column;gap:12px;}
+.evt-form-ft{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;background:#fff;}
 /* ── Dynamic tab pills ── */
 .tab-pills{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .tab-pill{display:flex;align-items:center;gap:4px;padding:5px 10px 5px 12px;border-radius:20px;border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:500;color:var(--text);white-space:nowrap}
@@ -357,12 +374,130 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
      SCREEN 5 — EVENTS
 ═══════════════════════════════════════ -->
 <div id="screen-events" class="screen">
-  <div class="cal-wrap">
+
+  <!-- ── Left panel ── -->
+  <div class="evt-left">
+
+    <!-- Header -->
+    <div class="evt-left-hdr">
+      <span style="font-size:13px;font-weight:700;color:var(--blue);flex:1;">Events</span>
+      <span id="cal-status" style="font-size:11px;color:var(--muted);margin-right:8px;"></span>
+      <button class="btn-ev-primary" style="font-size:12px;padding:6px 14px;" onclick="showNewEvtForm(null)">+ New Event</button>
+    </div>
+
+    <!-- Event list (top, scrollable) -->
+    <div class="evt-list" id="evt-list">
+      <div style="padding:20px 16px;text-align:center;font-size:12px;color:var(--muted);">Loading events…</div>
+    </div>
+
+    <!-- Event form (bottom) -->
+    <div class="evt-form-wrap" id="evt-form-wrap">
+
+      <!-- Empty state -->
+      <div id="evt-form-empty" style="flex:1;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;">
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;">Select an event from the list above,<br>or click a day on the calendar to create one.</div>
+      </div>
+
+      <!-- Form (hidden until an event is selected / New Event clicked) -->
+      <div id="evt-form-content" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+        <div class="evt-form-hdr">
+          <span id="evt-form-title" style="font-size:12px;font-weight:700;color:var(--blue);flex:1;">New Event</span>
+          <button class="btn-sm" onclick="clearEvtForm()" title="Close form">&#x2715;</button>
+        </div>
+        <div class="evt-form-body" style="overflow-y:auto;flex:1;">
+          <div class="field">
+            <label>Event Name</label>
+            <input type="text" id="evt-name" placeholder="e.g. ACCA Live Q&amp;A Session">
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label>Starts at</label>
+              <input type="datetime-local" id="evt-start">
+            </div>
+            <div class="field">
+              <label>Ends at</label>
+              <input type="datetime-local" id="evt-end">
+            </div>
+          </div>
+          <div class="field">
+            <label>Timezone</label>
+            <select id="evt-tz">
+              <option value="UTC">UTC — Coordinated Universal Time</option>
+              <option value="Europe/London">Europe/London — GMT / BST</option>
+              <option value="Europe/Dublin">Europe/Dublin — GMT / IST</option>
+              <option value="Europe/Paris">Europe/Paris — CET / CEST</option>
+              <option value="Europe/Berlin">Europe/Berlin — CET / CEST</option>
+              <option value="Europe/Istanbul">Europe/Istanbul — TRT (+3)</option>
+              <option value="Africa/Cairo">Africa/Cairo — EET (+2)</option>
+              <option value="Asia/Dubai">Asia/Dubai — GST (+4)</option>
+              <option value="Asia/Karachi">Asia/Karachi — PKT (+5)</option>
+              <option value="Asia/Kolkata">Asia/Kolkata — IST (+5:30)</option>
+              <option value="Asia/Dhaka">Asia/Dhaka — BST (+6)</option>
+              <option value="Asia/Bangkok">Asia/Bangkok — ICT (+7)</option>
+              <option value="Asia/Singapore">Asia/Singapore — SGT (+8)</option>
+              <option value="Asia/Hong_Kong">Asia/Hong Kong — HKT (+8)</option>
+              <option value="Asia/Tokyo">Asia/Tokyo — JST (+9)</option>
+              <option value="Australia/Perth">Australia/Perth — AWST (+8)</option>
+              <option value="Australia/Sydney">Australia/Sydney — AEST / AEDT</option>
+              <option value="Pacific/Auckland">Pacific/Auckland — NZST / NZDT</option>
+              <option value="America/New_York">America/New York — EST / EDT</option>
+              <option value="America/Chicago">America/Chicago — CST / CDT</option>
+              <option value="America/Denver">America/Denver — MST / MDT</option>
+              <option value="America/Los_Angeles">America/Los Angeles — PST / PDT</option>
+              <option value="America/Toronto">America/Toronto — EST / EDT</option>
+              <option value="America/Sao_Paulo">America/Sao Paulo — BRT (-3)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Description</label>
+            <div id="evt-desc-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+              <select id="evt-blk-sel" style="flex:1;font-family:'Poppins',sans-serif;font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);">
+                <option value="">— choose block type —</option>
+                <option value="heading-para">Heading + Paragraph</option>
+                <option value="paragraph">Paragraph only</option>
+                <option value="list">Bullet list</option>
+              </select>
+              <button class="btn-ev-outline" style="font-size:12px;padding:6px 12px;white-space:nowrap" onclick="evtAddBlock()">+ Add</button>
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label>Venue</label>
+              <input type="text" id="evt-venue" placeholder="e.g. Online (Zoom)">
+            </div>
+            <div class="field">
+              <label>Hosts</label>
+              <input type="text" id="evt-hosts" placeholder="e.g. John Smith">
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label>CTA Button Text</label>
+              <input type="text" id="evt-cta-text" placeholder="e.g. Register Now">
+            </div>
+            <div class="field">
+              <label>CTA Button URL</label>
+              <input type="url" id="evt-cta-url" placeholder="https://...">
+            </div>
+          </div>
+        </div>
+        <div class="evt-form-ft">
+          <button id="evt-delete-btn" class="btn-ev-danger" onclick="deleteCurrentEvt()" style="display:none;margin-right:auto;font-size:12px;padding:7px 14px;">Delete</button>
+          <button id="evt-code-btn" class="btn-ev-outline" onclick="showEvtCode()" style="display:none;font-size:12px;padding:7px 14px;">Get Code</button>
+          <button class="btn-ev-primary" id="evt-save-btn" onclick="saveEvt()" style="font-size:12px;padding:7px 16px;">Create Event</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Right panel: calendar ── -->
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
     <div class="cal-hdr">
       <button class="cal-nav-btn" onclick="calNav(-1)">&#8249;</button>
       <div class="cal-hdr-title" id="cal-title">April 2026</div>
       <button class="cal-nav-btn" onclick="calNav(1)">&#8250;</button>
-      <div style="margin-left:16px;font-size:12px;color:var(--muted)" id="cal-status"></div>
       <div style="margin-left:auto">
         <button class="btn-ev-outline" style="font-size:12px;padding:6px 14px" onclick="calGoToday()">Today</button>
       </div>
@@ -371,109 +506,36 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="cal-grid" id="cal-grid"></div>
     </div>
   </div>
+
 </div>
 
 </div><!-- .app -->
-
-<!-- ── Event create/edit modal ── -->
-<div id="evt-modal">
-  <div class="evt-card">
-    <div class="evt-card-hd">
-      <div class="evt-card-title" id="evt-modal-title">Create Event</div>
-      <button class="btn-icon" onclick="closeEvtModal()" style="font-size:16px">&#x2715;</button>
-    </div>
-    <div class="evt-card-bd">
-      <div class="field">
-        <label>Event Name</label>
-        <input type="text" id="evt-name" placeholder="e.g. ACCA Live Q&amp;A Session">
-      </div>
-      <div class="two-col">
-        <div class="field">
-          <label>Starts at</label>
-          <input type="datetime-local" id="evt-start">
-        </div>
-        <div class="field">
-          <label>Ends at</label>
-          <input type="datetime-local" id="evt-end">
-        </div>
-      </div>
-      <div class="field">
-        <label>Timezone</label>
-        <select id="evt-tz">
-          <option value="UTC">UTC — Coordinated Universal Time</option>
-          <option value="Europe/London">Europe/London — GMT / BST</option>
-          <option value="Europe/Dublin">Europe/Dublin — GMT / IST</option>
-          <option value="Europe/Paris">Europe/Paris — CET / CEST</option>
-          <option value="Europe/Berlin">Europe/Berlin — CET / CEST</option>
-          <option value="Europe/Istanbul">Europe/Istanbul — TRT (+3)</option>
-          <option value="Africa/Cairo">Africa/Cairo — EET (+2)</option>
-          <option value="Asia/Dubai">Asia/Dubai — GST (+4)</option>
-          <option value="Asia/Karachi">Asia/Karachi — PKT (+5)</option>
-          <option value="Asia/Kolkata">Asia/Kolkata — IST (+5:30)</option>
-          <option value="Asia/Dhaka">Asia/Dhaka — BST (+6)</option>
-          <option value="Asia/Bangkok">Asia/Bangkok — ICT (+7)</option>
-          <option value="Asia/Singapore">Asia/Singapore — SGT (+8)</option>
-          <option value="Asia/Hong_Kong">Asia/Hong Kong — HKT (+8)</option>
-          <option value="Asia/Tokyo">Asia/Tokyo — JST (+9)</option>
-          <option value="Australia/Perth">Australia/Perth — AWST (+8)</option>
-          <option value="Australia/Sydney">Australia/Sydney — AEST / AEDT</option>
-          <option value="Pacific/Auckland">Pacific/Auckland — NZST / NZDT</option>
-          <option value="America/New_York">America/New York — EST / EDT</option>
-          <option value="America/Chicago">America/Chicago — CST / CDT</option>
-          <option value="America/Denver">America/Denver — MST / MDT</option>
-          <option value="America/Los_Angeles">America/Los Angeles — PST / PDT</option>
-          <option value="America/Toronto">America/Toronto — EST / EDT</option>
-          <option value="America/Sao_Paulo">America/Sao Paulo — BRT (-3)</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Description</label>
-        <div id="evt-desc-list" style="display:flex;flex-direction:column;gap:6px;"></div>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
-          <select id="evt-blk-sel" style="flex:1;font-family:'Poppins',sans-serif;font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);">
-            <option value="">— choose block type —</option>
-            <option value="heading-para">Heading + Paragraph</option>
-            <option value="paragraph">Paragraph only</option>
-            <option value="list">Bullet list</option>
-          </select>
-          <button class="btn-ev-outline" style="font-size:12px;padding:6px 14px;white-space:nowrap" onclick="evtAddBlock()">+ Add block</button>
-        </div>
-      </div>
-      <div class="two-col">
-        <div class="field">
-          <label>Venue</label>
-          <input type="text" id="evt-venue" placeholder="e.g. Online (Zoom)">
-        </div>
-        <div class="field">
-          <label>Hosts</label>
-          <input type="text" id="evt-hosts" placeholder="e.g. John Smith">
-        </div>
-      </div>
-    </div>
-    <div class="evt-card-ft">
-      <button id="evt-delete-btn" class="btn-ev-danger" onclick="deleteCurrentEvt()" style="display:none;margin-right:auto">Delete Event</button>
-      <button id="evt-code-btn" class="btn-ev-outline" onclick="showEvtCode()" style="display:none">Generate Code</button>
-      <button class="btn-ev-outline" onclick="closeEvtModal()">Cancel</button>
-      <button class="btn-ev-primary" id="evt-save-btn" onclick="saveEvt()">Create Event</button>
-    </div>
-  </div>
-</div>
 
 <!-- ── Event embed code modal ── -->
 <div id="evt-code-modal">
   <div class="code-modal-card">
     <div class="evt-card-hd">
-      <div class="evt-card-title">Embed Code</div>
+      <div class="evt-card-title">Event Card</div>
       <button class="btn-icon" onclick="closeEvtCodeModal()" style="font-size:16px">&#x2715;</button>
     </div>
-    <div style="padding:16px 24px;flex:1;overflow:auto;">
-      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Paste this code into your Zenler page. The event card updates automatically when you make changes in the CMS.</p>
+    <!-- Tabs -->
+    <div style="display:flex;border-bottom:1px solid var(--border);padding:0 24px;background:#fff;flex-shrink:0;">
+      <div id="ecc-tab-preview" class="out-tab active" onclick="eccSwitchTab('preview')" style="height:40px;">Preview</div>
+      <div id="ecc-tab-code"    class="out-tab"        onclick="eccSwitchTab('code')"    style="height:40px;">Embed Code</div>
+    </div>
+    <!-- Preview panel -->
+    <div id="ecc-preview-panel" style="padding:24px;flex:1;overflow:auto;background:#f4f6f9;">
+      <div id="evt-card-preview"></div>
+    </div>
+    <!-- Code panel -->
+    <div id="ecc-code-panel" style="padding:16px 24px;flex:1;overflow:auto;display:none;">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Paste this into your Zenler page. The card updates automatically when you edit the event in the CMS.</p>
       <div class="code-wrap" style="display:block">
-        <div class="code-box" id="evt-embed-code" style="font-size:11px;max-height:360px;overflow:auto;"></div>
+        <div class="code-box" id="evt-embed-code" style="font-size:11px;max-height:380px;overflow:auto;"></div>
         <button class="btn-copy" onclick="doCopy('evt-embed-code',this)">Copy</button>
       </div>
     </div>
-    <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
+    <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;flex-shrink:0;">
       <button class="btn-ev-outline" onclick="closeEvtCodeModal()">Close</button>
     </div>
   </div>
@@ -1676,6 +1738,7 @@ async function loadEventsFromGist() {
   } catch(e) {
     document.getElementById('cal-status').textContent = 'Could not load events';
   }
+  renderEvtList();
   calRender();
 }
 
@@ -1759,14 +1822,14 @@ function calRender() {
 
     var evs   = byDate[dateStr] || [];
     var chips = evs.map(function(ev) {
-      return '<div class="cal-chip" onclick="openEditEvtModal(\'' + ev.id + '\');event.stopPropagation()" title="' + xA(ev.name) + '">' + xH(ev.name) + '</div>';
+      return '<div class="cal-chip" onclick="selectEvt(\'' + ev.id + '\');event.stopPropagation()" title="' + xA(ev.name) + '">' + xH(ev.name) + '</div>';
     }).join('');
 
     var plusDisabled = dateStr < todayStr;
-    html += '<div class="' + cls + '" onclick="' + (plusDisabled ? '' : 'openNewEvtModal(\'' + dateStr + '\')') + '">'
+    html += '<div class="' + cls + '" onclick="' + (plusDisabled ? '' : 'showNewEvtForm(\'' + dateStr + '\')') + '">'
           + '<span class="cal-dn">' + dayNum + '</span>'
           + '<div class="cal-chips">' + chips + '</div>'
-          + (plusDisabled ? '' : '<button class="cal-plus" onclick="openNewEvtModal(\'' + dateStr + '\');event.stopPropagation()" title="Add event">+</button>')
+          + (plusDisabled ? '' : '<button class="cal-plus" onclick="showNewEvtForm(\'' + dateStr + '\');event.stopPropagation()" title="Add event">+</button>')
           + '</div>';
   }
 
@@ -1776,54 +1839,103 @@ function calRender() {
 function pad2(n) { return String(n).padStart(2, '0'); }
 function fmtDate(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
 
-// ── Event modal ─────────────────────────────────────────────────
+// ── Event list rendering ────────────────────────────────────────
 
-function openNewEvtModal(dateStr) {
-  editingEvtId = null;
-  document.getElementById('evt-modal-title').textContent = 'Create Event';
-  document.getElementById('evt-save-btn').textContent    = 'Create Event';
-  document.getElementById('evt-delete-btn').style.display = 'none';
-  document.getElementById('evt-code-btn').style.display   = 'none';
-
-  document.getElementById('evt-name').value   = '';
-  document.getElementById('evt-start').value  = dateStr + 'T09:00';
-  document.getElementById('evt-end').value    = dateStr + 'T10:00';
-  document.getElementById('evt-tz').value     = 'Europe/London';
-  document.getElementById('evt-venue').value  = '';
-  document.getElementById('evt-hosts').value  = '';
-  document.getElementById('evt-desc-list').innerHTML = '';
-
-  document.getElementById('evt-modal').classList.add('open');
-  setTimeout(function() { document.getElementById('evt-name').focus(); }, 80);
+function renderEvtList() {
+  var list = document.getElementById('evt-list');
+  if (!list) return;
+  if (!vlsEvents.length) {
+    list.innerHTML = '<div style="padding:20px 16px;text-align:center;font-size:12px;color:var(--muted);">No events yet. Click + New Event or a calendar day to get started.</div>';
+    return;
+  }
+  var sorted = vlsEvents.slice().sort(function(a, b) { return (a.startsAt || '') < (b.startsAt || '') ? 1 : -1; });
+  var now    = new Date();
+  list.innerHTML = sorted.map(function(ev) {
+    var isPast  = ev.startsAt && new Date(ev.startsAt) < now;
+    var dateStr = '';
+    if (ev.startsAt) {
+      try {
+        dateStr = new Date(ev.startsAt).toLocaleString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      } catch(e) { dateStr = ev.startsAt; }
+    }
+    var isActive = ev.id === editingEvtId;
+    return '<div class="evt-list-item' + (isActive ? ' active' : '') + '" onclick="selectEvt(\'' + ev.id + '\')">'
+      + '<div class="evt-li-name">' + xH(ev.name || 'Untitled') + '</div>'
+      + (dateStr ? '<div class="evt-li-date">' + dateStr + '</div>' : '')
+      + '<span class="evt-li-badge ' + (isPast ? 'past' : 'upcoming') + '">' + (isPast ? 'Past' : 'Upcoming') + '</span>'
+      + '</div>';
+  }).join('');
 }
 
-function openEditEvtModal(id) {
+// ── Inline event form ───────────────────────────────────────────
+
+function showEvtForm() {
+  document.getElementById('evt-form-empty').style.display   = 'none';
+  document.getElementById('evt-form-content').style.display = 'flex';
+}
+
+function clearEvtForm() {
+  editingEvtId = null;
+  document.getElementById('evt-form-empty').style.display   = '';
+  document.getElementById('evt-form-content').style.display = 'none';
+  renderEvtList();
+}
+
+function showNewEvtForm(dateStr) {
+  editingEvtId = null;
+  document.getElementById('evt-form-title').textContent    = 'New Event';
+  document.getElementById('evt-save-btn').textContent      = 'Create Event';
+  document.getElementById('evt-delete-btn').style.display  = 'none';
+  document.getElementById('evt-code-btn').style.display    = 'none';
+
+  var d = dateStr || fmtDate(new Date());
+  document.getElementById('evt-name').value     = '';
+  document.getElementById('evt-start').value    = d + 'T09:00';
+  document.getElementById('evt-end').value      = d + 'T10:00';
+  document.getElementById('evt-tz').value       = 'Europe/London';
+  document.getElementById('evt-venue').value    = '';
+  document.getElementById('evt-hosts').value    = '';
+  document.getElementById('evt-cta-text').value = '';
+  document.getElementById('evt-cta-url').value  = '';
+  document.getElementById('evt-desc-list').innerHTML = '';
+
+  showEvtForm();
+  renderEvtList();
+  setTimeout(function() { document.getElementById('evt-name').focus(); }, 60);
+}
+
+function selectEvt(id) {
   var ev = vlsEvents.find(function(e) { return e.id === id; });
   if (!ev) return;
   editingEvtId = id;
 
-  document.getElementById('evt-modal-title').textContent = 'Edit Event';
-  document.getElementById('evt-save-btn').textContent    = 'Save Changes';
-  document.getElementById('evt-delete-btn').style.display = '';
-  document.getElementById('evt-code-btn').style.display   = '';
+  document.getElementById('evt-form-title').textContent    = 'Edit Event';
+  document.getElementById('evt-save-btn').textContent      = 'Save Changes';
+  document.getElementById('evt-delete-btn').style.display  = '';
+  document.getElementById('evt-code-btn').style.display    = '';
 
-  document.getElementById('evt-name').value   = ev.name   || '';
-  document.getElementById('evt-start').value  = ev.startsAt || '';
-  document.getElementById('evt-end').value    = ev.endsAt   || '';
-  document.getElementById('evt-tz').value     = ev.timezone || 'Europe/London';
-  document.getElementById('evt-venue').value  = ev.venue  || '';
-  document.getElementById('evt-hosts').value  = ev.hosts  || '';
+  document.getElementById('evt-name').value     = ev.name     || '';
+  document.getElementById('evt-start').value    = ev.startsAt || '';
+  document.getElementById('evt-end').value      = ev.endsAt   || '';
+  document.getElementById('evt-tz').value       = ev.timezone || 'Europe/London';
+  document.getElementById('evt-venue').value    = ev.venue    || '';
+  document.getElementById('evt-hosts').value    = ev.hosts    || '';
+  document.getElementById('evt-cta-text').value = ev.ctaText  || '';
+  document.getElementById('evt-cta-url').value  = ev.ctaUrl   || '';
 
-  // Rebuild description blocks
   document.getElementById('evt-desc-list').innerHTML = '';
   (ev.description || []).forEach(function(blk) { evtAddBlock(blk.type, blk); });
 
-  document.getElementById('evt-modal').classList.add('open');
-}
+  showEvtForm();
+  renderEvtList();
 
-function closeEvtModal() {
-  document.getElementById('evt-modal').classList.remove('open');
-  editingEvtId = null;
+  // Scroll calendar to the event's month
+  if (ev.startsAt) {
+    var d = new Date(ev.startsAt);
+    calYear  = d.getFullYear();
+    calMonth = d.getMonth();
+    calRender();
+  }
 }
 
 // ── Description blocks ──────────────────────────────────────────
@@ -1908,6 +2020,8 @@ function saveEvt() {
     description: evtCollectBlocks(),
     venue:       document.getElementById('evt-venue').value.trim(),
     hosts:       document.getElementById('evt-hosts').value.trim(),
+    ctaText:     document.getElementById('evt-cta-text').value.trim(),
+    ctaUrl:      document.getElementById('evt-cta-url').value.trim(),
     createdAt:   editingEvtId ? (vlsEvents.find(function(e){return e.id===editingEvtId;}) || {}).createdAt : new Date().toISOString()
   };
 
@@ -1918,16 +2032,15 @@ function saveEvt() {
     vlsEvents.push(ev);
   }
 
-  closeEvtModal();
-  publishEvents().then(function() { calRender(); });
+  publishEvents().then(function() { renderEvtList(); calRender(); });
 }
 
 function deleteCurrentEvt() {
   if (!editingEvtId) return;
   if (!confirm('Delete this event? This cannot be undone.')) return;
   vlsEvents = vlsEvents.filter(function(e) { return e.id !== editingEvtId; });
-  closeEvtModal();
-  publishEvents().then(function() { calRender(); });
+  clearEvtForm();
+  publishEvents().then(function() { renderEvtList(); calRender(); });
 }
 
 // ── Code generation ─────────────────────────────────────────────
@@ -1943,13 +2056,66 @@ function showEvtCode() {
     return;
   }
 
-  var code = buildEvtEmbedCode(ev.id, url);
-  document.getElementById('evt-embed-code').textContent = code;
+  // Render preview
+  document.getElementById('evt-card-preview').innerHTML = renderEvtCardHtml(ev);
+
+  // Render embed code
+  document.getElementById('evt-embed-code').textContent = buildEvtEmbedCode(ev.id, url);
+
+  // Default to preview tab
+  eccSwitchTab('preview');
   document.getElementById('evt-code-modal').classList.add('open');
 }
 
 function closeEvtCodeModal() {
   document.getElementById('evt-code-modal').classList.remove('open');
+}
+
+function eccSwitchTab(tab) {
+  document.getElementById('ecc-preview-panel').style.display = tab === 'preview' ? '' : 'none';
+  document.getElementById('ecc-code-panel').style.display    = tab === 'code'    ? '' : 'none';
+  document.getElementById('ecc-tab-preview').classList.toggle('active', tab === 'preview');
+  document.getElementById('ecc-tab-code').classList.toggle('active',    tab === 'code');
+}
+
+function renderEvtCardHtml(ev) {
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmtDT(str, tz) {
+    try {
+      return new Date(str).toLocaleString('en-GB', { weekday:'short', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', timeZone: tz, timeZoneName:'short' });
+    } catch(e) { return str; }
+  }
+  function descHtml(blocks) {
+    return (blocks||[]).map(function(b) {
+      if (b.type === 'heading-para') {
+        return (b.heading ? '<h3 style="font-family:Poppins,sans-serif;font-size:16px;font-weight:700;color:#204280;margin:0 0 6px;">' + esc(b.heading) + '</h3>' : '')
+             + (b.para    ? '<p style="font-family:Poppins,sans-serif;font-size:15px;color:#374151;line-height:1.6;margin:0 0 12px;">' + esc(b.para) + '</p>' : '');
+      } else if (b.type === 'paragraph') {
+        return b.para ? '<p style="font-family:Poppins,sans-serif;font-size:15px;color:#374151;line-height:1.6;margin:0 0 12px;">' + esc(b.para) + '</p>' : '';
+      } else if (b.type === 'list') {
+        return '<ul style="padding-left:0;list-style:none;margin:0 0 12px;">'
+          + (b.items||[]).map(function(i) { return '<li style="font-family:Poppins,sans-serif;font-size:15px;color:#374151;padding:3px 0;display:flex;gap:8px;align-items:flex-start;"><span style="color:#534AB7;font-weight:700;">•</span>' + esc(i) + '</li>'; }).join('')
+          + '</ul>';
+      }
+      return '';
+    }).join('');
+  }
+
+  var h = '<div style="font-family:Poppins,sans-serif;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;max-width:640px;">';
+  h += '<div style="background:#204280;padding:20px 24px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">';
+  h += '<div>';
+  h += '<h2 style="font-family:Poppins,sans-serif;font-size:20px;font-weight:700;color:#fff;margin:0 0 6px;">' + esc(ev.name) + '</h2>';
+  if (ev.startsAt) h += '<div style="font-family:Poppins,sans-serif;font-size:13px;color:rgba(255,255,255,.85);">' + fmtDT(ev.startsAt, ev.timezone) + '</div>';
+  h += '</div>';
+  if (ev.ctaText) h += '<a href="' + esc(ev.ctaUrl||'#') + '" style="display:inline-block;flex-shrink:0;padding:9px 18px;background:#e63946;color:#fff;font-family:Poppins,sans-serif;font-size:13px;font-weight:600;border-radius:6px;text-decoration:none;white-space:nowrap;align-self:center;">' + esc(ev.ctaText) + '</a>';
+  h += '</div>';
+  h += '<div style="padding:20px 24px;">';
+  if (ev.endsAt) h += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;"><span style="font-size:13px;font-weight:600;color:#6b7280;min-width:56px;">Ends</span><span style="font-size:14px;color:#374151;">' + fmtDT(ev.endsAt, ev.timezone) + '</span></div>';
+  if (ev.venue)  h += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;"><span style="font-size:13px;font-weight:600;color:#6b7280;min-width:56px;">Venue</span><span style="font-size:14px;color:#374151;">' + esc(ev.venue) + '</span></div>';
+  if (ev.hosts)  h += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;"><span style="font-size:13px;font-weight:600;color:#6b7280;min-width:56px;">Hosts</span><span style="font-size:14px;color:#374151;">' + esc(ev.hosts) + '</span></div>';
+  if (ev.description && ev.description.length) { h += '<hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 16px;">'; h += descHtml(ev.description); }
+  h += '</div></div>';
+  return h;
 }
 
 function buildEvtEmbedCode(evtId, rawUrl) {
@@ -1958,7 +2124,7 @@ function buildEvtEmbedCode(evtId, rawUrl) {
   L.push('<script>');
   L.push('(function(){');
   L.push('var EID="' + evtId + '",URL="' + rawUrl + '";');
-  L.push('function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}');
+  L.push('function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}');
   L.push('function fmtDT(str,tz){try{return new Date(str).toLocaleString("en-GB",{weekday:"short",year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit",timeZone:tz,timeZoneName:"short"});}catch(e){return str;}}');
   L.push('function renderDesc(blocks){');
   L.push('  if(!blocks||!blocks.length)return "";');
@@ -1980,10 +2146,16 @@ function buildEvtEmbedCode(evtId, rawUrl) {
   L.push('function render(ev){');
   L.push('  var el=document.getElementById("vls-event-"+EID);');
   L.push('  if(!el)return;');
+  // Auto-hide if event start date has passed
+  L.push('  if(ev.startsAt&&new Date(ev.startsAt)<new Date()){el.style.display="none";return;}');
   L.push('  var h="<div style=\\"font-family:Poppins,sans-serif;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;max-width:640px;\\">";');
-  L.push('  h+="<div style=\\"background:#204280;padding:20px 24px;\\">";');
+  L.push('  h+="<div style=\\"background:#204280;padding:20px 24px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;\\">";');
+  L.push('  h+="<div>";');
   L.push('  h+="<h2 style=\\"font-family:Poppins,sans-serif;font-size:20px;font-weight:700;color:#fff;margin:0 0 6px;\\">"+esc(ev.name)+"</h2>";');
   L.push('  if(ev.startsAt)h+="<div style=\\"font-family:Poppins,sans-serif;font-size:13px;color:rgba(255,255,255,.85);\\">"+fmtDT(ev.startsAt,ev.timezone)+"</div>";');
+  L.push('  h+="</div>";');
+  // CTA button top-right
+  L.push('  if(ev.ctaText)h+="<a href=\\""+esc(ev.ctaUrl||"#")+"\\" style=\\"display:inline-block;flex-shrink:0;padding:9px 18px;background:#e63946;color:#fff;font-family:Poppins,sans-serif;font-size:13px;font-weight:600;border-radius:6px;text-decoration:none;white-space:nowrap;align-self:center;\\">"+esc(ev.ctaText)+"</a>";');
   L.push('  h+="</div>";');
   L.push('  h+="<div style=\\"padding:20px 24px;\\">";');
   L.push('  if(ev.endsAt)h+="<div style=\\"display:flex;gap:10px;align-items:center;margin-bottom:8px;\\"><span style=\\"font-size:13px;font-weight:600;color:#6b7280;min-width:56px;\\">Ends</span><span style=\\"font-size:14px;color:#374151;\\">"+fmtDT(ev.endsAt,ev.timezone)+"</span></div>";');
