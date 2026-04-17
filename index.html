@@ -2080,40 +2080,68 @@ function eccSwitchTab(tab) {
 
 function renderEvtCardHtml(ev) {
   function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function fmtDT(str, tz) {
-    try {
-      return new Date(str).toLocaleString('en-GB', { weekday:'short', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', timeZone: tz, timeZoneName:'short' });
-    } catch(e) { return str; }
+  var MONS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  function fmtMon(str) { try { return MONS[new Date(str).getMonth()]; } catch(e) { return ''; } }
+  function fmtDay(str) { try { return new Date(str).getDate(); } catch(e) { return ''; } }
+  function fmtTime(str, tz) {
+    try { return new Date(str).toLocaleString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone: tz, timeZoneName:'short' }); }
+    catch(e) { return str; }
   }
   function descHtml(blocks) {
     return (blocks||[]).map(function(b) {
       if (b.type === 'heading-para') {
-        return (b.heading ? '<h3 style="font-family:Poppins,sans-serif;font-size:16px;font-weight:700;color:#204280;margin:0 0 6px;">' + esc(b.heading) + '</h3>' : '')
-             + (b.para    ? '<p style="font-family:Poppins,sans-serif;font-size:15px;color:#374151;line-height:1.6;margin:0 0 12px;">' + esc(b.para) + '</p>' : '');
+        return (b.heading ? '<h3 style="font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:#204280;margin:0 0 5px;">' + esc(b.heading) + '</h3>' : '')
+             + (b.para    ? '<p style="font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;">' + esc(b.para) + '</p>' : '');
       } else if (b.type === 'paragraph') {
-        return b.para ? '<p style="font-family:Poppins,sans-serif;font-size:15px;color:#374151;line-height:1.6;margin:0 0 12px;">' + esc(b.para) + '</p>' : '';
+        return b.para ? '<p style="font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;">' + esc(b.para) + '</p>' : '';
       } else if (b.type === 'list') {
-        return '<ul style="padding-left:0;list-style:none;margin:0 0 12px;">'
-          + (b.items||[]).map(function(i) { return '<li style="font-family:Poppins,sans-serif;font-size:15px;color:#374151;padding:3px 0;display:flex;gap:8px;align-items:flex-start;"><span style="color:#534AB7;font-weight:700;">•</span>' + esc(i) + '</li>'; }).join('')
+        return '<ul style="padding-left:0;list-style:none;margin:0 0 10px;">'
+          + (b.items||[]).map(function(i) { return '<li style="font-family:Poppins,sans-serif;font-size:14px;color:#374151;padding:2px 0;display:flex;gap:8px;align-items:flex-start;"><span style="color:#534AB7;font-weight:700;flex-shrink:0;">•</span>' + esc(i) + '</li>'; }).join('')
           + '</ul>';
       }
       return '';
     }).join('');
   }
 
-  var h = '<div style="font-family:Poppins,sans-serif;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;max-width:640px;">';
-  h += '<div style="background:#204280;padding:20px 24px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">';
-  h += '<div>';
-  h += '<h2 style="font-family:Poppins,sans-serif;font-size:20px;font-weight:700;color:#fff;margin:0 0 6px;">' + esc(ev.name) + '</h2>';
-  if (ev.startsAt) h += '<div style="font-family:Poppins,sans-serif;font-size:13px;color:rgba(255,255,255,.85);">' + fmtDT(ev.startsAt, ev.timezone) + '</div>';
+  var dotStyle = 'display:inline-block;width:8px;height:8px;border-radius:50%;background:#534AB7;flex-shrink:0;margin-top:3px;';
+  var infoStyle = 'display:inline-flex;align-items:flex-start;gap:6px;font-family:Poppins,sans-serif;font-size:13px;color:#374151;';
+
+  var h = '<div style="font-family:Poppins,sans-serif;display:flex;border-radius:12px;border:1px solid #e0e0f0;overflow:hidden;max-width:700px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.06);">';
+
+  // Left date strip
+  h += '<div style="background:#534AB7;width:76px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:16px 8px;">';
+  if (ev.startsAt) {
+    h += '<span style="font-family:Poppins,sans-serif;color:rgba(255,255,255,.8);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;">' + fmtMon(ev.startsAt) + '</span>';
+    h += '<span style="font-family:Poppins,sans-serif;color:#fff;font-size:38px;font-weight:700;line-height:1;">' + fmtDay(ev.startsAt) + '</span>';
+  }
   h += '</div>';
-  if (ev.ctaText) h += '<a href="' + esc(ev.ctaUrl||'#') + '" style="display:inline-block;flex-shrink:0;padding:9px 18px;background:#e63946;color:#fff;font-family:Poppins,sans-serif;font-size:13px;font-weight:600;border-radius:6px;text-decoration:none;white-space:nowrap;align-self:center;">' + esc(ev.ctaText) + '</a>';
-  h += '</div>';
-  h += '<div style="padding:20px 24px;">';
-  if (ev.endsAt) h += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;"><span style="font-size:13px;font-weight:600;color:#6b7280;min-width:56px;">Ends</span><span style="font-size:14px;color:#374151;">' + fmtDT(ev.endsAt, ev.timezone) + '</span></div>';
-  if (ev.venue)  h += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;"><span style="font-size:13px;font-weight:600;color:#6b7280;min-width:56px;">Venue</span><span style="font-size:14px;color:#374151;">' + esc(ev.venue) + '</span></div>';
-  if (ev.hosts)  h += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;"><span style="font-size:13px;font-weight:600;color:#6b7280;min-width:56px;">Hosts</span><span style="font-size:14px;color:#374151;">' + esc(ev.hosts) + '</span></div>';
-  if (ev.description && ev.description.length) { h += '<hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 16px;">'; h += descHtml(ev.description); }
+
+  // Main content
+  h += '<div style="flex:1;padding:16px 20px;position:relative;">';
+
+  // CTA — top right, absolutely positioned
+  if (ev.ctaText) {
+    h += '<a href="' + esc(ev.ctaUrl||'#') + '" style="position:absolute;top:16px;right:16px;display:inline-block;padding:9px 18px;background:#534AB7;color:#fff;font-family:Poppins,sans-serif;font-size:13px;font-weight:600;border-radius:6px;text-decoration:none;white-space:nowrap;">' + esc(ev.ctaText) + '</a>';
+  }
+
+  // Title (right padding so it doesn't overlap CTA)
+  h += '<h2 style="font-family:Poppins,sans-serif;font-size:18px;font-weight:700;color:#1a1a1a;margin:0 0 4px;' + (ev.ctaText ? 'padding-right:170px;' : '') + '">' + esc(ev.name) + '</h2>';
+
+  // Host
+  if (ev.hosts) h += '<div style="font-family:Poppins,sans-serif;font-size:13px;color:#6b7280;margin-bottom:10px;">Host: ' + esc(ev.hosts) + '</div>';
+
+  // Info row: time + venue
+  var infoItems = [];
+  if (ev.startsAt) infoItems.push('<span style="' + infoStyle + '"><span style="' + dotStyle + '"></span>' + fmtTime(ev.startsAt, ev.timezone) + '</span>');
+  if (ev.venue)    infoItems.push('<span style="' + infoStyle + '"><span style="' + dotStyle + '"></span>' + esc(ev.venue) + '</span>');
+  if (infoItems.length) h += '<div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:14px;">' + infoItems.join('') + '</div>';
+
+  // Description
+  if (ev.description && ev.description.length) {
+    h += '<hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 14px;">';
+    h += descHtml(ev.description);
+  }
+
   h += '</div></div>';
   return h;
 }
@@ -2124,20 +2152,23 @@ function buildEvtEmbedCode(evtId, rawUrl) {
   L.push('<script>');
   L.push('(function(){');
   L.push('var EID="' + evtId + '",URL="' + rawUrl + '";');
+  L.push('var MONS=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];');
   L.push('function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}');
-  L.push('function fmtDT(str,tz){try{return new Date(str).toLocaleString("en-GB",{weekday:"short",year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit",timeZone:tz,timeZoneName:"short"});}catch(e){return str;}}');
+  L.push('function fmtMon(s){try{return MONS[new Date(s).getMonth()];}catch(e){return "";}}');
+  L.push('function fmtDay(s){try{return new Date(s).getDate();}catch(e){return "";}}');
+  L.push('function fmtTime(s,tz){try{return new Date(s).toLocaleString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:tz,timeZoneName:"short"});}catch(e){return s;}}');
   L.push('function renderDesc(blocks){');
   L.push('  if(!blocks||!blocks.length)return "";');
   L.push('  var h="";');
   L.push('  blocks.forEach(function(b){');
   L.push('    if(b.type==="heading-para"){');
-  L.push('      if(b.heading)h+="<h3 style=\\"font-family:Poppins,sans-serif;font-size:16px;font-weight:700;color:#204280;margin:0 0 6px;\\">"+esc(b.heading)+"</h3>";');
-  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:15px;color:#374151;line-height:1.6;margin:0 0 12px;\\">"+esc(b.para)+"</p>";');
+  L.push('      if(b.heading)h+="<h3 style=\\"font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:#204280;margin:0 0 5px;\\">"+esc(b.heading)+"</h3>";');
+  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;\\">"+esc(b.para)+"</p>";');
   L.push('    }else if(b.type==="paragraph"){');
-  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:15px;color:#374151;line-height:1.6;margin:0 0 12px;\\">"+esc(b.para)+"</p>";');
+  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;\\">"+esc(b.para)+"</p>";');
   L.push('    }else if(b.type==="list"){');
-  L.push('      h+="<ul style=\\"padding-left:0;list-style:none;margin:0 0 12px;\\">";');
-  L.push('      (b.items||[]).forEach(function(item){h+="<li style=\\"font-family:Poppins,sans-serif;font-size:15px;color:#374151;padding:3px 0;display:flex;gap:8px;align-items:flex-start;\\"><span style=\\"color:#534AB7;font-weight:700;\\">•</span>"+esc(item)+"</li>";});');
+  L.push('      h+="<ul style=\\"padding-left:0;list-style:none;margin:0 0 10px;\\">";');
+  L.push('      (b.items||[]).forEach(function(item){h+="<li style=\\"font-family:Poppins,sans-serif;font-size:14px;color:#374151;padding:2px 0;display:flex;gap:8px;align-items:flex-start;\\"><span style=\\"color:#534AB7;font-weight:700;flex-shrink:0;\\">•</span>"+esc(item)+"</li>";});');
   L.push('      h+="</ul>";');
   L.push('    }');
   L.push('  });');
@@ -2146,22 +2177,23 @@ function buildEvtEmbedCode(evtId, rawUrl) {
   L.push('function render(ev){');
   L.push('  var el=document.getElementById("vls-event-"+EID);');
   L.push('  if(!el)return;');
-  // Auto-hide if event start date has passed
   L.push('  if(ev.startsAt&&new Date(ev.startsAt)<new Date()){el.style.display="none";return;}');
-  L.push('  var h="<div style=\\"font-family:Poppins,sans-serif;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;max-width:640px;\\">";');
-  L.push('  h+="<div style=\\"background:#204280;padding:20px 24px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;\\">";');
-  L.push('  h+="<div>";');
-  L.push('  h+="<h2 style=\\"font-family:Poppins,sans-serif;font-size:20px;font-weight:700;color:#fff;margin:0 0 6px;\\">"+esc(ev.name)+"</h2>";');
-  L.push('  if(ev.startsAt)h+="<div style=\\"font-family:Poppins,sans-serif;font-size:13px;color:rgba(255,255,255,.85);\\">"+fmtDT(ev.startsAt,ev.timezone)+"</div>";');
+  L.push('  var h="<div style=\\"font-family:Poppins,sans-serif;display:flex;border-radius:12px;border:1px solid #e0e0f0;overflow:hidden;max-width:700px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.06)\\">";');
+  // date strip
+  L.push('  h+="<div style=\\"background:#534AB7;width:76px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:16px 8px;\\">";');
+  L.push('  if(ev.startsAt){h+="<span style=\\"font-family:Poppins,sans-serif;color:rgba(255,255,255,.8);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;\\">"+fmtMon(ev.startsAt)+"</span>";');
+  L.push('  h+="<span style=\\"font-family:Poppins,sans-serif;color:#fff;font-size:38px;font-weight:700;line-height:1;\\">"+fmtDay(ev.startsAt)+"</span>";}');
   L.push('  h+="</div>";');
-  // CTA button top-right
-  L.push('  if(ev.ctaText)h+="<a href=\\""+esc(ev.ctaUrl||"#")+"\\" style=\\"display:inline-block;flex-shrink:0;padding:9px 18px;background:#e63946;color:#fff;font-family:Poppins,sans-serif;font-size:13px;font-weight:600;border-radius:6px;text-decoration:none;white-space:nowrap;align-self:center;\\">"+esc(ev.ctaText)+"</a>";');
-  L.push('  h+="</div>";');
-  L.push('  h+="<div style=\\"padding:20px 24px;\\">";');
-  L.push('  if(ev.endsAt)h+="<div style=\\"display:flex;gap:10px;align-items:center;margin-bottom:8px;\\"><span style=\\"font-size:13px;font-weight:600;color:#6b7280;min-width:56px;\\">Ends</span><span style=\\"font-size:14px;color:#374151;\\">"+fmtDT(ev.endsAt,ev.timezone)+"</span></div>";');
-  L.push('  if(ev.venue)h+="<div style=\\"display:flex;gap:10px;align-items:center;margin-bottom:8px;\\"><span style=\\"font-size:13px;font-weight:600;color:#6b7280;min-width:56px;\\">Venue</span><span style=\\"font-size:14px;color:#374151;\\">"+esc(ev.venue)+"</span></div>";');
-  L.push('  if(ev.hosts)h+="<div style=\\"display:flex;gap:10px;align-items:center;margin-bottom:16px;\\"><span style=\\"font-size:13px;font-weight:600;color:#6b7280;min-width:56px;\\">Hosts</span><span style=\\"font-size:14px;color:#374151;\\">"+esc(ev.hosts)+"</span></div>";');
-  L.push('  if(ev.description&&ev.description.length){h+="<hr style=\\"border:none;border-top:1px solid #e5e7eb;margin:0 0 16px;\\">";h+=renderDesc(ev.description);}');
+  // main
+  L.push('  h+="<div style=\\"flex:1;padding:16px 20px;position:relative;\\">";');
+  L.push('  if(ev.ctaText)h+="<a href=\\""+esc(ev.ctaUrl||"#")+"\\" style=\\"position:absolute;top:16px;right:16px;display:inline-block;padding:9px 18px;background:#534AB7;color:#fff;font-family:Poppins,sans-serif;font-size:13px;font-weight:600;border-radius:6px;text-decoration:none;white-space:nowrap;\\">"+esc(ev.ctaText)+"</a>";');
+  L.push('  h+="<h2 style=\\"font-family:Poppins,sans-serif;font-size:18px;font-weight:700;color:#1a1a1a;margin:0 0 4px;"+(ev.ctaText?"padding-right:170px;":"")+"\\">" + esc(ev.name)+"</h2>";');
+  L.push('  if(ev.hosts)h+="<div style=\\"font-family:Poppins,sans-serif;font-size:13px;color:#6b7280;margin-bottom:10px;\\">Host: "+esc(ev.hosts)+"</div>";');
+  L.push('  var info=[];');
+  L.push('  if(ev.startsAt)info.push("<span style=\\"display:inline-flex;align-items:flex-start;gap:6px;font-family:Poppins,sans-serif;font-size:13px;color:#374151;\\"><span style=\\"display:inline-block;width:8px;height:8px;border-radius:50%;background:#534AB7;flex-shrink:0;margin-top:3px;\\"></span>"+fmtTime(ev.startsAt,ev.timezone)+"</span>");');
+  L.push('  if(ev.venue)info.push("<span style=\\"display:inline-flex;align-items:flex-start;gap:6px;font-family:Poppins,sans-serif;font-size:13px;color:#374151;\\"><span style=\\"display:inline-block;width:8px;height:8px;border-radius:50%;background:#534AB7;flex-shrink:0;margin-top:3px;\\"></span>"+esc(ev.venue)+"</span>");');
+  L.push('  if(info.length)h+="<div style=\\"display:flex;flex-wrap:wrap;gap:16px;margin-bottom:14px;\\">"+info.join("")+"</div>";');
+  L.push('  if(ev.description&&ev.description.length){h+="<hr style=\\"border:none;border-top:1px solid #e5e7eb;margin:0 0 14px;\\">";h+=renderDesc(ev.description);}');
   L.push('  h+="</div></div>";');
   L.push('  el.innerHTML=h;');
   L.push('}');
