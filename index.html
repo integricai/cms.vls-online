@@ -1509,7 +1509,7 @@ function buildBannerHTML(cfg, deadline) {
   function pad(n) { return String(n).padStart(2,'0'); }
 
   var unitStyle = 'display:flex;flex-direction:column;align-items:center;gap:2px;';
-  var numStyle  = 'font-size:28px;font-weight:700;line-height:1;font-family:\'Poppins\',sans-serif;color:' + fg + ';';
+  var numStyle  = 'font-size:20px;font-weight:700;line-height:1;font-family:\'Poppins\',sans-serif;color:' + fg + ';';
   var lblStyle  = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;opacity:0.75;font-family:\'Poppins\',sans-serif;color:' + fg + ';';
   var sepStyle  = 'font-size:24px;font-weight:700;line-height:1;padding:0 4px;margin-top:-4px;color:' + fg + ';opacity:0.6;';
 
@@ -1618,7 +1618,7 @@ function updateInjectScript(rawUrl) {
              '        font-family:Poppins,sans-serif;}",');
   lines.push('      "#vls-banner-timer{display:flex;align-items:center;gap:6px;flex-shrink:0;}",');
   lines.push('      ".vls-unit{display:flex;flex-direction:column;align-items:center;gap:2px;}",');
-  lines.push('      ".vls-num{font-size:28px;font-weight:700;line-height:1;',
+  lines.push('      ".vls-num{font-size:20px;font-weight:700;line-height:1;',
              '        font-family:Poppins,sans-serif;}",');
   lines.push('      ".vls-lbl{font-size:10px;font-weight:500;text-transform:uppercase;',
              '        letter-spacing:0.08em;opacity:0.75;font-family:Poppins,sans-serif;}",');
@@ -2101,10 +2101,10 @@ function buildEvtListEmbedCode(rawUrl) {
   L.push('  var h="";');
   L.push('  blocks.forEach(function(b){');
   L.push('    if(b.type==="heading-para"){');
-  L.push('      if(b.heading)h+="<h3 style=\\"font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:#204280;margin:0 0 5px;\\">"+esc(b.heading)+"</h3>";');
-  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;\\">"+esc(b.para)+"</p>";');
+  L.push('      if(b.heading)h+="<h3 style=\\"font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:#204280;margin:0 0 5px;text-align:left;\\">"+esc(b.heading)+"</h3>";');
+  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;text-align:left;\\">"+esc(b.para)+"</p>";');
   L.push('    }else if(b.type==="paragraph"){');
-  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;\\">"+esc(b.para)+"</p>";');
+  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;text-align:left;\\">"+esc(b.para)+"</p>";');
   L.push('    }else if(b.type==="list"){');
   L.push('      h+="<ul style=\\"padding-left:0;list-style:none;margin:0 0 10px;\\">";');
   L.push('      (b.items||[]).forEach(function(item){h+="<li style=\\"font-family:Poppins,sans-serif;font-size:14px;color:#374151;padding:2px 0;display:flex;gap:8px;align-items:flex-start;\\"><span style=\\"color:#534AB7;font-weight:700;flex-shrink:0;\\">•</span>"+esc(item)+"</li>";});');
@@ -2115,15 +2115,15 @@ function buildEvtListEmbedCode(rawUrl) {
   L.push('}');
   L.push('var CLOCK=' + JSON.stringify(clockSvg) + ',PIN=' + JSON.stringify(pinSvg) + ';');
   L.push('function renderCard(ev){');
-  L.push('  var h="<div style=\\"font-family:Poppins,sans-serif;display:flex;border-radius:12px;border:1px solid #e0e0f0;overflow:hidden;max-width:700px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.06)\\">";');
+  L.push('  var h="<div style=\\"font-family:Poppins,sans-serif;display:flex;border-radius:12px;border:1px solid #e0e0f0;overflow:hidden;max-width:100%;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.06)\\">";');
   L.push('  h+="<div style=\\"background:#534AB7;width:76px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:16px 8px;\\">";');
   L.push('  if(ev.startsAt){h+="<span style=\\"font-family:Poppins,sans-serif;color:rgba(255,255,255,.8);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;\\">"+fmtMon(ev.startsAt)+"</span>";');
   L.push('  h+="<span style=\\"font-family:Poppins,sans-serif;color:#fff;font-size:38px;font-weight:700;line-height:1;\\">"+fmtDay(ev.startsAt)+"</span>";}');
   L.push('  h+="</div>";');
   L.push('  h+="<div style=\\"flex:1;padding:16px 20px;position:relative;\\">";');
   L.push('  if(ev.ctaText)h+="<a href=\\""+esc(ev.ctaUrl||"#")+"\\" style=\\"position:absolute;top:16px;right:16px;display:inline-block;padding:9px 18px;background:#534AB7;color:#fff;font-family:Poppins,sans-serif;font-size:13px;font-weight:600;border-radius:6px;text-decoration:none;white-space:nowrap;\\">"+esc(ev.ctaText)+"</a>";');
-  L.push('  h+="<h2 style=\\"font-family:Poppins,sans-serif;font-size:18px;font-weight:700;color:#1a1a1a;margin:0 0 4px;"+(ev.ctaText?"padding-right:170px;":"")+"\\">" + esc(ev.name)+"</h2>";');
-  L.push('  if(ev.hosts)h+="<div style=\\"font-family:Poppins,sans-serif;font-size:13px;color:#6b7280;margin-bottom:10px;\\">Host: "+esc(ev.hosts)+"</div>";');
+  L.push('  h+="<h2 style=\\"font-family:Poppins,sans-serif;font-size:18px;font-weight:700;color:#1a1a1a;margin:0 0 4px;text-align:left;"+(ev.ctaText?"padding-right:170px;":"")+"\\">" + esc(ev.name)+"</h2>";');
+  L.push('  if(ev.hosts)h+="<div style=\\"font-family:Poppins,sans-serif;font-size:13px;color:#6b7280;margin-bottom:10px;text-align:left;\\">Host: "+esc(ev.hosts)+"</div>";');
   L.push('  var IS="display:inline-flex;align-items:center;gap:6px;font-family:Poppins,sans-serif;font-size:13px;color:#374151;";');
   L.push('  var info=[];');
   L.push('  if(ev.startsAt)info.push("<span style=\\""+IS+"\\">"+CLOCK+fmtTime(ev.startsAt,ev.timezone)+"</span>");');
@@ -2170,10 +2170,10 @@ function renderEvtCardHtml(ev) {
   function descHtml(blocks) {
     return (blocks||[]).map(function(b) {
       if (b.type === 'heading-para') {
-        return (b.heading ? '<h3 style="font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:#204280;margin:0 0 5px;">' + esc(b.heading) + '</h3>' : '')
-             + (b.para    ? '<p style="font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;">' + esc(b.para) + '</p>' : '');
+        return (b.heading ? '<h3 style="font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:#204280;margin:0 0 5px;text-align:left;">' + esc(b.heading) + '</h3>' : '')
+             + (b.para    ? '<p style="font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;text-align:left;">' + esc(b.para) + '</p>' : '');
       } else if (b.type === 'paragraph') {
-        return b.para ? '<p style="font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;">' + esc(b.para) + '</p>' : '';
+        return b.para ? '<p style="font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;text-align:left;">' + esc(b.para) + '</p>' : '';
       } else if (b.type === 'list') {
         return '<ul style="padding-left:0;list-style:none;margin:0 0 10px;">'
           + (b.items||[]).map(function(i) { return '<li style="font-family:Poppins,sans-serif;font-size:14px;color:#374151;padding:2px 0;display:flex;gap:8px;align-items:flex-start;"><span style="color:#534AB7;font-weight:700;flex-shrink:0;">•</span>' + esc(i) + '</li>'; }).join('')
@@ -2187,7 +2187,7 @@ function renderEvtCardHtml(ev) {
   var pinIcon   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
   var infoStyle = 'display:inline-flex;align-items:center;gap:6px;font-family:Poppins,sans-serif;font-size:13px;color:#374151;';
 
-  var h = '<div style="font-family:Poppins,sans-serif;display:flex;border-radius:12px;border:1px solid #e0e0f0;overflow:hidden;max-width:700px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.06);">';
+  var h = '<div style="font-family:Poppins,sans-serif;display:flex;border-radius:12px;border:1px solid #e0e0f0;overflow:hidden;max-width:100%;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.06);">';
 
   // Left date strip
   h += '<div style="background:#534AB7;width:76px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:16px 8px;">';
@@ -2206,10 +2206,10 @@ function renderEvtCardHtml(ev) {
   }
 
   // Title (right padding so it doesn't overlap CTA)
-  h += '<h2 style="font-family:Poppins,sans-serif;font-size:18px;font-weight:700;color:#1a1a1a;margin:0 0 4px;' + (ev.ctaText ? 'padding-right:170px;' : '') + '">' + esc(ev.name) + '</h2>';
+  h += '<h2 style="font-family:Poppins,sans-serif;font-size:18px;font-weight:700;color:#1a1a1a;margin:0 0 4px;text-align:left;' + (ev.ctaText ? 'padding-right:170px;' : '') + '">' + esc(ev.name) + '</h2>';
 
   // Host
-  if (ev.hosts) h += '<div style="font-family:Poppins,sans-serif;font-size:13px;color:#6b7280;margin-bottom:10px;">Host: ' + esc(ev.hosts) + '</div>';
+  if (ev.hosts) h += '<div style="font-family:Poppins,sans-serif;font-size:13px;color:#6b7280;margin-bottom:10px;text-align:left;">Host: ' + esc(ev.hosts) + '</div>';
 
   // Info row: time + venue
   var infoItems = [];
@@ -2243,10 +2243,10 @@ function buildEvtEmbedCode(evtId, rawUrl) {
   L.push('  var h="";');
   L.push('  blocks.forEach(function(b){');
   L.push('    if(b.type==="heading-para"){');
-  L.push('      if(b.heading)h+="<h3 style=\\"font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:#204280;margin:0 0 5px;\\">"+esc(b.heading)+"</h3>";');
-  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;\\">"+esc(b.para)+"</p>";');
+  L.push('      if(b.heading)h+="<h3 style=\\"font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:#204280;margin:0 0 5px;text-align:left;\\">"+esc(b.heading)+"</h3>";');
+  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;text-align:left;\\">"+esc(b.para)+"</p>";');
   L.push('    }else if(b.type==="paragraph"){');
-  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;\\">"+esc(b.para)+"</p>";');
+  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.6;margin:0 0 10px;text-align:left;\\">"+esc(b.para)+"</p>";');
   L.push('    }else if(b.type==="list"){');
   L.push('      h+="<ul style=\\"padding-left:0;list-style:none;margin:0 0 10px;\\">";');
   L.push('      (b.items||[]).forEach(function(item){h+="<li style=\\"font-family:Poppins,sans-serif;font-size:14px;color:#374151;padding:2px 0;display:flex;gap:8px;align-items:flex-start;\\"><span style=\\"color:#534AB7;font-weight:700;flex-shrink:0;\\">•</span>"+esc(item)+"</li>";});');
@@ -2259,7 +2259,7 @@ function buildEvtEmbedCode(evtId, rawUrl) {
   L.push('  var el=document.getElementById("vls-event-"+EID);');
   L.push('  if(!el)return;');
   L.push('  if(ev.startsAt&&new Date(ev.startsAt)<new Date()){el.style.display="none";return;}');
-  L.push('  var h="<div style=\\"font-family:Poppins,sans-serif;display:flex;border-radius:12px;border:1px solid #e0e0f0;overflow:hidden;max-width:700px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.06)\\">";');
+  L.push('  var h="<div style=\\"font-family:Poppins,sans-serif;display:flex;border-radius:12px;border:1px solid #e0e0f0;overflow:hidden;max-width:100%;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.06)\\">";');
   // date strip
   L.push('  h+="<div style=\\"background:#534AB7;width:76px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:16px 8px;\\">";');
   L.push('  if(ev.startsAt){h+="<span style=\\"font-family:Poppins,sans-serif;color:rgba(255,255,255,.8);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;\\">"+fmtMon(ev.startsAt)+"</span>";');
@@ -2268,8 +2268,8 @@ function buildEvtEmbedCode(evtId, rawUrl) {
   // main
   L.push('  h+="<div style=\\"flex:1;padding:16px 20px;position:relative;\\">";');
   L.push('  if(ev.ctaText)h+="<a href=\\""+esc(ev.ctaUrl||"#")+"\\" style=\\"position:absolute;top:16px;right:16px;display:inline-block;padding:9px 18px;background:#534AB7;color:#fff;font-family:Poppins,sans-serif;font-size:13px;font-weight:600;border-radius:6px;text-decoration:none;white-space:nowrap;\\">"+esc(ev.ctaText)+"</a>";');
-  L.push('  h+="<h2 style=\\"font-family:Poppins,sans-serif;font-size:18px;font-weight:700;color:#1a1a1a;margin:0 0 4px;"+(ev.ctaText?"padding-right:170px;":"")+"\\">" + esc(ev.name)+"</h2>";');
-  L.push('  if(ev.hosts)h+="<div style=\\"font-family:Poppins,sans-serif;font-size:13px;color:#6b7280;margin-bottom:10px;\\">Host: "+esc(ev.hosts)+"</div>";');
+  L.push('  h+="<h2 style=\\"font-family:Poppins,sans-serif;font-size:18px;font-weight:700;color:#1a1a1a;margin:0 0 4px;text-align:left;"+(ev.ctaText?"padding-right:170px;":"")+"\\">" + esc(ev.name)+"</h2>";');
+  L.push('  if(ev.hosts)h+="<div style=\\"font-family:Poppins,sans-serif;font-size:13px;color:#6b7280;margin-bottom:10px;text-align:left;\\">Host: "+esc(ev.hosts)+"</div>";');
   var _clock = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 12"/></svg>';
   var _pin   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
   L.push('var CLOCK=' + JSON.stringify(_clock) + ',PIN=' + JSON.stringify(_pin) + ';');
