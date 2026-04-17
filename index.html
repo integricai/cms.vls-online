@@ -2103,8 +2103,9 @@ function renderEvtCardHtml(ev) {
     }).join('');
   }
 
-  var dotStyle = 'display:inline-block;width:8px;height:8px;border-radius:50%;background:#534AB7;flex-shrink:0;margin-top:3px;';
-  var infoStyle = 'display:inline-flex;align-items:flex-start;gap:6px;font-family:Poppins,sans-serif;font-size:13px;color:#374151;';
+  var clockIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 12"/></svg>';
+  var pinIcon   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+  var infoStyle = 'display:inline-flex;align-items:center;gap:6px;font-family:Poppins,sans-serif;font-size:13px;color:#374151;';
 
   var h = '<div style="font-family:Poppins,sans-serif;display:flex;border-radius:12px;border:1px solid #e0e0f0;overflow:hidden;max-width:700px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.06);">';
 
@@ -2132,8 +2133,8 @@ function renderEvtCardHtml(ev) {
 
   // Info row: time + venue
   var infoItems = [];
-  if (ev.startsAt) infoItems.push('<span style="' + infoStyle + '"><span style="' + dotStyle + '"></span>' + fmtTime(ev.startsAt, ev.timezone) + '</span>');
-  if (ev.venue)    infoItems.push('<span style="' + infoStyle + '"><span style="' + dotStyle + '"></span>' + esc(ev.venue) + '</span>');
+  if (ev.startsAt) infoItems.push('<span style="' + infoStyle + '">' + clockIcon + fmtTime(ev.startsAt, ev.timezone) + '</span>');
+  if (ev.venue)    infoItems.push('<span style="' + infoStyle + '">' + pinIcon   + esc(ev.venue) + '</span>');
   if (infoItems.length) h += '<div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:14px;">' + infoItems.join('') + '</div>';
 
   // Description
@@ -2189,9 +2190,13 @@ function buildEvtEmbedCode(evtId, rawUrl) {
   L.push('  if(ev.ctaText)h+="<a href=\\""+esc(ev.ctaUrl||"#")+"\\" style=\\"position:absolute;top:16px;right:16px;display:inline-block;padding:9px 18px;background:#534AB7;color:#fff;font-family:Poppins,sans-serif;font-size:13px;font-weight:600;border-radius:6px;text-decoration:none;white-space:nowrap;\\">"+esc(ev.ctaText)+"</a>";');
   L.push('  h+="<h2 style=\\"font-family:Poppins,sans-serif;font-size:18px;font-weight:700;color:#1a1a1a;margin:0 0 4px;"+(ev.ctaText?"padding-right:170px;":"")+"\\">" + esc(ev.name)+"</h2>";');
   L.push('  if(ev.hosts)h+="<div style=\\"font-family:Poppins,sans-serif;font-size:13px;color:#6b7280;margin-bottom:10px;\\">Host: "+esc(ev.hosts)+"</div>";');
+  var _clock = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 12"/></svg>';
+  var _pin   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+  L.push('var CLOCK=' + JSON.stringify(_clock) + ',PIN=' + JSON.stringify(_pin) + ';');
   L.push('  var info=[];');
-  L.push('  if(ev.startsAt)info.push("<span style=\\"display:inline-flex;align-items:flex-start;gap:6px;font-family:Poppins,sans-serif;font-size:13px;color:#374151;\\"><span style=\\"display:inline-block;width:8px;height:8px;border-radius:50%;background:#534AB7;flex-shrink:0;margin-top:3px;\\"></span>"+fmtTime(ev.startsAt,ev.timezone)+"</span>");');
-  L.push('  if(ev.venue)info.push("<span style=\\"display:inline-flex;align-items:flex-start;gap:6px;font-family:Poppins,sans-serif;font-size:13px;color:#374151;\\"><span style=\\"display:inline-block;width:8px;height:8px;border-radius:50%;background:#534AB7;flex-shrink:0;margin-top:3px;\\"></span>"+esc(ev.venue)+"</span>");');
+  L.push('  var IS="display:inline-flex;align-items:center;gap:6px;font-family:Poppins,sans-serif;font-size:13px;color:#374151;";');
+  L.push('  if(ev.startsAt)info.push("<span style=\\""+IS+"\\">"+CLOCK+fmtTime(ev.startsAt,ev.timezone)+"</span>");');
+  L.push('  if(ev.venue)info.push("<span style=\\""+IS+"\\">"+PIN+esc(ev.venue)+"</span>");');
   L.push('  if(info.length)h+="<div style=\\"display:flex;flex-wrap:wrap;gap:16px;margin-bottom:14px;\\">"+info.join("")+"</div>";');
   L.push('  if(ev.description&&ev.description.length){h+="<hr style=\\"border:none;border-top:1px solid #e5e7eb;margin:0 0 14px;\\">";h+=renderDesc(ev.description);}');
   L.push('  h+="</div></div>";');
