@@ -2400,7 +2400,25 @@ function faqOnOpen() {
   if (faqItems.length > 0) generateFaq();
 }
 
+function saveFaqState() {
+  faqItems.forEach(function(f) {
+    var id = f.id;
+    var typeEl = document.getElementById('faq-type-' + id);
+    if (!typeEl) return;
+    f.type     = typeEl.value;
+    f.question = ((document.getElementById('faq-q-' + id) || {}).value || '');
+    f.heading  = ((document.getElementById('faq-h-' + id) || {}).value || '');
+    f.para     = ((document.getElementById('faq-p-' + id) || {}).value || '');
+    f.items    = [];
+    var itemsEl = document.getElementById('faq-items-' + id);
+    if (itemsEl) {
+      itemsEl.querySelectorAll('input').forEach(function(inp) { f.items.push(inp.value); });
+    }
+  });
+}
+
 function addFaqItem() {
+  saveFaqState();
   var id = 'fq' + (++faqIdCounter);
   faqItems.push({ id: id, type: 'paragraph' });
   renderFaqBlocks();
@@ -2411,6 +2429,7 @@ function addFaqItem() {
 }
 
 function removeFaqItem(id) {
+  saveFaqState();
   faqItems = faqItems.filter(function(f) { return f.id !== id; });
   renderFaqBlocks();
   generateFaq();
@@ -2516,6 +2535,7 @@ function collectFaqData() {
 }
 
 function generateFaq() {
+  saveFaqState();
   var items = collectFaqData();
   renderFaqPreview(items);
   renderFaqCode(items);
