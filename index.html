@@ -552,7 +552,8 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
         <div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No members yet. Click + Add Member to get started.</div>
       </div>
       <button class="btn-add-block" onclick="addTeamCard()">+ Add Member</button>
-      <button class="btn-gen" onclick="generateTeam()">&#x25B6; Generate</button>
+      <button class="btn-gen" onclick="generateTeam()">&#x25B6; Generate &amp; Save</button>
+      <div id="team-status" style="font-size:12px;text-align:center;min-height:16px;color:var(--muted);"></div>
     </div>
   </div>
 
@@ -2437,8 +2438,62 @@ var TEAM_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/
 
 var teamCards = [];
 var teamIdCounter = 0;
+var teamLoaded = false;
 
-function teamOnOpen() { if (teamCards.length) generateTeam(); }
+function setTeamStatus(msg, color) {
+  var el = document.getElementById('team-status');
+  if (el) { el.textContent = msg; el.style.color = color || 'var(--muted)'; }
+}
+
+function teamOnOpen() {
+  if (!teamLoaded) {
+    teamLoaded = true;
+    loadTeamFromGist();
+  } else if (teamCards.length) {
+    generateTeam();
+  }
+}
+
+async function loadTeamFromGist() {
+  setTeamStatus('Loading…');
+  try {
+    var resp = await fetch('/api/publish-team');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var data = await resp.json();
+    if (data.cards && data.cards.length) {
+      teamCards = data.cards.map(function(c) {
+        if (!c.id) c.id = 'tm' + (++teamIdCounter);
+        else {
+          var n = parseInt(String(c.id).replace('tm', ''));
+          if (!isNaN(n) && n > teamIdCounter) teamIdCounter = n;
+        }
+        return c;
+      });
+      renderTeamBlocks();
+      generateTeam();
+    } else {
+      setTeamStatus('');
+    }
+  } catch(e) {
+    setTeamStatus('Could not load saved data', '#e63946');
+  }
+}
+
+async function publishTeam() {
+  setTeamStatus('Saving…');
+  try {
+    var resp = await fetch('/api/publish-team', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cards: teamCards })
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    setTeamStatus('Saved · ' + teamCards.length + ' member' + (teamCards.length !== 1 ? 's' : ''), '#16a34a');
+    setTimeout(function() { setTeamStatus(''); }, 3000);
+  } catch(e) {
+    setTeamStatus('Save failed: ' + e.message, '#e63946');
+  }
+}
 
 function saveTeamState() {
   teamCards.forEach(function(card) {
@@ -2470,6 +2525,19 @@ function removeTeamCard(id) {
   generateTeam();
 }
 
+function moveTeamCard(id, dir) {
+  saveTeamState();
+  var idx = -1;
+  teamCards.forEach(function(c, i) { if (c.id === id) idx = i; });
+  if (idx < 0) return;
+  var next = idx + dir;
+  if (next < 0 || next >= teamCards.length) return;
+  var tmp = teamCards[idx];
+  teamCards[idx] = teamCards[next];
+  teamCards[next] = tmp;
+  renderTeamBlocks();
+}
+
 function renderTeamBlocks() {
   var list = document.getElementById('team-list');
   if (!list) return;
@@ -2490,6 +2558,9 @@ function buildTeamBlockHtml(card, num) {
       + '</div>';
   }).join('');
 
+  var isFirst = num === 1;
+  var isLast  = num === teamCards.length;
+
   return '<div class="faq-block" id="team-block-' + id + '">'
     + '<div class="faq-block-hd" onclick="toggleTeamBlock(\'' + id + '\')">'
     +   '<img class="member-thumb" id="team-hd-img-' + id + '" src="' + imgSrc + '">'
@@ -2497,6 +2568,8 @@ function buildTeamBlockHtml(card, num) {
     +     '<div class="faq-block-q" id="team-hd-name-' + id + '">' + (card.name ? xH(card.name) : '<em style="color:var(--muted)">Unnamed member</em>') + '</div>'
     +     '<div style="font-size:11px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="team-hd-desig-' + id + '">' + xH(card.designation) + '</div>'
     +   '</div>'
+    +   '<button class="btn-icon" title="Move up"'   + (isFirst ? ' disabled style="opacity:.3;cursor:default;"' : '') + ' onclick="moveTeamCard(\'' + id + '\',-1);event.stopPropagation()">&#x25B2;</button>'
+    +   '<button class="btn-icon" title="Move down"' + (isLast  ? ' disabled style="opacity:.3;cursor:default;"' : '') + ' onclick="moveTeamCard(\'' + id + '\',1);event.stopPropagation()">&#x25BC;</button>'
     +   '<button class="btn-sm danger" onclick="removeTeamCard(\'' + id + '\');event.stopPropagation()">Remove</button>'
     + '</div>'
     + '<div class="faq-block-body" id="team-body-' + id + '">'
@@ -2584,11 +2657,12 @@ function collectTeamData() {
   }).filter(function(c) { return c.name.trim(); });
 }
 
-function generateTeam() {
+async function generateTeam() {
   saveTeamState();
   var cards = collectTeamData();
   renderTeamPreview(cards);
   renderTeamCode(cards);
+  await publishTeam();
 }
 
 function teamInitials(name) {
