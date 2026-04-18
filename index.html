@@ -166,6 +166,10 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 .nav-dd-item:hover{background:#f9fafb;color:var(--text);}
 .nav-dd-item.active{color:var(--purple);font-weight:600;}
 
+/* ── Team / FAQ shared block shell (reuses .faq-block styles) ── */
+.member-thumb{width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--purple);background:var(--purple-light);}
+.member-preview{width:64px;height:64px;border-radius:50%;object-fit:cover;object-position:top center;flex-shrink:0;border:2px solid var(--purple);background:var(--purple-light);}
+
 /* ── FAQ screen ── */
 .faq-block{border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:6px;}
 .faq-block-hd{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f9fafb;cursor:pointer;user-select:none;}
@@ -205,6 +209,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
     </div>
   </div>
   <div class="nav-tab" id="nav-faq" onclick="switchScreen('faq')">FAQs</div>
+  <div class="nav-tab" id="nav-team" onclick="switchScreen('team')">Team</div>
   <div class="nav-tab hidden" id="nav-banner" onclick="switchScreen('banner')">Banner</div>
   <div class="nav-tab hidden" id="nav-events" onclick="switchScreen('events')">Events</div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
@@ -536,6 +541,40 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 </div>
 
 <!-- ═══════════════════════════════════════
+     SCREEN — TEAM
+═══════════════════════════════════════ -->
+<div id="screen-team" class="screen">
+
+  <div class="form-panel" style="width:460px;">
+    <div class="form-inner">
+      <div class="section-label">Team members</div>
+      <div id="team-list">
+        <div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No members yet. Click + Add Member to get started.</div>
+      </div>
+      <button class="btn-add-block" onclick="addTeamCard()">+ Add Member</button>
+      <button class="btn-gen" onclick="generateTeam()">&#x25B6; Generate</button>
+    </div>
+  </div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div id="team-ot-preview" class="out-tab active" onclick="switchTeamOut('preview')">Preview</div>
+      <div id="team-ot-code" class="out-tab" onclick="switchTeamOut('code')">Code</div>
+    </div>
+    <div class="output-body">
+      <div id="team-preview-wrap" class="preview-wrap">
+        <div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Add team members and click Generate to preview.</div>
+      </div>
+      <div id="team-code-wrap" style="display:none;position:relative;">
+        <button class="btn-copy" style="position:absolute;top:12px;right:12px;" onclick="doCopy('team-code-box',this)">Copy</button>
+        <div class="code-box" id="team-code-box" style="min-height:300px;"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════
      SCREEN — FAQ
 ═══════════════════════════════════════ -->
 <div id="screen-faq" class="screen">
@@ -753,6 +792,7 @@ function switchScreen(name) {
   closeCourseDropdown();
   if (name === 'events') eventsOnOpen();
   if (name === 'faq') faqOnOpen();
+  if (name === 'team') teamOnOpen();
 }
 
 function switchOut(screen, mode) {
@@ -2389,6 +2429,267 @@ function buildEvtEmbedCode(evtId, rawUrl) {
   L.push('})();');
   L.push('<\/script>');
   return L.join('\n');
+}
+
+// ── SCREEN: TEAM ──────────────────────────────────────────────
+
+var TEAM_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23EEEDFE'/%3E%3Ccircle cx='50' cy='38' r='18' fill='%23534AB7' opacity='0.55'/%3E%3Cellipse cx='50' cy='80' rx='28' ry='22' fill='%23534AB7' opacity='0.55'/%3E%3C/svg%3E";
+
+var teamCards = [];
+var teamIdCounter = 0;
+
+function teamOnOpen() { if (teamCards.length) generateTeam(); }
+
+function saveTeamState() {
+  teamCards.forEach(function(card) {
+    var id = card.id;
+    card.name        = ((document.getElementById('team-name-'    + id) || {}).value || '');
+    card.designation = ((document.getElementById('team-desig-'   + id) || {}).value || '');
+    card.imgUrl      = ((document.getElementById('team-img-url-' + id) || {}).value || '');
+    card.paras = [];
+    var pc = document.getElementById('team-paras-' + id);
+    if (pc) pc.querySelectorAll('textarea').forEach(function(ta) { card.paras.push(ta.value); });
+  });
+}
+
+function addTeamCard() {
+  saveTeamState();
+  var id = 'tm' + (++teamIdCounter);
+  teamCards.push({ id: id, name: '', designation: '', imgUrl: '', paras: [''] });
+  renderTeamBlocks();
+  setTimeout(function() {
+    var el = document.getElementById('team-block-' + id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 50);
+}
+
+function removeTeamCard(id) {
+  saveTeamState();
+  teamCards = teamCards.filter(function(c) { return c.id !== id; });
+  renderTeamBlocks();
+  generateTeam();
+}
+
+function renderTeamBlocks() {
+  var list = document.getElementById('team-list');
+  if (!list) return;
+  if (!teamCards.length) {
+    list.innerHTML = '<div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No members yet. Click + Add Member to get started.</div>';
+    return;
+  }
+  list.innerHTML = teamCards.map(function(card, idx) { return buildTeamBlockHtml(card, idx + 1); }).join('');
+}
+
+function buildTeamBlockHtml(card, num) {
+  var id       = card.id;
+  var imgSrc   = card.imgUrl || TEAM_PLACEHOLDER;
+  var parasHtml = (card.paras && card.paras.length ? card.paras : ['']).map(function(p) {
+    return '<div class="feature-item" style="align-items:flex-start;">'
+      + '<textarea rows="3" placeholder="Bio paragraph..." style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);resize:vertical;line-height:1.6;outline:none;">' + xH(p) + '</textarea>'
+      + '<button class="btn-icon" style="margin-top:6px;flex-shrink:0;" onclick="this.parentNode.remove()" title="Remove">&#x2715;</button>'
+      + '</div>';
+  }).join('');
+
+  return '<div class="faq-block" id="team-block-' + id + '">'
+    + '<div class="faq-block-hd" onclick="toggleTeamBlock(\'' + id + '\')">'
+    +   '<img class="member-thumb" id="team-hd-img-' + id + '" src="' + imgSrc + '">'
+    +   '<div style="flex:1;min-width:0;overflow:hidden;">'
+    +     '<div class="faq-block-q" id="team-hd-name-' + id + '">' + (card.name ? xH(card.name) : '<em style="color:var(--muted)">Unnamed member</em>') + '</div>'
+    +     '<div style="font-size:11px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="team-hd-desig-' + id + '">' + xH(card.designation) + '</div>'
+    +   '</div>'
+    +   '<button class="btn-sm danger" onclick="removeTeamCard(\'' + id + '\');event.stopPropagation()">Remove</button>'
+    + '</div>'
+    + '<div class="faq-block-body" id="team-body-' + id + '">'
+    +   '<div class="field"><label>Full name</label>'
+    +     '<input type="text" id="team-name-' + id + '" value="' + xA(card.name) + '" placeholder="e.g. Syed M Ali" oninput="teamUpdateHeader(\'' + id + '\')">'
+    +   '</div>'
+    +   '<div class="field"><label>Designation / Role</label>'
+    +     '<input type="text" id="team-desig-' + id + '" value="' + xA(card.designation) + '" placeholder="e.g. Senior Tutor for ACCA & CIMA" oninput="teamUpdateHeader(\'' + id + '\')">'
+    +   '</div>'
+    +   '<div class="field"><label>Photo</label>'
+    +     '<div style="display:flex;gap:12px;align-items:center;">'
+    +       '<img class="member-preview" id="team-img-prev-' + id + '" src="' + imgSrc + '">'
+    +       '<div style="flex:1;display:flex;flex-direction:column;gap:6px;">'
+    +         '<input type="text" id="team-img-url-' + id + '" value="' + xA(card.imgUrl) + '" placeholder="Paste image URL..." oninput="teamUpdateHeader(\'' + id + '\')">'
+    +         '<label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--purple);cursor:pointer;font-weight:500;padding:2px 0;">'
+    +           '<input type="file" accept="image/*" style="display:none" onchange="teamImageUpload(\'' + id + '\',this)">&#x2191; Upload from device</label>'
+    +         '<span style="font-size:11px;color:var(--muted);">Uploaded images are resized to 300px automatically.</span>'
+    +       '</div>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="field"><label>Bio paragraphs</label>'
+    +     '<div id="team-paras-' + id + '" style="display:flex;flex-direction:column;gap:8px;">' + parasHtml + '</div>'
+    +     '<button class="btn-add-block" style="margin-top:6px" onclick="teamAddPara(\'' + id + '\')">+ Add paragraph</button>'
+    +   '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+function toggleTeamBlock(id) {
+  var b = document.getElementById('team-body-' + id);
+  if (b) b.classList.toggle('collapsed');
+}
+
+function teamUpdateHeader(id) {
+  var name   = (document.getElementById('team-name-'    + id) || {}).value || '';
+  var desig  = (document.getElementById('team-desig-'   + id) || {}).value || '';
+  var imgUrl = (document.getElementById('team-img-url-' + id) || {}).value || '';
+  var src    = imgUrl || TEAM_PLACEHOLDER;
+  var nameEl = document.getElementById('team-hd-name-'  + id);
+  var desEl  = document.getElementById('team-hd-desig-' + id);
+  var hdImg  = document.getElementById('team-hd-img-'   + id);
+  var pvImg  = document.getElementById('team-img-prev-' + id);
+  if (nameEl) nameEl.innerHTML  = name  ? xH(name)  : '<em style="color:var(--muted)">Unnamed member</em>';
+  if (desEl)  desEl.textContent = desig;
+  if (hdImg)  hdImg.src = src;
+  if (pvImg)  pvImg.src = src;
+}
+
+function teamImageUpload(id, input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var MAX = 300, w = img.width, h = img.height;
+      if (w > MAX || h > MAX) { var s = MAX / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      var urlInp = document.getElementById('team-img-url-' + id);
+      if (urlInp) { urlInp.value = dataUrl; teamUpdateHeader(id); }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function teamAddPara(id) {
+  var c = document.getElementById('team-paras-' + id);
+  if (!c) return;
+  var d = document.createElement('div');
+  d.className = 'feature-item';
+  d.style.alignItems = 'flex-start';
+  d.innerHTML = '<textarea rows="3" placeholder="Bio paragraph..." style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);resize:vertical;line-height:1.6;outline:none;"></textarea>'
+    + '<button class="btn-icon" style="margin-top:6px;flex-shrink:0;" onclick="this.parentNode.remove()" title="Remove">&#x2715;</button>';
+  c.appendChild(d);
+}
+
+function collectTeamData() {
+  return teamCards.map(function(c) {
+    return { id: c.id, name: c.name, designation: c.designation, imgUrl: c.imgUrl,
+             paras: (c.paras || []).filter(function(p) { return p.trim(); }) };
+  }).filter(function(c) { return c.name.trim(); });
+}
+
+function generateTeam() {
+  saveTeamState();
+  var cards = collectTeamData();
+  renderTeamPreview(cards);
+  renderTeamCode(cards);
+}
+
+function teamInitials(name) {
+  return (name || '?').trim().split(/\s+/).slice(0, 2).map(function(w) { return w[0].toUpperCase(); }).join('');
+}
+
+function teamCardHtml(card) {
+  var esc = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+  var e   = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+
+  var photo = card.imgUrl
+    ? '<img src="' + esc(card.imgUrl) + '" alt="' + esc(card.name) + '" style="width:120px;height:120px;border-radius:50%;object-fit:cover;object-position:top center;display:block;border:3px solid #534AB7;">'
+    : '<div style="width:120px;height:120px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;border:3px solid #534AB7;">'
+      + '<span style="font-family:Poppins,sans-serif;font-size:34px;font-weight:700;color:#534AB7;">' + e(teamInitials(card.name)) + '</span></div>';
+
+  var paras = (card.paras || []).map(function(p, i, arr) {
+    return '<p style="font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.75;margin:0' + (i < arr.length - 1 ? ' 0 12px' : '') + ';text-align:left;">' + e(p) + '</p>';
+  }).join('');
+
+  return '<div style="display:flex;gap:28px;align-items:flex-start;background:#fff;border-radius:16px;padding:28px;box-shadow:0 2px 16px rgba(0,0,0,.08);border:1px solid #f0f0f5;">'
+    + '<div style="flex-shrink:0;">' + photo + '</div>'
+    + '<div style="flex:1;min-width:0;">'
+    +   '<h3 style="font-family:Poppins,sans-serif;font-size:19px;font-weight:700;color:#1a1a1a;margin:0 0 4px;text-align:left;">' + e(card.name) + '</h3>'
+    + (card.designation ? '<p style="font-family:Poppins,sans-serif;font-size:14px;font-weight:600;color:#534AB7;margin:0 0 16px;text-align:left;">' + e(card.designation) + '</p>' : '')
+    + paras
+    + '</div></div>';
+}
+
+function renderTeamPreview(cards) {
+  var wrap = document.getElementById('team-preview-wrap');
+  if (!wrap) return;
+  if (!cards.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Add team members and click Generate to preview.</div>';
+    return;
+  }
+  wrap.innerHTML = '<div style="display:flex;flex-direction:column;gap:20px;">' + cards.map(teamCardHtml).join('') + '</div>';
+}
+
+function renderTeamCode(cards) {
+  var box = document.getElementById('team-code-box');
+  if (!box) return;
+  if (!cards.length) { box.textContent = '<!-- Add team members and click Generate -->'; return; }
+
+  var uid = 'vlsteam' + Math.random().toString(36).slice(2, 7);
+  var L = [];
+
+  L.push('<style>');
+  L.push('.' + uid + '{display:flex;flex-direction:column;gap:20px;font-family:Poppins,sans-serif;width:100%;}');
+  L.push('.' + uid + '-card{display:flex;gap:28px;align-items:flex-start;background:#fff;border-radius:16px;padding:28px;box-shadow:0 2px 16px rgba(0,0,0,.08);border:1px solid #f0f0f5;}');
+  L.push('.' + uid + '-photo{flex-shrink:0;}');
+  L.push('.' + uid + '-photo img{width:120px;height:120px;border-radius:50%;object-fit:cover;object-position:top center;display:block;border:3px solid #534AB7;}');
+  L.push('.' + uid + '-initials{width:120px;height:120px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;border:3px solid #534AB7;}');
+  L.push('.' + uid + '-initials span{font-family:Poppins,sans-serif;font-size:34px;font-weight:700;color:#534AB7;}');
+  L.push('.' + uid + '-body{flex:1;min-width:0;}');
+  L.push('.' + uid + '-name{font-family:Poppins,sans-serif;font-size:19px;font-weight:700;color:#1a1a1a;margin:0 0 4px;text-align:left;}');
+  L.push('.' + uid + '-role{font-family:Poppins,sans-serif;font-size:14px;font-weight:600;color:#534AB7;margin:0 0 16px;text-align:left;}');
+  L.push('.' + uid + '-para{font-family:Poppins,sans-serif;font-size:14px;color:#374151;line-height:1.75;margin:0 0 12px;text-align:left;}');
+  L.push('.' + uid + '-para:last-child{margin-bottom:0;}');
+  L.push('@media(max-width:600px){'
+    + '.' + uid + '-card{flex-direction:column;align-items:center;padding:20px;gap:16px;}'
+    + '.' + uid + '-name,.' + uid + '-role,.' + uid + '-para{text-align:center;}'
+    + '}');
+  L.push('</style>');
+  L.push('');
+  L.push('<div class="' + uid + '">');
+
+  cards.forEach(function(card) {
+    var esc = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+    var e   = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+    L.push('  <div class="' + uid + '-card">');
+    L.push('    <div class="' + uid + '-photo">');
+    if (card.imgUrl) {
+      L.push('      <img src="' + esc(card.imgUrl) + '" alt="' + esc(card.name) + '">');
+    } else {
+      L.push('      <div class="' + uid + '-initials"><span>' + e(teamInitials(card.name)) + '</span></div>');
+    }
+    L.push('    </div>');
+    L.push('    <div class="' + uid + '-body">');
+    L.push('      <h3 class="' + uid + '-name">' + e(card.name) + '</h3>');
+    if (card.designation) L.push('      <p class="' + uid + '-role">' + e(card.designation) + '</p>');
+    (card.paras || []).forEach(function(p) { L.push('      <p class="' + uid + '-para">' + e(p) + '</p>'); });
+    L.push('    </div>');
+    L.push('  </div>');
+  });
+
+  L.push('</div>');
+  box.textContent = L.join('\n');
+}
+
+function switchTeamOut(mode) {
+  var pw = document.getElementById('team-preview-wrap');
+  var cw = document.getElementById('team-code-wrap');
+  var tp = document.getElementById('team-ot-preview');
+  var tc = document.getElementById('team-ot-code');
+  if (mode === 'preview') {
+    pw.style.display = ''; cw.style.display = 'none';
+    tp.classList.add('active'); tc.classList.remove('active');
+  } else {
+    pw.style.display = 'none'; cw.style.display = '';
+    tc.classList.add('active'); tp.classList.remove('active');
+  }
 }
 
 // ── SCREEN: FAQ ────────────────────────────────────────────────
