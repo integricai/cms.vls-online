@@ -3077,25 +3077,22 @@ function buildFooterHtml(data) {
   html += '</div>'; // end 4-col grid
 
   // Copyright bar
-  html += '<div style="display:flex;align-items:center;padding:18px 0;">';
+  html += '<div style="padding:18px 0;">';
 
-  // Left spacer (balances right for centering)
-  html += '<div style="flex:1;"></div>';
-
-  // Centre: copyright links equally spaced
+  // Links row — left-aligned
   var cpLinks = (data.copyright.links || []).filter(function(l) { return l.label; });
   if (cpLinks.length) {
-    html += '<div style="flex:1;display:flex;justify-content:center;gap:32px;">';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:8px;">';
     cpLinks.forEach(function(link) {
       html += '<a href="' + ftHesc(link.url || '#') + '" style="font-family:Poppins,sans-serif;font-size:12px;color:rgba(255,255,255,0.65);text-decoration:none;white-space:nowrap;">' + ftHesc(link.label) + '</a>';
     });
     html += '</div>';
-  } else {
-    html += '<div style="flex:1;"></div>';
   }
 
-  // Right: copyright text
-  html += '<div style="flex:1;text-align:right;font-family:Poppins,sans-serif;font-size:12px;color:rgba(255,255,255,0.5);">' + ftHesc(data.copyright.text || '') + '</div>';
+  // Copyright text — left-aligned, below links
+  if (data.copyright.text) {
+    html += '<div style="font-family:Poppins,sans-serif;font-size:12px;color:rgba(255,255,255,0.5);">' + ftHesc(data.copyright.text) + '</div>';
+  }
 
   html += '</div>'; // end copyright bar
   html += '</div>'; // end padding wrapper
