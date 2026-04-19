@@ -213,6 +213,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
   <div class="nav-tab" id="nav-team" onclick="switchScreen('team')">Team</div>
   <div class="nav-tab hidden" id="nav-banner" onclick="switchScreen('banner')">Banner</div>
   <div class="nav-tab hidden" id="nav-events" onclick="switchScreen('events')">Events</div>
+  <div class="nav-tab hidden" id="nav-footer" onclick="switchScreen('footer')">Footer</div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
 </div>
 
@@ -540,6 +541,46 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 </div>
 
 <!-- ═══════════════════════════════════════
+     SCREEN — FOOTER
+═══════════════════════════════════════ -->
+<div id="screen-footer" class="screen">
+
+  <div class="form-panel"><div class="form-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="section-label" style="margin:0;">Footer Builder</div>
+      <button class="btn-gen" style="padding:8px 18px;font-size:13px;" onclick="generateAndSaveFooter()">&#x1F4BE; Save &amp; Generate</button>
+    </div>
+    <div id="footer-form-body">
+      <div style="text-align:center;font-size:12px;color:var(--muted);padding:32px 0;">Loading…</div>
+    </div>
+    <div id="footer-status" style="font-size:12px;text-align:center;min-height:16px;margin-top:8px;color:var(--muted);"></div>
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="footer-ot-preview" onclick="switchFooterOut('preview')">Preview</div>
+      <div class="out-tab" id="footer-ot-code" onclick="switchFooterOut('code')">HTML Code</div>
+    </div>
+    <div class="output-body" style="padding:0;">
+      <div id="footer-out-preview" style="min-height:200px;">
+        <div id="footer-preview-body">
+          <div style="padding:40px;text-align:center;font-size:13px;color:var(--muted);">Fill in the form and click "Save &amp; Generate" to preview the footer here.</div>
+        </div>
+      </div>
+      <div id="footer-out-code" style="display:none;padding:16px;">
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:8px;">
+          Copy this HTML and paste it into your site's footer area.
+        </div>
+        <div style="position:relative;">
+          <button class="btn-copy" style="position:absolute;top:8px;right:8px;" onclick="doCopy('footer-html-code',this)">Copy</button>
+          <pre id="footer-html-code" class="code-box" style="min-height:80px;font-size:11px;padding-top:36px;"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
      SCREEN — FAQ
 ═══════════════════════════════════════ -->
 <div id="screen-faq" class="screen">
@@ -616,14 +657,17 @@ var AUTH_ROLE_KEY = 'vls_auth_role';
 function applyRole(role) {
   var bannerNav = document.getElementById('nav-banner');
   var eventsNav = document.getElementById('nav-events');
+  var footerNav = document.getElementById('nav-footer');
   if (role === 'admin') {
     bannerNav.classList.remove('hidden');
     eventsNav.classList.remove('hidden');
+    footerNav.classList.remove('hidden');
   } else {
     bannerNav.classList.add('hidden');
     eventsNav.classList.add('hidden');
+    footerNav.classList.add('hidden');
     var active = document.querySelector('.screen.active');
-    if (active && (active.id === 'screen-banner' || active.id === 'screen-events')) {
+    if (active && (active.id === 'screen-banner' || active.id === 'screen-events' || active.id === 'screen-footer')) {
       switchScreen('intro');
     }
   }
@@ -759,6 +803,7 @@ function switchScreen(name) {
   if (name === 'faq') faqOnOpen();
   if (name === 'team') teamOnOpen();
   if (name === 'banner') bannerOnOpen();
+  if (name === 'footer') footerOnOpen();
 }
 
 function switchOut(screen, mode) {
@@ -2767,6 +2812,303 @@ function switchTeamOut(mode) {
     pw.style.display = 'none'; cw.style.display = '';
     tc.classList.add('active'); tp.classList.remove('active');
   }
+}
+
+// ── SCREEN: FOOTER ─────────────────────────────────────────────
+
+var footerData = null;
+var footerLoaded = false;
+var footerLinkCounter = 0;
+
+function ftEsc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function ftHesc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function makeFooterDefault() {
+  return {
+    sections: [
+      { title: '', links: [] },
+      { title: '', links: [] },
+      { title: '', links: [] }
+    ],
+    contact: { title: 'Get in Touch', address: '', email: '', whatsapp: '' },
+    copyright: { text: '', links: [] }
+  };
+}
+
+function footerOnOpen() {
+  if (!footerLoaded) { footerLoaded = true; loadFooterFromGist(); }
+  else { renderFooterForm(); }
+}
+
+function setFooterStatus(msg, color) {
+  var el = document.getElementById('footer-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = color || 'var(--muted)';
+}
+
+async function loadFooterFromGist() {
+  setFooterStatus('Loading…');
+  try {
+    var resp = await fetch('/api/publish-footer');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var data = await resp.json();
+    if (data.footer) {
+      footerData = data.footer;
+      if (!footerData.sections) footerData.sections = [];
+      while (footerData.sections.length < 3) footerData.sections.push({ title: '', links: [] });
+      if (!footerData.contact) footerData.contact = { title: 'Get in Touch', address: '', email: '', whatsapp: '' };
+      if (!footerData.copyright) footerData.copyright = { text: '', links: [] };
+      // Assign fresh session IDs to all links
+      var c = footerLinkCounter;
+      footerData.sections.forEach(function(sec) {
+        sec.links = (sec.links || []).map(function(l) { return { id: 'fl' + (++c), label: l.label || '', url: l.url || '' }; });
+      });
+      footerData.copyright.links = (footerData.copyright.links || []).map(function(l) { return { id: 'fl' + (++c), label: l.label || '', url: l.url || '' }; });
+      footerLinkCounter = c;
+    } else {
+      footerData = makeFooterDefault();
+    }
+  } catch(e) {
+    footerData = makeFooterDefault();
+  }
+  setFooterStatus('');
+  renderFooterForm();
+  if (footerData.sections.some(function(s) { return s.title; }) || footerData.contact.address || footerData.copyright.text) {
+    generateFooterPreview();
+  }
+}
+
+function saveFooterState() {
+  if (!footerData) return;
+  footerData.sections.forEach(function(sec, i) {
+    var titleEl = document.getElementById('ft-sec-title-' + i);
+    if (titleEl) sec.title = titleEl.value;
+    sec.links = [];
+    var linksEl = document.getElementById('ft-sec-links-' + i);
+    if (linksEl) {
+      linksEl.querySelectorAll('.ft-link-row').forEach(function(row) {
+        var lbl = row.querySelector('.ft-link-label');
+        var url = row.querySelector('.ft-link-url');
+        sec.links.push({ id: row.dataset.lid, label: (lbl || {}).value || '', url: (url || {}).value || '' });
+      });
+    }
+  });
+  var ctEl = document.getElementById('ft-contact-title');
+  var addrEl = document.getElementById('ft-addr');
+  var emailEl = document.getElementById('ft-email');
+  var waEl = document.getElementById('ft-wa');
+  if (ctEl) footerData.contact.title = ctEl.value;
+  if (addrEl) footerData.contact.address = addrEl.value;
+  if (emailEl) footerData.contact.email = emailEl.value;
+  if (waEl) footerData.contact.whatsapp = waEl.value;
+  var cpEl = document.getElementById('ft-cp-text');
+  if (cpEl) footerData.copyright.text = cpEl.value;
+  footerData.copyright.links = [];
+  var cpLinksEl = document.getElementById('ft-cp-links');
+  if (cpLinksEl) {
+    cpLinksEl.querySelectorAll('.ft-link-row').forEach(function(row) {
+      var lbl = row.querySelector('.ft-link-label');
+      var url = row.querySelector('.ft-link-url');
+      footerData.copyright.links.push({ id: row.dataset.lid, label: (lbl || {}).value || '', url: (url || {}).value || '' });
+    });
+  }
+}
+
+function addFooterLink(sectionIdx) {
+  saveFooterState();
+  var lid = 'fl' + (++footerLinkCounter);
+  footerData.sections[sectionIdx].links.push({ id: lid, label: '', url: '' });
+  renderFooterForm();
+  setTimeout(function() {
+    var el = document.querySelector('[data-lid="' + lid + '"] .ft-link-label');
+    if (el) el.focus();
+  }, 30);
+}
+
+function removeFooterLink(sectionIdx, lid) {
+  saveFooterState();
+  footerData.sections[sectionIdx].links = footerData.sections[sectionIdx].links.filter(function(l) { return l.id !== lid; });
+  renderFooterForm();
+}
+
+function addCopyrightLink() {
+  saveFooterState();
+  var lid = 'fl' + (++footerLinkCounter);
+  footerData.copyright.links.push({ id: lid, label: '', url: '' });
+  renderFooterForm();
+  setTimeout(function() {
+    var el = document.querySelector('[data-lid="' + lid + '"] .ft-link-label');
+    if (el) el.focus();
+  }, 30);
+}
+
+function removeCopyrightLink(lid) {
+  saveFooterState();
+  footerData.copyright.links = footerData.copyright.links.filter(function(l) { return l.id !== lid; });
+  renderFooterForm();
+}
+
+function buildFooterLinkRowHtml(link, removeCall) {
+  return '<div class="ft-link-row" data-lid="' + link.id + '" style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:center;">'
+    + '<input class="ft-link-label" type="text" value="' + ftEsc(link.label) + '" placeholder="Label" style="font-family:Poppins,sans-serif;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;">'
+    + '<input class="ft-link-url" type="text" value="' + ftEsc(link.url) + '" placeholder="https://..." style="font-family:Poppins,sans-serif;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;">'
+    + '<button onclick="' + removeCall + '" style="padding:6px 9px;background:#fee2e2;color:#e63946;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;font-size:12px;">✕</button>'
+    + '</div>';
+}
+
+function renderFooterForm() {
+  if (!footerData) return;
+  var container = document.getElementById('footer-form-body');
+  if (!container) return;
+  var html = '';
+
+  // 3 link sections
+  for (var i = 0; i < 3; i++) {
+    var sec = footerData.sections[i];
+    html += '<div class="section-label">Section ' + (i + 1) + '</div>';
+    html += '<div class="field"><label>Title</label><input type="text" id="ft-sec-title-' + i + '" value="' + ftEsc(sec.title) + '" placeholder="e.g. Quick Links"></div>';
+    html += '<div style="margin-bottom:4px;font-size:12px;font-weight:500;color:var(--muted);">Links</div>';
+    html += '<div id="ft-sec-links-' + i + '" style="display:flex;flex-direction:column;gap:6px;">';
+    sec.links.forEach(function(link) {
+      html += buildFooterLinkRowHtml(link, 'removeFooterLink(' + i + ',\'' + link.id + '\')');
+    });
+    html += '</div>';
+    html += '<button onclick="addFooterLink(' + i + ')" style="margin-top:6px;font-size:12px;padding:5px 12px;background:#f0f4ff;color:var(--blue);border:1px solid #c7d7f5;border-radius:6px;cursor:pointer;">+ Add link</button>';
+    if (i < 2) html += '<div style="border-top:1px solid var(--border);margin:14px 0;"></div>';
+  }
+
+  // Contact section
+  html += '<div class="section-label" style="margin-top:14px;">Contact Section</div>';
+  html += '<div class="field"><label>Section title</label><input type="text" id="ft-contact-title" value="' + ftEsc(footerData.contact.title || 'Get in Touch') + '" placeholder="Get in Touch"></div>';
+  html += '<div class="field"><label>Address</label><textarea id="ft-addr" rows="3" style="width:100%;font-family:Poppins,sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;resize:vertical;" placeholder="123 Main Street&#10;London, UK">' + ftEsc(footerData.contact.address) + '</textarea></div>';
+  html += '<div class="field"><label>Email</label><input type="email" id="ft-email" value="' + ftEsc(footerData.contact.email) + '" placeholder="info@vls-online.com"></div>';
+  html += '<div class="field"><label>WhatsApp number</label><input type="text" id="ft-wa" value="' + ftEsc(footerData.contact.whatsapp) + '" placeholder="+44 7000 000000"></div>';
+
+  // Copyright bar
+  html += '<div class="section-label" style="margin-top:14px;">Copyright Bar</div>';
+  html += '<div class="field"><label>Copyright text <span class="hint">(right-aligned)</span></label><input type="text" id="ft-cp-text" value="' + ftEsc(footerData.copyright.text) + '" placeholder="© 2025 VLS Online. All rights reserved."></div>';
+  html += '<div style="margin-bottom:4px;font-size:12px;font-weight:500;color:var(--muted);">Footer links <span style="font-size:11px;">(Privacy Policy, Terms etc. — centred)</span></div>';
+  html += '<div id="ft-cp-links" style="display:flex;flex-direction:column;gap:6px;">';
+  footerData.copyright.links.forEach(function(link) {
+    html += buildFooterLinkRowHtml(link, 'removeCopyrightLink(\'' + link.id + '\')');
+  });
+  html += '</div>';
+  html += '<button onclick="addCopyrightLink()" style="margin-top:6px;font-size:12px;padding:5px 12px;background:#f0f4ff;color:var(--blue);border:1px solid #c7d7f5;border-radius:6px;cursor:pointer;">+ Add link</button>';
+
+  container.innerHTML = html;
+}
+
+async function generateAndSaveFooter() {
+  saveFooterState();
+  setFooterStatus('Saving…', '#6b7280');
+  try {
+    var resp = await fetch('/api/publish-footer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ footer: footerData })
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    setFooterStatus('Saved!', '#16a34a');
+    setTimeout(function() { setFooterStatus(''); }, 3000);
+    generateFooterPreview();
+    switchFooterOut('preview');
+  } catch(e) {
+    setFooterStatus('Save failed: ' + e.message, '#e63946');
+  }
+}
+
+function generateFooterPreview() {
+  if (!footerData) return;
+  var html = buildFooterHtml(footerData);
+  var previewEl = document.getElementById('footer-preview-body');
+  if (previewEl) previewEl.innerHTML = html;
+  var codeEl = document.getElementById('footer-html-code');
+  if (codeEl) codeEl.textContent = html;
+}
+
+function buildFooterHtml(data) {
+  var BG = '#0f2155';
+  var ts = 'font-family:Poppins,sans-serif;font-size:13px;font-weight:700;color:#ffffff;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.07em;';
+  var ls = 'color:rgba(255,255,255,0.8);text-decoration:none;font-size:13px;font-family:Poppins,sans-serif;display:block;margin-bottom:9px;line-height:1.4;transition:color .2s;';
+
+  var html = '<footer style="background:' + BG + ';color:#fff;font-family:Poppins,sans-serif;">';
+  html += '<div style="padding:52px 40px 0;">';
+
+  // 4-column grid
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:40px;padding-bottom:44px;border-bottom:1px solid rgba(255,255,255,0.12);">';
+
+  // 3 link sections
+  data.sections.forEach(function(sec) {
+    html += '<div style="text-align:left;">';
+    if (sec.title) html += '<p style="' + ts + '">' + ftHesc(sec.title) + '</p>';
+    var visibleLinks = (sec.links || []).filter(function(l) { return l.label; });
+    if (visibleLinks.length) {
+      visibleLinks.forEach(function(link) {
+        html += '<a href="' + ftHesc(link.url || '#') + '" style="' + ls + '">' + ftHesc(link.label) + '</a>';
+      });
+    }
+    html += '</div>';
+  });
+
+  // Contact column
+  html += '<div style="text-align:left;">';
+  var ctTitle = (data.contact.title || 'Get in Touch');
+  html += '<p style="' + ts + '">' + ftHesc(ctTitle) + '</p>';
+  if (data.contact.address) {
+    var addrHtml = data.contact.address.split('\n').map(ftHesc).join('<br>');
+    html += '<div style="font-size:13px;color:rgba(255,255,255,0.8);line-height:1.75;margin-bottom:12px;font-family:Poppins,sans-serif;">' + addrHtml + '</div>';
+  }
+  if (data.contact.email) {
+    html += '<a href="mailto:' + ftHesc(data.contact.email) + '" style="' + ls + '">' + ftHesc(data.contact.email) + '</a>';
+  }
+  if (data.contact.whatsapp) {
+    var waNum = data.contact.whatsapp.replace(/[\s\-()]/g, '').replace(/^\+/, '');
+    html += '<a href="https://wa.me/' + waNum + '" style="' + ls + '">' + ftHesc(data.contact.whatsapp) + '</a>';
+  }
+  html += '</div>';
+
+  html += '</div>'; // end 4-col grid
+
+  // Copyright bar
+  html += '<div style="display:flex;align-items:center;padding:18px 0;">';
+
+  // Left spacer (balances right for centering)
+  html += '<div style="flex:1;"></div>';
+
+  // Centre: copyright links equally spaced
+  var cpLinks = (data.copyright.links || []).filter(function(l) { return l.label; });
+  if (cpLinks.length) {
+    html += '<div style="flex:1;display:flex;justify-content:center;gap:32px;">';
+    cpLinks.forEach(function(link) {
+      html += '<a href="' + ftHesc(link.url || '#') + '" style="font-family:Poppins,sans-serif;font-size:12px;color:rgba(255,255,255,0.65);text-decoration:none;white-space:nowrap;">' + ftHesc(link.label) + '</a>';
+    });
+    html += '</div>';
+  } else {
+    html += '<div style="flex:1;"></div>';
+  }
+
+  // Right: copyright text
+  html += '<div style="flex:1;text-align:right;font-family:Poppins,sans-serif;font-size:12px;color:rgba(255,255,255,0.5);">' + ftHesc(data.copyright.text || '') + '</div>';
+
+  html += '</div>'; // end copyright bar
+  html += '</div>'; // end padding wrapper
+  html += '</footer>';
+
+  return html;
+}
+
+function switchFooterOut(mode) {
+  document.getElementById('footer-out-preview').style.display = mode === 'preview' ? '' : 'none';
+  document.getElementById('footer-out-code').style.display    = mode === 'code'    ? '' : 'none';
+  document.getElementById('footer-ot-preview').classList.toggle('active', mode === 'preview');
+  document.getElementById('footer-ot-code').classList.toggle('active', mode === 'code');
 }
 
 // ── SCREEN: FAQ ────────────────────────────────────────────────
