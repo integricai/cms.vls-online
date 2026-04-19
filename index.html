@@ -1567,8 +1567,14 @@ function deleteBanner(id) {
 
 function toggleBannerBlock(id) {
   saveBannerState();
-  banners.forEach(function(b) { if (b.id === id) b.expanded = !b.expanded; });
+  var wasExpanded = false;
+  banners.forEach(function(b) { if (b.id === id) { wasExpanded = b.expanded; b.expanded = !b.expanded; } });
   renderBannerBlocks();
+  // When opening a banner, show its current data in the preview panel
+  if (!wasExpanded) {
+    var b = banners.find(function(x) { return x.id === id; });
+    if (b) { renderBannerPreview(b); switchBannerOut('preview'); }
+  }
 }
 
 function saveBannerState() {
