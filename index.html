@@ -1608,7 +1608,7 @@ function buildBannerBlockHtml(b) {
   var collapsed = !b.expanded;
   var html = '<div id="banner-block-' + id + '" style="border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden;">';
   html += '<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;background:#f8fafc;cursor:pointer;" onclick="toggleBannerBlock(\'' + id + '\')">';
-  html += '<span style="font-size:13px;font-weight:600;flex:1;color:var(--blue);">' + bnEsc(b.title || 'Untitled Banner') + '</span>';
+  html += '<span style="font-size:13px;font-weight:600;flex:1;color:var(--blue);">' + bnEsc(b.name || 'Untitled') + '</span>';
   html += '<span style="font-size:11px;color:var(--muted);">' + (b.visible ? '● Visible' : '○ Hidden') + '</span>';
   html += '<span style="font-size:14px;color:var(--muted);margin-left:8px;">' + (collapsed ? '▾' : '▴') + '</span>';
   html += '</div>';
