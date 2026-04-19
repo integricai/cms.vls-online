@@ -3035,67 +3035,94 @@ function generateFooterPreview() {
 
 function buildFooterHtml(data) {
   var BG = '#0f2155';
-  var ts = 'font-family:Poppins,sans-serif;font-size:13px;font-weight:700;color:#ffffff;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.07em;';
-  var ls = 'color:rgba(255,255,255,0.8);text-decoration:none;font-size:13px;font-family:Poppins,sans-serif;display:block;margin-bottom:9px;line-height:1.4;transition:color .2s;';
+  var P  = 'vlsft'; // scoped prefix — avoids clashing with Zenler global styles
+
+  // Scoped CSS: desktop grid + mobile accordion
+  var css = ''
+    + '.' + P + '-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:40px;padding-bottom:44px;border-bottom:1px solid rgba(255,255,255,.12);}'
+    + '.' + P + '-col{}'
+    + '.' + P + '-hdr{margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;cursor:default;}'
+    + '.' + P + '-arrow{display:none;font-size:18px;color:rgba(255,255,255,.7);line-height:1;}'
+    + '.' + P + '-body{display:block;}'
+    + '@media(max-width:768px){'
+    +   '.' + P + '-grid{display:block;}'
+    +   '.' + P + '-col{border-bottom:1px solid rgba(255,255,255,.12);}'
+    +   '.' + P + '-col:first-child{border-top:1px solid rgba(255,255,255,.12);margin-top:8px;}'
+    +   '.' + P + '-hdr{cursor:pointer;padding:14px 0;margin-bottom:0;}'
+    +   '.' + P + '-arrow{display:inline-block;transition:transform .25s;}'
+    +   '.' + P + '-body{display:none;padding-bottom:14px;}'
+    +   '.' + P + '-col.open .' + P + '-body{display:block;}'
+    +   '.' + P + '-col.open .' + P + '-arrow{transform:rotate(180deg);}'
+    + '}';
+
+  var toggleJs = ''
+    + 'function vlsFtTog(h){'
+    +   'if(window.innerWidth>768)return;'
+    +   'var c=h.parentElement,o=c.classList.contains("open");'
+    +   'document.querySelectorAll(".' + P + '-col").forEach(function(x){x.classList.remove("open");});'
+    +   'if(!o)c.classList.add("open");'
+    + '}';
+
+  var ts = 'font-family:Poppins,sans-serif;font-size:13px;font-weight:700;color:#fff;margin:0;text-transform:uppercase;letter-spacing:.07em;text-align:left;';
+  var ls = 'color:rgba(255,255,255,.8);text-decoration:none;font-size:13px;font-family:Poppins,sans-serif;display:block;margin-bottom:9px;line-height:1.4;text-align:left;';
+
+  function col(titleText, bodyHtml) {
+    return '<div class="' + P + '-col">'
+      + '<div class="' + P + '-hdr" onclick="vlsFtTog(this)">'
+      +   '<span style="' + ts + '">' + titleText + '</span>'
+      +   '<span class="' + P + '-arrow">&#9660;</span>'
+      + '</div>'
+      + '<div class="' + P + '-body">' + bodyHtml + '</div>'
+      + '</div>';
+  }
 
   var html = '<footer style="background:' + BG + ';color:#fff;font-family:Poppins,sans-serif;">';
+  html += '<style>' + css + '</style>';
   html += '<div style="padding:52px 40px 0;">';
-
-  // 4-column grid
-  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:40px;padding-bottom:44px;border-bottom:1px solid rgba(255,255,255,0.12);">';
+  html += '<div class="' + P + '-grid">';
 
   // 3 link sections
   data.sections.forEach(function(sec) {
-    html += '<div style="text-align:left;">';
-    if (sec.title) html += '<p style="' + ts + '">' + ftHesc(sec.title) + '</p>';
-    var visibleLinks = (sec.links || []).filter(function(l) { return l.label; });
-    if (visibleLinks.length) {
-      visibleLinks.forEach(function(link) {
-        html += '<a href="' + ftHesc(link.url || '#') + '" style="' + ls + '">' + ftHesc(link.label) + '</a>';
-      });
-    }
-    html += '</div>';
+    var body = (sec.links || []).filter(function(l) { return l.label; }).map(function(l) {
+      return '<a href="' + ftHesc(l.url || '#') + '" style="' + ls + '">' + ftHesc(l.label) + '</a>';
+    }).join('');
+    html += col(ftHesc(sec.title || '&nbsp;'), body);
   });
 
   // Contact column
-  html += '<div style="text-align:left;">';
-  var ctTitle = (data.contact.title || 'Get in Touch');
-  html += '<p style="' + ts + '">' + ftHesc(ctTitle) + '</p>';
+  var contactBody = '';
   if (data.contact.address) {
-    var addrHtml = data.contact.address.split('\n').map(ftHesc).join('<br>');
-    html += '<div style="font-size:13px;color:rgba(255,255,255,0.8);line-height:1.75;margin-bottom:12px;font-family:Poppins,sans-serif;">' + addrHtml + '</div>';
+    contactBody += '<div style="font-size:13px;color:rgba(255,255,255,.8);line-height:1.75;margin-bottom:12px;font-family:Poppins,sans-serif;text-align:left;">'
+      + data.contact.address.split('\n').map(ftHesc).join('<br>') + '</div>';
   }
   if (data.contact.email) {
-    html += '<a href="mailto:' + ftHesc(data.contact.email) + '" style="' + ls + '">' + ftHesc(data.contact.email) + '</a>';
+    contactBody += '<a href="mailto:' + ftHesc(data.contact.email) + '" style="' + ls + '">' + ftHesc(data.contact.email) + '</a>';
   }
   if (data.contact.whatsapp) {
     var waNum = data.contact.whatsapp.replace(/[\s\-()]/g, '').replace(/^\+/, '');
-    html += '<a href="https://wa.me/' + waNum + '" style="' + ls + '">' + ftHesc(data.contact.whatsapp) + '</a>';
+    contactBody += '<a href="https://wa.me/' + waNum + '" style="' + ls + '">' + ftHesc(data.contact.whatsapp) + '</a>';
   }
-  html += '</div>';
+  html += col(ftHesc(data.contact.title || 'Get in Touch'), contactBody);
 
-  html += '</div>'; // end 4-col grid
+  html += '</div>'; // end grid
 
-  // Copyright bar
-  html += '<div style="padding:18px 0;">';
-
-  // Links row — left-aligned
+  // Copyright bar — fully left-aligned with explicit text-align:left to override Zenler
+  html += '<div style="padding:18px 0;text-align:left;">';
   var cpLinks = (data.copyright.links || []).filter(function(l) { return l.label; });
   if (cpLinks.length) {
-    html += '<div style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:8px;">';
-    cpLinks.forEach(function(link) {
-      html += '<a href="' + ftHesc(link.url || '#') + '" style="font-family:Poppins,sans-serif;font-size:12px;color:rgba(255,255,255,0.65);text-decoration:none;white-space:nowrap;">' + ftHesc(link.label) + '</a>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:8px;text-align:left;">';
+    cpLinks.forEach(function(l) {
+      html += '<a href="' + ftHesc(l.url || '#') + '" style="font-family:Poppins,sans-serif;font-size:12px;color:rgba(255,255,255,.65);text-decoration:none;white-space:nowrap;text-align:left;">' + ftHesc(l.label) + '</a>';
     });
     html += '</div>';
   }
-
-  // Copyright text — left-aligned, below links
   if (data.copyright.text) {
-    html += '<div style="font-family:Poppins,sans-serif;font-size:12px;color:rgba(255,255,255,0.5);">' + ftHesc(data.copyright.text) + '</div>';
+    html += '<div style="font-family:Poppins,sans-serif;font-size:12px;color:rgba(255,255,255,.5);text-align:left;">' + ftHesc(data.copyright.text) + '</div>';
   }
-
   html += '</div>'; // end copyright bar
+
   html += '</div>'; // end padding wrapper
+  html += '<script>' + toggleJs + '<\/script>';
   html += '</footer>';
 
   return html;
