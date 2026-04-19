@@ -331,10 +331,8 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 <div id="screen-banner" class="screen">
 
   <div class="form-panel"><div class="form-inner">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <div class="section-label" style="margin:0;">Banners</div>
-      <button class="btn-gen" style="padding:8px 18px;font-size:13px;" onclick="addBanner()">+ New Banner</button>
-    </div>
+    <div class="section-label" style="margin:0 0 12px 0;">Banners</div>
+    <button class="btn-gen" style="padding:8px 18px;font-size:13px;margin-bottom:16px;" onclick="addBanner()">+ New Banner</button>
     <div id="banner-list">
       <div style="text-align:center;font-size:12px;color:var(--muted);padding:32px 0;">Loading banners…</div>
     </div>
@@ -1550,7 +1548,7 @@ function addBanner() {
   saveBannerState();
   var id = 'bn' + (++bannerIdCounter);
   banners.push({
-    id: id, name: 'New Banner', title: '', sub: '', ctaText: '', ctaUrl: '',
+    id: id, name: '', title: '', sub: '', ctaText: '', ctaUrl: '',
     days: 0, hours: 0, mins: 0, secs: 0, visible: true,
     bg: '#204280', fg: '#ffffff', btnBg: '#e63946', btnFg: '#ffffff', expanded: true
   });
@@ -1610,7 +1608,7 @@ function buildBannerBlockHtml(b) {
   var collapsed = !b.expanded;
   var html = '<div id="banner-block-' + id + '" style="border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden;">';
   html += '<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;background:#f8fafc;cursor:pointer;" onclick="toggleBannerBlock(\'' + id + '\')">';
-  html += '<span style="font-size:13px;font-weight:600;flex:1;color:var(--blue);">' + bnEsc(b.name || 'Untitled') + '</span>';
+  html += '<span style="font-size:13px;font-weight:600;flex:1;color:var(--blue);">' + bnEsc(b.title || 'Untitled Banner') + '</span>';
   html += '<span style="font-size:11px;color:var(--muted);">' + (b.visible ? '● Visible' : '○ Hidden') + '</span>';
   html += '<span style="font-size:14px;color:var(--muted);margin-left:8px;">' + (collapsed ? '▾' : '▴') + '</span>';
   html += '</div>';
