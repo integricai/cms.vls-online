@@ -585,15 +585,17 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 ═══════════════════════════════════════ -->
 <div id="screen-faq" class="screen">
 
-  <!-- Left: FAQ editor -->
+  <!-- Left: FAQ sections -->
   <div class="form-panel" style="width:460px;">
     <div class="form-inner">
-      <div class="section-label">FAQ items</div>
-      <div id="faq-list">
-        <div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No FAQs yet. Click + Add FAQ to get started.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="section-label" style="margin:0;">FAQ Sections</div>
+        <button class="btn-add-block" onclick="addFaqSection()" style="margin:0;">+ New Section</button>
       </div>
-      <button class="btn-add-block" onclick="addFaqItem()">+ Add FAQ</button>
-      <button class="btn-gen" onclick="generateFaq()">&#x25B6; Generate</button>
+      <div id="faq-section-list">
+        <div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No sections yet. Click + New Section to get started.</div>
+      </div>
+      <div id="faq-status" style="font-size:12px;margin-top:8px;min-height:18px;"></div>
     </div>
   </div>
 
@@ -605,7 +607,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
     </div>
     <div class="output-body">
       <div id="faq-preview-wrap" class="preview-wrap">
-        <div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Add FAQ items and click Generate to preview.</div>
+        <div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Create a section and click Generate &amp; Save to preview.</div>
       </div>
       <div id="faq-code-wrap" style="display:none;position:relative;">
         <button class="btn-copy" style="position:absolute;top:12px;right:12px;" onclick="doCopy('faq-code-box',this)">Copy</button>
@@ -3210,59 +3212,152 @@ function switchFooterOut(mode) {
 
 // ── SCREEN: FAQ ────────────────────────────────────────────────
 
-var faqItems = [];
-var faqIdCounter = 0;
+var faqSections = [];
+var faqSectionCounter = 0;
+var faqItemCounter = 0;
+var faqLoaded = false;
 
 function faqOnOpen() {
-  if (faqItems.length > 0) generateFaq();
+  if (!faqLoaded) loadFaqFromGist();
 }
 
-function saveFaqState() {
-  faqItems.forEach(function(f) {
-    var id = f.id;
-    var typeEl = document.getElementById('faq-type-' + id);
-    if (!typeEl) return;
-    f.type     = typeEl.value;
-    f.question = ((document.getElementById('faq-q-' + id) || {}).value || '');
-    f.heading  = ((document.getElementById('faq-h-' + id) || {}).value || '');
-    f.para     = ((document.getElementById('faq-p-' + id) || {}).value || '');
-    f.items    = [];
-    var itemsEl = document.getElementById('faq-items-' + id);
-    if (itemsEl) {
-      itemsEl.querySelectorAll('input').forEach(function(inp) { f.items.push(inp.value); });
-    }
+function loadFaqFromGist() {
+  fetch('/api/publish-faq')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      faqLoaded = true;
+      var secs = data.sections || [];
+      if (!secs.length) return;
+      secs.forEach(function(sec) {
+        var n = parseInt((sec.id || '').replace('fqs', ''), 10);
+        if (n > faqSectionCounter) faqSectionCounter = n;
+        (sec.items || []).forEach(function(f) {
+          var m = parseInt((f.id || '').replace('fq', ''), 10);
+          if (m > faqItemCounter) faqItemCounter = m;
+        });
+      });
+      faqSections = secs.map(function(sec) {
+        return {
+          id: sec.id || ('fqs' + (++faqSectionCounter)),
+          name: sec.name || '',
+          expanded: false,
+          items: (sec.items || []).map(function(f) {
+            return { id: f.id, type: f.type || 'paragraph', question: f.question || '', heading: f.heading || '', para: f.para || '', items: f.items || [] };
+          })
+        };
+      });
+      renderFaqSections();
+    })
+    .catch(function() { faqLoaded = true; });
+}
+
+function saveFaqSectionsState() {
+  faqSections.forEach(function(sec) {
+    var nameEl = document.getElementById('fqs-name-' + sec.id);
+    if (nameEl) sec.name = nameEl.value;
+    sec.items.forEach(function(f) {
+      var id = f.id;
+      var typeEl = document.getElementById('faq-type-' + id);
+      if (!typeEl) return;
+      f.type     = typeEl.value;
+      f.question = ((document.getElementById('faq-q-' + id) || {}).value || '');
+      f.heading  = ((document.getElementById('faq-h-' + id) || {}).value || '');
+      f.para     = ((document.getElementById('faq-p-' + id) || {}).value || '');
+      f.items    = [];
+      var itemsEl = document.getElementById('faq-items-' + id);
+      if (itemsEl) itemsEl.querySelectorAll('input').forEach(function(inp) { f.items.push(inp.value); });
+    });
   });
 }
 
-function addFaqItem() {
-  saveFaqState();
-  var id = 'fq' + (++faqIdCounter);
-  faqItems.push({ id: id, type: 'paragraph' });
-  renderFaqBlocks();
+function addFaqSection() {
+  saveFaqSectionsState();
+  var sid = 'fqs' + (++faqSectionCounter);
+  faqSections.push({ id: sid, name: '', expanded: true, items: [] });
+  renderFaqSections();
   setTimeout(function() {
-    var el = document.getElementById('faq-block-' + id);
+    var el = document.getElementById('fqs-block-' + sid);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    var nameEl = document.getElementById('fqs-name-' + sid);
+    if (nameEl) nameEl.focus();
+  }, 50);
+}
+
+function deleteFaqSection(sid) {
+  saveFaqSectionsState();
+  faqSections = faqSections.filter(function(s) { return s.id !== sid; });
+  renderFaqSections();
+}
+
+function toggleFaqSection(sid) {
+  saveFaqSectionsState();
+  faqSections.forEach(function(s) { if (s.id === sid) s.expanded = !s.expanded; });
+  renderFaqSections();
+}
+
+function faqUpdateSectionLabel(sid) {
+  var inp = document.getElementById('fqs-name-' + sid);
+  var lbl = document.getElementById('fqs-lbl-' + sid);
+  if (inp && lbl) lbl.innerHTML = inp.value.trim() ? xH(inp.value.trim()) : '<em style="color:var(--muted)">Untitled section</em>';
+}
+
+function renderFaqSections() {
+  var list = document.getElementById('faq-section-list');
+  if (!list) return;
+  if (!faqSections.length) {
+    list.innerHTML = '<div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No sections yet. Click + New Section to get started.</div>';
+    return;
+  }
+  list.innerHTML = faqSections.map(function(sec) { return buildFaqSectionBlockHtml(sec); }).join('');
+}
+
+function buildFaqSectionBlockHtml(sec) {
+  var sid = sec.id;
+  var isExp = sec.expanded;
+  var nameDisp = sec.name ? xH(sec.name) : '<em style="color:var(--muted)">Untitled section</em>';
+  var html = '<div class="banner-block" id="fqs-block-' + sid + '">';
+  html += '<div class="banner-block-hd" onclick="toggleFaqSection(\'' + sid + '\')">'
+        + '<span class="banner-block-chevron" id="fqs-chev-' + sid + '" style="transition:transform .15s;' + (isExp ? 'transform:rotate(90deg);' : '') + '">&#9654;</span>'
+        + '<span id="fqs-lbl-' + sid + '" style="flex:1;font-weight:600;font-size:13px;">' + nameDisp + '</span>'
+        + '<button class="btn-sm" style="background:#534AB7;color:#fff;margin-right:4px;" onclick="generateFaqSection(\'' + sid + '\');event.stopPropagation()">&#x25B6; Generate &amp; Save</button>'
+        + '<button class="btn-sm danger" onclick="deleteFaqSection(\'' + sid + '\');event.stopPropagation()">Delete</button>'
+        + '</div>';
+  if (isExp) {
+    html += '<div class="banner-block-body" id="fqs-body-' + sid + '">';
+    html += '<div class="field"><label>Section Name</label><input type="text" id="fqs-name-' + sid + '" value="' + xA(sec.name || '') + '" placeholder="e.g. ACCA Exam Preparation" oninput="faqUpdateSectionLabel(\'' + sid + '\')"></div>';
+    if (sec.items.length) {
+      html += sec.items.map(function(f, idx) { return buildFaqBlockHtml(f, idx + 1, sid); }).join('');
+    } else {
+      html += '<div style="text-align:center;padding:12px 0;font-size:12px;color:var(--muted);">No FAQs yet. Click + Add FAQ below.</div>';
+    }
+    html += '<button class="btn-add-block" style="margin-top:8px;" onclick="addFaqItemToSection(\'' + sid + '\')">+ Add FAQ</button>';
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function addFaqItemToSection(sid) {
+  saveFaqSectionsState();
+  var sec = faqSections.find(function(s) { return s.id === sid; });
+  if (!sec) return;
+  var fid = 'fq' + (++faqItemCounter);
+  sec.items.push({ id: fid, type: 'paragraph', question: '', heading: '', para: '', items: [] });
+  renderFaqSections();
+  setTimeout(function() {
+    var el = document.getElementById('faq-block-' + fid);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, 50);
 }
 
-function removeFaqItem(id) {
-  saveFaqState();
-  faqItems = faqItems.filter(function(f) { return f.id !== id; });
-  renderFaqBlocks();
-  generateFaq();
+function removeFaqItemFromSection(sid, fid) {
+  saveFaqSectionsState();
+  var sec = faqSections.find(function(s) { return s.id === sid; });
+  if (sec) sec.items = sec.items.filter(function(f) { return f.id !== fid; });
+  renderFaqSections();
 }
 
-function renderFaqBlocks() {
-  var list = document.getElementById('faq-list');
-  if (!list) return;
-  if (!faqItems.length) {
-    list.innerHTML = '<div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No FAQs yet. Click + Add FAQ to get started.</div>';
-    return;
-  }
-  list.innerHTML = faqItems.map(function(f, idx) { return buildFaqBlockHtml(f, idx + 1); }).join('');
-}
-
-function buildFaqBlockHtml(f, num) {
+function buildFaqBlockHtml(f, num, sid) {
   var id = f.id;
   var typeOpts = [
     ['paragraph',       'Paragraph'],
@@ -3277,7 +3372,7 @@ function buildFaqBlockHtml(f, num) {
     + '<div class="faq-block-hd" onclick="toggleFaqBlock(\'' + id + '\')">'
     +   '<span class="faq-block-num">' + num + '</span>'
     +   '<span class="faq-block-q" id="faq-qlbl-' + id + '">' + (f.question ? xH(f.question) : '<em style="color:var(--muted)">Untitled question</em>') + '</span>'
-    +   '<button class="btn-sm danger" onclick="removeFaqItem(\'' + id + '\');event.stopPropagation()">Remove</button>'
+    +   '<button class="btn-sm danger" onclick="removeFaqItemFromSection(\'' + sid + '\',\'' + id + '\');event.stopPropagation()">Remove</button>'
     + '</div>'
     + '<div class="faq-block-body" id="faq-body-' + id + '">'
     +   '<div class="field"><label>Question</label><input type="text" id="faq-q-' + id + '" value="' + xA(f.question || '') + '" placeholder="e.g. What is included in the course?" oninput="faqUpdateLabel(\'' + id + '\')"></div>'
@@ -3285,6 +3380,40 @@ function buildFaqBlockHtml(f, num) {
     +   '<div id="faq-answer-' + id + '">' + buildFaqAnswerHtml(id, f.type || 'paragraph', f) + '</div>'
     + '</div>'
     + '</div>';
+}
+
+function generateFaqSection(sid) {
+  saveFaqSectionsState();
+  var sec = faqSections.find(function(s) { return s.id === sid; });
+  if (!sec) return;
+  var items = sec.items.filter(function(f) { return f.question; });
+  renderFaqPreview(items);
+  renderFaqCode(items);
+  switchFaqOut('preview');
+
+  var status = document.getElementById('faq-status');
+  if (status) { status.textContent = 'Saving…'; status.style.color = 'var(--muted)'; }
+
+  var payload = { sections: faqSections.map(function(s) {
+    return { id: s.id, name: s.name, items: s.items };
+  })};
+
+  fetch('/api/publish-faq', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      if (status) { status.textContent = 'Saved!'; status.style.color = 'green'; setTimeout(function() { if (status) status.textContent = ''; }, 2000); }
+    } else {
+      if (status) { status.textContent = 'Error: ' + (data.error || 'Unknown'); status.style.color = 'red'; }
+    }
+  })
+  .catch(function() {
+    if (status) { status.textContent = 'Network error'; status.style.color = 'red'; }
+  });
 }
 
 function buildFaqAnswerHtml(id, type, f) {
@@ -3333,30 +3462,6 @@ function faqAddBullet(id) {
   list.appendChild(d);
 }
 
-function collectFaqData() {
-  return faqItems.map(function(f) {
-    var id   = f.id;
-    var type = (document.getElementById('faq-type-' + id) || {}).value || 'paragraph';
-    var q    = ((document.getElementById('faq-q-' + id) || {}).value || '').trim();
-    var h    = ((document.getElementById('faq-h-' + id) || {}).value || '').trim();
-    var p    = ((document.getElementById('faq-p-' + id) || {}).value || '').trim();
-    var items = [];
-    var itemsEl = document.getElementById('faq-items-' + id);
-    if (itemsEl) {
-      itemsEl.querySelectorAll('input').forEach(function(inp) {
-        if (inp.value.trim()) items.push(inp.value.trim());
-      });
-    }
-    return { id: id, type: type, question: q, heading: h, para: p, items: items };
-  }).filter(function(f) { return f.question; });
-}
-
-function generateFaq() {
-  saveFaqState();
-  var items = collectFaqData();
-  renderFaqPreview(items);
-  renderFaqCode(items);
-}
 
 function faqAnswerInnerHtml(f) {
   var e = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
