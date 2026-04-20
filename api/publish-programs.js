@@ -30,14 +30,14 @@ export default async function handler(req, res) {
     if (!ghRes.ok) return res.status(ghRes.status).json({ error: data.message || 'GitHub error' });
 
     const file = data.files && data.files['vls-programs.json'];
-    let topics = [];
+    let sections = [];
     if (file && file.content) {
-      try { topics = JSON.parse(file.content).topics || []; } catch(e) {}
+      try { sections = JSON.parse(file.content).sections || []; } catch(e) {}
     }
-    return res.status(200).json({ topics });
+    return res.status(200).json({ sections });
   }
 
-  // ── POST: save program topics ───────────────────────────────
+  // ── POST: save program sections ─────────────────────────────
   if (req.method === 'POST') {
     let body;
     try {
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid JSON body' });
     }
 
-    const topics = body.topics || [];
+    const sections = body.sections || [];
     const ghRes = await fetch(`https://api.github.com/gists/${gistId}`, {
       method: 'PATCH',
       headers: {
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
         'User-Agent': 'VLS-CMS'
       },
       body: JSON.stringify({
-        files: { 'vls-programs.json': { content: JSON.stringify({ topics }, null, 2) } }
+        files: { 'vls-programs.json': { content: JSON.stringify({ sections }, null, 2) } }
       })
     });
 

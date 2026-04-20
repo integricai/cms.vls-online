@@ -624,20 +624,17 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 ═══════════════════════════════════════ -->
 <div id="screen-programs" class="screen">
 
-  <!-- Left: topic + card editor -->
+  <!-- Left: section > topic > card editor -->
   <div class="form-panel" style="width:460px;">
     <div class="form-inner">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div class="section-label" style="margin:0;">Program Selector</div>
-        <button class="btn-add-block" onclick="addProgramTopic()" style="margin:0;">+ New Topic</button>
+        <button class="btn-add-block" onclick="addProgramSection()" style="margin:0;">+ New Section</button>
       </div>
-      <div id="program-topic-list">
-        <div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No topics yet. Click + New Topic to get started.</div>
+      <div id="program-section-list">
+        <div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No sections yet. Click + New Section to get started.</div>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;">
-        <div id="program-status" style="font-size:12px;min-height:18px;"></div>
-        <button class="btn-gen" onclick="generatePrograms()">&#x25B6; Generate &amp; Save</button>
-      </div>
+      <div id="program-status" style="font-size:12px;margin-top:8px;min-height:18px;"></div>
     </div>
   </div>
 
@@ -3656,8 +3653,11 @@ function switchFaqOut(mode) {
 }
 
 // ── SCREEN: PROGRAMS ───────────────────────────────────────────
+// Data hierarchy: Section → Topic → Card
+// Each Section generates its own independent HTML snippet.
 
-var programTopics = [];
+var programSections = [];
+var programSectionCounter = 0;
 var programTopicCounter = 0;
 var programCardCounter = 0;
 var programLoaded = false;
@@ -3671,50 +3671,112 @@ function loadProgramsFromGist() {
     .then(function(r) { return r.json(); })
     .then(function(data) {
       programLoaded = true;
-      var topics = data.topics || [];
-      if (!topics.length) return;
-      topics.forEach(function(t) {
-        var n = parseInt((t.id || '').replace('pt', ''), 10);
-        if (n > programTopicCounter) programTopicCounter = n;
-        (t.cards || []).forEach(function(c) {
-          var m = parseInt((c.id || '').replace('pc', ''), 10);
-          if (m > programCardCounter) programCardCounter = m;
+      var sections = data.sections || [];
+      if (!sections.length) return;
+      sections.forEach(function(s) {
+        var sn = parseInt((s.id || '').replace('ps', ''), 10);
+        if (sn > programSectionCounter) programSectionCounter = sn;
+        (s.topics || []).forEach(function(t) {
+          var tn = parseInt((t.id || '').replace('pt', ''), 10);
+          if (tn > programTopicCounter) programTopicCounter = tn;
+          (t.cards || []).forEach(function(c) {
+            var cn = parseInt((c.id || '').replace('pc', ''), 10);
+            if (cn > programCardCounter) programCardCounter = cn;
+          });
         });
       });
-      programTopics = topics.map(function(t) {
+      programSections = sections.map(function(s) {
         return {
-          id: t.id || ('pt' + (++programTopicCounter)),
-          title: t.title || '',
+          id: s.id || ('ps' + (++programSectionCounter)),
+          name: s.name || '',
           expanded: false,
-          cards: (t.cards || []).map(function(c) {
-            return { id: c.id, title: c.title || '', desc: c.desc || '', url: c.url || '', cta: c.cta || 'See Details' };
+          topics: (s.topics || []).map(function(t) {
+            return {
+              id: t.id || ('pt' + (++programTopicCounter)),
+              title: t.title || '',
+              expanded: false,
+              cards: (t.cards || []).map(function(c) {
+                return { id: c.id, title: c.title || '', desc: c.desc || '', url: c.url || '', cta: c.cta || 'See Details' };
+              })
+            };
           })
         };
       });
-      renderProgramTopics();
+      renderProgramSections();
     })
     .catch(function() { programLoaded = true; });
 }
 
 function saveProgramState() {
-  programTopics.forEach(function(t) {
-    var titleEl = document.getElementById('pt-title-' + t.id);
-    if (titleEl) t.title = titleEl.value;
-    t.cards.forEach(function(c) {
-      var el;
-      el = document.getElementById('pc-title-' + c.id); if (el) c.title = el.value;
-      el = document.getElementById('pc-desc-'  + c.id); if (el) c.desc  = el.value;
-      el = document.getElementById('pc-url-'   + c.id); if (el) c.url   = el.value;
-      el = document.getElementById('pc-cta-'   + c.id); if (el) c.cta   = el.value;
+  programSections.forEach(function(s) {
+    var nameEl = document.getElementById('ps-name-' + s.id);
+    if (nameEl) s.name = nameEl.value;
+    s.topics.forEach(function(t) {
+      var titleEl = document.getElementById('pt-title-' + t.id);
+      if (titleEl) t.title = titleEl.value;
+      t.cards.forEach(function(c) {
+        var el;
+        el = document.getElementById('pc-title-' + c.id); if (el) c.title = el.value;
+        el = document.getElementById('pc-desc-'  + c.id); if (el) c.desc  = el.value;
+        el = document.getElementById('pc-url-'   + c.id); if (el) c.url   = el.value;
+        el = document.getElementById('pc-cta-'   + c.id); if (el) c.cta   = el.value;
+      });
     });
   });
 }
 
-function addProgramTopic() {
+// ── Section CRUD ──────────────────────────────────────────────
+
+function addProgramSection() {
   saveProgramState();
+  var sid = 'ps' + (++programSectionCounter);
+  programSections.push({ id: sid, name: '', expanded: true, topics: [] });
+  renderProgramSections();
+  setTimeout(function() {
+    var el = document.getElementById('ps-block-' + sid);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    var inp = document.getElementById('ps-name-' + sid);
+    if (inp) inp.focus();
+  }, 50);
+}
+
+function deleteProgramSection(sid) {
+  saveProgramState();
+  programSections = programSections.filter(function(s) { return s.id !== sid; });
+  renderProgramSections();
+}
+
+function toggleProgramSection(sid) {
+  saveProgramState();
+  programSections.forEach(function(s) { if (s.id === sid) s.expanded = !s.expanded; });
+  renderProgramSections();
+}
+
+function moveProgramSection(sid, dir) {
+  saveProgramState();
+  var idx = programSections.findIndex(function(s) { return s.id === sid; });
+  if (idx < 0) return;
+  var ni = idx + dir;
+  if (ni < 0 || ni >= programSections.length) return;
+  var tmp = programSections[idx]; programSections[idx] = programSections[ni]; programSections[ni] = tmp;
+  renderProgramSections();
+}
+
+function updateProgramSectionLabel(sid) {
+  var inp = document.getElementById('ps-name-' + sid);
+  var lbl = document.getElementById('ps-lbl-' + sid);
+  if (inp && lbl) lbl.innerHTML = inp.value.trim() ? xH(inp.value.trim()) : '<em style="color:var(--muted)">Untitled section</em>';
+}
+
+// ── Topic CRUD ────────────────────────────────────────────────
+
+function addTopicToSection(sid) {
+  saveProgramState();
+  var s = programSections.find(function(s) { return s.id === sid; });
+  if (!s) return;
   var tid = 'pt' + (++programTopicCounter);
-  programTopics.push({ id: tid, title: '', expanded: true, cards: [] });
-  renderProgramTopics();
+  s.topics.push({ id: tid, title: '', expanded: true, cards: [] });
+  renderProgramSections();
   setTimeout(function() {
     var el = document.getElementById('pt-block-' + tid);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -3723,26 +3785,31 @@ function addProgramTopic() {
   }, 50);
 }
 
-function deleteProgramTopic(tid) {
+function deleteTopicFromSection(sid, tid) {
   saveProgramState();
-  programTopics = programTopics.filter(function(t) { return t.id !== tid; });
-  renderProgramTopics();
+  var s = programSections.find(function(s) { return s.id === sid; });
+  if (s) s.topics = s.topics.filter(function(t) { return t.id !== tid; });
+  renderProgramSections();
 }
 
 function toggleProgramTopic(tid) {
   saveProgramState();
-  programTopics.forEach(function(t) { if (t.id === tid) t.expanded = !t.expanded; });
-  renderProgramTopics();
+  programSections.forEach(function(s) {
+    s.topics.forEach(function(t) { if (t.id === tid) t.expanded = !t.expanded; });
+  });
+  renderProgramSections();
 }
 
-function moveProgramTopic(tid, dir) {
+function moveTopicInSection(sid, tid, dir) {
   saveProgramState();
-  var idx = programTopics.findIndex(function(t) { return t.id === tid; });
+  var s = programSections.find(function(s) { return s.id === sid; });
+  if (!s) return;
+  var idx = s.topics.findIndex(function(t) { return t.id === tid; });
   if (idx < 0) return;
   var ni = idx + dir;
-  if (ni < 0 || ni >= programTopics.length) return;
-  var tmp = programTopics[idx]; programTopics[idx] = programTopics[ni]; programTopics[ni] = tmp;
-  renderProgramTopics();
+  if (ni < 0 || ni >= s.topics.length) return;
+  var tmp = s.topics[idx]; s.topics[idx] = s.topics[ni]; s.topics[ni] = tmp;
+  renderProgramSections();
 }
 
 function updateProgramTopicLabel(tid) {
@@ -3751,81 +3818,95 @@ function updateProgramTopicLabel(tid) {
   if (inp && lbl) lbl.innerHTML = inp.value.trim() ? xH(inp.value.trim()) : '<em style="color:var(--muted)">Untitled topic</em>';
 }
 
-function addProgramCard(tid) {
+// ── Card CRUD ─────────────────────────────────────────────────
+
+function addCardToTopic(sid, tid) {
   saveProgramState();
-  var t = programTopics.find(function(t) { return t.id === tid; });
+  var s = programSections.find(function(s) { return s.id === sid; });
+  if (!s) return;
+  var t = s.topics.find(function(t) { return t.id === tid; });
   if (!t) return;
   var cid = 'pc' + (++programCardCounter);
   t.cards.push({ id: cid, title: '', desc: '', url: '', cta: 'See Details' });
-  renderProgramTopics();
+  renderProgramSections();
   setTimeout(function() {
     var el = document.getElementById('pc-block-' + cid);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, 50);
 }
 
-function deleteProgramCard(tid, cid) {
+function deleteCardFromTopic(sid, tid, cid) {
   saveProgramState();
-  var t = programTopics.find(function(t) { return t.id === tid; });
+  var s = programSections.find(function(s) { return s.id === sid; });
+  if (!s) return;
+  var t = s.topics.find(function(t) { return t.id === tid; });
   if (t) t.cards = t.cards.filter(function(c) { return c.id !== cid; });
-  renderProgramTopics();
+  renderProgramSections();
 }
 
-function moveProgramCard(tid, cid, dir) {
+function moveCardInTopic(sid, tid, cid, dir) {
   saveProgramState();
-  var t = programTopics.find(function(t) { return t.id === tid; });
+  var s = programSections.find(function(s) { return s.id === sid; });
+  if (!s) return;
+  var t = s.topics.find(function(t) { return t.id === tid; });
   if (!t) return;
   var idx = t.cards.findIndex(function(c) { return c.id === cid; });
   if (idx < 0) return;
   var ni = idx + dir;
   if (ni < 0 || ni >= t.cards.length) return;
   var tmp = t.cards[idx]; t.cards[idx] = t.cards[ni]; t.cards[ni] = tmp;
-  renderProgramTopics();
+  renderProgramSections();
 }
 
-function renderProgramTopics() {
-  var list = document.getElementById('program-topic-list');
+// ── Render ────────────────────────────────────────────────────
+
+function renderProgramSections() {
+  var list = document.getElementById('program-section-list');
   if (!list) return;
-  if (!programTopics.length) {
-    list.innerHTML = '<div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No topics yet. Click + New Topic to get started.</div>';
+  if (!programSections.length) {
+    list.innerHTML = '<div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No sections yet. Click + New Section to get started.</div>';
     return;
   }
-  list.innerHTML = programTopics.map(function(t, idx) {
-    return buildProgramTopicHtml(t, idx, programTopics.length);
+  list.innerHTML = programSections.map(function(s, idx) {
+    return buildProgramSectionHtml(s, idx, programSections.length);
   }).join('');
 }
 
-function buildProgramTopicHtml(t, idx, total) {
-  var tid = t.id;
-  var isExp = t.expanded;
-  var cnt = t.cards.length;
-  var titleDisp = t.title ? xH(t.title) : '<em style="color:var(--muted)">Untitled topic</em>';
+function buildProgramSectionHtml(s, idx, total) {
+  var sid = s.id;
+  var isExp = s.expanded;
+  var topicCount = s.topics.length;
+  var cardCount = s.topics.reduce(function(n, t) { return n + t.cards.length; }, 0);
+  var nameDisp = s.name ? xH(s.name) : '<em style="color:var(--muted)">Untitled section</em>';
 
-  var html = '<div class="banner-block" id="pt-block-' + tid + '">';
-  html += '<div class="banner-block-hd" onclick="toggleProgramTopic(\'' + tid + '\')">'
+  var html = '<div class="banner-block" id="ps-block-' + sid + '">';
+  html += '<div class="banner-block-hd" onclick="toggleProgramSection(\'' + sid + '\')">'
         + '<span class="banner-block-chevron" style="transition:transform .15s;' + (isExp ? 'transform:rotate(90deg);' : '') + '">&#9654;</span>'
-        + '<span id="pt-lbl-' + tid + '" style="flex:1;font-weight:600;font-size:13px;">' + titleDisp + '</span>'
-        + '<span style="font-size:11px;color:var(--muted);margin-right:4px;">' + cnt + ' card' + (cnt !== 1 ? 's' : '') + '</span>'
-        + '<button class="btn-icon" title="Move up" onclick="moveProgramTopic(\'' + tid + '\',-1);event.stopPropagation()"' + (idx === 0 ? ' disabled' : '') + '>&#x25B2;</button>'
-        + '<button class="btn-icon" title="Move down" onclick="moveProgramTopic(\'' + tid + '\',1);event.stopPropagation()"' + (idx === total - 1 ? ' disabled' : '') + '>&#x25BC;</button>'
-        + '<button class="btn-sm danger" onclick="deleteProgramTopic(\'' + tid + '\');event.stopPropagation()" style="margin-left:4px;">Delete</button>'
+        + '<span id="ps-lbl-' + sid + '" style="flex:1;font-weight:600;font-size:13px;">' + nameDisp + '</span>'
+        + '<span style="font-size:11px;color:var(--muted);margin-right:4px;">' + topicCount + ' topic' + (topicCount !== 1 ? 's' : '') + ' &middot; ' + cardCount + ' card' + (cardCount !== 1 ? 's' : '') + '</span>'
+        + '<button class="btn-icon" title="Move up" onclick="moveProgramSection(\'' + sid + '\',-1);event.stopPropagation()"' + (idx === 0 ? ' disabled' : '') + '>&#x25B2;</button>'
+        + '<button class="btn-icon" title="Move down" onclick="moveProgramSection(\'' + sid + '\',1);event.stopPropagation()"' + (idx === total - 1 ? ' disabled' : '') + '>&#x25BC;</button>'
+        + '<button class="btn-sm danger" onclick="deleteProgramSection(\'' + sid + '\');event.stopPropagation()" style="margin-left:4px;">Delete</button>'
         + '</div>';
 
   if (isExp) {
     html += '<div class="banner-block-body">';
-    html += '<div class="field"><label>Topic Title</label>'
-          + '<input type="text" id="pt-title-' + tid + '" value="' + xA(t.title || '') + '" placeholder="e.g. ACCA Foundation Diploma" oninput="updateProgramTopicLabel(\'' + tid + '\')">'
+    html += '<div class="field"><label>Section Name</label>'
+          + '<input type="text" id="ps-name-' + sid + '" value="' + xA(s.name || '') + '" placeholder="e.g. ACCA Study Notes" oninput="updateProgramSectionLabel(\'' + sid + '\')">'
           + '</div>';
 
-    if (t.cards.length) {
-      t.cards.forEach(function(c, cidx) {
-        html += buildProgramCardHtml(c, cidx, t.cards.length, tid);
+    if (s.topics.length) {
+      s.topics.forEach(function(t, tidx) {
+        html += buildProgramTopicHtml(t, tidx, s.topics.length, sid);
       });
     } else {
-      html += '<div style="text-align:center;padding:12px 0;font-size:12px;color:var(--muted);">No cards yet. Click + Add Card below.</div>';
+      html += '<div style="text-align:center;padding:10px 0;font-size:12px;color:var(--muted);">No topics yet. Click + Add Topic below.</div>';
     }
 
-    html += '<button class="btn-add-block" style="margin-top:8px;" onclick="addProgramCard(\'' + tid + '\')">+ Add Card</button>';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid #e5e7eb;">'
+          + '<button class="btn-add-block" style="margin:0;" onclick="addTopicToSection(\'' + sid + '\')">+ Add Topic</button>'
+          + '<button class="btn-sm" style="background:#534AB7;color:#fff;" onclick="generateProgramSection(\'' + sid + '\')">&#x25B6; Generate &amp; Save</button>'
+          + '</div>';
     html += '</div>';
   }
 
@@ -3833,67 +3914,108 @@ function buildProgramTopicHtml(t, idx, total) {
   return html;
 }
 
-function buildProgramCardHtml(c, idx, total, tid) {
+function buildProgramTopicHtml(t, tidx, topicTotal, sid) {
+  var tid = t.id;
+  var isExp = t.expanded;
+  var cnt = t.cards.length;
+  var titleDisp = t.title ? xH(t.title) : '<em style="color:var(--muted)">Untitled topic</em>';
+
+  var html = '<div style="border:1px solid #d1d5db;border-radius:6px;margin-bottom:6px;" id="pt-block-' + tid + '">';
+  html += '<div style="display:flex;align-items:center;gap:4px;padding:8px 10px;cursor:pointer;background:#f9fafb;border-radius:' + (t.expanded ? '6px 6px 0 0' : '6px') + ';" onclick="toggleProgramTopic(\'' + tid + '\')">'
+        + '<span style="font-size:10px;color:var(--muted);transition:transform .15s;display:inline-block;' + (isExp ? 'transform:rotate(90deg);' : '') + '">&#9654;</span>'
+        + '<span id="pt-lbl-' + tid + '" style="flex:1;font-size:12px;font-weight:600;">' + titleDisp + '</span>'
+        + '<span style="font-size:11px;color:var(--muted);margin-right:4px;">' + cnt + ' card' + (cnt !== 1 ? 's' : '') + '</span>'
+        + '<button class="btn-icon" style="font-size:10px;" title="Move up" onclick="moveTopicInSection(\'' + sid + '\',\'' + tid + '\',-1);event.stopPropagation()"' + (tidx === 0 ? ' disabled' : '') + '>&#x25B2;</button>'
+        + '<button class="btn-icon" style="font-size:10px;" title="Move down" onclick="moveTopicInSection(\'' + sid + '\',\'' + tid + '\',1);event.stopPropagation()"' + (tidx === topicTotal - 1 ? ' disabled' : '') + '>&#x25BC;</button>'
+        + '<button class="btn-sm danger" style="font-size:11px;" onclick="deleteTopicFromSection(\'' + sid + '\',\'' + tid + '\');event.stopPropagation()">Delete</button>'
+        + '</div>';
+
+  if (isExp) {
+    html += '<div style="padding:10px 10px 6px;">';
+    html += '<div class="field" style="margin-bottom:8px;"><label style="font-size:11px;">Topic Title</label>'
+          + '<input type="text" id="pt-title-' + tid + '" value="' + xA(t.title || '') + '" placeholder="e.g. ACCA Foundation Diploma" oninput="updateProgramTopicLabel(\'' + tid + '\')">'
+          + '</div>';
+
+    if (t.cards.length) {
+      t.cards.forEach(function(c, cidx) {
+        html += buildProgramCardHtml(c, cidx, t.cards.length, sid, tid);
+      });
+    } else {
+      html += '<div style="text-align:center;padding:8px 0;font-size:11px;color:var(--muted);">No cards yet.</div>';
+    }
+
+    html += '<button class="btn-add-block" style="margin-top:6px;font-size:11px;" onclick="addCardToTopic(\'' + sid + '\',\'' + tid + '\')">+ Add Card</button>';
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function buildProgramCardHtml(c, cidx, cardTotal, sid, tid) {
   var cid = c.id;
-  return '<div id="pc-block-' + cid + '" style="border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;margin-bottom:8px;">'
-    + '<div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;">'
-    + '<span style="flex:1;font-size:12px;font-weight:600;color:#374151;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'
+  return '<div id="pc-block-' + cid + '" style="border:1px solid #e5e7eb;border-radius:5px;padding:8px 10px;margin-bottom:6px;background:#fff;">'
+    + '<div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">'
+    + '<span style="flex:1;font-size:11px;font-weight:600;color:#374151;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'
     +   (c.title ? xH(c.title) : '<em style="color:var(--muted);font-weight:400;">Untitled card</em>') + '</span>'
-    + '<button class="btn-icon" title="Move up" onclick="moveProgramCard(\'' + tid + '\',\'' + cid + '\',-1)"' + (idx === 0 ? ' disabled' : '') + '>&#x25B2;</button>'
-    + '<button class="btn-icon" title="Move down" onclick="moveProgramCard(\'' + tid + '\',\'' + cid + '\',1)"' + (idx === total - 1 ? ' disabled' : '') + '>&#x25BC;</button>'
-    + '<button class="btn-sm danger" onclick="deleteProgramCard(\'' + tid + '\',\'' + cid + '\')">Remove</button>'
+    + '<button class="btn-icon" style="font-size:10px;" title="Move up" onclick="moveCardInTopic(\'' + sid + '\',\'' + tid + '\',\'' + cid + '\',-1)"' + (cidx === 0 ? ' disabled' : '') + '>&#x25B2;</button>'
+    + '<button class="btn-icon" style="font-size:10px;" title="Move down" onclick="moveCardInTopic(\'' + sid + '\',\'' + tid + '\',\'' + cid + '\',1)"' + (cidx === cardTotal - 1 ? ' disabled' : '') + '>&#x25BC;</button>'
+    + '<button class="btn-sm danger" style="font-size:11px;" onclick="deleteCardFromTopic(\'' + sid + '\',\'' + tid + '\',\'' + cid + '\')">Remove</button>'
     + '</div>'
-    + '<div class="field" style="margin-bottom:6px;"><label style="font-size:11px;">Course Title</label>'
+    + '<div class="field" style="margin-bottom:5px;"><label style="font-size:11px;">Course Title</label>'
     + '<input type="text" id="pc-title-' + cid + '" value="' + xA(c.title || '') + '" placeholder="Course title"></div>'
-    + '<div class="field" style="margin-bottom:6px;"><label style="font-size:11px;">Short Description</label>'
+    + '<div class="field" style="margin-bottom:5px;"><label style="font-size:11px;">Short Description</label>'
     + '<textarea id="pc-desc-' + cid + '" rows="2" placeholder="Short course description..." style="resize:vertical;">' + xH(c.desc || '') + '</textarea></div>'
-    + '<div class="field" style="margin-bottom:6px;"><label style="font-size:11px;">CTA URL</label>'
+    + '<div class="field" style="margin-bottom:5px;"><label style="font-size:11px;">CTA URL</label>'
     + '<input type="text" id="pc-url-' + cid + '" value="' + xA(c.url || '') + '" placeholder="https://..."></div>'
     + '<div class="field" style="margin-bottom:0;"><label style="font-size:11px;">CTA Button Text</label>'
     + '<input type="text" id="pc-cta-' + cid + '" value="' + xA(c.cta || 'See Details') + '" placeholder="See Details"></div>'
     + '</div>';
 }
 
-function generatePrograms() {
+// ── Generate per section ──────────────────────────────────────
+
+function generateProgramSection(sid) {
   saveProgramState();
+  var s = programSections.find(function(s) { return s.id === sid; });
+  if (!s) return;
 
   var allCards = [];
-  programTopics.forEach(function(t) {
+  s.topics.forEach(function(t) {
     t.cards.forEach(function(c) {
       allCards.push({ topicId: t.id, title: c.title, desc: c.desc, url: c.url, cta: c.cta || 'See Details' });
     });
   });
 
   var uid = 'vlspg' + Math.random().toString(36).slice(2, 7);
-  var html = buildProgramsHtml(uid, programTopics, allCards);
+  var html = buildProgramsHtml(uid, s.topics, allCards);
 
-  // Preview
   var prev = document.getElementById('prog-out-preview');
   if (prev) {
     prev.innerHTML = html;
-    prev.querySelectorAll('script').forEach(function(s) {
+    prev.querySelectorAll('script').forEach(function(sc) {
       var ns = document.createElement('script');
-      ns.textContent = s.textContent;
+      ns.textContent = sc.textContent;
       document.head.appendChild(ns);
       document.head.removeChild(ns);
     });
   }
 
-  // Code
   var box = document.getElementById('prog-code-box');
   if (box) box.textContent = html;
 
   switchProgOut('preview');
 
-  // Save to Gist
   var status = document.getElementById('program-status');
   if (status) { status.textContent = 'Saving\u2026'; status.style.color = 'var(--muted)'; }
 
   fetch('/api/publish-programs', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ topics: programTopics.map(function(t) {
-      return { id: t.id, title: t.title, cards: t.cards };
+    body: JSON.stringify({ sections: programSections.map(function(s) {
+      return { id: s.id, name: s.name, topics: s.topics.map(function(t) {
+        return { id: t.id, title: t.title, cards: t.cards };
+      })};
     })})
   })
   .then(function(r) { return r.json(); })
