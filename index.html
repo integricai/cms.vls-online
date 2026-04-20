@@ -214,6 +214,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
   <div class="nav-tab hidden" id="nav-banner" onclick="switchScreen('banner')">Banner</div>
   <div class="nav-tab hidden" id="nav-events" onclick="switchScreen('events')">Events</div>
   <div class="nav-tab hidden" id="nav-footer" onclick="switchScreen('footer')">Footer</div>
+  <div class="nav-tab hidden" id="nav-programs" onclick="switchScreen('programs')">Programs</div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
 </div>
 
@@ -618,6 +619,47 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 
 </div>
 
+<!-- ═══════════════════════════════════════
+     SCREEN — PROGRAMS
+═══════════════════════════════════════ -->
+<div id="screen-programs" class="screen">
+
+  <!-- Left: topic + card editor -->
+  <div class="form-panel" style="width:460px;">
+    <div class="form-inner">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="section-label" style="margin:0;">Program Selector</div>
+        <button class="btn-add-block" onclick="addProgramTopic()" style="margin:0;">+ New Topic</button>
+      </div>
+      <div id="program-topic-list">
+        <div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No topics yet. Click + New Topic to get started.</div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;">
+        <div id="program-status" style="font-size:12px;min-height:18px;"></div>
+        <button class="btn-gen" onclick="generatePrograms()">&#x25B6; Generate &amp; Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: preview + code -->
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div id="prog-ot-preview" class="out-tab active" onclick="switchProgOut('preview')">Preview</div>
+      <div id="prog-ot-code" class="out-tab" onclick="switchProgOut('code')">Code</div>
+    </div>
+    <div class="output-body" style="padding:0;">
+      <div id="prog-out-preview" style="flex:1;overflow:auto;padding:16px;">
+        <div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Add topics and cards, then click Generate &amp; Save to preview.</div>
+      </div>
+      <div id="prog-out-code" style="display:none;position:relative;padding:16px;">
+        <button class="btn-copy" style="position:absolute;top:24px;right:24px;" onclick="doCopy('prog-code-box',this)">Copy</button>
+        <pre class="code-box" id="prog-code-box" style="min-height:300px;margin:0;"></pre>
+      </div>
+    </div>
+  </div>
+
+</div>
+
 </div><!-- .app -->
 
 <!-- ── Event embed code modal ── -->
@@ -657,19 +699,22 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 var AUTH_ROLE_KEY = 'vls_auth_role';
 
 function applyRole(role) {
-  var bannerNav = document.getElementById('nav-banner');
-  var eventsNav = document.getElementById('nav-events');
-  var footerNav = document.getElementById('nav-footer');
+  var bannerNav   = document.getElementById('nav-banner');
+  var eventsNav   = document.getElementById('nav-events');
+  var footerNav   = document.getElementById('nav-footer');
+  var programsNav = document.getElementById('nav-programs');
   if (role === 'admin') {
     bannerNav.classList.remove('hidden');
     eventsNav.classList.remove('hidden');
     footerNav.classList.remove('hidden');
+    programsNav.classList.remove('hidden');
   } else {
     bannerNav.classList.add('hidden');
     eventsNav.classList.add('hidden');
     footerNav.classList.add('hidden');
+    programsNav.classList.add('hidden');
     var active = document.querySelector('.screen.active');
-    if (active && (active.id === 'screen-banner' || active.id === 'screen-events' || active.id === 'screen-footer')) {
+    if (active && (active.id === 'screen-banner' || active.id === 'screen-events' || active.id === 'screen-footer' || active.id === 'screen-programs')) {
       switchScreen('intro');
     }
   }
@@ -806,6 +851,7 @@ function switchScreen(name) {
   if (name === 'team') teamOnOpen();
   if (name === 'banner') bannerOnOpen();
   if (name === 'footer') footerOnOpen();
+  if (name === 'programs') programOnOpen();
 }
 
 function switchOut(screen, mode) {
@@ -3607,6 +3653,388 @@ function switchFaqOut(mode) {
     tc.classList.add('active');
     tp.classList.remove('active');
   }
+}
+
+// ── SCREEN: PROGRAMS ───────────────────────────────────────────
+
+var programTopics = [];
+var programTopicCounter = 0;
+var programCardCounter = 0;
+var programLoaded = false;
+
+function programOnOpen() {
+  if (!programLoaded) loadProgramsFromGist();
+}
+
+function loadProgramsFromGist() {
+  fetch('/api/publish-programs')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      programLoaded = true;
+      var topics = data.topics || [];
+      if (!topics.length) return;
+      topics.forEach(function(t) {
+        var n = parseInt((t.id || '').replace('pt', ''), 10);
+        if (n > programTopicCounter) programTopicCounter = n;
+        (t.cards || []).forEach(function(c) {
+          var m = parseInt((c.id || '').replace('pc', ''), 10);
+          if (m > programCardCounter) programCardCounter = m;
+        });
+      });
+      programTopics = topics.map(function(t) {
+        return {
+          id: t.id || ('pt' + (++programTopicCounter)),
+          title: t.title || '',
+          expanded: false,
+          cards: (t.cards || []).map(function(c) {
+            return { id: c.id, title: c.title || '', desc: c.desc || '', url: c.url || '', cta: c.cta || 'See Details' };
+          })
+        };
+      });
+      renderProgramTopics();
+    })
+    .catch(function() { programLoaded = true; });
+}
+
+function saveProgramState() {
+  programTopics.forEach(function(t) {
+    var titleEl = document.getElementById('pt-title-' + t.id);
+    if (titleEl) t.title = titleEl.value;
+    t.cards.forEach(function(c) {
+      var el;
+      el = document.getElementById('pc-title-' + c.id); if (el) c.title = el.value;
+      el = document.getElementById('pc-desc-'  + c.id); if (el) c.desc  = el.value;
+      el = document.getElementById('pc-url-'   + c.id); if (el) c.url   = el.value;
+      el = document.getElementById('pc-cta-'   + c.id); if (el) c.cta   = el.value;
+    });
+  });
+}
+
+function addProgramTopic() {
+  saveProgramState();
+  var tid = 'pt' + (++programTopicCounter);
+  programTopics.push({ id: tid, title: '', expanded: true, cards: [] });
+  renderProgramTopics();
+  setTimeout(function() {
+    var el = document.getElementById('pt-block-' + tid);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    var inp = document.getElementById('pt-title-' + tid);
+    if (inp) inp.focus();
+  }, 50);
+}
+
+function deleteProgramTopic(tid) {
+  saveProgramState();
+  programTopics = programTopics.filter(function(t) { return t.id !== tid; });
+  renderProgramTopics();
+}
+
+function toggleProgramTopic(tid) {
+  saveProgramState();
+  programTopics.forEach(function(t) { if (t.id === tid) t.expanded = !t.expanded; });
+  renderProgramTopics();
+}
+
+function moveProgramTopic(tid, dir) {
+  saveProgramState();
+  var idx = programTopics.findIndex(function(t) { return t.id === tid; });
+  if (idx < 0) return;
+  var ni = idx + dir;
+  if (ni < 0 || ni >= programTopics.length) return;
+  var tmp = programTopics[idx]; programTopics[idx] = programTopics[ni]; programTopics[ni] = tmp;
+  renderProgramTopics();
+}
+
+function updateProgramTopicLabel(tid) {
+  var inp = document.getElementById('pt-title-' + tid);
+  var lbl = document.getElementById('pt-lbl-' + tid);
+  if (inp && lbl) lbl.innerHTML = inp.value.trim() ? xH(inp.value.trim()) : '<em style="color:var(--muted)">Untitled topic</em>';
+}
+
+function addProgramCard(tid) {
+  saveProgramState();
+  var t = programTopics.find(function(t) { return t.id === tid; });
+  if (!t) return;
+  var cid = 'pc' + (++programCardCounter);
+  t.cards.push({ id: cid, title: '', desc: '', url: '', cta: 'See Details' });
+  renderProgramTopics();
+  setTimeout(function() {
+    var el = document.getElementById('pc-block-' + cid);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 50);
+}
+
+function deleteProgramCard(tid, cid) {
+  saveProgramState();
+  var t = programTopics.find(function(t) { return t.id === tid; });
+  if (t) t.cards = t.cards.filter(function(c) { return c.id !== cid; });
+  renderProgramTopics();
+}
+
+function moveProgramCard(tid, cid, dir) {
+  saveProgramState();
+  var t = programTopics.find(function(t) { return t.id === tid; });
+  if (!t) return;
+  var idx = t.cards.findIndex(function(c) { return c.id === cid; });
+  if (idx < 0) return;
+  var ni = idx + dir;
+  if (ni < 0 || ni >= t.cards.length) return;
+  var tmp = t.cards[idx]; t.cards[idx] = t.cards[ni]; t.cards[ni] = tmp;
+  renderProgramTopics();
+}
+
+function renderProgramTopics() {
+  var list = document.getElementById('program-topic-list');
+  if (!list) return;
+  if (!programTopics.length) {
+    list.innerHTML = '<div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No topics yet. Click + New Topic to get started.</div>';
+    return;
+  }
+  list.innerHTML = programTopics.map(function(t, idx) {
+    return buildProgramTopicHtml(t, idx, programTopics.length);
+  }).join('');
+}
+
+function buildProgramTopicHtml(t, idx, total) {
+  var tid = t.id;
+  var isExp = t.expanded;
+  var cnt = t.cards.length;
+  var titleDisp = t.title ? xH(t.title) : '<em style="color:var(--muted)">Untitled topic</em>';
+
+  var html = '<div class="banner-block" id="pt-block-' + tid + '">';
+  html += '<div class="banner-block-hd" onclick="toggleProgramTopic(\'' + tid + '\')">'
+        + '<span class="banner-block-chevron" style="transition:transform .15s;' + (isExp ? 'transform:rotate(90deg);' : '') + '">&#9654;</span>'
+        + '<span id="pt-lbl-' + tid + '" style="flex:1;font-weight:600;font-size:13px;">' + titleDisp + '</span>'
+        + '<span style="font-size:11px;color:var(--muted);margin-right:4px;">' + cnt + ' card' + (cnt !== 1 ? 's' : '') + '</span>'
+        + '<button class="btn-icon" title="Move up" onclick="moveProgramTopic(\'' + tid + '\',-1);event.stopPropagation()"' + (idx === 0 ? ' disabled' : '') + '>&#x25B2;</button>'
+        + '<button class="btn-icon" title="Move down" onclick="moveProgramTopic(\'' + tid + '\',1);event.stopPropagation()"' + (idx === total - 1 ? ' disabled' : '') + '>&#x25BC;</button>'
+        + '<button class="btn-sm danger" onclick="deleteProgramTopic(\'' + tid + '\');event.stopPropagation()" style="margin-left:4px;">Delete</button>'
+        + '</div>';
+
+  if (isExp) {
+    html += '<div class="banner-block-body">';
+    html += '<div class="field"><label>Topic Title</label>'
+          + '<input type="text" id="pt-title-' + tid + '" value="' + xA(t.title || '') + '" placeholder="e.g. ACCA Foundation Diploma" oninput="updateProgramTopicLabel(\'' + tid + '\')">'
+          + '</div>';
+
+    if (t.cards.length) {
+      t.cards.forEach(function(c, cidx) {
+        html += buildProgramCardHtml(c, cidx, t.cards.length, tid);
+      });
+    } else {
+      html += '<div style="text-align:center;padding:12px 0;font-size:12px;color:var(--muted);">No cards yet. Click + Add Card below.</div>';
+    }
+
+    html += '<button class="btn-add-block" style="margin-top:8px;" onclick="addProgramCard(\'' + tid + '\')">+ Add Card</button>';
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function buildProgramCardHtml(c, idx, total, tid) {
+  var cid = c.id;
+  return '<div id="pc-block-' + cid + '" style="border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;margin-bottom:8px;">'
+    + '<div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;">'
+    + '<span style="flex:1;font-size:12px;font-weight:600;color:#374151;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'
+    +   (c.title ? xH(c.title) : '<em style="color:var(--muted);font-weight:400;">Untitled card</em>') + '</span>'
+    + '<button class="btn-icon" title="Move up" onclick="moveProgramCard(\'' + tid + '\',\'' + cid + '\',-1)"' + (idx === 0 ? ' disabled' : '') + '>&#x25B2;</button>'
+    + '<button class="btn-icon" title="Move down" onclick="moveProgramCard(\'' + tid + '\',\'' + cid + '\',1)"' + (idx === total - 1 ? ' disabled' : '') + '>&#x25BC;</button>'
+    + '<button class="btn-sm danger" onclick="deleteProgramCard(\'' + tid + '\',\'' + cid + '\')">Remove</button>'
+    + '</div>'
+    + '<div class="field" style="margin-bottom:6px;"><label style="font-size:11px;">Course Title</label>'
+    + '<input type="text" id="pc-title-' + cid + '" value="' + xA(c.title || '') + '" placeholder="Course title"></div>'
+    + '<div class="field" style="margin-bottom:6px;"><label style="font-size:11px;">Short Description</label>'
+    + '<textarea id="pc-desc-' + cid + '" rows="2" placeholder="Short course description..." style="resize:vertical;">' + xH(c.desc || '') + '</textarea></div>'
+    + '<div class="field" style="margin-bottom:6px;"><label style="font-size:11px;">CTA URL</label>'
+    + '<input type="text" id="pc-url-' + cid + '" value="' + xA(c.url || '') + '" placeholder="https://..."></div>'
+    + '<div class="field" style="margin-bottom:0;"><label style="font-size:11px;">CTA Button Text</label>'
+    + '<input type="text" id="pc-cta-' + cid + '" value="' + xA(c.cta || 'See Details') + '" placeholder="See Details"></div>'
+    + '</div>';
+}
+
+function generatePrograms() {
+  saveProgramState();
+
+  var allCards = [];
+  programTopics.forEach(function(t) {
+    t.cards.forEach(function(c) {
+      allCards.push({ topicId: t.id, title: c.title, desc: c.desc, url: c.url, cta: c.cta || 'See Details' });
+    });
+  });
+
+  var uid = 'vlspg' + Math.random().toString(36).slice(2, 7);
+  var html = buildProgramsHtml(uid, programTopics, allCards);
+
+  // Preview
+  var prev = document.getElementById('prog-out-preview');
+  if (prev) {
+    prev.innerHTML = html;
+    prev.querySelectorAll('script').forEach(function(s) {
+      var ns = document.createElement('script');
+      ns.textContent = s.textContent;
+      document.head.appendChild(ns);
+      document.head.removeChild(ns);
+    });
+  }
+
+  // Code
+  var box = document.getElementById('prog-code-box');
+  if (box) box.textContent = html;
+
+  switchProgOut('preview');
+
+  // Save to Gist
+  var status = document.getElementById('program-status');
+  if (status) { status.textContent = 'Saving\u2026'; status.style.color = 'var(--muted)'; }
+
+  fetch('/api/publish-programs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ topics: programTopics.map(function(t) {
+      return { id: t.id, title: t.title, cards: t.cards };
+    })})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      if (status) { status.textContent = 'Saved!'; status.style.color = 'green'; setTimeout(function() { if (status) status.textContent = ''; }, 2000); }
+    } else {
+      if (status) { status.textContent = 'Error: ' + (data.error || 'Unknown'); status.style.color = 'red'; }
+    }
+  })
+  .catch(function() {
+    if (status) { status.textContent = 'Network error'; status.style.color = 'red'; }
+  });
+}
+
+function buildProgramsHtml(uid, topics, allCards) {
+  var e  = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var ea = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); };
+
+  var totalCards = allCards.length;
+
+  var filtersHtml = '      <div class="' + uid + '-filter active" id="' + uid + '-fall" onclick="' + uid + 'setTopic(\'all\')">All (' + totalCards + ')</div>';
+  topics.forEach(function(t) {
+    filtersHtml += '\n      <div class="' + uid + '-filter" id="' + uid + '-f' + t.id + '" onclick="' + uid + 'setTopic(\'' + t.id + '\')">'
+                + e(t.title || 'Untitled') + ' (' + t.cards.length + ')</div>';
+  });
+
+  var dataJson = JSON.stringify({
+    topics: topics.map(function(t) { return { id: t.id, title: t.title }; }),
+    cards:  allCards
+  });
+
+  var css = '<style>\n'
+    + '.' + uid + '-wrap{display:flex;gap:24px;font-family:Poppins,sans-serif;}\n'
+    + '.' + uid + '-sidebar{width:220px;flex-shrink:0;}\n'
+    + '.' + uid + '-search{width:100%;box-sizing:border-box;padding:8px 12px;border:1.5px solid #d1d5db;border-radius:6px;font-family:Poppins,sans-serif;font-size:13px;margin-bottom:10px;outline:none;}\n'
+    + '.' + uid + '-filter{padding:10px 14px;border-radius:6px;font-size:13px;cursor:pointer;margin-bottom:2px;color:#262a32;line-height:1.4;}\n'
+    + '.' + uid + '-filter:hover{background:#f3f4f6;}\n'
+    + '.' + uid + '-filter.active{background:#204280;color:#fff;}\n'
+    + '.' + uid + '-main{flex:1;min-width:0;}\n'
+    + '.' + uid + '-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}\n'
+    + '.' + uid + '-card{border:1px solid #e5e7eb;border-radius:8px;padding:20px;display:flex;flex-direction:column;background:#fff;}\n'
+    + '.' + uid + '-card-title{font-weight:700;font-size:15px;color:#1a1a1a;margin:0 0 8px;text-align:left;}\n'
+    + '.' + uid + '-card-desc{font-size:13px;color:#4b5563;line-height:1.6;flex:1;margin:0 0 16px;text-align:left;}\n'
+    + '.' + uid + '-card-btn{display:block;width:100%;box-sizing:border-box;padding:10px;background:#204280;color:#fff;border:none;border-radius:6px;font-family:Poppins,sans-serif;font-size:13px;font-weight:600;text-align:center;cursor:pointer;text-decoration:none;}\n'
+    + '.' + uid + '-card-btn:hover{background:#1a3570;color:#fff;}\n'
+    + '.' + uid + '-pager{display:flex;gap:6px;margin-top:20px;flex-wrap:wrap;align-items:center;}\n'
+    + '.' + uid + '-pg-btn{padding:6px 12px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-family:Poppins,sans-serif;font-size:13px;color:#262a32;}\n'
+    + '.' + uid + '-pg-btn.active{background:#204280;color:#fff;border-color:#204280;}\n'
+    + '.' + uid + '-pg-btn:hover:not(.active){background:#f3f4f6;}\n'
+    + '.' + uid + '-pg-btn:disabled{opacity:.4;cursor:default;pointer-events:none;}\n'
+    + '.' + uid + '-empty{padding:40px 0;text-align:center;color:#9ca3af;font-size:14px;grid-column:1/-1;}\n'
+    + '@media(max-width:900px){.' + uid + '-grid{grid-template-columns:repeat(2,1fr);}}\n'
+    + '@media(max-width:640px){.' + uid + '-wrap{flex-direction:column;}.' + uid + '-sidebar{width:100%;}.' + uid + '-grid{grid-template-columns:1fr;}}\n'
+    + '</style>';
+
+  var markup = '<div class="' + uid + '-wrap">\n'
+    + '  <div class="' + uid + '-sidebar">\n'
+    + '    <input class="' + uid + '-search" id="' + uid + '-srch" type="text" placeholder="Search\u2026" oninput="' + uid + 'filter()">\n'
+    + '    <div id="' + uid + '-filters">\n'
+    + filtersHtml + '\n'
+    + '    </div>\n'
+    + '  </div>\n'
+    + '  <div class="' + uid + '-main">\n'
+    + '    <div class="' + uid + '-grid" id="' + uid + '-grid"></div>\n'
+    + '    <div class="' + uid + '-pager" id="' + uid + '-pager"></div>\n'
+    + '  </div>\n'
+    + '</div>';
+
+  // All function and variable names are uid-prefixed to avoid global collisions
+  var script = '<script>\n'
+    + '(function(){\n'
+    + '  var D=' + dataJson + ';\n'
+    + '  var PS=9;\n'
+    + '  var st={t:"all",p:1,q:""};\n'
+    + '  function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}\n'
+    + '  function esca(s){return String(s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;");}\n'
+    + '  function getCards(){\n'
+    + '    var c=st.t==="all"?D.cards:D.cards.filter(function(x){return x.topicId===st.t;});\n'
+    + '    if(st.q){var q=st.q.toLowerCase();c=c.filter(function(x){return(x.title+" "+x.desc).toLowerCase().indexOf(q)>=0;});}\n'
+    + '    return c;\n'
+    + '  }\n'
+    + '  function render(){\n'
+    + '    var fc=getCards(),tot=fc.length,pages=Math.max(1,Math.ceil(tot/PS));\n'
+    + '    if(st.p>pages)st.p=1;\n'
+    + '    var sl=fc.slice((st.p-1)*PS,(st.p-1)*PS+PS);\n'
+    + '    var g=document.getElementById("' + uid + '-grid");\n'
+    + '    var pg=document.getElementById("' + uid + '-pager");\n'
+    + '    if(!g)return;\n'
+    + '    if(!sl.length){\n'
+    + '      g.innerHTML=\'<div class="' + uid + '-empty">No courses found.</div>\';\n'
+    + '      pg.innerHTML="";\n'
+    + '      return;\n'
+    + '    }\n'
+    + '    g.innerHTML=sl.map(function(c){\n'
+    + '      return \'<div class="' + uid + '-card">\'\n'
+    + '        +\'<div class="' + uid + '-card-title">\'+esc(c.title)+\'</div>\'\n'
+    + '        +\'<div class="' + uid + '-card-desc">\'+esc(c.desc)+\'</div>\'\n'
+    + '        +\'<a class="' + uid + '-card-btn" href="\'+esca(c.url)+\'">\'+esc(c.cta||"See Details")+\'</a>\'\n'
+    + '        +\'</div>\';\n'
+    + '    }).join("");\n'
+    + '    var ph="";\n'
+    + '    ph+=\'<button class="' + uid + '-pg-btn"\''
+    +          '+(st.p===1?" disabled":"")\n'
+    + '        +\' onclick="' + uid + 'goto(\'+( st.p-1)+\')">&#x276E;</button>\';\n'
+    + '    for(var i=1;i<=pages;i++){\n'
+    + '      ph+=\'<button class="' + uid + '-pg-btn\'+(i===st.p?" active":"")+\'"\'\n'
+    + '          +\' onclick="' + uid + 'goto(\'+i+\')">\'+i+\'</button>\';\n'
+    + '    }\n'
+    + '    ph+=\'<button class="' + uid + '-pg-btn"\''
+    +          '+(st.p===pages?" disabled":"")\n'
+    + '        +\' onclick="' + uid + 'goto(\'+( st.p+1)+\')">&#x276F;</button>\';\n'
+    + '    pg.innerHTML=ph;\n'
+    + '  }\n'
+    + '  window.' + uid + 'setTopic=function(t){\n'
+    + '    document.getElementById("' + uid + '-filters").querySelectorAll(".' + uid + '-filter").forEach(function(el){el.classList.remove("active");});\n'
+    + '    var a=t==="all"?document.getElementById("' + uid + '-fall"):document.getElementById("' + uid + '-f"+t);\n'
+    + '    if(a)a.classList.add("active");\n'
+    + '    st.t=t;st.p=1;render();\n'
+    + '  };\n'
+    + '  window.' + uid + 'filter=function(){\n'
+    + '    st.q=(document.getElementById("' + uid + '-srch")||{value:""}).value;\n'
+    + '    st.p=1;render();\n'
+    + '  };\n'
+    + '  window.' + uid + 'goto=function(p){\n'
+    + '    var max=Math.max(1,Math.ceil(getCards().length/PS));\n'
+    + '    if(p<1||p>max)return;\n'
+    + '    st.p=p;render();\n'
+    + '  };\n'
+    + '  render();\n'
+    + '})();\n'
+    + '<\/script>';
+
+  return css + '\n\n' + markup + '\n\n' + script;
+}
+
+function switchProgOut(mode) {
+  document.getElementById('prog-out-preview').style.display = mode === 'preview' ? '' : 'none';
+  document.getElementById('prog-out-code').style.display    = mode === 'code'    ? '' : 'none';
+  document.getElementById('prog-ot-preview').classList.toggle('active', mode === 'preview');
+  document.getElementById('prog-ot-code').classList.toggle('active', mode === 'code');
 }
 
 </script>
