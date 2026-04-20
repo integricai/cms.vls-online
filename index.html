@@ -2829,6 +2829,16 @@ function ftHesc(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+var SOCIAL_PLATFORMS = ['facebook','youtube','linkedin','instagram','x'];
+
+var SOCIAL_ICONS = {
+  facebook: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>',
+  youtube:  '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><path fill="white" d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon fill="#0f2155" points="9.75 15.02 15.5 12 9.75 8.98"/></svg>',
+  linkedin: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>',
+  instagram:'<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>',
+  x:        '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>'
+};
+
 function makeFooterDefault() {
   return {
     sections: [
@@ -2837,6 +2847,7 @@ function makeFooterDefault() {
       { title: '', links: [] }
     ],
     contact: { title: 'Get in Touch', address: '', email: '', whatsapp: '' },
+    socials: [],
     copyright: { text: '', links: [] }
   };
 }
@@ -2872,6 +2883,8 @@ async function loadFooterFromGist() {
       });
       footerData.copyright.links = (footerData.copyright.links || []).map(function(l) { return { id: 'fl' + (++c), label: l.label || '', url: l.url || '' }; });
       footerLinkCounter = c;
+      if (!footerData.socials) footerData.socials = [];
+      footerData.socials = footerData.socials.map(function(s) { return { id: 'fs' + (++footerSocialCounter), platform: s.platform || 'facebook', url: s.url || '' }; });
     } else {
       footerData = makeFooterDefault();
     }
@@ -2908,6 +2921,13 @@ function saveFooterState() {
   if (addrEl) footerData.contact.address = addrEl.value;
   if (emailEl) footerData.contact.email = emailEl.value;
   if (waEl) footerData.contact.whatsapp = waEl.value;
+  footerData.socials = [];
+  var socialRows = document.querySelectorAll('.ft-social-row');
+  socialRows.forEach(function(row) {
+    var sel = row.querySelector('.ft-social-sel');
+    var url = row.querySelector('.ft-social-url');
+    footerData.socials.push({ id: row.dataset.sid, platform: (sel || {}).value || 'facebook', url: (url || {}).value || '' });
+  });
   var cpEl = document.getElementById('ft-cp-text');
   if (cpEl) footerData.copyright.text = cpEl.value;
   footerData.copyright.links = [];
@@ -2955,6 +2975,25 @@ function removeCopyrightLink(lid) {
   renderFooterForm();
 }
 
+var footerSocialCounter = 0;
+
+function addSocial() {
+  saveFooterState();
+  footerData.socials.push({ id: 'fs' + (++footerSocialCounter), platform: 'facebook', url: '' });
+  renderFooterForm();
+  setTimeout(function() {
+    var rows = document.querySelectorAll('.ft-social-row');
+    var last = rows[rows.length - 1];
+    if (last) last.querySelector('.ft-social-url').focus();
+  }, 30);
+}
+
+function removeSocial(sid) {
+  saveFooterState();
+  footerData.socials = footerData.socials.filter(function(s) { return s.id !== sid; });
+  renderFooterForm();
+}
+
 function buildFooterLinkRowHtml(link, removeCall) {
   return '<div class="ft-link-row" data-lid="' + link.id + '" style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:center;">'
     + '<input class="ft-link-label" type="text" value="' + ftEsc(link.label) + '" placeholder="Label" style="font-family:Poppins,sans-serif;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;">'
@@ -2990,6 +3029,22 @@ function renderFooterForm() {
   html += '<div class="field"><label>Address</label><textarea id="ft-addr" rows="3" style="width:100%;font-family:Poppins,sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;resize:vertical;" placeholder="123 Main Street&#10;London, UK">' + ftEsc(footerData.contact.address) + '</textarea></div>';
   html += '<div class="field"><label>Email</label><input type="email" id="ft-email" value="' + ftEsc(footerData.contact.email) + '" placeholder="info@vls-online.com"></div>';
   html += '<div class="field"><label>WhatsApp number</label><input type="text" id="ft-wa" value="' + ftEsc(footerData.contact.whatsapp) + '" placeholder="+44 7000 000000"></div>';
+
+  // Social media
+  html += '<div class="section-label" style="margin-top:14px;">Social Media</div>';
+  html += '<div id="ft-social-list" style="display:flex;flex-direction:column;gap:6px;">';
+  (footerData.socials || []).forEach(function(s) {
+    var opts = SOCIAL_PLATFORMS.map(function(p) {
+      return '<option value="' + p + '"' + (s.platform === p ? ' selected' : '') + '>' + p.charAt(0).toUpperCase() + p.slice(1) + '</option>';
+    }).join('');
+    html += '<div class="ft-social-row" data-sid="' + s.id + '" style="display:grid;grid-template-columns:140px 1fr auto;gap:6px;align-items:center;">'
+      + '<select class="ft-social-sel" style="font-family:Poppins,sans-serif;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;">' + opts + '</select>'
+      + '<input class="ft-social-url" type="text" value="' + ftEsc(s.url) + '" placeholder="https://..." style="font-family:Poppins,sans-serif;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;">'
+      + '<button onclick="removeSocial(\'' + s.id + '\')" style="padding:6px 9px;background:#fee2e2;color:#e63946;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;font-size:12px;">✕</button>'
+      + '</div>';
+  });
+  html += '</div>';
+  html += '<button onclick="addSocial()" style="margin-top:6px;font-size:12px;padding:5px 12px;background:#f0f4ff;color:var(--blue);border:1px solid #c7d7f5;border-radius:6px;cursor:pointer;">+ Add social</button>';
 
   // Copyright bar
   html += '<div class="section-label" style="margin-top:14px;">Copyright Bar</div>';
@@ -3039,7 +3094,7 @@ function buildFooterHtml(data) {
 
   // Scoped CSS: desktop grid + mobile accordion
   var css = ''
-    + '.' + P + '-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:40px;padding-bottom:44px;border-bottom:1px solid rgba(255,255,255,.12);}'
+    + '.' + P + '-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:40px;padding-bottom:32px;}'
     + '.' + P + '-col{}'
     + '.' + P + '-hdr{margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;cursor:default;}'
     + '.' + P + '-arrow{display:none;font-size:18px;color:rgba(255,255,255,.7);line-height:1;}'
@@ -3109,6 +3164,19 @@ function buildFooterHtml(data) {
   html += col(ftHesc(data.contact.title || 'Get in Touch'), contactBody);
 
   html += '</div>'; // end grid
+
+  // Social icons row — right-aligned, above the separator line
+  var activeSocials = (data.socials || []).filter(function(s) { return s.url; });
+  html += '<div style="display:flex;justify-content:flex-end;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.12);">';
+  if (activeSocials.length) {
+    html += '<div style="display:flex;gap:18px;align-items:center;">';
+    activeSocials.forEach(function(s) {
+      var icon = SOCIAL_ICONS[s.platform] || '';
+      html += '<a href="' + ftHesc(s.url) + '" target="_blank" rel="noopener" style="display:inline-flex;opacity:.85;line-height:0;">' + icon + '</a>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
 
   // Copyright bar — fully left-aligned with explicit text-align:left to override Zenler
   html += '<div style="padding:18px 0;text-align:left;">';
