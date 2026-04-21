@@ -4924,6 +4924,7 @@ function readHdrCtaItems() {
 
 /* ── Menu tree ─────────────────────────────── */
 function addHdrMenuItem(parentId) {
+  readHdrMenuItems();
   var id = 'hm' + (++hdrMenuCounter);
   var item = { id:id, label:'', url:'#', newTab:false, children:[] };
   if (!parentId) {
@@ -4936,7 +4937,7 @@ function addHdrMenuItem(parentId) {
 }
 
 function deleteHdrMenuItem(id) {
-  readHdrMenuItems();
+  readHdrMenuItems(); // sync labels/urls before re-render
   function remove(arr) {
     for (var i = 0; i < arr.length; i++) {
       if (arr[i].id === id) { arr.splice(i,1); return true; }
@@ -5004,7 +5005,7 @@ function buildHdrMenuItemHtml(item, idx, total, level) {
   h += '<input type="text" id="hmlbl-'+item.id+'" value="'+xA(item.label)+'" placeholder="Label" style="flex:1;min-width:80px;font-size:12px;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;">';
   h += '<input type="text" id="hmurl-'+item.id+'" value="'+xA(item.url)+'" placeholder="URL" style="flex:1;min-width:80px;font-size:12px;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;">';
   h += '<label style="font-size:10px;white-space:nowrap;color:var(--muted);"><input type="checkbox" id="hmnt-'+item.id+'"'+(item.newTab?' checked':'')+' style="margin-right:2px;">New tab</label>';
-  if (canChild) h += '<button class="btn-icon" title="Add child item" onclick="readHdrMenuItems();addHdrMenuItem(\''+item.id+'\')" style="color:#534AB7;font-size:14px;font-weight:700;">+</button>';
+  if (canChild) h += '<button class="btn-icon" title="Add child item" onclick="addHdrMenuItem(\''+item.id+'\')" style="color:#534AB7;font-size:14px;font-weight:700;">+</button>';
   h += '<button class="btn-icon" onclick="deleteHdrMenuItem(\''+item.id+'\')" style="color:#e53e3e;">'+HDR_IC_DEL+'</button>';
   h += '</div>';
   if (item.children && item.children.length) {
