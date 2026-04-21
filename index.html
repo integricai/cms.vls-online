@@ -3656,6 +3656,9 @@ function switchFaqOut(mode) {
 // Data hierarchy: Section → Topic → Card
 // Each Section generates its own independent HTML snippet.
 
+var PROG_IC_DEL  = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 3h10M4 3V1.5h4V3M2.5 3l.75 7.5h5.5L9.5 3"/><path d="M5 5.5v3M7 5.5v3"/></svg>';
+var PROG_IC_COPY = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1"/><path d="M1 8V1h7v3"/></svg>';
+
 var programSections = [];
 var programSectionCounter = 0;
 var programTopicCounter = 0;
@@ -3886,7 +3889,7 @@ function buildProgramSectionHtml(s, idx, total) {
         + '<span style="font-size:11px;color:var(--muted);margin-right:4px;">' + topicCount + ' topic' + (topicCount !== 1 ? 's' : '') + ' &middot; ' + cardCount + ' card' + (cardCount !== 1 ? 's' : '') + '</span>'
         + '<button class="btn-icon" title="Move up" onclick="moveProgramSection(\'' + sid + '\',-1);event.stopPropagation()"' + (idx === 0 ? ' disabled' : '') + '>&#x25B2;</button>'
         + '<button class="btn-icon" title="Move down" onclick="moveProgramSection(\'' + sid + '\',1);event.stopPropagation()"' + (idx === total - 1 ? ' disabled' : '') + '>&#x25BC;</button>'
-        + '<button class="btn-sm danger" onclick="deleteProgramSection(\'' + sid + '\');event.stopPropagation()" style="margin-left:4px;">Delete</button>'
+        + '<button class="btn-icon" title="Delete section" onclick="deleteProgramSection(\'' + sid + '\');event.stopPropagation()" style="margin-left:2px;">' + PROG_IC_DEL + '</button>'
         + '</div>';
 
   if (isExp) {
@@ -3927,7 +3930,8 @@ function buildProgramTopicHtml(t, tidx, topicTotal, sid) {
         + '<span style="font-size:11px;color:var(--muted);margin-right:4px;">' + cnt + ' card' + (cnt !== 1 ? 's' : '') + '</span>'
         + '<button class="btn-icon" style="font-size:10px;" title="Move up" onclick="moveTopicInSection(\'' + sid + '\',\'' + tid + '\',-1);event.stopPropagation()"' + (tidx === 0 ? ' disabled' : '') + '>&#x25B2;</button>'
         + '<button class="btn-icon" style="font-size:10px;" title="Move down" onclick="moveTopicInSection(\'' + sid + '\',\'' + tid + '\',1);event.stopPropagation()"' + (tidx === topicTotal - 1 ? ' disabled' : '') + '>&#x25BC;</button>'
-        + '<button class="btn-sm danger" style="font-size:11px;" onclick="deleteTopicFromSection(\'' + sid + '\',\'' + tid + '\');event.stopPropagation()">Delete</button>'
+        + '<button class="btn-icon" title="Copy topic to another section" onclick="showCopyTopicMenu(this,\'' + sid + '\',\'' + tid + '\');event.stopPropagation()" style="color:#534AB7;">' + PROG_IC_COPY + '</button>'
+        + '<button class="btn-icon" title="Delete topic" onclick="deleteTopicFromSection(\'' + sid + '\',\'' + tid + '\');event.stopPropagation()">' + PROG_IC_DEL + '</button>'
         + '</div>';
 
   if (isExp) {
@@ -3960,7 +3964,7 @@ function buildProgramCardHtml(c, cidx, cardTotal, sid, tid) {
     +   (c.title ? xH(c.title) : '<em style="color:var(--muted);font-weight:400;">Untitled card</em>') + '</span>'
     + '<button class="btn-icon" style="font-size:10px;" title="Move up" onclick="moveCardInTopic(\'' + sid + '\',\'' + tid + '\',\'' + cid + '\',-1)"' + (cidx === 0 ? ' disabled' : '') + '>&#x25B2;</button>'
     + '<button class="btn-icon" style="font-size:10px;" title="Move down" onclick="moveCardInTopic(\'' + sid + '\',\'' + tid + '\',\'' + cid + '\',1)"' + (cidx === cardTotal - 1 ? ' disabled' : '') + '>&#x25BC;</button>'
-    + '<button class="btn-sm danger" style="font-size:11px;" onclick="deleteCardFromTopic(\'' + sid + '\',\'' + tid + '\',\'' + cid + '\')">Remove</button>'
+    + '<button class="btn-icon" title="Remove card" onclick="deleteCardFromTopic(\'' + sid + '\',\'' + tid + '\',\'' + cid + '\')">' + PROG_IC_DEL + '</button>'
     + '</div>'
     + '<div class="field" style="margin-bottom:5px;"><label style="font-size:11px;">Course Title</label>'
     + '<input type="text" id="pc-title-' + cid + '" value="' + xA(c.title || '') + '" placeholder="Course title"></div>'
@@ -3971,6 +3975,92 @@ function buildProgramCardHtml(c, cidx, cardTotal, sid, tid) {
     + '<div class="field" style="margin-bottom:0;"><label style="font-size:11px;">CTA Button Text</label>'
     + '<input type="text" id="pc-cta-' + cid + '" value="' + xA(c.cta || 'See Details') + '" placeholder="See Details"></div>'
     + '</div>';
+}
+
+// ── Copy topic ────────────────────────────────────────────────
+
+function showCopyTopicMenu(btn, fromSid, tid) {
+  var existing = document.getElementById('prog-copy-menu');
+  if (existing) { existing.remove(); return; }
+
+  saveProgramState();
+
+  var menu = document.createElement('div');
+  menu.id = 'prog-copy-menu';
+  menu.style.cssText = 'position:fixed;background:#fff;border:1px solid #d1d5db;border-radius:6px;'
+    + 'box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:9999;min-width:200px;padding:4px 0;font-family:Poppins,sans-serif;font-size:12px;';
+
+  var rect = btn.getBoundingClientRect();
+  menu.style.top  = (rect.bottom + 4) + 'px';
+  menu.style.left = Math.max(8, rect.right - 200) + 'px';
+
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'padding:6px 12px 5px;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;margin-bottom:2px;';
+  hdr.textContent = 'Copy topic to\u2026';
+  menu.appendChild(hdr);
+
+  if (programSections.length === 0) {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'padding:8px 12px;color:#9ca3af;font-size:11px;';
+    empty.textContent = 'No sections available';
+    menu.appendChild(empty);
+  } else {
+    programSections.forEach(function(s) {
+      var item = document.createElement('div');
+      item.style.cssText = 'padding:7px 12px;cursor:pointer;color:#262a32;display:flex;align-items:center;gap:6px;';
+      var isCurrent = s.id === fromSid;
+      item.innerHTML = (isCurrent
+        ? '<span style="width:14px;color:#9ca3af;">&#x2022;</span><span style="color:#9ca3af;">' + xH(s.name || 'Untitled section') + ' <em style="font-size:10px;">(current)</em></span>'
+        : '<span style="width:14px;"></span><span>' + xH(s.name || 'Untitled section') + '</span>');
+      item.onmouseenter = function() { if (!isCurrent) item.style.background = '#f3f4f6'; };
+      item.onmouseleave = function() { item.style.background = ''; };
+      item.onclick = function() {
+        menu.remove();
+        performTopicCopy(fromSid, tid, s.id);
+      };
+      menu.appendChild(item);
+    });
+  }
+
+  document.body.appendChild(menu);
+
+  setTimeout(function() {
+    function outsideClick(e) {
+      if (!menu.contains(e.target) && e.target !== btn) {
+        menu.remove();
+        document.removeEventListener('click', outsideClick, true);
+      }
+    }
+    document.addEventListener('click', outsideClick, true);
+  }, 0);
+}
+
+function performTopicCopy(fromSid, tid, toSid) {
+  var fromSec = programSections.find(function(s) { return s.id === fromSid; });
+  if (!fromSec) return;
+  var topic = fromSec.topics.find(function(t) { return t.id === tid; });
+  if (!topic) return;
+  var toSec = programSections.find(function(s) { return s.id === toSid; });
+  if (!toSec) return;
+
+  var newTopic = {
+    id: 'pt' + (++programTopicCounter),
+    title: topic.title,
+    expanded: false,
+    cards: topic.cards.map(function(c) {
+      return { id: 'pc' + (++programCardCounter), title: c.title, desc: c.desc, url: c.url, cta: c.cta };
+    })
+  };
+
+  toSec.topics.push(newTopic);
+  renderProgramSections();
+
+  var status = document.getElementById('program-status');
+  if (status) {
+    status.textContent = 'Topic copied to \u201c' + (toSec.name || 'Untitled section') + '\u201d';
+    status.style.color = '#534AB7';
+    setTimeout(function() { if (status) status.textContent = ''; }, 3000);
+  }
 }
 
 // ── Generate per section ──────────────────────────────────────
