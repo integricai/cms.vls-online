@@ -119,7 +119,7 @@ export default async function handler(req, res) {
 
     if (!adminRes.ok) {
       const errData = await adminRes.json().catch(() => ({}));
-      return res.status(500).json({ error: errData.message || 'Failed to send email' });
+      return res.status(500).json({ error: errData.message || 'Failed to send email', details: errData, status: adminRes.status });
     }
 
     return res.status(200).json({ ok: true });
