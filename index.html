@@ -706,6 +706,10 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
             <label>Site Title Text</label>
             <input type="text" id="hdr-site-title" value="Vertex Language Solutions">
           </div>
+          <div class="field">
+            <label>Site Sub-title <span style="font-weight:400;color:var(--muted);font-size:11px;">— tagline / strapline</span></label>
+            <input type="text" id="hdr-sub-title" placeholder="Changing Behaviors Through Education">
+          </div>
           <div class="field" style="display:flex;gap:12px;">
             <div style="flex:1;">
               <label>Title Colour</label>
@@ -4825,6 +4829,7 @@ function loadHeaderFromGist() {
       if (cfg.logoLink)     hdrSetVal('hdr-logo-link', cfg.logoLink);
       if (cfg.logoHeight)   hdrSetVal('hdr-logo-height', cfg.logoHeight);
       if (cfg.siteTitle)    hdrSetVal('hdr-site-title', cfg.siteTitle);
+      if (cfg.subTitle)     hdrSetVal('hdr-sub-title',  cfg.subTitle);
       if (cfg.titleColor)   hdrSetVal('hdr-title-color', cfg.titleColor);
       if (cfg.titleSize)    hdrSetVal('hdr-title-size', cfg.titleSize);
       if (cfg.topbarBg)     hdrSetVal('hdr-topbar-bg', cfg.topbarBg);
@@ -5029,6 +5034,7 @@ function generateHeaderHtml() {
     logoLink:   hdrGetVal('hdr-logo-link')   || '/',
     logoHeight: hdrGetVal('hdr-logo-height') || '56',
     siteTitle:  hdrGetVal('hdr-site-title'),
+    subTitle:   hdrGetVal('hdr-sub-title'),
     titleColor: hdrGetVal('hdr-title-color'),
     titleSize:  hdrGetVal('hdr-title-size')  || '22',
     topbarBg:   hdrGetVal('hdr-topbar-bg'),
@@ -5137,11 +5143,13 @@ function buildHeaderOutputHtml(uid, cfg) {
     + '.'+uid+'-login-slot a,.'+uid+'-login-slot button{color:'+topbarTextColor+'!important;font-size:'+menuFontSize+'!important;}'
     /* Brand bar */
     + '.'+uid+'-brand{background:'+q(cfg.brandBg)+';padding:8px 0;border-bottom:1px solid #e5e7eb;}'
-    + '.'+uid+'-brand-inner{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:16px;}'
+    + '.'+uid+'-brand-inner{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;align-items:flex-end;gap:16px;}'
     + '.'+uid+'-logo{height:'+logoHeightCss+';width:auto;display:block;}'
+    + '.'+uid+'-namewrap{display:flex;flex-direction:column;justify-content:flex-end;gap:2px;}'
     + '.'+uid+'-sitename{font-size:'+q(cfg.titleSize)+'px;font-weight:700;color:'+q(cfg.titleColor)+';line-height:1.2;}'
+    + '.'+uid+'-subtitle{font-size:12px;font-weight:400;color:'+q(cfg.titleColor)+';opacity:.75;line-height:1.3;letter-spacing:.04em;text-transform:uppercase;}'
     + '.'+uid+'-brand-spacer{flex:1;min-width:16px;}'
-    + '.'+uid+'-brand-right{display:flex;align-items:center;gap:16px;flex-shrink:0;}'
+    + '.'+uid+'-brand-right{display:flex;align-items:center;gap:16px;flex-shrink:0;align-self:center;}'
     + '.'+uid+'-ctas{display:flex;flex-direction:column;gap:6px;align-items:flex-end;}'
     + '.'+uid+'-cta{display:inline-block;padding:8px 20px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;white-space:nowrap;transition:opacity .2s;}'
     + '.'+uid+'-cta:hover{opacity:.85;}'
@@ -5192,7 +5200,10 @@ function buildHeaderOutputHtml(uid, cfg) {
     /* Brand */
     + '<div class="'+uid+'-brand"><div class="'+uid+'-brand-inner">'
     + (cfg.logoUrl ? '<a href="'+e(cfg.logoLink)+'" style="flex-shrink:0;"><img src="'+e(cfg.logoUrl)+'" alt="'+e(cfg.logoAlt)+'" class="'+uid+'-logo"></a>' : '')
+    + '<div class="'+uid+'-namewrap">'
     + '<span class="'+uid+'-sitename">'+e(cfg.siteTitle)+'</span>'
+    + (cfg.subTitle ? '<span class="'+uid+'-subtitle">'+e(cfg.subTitle)+'</span>' : '')
+    + '</div>'
     + '<div class="'+uid+'-brand-spacer"></div>'
     + '<div class="'+uid+'-brand-right">'
     + (ctaHtml ? '<div class="'+uid+'-ctas">'+ctaHtml+'</div>' : '')
