@@ -4798,8 +4798,8 @@ function switchFormOut(mode) {
    HEADER BUILDER
 ═══════════════════════════════════════════════════════════════ */
 
-function getVal(id) { var el = document.getElementById(id); return el ? el.value : ''; }
-function setVal(id, val) { var el = document.getElementById(id); if (el && val != null) el.value = val; }
+function hdrGetVal(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+function hdrSetVal(id, val) { var el = document.getElementById(id); if (el && val != null) el.value = val; }
 
 var HDR_IC_DEL  = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 3h10M4 3V1.5h4V3M2.5 3l.75 7.5h5.5L9.5 3"/><path d="M5 5.5v3M7 5.5v3"/></svg>';
 
@@ -4820,21 +4820,21 @@ function loadHeaderFromGist() {
       hdrLoaded = true;
       var cfg = data.config;
       if (!cfg) { renderHdrCtaList(); renderHdrMenuList(); return; }
-      if (cfg.logoUrl)      setVal('hdr-logo-url', cfg.logoUrl);
-      if (cfg.logoAlt)      setVal('hdr-logo-alt', cfg.logoAlt);
-      if (cfg.logoLink)     setVal('hdr-logo-link', cfg.logoLink);
-      if (cfg.logoHeight)   setVal('hdr-logo-height', cfg.logoHeight);
-      if (cfg.siteTitle)    setVal('hdr-site-title', cfg.siteTitle);
-      if (cfg.titleColor)   setVal('hdr-title-color', cfg.titleColor);
-      if (cfg.titleSize)    setVal('hdr-title-size', cfg.titleSize);
-      if (cfg.topbarBg)     setVal('hdr-topbar-bg', cfg.topbarBg);
-      if (cfg.topbarText)   setVal('hdr-topbar-text', cfg.topbarText);
-      if (cfg.brandBg)      setVal('hdr-brand-bg', cfg.brandBg);
-      if (cfg.menuBg)       setVal('hdr-menu-bg', cfg.menuBg);
-      if (cfg.menuText)     setVal('hdr-menu-text', cfg.menuText);
-      if (cfg.menuHover)    setVal('hdr-menu-hover', cfg.menuHover);
-      if (cfg.dropBg)       setVal('hdr-drop-bg', cfg.dropBg);
-      if (cfg.dropText)     setVal('hdr-drop-text', cfg.dropText);
+      if (cfg.logoUrl)      hdrSetVal('hdr-logo-url', cfg.logoUrl);
+      if (cfg.logoAlt)      hdrSetVal('hdr-logo-alt', cfg.logoAlt);
+      if (cfg.logoLink)     hdrSetVal('hdr-logo-link', cfg.logoLink);
+      if (cfg.logoHeight)   hdrSetVal('hdr-logo-height', cfg.logoHeight);
+      if (cfg.siteTitle)    hdrSetVal('hdr-site-title', cfg.siteTitle);
+      if (cfg.titleColor)   hdrSetVal('hdr-title-color', cfg.titleColor);
+      if (cfg.titleSize)    hdrSetVal('hdr-title-size', cfg.titleSize);
+      if (cfg.topbarBg)     hdrSetVal('hdr-topbar-bg', cfg.topbarBg);
+      if (cfg.topbarText)   hdrSetVal('hdr-topbar-text', cfg.topbarText);
+      if (cfg.brandBg)      hdrSetVal('hdr-brand-bg', cfg.brandBg);
+      if (cfg.menuBg)       hdrSetVal('hdr-menu-bg', cfg.menuBg);
+      if (cfg.menuText)     hdrSetVal('hdr-menu-text', cfg.menuText);
+      if (cfg.menuHover)    hdrSetVal('hdr-menu-hover', cfg.menuHover);
+      if (cfg.dropBg)       hdrSetVal('hdr-drop-bg', cfg.dropBg);
+      if (cfg.dropText)     hdrSetVal('hdr-drop-text', cfg.dropText);
       if (cfg.ctas && cfg.ctas.length) {
         cfg.ctas.forEach(function(c) {
           var n = parseInt((c.id||'').replace('hc',''),10);
@@ -5024,21 +5024,21 @@ function buildHdrMenuItemHtml(item, idx, total, level) {
 function generateHeaderHtml() {
   readHdrMenuItems();
   var cfg = {
-    logoUrl:    getVal('hdr-logo-url'),
-    logoAlt:    getVal('hdr-logo-alt'),
-    logoLink:   getVal('hdr-logo-link')   || '/',
-    logoHeight: getVal('hdr-logo-height') || '56',
-    siteTitle:  getVal('hdr-site-title'),
-    titleColor: getVal('hdr-title-color'),
-    titleSize:  getVal('hdr-title-size')  || '22',
-    topbarBg:   getVal('hdr-topbar-bg'),
-    topbarText: getVal('hdr-topbar-text'),
-    brandBg:    getVal('hdr-brand-bg'),
-    menuBg:     getVal('hdr-menu-bg'),
-    menuText:   getVal('hdr-menu-text'),
-    menuHover:  getVal('hdr-menu-hover'),
-    dropBg:     getVal('hdr-drop-bg'),
-    dropText:   getVal('hdr-drop-text'),
+    logoUrl:    hdrGetVal('hdr-logo-url'),
+    logoAlt:    hdrGetVal('hdr-logo-alt'),
+    logoLink:   hdrGetVal('hdr-logo-link')   || '/',
+    logoHeight: hdrGetVal('hdr-logo-height') || '56',
+    siteTitle:  hdrGetVal('hdr-site-title'),
+    titleColor: hdrGetVal('hdr-title-color'),
+    titleSize:  hdrGetVal('hdr-title-size')  || '22',
+    topbarBg:   hdrGetVal('hdr-topbar-bg'),
+    topbarText: hdrGetVal('hdr-topbar-text'),
+    brandBg:    hdrGetVal('hdr-brand-bg'),
+    menuBg:     hdrGetVal('hdr-menu-bg'),
+    menuText:   hdrGetVal('hdr-menu-text'),
+    menuHover:  hdrGetVal('hdr-menu-hover'),
+    dropBg:     hdrGetVal('hdr-drop-bg'),
+    dropText:   hdrGetVal('hdr-drop-text'),
     ctas:       readHdrCtaItems(),
     menuItems:  hdrMenuItems
   };
