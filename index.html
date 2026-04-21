@@ -216,6 +216,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
   <div class="nav-tab hidden" id="nav-footer" onclick="switchScreen('footer')">Footer</div>
   <div class="nav-tab hidden" id="nav-programs" onclick="switchScreen('programs')">Programs</div>
   <div class="nav-tab hidden" id="nav-form" onclick="switchScreen('form')">Form</div>
+  <div class="nav-tab hidden" id="nav-header" onclick="switchScreen('header')">Header</div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
 </div>
 
@@ -659,6 +660,132 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 </div>
 
 <!-- ═══════════════════════════════════════
+     SCREEN — HEADER
+═══════════════════════════════════════ -->
+<div id="screen-header" class="screen">
+
+  <!-- Left: config -->
+  <div class="form-panel" style="width:480px;">
+    <div class="form-inner">
+      <div class="section-label">Header Builder</div>
+
+      <!-- Logo -->
+      <div class="banner-block">
+        <div class="banner-block-hd" onclick="toggleHdrBlock('logo')">
+          <span class="banner-block-title">Logo</span>
+          <span id="hdr-arrow-logo" class="banner-block-arrow">▼</span>
+        </div>
+        <div class="banner-block-body" id="hdr-body-logo">
+          <div class="field">
+            <label>Logo Image URL</label>
+            <input type="text" id="hdr-logo-url" placeholder="https://...">
+          </div>
+          <div class="field">
+            <label>Alt Text</label>
+            <input type="text" id="hdr-logo-alt" value="VLS Online">
+          </div>
+          <div class="field">
+            <label>Logo Link URL</label>
+            <input type="text" id="hdr-logo-link" value="/">
+          </div>
+          <div class="field">
+            <label>Logo Height (px)</label>
+            <input type="number" id="hdr-logo-height" value="56" min="20" max="120">
+          </div>
+        </div>
+      </div>
+
+      <!-- Branding -->
+      <div class="banner-block" style="margin-top:8px;">
+        <div class="banner-block-hd" onclick="toggleHdrBlock('brand')">
+          <span class="banner-block-title">Site Title</span>
+          <span id="hdr-arrow-brand" class="banner-block-arrow">▼</span>
+        </div>
+        <div class="banner-block-body" id="hdr-body-brand">
+          <div class="field">
+            <label>Site Title Text</label>
+            <input type="text" id="hdr-site-title" value="Vertex Language Solutions">
+          </div>
+          <div class="field" style="display:flex;gap:12px;">
+            <div style="flex:1;">
+              <label>Title Colour</label>
+              <input type="color" id="hdr-title-color" value="#204280">
+            </div>
+            <div style="flex:1;">
+              <label>Font Size (px)</label>
+              <input type="number" id="hdr-title-size" value="22" min="12" max="48">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Colours -->
+      <div class="banner-block" style="margin-top:8px;">
+        <div class="banner-block-hd" onclick="toggleHdrBlock('colours')">
+          <span class="banner-block-title">Colours</span>
+          <span id="hdr-arrow-colours" class="banner-block-arrow">▼</span>
+        </div>
+        <div class="banner-block-body" id="hdr-body-colours">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="field"><label>Top Bar BG</label><input type="color" id="hdr-topbar-bg" value="#1c1f26"></div>
+            <div class="field"><label>Top Bar Text</label><input type="color" id="hdr-topbar-text" value="#cccccc"></div>
+            <div class="field"><label>Brand Bar BG</label><input type="color" id="hdr-brand-bg" value="#ffffff"></div>
+            <div class="field"><label>Menu Bar BG</label><input type="color" id="hdr-menu-bg" value="#204280"></div>
+            <div class="field"><label>Menu Text</label><input type="color" id="hdr-menu-text" value="#ffffff"></div>
+            <div class="field"><label>Menu Hover BG</label><input type="color" id="hdr-menu-hover" value="#1a3567"></div>
+            <div class="field"><label>Dropdown BG</label><input type="color" id="hdr-drop-bg" value="#ffffff"></div>
+            <div class="field"><label>Dropdown Text</label><input type="color" id="hdr-drop-text" value="#262a32"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTAs -->
+      <div class="banner-block" style="margin-top:8px;">
+        <div class="banner-block-hd" onclick="toggleHdrBlock('ctas')">
+          <span class="banner-block-title">Call to Actions <span style="font-weight:400;font-size:11px;">(max 2)</span></span>
+          <span id="hdr-arrow-ctas" class="banner-block-arrow">▼</span>
+        </div>
+        <div class="banner-block-body" id="hdr-body-ctas">
+          <div id="hdr-cta-list"></div>
+          <button class="add-btn" id="hdr-add-cta-btn" onclick="addHdrCta()" style="margin-top:8px;">+ Add CTA</button>
+        </div>
+      </div>
+
+      <!-- Menu -->
+      <div class="banner-block" style="margin-top:8px;">
+        <div class="banner-block-hd" onclick="toggleHdrBlock('menu')">
+          <span class="banner-block-title">Navigation Menu</span>
+          <span id="hdr-arrow-menu" class="banner-block-arrow">▼</span>
+        </div>
+        <div class="banner-block-body" id="hdr-body-menu">
+          <div id="hdr-menu-list"></div>
+          <button class="add-btn" onclick="addHdrMenuItem(null)" style="margin-top:8px;">+ Add Menu Item</button>
+        </div>
+      </div>
+
+      <div id="header-status" class="status-msg" style="margin-top:16px;"></div>
+      <button class="pub-btn" onclick="generateHeaderHtml()" style="margin-top:8px;width:100%;">Generate &amp; Save</button>
+    </div>
+  </div>
+
+  <!-- Right: output -->
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div id="hdr-ot-preview" class="out-tab active" onclick="switchHdrOut('preview')">Preview</div>
+      <div id="hdr-ot-code" class="out-tab" onclick="switchHdrOut('code')">Code</div>
+    </div>
+    <div id="hdr-out-preview" style="flex:1;overflow:auto;background:#f3f4f6;padding:0;">
+      <div id="hdr-preview-frame"></div>
+    </div>
+    <div id="hdr-out-code" style="display:none;flex:1;position:relative;">
+      <textarea id="hdr-code-box" class="code-output" readonly style="height:100%;"></textarea>
+      <button class="copy-code-btn" onclick="copyHdrCode()">Copy</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════
      SCREEN — FORM
 ═══════════════════════════════════════ -->
 <div id="screen-form" class="screen">
@@ -770,20 +897,23 @@ function applyRole(role) {
   var footerNav   = document.getElementById('nav-footer');
   var programsNav = document.getElementById('nav-programs');
   var formNav     = document.getElementById('nav-form');
+  var headerNav   = document.getElementById('nav-header');
   if (role === 'admin') {
     bannerNav.classList.remove('hidden');
     eventsNav.classList.remove('hidden');
     footerNav.classList.remove('hidden');
     programsNav.classList.remove('hidden');
     formNav.classList.remove('hidden');
+    headerNav.classList.remove('hidden');
   } else {
     bannerNav.classList.add('hidden');
     eventsNav.classList.add('hidden');
     footerNav.classList.add('hidden');
     programsNav.classList.add('hidden');
     formNav.classList.add('hidden');
+    headerNav.classList.add('hidden');
     var active = document.querySelector('.screen.active');
-    if (active && ['screen-banner','screen-events','screen-footer','screen-programs','screen-form'].indexOf(active.id) >= 0) {
+    if (active && ['screen-banner','screen-events','screen-footer','screen-programs','screen-form','screen-header'].indexOf(active.id) >= 0) {
       switchScreen('intro');
     }
   }
@@ -922,6 +1052,7 @@ function switchScreen(name) {
   if (name === 'footer') footerOnOpen();
   if (name === 'programs') programOnOpen();
   if (name === 'form')     formOnOpen();
+  if (name === 'header')   headerOnOpen();
 }
 
 function switchOut(screen, mode) {
@@ -4661,6 +4792,481 @@ function switchFormOut(mode) {
   document.getElementById('form-out-code').style.display    = mode === 'code'    ? '' : 'none';
   document.getElementById('form-ot-preview').classList.toggle('active', mode === 'preview');
   document.getElementById('form-ot-code').classList.toggle('active', mode === 'code');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HEADER BUILDER
+═══════════════════════════════════════════════════════════════ */
+
+var HDR_IC_DEL  = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 3h10M4 3V1.5h4V3M2.5 3l.75 7.5h5.5L9.5 3"/><path d="M5 5.5v3M7 5.5v3"/></svg>';
+
+var hdrMenuItems   = [];   // [{id,label,url,newTab,children:[{id,label,url,newTab,children:[{id,label,url,newTab}]}]}]
+var hdrCtaItems    = [];   // [{id,label,url,bgColor,textColor,newTab}]
+var hdrMenuCounter = 0;
+var hdrCtaCounter  = 0;
+var hdrLoaded      = false;
+
+function headerOnOpen() {
+  if (!hdrLoaded) loadHeaderFromGist();
+}
+
+function loadHeaderFromGist() {
+  fetch('/api/publish-header')
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      hdrLoaded = true;
+      var cfg = data.config;
+      if (!cfg) { renderHdrCtaList(); renderHdrMenuList(); return; }
+      if (cfg.logoUrl)      setVal('hdr-logo-url', cfg.logoUrl);
+      if (cfg.logoAlt)      setVal('hdr-logo-alt', cfg.logoAlt);
+      if (cfg.logoLink)     setVal('hdr-logo-link', cfg.logoLink);
+      if (cfg.logoHeight)   setVal('hdr-logo-height', cfg.logoHeight);
+      if (cfg.siteTitle)    setVal('hdr-site-title', cfg.siteTitle);
+      if (cfg.titleColor)   setVal('hdr-title-color', cfg.titleColor);
+      if (cfg.titleSize)    setVal('hdr-title-size', cfg.titleSize);
+      if (cfg.topbarBg)     setVal('hdr-topbar-bg', cfg.topbarBg);
+      if (cfg.topbarText)   setVal('hdr-topbar-text', cfg.topbarText);
+      if (cfg.brandBg)      setVal('hdr-brand-bg', cfg.brandBg);
+      if (cfg.menuBg)       setVal('hdr-menu-bg', cfg.menuBg);
+      if (cfg.menuText)     setVal('hdr-menu-text', cfg.menuText);
+      if (cfg.menuHover)    setVal('hdr-menu-hover', cfg.menuHover);
+      if (cfg.dropBg)       setVal('hdr-drop-bg', cfg.dropBg);
+      if (cfg.dropText)     setVal('hdr-drop-text', cfg.dropText);
+      if (cfg.ctas && cfg.ctas.length) {
+        cfg.ctas.forEach(function(c) {
+          var n = parseInt((c.id||'').replace('hc',''),10);
+          if (n > hdrCtaCounter) hdrCtaCounter = n;
+        });
+        hdrCtaItems = cfg.ctas.map(function(c){
+          return { id: c.id||('hc'+(++hdrCtaCounter)), label:c.label||'', url:c.url||'', bgColor:c.bgColor||'#204280', textColor:c.textColor||'#ffffff', newTab:!!c.newTab };
+        });
+      }
+      if (cfg.menuItems && cfg.menuItems.length) {
+        var maxId = 0;
+        function scanIds(items) {
+          items.forEach(function(it){
+            var n = parseInt((it.id||'').replace('hm',''),10);
+            if (n > maxId) maxId = n;
+            if (it.children) scanIds(it.children);
+          });
+        }
+        scanIds(cfg.menuItems);
+        hdrMenuCounter = maxId;
+        hdrMenuItems = cfg.menuItems;
+      }
+      renderHdrCtaList();
+      renderHdrMenuList();
+    })
+    .catch(function(){ hdrLoaded = true; renderHdrCtaList(); renderHdrMenuList(); });
+}
+
+function saveHdrState() {
+  /* Read all plain inputs */
+  /* Menu & CTA items read inline before generate */
+}
+
+function toggleHdrBlock(key) {
+  var body  = document.getElementById('hdr-body-' + key);
+  var arrow = document.getElementById('hdr-arrow-' + key);
+  if (!body) return;
+  var open = body.style.display !== 'none';
+  body.style.display  = open ? 'none' : '';
+  if (arrow) arrow.textContent = open ? '▶' : '▼';
+}
+
+/* ── CTA list ──────────────────────────────── */
+function addHdrCta() {
+  if (hdrCtaItems.length >= 2) return;
+  var id = 'hc' + (++hdrCtaCounter);
+  hdrCtaItems.push({ id:id, label:'', url:'', bgColor:'#204280', textColor:'#ffffff', newTab:false });
+  renderHdrCtaList();
+  if (hdrCtaItems.length >= 2) document.getElementById('hdr-add-cta-btn').style.display = 'none';
+}
+
+function deleteHdrCta(id) {
+  hdrCtaItems = hdrCtaItems.filter(function(c){ return c.id !== id; });
+  document.getElementById('hdr-add-cta-btn').style.display = '';
+  renderHdrCtaList();
+}
+
+function renderHdrCtaList() {
+  var html = '';
+  hdrCtaItems.forEach(function(c) {
+    html += '<div class="banner-block" style="margin-bottom:6px;background:#f9fafb;" id="hdrcta-' + c.id + '">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;">'
+      + '<span style="font-size:12px;font-weight:600;color:var(--muted);">CTA</span>'
+      + '<button class="btn-icon" onclick="deleteHdrCta(\'' + c.id + '\')" style="color:#e53e3e;">' + HDR_IC_DEL + '</button>'
+      + '</div>'
+      + '<div style="padding:0 10px 10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+      + '<div class="field" style="grid-column:1/-1;"><label>Label</label><input type="text" id="hdrcta-lbl-' + c.id + '" value="' + xA(c.label) + '" placeholder="Enrol Now"></div>'
+      + '<div class="field" style="grid-column:1/-1;"><label>URL</label><input type="text" id="hdrcta-url-' + c.id + '" value="' + xA(c.url) + '" placeholder="/enrol"></div>'
+      + '<div class="field"><label>BG Colour</label><input type="color" id="hdrcta-bg-' + c.id + '" value="' + xA(c.bgColor) + '"></div>'
+      + '<div class="field"><label>Text Colour</label><input type="color" id="hdrcta-tc-' + c.id + '" value="' + xA(c.textColor) + '"></div>'
+      + '<div class="field" style="grid-column:1/-1;"><label><input type="checkbox" id="hdrcta-nt-' + c.id + '"' + (c.newTab?' checked':'') + '> Open in new tab</label></div>'
+      + '</div></div>';
+  });
+  document.getElementById('hdr-cta-list').innerHTML = html;
+  document.getElementById('hdr-add-cta-btn').style.display = hdrCtaItems.length >= 2 ? 'none' : '';
+}
+
+function readHdrCtaItems() {
+  return hdrCtaItems.map(function(c){
+    return {
+      id:       c.id,
+      label:    (document.getElementById('hdrcta-lbl-'+c.id)||{}).value || '',
+      url:      (document.getElementById('hdrcta-url-'+c.id)||{}).value || '',
+      bgColor:  (document.getElementById('hdrcta-bg-'+c.id)||{}).value  || '#204280',
+      textColor:(document.getElementById('hdrcta-tc-'+c.id)||{}).value  || '#ffffff',
+      newTab:   !!(document.getElementById('hdrcta-nt-'+c.id)||{}).checked
+    };
+  });
+}
+
+/* ── Menu tree ─────────────────────────────── */
+function addHdrMenuItem(parentId) {
+  var id = 'hm' + (++hdrMenuCounter);
+  var item = { id:id, label:'', url:'#', newTab:false, children:[] };
+  if (!parentId) {
+    hdrMenuItems.push(item);
+  } else {
+    var parent = hdrFindItem(hdrMenuItems, parentId);
+    if (parent) parent.children.push(item);
+  }
+  renderHdrMenuList();
+}
+
+function deleteHdrMenuItem(id) {
+  readHdrMenuItems();
+  function remove(arr) {
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i].id === id) { arr.splice(i,1); return true; }
+      if (arr[i].children && remove(arr[i].children)) return true;
+    }
+    return false;
+  }
+  remove(hdrMenuItems);
+  renderHdrMenuList();
+}
+
+function moveHdrMenuItem(id, dir) {
+  readHdrMenuItems();
+  function moveIn(arr) {
+    var idx = arr.findIndex(function(x){ return x.id === id; });
+    if (idx < 0) {
+      for (var i=0;i<arr.length;i++) { if (arr[i].children && moveIn(arr[i].children)) return true; }
+      return false;
+    }
+    var to = idx + dir;
+    if (to < 0 || to >= arr.length) return true;
+    var tmp = arr[idx]; arr[idx] = arr[to]; arr[to] = tmp;
+    return true;
+  }
+  moveIn(hdrMenuItems);
+  renderHdrMenuList();
+}
+
+function hdrFindItem(items, id) {
+  for (var i=0;i<items.length;i++){
+    if (items[i].id === id) return items[i];
+    if (items[i].children){ var f=hdrFindItem(items[i].children,id); if(f) return f; }
+  }
+  return null;
+}
+
+function readHdrMenuItems() {
+  function readItem(item) {
+    var lbl = document.getElementById('hmlbl-'+item.id);
+    var url = document.getElementById('hmurl-'+item.id);
+    var nt  = document.getElementById('hmnt-'+item.id);
+    if (lbl) item.label  = lbl.value;
+    if (url) item.url    = url.value;
+    if (nt)  item.newTab = nt.checked;
+    if (item.children) item.children.forEach(readItem);
+  }
+  hdrMenuItems.forEach(readItem);
+}
+
+function renderHdrMenuList() {
+  var html = '';
+  hdrMenuItems.forEach(function(item, idx) {
+    html += buildHdrMenuItemHtml(item, idx, hdrMenuItems.length, 1);
+  });
+  document.getElementById('hdr-menu-list').innerHTML = html;
+}
+
+function buildHdrMenuItemHtml(item, idx, total, level) {
+  var pad = (level - 1) * 18;
+  var canChild = level < 3;
+  var h = '<div id="hdrmi-'+item.id+'" style="margin-left:'+pad+'px;margin-bottom:4px;">';
+  h += '<div style="display:flex;align-items:center;gap:4px;background:'+(level===1?'#f0f4ff':level===2?'#f7f9fc':'#fafafa')+';border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;">';
+  h += '<button class="btn-icon" onclick="moveHdrMenuItem(\''+item.id+'\','+ -1+')" '+(idx===0?'disabled':'')+'>↑</button>';
+  h += '<button class="btn-icon" onclick="moveHdrMenuItem(\''+item.id+'\','+1+')" '+(idx===total-1?'disabled':'')+'>↓</button>';
+  h += '<input type="text" id="hmlbl-'+item.id+'" value="'+xA(item.label)+'" placeholder="Label" style="flex:1;min-width:80px;font-size:12px;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;">';
+  h += '<input type="text" id="hmurl-'+item.id+'" value="'+xA(item.url)+'" placeholder="URL" style="flex:1;min-width:80px;font-size:12px;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;">';
+  h += '<label style="font-size:10px;white-space:nowrap;color:var(--muted);"><input type="checkbox" id="hmnt-'+item.id+'"'+(item.newTab?' checked':'')+' style="margin-right:2px;">New tab</label>';
+  if (canChild) h += '<button class="btn-icon" title="Add child item" onclick="readHdrMenuItems();addHdrMenuItem(\''+item.id+'\')" style="color:#534AB7;font-size:14px;font-weight:700;">+</button>';
+  h += '<button class="btn-icon" onclick="deleteHdrMenuItem(\''+item.id+'\')" style="color:#e53e3e;">'+HDR_IC_DEL+'</button>';
+  h += '</div>';
+  if (item.children && item.children.length) {
+    item.children.forEach(function(child, cidx){
+      h += buildHdrMenuItemHtml(child, cidx, item.children.length, level+1);
+    });
+  }
+  h += '</div>';
+  return h;
+}
+
+/* ── Generate ──────────────────────────────── */
+function generateHeaderHtml() {
+  readHdrMenuItems();
+  var cfg = {
+    logoUrl:    getVal('hdr-logo-url'),
+    logoAlt:    getVal('hdr-logo-alt'),
+    logoLink:   getVal('hdr-logo-link')   || '/',
+    logoHeight: getVal('hdr-logo-height') || '56',
+    siteTitle:  getVal('hdr-site-title'),
+    titleColor: getVal('hdr-title-color'),
+    titleSize:  getVal('hdr-title-size')  || '22',
+    topbarBg:   getVal('hdr-topbar-bg'),
+    topbarText: getVal('hdr-topbar-text'),
+    brandBg:    getVal('hdr-brand-bg'),
+    menuBg:     getVal('hdr-menu-bg'),
+    menuText:   getVal('hdr-menu-text'),
+    menuHover:  getVal('hdr-menu-hover'),
+    dropBg:     getVal('hdr-drop-bg'),
+    dropText:   getVal('hdr-drop-text'),
+    ctas:       readHdrCtaItems(),
+    menuItems:  hdrMenuItems
+  };
+
+  var uid = 'vlsh' + Math.random().toString(36).slice(2,7);
+  var html = buildHeaderOutputHtml(uid, cfg);
+
+  document.getElementById('hdr-preview-frame').innerHTML = html;
+  Array.from(document.getElementById('hdr-preview-frame').querySelectorAll('script')).forEach(function(s){
+    var ns = document.createElement('script'); ns.textContent = s.textContent; s.parentNode.replaceChild(ns,s);
+  });
+  document.getElementById('hdr-code-box').value = html;
+
+  var st = document.getElementById('header-status');
+  st.textContent = 'Saving…';
+  fetch('/api/publish-header', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ config: cfg })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){ st.textContent = d.ok ? 'Saved ✓' : ('Error: ' + d.error); })
+  .catch(function(){ st.textContent = 'Save failed.'; });
+
+  switchHdrOut('preview');
+}
+
+function buildHeaderOutputHtml(uid, cfg) {
+  var e = function(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+  var q = function(s){ return String(s||''); };
+
+  /* Build menu HTML */
+  function buildMenuItems(items, level) {
+    if (!items || !items.length) return '';
+    var h = '';
+    items.forEach(function(item){
+      var hasKids = item.children && item.children.length > 0;
+      var targetAttr = item.newTab ? ' target="_blank" rel="noopener"' : '';
+      h += '<li class="'+uid+'-ni'+(hasKids?' '+uid+'-has':'')+(level>1?' '+uid+'-sub-ni':'')+'">';
+      h += '<a href="'+e(item.url)+'"'+targetAttr+' class="'+uid+'-nl">';
+      h += e(item.label);
+      if (hasKids) h += '<svg class="'+uid+'-arr" width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3.5L5 6.5L8 3.5"/></svg>';
+      h += '</a>';
+      if (hasKids) {
+        h += '<ul class="'+uid+'-drop'+( level > 1 ? ' '+uid+'-drop-r' : '')+'">';
+        h += buildMenuItems(item.children, level+1);
+        h += '</ul>';
+      }
+      h += '</li>';
+    });
+    return h;
+  }
+
+  /* Build CTA HTML */
+  var ctaHtml = '';
+  cfg.ctas.forEach(function(c){
+    if (!c.label) return;
+    var t = c.newTab ? ' target="_blank" rel="noopener"' : '';
+    ctaHtml += '<a href="'+e(c.url)+'"'+t+' class="'+uid+'-cta" style="background:'+q(c.bgColor)+';color:'+q(c.textColor)+';">'+e(c.label)+'</a>';
+  });
+
+  var css = '<style>'
+    /* Zenler overrides */
+    + '.zl-navbar-brand,.navbar-header{display:none!important;}'
+    + '.navbar-collapse{display:none!important;}'
+    + '.zl-navbar{background:transparent!important;min-height:0!important;padding:0!important;border:none!important;box-shadow:none!important;margin:0!important;}'
+    + '.zl-navbar>.container{padding:0!important;}'
+    + '.navbar-buttons.jqLoginLogout,.navbar-buttons.navbar-mob{position:static!important;float:none!important;display:flex!important;align-items:center!important;}'
+    /* Wrapper */
+    + '.'+uid+'-wrap{font-family:Arial,sans-serif;width:100%;}'
+    /* Top bar */
+    + '.'+uid+'-topbar{background:'+q(cfg.topbarBg)+';padding:6px 0;}'
+    + '.'+uid+'-topbar-inner{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;justify-content:flex-end;align-items:center;}'
+    + '.'+uid+'-login-slot{display:flex;align-items:center;}'
+    + '.'+uid+'-login-slot a,.'+uid+'-login-slot button{color:'+q(cfg.topbarText)+'!important;font-size:13px!important;}'
+    /* Brand bar */
+    + '.'+uid+'-brand{background:'+q(cfg.brandBg)+';padding:12px 0;border-bottom:1px solid #e5e7eb;}'
+    + '.'+uid+'-brand-inner{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:16px;}'
+    + '.'+uid+'-logo{height:'+q(cfg.logoHeight)+'px;width:auto;display:block;}'
+    + '.'+uid+'-sitename{font-size:'+q(cfg.titleSize)+'px;font-weight:700;color:'+q(cfg.titleColor)+';text-decoration:none;flex:1;line-height:1.2;}'
+    + '.'+uid+'-ctas{display:flex;flex-direction:column;gap:8px;align-items:flex-end;}'
+    + '.'+uid+'-cta{display:inline-block;padding:8px 20px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;white-space:nowrap;transition:opacity .2s;}'
+    + '.'+uid+'-cta:hover{opacity:.85;}'
+    /* Menu bar */
+    + '.'+uid+'-menubar{background:'+q(cfg.menuBg)+';position:relative;}'
+    + '.'+uid+'-menu-inner{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;align-items:center;}'
+    /* Nav */
+    + '.'+uid+'-nav{flex:1;}'
+    + '.'+uid+'-ul{list-style:none;margin:0;padding:0;display:flex;align-items:center;}'
+    + '.'+uid+'-ni{position:relative;}'
+    + '.'+uid+'-nl{display:flex;align-items:center;gap:4px;padding:14px 16px;color:'+q(cfg.menuText)+'!important;text-decoration:none!important;font-size:14px;font-weight:500;white-space:nowrap;transition:background .15s;}'
+    + '.'+uid+'-nl:hover,.'+uid+'-ni:hover>.'+uid+'-nl{background:'+q(cfg.menuHover)+';}'
+    + '.'+uid+'-arr{transition:transform .2s;flex-shrink:0;}'
+    + '.'+uid+'-ni:hover>.'+uid+'-nl .'+uid+'-arr{transform:rotate(180deg);}'
+    /* Dropdowns */
+    + '.'+uid+'-drop{display:none;position:absolute;top:100%;left:0;min-width:200px;background:'+q(cfg.dropBg)+';box-shadow:0 4px 20px rgba(0,0,0,.15);border-radius:0 0 6px 6px;z-index:9999;list-style:none;margin:0;padding:4px 0;}'
+    + '.'+uid+'-drop-r{left:100%;top:0;border-radius:0 6px 6px 6px;}'
+    + '.'+uid+'-ni:hover>.'+uid+'-drop{display:block;}'
+    + '.'+uid+'-drop .'+uid+'-nl{color:'+q(cfg.dropText)+'!important;padding:10px 16px;font-size:13px;}'
+    + '.'+uid+'-drop .'+uid+'-nl:hover{background:#f3f4f6;}'
+    + '.'+uid+'-sub-ni{position:relative;}'
+    /* More link */
+    + '.'+uid+'-more{position:relative;}'
+    /* Burger */
+    + '.'+uid+'-burger{display:none;flex-direction:column;justify-content:center;gap:5px;width:36px;height:36px;background:none;border:none;cursor:pointer;padding:4px;margin-left:auto;}'
+    + '.'+uid+'-burger span{display:block;height:2px;width:100%;background:'+q(cfg.menuText)+';border-radius:2px;transition:all .25s;}'
+    + '.'+uid+'-burger.'+uid+'-open span:nth-child(1){transform:translateY(7px) rotate(45deg);}'
+    + '.'+uid+'-burger.'+uid+'-open span:nth-child(2){opacity:0;}'
+    + '.'+uid+'-burger.'+uid+'-open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}'
+    /* Mobile */
+    + '@media(max-width:768px){'
+    + '.'+uid+'-burger{display:flex;}'
+    + '.'+uid+'-nav{display:none;position:absolute;top:100%;left:0;right:0;background:'+q(cfg.menuBg)+';z-index:9998;border-top:1px solid rgba(255,255,255,.1);}'
+    + '.'+uid+'-nav.'+uid+'-open{display:block;}'
+    + '.'+uid+'-ul{flex-direction:column;align-items:stretch;}'
+    + '.'+uid+'-ni{width:100%;}'
+    + '.'+uid+'-nl{justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.06);}'
+    + '.'+uid+'-drop{display:none;position:static;box-shadow:none;border-radius:0;background:rgba(0,0,0,.15);}'
+    + '.'+uid+'-drop-r{left:0;top:auto;border-radius:0;}'
+    + '.'+uid+'-drop.'+uid+'-mob-open{display:block;}'
+    + '.'+uid+'-drop .'+uid+'-nl{padding-left:32px;}'
+    + '.'+uid+'-drop .'+uid+'-drop .'+uid+'-nl{padding-left:48px;}'
+    + '}'
+    + '</style>';
+
+  var markup = '<div class="'+uid+'-wrap">'
+    /* Top bar */
+    + '<div class="'+uid+'-topbar"><div class="'+uid+'-topbar-inner"><div id="'+uid+'-login-slot" class="'+uid+'-login-slot"></div></div></div>'
+    /* Brand */
+    + '<div class="'+uid+'-brand"><div class="'+uid+'-brand-inner">'
+    + (cfg.logoUrl ? '<a href="'+e(cfg.logoLink)+'" style="flex-shrink:0;"><img src="'+e(cfg.logoUrl)+'" alt="'+e(cfg.logoAlt)+'" class="'+uid+'-logo"></a>' : '')
+    + '<a href="'+e(cfg.logoLink)+'" class="'+uid+'-sitename">'+e(cfg.siteTitle)+'</a>'
+    + (ctaHtml ? '<div class="'+uid+'-ctas">'+ctaHtml+'</div>' : '')
+    + '</div></div>'
+    /* Menu */
+    + '<div class="'+uid+'-menubar"><div class="'+uid+'-menu-inner">'
+    + '<button class="'+uid+'-burger" id="'+uid+'-burger" onclick="'+uid+'_toggle()" aria-label="Menu"><span></span><span></span><span></span></button>'
+    + '<nav class="'+uid+'-nav" id="'+uid+'-nav">'
+    + '<ul class="'+uid+'-ul" id="'+uid+'-ul">'
+    + buildMenuItems(cfg.menuItems, 1)
+    + '<li class="'+uid+'-ni '+uid+'-more" id="'+uid+'-more" style="display:none;">'
+    + '<a href="#" class="'+uid+'-nl" onclick="return false;">More <svg class="'+uid+'-arr" width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3.5L5 6.5L8 3.5"/></svg></a>'
+    + '<ul class="'+uid+'-drop" id="'+uid+'-more-drop"></ul>'
+    + '</li>'
+    + '</ul></nav></div></div>'
+    + '</div>';
+
+  var script = '<script>(function(){'
+    + 'var P="'+uid+'";\n'
+    /* Move Zenler login */
+    + 'function moveLogin(){'
+    + 'var src=document.querySelector(".navbar-buttons.jqLoginLogout");'
+    + 'var slot=document.getElementById(P+"-login-slot");'
+    + 'if(src&&slot&&!slot.contains(src)){slot.appendChild(src);}'
+    + '}\n'
+    /* Overflow detection */
+    + 'function initOverflow(){'
+    + 'var ul=document.getElementById(P+"-ul");'
+    + 'var moreItem=document.getElementById(P+"-more");'
+    + 'var moreDrop=document.getElementById(P+"-more-drop");'
+    + 'if(!ul)return;'
+    + 'var allItems=Array.from(ul.children).filter(function(li){return li!==moreItem;});'
+    + 'function check(){'
+    + 'allItems.forEach(function(li){li.style.display="";});'
+    + 'moreDrop.innerHTML="";moreItem.style.display="none";'
+    + 'var bar=ul.parentElement;if(!bar)return;'
+    + 'var avail=bar.offsetWidth-60;'
+    + 'var used=0;var overflow=[];'
+    + 'allItems.forEach(function(li){'
+    + 'used+=li.offsetWidth;'
+    + 'if(used>avail)overflow.push(li);'
+    + '});'
+    + 'if(overflow.length){'
+    + 'moreItem.style.display="";'
+    + 'overflow.forEach(function(li){'
+    + 'li.style.display="none";'
+    + 'var c=li.cloneNode(true);c.style.display="";'
+    + 'moreDrop.appendChild(c);'
+    + '});}'
+    + '}'
+    + 'check();window.addEventListener("resize",check);'
+    + '}\n'
+    /* Mobile toggle */
+    + 'window[P+"_toggle"]=function(){'
+    + 'var nav=document.getElementById(P+"-nav");'
+    + 'var brg=document.getElementById(P+"-burger");'
+    + 'nav.classList.toggle(P+"-open");'
+    + 'brg.classList.toggle(P+"-open");'
+    + '};\n'
+    /* Mobile dropdown toggle on click */
+    + 'document.addEventListener("click",function(e){'
+    + 'var nl=e.target.closest(".'+uid+'-nl");'
+    + 'if(!nl)return;'
+    + 'var ni=nl.parentElement;'
+    + 'var drop=ni.querySelector(".'+uid+'-drop");'
+    + 'if(!drop)return;'
+    + 'var isMob=window.innerWidth<=768;'
+    + 'if(isMob){'
+    + 'e.preventDefault();'
+    + 'var wasOpen=drop.classList.contains(P+"-mob-open");'
+    + 'document.querySelectorAll(".'+uid+'-drop.'+uid+'-mob-open").forEach(function(d){d.classList.remove(P+"-mob-open");});'
+    + 'if(!wasOpen)drop.classList.add(P+"-mob-open");'
+    + '}'
+    + '});\n'
+    /* Close on outside click */
+    + 'document.addEventListener("click",function(e){'
+    + 'var nav=document.getElementById(P+"-nav");'
+    + 'var brg=document.getElementById(P+"-burger");'
+    + 'if(nav&&brg&&!nav.contains(e.target)&&!brg.contains(e.target)){'
+    + 'nav.classList.remove(P+"-open");brg.classList.remove(P+"-open");'
+    + '}'
+    + '});\n'
+    /* Init */
+    + 'function init(){moveLogin();initOverflow();}'
+    + 'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init);}else{init();}'
+    + 'setTimeout(init,600);'
+    + '})();<\/script>';
+
+  return css + '\n' + markup + '\n' + script;
+}
+
+function switchHdrOut(mode) {
+  document.getElementById('hdr-out-preview').style.display = mode === 'preview' ? '' : 'none';
+  document.getElementById('hdr-out-code').style.display    = mode === 'code'    ? '' : 'none';
+  document.getElementById('hdr-ot-preview').classList.toggle('active', mode === 'preview');
+  document.getElementById('hdr-ot-code').classList.toggle('active', mode === 'code');
+}
+
+function copyHdrCode() {
+  var box = document.getElementById('hdr-code-box');
+  box.select();
+  document.execCommand('copy');
 }
 
 </script>
