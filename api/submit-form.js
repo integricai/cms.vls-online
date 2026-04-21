@@ -118,8 +118,11 @@ export default async function handler(req, res) {
     ]);
 
     if (!adminRes.ok) {
-      const errData = await adminRes.json().catch(() => ({}));
-      return res.status(500).json({ error: errData.message || 'Failed to send email', details: errData, status: adminRes.status });
+      const errText = await adminRes.text().catch(() => '');
+      console.error('MailerLite error', adminRes.status, errText);
+      let errData = {};
+      try { errData = JSON.parse(errText); } catch(e) {}
+      return res.status(500).json({ error: errData.message || 'Failed to send email', mlStatus: adminRes.status, mlBody: errText });
     }
 
     return res.status(200).json({ ok: true });
