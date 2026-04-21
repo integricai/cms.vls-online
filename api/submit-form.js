@@ -1,5 +1,5 @@
 // Vercel serverless function — handles enquiry form submission
-// Sends notification to admin emails + thank-you to submitter via MailerLite transactional API
+// Sends notification to admin emails + thank-you to submitter via MailerSend API
 
 function esc(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const apiKey = process.env.Mailer_Lite_API_KEY;
+  const apiKey = process.env.MAILERSEND_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'Email service not configured' });
 
   let body;
@@ -36,6 +36,13 @@ export default async function handler(req, res) {
   const fullPhone = phoneCode
     ? `${phoneCode} ${phoneNumber}`.trim()
     : phoneNumber.trim();
+
+  const recipients = Array.isArray(body.recipients)
+    ? body.recipients.filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e).trim())).map(e => String(e).trim())
+    : [];
+  const adminTo = recipients.length
+    ? recipients
+    : ['office@vls-online.com', 'info@vls-online.com'];
 
   const adminHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head><body>
@@ -78,39 +85,31 @@ export default async function handler(req, res) {
 </div>
 </body></html>`;
 
-  const ML_URL = 'https://connect.mailerlite.com/api/emails';
-  const mlHeaders = {
+  const MS_URL = 'https://api.mailersend.com/v1/email';
+  const headers = {
     'Authorization': `Bearer ${apiKey}`,
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    'Content-Type': 'application/json'
   };
-
-  const recipients = Array.isArray(body.recipients)
-    ? body.recipients.filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e).trim())).map(e => ({ email: String(e).trim() }))
-    : [];
-  const adminTo = recipients.length
-    ? recipients
-    : [{ email: 'office@vls-online.com' }, { email: 'info@vls-online.com' }];
 
   try {
     const [adminRes] = await Promise.all([
-      fetch(ML_URL, {
+      fetch(MS_URL, {
         method: 'POST',
-        headers: mlHeaders,
+        headers,
         body: JSON.stringify({
-          to: adminTo,
           from: { email: 'noreply@vls-online.com', name: 'VLS Online Website' },
+          to: adminTo.map(e => ({ email: e })),
           reply_to: { email: email.trim(), name: fullName },
           subject: 'Enquiry Form Submission',
           html: adminHtml
         })
       }),
-      fetch(ML_URL, {
+      fetch(MS_URL, {
         method: 'POST',
-        headers: mlHeaders,
+        headers,
         body: JSON.stringify({
-          to: [{ email: email.trim(), name: fullName }],
           from: { email: 'noreply@vls-online.com', name: 'VLS Online' },
+          to: [{ email: email.trim(), name: fullName }],
           subject: 'Thank you for your enquiry \u2014 VLS Online',
           html: tyHtml
         })
@@ -119,10 +118,10 @@ export default async function handler(req, res) {
 
     if (!adminRes.ok) {
       const errText = await adminRes.text().catch(() => '');
-      console.error('MailerLite error', adminRes.status, errText);
+      console.error('MailerSend error', adminRes.status, errText);
       let errData = {};
       try { errData = JSON.parse(errText); } catch(e) {}
-      return res.status(500).json({ error: errData.message || 'Failed to send email', mlStatus: adminRes.status, mlBody: errText });
+      return res.status(500).json({ error: errData.message || 'Failed to send email' });
     }
 
     return res.status(200).json({ ok: true });
