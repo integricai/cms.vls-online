@@ -119,9 +119,7 @@ export default async function handler(req, res) {
     if (!adminRes.ok) {
       const errText = await adminRes.text().catch(() => '');
       console.error('MailerSend error', adminRes.status, errText);
-      let errData = {};
-      try { errData = JSON.parse(errText); } catch(e) {}
-      return res.status(500).json({ error: errData.message || 'Failed to send email' });
+      return res.status(500).json({ error: `MailerSend ${adminRes.status}: ${errText}` });
     }
 
     return res.status(200).json({ ok: true });
