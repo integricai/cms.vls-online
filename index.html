@@ -215,6 +215,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
   <div class="nav-tab hidden" id="nav-events" onclick="switchScreen('events')">Events</div>
   <div class="nav-tab hidden" id="nav-footer" onclick="switchScreen('footer')">Footer</div>
   <div class="nav-tab hidden" id="nav-programs" onclick="switchScreen('programs')">Programs</div>
+  <div class="nav-tab hidden" id="nav-form" onclick="switchScreen('form')">Form</div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
 </div>
 
@@ -657,6 +658,74 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 
 </div>
 
+<!-- ═══════════════════════════════════════
+     SCREEN — FORM
+═══════════════════════════════════════ -->
+<div id="screen-form" class="screen">
+
+  <!-- Left: form config -->
+  <div class="form-panel" style="width:460px;">
+    <div class="form-inner">
+      <div class="section-label">Form Builder</div>
+
+      <div class="field">
+        <label>Form Title</label>
+        <input type="text" id="form-title" value="Course Enquiry Form" placeholder="Course Enquiry Form">
+      </div>
+      <div class="field">
+        <label>Submit Button Text</label>
+        <input type="text" id="form-submit-text" value="Submit Form" placeholder="Submit Form">
+      </div>
+
+      <div class="section-label" style="margin-top:16px;">Thank You Message</div>
+      <div class="field">
+        <label>Title</label>
+        <input type="text" id="form-ty-title" value="Form submitted" placeholder="Form submitted">
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <textarea id="form-ty-desc" rows="2" placeholder="Thank you for sharing the information. We will contact you soon.">Thank you for sharing the information. We will contact you soon.</textarea>
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label>Recipient(s) <span style="font-weight:400;color:var(--muted);font-size:11px;">— separate multiple emails with ;</span></label>
+        <input type="text" id="form-recipients" placeholder="office@example.com; info@example.com">
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;">
+        <div class="section-label" style="margin:0;">Enquiry Options</div>
+        <button class="btn-add-block" onclick="addEnquiryOption()" style="margin:0;width:auto;padding:6px 14px;">+ Add Option</button>
+      </div>
+      <div id="form-enquiry-list">
+        <div style="text-align:center;padding:12px;font-size:12px;color:var(--muted);">No options yet. Click + Add Option.</div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;">
+        <div id="form-status" style="font-size:12px;min-height:18px;"></div>
+        <button class="btn-gen" onclick="generateFormHtml()">&#x25B6; Generate &amp; Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: preview + code -->
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div id="form-ot-preview" class="out-tab active" onclick="switchFormOut('preview')">Preview</div>
+      <div id="form-ot-code" class="out-tab" onclick="switchFormOut('code')">Code</div>
+    </div>
+    <div class="output-body" style="padding:0;">
+      <div id="form-out-preview" style="flex:1;overflow:auto;padding:32px;display:flex;justify-content:center;align-items:flex-start;background:#f3f4f6;">
+        <div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Click Generate &amp; Save to preview the form.</div>
+      </div>
+      <div id="form-out-code" style="display:none;position:relative;padding:16px;">
+        <button class="btn-copy" style="position:absolute;top:24px;right:24px;" onclick="doCopy('form-code-box',this)">Copy</button>
+        <pre class="code-box" id="form-code-box" style="min-height:300px;margin:0;"></pre>
+      </div>
+    </div>
+  </div>
+
+</div>
+
 </div><!-- .app -->
 
 <!-- ── Event embed code modal ── -->
@@ -700,18 +769,21 @@ function applyRole(role) {
   var eventsNav   = document.getElementById('nav-events');
   var footerNav   = document.getElementById('nav-footer');
   var programsNav = document.getElementById('nav-programs');
+  var formNav     = document.getElementById('nav-form');
   if (role === 'admin') {
     bannerNav.classList.remove('hidden');
     eventsNav.classList.remove('hidden');
     footerNav.classList.remove('hidden');
     programsNav.classList.remove('hidden');
+    formNav.classList.remove('hidden');
   } else {
     bannerNav.classList.add('hidden');
     eventsNav.classList.add('hidden');
     footerNav.classList.add('hidden');
     programsNav.classList.add('hidden');
+    formNav.classList.add('hidden');
     var active = document.querySelector('.screen.active');
-    if (active && (active.id === 'screen-banner' || active.id === 'screen-events' || active.id === 'screen-footer' || active.id === 'screen-programs')) {
+    if (active && ['screen-banner','screen-events','screen-footer','screen-programs','screen-form'].indexOf(active.id) >= 0) {
       switchScreen('intro');
     }
   }
@@ -849,6 +921,7 @@ function switchScreen(name) {
   if (name === 'banner') bannerOnOpen();
   if (name === 'footer') footerOnOpen();
   if (name === 'programs') programOnOpen();
+  if (name === 'form')     formOnOpen();
 }
 
 function switchOut(screen, mode) {
@@ -1475,8 +1548,8 @@ function generateTabs() {
         if (d.heading) out += '    <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#204280;line-height:25px;margin-bottom:0.4rem;text-align:left;">' + xH(d.heading) + '</h3>\n';
         out += '    <ul style="padding-left:0;list-style:none;margin:0.6rem 0;">\n';
         items.forEach(function(item) {
-          out += '      <li style="display:flex;gap:8px;align-items:flex-start;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#262a32;line-height:25px;padding:2px 0;text-align:left;">'
-            + '<span style="color:#534AB7;font-weight:700;flex-shrink:0;margin-top:1px;">•</span>' + xH(item) + '</li>\n';
+          out += '      <li style="display:flex;gap:8px;align-items:flex-start;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400!important;color:#262a32;line-height:25px;padding:2px 0;text-align:left;">'
+            + '<span style="color:#534AB7;font-weight:700;flex-shrink:0;margin-top:1px;">•</span><span style="font-weight:400!important;">' + xH(item) + '</span></li>\n';
         });
         out += '    </ul>\n  </div>\n';
 
@@ -4247,6 +4320,347 @@ function switchProgOut(mode) {
   document.getElementById('prog-out-code').style.display    = mode === 'code'    ? '' : 'none';
   document.getElementById('prog-ot-preview').classList.toggle('active', mode === 'preview');
   document.getElementById('prog-ot-code').classList.toggle('active', mode === 'code');
+}
+
+// ── SCREEN: FORM ───────────────────────────────────────────────
+
+var FORM_DEFAULTS = {
+  formTitle:  'Course Enquiry Form',
+  submitText: 'Submit Form',
+  thankTitle: 'Form submitted',
+  thankDesc:  'Thank you for sharing the information. We will contact you soon.'
+};
+
+var formEnquiryOptions = [];  // [{ id, label }]
+var formEnquiryCounter = 0;
+var formLoaded = false;
+
+var FORM_IC_DEL = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 3h10M4 3V1.5h4V3M2.5 3l.75 7.5h5.5L9.5 3"/><path d="M5 5.5v3M7 5.5v3"/></svg>';
+
+var FORM_COUNTRY_CODES = [
+  ['+44',  'United Kingdom (+44)'],
+  ['+1',   'United States / Canada (+1)'],
+  ['+971', 'UAE (+971)'],
+  ['+966', 'Saudi Arabia (+966)'],
+  ['+974', 'Qatar (+974)'],
+  ['+968', 'Oman (+968)'],
+  ['+973', 'Bahrain (+973)'],
+  ['+965', 'Kuwait (+965)'],
+  ['+962', 'Jordan (+962)'],
+  ['+961', 'Lebanon (+961)'],
+  ['+20',  'Egypt (+20)'],
+  ['+91',  'India (+91)'],
+  ['+92',  'Pakistan (+92)'],
+  ['+880', 'Bangladesh (+880)'],
+  ['+94',  'Sri Lanka (+94)'],
+  ['+234', 'Nigeria (+234)'],
+  ['+27',  'South Africa (+27)'],
+  ['+233', 'Ghana (+233)'],
+  ['+254', 'Kenya (+254)'],
+  ['+256', 'Uganda (+256)'],
+  ['+255', 'Tanzania (+255)'],
+  ['+249', 'Sudan (+249)'],
+  ['+212', 'Morocco (+212)'],
+  ['+216', 'Tunisia (+216)'],
+  ['+213', 'Algeria (+213)'],
+  ['+61',  'Australia (+61)'],
+  ['+64',  'New Zealand (+64)'],
+  ['+65',  'Singapore (+65)'],
+  ['+60',  'Malaysia (+60)'],
+  ['+33',  'France (+33)'],
+  ['+49',  'Germany (+49)'],
+  ['+31',  'Netherlands (+31)'],
+  ['+32',  'Belgium (+32)'],
+  ['+41',  'Switzerland (+41)'],
+  ['+353', 'Ireland (+353)'],
+  ['+39',  'Italy (+39)'],
+  ['+34',  'Spain (+34)'],
+  ['+351', 'Portugal (+351)'],
+  ['+86',  'China (+86)'],
+  ['+81',  'Japan (+81)'],
+  ['+82',  'South Korea (+82)'],
+  ['+7',   'Russia (+7)'],
+  ['+90',  'Turkey (+90)']
+];
+
+function formOnOpen() {
+  if (!formLoaded) loadFormConfigFromGist();
+}
+
+function loadFormConfigFromGist() {
+  fetch('/api/publish-form-config')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      formLoaded = true;
+      var cfg = data.config;
+      if (!cfg) return;
+      var setVal = function(id, val) { var el = document.getElementById(id); if (el && val != null) el.value = val; };
+      setVal('form-title',       cfg.formTitle  || FORM_DEFAULTS.formTitle);
+      setVal('form-submit-text', cfg.submitText || FORM_DEFAULTS.submitText);
+      setVal('form-ty-title',    cfg.thankTitle  || FORM_DEFAULTS.thankTitle);
+      setVal('form-ty-desc',     cfg.thankDesc   || FORM_DEFAULTS.thankDesc);
+      if (cfg.recipients && cfg.recipients.length) setVal('form-recipients', cfg.recipients.join('; '));
+      if (cfg.enquiryOptions && cfg.enquiryOptions.length) {
+        cfg.enquiryOptions.forEach(function(opt) {
+          var n = parseInt((opt.id || '').replace('eq', ''), 10);
+          if (n > formEnquiryCounter) formEnquiryCounter = n;
+        });
+        formEnquiryOptions = cfg.enquiryOptions.map(function(opt) {
+          return { id: opt.id || ('eq' + (++formEnquiryCounter)), label: opt.label || '' };
+        });
+        renderEnquiryOptions();
+      }
+    })
+    .catch(function() { formLoaded = true; });
+}
+
+function saveFormConfigState() {
+  var getVal = function(id) { var el = document.getElementById(id); return el ? el.value : ''; };
+  formEnquiryOptions.forEach(function(opt) {
+    var el = document.getElementById('eq-label-' + opt.id);
+    if (el) opt.label = el.value;
+  });
+  var recipRaw = getVal('form-recipients');
+  var recipients = recipRaw.split(';').map(function(s) { return s.trim(); }).filter(function(s) { return s.indexOf('@') > 0; });
+  return {
+    formTitle:       getVal('form-title')       || FORM_DEFAULTS.formTitle,
+    submitText:      getVal('form-submit-text') || FORM_DEFAULTS.submitText,
+    thankTitle:      getVal('form-ty-title')    || FORM_DEFAULTS.thankTitle,
+    thankDesc:       getVal('form-ty-desc')     || FORM_DEFAULTS.thankDesc,
+    recipients:      recipients,
+    enquiryOptions:  formEnquiryOptions.map(function(o) { return { id: o.id, label: o.label }; })
+  };
+}
+
+function addEnquiryOption() {
+  formEnquiryOptions.forEach(function(opt) {
+    var el = document.getElementById('eq-label-' + opt.id);
+    if (el) opt.label = el.value;
+  });
+  var eid = 'eq' + (++formEnquiryCounter);
+  formEnquiryOptions.push({ id: eid, label: '' });
+  renderEnquiryOptions();
+  setTimeout(function() {
+    var inp = document.getElementById('eq-label-' + eid);
+    if (inp) inp.focus();
+  }, 50);
+}
+
+function deleteEnquiryOption(eid) {
+  formEnquiryOptions.forEach(function(opt) {
+    var el = document.getElementById('eq-label-' + opt.id);
+    if (el) opt.label = el.value;
+  });
+  formEnquiryOptions = formEnquiryOptions.filter(function(o) { return o.id !== eid; });
+  renderEnquiryOptions();
+}
+
+function moveEnquiryOption(eid, dir) {
+  formEnquiryOptions.forEach(function(opt) {
+    var el = document.getElementById('eq-label-' + opt.id);
+    if (el) opt.label = el.value;
+  });
+  var idx = formEnquiryOptions.findIndex(function(o) { return o.id === eid; });
+  if (idx < 0) return;
+  var ni = idx + dir;
+  if (ni < 0 || ni >= formEnquiryOptions.length) return;
+  var tmp = formEnquiryOptions[idx]; formEnquiryOptions[idx] = formEnquiryOptions[ni]; formEnquiryOptions[ni] = tmp;
+  renderEnquiryOptions();
+}
+
+function renderEnquiryOptions() {
+  var list = document.getElementById('form-enquiry-list');
+  if (!list) return;
+  if (!formEnquiryOptions.length) {
+    list.innerHTML = '<div style="text-align:center;padding:12px;font-size:12px;color:var(--muted);">No options yet. Click + Add Option.</div>';
+    return;
+  }
+  list.innerHTML = formEnquiryOptions.map(function(opt, idx) {
+    return buildEnquiryOptionHtml(opt, idx, formEnquiryOptions.length);
+  }).join('');
+}
+
+function buildEnquiryOptionHtml(opt, idx, total) {
+  var eid = opt.id;
+  return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
+    + '<input type="text" id="eq-label-' + eid + '" value="' + xA(opt.label || '') + '" placeholder="Option label"'
+    + ' style="flex:1;padding:7px 10px;border:1px solid #d1d5db;border-radius:5px;font-family:Poppins,sans-serif;font-size:13px;">'
+    + '<button class="btn-icon" style="font-size:10px;" title="Move up" onclick="moveEnquiryOption(\'' + eid + '\',-1)"' + (idx === 0 ? ' disabled' : '') + '>&#x25B2;</button>'
+    + '<button class="btn-icon" style="font-size:10px;" title="Move down" onclick="moveEnquiryOption(\'' + eid + '\',1)"' + (idx === total - 1 ? ' disabled' : '') + '>&#x25BC;</button>'
+    + '<button class="btn-icon" title="Delete option" onclick="deleteEnquiryOption(\'' + eid + '\')">' + FORM_IC_DEL + '</button>'
+    + '</div>';
+}
+
+function generateFormHtml() {
+  var cfg = saveFormConfigState();
+  var uid = 'vlsf' + Math.random().toString(36).slice(2, 7);
+  var apiUrl = window.location.origin + '/api/submit-form';
+  var html = buildFormOutputHtml(uid, cfg, apiUrl);
+
+  var prev = document.getElementById('form-out-preview');
+  if (prev) {
+    prev.innerHTML = html;
+    prev.querySelectorAll('script').forEach(function(s) {
+      var ns = document.createElement('script');
+      ns.textContent = s.textContent;
+      document.head.appendChild(ns);
+      document.head.removeChild(ns);
+    });
+  }
+  document.getElementById('form-code-box').textContent = html;
+  switchFormOut('preview');
+
+  var status = document.getElementById('form-status');
+  if (status) { status.textContent = 'Saving\u2026'; status.style.color = 'var(--muted)'; }
+
+  fetch('/api/publish-form-config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ config: cfg })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      if (status) { status.textContent = 'Saved!'; status.style.color = 'green'; setTimeout(function() { if (status) status.textContent = ''; }, 2000); }
+    } else {
+      if (status) { status.textContent = 'Error: ' + (data.error || 'Unknown'); status.style.color = 'red'; }
+    }
+  })
+  .catch(function() { if (status) { status.textContent = 'Network error'; status.style.color = 'red'; } });
+}
+
+function buildFormOutputHtml(uid, cfg, apiUrl) {
+  var e  = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var ea = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); };
+
+  var countryOpts = '<option value="">Country code</option>\n'
+    + FORM_COUNTRY_CODES.map(function(cc) {
+        return '            <option value="' + ea(cc[0]) + '">' + e(cc[1]) + '</option>';
+      }).join('\n');
+
+  var enquiryOpts = '<option value="">Select\u2026</option>\n'
+    + cfg.enquiryOptions.filter(function(o) { return o.label.trim(); }).map(function(o) {
+        return '            <option value="' + ea(o.label) + '">' + e(o.label) + '</option>';
+      }).join('\n');
+
+  var successSvg = '<svg width="110" height="90" viewBox="0 0 110 90" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    + '<rect x="12" y="22" width="68" height="48" rx="4" stroke="#204280" stroke-width="3.5" fill="none"/>'
+    + '<path d="M12 30 L46 54 L80 30" stroke="#204280" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'
+    + '<path d="M4 38 L10 38 M4 50 L10 50 M4 62 L10 62" stroke="#204280" stroke-width="3" stroke-linecap="round"/>'
+    + '<circle cx="86" cy="64" r="18" fill="#204280"/>'
+    + '<path d="M78 64 L83 70 L94 57" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'
+    + '</svg>';
+
+  var css = '<style>\n'
+    + '.' + uid + '-wrap{font-family:Poppins,sans-serif;width:100%;max-width:480px;}\n'
+    + '.' + uid + '-card{background:#fff;border:1px solid #dde2e8;border-radius:12px;padding:32px 28px;box-shadow:0 2px 12px rgba(0,0,0,.06);}\n'
+    + '.' + uid + '-title{font-size:20px;font-weight:700;color:#262a32;text-align:center;margin:0 0 24px;font-family:Poppins,sans-serif;}\n'
+    + '.' + uid + '-row{display:flex;gap:12px;}\n'
+    + '.' + uid + '-row .' + uid + '-field{flex:1;min-width:0;}\n'
+    + '.' + uid + '-field{margin-bottom:14px;}\n'
+    + '.' + uid + '-input{width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #d1d5db;border-radius:6px;font-family:Poppins,sans-serif;font-size:14px;color:#262a32;background:#fff;outline:none;}\n'
+    + '.' + uid + '-input:focus{border-color:#204280;box-shadow:0 0 0 2px rgba(32,66,128,.08);}\n'
+    + '.' + uid + '-phone{display:flex;gap:8px;margin-bottom:14px;}\n'
+    + '.' + uid + '-pcode{width:160px;flex-shrink:0;}\n'
+    + '.' + uid + '-pnum{flex:1;min-width:0;}\n'
+    + '.' + uid + '-btn{width:100%;box-sizing:border-box;padding:13px;background:#204280;color:#fff;border:none;border-radius:6px;font-family:Poppins,sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-top:6px;}\n'
+    + '.' + uid + '-btn:hover{background:#1a3570;}\n'
+    + '.' + uid + '-btn:disabled{opacity:.6;cursor:default;}\n'
+    + '.' + uid + '-err{color:#dc2626;font-size:13px;margin-top:10px;text-align:center;display:none;}\n'
+    + '.' + uid + '-ok{text-align:center;padding:16px 0;display:none;}\n'
+    + '.' + uid + '-ok h3{font-family:Poppins,sans-serif;font-size:20px;font-weight:700;color:#262a32;margin:0 0 10px;}\n'
+    + '.' + uid + '-ok p{font-family:Poppins,sans-serif;font-size:15px;font-weight:400;color:#4b5563;margin:0 0 28px;line-height:1.65;}\n'
+    + '@media(max-width:480px){.' + uid + '-row{flex-direction:column;gap:0;}.' + uid + '-phone{flex-direction:column;gap:8px;}.' + uid + '-pcode{width:100%;}}\n'
+    + '</style>';
+
+  var rcpJson = JSON.stringify((cfg.recipients || []).filter(function(r) { return r.indexOf('@') > 0; }));
+
+  var markup = '<div class="' + uid + '-wrap">\n'
+    + '  <div class="' + uid + '-card">\n'
+    + '    <div id="' + uid + '-fv">\n'
+    + '      <h2 class="' + uid + '-title">' + e(cfg.formTitle) + '</h2>\n'
+    + '      <div class="' + uid + '-row">\n'
+    + '        <div class="' + uid + '-field"><input class="' + uid + '-input" id="' + uid + '-fn" type="text" placeholder="First name *" required></div>\n'
+    + '        <div class="' + uid + '-field"><input class="' + uid + '-input" id="' + uid + '-ln" type="text" placeholder="Last name *" required></div>\n'
+    + '      </div>\n'
+    + '      <div class="' + uid + '-field"><input class="' + uid + '-input" id="' + uid + '-em" type="email" placeholder="Enter email address *" required></div>\n'
+    + '      <div class="' + uid + '-phone">\n'
+    + '        <select class="' + uid + '-input ' + uid + '-pcode" id="' + uid + '-pc" required>\n'
+    + countryOpts + '\n'
+    + '        </select>\n'
+    + '        <input class="' + uid + '-input ' + uid + '-pnum" id="' + uid + '-ph" type="tel" placeholder="Phone number *" required>\n'
+    + '      </div>\n'
+    + '      <div class="' + uid + '-field"><select class="' + uid + '-input" id="' + uid + '-eq" required>\n'
+    + enquiryOpts + '\n'
+    + '      </select></div>\n'
+    + '      <div class="' + uid + '-field"><textarea class="' + uid + '-input" id="' + uid + '-cm" rows="3" placeholder="Comments \u2026" style="resize:vertical;"></textarea></div>\n'
+    + '      <button class="' + uid + '-btn" id="' + uid + '-sb" onclick="' + uid + 'sub()">' + e(cfg.submitText) + '</button>\n'
+    + '      <div class="' + uid + '-err" id="' + uid + '-er"></div>\n'
+    + '    </div>\n'
+    + '    <div class="' + uid + '-ok" id="' + uid + '-ok">\n'
+    + '      <h3>' + e(cfg.thankTitle) + '</h3>\n'
+    + '      <p>' + e(cfg.thankDesc) + '</p>\n'
+    + '      ' + successSvg + '\n'
+    + '    </div>\n'
+    + '  </div>\n'
+    + '</div>';
+
+  var script = '<script>\n'
+    + '(function(){\n'
+    + '  var API="' + apiUrl + '";\n'
+    + '  var RCP=' + rcpJson + ';\n'
+    + '  window.' + uid + 'sub=function(){\n'
+    + '    var fn=document.getElementById("' + uid + '-fn").value.trim();\n'
+    + '    var ln=document.getElementById("' + uid + '-ln").value.trim();\n'
+    + '    var em=document.getElementById("' + uid + '-em").value.trim();\n'
+    + '    var pc=document.getElementById("' + uid + '-pc").value;\n'
+    + '    var ph=document.getElementById("' + uid + '-ph").value.trim();\n'
+    + '    var eq=document.getElementById("' + uid + '-eq").value;\n'
+    + '    var er=document.getElementById("' + uid + '-er");\n'
+    + '    er.style.display="none";\n'
+    + '    if(!fn){er.textContent="Please enter your first name.";er.style.display="block";return;}\n'
+    + '    if(!ln){er.textContent="Please enter your last name.";er.style.display="block";return;}\n'
+    + '    if(!em){er.textContent="Please enter your email address.";er.style.display="block";return;}\n'
+    + '    if(!pc){er.textContent="Please select a country code.";er.style.display="block";return;}\n'
+    + '    if(!ph){er.textContent="Please enter your phone number.";er.style.display="block";return;}\n'
+    + '    if(!eq){er.textContent="Please select an enquiry type.";er.style.display="block";return;}\n'
+    + '    var btn=document.getElementById("' + uid + '-sb");\n'
+    + '    btn.disabled=true;btn.textContent="Sending\u2026";\n'
+    + '    fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({\n'
+    + '      firstName:fn,lastName:ln,email:em,\n'
+    + '      phoneCode:pc,phoneNumber:ph,\n'
+    + '      enquiry:eq,\n'
+    + '      comments:document.getElementById("' + uid + '-cm").value.trim(),\n'
+    + '      recipients:RCP\n'
+    + '    })})\n'
+    + '    .then(function(r){return r.json();})\n'
+    + '    .then(function(d){\n'
+    + '      if(d.ok){\n'
+    + '        document.getElementById("' + uid + '-fv").style.display="none";\n'
+    + '        document.getElementById("' + uid + '-ok").style.display="block";\n'
+    + '      }else{\n'
+    + '        er.textContent=d.error||"Something went wrong. Please try again.";\n'
+    + '        er.style.display="block";\n'
+    + '        btn.disabled=false;btn.textContent="' + ea(cfg.submitText) + '";\n'
+    + '      }\n'
+    + '    })\n'
+    + '    .catch(function(){\n'
+    + '      er.textContent="Network error. Please try again.";\n'
+    + '      er.style.display="block";\n'
+    + '      btn.disabled=false;btn.textContent="' + ea(cfg.submitText) + '";\n'
+    + '    });\n'
+    + '  };\n'
+    + '})();\n'
+    + '<\/script>';
+
+  return css + '\n\n' + markup + '\n\n' + script;
+}
+
+function switchFormOut(mode) {
+  document.getElementById('form-out-preview').style.display = mode === 'preview' ? '' : 'none';
+  document.getElementById('form-out-code').style.display    = mode === 'code'    ? '' : 'none';
+  document.getElementById('form-ot-preview').classList.toggle('active', mode === 'preview');
+  document.getElementById('form-ot-code').classList.toggle('active', mode === 'code');
 }
 
 </script>
