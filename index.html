@@ -3221,7 +3221,7 @@ function renderFaqPreview(items) {
     wrap.innerHTML = '<div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Add FAQ items and click Generate to preview.</div>';
     return;
   }
-  var html = '<div style="max-width:800px;width:100%;font-family:Poppins,sans-serif;">';
+  var html = '<div style="width:100%;font-family:Poppins,sans-serif;">';
   items.forEach(function(f, i) {
     var bid = 'fqprev' + i;
     html += '<div style="border-bottom:1.5px solid #e5e7eb;' + (i === 0 ? 'border-top:1.5px solid #e5e7eb;' : '') + '">';
@@ -3272,7 +3272,7 @@ function buildFaqCode(items) {
   L.push('<\/script>');
   L.push('');
   L.push('<style>');
-  L.push('.' + uid + '{font-family:Poppins,sans-serif;max-width:800px;width:100%;}');
+  L.push('.' + uid + '{font-family:Poppins,sans-serif;width:100%;}');
   L.push('.' + uid + '-item{border-bottom:1.5px solid #e5e7eb;}');
   L.push('.' + uid + '-item:first-child{border-top:1.5px solid #e5e7eb;}');
   L.push('.' + uid + '-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;background:none;border:none;cursor:pointer;font-family:Poppins,sans-serif;font-size:16px;font-weight:600;color:#1a1a1a;}');
