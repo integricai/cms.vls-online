@@ -4893,6 +4893,10 @@ function buildHeaderOutputHtml(uid, cfg) {
     + 'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init);}else{init();}'
     + 'setTimeout(init,600);'
     + 'setTimeout(init,1500);'
+    + 'setTimeout(init,3000);'
+    + 'var _lo=new MutationObserver(function(){moveLogin();});'
+    + '_lo.observe(document.body,{childList:true,subtree:true});'
+    + 'setTimeout(function(){_lo.disconnect();},10000);'
     + '})();<\/script>';
 
   return css + '\n' + markup + '\n' + script;
