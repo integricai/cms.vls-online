@@ -762,8 +762,17 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <span id="hdr-arrow-menu" class="banner-block-arrow">▼</span>
         </div>
         <div class="banner-block-body" id="hdr-body-menu">
-          <div id="hdr-menu-list"></div>
-          <button class="add-btn" onclick="addHdrMenuItem(null)" style="margin-top:8px;">+ Add Menu Item</button>
+          <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:6px;border:1px solid #c7d4f0;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#204280;">
+              <input type="checkbox" id="hdr-zen-menu" onchange="toggleHdrZenMenu(this.checked)">
+              Use Zenler's live navigation (auto-sync)
+            </label>
+            <p style="font-size:11px;color:var(--muted);margin:6px 0 0 22px;line-height:1.5;">When enabled, the snippet reads the navigation directly from Zenler's DOM — no manual updates needed when pages change. The CMS menu items below are still saved as fallback.</p>
+          </div>
+          <div id="hdr-manual-menu" style="">
+            <div id="hdr-menu-list"></div>
+            <button class="add-btn" onclick="addHdrMenuItem(null)" style="margin-top:8px;">+ Add Menu Item</button>
+          </div>
         </div>
       </div>
 
@@ -4862,6 +4871,10 @@ function loadHeaderFromGist() {
         hdrMenuCounter = maxId;
         hdrMenuItems = cfg.menuItems;
       }
+      if (cfg.useZenMenu) {
+        var cb = document.getElementById('hdr-zen-menu');
+        if (cb) { cb.checked = true; toggleHdrZenMenu(true); }
+      }
       renderHdrCtaList();
       renderHdrMenuList();
     })
@@ -5025,6 +5038,11 @@ function buildHdrMenuItemHtml(item, idx, total, level) {
   return h;
 }
 
+function toggleHdrZenMenu(on) {
+  var manual = document.getElementById('hdr-manual-menu');
+  if (manual) manual.style.opacity = on ? '0.45' : '1';
+}
+
 /* ── Generate ──────────────────────────────── */
 function generateHeaderHtml() {
   readHdrMenuItems();
@@ -5046,7 +5064,8 @@ function generateHeaderHtml() {
     dropBg:     hdrGetVal('hdr-drop-bg'),
     dropText:   hdrGetVal('hdr-drop-text'),
     ctas:       readHdrCtaItems(),
-    menuItems:  hdrMenuItems
+    menuItems:  hdrMenuItems,
+    useZenMenu: !!(document.getElementById('hdr-zen-menu')||{}).checked
   };
 
   var uid = 'vlsh' + Math.random().toString(36).slice(2,7);
@@ -5215,7 +5234,7 @@ function buildHeaderOutputHtml(uid, cfg) {
     + '<button class="'+uid+'-burger" id="'+uid+'-burger" onclick="'+uid+'_toggle()" aria-label="Menu"><span></span><span></span><span></span></button>'
     + '<nav class="'+uid+'-nav" id="'+uid+'-nav">'
     + '<ul class="'+uid+'-ul" id="'+uid+'-ul">'
-    + buildMenuItems(cfg.menuItems, 1)
+    + (cfg.useZenMenu ? '' : buildMenuItems(cfg.menuItems, 1))
     + '<li class="'+uid+'-ni '+uid+'-more" id="'+uid+'-more" style="display:none;">'
     + '<a href="#" class="'+uid+'-nl" onclick="return false;">More <svg class="'+uid+'-arr" width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3.5L5 6.5L8 3.5"/></svg></a>'
     + '<ul class="'+uid+'-drop" id="'+uid+'-more-drop"></ul>'
@@ -5312,8 +5331,71 @@ function buildHeaderOutputHtml(uid, cfg) {
     + 'nav.classList.remove(P+"-open");brg.classList.remove(P+"-open");'
     + '}'
     + '});\n'
+    /* Zenler DOM reader (only when useZenMenu=true) */
+    + (cfg.useZenMenu ? (
+      'var USE_ZEN=true;\n'
+      + 'function readZenlerMenu(){'
+      + 'var items=[];'
+      + 'var lis=document.querySelectorAll("ul.dynamic_menu_texts>li");'
+      + 'lis.forEach(function(li){'
+      + 'var action=li.getAttribute("data-action");'
+      + 'var item={label:"",url:"#",newTab:false,children:[]};'
+      + 'if(action==="link"){'
+      + 'var a=li.querySelector("a.dynamic-link");if(!a)return;'
+      + 'item.label=a.textContent.trim();item.url=a.getAttribute("href")||"#";'
+      + 'item.newTab=a.getAttribute("target")==="_blank";'
+      + '}else if(action==="dropdown"){'
+      + 'var tog=li.querySelector("a.dropdown-toggle");if(!tog)return;'
+      + 'var clone=tog.cloneNode(true);var caret=clone.querySelector(".caret");if(caret)caret.remove();'
+      + 'item.label=clone.textContent.trim();'
+      + 'li.querySelectorAll("ul.dropdown-menu>li").forEach(function(sub){'
+      + 'var sa=sub.querySelector("a.dynamic-link");if(!sa)return;'
+      + 'item.children.push({label:sa.textContent.trim(),url:sa.getAttribute("href")||"#",newTab:sa.getAttribute("target")==="_blank",children:[]});'
+      + '});'
+      + '}'
+      + 'if(item.label)items.push(item);'
+      + '});'
+      + 'return items;'
+      + '}\n'
+      + 'function makeNavLi(item,level){'
+      + 'var P2=P;'
+      + 'var li=document.createElement("li");'
+      + 'var hasKids=item.children&&item.children.length>0;'
+      + 'li.className=P2+"-ni"+(hasKids?" "+P2+"-has":"")+(level>1?" "+P2+"-sub-ni":"");'
+      + 'var a=document.createElement("a");'
+      + 'a.href=item.url;a.className=P2+"-nl";'
+      + 'if(item.newTab){a.target="_blank";a.rel="noopener";}'
+      + 'a.appendChild(document.createTextNode(item.label));'
+      + 'if(hasKids){'
+      + 'var svg=document.createElementNS("http://www.w3.org/2000/svg","svg");'
+      + 'svg.setAttribute("class",P2+"-arr");svg.setAttribute("width","10");svg.setAttribute("height","10");svg.setAttribute("viewBox","0 0 10 10");svg.setAttribute("fill","currentColor");'
+      + 'var path=document.createElementNS("http://www.w3.org/2000/svg","path");path.setAttribute("d","M2 3.5L5 6.5L8 3.5");svg.appendChild(path);'
+      + 'a.appendChild(svg);'
+      + 'li.appendChild(a);'
+      + 'var drop=document.createElement("ul");'
+      + 'drop.className=P2+"-drop"+(level>1?" "+P2+"-drop-r":"");'
+      + 'item.children.forEach(function(child){drop.appendChild(makeNavLi(child,level+1));});'
+      + 'li.appendChild(drop);'
+      + '}else{li.appendChild(a);}'
+      + 'return li;'
+      + '}\n'
+      + 'function buildZenNav(attempt){'
+      + 'var zenUl=document.querySelector("ul.dynamic_menu_texts");'
+      + 'if(zenUl&&zenUl.querySelectorAll("li").length>0){'
+      + 'var ul=document.getElementById(P+"-ul");'
+      + 'var moreItem=document.getElementById(P+"-more");'
+      + 'if(!ul)return;'
+      + 'Array.from(ul.children).forEach(function(li){if(li!==moreItem)ul.removeChild(li);});'
+      + 'var items=readZenlerMenu();'
+      + 'items.forEach(function(item){ul.insertBefore(makeNavLi(item,1),moreItem);});'
+      + 'initOverflow();'
+      + '}else if((attempt||0)<15){'
+      + 'setTimeout(function(){buildZenNav((attempt||0)+1);},300);'
+      + '}'
+      + '}\n'
+    ) : 'var USE_ZEN=false;\n')
     /* Init */
-    + 'function init(){moveLogin();syncCoursesMenu();initOverflow();}'
+    + 'function init(){moveLogin();syncCoursesMenu();if(USE_ZEN){buildZenNav(0);}else{initOverflow();}}'
     + 'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init);}else{init();}'
     + 'setTimeout(init,600);'
     + 'setTimeout(init,1500);'
