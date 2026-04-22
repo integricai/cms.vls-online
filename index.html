@@ -5162,9 +5162,12 @@ function buildHeaderOutputHtml(uid, cfg) {
     /* Top bar */
     + '.'+uid+'-topbar{background:#ffffff;padding:8px 0 6px;border-top:2px solid '+topbarLineColor+';}'
     + '.'+uid+'-topbar-inner{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;justify-content:flex-end;align-items:center;min-height:38px;}'
-    + '.'+uid+'-login-slot{display:flex;align-items:center;align-self:center;flex-shrink:0;padding-right:12px;}'
-    + '.'+uid+'-login-slot .navbar-buttons{margin:0!important;padding:0!important;align-items:center!important;}'
-    + '.'+uid+'-login-slot a,.'+uid+'-login-slot button{color:'+menuTextColor+'!important;font-size:'+menuFontSize+'!important;}'
+    + '.'+uid+'-login-brand{display:flex;align-items:center;align-self:center;flex-shrink:0;}'
+    + '.'+uid+'-login-brand .navbar-buttons{margin:0!important;padding:0!important;align-items:center!important;}'
+    + '.'+uid+'-login-brand a,.'+uid+'-login-brand button,.'+uid+'-login-brand span{color:'+dropTextColor+'!important;font-size:'+menuFontSize+'!important;}'
+    + '.'+uid+'-login-menu{display:none;align-items:center;align-self:center;flex-shrink:0;padding-right:12px;}'
+    + '.'+uid+'-login-menu .navbar-buttons{margin:0!important;padding:0!important;align-items:center!important;}'
+    + '.'+uid+'-login-menu a,.'+uid+'-login-menu button,.'+uid+'-login-menu span{color:'+menuTextColor+'!important;font-size:'+menuFontSize+'!important;}'
     /* Brand bar */
     + '.'+uid+'-brand{background:'+q(cfg.brandBg)+';padding:8px 0;border-bottom:1px solid #e5e7eb;position:relative;width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);}'
     + '.'+uid+'-brand-inner{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;align-items:flex-end;gap:16px;}'
@@ -5223,7 +5226,9 @@ function buildHeaderOutputHtml(uid, cfg) {
     + '.'+uid+'-logo{height:'+(isFinite(logoHeightNum)?Math.round(logoHeightNum*0.7)+'px':q(cfg.logoHeight||'42px'))+';}'
     + '.'+uid+'-ctas{display:none;}'
     + '.'+uid+'-mob-cta{display:block!important;}'
-    + '.'+uid+'-login-slot,.'+uid+'-login-slot *{color:#ffffff!important;}'
+    + '.'+uid+'-login-brand{display:none!important;}'
+    + '.'+uid+'-login-menu{display:flex!important;}'
+    + '.'+uid+'-login-menu,.'+uid+'-login-menu *{color:#ffffff!important;}'
     + '}'
     + '</style>';
 
@@ -5238,11 +5243,12 @@ function buildHeaderOutputHtml(uid, cfg) {
     + '<div class="'+uid+'-brand-spacer"></div>'
     + '<div class="'+uid+'-brand-right">'
     + (ctaHtml ? '<div class="'+uid+'-ctas">'+ctaHtml+'</div>' : '')
+    + '<div id="'+uid+'-login-brand" class="'+uid+'-login-brand"></div>'
     + '</div>'
     + '</div></div>'
     /* Menu */
     + '<div class="'+uid+'-menubar"><div class="'+uid+'-menu-inner">'
-    + '<div id="'+uid+'-login-slot" class="'+uid+'-login-slot"></div>'
+    + '<div id="'+uid+'-login-menu" class="'+uid+'-login-menu"></div>'
     + '<nav class="'+uid+'-nav" id="'+uid+'-nav">'
     + '<ul class="'+uid+'-ul" id="'+uid+'-ul">'
     + (cfg.useZenMenu ? '' : buildMenuItems(cfg.menuItems, 1))
@@ -5285,9 +5291,11 @@ function buildHeaderOutputHtml(uid, cfg) {
     /* Move Zenler login */
     + 'function moveLogin(){'
     + 'var src=document.querySelector(".navbar-buttons.jqLoginLogout");'
-    + 'var slot=document.getElementById(P+"-login-slot");'
-    + 'if(src&&slot&&!slot.contains(src)){slot.appendChild(src);}'
+    + 'if(!src)return;'
+    + 'var slot=document.getElementById(window.innerWidth<=768?P+"-login-menu":P+"-login-brand");'
+    + 'if(slot&&!slot.contains(src)){slot.appendChild(src);}'
     + '}\n'
+    + 'window.addEventListener("resize",function(){moveLogin();});\n'
     /* Overflow detection */
     + 'function initOverflow(){'
     + 'var ul=document.getElementById(P+"-ul");'
