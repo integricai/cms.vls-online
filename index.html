@@ -5162,7 +5162,8 @@ function buildHeaderOutputHtml(uid, cfg) {
     /* Top bar */
     + '.'+uid+'-topbar{background:#ffffff;padding:8px 0 6px;border-top:2px solid '+topbarLineColor+';}'
     + '.'+uid+'-topbar-inner{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;justify-content:flex-end;align-items:center;min-height:38px;}'
-    + '.'+uid+'-login-slot{display:flex;align-items:center;flex-shrink:0;padding-right:12px;}'
+    + '.'+uid+'-login-slot{display:flex;align-items:center;align-self:center;flex-shrink:0;padding-right:12px;}'
+    + '.'+uid+'-login-slot .navbar-buttons{margin:0!important;padding:0!important;align-items:center!important;}'
     + '.'+uid+'-login-slot a,.'+uid+'-login-slot button{color:'+menuTextColor+'!important;font-size:'+menuFontSize+'!important;}'
     /* Brand bar */
     + '.'+uid+'-brand{background:'+q(cfg.brandBg)+';padding:8px 0;border-bottom:1px solid #e5e7eb;position:relative;width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);}'
@@ -5222,6 +5223,7 @@ function buildHeaderOutputHtml(uid, cfg) {
     + '.'+uid+'-logo{height:'+(isFinite(logoHeightNum)?Math.round(logoHeightNum*0.7)+'px':q(cfg.logoHeight||'42px'))+';}'
     + '.'+uid+'-ctas{display:none;}'
     + '.'+uid+'-mob-cta{display:block!important;}'
+    + '.'+uid+'-login-slot,.'+uid+'-login-slot *{color:#ffffff!important;}'
     + '}'
     + '</style>';
 
