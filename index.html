@@ -2018,8 +2018,8 @@ function buildBannerPreviewHtml(b, deadline) {
   var ns = 'font-size:20px;font-weight:700;line-height:1;font-family:\'Poppins\',sans-serif;color:' + fg + ';';
   var ls = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;opacity:0.75;font-family:\'Poppins\',sans-serif;color:' + fg + ';';
   var ss = 'font-size:24px;font-weight:700;line-height:1;padding:0 4px;margin-top:-4px;color:' + fg + ';opacity:0.6;';
-  var html = '<div style="background:' + bg + ';padding:10px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">';
-  html += '<div style="flex:1;min-width:180px;">';
+  var html = '<div style="background:' + bg + ';padding:10px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;">';
+  html += '<div style="flex:1;min-width:0;">';
   if (b.title) html += '<div style="font-family:\'Poppins\',sans-serif;font-size:15px;font-weight:600;color:' + fg + ';line-height:1.3;">' + bnEsc(b.title) + '</div>';
   if (b.sub)   html += '<div style="font-family:\'Poppins\',sans-serif;font-size:12px;color:' + fg + ';opacity:0.8;margin-top:3px;">' + bnEsc(b.sub) + '</div>';
   html += '</div>';
@@ -2117,8 +2117,8 @@ function buildBannerInjectCode(b, apiUrl) {
   lines.push('    bEl.style.background=b.bg||"#204280";');
   lines.push('    var fg=b.fg||"#fff";var btnBg=b.btnBg||"#e63946";var btnFg=b.btnFg||"#fff";');
   lines.push('    bEl.innerHTML=');
-  lines.push('      \'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 24px;gap:16px;flex-wrap:wrap;">\'');
-  lines.push('      +\'<div style="flex:1;min-width:160px;">\'');
+  lines.push('      \'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 24px;gap:16px;">\'');
+  lines.push('      +\'<div style="flex:1;min-width:0;">\'');
   lines.push('      +(b.title?\'<div style="font-family:Poppins,sans-serif;font-size:15px;font-weight:600;color:\'+fg+\';line-height:1.3;">\'+b.title+"<\\/div>":"")');
   lines.push('      +(b.sub?\'<div style="font-family:Poppins,sans-serif;font-size:12px;color:\'+fg+\';opacity:0.8;margin-top:3px;">\'+b.sub+"<\\/div>":"")');
   lines.push('      +"<\\/div>"');
@@ -5152,8 +5152,8 @@ function buildHeaderOutputHtml(uid, cfg) {
     + '.zl-navbar{background:transparent!important;min-height:0!important;padding:0!important;border:none!important;box-shadow:none!important;margin:0!important;}'
     + '.zl-navbar>.container{padding:0!important;}'
     + '.navbar-buttons.jqLoginLogout,.navbar-buttons.navbar-mob{position:static!important;float:none!important;display:flex!important;align-items:center!important;background:transparent!important;}'
-    + '.navbar-buttons.jqLoginLogout .btn,.navbar-buttons.jqLoginLogout .dropdown-toggle,.navbar-buttons.jqLoginLogout [role="button"]{background:transparent!important;border:none!important;box-shadow:none!important;color:'+topbarTextColor+'!important;padding:0!important;}'
-    + '.navbar-buttons.jqLoginLogout .caret,.navbar-buttons.jqLoginLogout .fa,.navbar-buttons.jqLoginLogout [class*="icon"]{color:'+topbarTextColor+'!important;}'
+    + '.navbar-buttons.jqLoginLogout .btn,.navbar-buttons.jqLoginLogout .dropdown-toggle,.navbar-buttons.jqLoginLogout [role="button"]{background:transparent!important;border:none!important;box-shadow:none!important;color:'+menuTextColor+'!important;padding:0!important;}'
+    + '.navbar-buttons.jqLoginLogout .caret,.navbar-buttons.jqLoginLogout .fa,.navbar-buttons.jqLoginLogout [class*="icon"]{color:'+menuTextColor+'!important;}'
     + '.navbar-buttons.jqLoginLogout .dropdown-menu{background:#ffffff!important;border:1px solid #e5e7eb!important;box-shadow:0 12px 28px rgba(15,23,42,.12)!important;border-radius:10px!important;padding:8px 0!important;min-width:200px!important;}'
     + '.navbar-buttons.jqLoginLogout .dropdown-menu>li>a,.navbar-buttons.jqLoginLogout .dropdown-menu a{background:transparent!important;color:'+dropTextColor+'!important;font-size:'+dropFontSize+'!important;}'
     + '.navbar-buttons.jqLoginLogout .dropdown-menu>li>a:hover,.navbar-buttons.jqLoginLogout .dropdown-menu a:hover{background:#f8fafc!important;color:'+dropTextColor+'!important;}'
@@ -5162,8 +5162,8 @@ function buildHeaderOutputHtml(uid, cfg) {
     /* Top bar */
     + '.'+uid+'-topbar{background:#ffffff;padding:8px 0 6px;border-top:2px solid '+topbarLineColor+';}'
     + '.'+uid+'-topbar-inner{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;justify-content:flex-end;align-items:center;min-height:38px;}'
-    + '.'+uid+'-login-slot{display:flex;align-items:center;gap:12px;}'
-    + '.'+uid+'-login-slot a,.'+uid+'-login-slot button{color:'+topbarTextColor+'!important;font-size:'+menuFontSize+'!important;}'
+    + '.'+uid+'-login-slot{display:flex;align-items:center;flex-shrink:0;padding-right:12px;}'
+    + '.'+uid+'-login-slot a,.'+uid+'-login-slot button{color:'+menuTextColor+'!important;font-size:'+menuFontSize+'!important;}'
     /* Brand bar */
     + '.'+uid+'-brand{background:'+q(cfg.brandBg)+';padding:8px 0;border-bottom:1px solid #e5e7eb;position:relative;width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);}'
     + '.'+uid+'-brand-inner{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;align-items:flex-end;gap:16px;}'
@@ -5176,7 +5176,6 @@ function buildHeaderOutputHtml(uid, cfg) {
     + '.'+uid+'-ctas{display:flex;flex-direction:column;gap:6px;align-items:flex-end;}'
     + '.'+uid+'-cta{display:inline-block;padding:8px 20px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;white-space:nowrap;transition:opacity .2s;}'
     + '.'+uid+'-cta:hover{opacity:.85;}'
-    + '.'+uid+'-login-slot{display:flex;align-items:center;}'
     /* Menu bar */
     + '.'+uid+'-menubar{background:'+q(cfg.menuBg)+';position:relative;width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);}'
     + '.'+uid+'-menu-inner{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;align-items:center;}'
@@ -5237,12 +5236,11 @@ function buildHeaderOutputHtml(uid, cfg) {
     + '<div class="'+uid+'-brand-spacer"></div>'
     + '<div class="'+uid+'-brand-right">'
     + (ctaHtml ? '<div class="'+uid+'-ctas">'+ctaHtml+'</div>' : '')
-    + '<div id="'+uid+'-login-slot" class="'+uid+'-login-slot"></div>'
     + '</div>'
     + '</div></div>'
     /* Menu */
     + '<div class="'+uid+'-menubar"><div class="'+uid+'-menu-inner">'
-    + '<button class="'+uid+'-burger" id="'+uid+'-burger" onclick="'+uid+'_toggle()" aria-label="Menu"><span></span><span></span><span></span></button>'
+    + '<div id="'+uid+'-login-slot" class="'+uid+'-login-slot"></div>'
     + '<nav class="'+uid+'-nav" id="'+uid+'-nav">'
     + '<ul class="'+uid+'-ul" id="'+uid+'-ul">'
     + (cfg.useZenMenu ? '' : buildMenuItems(cfg.menuItems, 1))
@@ -5256,7 +5254,9 @@ function buildHeaderOutputHtml(uid, cfg) {
           + '<a href="'+e(c.url)+'"'+t+' class="'+uid+'-nl" style="background:#e63946!important;color:#ffffff!important;justify-content:center;font-weight:700;border-bottom:1px solid rgba(230,57,70,.4);">'+e(c.label)+'</a>'
           + '</li>';
       }).join('') || '')
-    + '</ul></nav></div></div>'
+    + '</ul></nav>'
+    + '<button class="'+uid+'-burger" id="'+uid+'-burger" onclick="'+uid+'_toggle()" aria-label="Menu"><span></span><span></span><span></span></button>'
+    + '</div></div>'
     + '</div>';
 
   var script = '<script>(function(){'
