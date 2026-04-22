@@ -1,0 +1,97 @@
+<div id="screen-events" class="screen">
+  <div class="evt-left">
+    <div class="evt-left-hdr">
+      <span style="font-size:13px;font-weight:700;color:var(--blue);flex:1;">Events</span>
+      <span id="cal-status" style="font-size:11px;color:var(--muted);margin-right:8px;"></span>
+      <button class="btn-ev-outline" style="font-size:12px;padding:6px 14px;" onclick="showEvtListCode()">List Embed</button>
+      <button class="btn-ev-primary" style="font-size:12px;padding:6px 14px;" onclick="showNewEvtForm(null)">+ New Event</button>
+    </div>
+    <div class="evt-list" id="evt-list">
+      <div style="padding:20px 16px;text-align:center;font-size:12px;color:var(--muted);">Loading events…</div>
+    </div>
+    <div class="evt-form-wrap" id="evt-form-wrap">
+      <div id="evt-form-empty" style="flex:1;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;">
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;">Select an event from the list above,<br>or click a day on the calendar to create one.</div>
+      </div>
+      <div id="evt-form-content" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+        <div class="evt-form-hdr">
+          <span id="evt-form-title" style="font-size:12px;font-weight:700;color:var(--blue);flex:1;">New Event</span>
+          <button class="btn-sm" onclick="clearEvtForm()" title="Close form">&#x2715;</button>
+        </div>
+        <div class="evt-form-body" style="overflow-y:auto;flex:1;">
+          <div class="field"><label>Event Name</label><input type="text" id="evt-name" placeholder="e.g. ACCA Live Q&amp;A Session"></div>
+          <div class="two-col">
+            <div class="field"><label>Starts at</label><input type="datetime-local" id="evt-start"></div>
+            <div class="field"><label>Ends at</label><input type="datetime-local" id="evt-end"></div>
+          </div>
+          <div class="field">
+            <label>Timezone</label>
+            <select id="evt-tz">
+              <option value="UTC">UTC — Coordinated Universal Time</option>
+              <option value="Europe/London">Europe/London — GMT / BST</option>
+              <option value="Europe/Dublin">Europe/Dublin — GMT / IST</option>
+              <option value="Europe/Paris">Europe/Paris — CET / CEST</option>
+              <option value="Europe/Berlin">Europe/Berlin — CET / CEST</option>
+              <option value="Europe/Istanbul">Europe/Istanbul — TRT (+3)</option>
+              <option value="Africa/Cairo">Africa/Cairo — EET (+2)</option>
+              <option value="Asia/Dubai">Asia/Dubai — GST (+4)</option>
+              <option value="Asia/Karachi">Asia/Karachi — PKT (+5)</option>
+              <option value="Asia/Kolkata">Asia/Kolkata — IST (+5:30)</option>
+              <option value="Asia/Dhaka">Asia/Dhaka — BST (+6)</option>
+              <option value="Asia/Bangkok">Asia/Bangkok — ICT (+7)</option>
+              <option value="Asia/Singapore">Asia/Singapore — SGT (+8)</option>
+              <option value="Asia/Hong_Kong">Asia/Hong Kong — HKT (+8)</option>
+              <option value="Asia/Tokyo">Asia/Tokyo — JST (+9)</option>
+              <option value="Australia/Perth">Australia/Perth — AWST (+8)</option>
+              <option value="Australia/Sydney">Australia/Sydney — AEST / AEDT</option>
+              <option value="Pacific/Auckland">Pacific/Auckland — NZST / NZDT</option>
+              <option value="America/New_York">America/New York — EST / EDT</option>
+              <option value="America/Chicago">America/Chicago — CST / CDT</option>
+              <option value="America/Denver">America/Denver — MST / MDT</option>
+              <option value="America/Los_Angeles">America/Los Angeles — PST / PDT</option>
+              <option value="America/Toronto">America/Toronto — EST / EDT</option>
+              <option value="America/Sao_Paulo">America/Sao Paulo — BRT (-3)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Description</label>
+            <div id="evt-desc-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+              <select id="evt-blk-sel" style="flex:1;font-family:'Poppins',sans-serif;font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);">
+                <option value="">— choose block type —</option>
+                <option value="heading-para">Heading + Paragraph</option>
+                <option value="paragraph">Paragraph only</option>
+                <option value="list">Bullet list</option>
+              </select>
+              <button class="btn-ev-outline" style="font-size:12px;padding:6px 12px;white-space:nowrap" onclick="evtAddBlock()">+ Add</button>
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="field"><label>Venue</label><input type="text" id="evt-venue" placeholder="e.g. Online (Zoom)"></div>
+            <div class="field"><label>Hosts</label><input type="text" id="evt-hosts" placeholder="e.g. John Smith"></div>
+          </div>
+          <div class="two-col">
+            <div class="field"><label>CTA Button Text</label><input type="text" id="evt-cta-text" placeholder="e.g. Register Now"></div>
+            <div class="field"><label>CTA Button URL</label><input type="url" id="evt-cta-url" placeholder="https://..."></div>
+          </div>
+        </div>
+        <div class="evt-form-ft">
+          <button id="evt-delete-btn" class="btn-ev-danger" onclick="deleteCurrentEvt()" style="display:none;margin-right:auto;font-size:12px;padding:7px 14px;">Delete</button>
+          <button id="evt-code-btn" class="btn-ev-outline" onclick="showEvtCode()" style="display:none;font-size:12px;padding:7px 14px;">Get Code</button>
+          <button class="btn-ev-primary" id="evt-save-btn" onclick="saveEvt()" style="font-size:12px;padding:7px 16px;">Create Event</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+    <div class="cal-hdr">
+      <button class="cal-nav-btn" onclick="calNav(-1)">&#8249;</button>
+      <div class="cal-hdr-title" id="cal-title">April 2026</div>
+      <button class="cal-nav-btn" onclick="calNav(1)">&#8250;</button>
+      <div style="margin-left:auto">
+        <button class="btn-ev-outline" style="font-size:12px;padding:6px 14px" onclick="calGoToday()">Today</button>
+      </div>
+    </div>
+    <div class="cal-body"><div class="cal-grid" id="cal-grid"></div></div>
+  </div>
+</div>

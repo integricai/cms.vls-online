@@ -1,0 +1,32 @@
+<div id="screen-programs" class="screen">
+
+  <div class="form-panel" style="width:460px;">
+    <div class="form-inner">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="section-label" style="margin:0;">Program Selector</div>
+        <button class="btn-add-block" onclick="addProgramSection()" style="margin:0;">+ New Section</button>
+      </div>
+      <div id="program-section-list">
+        <div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No sections yet. Click + New Section to get started.</div>
+      </div>
+      <div id="program-status" style="font-size:12px;margin-top:8px;min-height:18px;"></div>
+    </div>
+  </div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div id="prog-ot-preview" class="out-tab active" onclick="switchProgOut('preview')">Preview</div>
+      <div id="prog-ot-code" class="out-tab" onclick="switchProgOut('code')">Code</div>
+    </div>
+    <div class="output-body" style="padding:0;">
+      <div id="prog-out-preview" style="flex:1;overflow:auto;padding:16px;">
+        <div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Add topics and cards, then click Generate &amp; Save to preview.</div>
+      </div>
+      <div id="prog-out-code" style="display:none;position:relative;padding:16px;">
+        <button class="btn-copy" style="position:absolute;top:24px;right:24px;" onclick="doCopy('prog-code-box',this)">Copy</button>
+        <pre class="code-box" id="prog-code-box" style="min-height:300px;margin:0;"></pre>
+      </div>
+    </div>
+  </div>
+
+</div>

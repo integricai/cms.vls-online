@@ -1,0 +1,28 @@
+<div id="screen-team" class="screen">
+  <div class="form-panel" style="width:460px;">
+    <div class="form-inner">
+      <div class="section-label">Team members</div>
+      <div id="team-list">
+        <div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No members yet. Click + Add Member to get started.</div>
+      </div>
+      <button class="btn-add-block" onclick="addTeamCard()">+ Add Member</button>
+      <button class="btn-gen" onclick="generateTeam()">&#x25B6; Generate &amp; Save</button>
+      <div id="team-status" style="font-size:12px;text-align:center;min-height:16px;color:var(--muted);"></div>
+    </div>
+  </div>
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div id="team-ot-preview" class="out-tab active" onclick="switchTeamOut('preview')">Preview</div>
+      <div id="team-ot-code" class="out-tab" onclick="switchTeamOut('code')">Code</div>
+    </div>
+    <div class="output-body">
+      <div id="team-preview-wrap" class="preview-wrap">
+        <div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Add team members and click Generate to preview.</div>
+      </div>
+      <div id="team-code-wrap" style="display:none;position:relative;">
+        <button class="btn-copy" style="position:absolute;top:12px;right:12px;" onclick="doCopy('team-code-box',this)">Copy</button>
+        <div class="code-box" id="team-code-box" style="min-height:300px;"></div>
+      </div>
+    </div>
+  </div>
+</div>

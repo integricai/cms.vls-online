@@ -1,0 +1,39 @@
+<div id="screen-intro" class="screen">
+  <div class="form-panel"><div class="form-inner">
+    <div class="section-label">Template</div>
+    <div class="field">
+      <label>Introduction type</label>
+      <select id="intro-type" onchange="loadIntroTemplate()">
+        <option value="course">Online Course</option>
+        <option value="notes">Study Notes</option>
+      </select>
+    </div>
+    <div class="section-label">Page headings</div>
+    <div class="field"><label>H1 — Course title</label><input type="text" id="intro-h1" value="ACCA FA1 Recording Financial Transactions"></div>
+    <div class="field"><label>H2 — Subtitle / strapline</label><textarea id="intro-h2" rows="3">Master the foundations of bookkeeping and pass your FA1 exam with confidence expert-led, exam-focused, and built for complete beginners.</textarea></div>
+    <div class="section-label">Features section</div>
+    <div class="field"><label>Features heading</label><input type="text" id="intro-feat-heading" value="Detailed Study Notes"></div>
+    <div class="field">
+      <label>Feature items <span class="hint">(tick list — 2 columns)</span></label>
+      <div id="intro-features" class="block-list"></div>
+      <button class="btn-add-block" style="margin-top:6px" onclick="addFeature()">+ Add feature item</button>
+    </div>
+    <div class="section-label">Call to action</div>
+    <div class="field"><label>Button label</label><input type="text" id="intro-cta-text" value="Enroll Now"></div>
+    <div class="field"><label>Button URL</label><input type="text" id="intro-cta-url" value="https://vls-online.com/courses/fa1/buy/?preview=on&themeid=0"></div>
+    <button class="btn-gen" onclick="generateIntro()">Generate HTML</button>
+  </div></div>
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="intro-ot-preview" onclick="switchOut('intro','preview')">Preview</div>
+      <div class="out-tab" id="intro-ot-html" onclick="switchOut('intro','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="intro-preview-wrap" class="preview-wrap"></div>
+      <div id="intro-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('intro-code',this)">Copy</button>
+        <pre id="intro-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>

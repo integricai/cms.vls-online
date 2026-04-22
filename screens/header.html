@@ -1,0 +1,128 @@
+<div id="screen-header" class="screen">
+
+  <div class="form-panel" style="width:480px;">
+    <div class="form-inner">
+      <div class="section-label">Header Builder</div>
+
+      <div class="banner-block">
+        <div class="banner-block-hd" onclick="toggleHdrBlock('logo')">
+          <span class="banner-block-title">Logo</span>
+          <span id="hdr-arrow-logo" class="banner-block-arrow">▼</span>
+        </div>
+        <div class="banner-block-body" id="hdr-body-logo">
+          <div class="field">
+            <label>Logo Image URL</label>
+            <input type="text" id="hdr-logo-url" placeholder="https://...">
+          </div>
+          <div class="field">
+            <label>Alt Text</label>
+            <input type="text" id="hdr-logo-alt" value="VLS Online">
+          </div>
+          <div class="field">
+            <label>Logo Link URL</label>
+            <input type="text" id="hdr-logo-link" value="/">
+          </div>
+          <div class="field">
+            <label>Logo Height (px)</label>
+            <input type="number" id="hdr-logo-height" value="56" min="20" max="120">
+          </div>
+        </div>
+      </div>
+
+      <div class="banner-block" style="margin-top:8px;">
+        <div class="banner-block-hd" onclick="toggleHdrBlock('brand')">
+          <span class="banner-block-title">Site Title</span>
+          <span id="hdr-arrow-brand" class="banner-block-arrow">▼</span>
+        </div>
+        <div class="banner-block-body" id="hdr-body-brand">
+          <div class="field">
+            <label>Site Title Text</label>
+            <input type="text" id="hdr-site-title" value="Vertex Language Solutions">
+          </div>
+          <div class="field">
+            <label>Site Sub-title <span style="font-weight:400;color:var(--muted);font-size:11px;">— tagline / strapline</span></label>
+            <input type="text" id="hdr-sub-title" placeholder="Changing Behaviors Through Education">
+          </div>
+          <div class="field" style="display:flex;gap:12px;">
+            <div style="flex:1;">
+              <label>Title Colour</label>
+              <input type="color" id="hdr-title-color" value="#204280">
+            </div>
+            <div style="flex:1;">
+              <label>Font Size (px)</label>
+              <input type="number" id="hdr-title-size" value="22" min="12" max="48">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="banner-block" style="margin-top:8px;">
+        <div class="banner-block-hd" onclick="toggleHdrBlock('colours')">
+          <span class="banner-block-title">Colours</span>
+          <span id="hdr-arrow-colours" class="banner-block-arrow">▼</span>
+        </div>
+        <div class="banner-block-body" id="hdr-body-colours">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="field"><label>Top Bar BG</label><input type="color" id="hdr-topbar-bg" value="#ffffff"></div>
+            <div class="field"><label>Top Bar Text</label><input type="color" id="hdr-topbar-text" value="#262a32"></div>
+            <div class="field"><label>Brand Bar BG</label><input type="color" id="hdr-brand-bg" value="#ffffff"></div>
+            <div class="field"><label>Menu Bar BG</label><input type="color" id="hdr-menu-bg" value="#204280"></div>
+            <div class="field"><label>Menu Text</label><input type="color" id="hdr-menu-text" value="#ffffff"></div>
+            <div class="field"><label>Menu Hover BG</label><input type="color" id="hdr-menu-hover" value="#1a3567"></div>
+            <div class="field"><label>Dropdown BG</label><input type="color" id="hdr-drop-bg" value="#ffffff"></div>
+            <div class="field"><label>Dropdown Text</label><input type="color" id="hdr-drop-text" value="#262a32"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="banner-block" style="margin-top:8px;">
+        <div class="banner-block-hd" onclick="toggleHdrBlock('ctas')">
+          <span class="banner-block-title">Call to Actions <span style="font-weight:400;font-size:11px;">(max 2)</span></span>
+          <span id="hdr-arrow-ctas" class="banner-block-arrow">▼</span>
+        </div>
+        <div class="banner-block-body" id="hdr-body-ctas">
+          <div id="hdr-cta-list"></div>
+          <button class="add-btn" id="hdr-add-cta-btn" onclick="addHdrCta()" style="margin-top:8px;">+ Add CTA</button>
+        </div>
+      </div>
+
+      <div class="banner-block" style="margin-top:8px;">
+        <div class="banner-block-hd" onclick="toggleHdrBlock('menu')">
+          <span class="banner-block-title">Navigation Menu</span>
+          <span id="hdr-arrow-menu" class="banner-block-arrow">▼</span>
+        </div>
+        <div class="banner-block-body" id="hdr-body-menu">
+          <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:6px;border:1px solid #c7d4f0;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#204280;">
+              <input type="checkbox" id="hdr-zen-menu" onchange="toggleHdrZenMenu(this.checked)">
+              Use Zenler's live navigation (auto-sync)
+            </label>
+            <p style="font-size:11px;color:var(--muted);margin:6px 0 0 22px;line-height:1.5;">When enabled, the snippet reads the navigation directly from Zenler's DOM — no manual updates needed when pages change. The CMS menu items below are still saved as fallback.</p>
+          </div>
+          <div id="hdr-manual-menu" style="">
+            <div id="hdr-menu-list"></div>
+            <button class="add-btn" onclick="addHdrMenuItem(null)" style="margin-top:8px;">+ Add Menu Item</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="header-status" class="status-msg" style="margin-top:16px;"></div>
+      <button class="pub-btn" onclick="generateHeaderHtml()" style="margin-top:8px;width:100%;">Generate &amp; Save</button>
+    </div>
+  </div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div id="hdr-ot-preview" class="out-tab active" onclick="switchHdrOut('preview')">Preview</div>
+      <div id="hdr-ot-code" class="out-tab" onclick="switchHdrOut('code')">Code</div>
+    </div>
+    <div id="hdr-out-preview" style="flex:1;overflow:auto;background:#f3f4f6;padding:0;">
+      <div id="hdr-preview-frame"></div>
+    </div>
+    <div id="hdr-out-code" style="display:none;flex:1;position:relative;">
+      <textarea id="hdr-code-box" class="code-output" readonly style="height:100%;"></textarea>
+      <button class="copy-code-btn" onclick="copyHdrCode()">Copy</button>
+    </div>
+  </div>
+
+</div>

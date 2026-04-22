@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -178,6 +178,22 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 .faq-block-q{font-size:12px;font-weight:600;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .faq-block-body{padding:12px;display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--border);}
 .faq-block-body.collapsed{display:none;}
+
+/* ── Home screen ── */
+#screen-home{background:var(--bg);overflow:auto;}
+.home-wrap{padding:40px 48px;max-width:1100px;}
+.home-welcome{margin-bottom:36px;}
+.home-welcome h1{font-size:22px;font-weight:700;color:var(--blue);margin-bottom:8px;}
+.home-welcome p{font-size:14px;color:var(--muted);line-height:1.6;}
+.home-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.home-tile{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:12px;}
+.home-tile-title{font-size:15px;font-weight:700;color:var(--blue);}
+.home-tile-desc{font-size:13px;color:var(--muted);line-height:1.6;flex:1;}
+.home-tile-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
+.home-tile-link{font-size:12px;font-weight:500;padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--text);cursor:pointer;font-family:'Poppins',sans-serif;}
+.home-tile-link:hover{background:var(--purple-light);color:var(--purple);border-color:var(--purple);}
+.home-tile.admin-tile{display:none;}
+.home-tile.admin-tile.visible{display:flex;}
 </style>
 </head>
 <body>
@@ -200,671 +216,83 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 
 <div class="topbar">
   <span class="topbar-logo">VLS Online CMS</span>
-  <!-- Course dropdown -->
-  <div class="nav-dropdown" id="nav-course-dd">
-    <div class="nav-tab active" id="nav-course" onclick="toggleCourseDropdown(event)">Course <span class="nav-dd-arrow">▾</span></div>
-    <div class="nav-dd-menu" id="nav-course-menu">
-      <div class="nav-dd-item active" id="nav-intro" onclick="switchScreen('intro')">Introduction</div>
-      <div class="nav-dd-item" id="nav-desc" onclick="switchScreen('desc')">Description</div>
-      <div class="nav-dd-item" id="nav-tabs" onclick="switchScreen('tabs')">Tabs</div>
+  <div class="nav-tab active" id="nav-home" onclick="switchScreen('home')">Home</div>
+  <!-- Global dropdown (admin only) -->
+  <div class="nav-dropdown hidden" id="nav-global-dd">
+    <div class="nav-tab" id="nav-global" onclick="toggleNavDd('global',event)">Global <span class="nav-dd-arrow">▾</span></div>
+    <div class="nav-dd-menu" id="nav-global-menu">
+      <div class="nav-dd-item" id="nav-header" onclick="switchScreen('header')">Header</div>
+      <div class="nav-dd-item" id="nav-footer" onclick="switchScreen('footer')">Footer</div>
+      <div class="nav-dd-item" id="nav-banner" onclick="switchScreen('banner')">Banner</div>
     </div>
   </div>
-  <div class="nav-tab" id="nav-faq" onclick="switchScreen('faq')">FAQs</div>
-  <div class="nav-tab" id="nav-team" onclick="switchScreen('team')">Team</div>
-  <div class="nav-tab hidden" id="nav-banner" onclick="switchScreen('banner')">Banner</div>
-  <div class="nav-tab hidden" id="nav-events" onclick="switchScreen('events')">Events</div>
-  <div class="nav-tab hidden" id="nav-footer" onclick="switchScreen('footer')">Footer</div>
-  <div class="nav-tab hidden" id="nav-programs" onclick="switchScreen('programs')">Programs</div>
-  <div class="nav-tab hidden" id="nav-form" onclick="switchScreen('form')">Form</div>
-  <div class="nav-tab hidden" id="nav-header" onclick="switchScreen('header')">Header</div>
+  <!-- Page dropdown -->
+  <div class="nav-dropdown" id="nav-page-dd">
+    <div class="nav-tab" id="nav-page" onclick="toggleNavDd('page',event)">Page <span class="nav-dd-arrow">▾</span></div>
+    <div class="nav-dd-menu" id="nav-page-menu">
+      <div class="nav-dd-item" id="nav-intro" onclick="switchScreen('intro')">Course Intro</div>
+      <div class="nav-dd-item" id="nav-desc" onclick="switchScreen('desc')">Description</div>
+      <div class="nav-dd-item" id="nav-tabs" onclick="switchScreen('tabs')">Tabs</div>
+      <div class="nav-dd-item" id="nav-team" onclick="switchScreen('team')">Team Cards</div>
+    </div>
+  </div>
+  <!-- Shared dropdown -->
+  <div class="nav-dropdown" id="nav-shared-dd">
+    <div class="nav-tab" id="nav-shared" onclick="toggleNavDd('shared',event)">Shared <span class="nav-dd-arrow">▾</span></div>
+    <div class="nav-dd-menu" id="nav-shared-menu">
+      <div class="nav-dd-item" id="nav-faq" onclick="switchScreen('faq')">FAQ</div>
+      <div class="nav-dd-item" id="nav-events" onclick="switchScreen('events')">Events</div>
+      <div class="nav-dd-item" id="nav-programs" onclick="switchScreen('programs')">Program Cards</div>
+      <div class="nav-dd-item" id="nav-form" onclick="switchScreen('form')">Form</div>
+    </div>
+  </div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
 </div>
 
 <!-- ═══════════════════════════════════════
-     SCREEN 1 — INTRODUCTION
+     SCREEN — HOME
 ═══════════════════════════════════════ -->
-<div id="screen-intro" class="screen active">
-  <div class="form-panel"><div class="form-inner">
-    <div class="section-label">Template</div>
-    <div class="field">
-      <label>Introduction type</label>
-      <select id="intro-type" onchange="loadIntroTemplate()">
-        <option value="course">Online Course</option>
-        <option value="notes">Study Notes</option>
-      </select>
+<div id="screen-home" class="screen active">
+  <div class="home-wrap">
+    <div class="home-welcome">
+      <h1>VLS Online CMS</h1>
+      <p>Build and manage your Zenler course components from one place. Choose a category below to get started.</p>
     </div>
-    <div class="section-label">Page headings</div>
-    <div class="field"><label>H1 — Course title</label><input type="text" id="intro-h1" value="ACCA FA1 Recording Financial Transactions"></div>
-    <div class="field"><label>H2 — Subtitle / strapline</label><textarea id="intro-h2" rows="3">Master the foundations of bookkeeping and pass your FA1 exam with confidence expert-led, exam-focused, and built for complete beginners.</textarea></div>
-    <div class="section-label">Features section</div>
-    <div class="field"><label>Features heading</label><input type="text" id="intro-feat-heading" value="Detailed Study Notes"></div>
-    <div class="field">
-      <label>Feature items <span class="hint">(tick list — 2 columns)</span></label>
-      <div id="intro-features" class="block-list"></div>
-      <button class="btn-add-block" style="margin-top:6px" onclick="addFeature()">+ Add feature item</button>
-    </div>
-    <div class="section-label">Call to action</div>
-    <div class="field"><label>Button label</label><input type="text" id="intro-cta-text" value="Enroll Now"></div>
-    <div class="field"><label>Button URL</label><input type="text" id="intro-cta-url" value="https://vls-online.com/courses/fa1/buy/?preview=on&themeid=0"></div>
-    <button class="btn-gen" onclick="generateIntro()">Generate HTML</button>
-  </div></div>
-  <div class="output-panel">
-    <div class="output-topbar">
-      <div class="out-tab active" id="intro-ot-preview" onclick="switchOut('intro','preview')">Preview</div>
-      <div class="out-tab" id="intro-ot-html" onclick="switchOut('intro','html')">HTML</div>
-    </div>
-    <div class="output-body">
-      <div id="intro-preview-wrap" class="preview-wrap"></div>
-      <div id="intro-html-wrap" class="code-wrap">
-        <button class="btn-copy" onclick="doCopy('intro-code',this)">Copy</button>
-        <pre id="intro-code" class="code-box"></pre>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════
-     SCREEN 2 — DESCRIPTION
-═══════════════════════════════════════ -->
-<div id="screen-desc" class="screen">
-  <div class="form-panel"><div class="form-inner">
-    <div class="section-label">Above "Read More" — always visible</div>
-    <div class="field"><label>Bold intro line</label><input type="text" id="desc-intro-bold" value="Start your ACCA journey with the qualification's first building block."></div>
-    <div class="field"><label>Paragraph 1</label><textarea id="desc-intro-p1" rows="3">FA1 Recording Financial Transactions is the entry point into the ACCA Foundations in Accountancy (FIA) pathway. Whether you're brand new to accounting or returning to formalise your skills, this course gives you everything you need to understand how financial information flows through a business from the very first document all the way to the trial balance.</textarea></div>
-    <div class="field"><label>Paragraph 2 <span class="hint">(optional)</span></label><textarea id="desc-intro-p2" rows="2">No prior accounting knowledge is required. This is deliberately designed as a clean starting point.</textarea></div>
-    <div class="section-label">Below "Read More" — expandable blocks</div>
-    <div id="desc-blocks" class="block-list"></div>
-    <button class="btn-add-block" onclick="toggleBlockPicker()">+ Add block</button>
-    <div id="block-type-picker" style="display:none;border:1px solid var(--border);border-radius:8px;overflow:hidden">
-      <div style="padding:8px 12px;background:#f9fafb;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Choose block type</div>
-      <button onclick="addDescBlock('paragraph')" style="display:block;width:100%;text-align:left;padding:9px 14px;border:none;border-top:1px solid var(--border);background:#fff;font-family:'Poppins',sans-serif;font-size:13px;cursor:pointer">Paragraph</button>
-      <button onclick="addDescBlock('heading-paragraph')" style="display:block;width:100%;text-align:left;padding:9px 14px;border:none;border-top:1px solid var(--border);background:#fff;font-family:'Poppins',sans-serif;font-size:13px;cursor:pointer">Heading + Paragraph</button>
-      <button onclick="addDescBlock('heading-bullets')" style="display:block;width:100%;text-align:left;padding:9px 14px;border:none;border-top:1px solid var(--border);background:#fff;font-family:'Poppins',sans-serif;font-size:13px;cursor:pointer">Heading + Bullet list</button>
-      <button onclick="addDescBlock('bullets')" style="display:block;width:100%;text-align:left;padding:9px 14px;border:none;border-top:1px solid var(--border);background:#fff;font-family:'Poppins',sans-serif;font-size:13px;cursor:pointer">Bullet list (no heading)</button>
-      <button onclick="addDescBlock('items')" style="display:block;width:100%;text-align:left;padding:9px 14px;border:none;border-top:1px solid var(--border);background:#fff;font-family:'Poppins',sans-serif;font-size:13px;cursor:pointer">Item list (heading + para per item)</button>
-      <button onclick="addDescBlock('note')" style="display:block;width:100%;text-align:left;padding:9px 14px;border:none;border-top:1px solid var(--border);background:#fff;font-family:'Poppins',sans-serif;font-size:13px;cursor:pointer">Note / callout</button>
-    </div>
-    <button class="btn-gen" onclick="generateDesc()">Generate HTML</button>
-  </div></div>
-  <div class="output-panel">
-    <div class="output-topbar">
-      <div class="out-tab active" id="desc-ot-preview" onclick="switchOut('desc','preview')">Preview</div>
-      <div class="out-tab" id="desc-ot-html" onclick="switchOut('desc','html')">HTML</div>
-    </div>
-    <div class="output-body">
-      <div id="desc-preview-wrap" class="preview-wrap"></div>
-      <div id="desc-html-wrap" class="code-wrap">
-        <button class="btn-copy" onclick="doCopy('desc-code',this)">Copy</button>
-        <pre id="desc-code" class="code-box"></pre>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════
-     SCREEN 3 — TABS
-═══════════════════════════════════════ -->
-<div id="screen-tabs" class="screen">
-  <div class="form-panel"><div class="form-inner">
-    <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
-      Tabs
-      <button class="btn-sm" onclick="tabsAddTab()">+ Add tab</button>
-    </div>
-    <div id="tabs-pill-bar" class="tab-pills"></div>
-    <div id="tabs-editor-area" style="display:flex;flex-direction:column;gap:14px;"></div>
-    <button class="btn-gen" onclick="generateTabs()">Generate HTML</button>
-  </div></div>
-  <div class="output-panel">
-    <div class="output-topbar">
-      <div class="out-tab active" id="tabs-ot-preview" onclick="switchOut('tabs','preview')">Preview</div>
-      <div class="out-tab" id="tabs-ot-html" onclick="switchOut('tabs','html')">HTML</div>
-    </div>
-    <div class="output-body">
-      <div id="tabs-preview-wrap" class="preview-wrap"></div>
-      <div id="tabs-html-wrap" class="code-wrap">
-        <button class="btn-copy" onclick="doCopy('tabs-code',this)">Copy</button>
-        <pre id="tabs-code" class="code-box"></pre>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<!-- ═══════════════════════════════════════
-     SCREEN 4 — BANNER
-═══════════════════════════════════════ -->
-<div id="screen-banner" class="screen">
-
-  <div class="form-panel"><div class="form-inner">
-    <div class="section-label" style="margin:0 0 12px 0;">Banners</div>
-    <button class="btn-gen" style="padding:8px 18px;font-size:13px;margin-bottom:16px;" onclick="addBanner()">+ New Banner</button>
-    <div id="banner-list">
-      <div style="text-align:center;font-size:12px;color:var(--muted);padding:32px 0;">Loading banners…</div>
-    </div>
-  </div></div>
-
-  <div class="output-panel">
-    <div class="output-topbar">
-      <div class="out-tab active" id="banner-ot-preview" onclick="switchBannerOut('preview')">Preview</div>
-      <div class="out-tab" id="banner-ot-code" onclick="switchBannerOut('code')">Inject Code</div>
-    </div>
-    <div class="output-body">
-      <div id="banner-out-preview" style="background:#fff;border-radius:10px;border:1px solid var(--border);overflow:hidden;min-height:300px;">
-        <div id="banner-live-preview" style="padding:0;"></div>
-        <div id="banner-preview-hint" style="padding:32px;color:var(--muted);font-size:13px;text-align:center;">
-          Click "Save (Preview)" on a banner to see the preview here.
+    <div class="home-tiles">
+      <div class="home-tile admin-tile" id="home-tile-global">
+        <div class="home-tile-title">Global Components</div>
+        <div class="home-tile-desc">Site-wide elements shared across all pages — header, footer, and promotional banners.</div>
+        <div class="home-tile-links">
+          <button class="home-tile-link" onclick="switchScreen('header')">Header</button>
+          <button class="home-tile-link" onclick="switchScreen('footer')">Footer</button>
+          <button class="home-tile-link" onclick="switchScreen('banner')">Banner</button>
         </div>
       </div>
-      <div id="banner-out-code" style="display:none;">
-        <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:8px;">
-          Paste this script <strong>once</strong> per Zenler page for this banner. Future publishes update automatically — no need to re-paste.
+      <div class="home-tile">
+        <div class="home-tile-title">Page Components</div>
+        <div class="home-tile-desc">Course page building blocks — introduction, description, content tabs, and team cards.</div>
+        <div class="home-tile-links">
+          <button class="home-tile-link" onclick="switchScreen('intro')">Course Intro</button>
+          <button class="home-tile-link" onclick="switchScreen('desc')">Description</button>
+          <button class="home-tile-link" onclick="switchScreen('tabs')">Tabs</button>
+          <button class="home-tile-link" onclick="switchScreen('team')">Team Cards</button>
         </div>
-        <div style="position:relative;">
-          <button class="btn-copy" style="position:absolute;top:8px;right:8px;" onclick="doCopy('banner-inject-code',this)">Copy</button>
-          <pre id="banner-inject-code" class="code-box" style="min-height:80px;font-size:11px;padding-top:36px;"></pre>
+      </div>
+      <div class="home-tile">
+        <div class="home-tile-title">Shared Components</div>
+        <div class="home-tile-desc">Reusable across multiple pages — FAQs, events calendar, program cards, and enquiry forms.</div>
+        <div class="home-tile-links">
+          <button class="home-tile-link" onclick="switchScreen('faq')">FAQ</button>
+          <button class="home-tile-link" onclick="switchScreen('events')">Events</button>
+          <button class="home-tile-link" onclick="switchScreen('programs')">Program Cards</button>
+          <button class="home-tile-link" onclick="switchScreen('form')">Form</button>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════
-     SCREEN 5 — EVENTS
-═══════════════════════════════════════ -->
-<div id="screen-events" class="screen">
-
-  <!-- ── Left panel ── -->
-  <div class="evt-left">
-
-    <!-- Header -->
-    <div class="evt-left-hdr">
-      <span style="font-size:13px;font-weight:700;color:var(--blue);flex:1;">Events</span>
-      <span id="cal-status" style="font-size:11px;color:var(--muted);margin-right:8px;"></span>
-      <button class="btn-ev-outline" style="font-size:12px;padding:6px 14px;" onclick="showEvtListCode()">List Embed</button>
-      <button class="btn-ev-primary" style="font-size:12px;padding:6px 14px;" onclick="showNewEvtForm(null)">+ New Event</button>
-    </div>
-
-    <!-- Event list (top, scrollable) -->
-    <div class="evt-list" id="evt-list">
-      <div style="padding:20px 16px;text-align:center;font-size:12px;color:var(--muted);">Loading events…</div>
-    </div>
-
-    <!-- Event form (bottom) -->
-    <div class="evt-form-wrap" id="evt-form-wrap">
-
-      <!-- Empty state -->
-      <div id="evt-form-empty" style="flex:1;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;">
-        <div style="font-size:12px;color:var(--muted);line-height:1.6;">Select an event from the list above,<br>or click a day on the calendar to create one.</div>
-      </div>
-
-      <!-- Form (hidden until an event is selected / New Event clicked) -->
-      <div id="evt-form-content" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
-        <div class="evt-form-hdr">
-          <span id="evt-form-title" style="font-size:12px;font-weight:700;color:var(--blue);flex:1;">New Event</span>
-          <button class="btn-sm" onclick="clearEvtForm()" title="Close form">&#x2715;</button>
-        </div>
-        <div class="evt-form-body" style="overflow-y:auto;flex:1;">
-          <div class="field">
-            <label>Event Name</label>
-            <input type="text" id="evt-name" placeholder="e.g. ACCA Live Q&amp;A Session">
-          </div>
-          <div class="two-col">
-            <div class="field">
-              <label>Starts at</label>
-              <input type="datetime-local" id="evt-start">
-            </div>
-            <div class="field">
-              <label>Ends at</label>
-              <input type="datetime-local" id="evt-end">
-            </div>
-          </div>
-          <div class="field">
-            <label>Timezone</label>
-            <select id="evt-tz">
-              <option value="UTC">UTC — Coordinated Universal Time</option>
-              <option value="Europe/London">Europe/London — GMT / BST</option>
-              <option value="Europe/Dublin">Europe/Dublin — GMT / IST</option>
-              <option value="Europe/Paris">Europe/Paris — CET / CEST</option>
-              <option value="Europe/Berlin">Europe/Berlin — CET / CEST</option>
-              <option value="Europe/Istanbul">Europe/Istanbul — TRT (+3)</option>
-              <option value="Africa/Cairo">Africa/Cairo — EET (+2)</option>
-              <option value="Asia/Dubai">Asia/Dubai — GST (+4)</option>
-              <option value="Asia/Karachi">Asia/Karachi — PKT (+5)</option>
-              <option value="Asia/Kolkata">Asia/Kolkata — IST (+5:30)</option>
-              <option value="Asia/Dhaka">Asia/Dhaka — BST (+6)</option>
-              <option value="Asia/Bangkok">Asia/Bangkok — ICT (+7)</option>
-              <option value="Asia/Singapore">Asia/Singapore — SGT (+8)</option>
-              <option value="Asia/Hong_Kong">Asia/Hong Kong — HKT (+8)</option>
-              <option value="Asia/Tokyo">Asia/Tokyo — JST (+9)</option>
-              <option value="Australia/Perth">Australia/Perth — AWST (+8)</option>
-              <option value="Australia/Sydney">Australia/Sydney — AEST / AEDT</option>
-              <option value="Pacific/Auckland">Pacific/Auckland — NZST / NZDT</option>
-              <option value="America/New_York">America/New York — EST / EDT</option>
-              <option value="America/Chicago">America/Chicago — CST / CDT</option>
-              <option value="America/Denver">America/Denver — MST / MDT</option>
-              <option value="America/Los_Angeles">America/Los Angeles — PST / PDT</option>
-              <option value="America/Toronto">America/Toronto — EST / EDT</option>
-              <option value="America/Sao_Paulo">America/Sao Paulo — BRT (-3)</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Description</label>
-            <div id="evt-desc-list" style="display:flex;flex-direction:column;gap:6px;"></div>
-            <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
-              <select id="evt-blk-sel" style="flex:1;font-family:'Poppins',sans-serif;font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);">
-                <option value="">— choose block type —</option>
-                <option value="heading-para">Heading + Paragraph</option>
-                <option value="paragraph">Paragraph only</option>
-                <option value="list">Bullet list</option>
-              </select>
-              <button class="btn-ev-outline" style="font-size:12px;padding:6px 12px;white-space:nowrap" onclick="evtAddBlock()">+ Add</button>
-            </div>
-          </div>
-          <div class="two-col">
-            <div class="field">
-              <label>Venue</label>
-              <input type="text" id="evt-venue" placeholder="e.g. Online (Zoom)">
-            </div>
-            <div class="field">
-              <label>Hosts</label>
-              <input type="text" id="evt-hosts" placeholder="e.g. John Smith">
-            </div>
-          </div>
-          <div class="two-col">
-            <div class="field">
-              <label>CTA Button Text</label>
-              <input type="text" id="evt-cta-text" placeholder="e.g. Register Now">
-            </div>
-            <div class="field">
-              <label>CTA Button URL</label>
-              <input type="url" id="evt-cta-url" placeholder="https://...">
-            </div>
-          </div>
-        </div>
-        <div class="evt-form-ft">
-          <button id="evt-delete-btn" class="btn-ev-danger" onclick="deleteCurrentEvt()" style="display:none;margin-right:auto;font-size:12px;padding:7px 14px;">Delete</button>
-          <button id="evt-code-btn" class="btn-ev-outline" onclick="showEvtCode()" style="display:none;font-size:12px;padding:7px 14px;">Get Code</button>
-          <button class="btn-ev-primary" id="evt-save-btn" onclick="saveEvt()" style="font-size:12px;padding:7px 16px;">Create Event</button>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ── Right panel: calendar ── -->
-  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-    <div class="cal-hdr">
-      <button class="cal-nav-btn" onclick="calNav(-1)">&#8249;</button>
-      <div class="cal-hdr-title" id="cal-title">April 2026</div>
-      <button class="cal-nav-btn" onclick="calNav(1)">&#8250;</button>
-      <div style="margin-left:auto">
-        <button class="btn-ev-outline" style="font-size:12px;padding:6px 14px" onclick="calGoToday()">Today</button>
-      </div>
-    </div>
-    <div class="cal-body">
-      <div class="cal-grid" id="cal-grid"></div>
-    </div>
-  </div>
-
-</div>
-
-<!-- ═══════════════════════════════════════
-     SCREEN — TEAM
-═══════════════════════════════════════ -->
-<div id="screen-team" class="screen">
-
-  <div class="form-panel" style="width:460px;">
-    <div class="form-inner">
-      <div class="section-label">Team members</div>
-      <div id="team-list">
-        <div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No members yet. Click + Add Member to get started.</div>
-      </div>
-      <button class="btn-add-block" onclick="addTeamCard()">+ Add Member</button>
-      <button class="btn-gen" onclick="generateTeam()">&#x25B6; Generate &amp; Save</button>
-      <div id="team-status" style="font-size:12px;text-align:center;min-height:16px;color:var(--muted);"></div>
-    </div>
-  </div>
-
-  <div class="output-panel">
-    <div class="output-topbar">
-      <div id="team-ot-preview" class="out-tab active" onclick="switchTeamOut('preview')">Preview</div>
-      <div id="team-ot-code" class="out-tab" onclick="switchTeamOut('code')">Code</div>
-    </div>
-    <div class="output-body">
-      <div id="team-preview-wrap" class="preview-wrap">
-        <div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Add team members and click Generate to preview.</div>
-      </div>
-      <div id="team-code-wrap" style="display:none;position:relative;">
-        <button class="btn-copy" style="position:absolute;top:12px;right:12px;" onclick="doCopy('team-code-box',this)">Copy</button>
-        <div class="code-box" id="team-code-box" style="min-height:300px;"></div>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<!-- ═══════════════════════════════════════
-     SCREEN — FOOTER
-═══════════════════════════════════════ -->
-<div id="screen-footer" class="screen">
-
-  <div class="form-panel"><div class="form-inner">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <div class="section-label" style="margin:0;">Footer Builder</div>
-      <button class="btn-gen" style="padding:8px 18px;font-size:13px;" onclick="generateAndSaveFooter()">&#x1F4BE; Save &amp; Generate</button>
-    </div>
-    <div id="footer-form-body">
-      <div style="text-align:center;font-size:12px;color:var(--muted);padding:32px 0;">Loading…</div>
-    </div>
-    <div id="footer-status" style="font-size:12px;text-align:center;min-height:16px;margin-top:8px;color:var(--muted);"></div>
-  </div></div>
-
-  <div class="output-panel">
-    <div class="output-topbar">
-      <div class="out-tab active" id="footer-ot-preview" onclick="switchFooterOut('preview')">Preview</div>
-      <div class="out-tab" id="footer-ot-code" onclick="switchFooterOut('code')">HTML Code</div>
-    </div>
-    <div class="output-body" style="padding:0;">
-      <div id="footer-out-preview" style="min-height:200px;">
-        <div id="footer-preview-body">
-          <div style="padding:40px;text-align:center;font-size:13px;color:var(--muted);">Fill in the form and click "Save &amp; Generate" to preview the footer here.</div>
-        </div>
-      </div>
-      <div id="footer-out-code" style="display:none;padding:16px;">
-        <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:8px;">
-          Copy this HTML and paste it into your site's footer area.
-        </div>
-        <div style="position:relative;">
-          <button class="btn-copy" style="position:absolute;top:8px;right:8px;" onclick="doCopy('footer-html-code',this)">Copy</button>
-          <pre id="footer-html-code" class="code-box" style="min-height:80px;font-size:11px;padding-top:36px;"></pre>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════
-     SCREEN — FAQ
-═══════════════════════════════════════ -->
-<div id="screen-faq" class="screen">
-
-  <!-- Left: FAQ sections -->
-  <div class="form-panel" style="width:460px;">
-    <div class="form-inner">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div class="section-label" style="margin:0;">FAQ Sections</div>
-        <button class="btn-add-block" onclick="addFaqSection()" style="margin:0;">+ New Section</button>
-      </div>
-      <div id="faq-section-list">
-        <div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No sections yet. Click + New Section to get started.</div>
-      </div>
-      <div id="faq-status" style="font-size:12px;margin-top:8px;min-height:18px;"></div>
-    </div>
-  </div>
-
-  <!-- Right: preview + code -->
-  <div class="output-panel">
-    <div class="output-topbar">
-      <div id="faq-ot-preview" class="out-tab active" onclick="switchFaqOut('preview')">Preview</div>
-      <div id="faq-ot-code" class="out-tab" onclick="switchFaqOut('code')">Code</div>
-    </div>
-    <div class="output-body">
-      <div id="faq-preview-wrap" class="preview-wrap">
-        <div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Create a section and click Generate &amp; Save to preview.</div>
-      </div>
-      <div id="faq-code-wrap" style="display:none;position:relative;">
-        <button class="btn-copy" style="position:absolute;top:12px;right:12px;" onclick="doCopy('faq-code-box',this)">Copy</button>
-        <div class="code-box" id="faq-code-box" style="min-height:300px;"></div>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<!-- ═══════════════════════════════════════
-     SCREEN — PROGRAMS
-═══════════════════════════════════════ -->
-<div id="screen-programs" class="screen">
-
-  <!-- Left: section > topic > card editor -->
-  <div class="form-panel" style="width:460px;">
-    <div class="form-inner">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div class="section-label" style="margin:0;">Program Selector</div>
-        <button class="btn-add-block" onclick="addProgramSection()" style="margin:0;">+ New Section</button>
-      </div>
-      <div id="program-section-list">
-        <div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">No sections yet. Click + New Section to get started.</div>
-      </div>
-      <div id="program-status" style="font-size:12px;margin-top:8px;min-height:18px;"></div>
-    </div>
-  </div>
-
-  <!-- Right: preview + code -->
-  <div class="output-panel">
-    <div class="output-topbar">
-      <div id="prog-ot-preview" class="out-tab active" onclick="switchProgOut('preview')">Preview</div>
-      <div id="prog-ot-code" class="out-tab" onclick="switchProgOut('code')">Code</div>
-    </div>
-    <div class="output-body" style="padding:0;">
-      <div id="prog-out-preview" style="flex:1;overflow:auto;padding:16px;">
-        <div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Add topics and cards, then click Generate &amp; Save to preview.</div>
-      </div>
-      <div id="prog-out-code" style="display:none;position:relative;padding:16px;">
-        <button class="btn-copy" style="position:absolute;top:24px;right:24px;" onclick="doCopy('prog-code-box',this)">Copy</button>
-        <pre class="code-box" id="prog-code-box" style="min-height:300px;margin:0;"></pre>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<!-- ═══════════════════════════════════════
-     SCREEN — HEADER
-═══════════════════════════════════════ -->
-<div id="screen-header" class="screen">
-
-  <!-- Left: config -->
-  <div class="form-panel" style="width:480px;">
-    <div class="form-inner">
-      <div class="section-label">Header Builder</div>
-
-      <!-- Logo -->
-      <div class="banner-block">
-        <div class="banner-block-hd" onclick="toggleHdrBlock('logo')">
-          <span class="banner-block-title">Logo</span>
-          <span id="hdr-arrow-logo" class="banner-block-arrow">▼</span>
-        </div>
-        <div class="banner-block-body" id="hdr-body-logo">
-          <div class="field">
-            <label>Logo Image URL</label>
-            <input type="text" id="hdr-logo-url" placeholder="https://...">
-          </div>
-          <div class="field">
-            <label>Alt Text</label>
-            <input type="text" id="hdr-logo-alt" value="VLS Online">
-          </div>
-          <div class="field">
-            <label>Logo Link URL</label>
-            <input type="text" id="hdr-logo-link" value="/">
-          </div>
-          <div class="field">
-            <label>Logo Height (px)</label>
-            <input type="number" id="hdr-logo-height" value="56" min="20" max="120">
-          </div>
-        </div>
-      </div>
-
-      <!-- Branding -->
-      <div class="banner-block" style="margin-top:8px;">
-        <div class="banner-block-hd" onclick="toggleHdrBlock('brand')">
-          <span class="banner-block-title">Site Title</span>
-          <span id="hdr-arrow-brand" class="banner-block-arrow">▼</span>
-        </div>
-        <div class="banner-block-body" id="hdr-body-brand">
-          <div class="field">
-            <label>Site Title Text</label>
-            <input type="text" id="hdr-site-title" value="Vertex Language Solutions">
-          </div>
-          <div class="field">
-            <label>Site Sub-title <span style="font-weight:400;color:var(--muted);font-size:11px;">— tagline / strapline</span></label>
-            <input type="text" id="hdr-sub-title" placeholder="Changing Behaviors Through Education">
-          </div>
-          <div class="field" style="display:flex;gap:12px;">
-            <div style="flex:1;">
-              <label>Title Colour</label>
-              <input type="color" id="hdr-title-color" value="#204280">
-            </div>
-            <div style="flex:1;">
-              <label>Font Size (px)</label>
-              <input type="number" id="hdr-title-size" value="22" min="12" max="48">
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Colours -->
-      <div class="banner-block" style="margin-top:8px;">
-        <div class="banner-block-hd" onclick="toggleHdrBlock('colours')">
-          <span class="banner-block-title">Colours</span>
-          <span id="hdr-arrow-colours" class="banner-block-arrow">▼</span>
-        </div>
-        <div class="banner-block-body" id="hdr-body-colours">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <div class="field"><label>Top Bar BG</label><input type="color" id="hdr-topbar-bg" value="#ffffff"></div>
-            <div class="field"><label>Top Bar Text</label><input type="color" id="hdr-topbar-text" value="#262a32"></div>
-            <div class="field"><label>Brand Bar BG</label><input type="color" id="hdr-brand-bg" value="#ffffff"></div>
-            <div class="field"><label>Menu Bar BG</label><input type="color" id="hdr-menu-bg" value="#204280"></div>
-            <div class="field"><label>Menu Text</label><input type="color" id="hdr-menu-text" value="#ffffff"></div>
-            <div class="field"><label>Menu Hover BG</label><input type="color" id="hdr-menu-hover" value="#1a3567"></div>
-            <div class="field"><label>Dropdown BG</label><input type="color" id="hdr-drop-bg" value="#ffffff"></div>
-            <div class="field"><label>Dropdown Text</label><input type="color" id="hdr-drop-text" value="#262a32"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- CTAs -->
-      <div class="banner-block" style="margin-top:8px;">
-        <div class="banner-block-hd" onclick="toggleHdrBlock('ctas')">
-          <span class="banner-block-title">Call to Actions <span style="font-weight:400;font-size:11px;">(max 2)</span></span>
-          <span id="hdr-arrow-ctas" class="banner-block-arrow">▼</span>
-        </div>
-        <div class="banner-block-body" id="hdr-body-ctas">
-          <div id="hdr-cta-list"></div>
-          <button class="add-btn" id="hdr-add-cta-btn" onclick="addHdrCta()" style="margin-top:8px;">+ Add CTA</button>
-        </div>
-      </div>
-
-      <!-- Menu -->
-      <div class="banner-block" style="margin-top:8px;">
-        <div class="banner-block-hd" onclick="toggleHdrBlock('menu')">
-          <span class="banner-block-title">Navigation Menu</span>
-          <span id="hdr-arrow-menu" class="banner-block-arrow">▼</span>
-        </div>
-        <div class="banner-block-body" id="hdr-body-menu">
-          <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:6px;border:1px solid #c7d4f0;">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#204280;">
-              <input type="checkbox" id="hdr-zen-menu" onchange="toggleHdrZenMenu(this.checked)">
-              Use Zenler's live navigation (auto-sync)
-            </label>
-            <p style="font-size:11px;color:var(--muted);margin:6px 0 0 22px;line-height:1.5;">When enabled, the snippet reads the navigation directly from Zenler's DOM — no manual updates needed when pages change. The CMS menu items below are still saved as fallback.</p>
-          </div>
-          <div id="hdr-manual-menu" style="">
-            <div id="hdr-menu-list"></div>
-            <button class="add-btn" onclick="addHdrMenuItem(null)" style="margin-top:8px;">+ Add Menu Item</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="header-status" class="status-msg" style="margin-top:16px;"></div>
-      <button class="pub-btn" onclick="generateHeaderHtml()" style="margin-top:8px;width:100%;">Generate &amp; Save</button>
-    </div>
-  </div>
-
-  <!-- Right: output -->
-  <div class="output-panel">
-    <div class="output-topbar">
-      <div id="hdr-ot-preview" class="out-tab active" onclick="switchHdrOut('preview')">Preview</div>
-      <div id="hdr-ot-code" class="out-tab" onclick="switchHdrOut('code')">Code</div>
-    </div>
-    <div id="hdr-out-preview" style="flex:1;overflow:auto;background:#f3f4f6;padding:0;">
-      <div id="hdr-preview-frame"></div>
-    </div>
-    <div id="hdr-out-code" style="display:none;flex:1;position:relative;">
-      <textarea id="hdr-code-box" class="code-output" readonly style="height:100%;"></textarea>
-      <button class="copy-code-btn" onclick="copyHdrCode()">Copy</button>
-    </div>
-  </div>
-
-</div>
-
-<!-- ═══════════════════════════════════════
-     SCREEN — FORM
-═══════════════════════════════════════ -->
-<div id="screen-form" class="screen">
-
-  <!-- Left: form config -->
-  <div class="form-panel" style="width:460px;">
-    <div class="form-inner">
-      <div class="section-label">Form Builder</div>
-
-      <div class="field">
-        <label>Form Title</label>
-        <input type="text" id="form-title" value="Course Enquiry Form" placeholder="Course Enquiry Form">
-      </div>
-      <div class="field">
-        <label>Submit Button Text</label>
-        <input type="text" id="form-submit-text" value="Submit Form" placeholder="Submit Form">
-      </div>
-
-      <div class="section-label" style="margin-top:16px;">Thank You Message</div>
-      <div class="field">
-        <label>Title</label>
-        <input type="text" id="form-ty-title" value="Form submitted" placeholder="Form submitted">
-      </div>
-      <div class="field">
-        <label>Description</label>
-        <textarea id="form-ty-desc" rows="2" placeholder="Thank you for sharing the information. We will contact you soon.">Thank you for sharing the information. We will contact you soon.</textarea>
-      </div>
-
-      <div class="field" style="margin-top:16px;">
-        <label>Recipient(s) <span style="font-weight:400;color:var(--muted);font-size:11px;">— separate multiple emails with ;</span></label>
-        <input type="text" id="form-recipients" placeholder="office@example.com; info@example.com">
-      </div>
-
-      <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;">
-        <div class="section-label" style="margin:0;">Enquiry Options</div>
-        <button class="btn-add-block" onclick="addEnquiryOption()" style="margin:0;width:auto;padding:6px 14px;">+ Add Option</button>
-      </div>
-      <div id="form-enquiry-list">
-        <div style="text-align:center;padding:12px;font-size:12px;color:var(--muted);">No options yet. Click + Add Option.</div>
-      </div>
-
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;">
-        <div id="form-status" style="font-size:12px;min-height:18px;"></div>
-        <button class="btn-gen" onclick="generateFormHtml()">&#x25B6; Generate &amp; Save</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Right: preview + code -->
-  <div class="output-panel">
-    <div class="output-topbar">
-      <div id="form-ot-preview" class="out-tab active" onclick="switchFormOut('preview')">Preview</div>
-      <div id="form-ot-code" class="out-tab" onclick="switchFormOut('code')">Code</div>
-    </div>
-    <div class="output-body" style="padding:0;">
-      <div id="form-out-preview" style="flex:1;overflow:auto;padding:32px;display:flex;justify-content:center;align-items:flex-start;background:#f3f4f6;">
-        <div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Click Generate &amp; Save to preview the form.</div>
-      </div>
-      <div id="form-out-code" style="display:none;position:relative;padding:16px;">
-        <button class="btn-copy" style="position:absolute;top:24px;right:24px;" onclick="doCopy('form-code-box',this)">Copy</button>
-        <pre class="code-box" id="form-code-box" style="min-height:300px;margin:0;"></pre>
-      </div>
-    </div>
-  </div>
-
-</div>
+<!-- Dynamically loaded screens are injected here -->
 
 </div><!-- .app -->
 
@@ -905,59 +333,46 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 var AUTH_ROLE_KEY = 'vls_auth_role';
 
 function applyRole(role) {
-  var bannerNav   = document.getElementById('nav-banner');
-  var eventsNav   = document.getElementById('nav-events');
-  var footerNav   = document.getElementById('nav-footer');
-  var programsNav = document.getElementById('nav-programs');
-  var formNav     = document.getElementById('nav-form');
-  var headerNav   = document.getElementById('nav-header');
+  var globalDd = document.getElementById('nav-global-dd');
+  var globalTile = document.getElementById('home-tile-global');
   if (role === 'admin') {
-    bannerNav.classList.remove('hidden');
-    eventsNav.classList.remove('hidden');
-    footerNav.classList.remove('hidden');
-    programsNav.classList.remove('hidden');
-    formNav.classList.remove('hidden');
-    headerNav.classList.remove('hidden');
+    globalDd.classList.remove('hidden');
+    if (globalTile) { globalTile.classList.add('visible'); }
   } else {
-    bannerNav.classList.add('hidden');
-    eventsNav.classList.add('hidden');
-    footerNav.classList.add('hidden');
-    programsNav.classList.add('hidden');
-    formNav.classList.add('hidden');
-    headerNav.classList.add('hidden');
+    globalDd.classList.add('hidden');
+    if (globalTile) { globalTile.classList.remove('visible'); }
     var active = document.querySelector('.screen.active');
-    if (active && ['screen-banner','screen-events','screen-footer','screen-programs','screen-form','screen-header'].indexOf(active.id) >= 0) {
-      switchScreen('intro');
+    if (active && ['screen-banner','screen-footer','screen-header'].indexOf(active.id) >= 0) {
+      switchScreen('home');
     }
   }
 }
 
-// ── Course dropdown ────────────────────────────────────────────
+// ── Nav dropdowns ──────────────────────────────────────────────
 
-function toggleCourseDropdown(e) {
+function toggleNavDd(name, e) {
   if (e) e.stopPropagation();
-  var dd = document.getElementById('nav-course-dd');
-  var menu = document.getElementById('nav-course-menu');
+  var dd = document.getElementById('nav-' + name + '-dd');
+  var menu = document.getElementById('nav-' + name + '-menu');
   var isOpen = dd.classList.contains('open');
-  if (isOpen) {
-    dd.classList.remove('open');
-    menu.classList.remove('open');
-  } else {
+  closeAllNavDds();
+  if (!isOpen) {
     dd.classList.add('open');
     menu.classList.add('open');
   }
 }
 
-function closeCourseDropdown() {
-  var dd = document.getElementById('nav-course-dd');
-  var menu = document.getElementById('nav-course-menu');
-  if (dd) dd.classList.remove('open');
-  if (menu) menu.classList.remove('open');
+function closeAllNavDds() {
+  document.querySelectorAll('.nav-dropdown').forEach(function(dd) {
+    dd.classList.remove('open');
+    var menu = dd.querySelector('.nav-dd-menu');
+    if (menu) menu.classList.remove('open');
+  });
 }
 
 document.addEventListener('click', function(e) {
-  var dd = document.getElementById('nav-course-dd');
-  if (dd && !dd.contains(e.target)) closeCourseDropdown();
+  var inDd = e.target.closest('.nav-dropdown');
+  if (!inDd) closeAllNavDds();
 });
 
 function globalCheckAuth() {
@@ -965,6 +380,7 @@ function globalCheckAuth() {
   if (role) {
     document.getElementById('global-auth-gate').classList.add('hidden');
     applyRole(role);
+    switchScreen('home');
   } else {
     document.getElementById('global-auth-gate').classList.remove('hidden');
     setTimeout(function() { var e = document.getElementById('global-email'); if (e) e.focus(); }, 80);
@@ -997,6 +413,7 @@ async function globalLogin() {
       document.getElementById('global-auth-gate').classList.add('hidden');
       passEl.value = '';
       applyRole(data.role);
+      switchScreen('home');
     } else {
       errEl.textContent = data.error || 'Invalid email or password.';
       passEl.value = '';
@@ -1039,33 +456,76 @@ function doCopy(id, btn) {
 
 // ── Screen switching ───────────────────────────────────────────
 
-var COURSE_SCREENS = ['intro', 'desc', 'tabs'];
+var _GLOBAL_SCREENS = ['header', 'footer', 'banner'];
+var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
+var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form'];
 
-function switchScreen(name) {
+var _screenFiles = {
+  intro:    '/screens/intro.html',
+  desc:     '/screens/desc.html',
+  tabs:     '/screens/tabs.html',
+  banner:   '/screens/banner.html',
+  events:   '/screens/events.html',
+  team:     '/screens/team.html',
+  footer:   '/screens/footer.html',
+  faq:      '/screens/faq.html',
+  programs: '/screens/programs.html',
+  header:   '/screens/header.html',
+  form:     '/screens/form.html',
+};
+var _loadedScreens = {};
+
+async function loadScreen(name) {
+  if (_loadedScreens[name]) return;
+  var url = _screenFiles[name];
+  if (!url) return;
+  try {
+    var resp = await fetch(url);
+    var html = await resp.text();
+    var modal = document.getElementById('evt-code-modal');
+    modal.insertAdjacentHTML('beforebegin', html);
+    _loadedScreens[name] = true;
+  } catch(e) {
+    console.error('Failed to load screen:', name, e);
+  }
+}
+
+async function switchScreen(name) {
+  closeAllNavDds();
+
+  if (name !== 'home') await loadScreen(name);
+
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
   document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
   document.querySelectorAll('.nav-dd-item').forEach(function(t) { t.classList.remove('active'); });
 
-  document.getElementById('screen-' + name).classList.add('active');
+  var screen = document.getElementById('screen-' + name);
+  if (screen) screen.classList.add('active');
 
-  if (COURSE_SCREENS.indexOf(name) >= 0) {
-    document.getElementById('nav-course').classList.add('active');
-    var item = document.getElementById('nav-' + name);
-    if (item) item.classList.add('active');
-  } else {
-    var tab = document.getElementById('nav-' + name);
-    if (tab) tab.classList.add('active');
+  if (name === 'home') {
+    document.getElementById('nav-home').classList.add('active');
+  } else if (_GLOBAL_SCREENS.indexOf(name) >= 0) {
+    document.getElementById('nav-global').classList.add('active');
+    var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
+  } else if (_PAGE_SCREENS.indexOf(name) >= 0) {
+    document.getElementById('nav-page').classList.add('active');
+    var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
+  } else if (_SHARED_SCREENS.indexOf(name) >= 0) {
+    document.getElementById('nav-shared').classList.add('active');
+    var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
   }
 
-  closeCourseDropdown();
-  if (name === 'events') eventsOnOpen();
-  if (name === 'faq') faqOnOpen();
-  if (name === 'team') teamOnOpen();
-  if (name === 'banner') bannerOnOpen();
-  if (name === 'footer') footerOnOpen();
+  if (name === 'intro' && !_loadedScreens._introInit) { _loadedScreens._introInit = true; introOnOpen(); }
+  if (name === 'desc'  && !_loadedScreens._descInit)  { _loadedScreens._descInit  = true; descOnOpen();  }
+  if (name === 'tabs'  && !_loadedScreens._tabsInit)  { _loadedScreens._tabsInit  = true; tabsOnOpen();  }
+  if (name === 'events')  eventsOnOpen();
+  if (name === 'faq')     faqOnOpen();
+  if (name === 'team')    teamOnOpen();
+  if (name === 'banner')  bannerOnOpen();
+  if (name === 'footer')  footerOnOpen();
   if (name === 'programs') programOnOpen();
-  if (name === 'form')     formOnOpen();
-  if (name === 'header')   headerOnOpen();
+  if (name === 'form')    formOnOpen();
+  if (name === 'header')  headerOnOpen();
 }
 
 function switchOut(screen, mode) {
@@ -1726,14 +1186,13 @@ function generateTabs() {
   switchOut('tabs', 'preview');
 }
 
-// ── Initialise pre-populated data ─────────────────────────────
+// ── Lazy screen initialisers (called once on first visit) ──────
 
-window.addEventListener('DOMContentLoaded', function() {
-
-  // Intro
+function introOnOpen() {
   introData.course.items.forEach(function(f) { addFeature(f); });
+}
 
-  // Description blocks
+function descOnOpen() {
   addDescBlock('heading-paragraph', { h: 'What this course covers', p: 'The FA1 syllabus is structured around five core capability areas, and our course walks you through each one systematically.' });
   addDescBlock('items', { h: '', items: [
     { h: 'Business transactions and documentation', p: 'Understand the types of transactions that occur in a business and the source documents that capture them: invoices, receipts, credit notes, and more. You\'ll learn how to identify and process these documents accurately.' },
@@ -1751,8 +1210,9 @@ window.addEventListener('DOMContentLoaded', function() {
   ]});
   addDescBlock('heading-paragraph', { h: 'Why study FA1 with VLS Online?', p: 'Our tutors have deep ACCA exam expertise and know exactly where students lose marks. The course is structured for efficient, focused study with no padding, no filler. You\'ll study at your own pace, revisit difficult topics as many times as you need, and arrive at your exam having practised the exact skills the examiner is testing.' });
   addDescBlock('note', { p: 'Note: Exam registration is handled directly through ACCA. Students must apply to ACCA separately for student membership and exam entry.' });
+}
 
-  // Course Tabs — dynamic system
+function tabsOnOpen() {
   tabsInit([
     {
       id: tabsMakeId(), label: 'About Course Package',
@@ -1801,7 +1261,7 @@ window.addEventListener('DOMContentLoaded', function() {
       ]
     }
   ]);
-});
+}
 
 
 // ── SCREEN 4: BANNER ───────────────────────────────────────────

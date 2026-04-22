@@ -1,0 +1,24 @@
+<div id="screen-tabs" class="screen">
+  <div class="form-panel"><div class="form-inner">
+    <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+      Tabs
+      <button class="btn-sm" onclick="tabsAddTab()">+ Add tab</button>
+    </div>
+    <div id="tabs-pill-bar" class="tab-pills"></div>
+    <div id="tabs-editor-area" style="display:flex;flex-direction:column;gap:14px;"></div>
+    <button class="btn-gen" onclick="generateTabs()">Generate HTML</button>
+  </div></div>
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="tabs-ot-preview" onclick="switchOut('tabs','preview')">Preview</div>
+      <div class="out-tab" id="tabs-ot-html" onclick="switchOut('tabs','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="tabs-preview-wrap" class="preview-wrap"></div>
+      <div id="tabs-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('tabs-code',this)">Copy</button>
+        <pre id="tabs-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>

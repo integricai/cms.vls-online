@@ -1,0 +1,36 @@
+<div id="screen-footer" class="screen">
+
+  <div class="form-panel"><div class="form-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="section-label" style="margin:0;">Footer Builder</div>
+      <button class="btn-gen" style="padding:8px 18px;font-size:13px;" onclick="generateAndSaveFooter()">&#x1F4BE; Save &amp; Generate</button>
+    </div>
+    <div id="footer-form-body">
+      <div style="text-align:center;font-size:12px;color:var(--muted);padding:32px 0;">Loading…</div>
+    </div>
+    <div id="footer-status" style="font-size:12px;text-align:center;min-height:16px;margin-top:8px;color:var(--muted);"></div>
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="footer-ot-preview" onclick="switchFooterOut('preview')">Preview</div>
+      <div class="out-tab" id="footer-ot-code" onclick="switchFooterOut('code')">HTML Code</div>
+    </div>
+    <div class="output-body" style="padding:0;">
+      <div id="footer-out-preview" style="min-height:200px;">
+        <div id="footer-preview-body">
+          <div style="padding:40px;text-align:center;font-size:13px;color:var(--muted);">Fill in the form and click "Save &amp; Generate" to preview the footer here.</div>
+        </div>
+      </div>
+      <div id="footer-out-code" style="display:none;padding:16px;">
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:8px;">
+          Copy this HTML and paste it into your site's footer area.
+        </div>
+        <div style="position:relative;">
+          <button class="btn-copy" style="position:absolute;top:8px;right:8px;" onclick="doCopy('footer-html-code',this)">Copy</button>
+          <pre id="footer-html-code" class="code-box" style="min-height:80px;font-size:11px;padding-top:36px;"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
