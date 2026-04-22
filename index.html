@@ -482,8 +482,7 @@ async function loadScreen(name) {
   try {
     var resp = await fetch(url);
     var html = await resp.text();
-    var modal = document.getElementById('evt-code-modal');
-    modal.insertAdjacentHTML('beforebegin', html);
+    document.querySelector('.app').insertAdjacentHTML('beforeend', html);
     _loadedScreens[name] = true;
   } catch(e) {
     console.error('Failed to load screen:', name, e);
