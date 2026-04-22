@@ -3857,7 +3857,7 @@ function buildProgramsHtml(uid, topics, allCards) {
     + '</div>';
 
   // All function and variable names are uid-prefixed to avoid global collisions
-  var script = '<script>\n'
+  var script = '<script data-cfasync="false">\n'
     + '(function(){\n'
     + '  var D=' + dataJson + ';\n'
     + '  var PS=9;\n'
@@ -4213,7 +4213,7 @@ function buildFormOutputHtml(uid, cfg, apiUrl) {
     + '  </div>\n'
     + '</div>';
 
-  var script = '<script>\n'
+  var script = '<script data-cfasync="false">\n'
     + '(function(){\n'
     + '  var API="' + apiUrl + '";\n'
     + '  var RCP=' + rcpJson + ';\n'
@@ -4729,7 +4729,7 @@ function buildHeaderOutputHtml(uid, cfg) {
     + '</div></div>'
     + '</div>';
 
-  var script = '<script>(function(){'
+  var script = '<script data-cfasync="false">(function(){'
     + 'var P="'+uid+'";\n'
     + 'var overflowCheck=null;\n'
     + 'function detectLoggedIn(){'
