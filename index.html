@@ -4671,6 +4671,7 @@ function buildHeaderOutputHtml(uid, cfg) {
     /* Mobile */
     + '@media(max-width:768px){'
     + '.'+uid+'-burger{display:flex;}'
+    + '.'+uid+'-ni:hover>.'+uid+'-drop{display:none;}'
     + '.'+uid+'-nav{display:none;position:absolute;top:100%;left:0;right:0;background:'+q(cfg.menuBg)+';z-index:9998;border-top:1px solid rgba(0,0,0,.1);}'
     + '.'+uid+'-nav.'+uid+'-open{display:block;}'
     + '.'+uid+'-ul{flex-direction:column;align-items:stretch;}'
@@ -4729,7 +4730,7 @@ function buildHeaderOutputHtml(uid, cfg) {
     + '</div></div>'
     + '</div>';
 
-  var script = '<script data-cfasync="false">(function(){'
+  var script = '<script type="module" data-cfasync="false">(function(){'
     + 'var P="'+uid+'";\n'
     + 'var overflowCheck=null;\n'
     + 'function detectLoggedIn(){'
