@@ -467,6 +467,24 @@ function xH(s) {
 function xA(s) {
   return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
 }
+function buildScrollHelperScript(uid) {
+  return '<script data-cfasync="false">(function(){'
+    + 'window.' + uid + 'Scroll=function(sel){'
+    + 'if(!sel)return false;'
+    + 'var el=null;'
+    + 'try{el=document.querySelector(sel);}catch(e){}'
+    + 'var clean=String(sel).replace(/^[#.]/,"").trim();'
+    + 'if(!el&&clean){'
+    + 'el=document.getElementById(clean)'
+    + '||document.querySelector(\'[data-scroll-target="\'+clean+\'"]\')'
+    + '||document.querySelector(\'[data-vls-anchor="\'+clean+\'"]\')'
+    + '||document.querySelector(\'[name="\'+clean+\'"]\');'
+    + 'if(!el){try{el=document.querySelector(\'.\'+clean);}catch(e){}}'
+    + '}'
+    + 'if(el&&el.scrollIntoView){el.scrollIntoView({behavior:"smooth",block:"start"});}'
+    + 'return false;'
+    + '};})();<\/script>';
+}
 function doCopy(id, btn) {
   var text = document.getElementById(id).textContent;
   navigator.clipboard.writeText(text).then(function() {
@@ -4219,7 +4237,7 @@ function buildFormOutputHtml(uid, cfg, apiUrl) {
 
   var rcpJson = JSON.stringify((cfg.recipients || []).filter(function(r) { return r.indexOf('@') > 0; }));
 
-  var markup = '<div class="' + uid + '-wrap">\n'
+  var markup = '<div class="' + uid + '-wrap section-form" data-scroll-target="enquire" data-vls-anchor="contact">\n'
     + '  <div class="' + uid + '-card">\n'
     + '    <div id="' + uid + '-fv">\n'
     + '      <h2 class="' + uid + '-title">' + e(cfg.formTitle) + '</h2>\n'
@@ -5407,6 +5425,8 @@ function generateHero() {
       '<div class="' + uid + '-sl">' + xH(s.l) + '</div>' +
       '</div>';
   }).join('');
+  var b1ScrollAttr = b1s ? ' onclick="return ' + uid + 'Scroll(' + JSON.stringify(String(b1s)).replace(/"/g, '&quot;') + ')"' : '';
+  var b2ScrollAttr = b2s ? ' onclick="return ' + uid + 'Scroll(' + JSON.stringify(String(b2s)).replace(/"/g, '&quot;') + ')"' : '';
 
   var h2Size = Math.round(h1Size * 0.5);
 
@@ -5437,18 +5457,14 @@ function generateHero() {
     (desc ? '<p class="' + uid + '-desc">' + xH(desc) + '</p>' : '') +
     (tags.length ? '<div class="' + uid + '-tags">' + tagsHtml + '</div>' : '') +
     ((b1t || b2t) ? '<div class="' + uid + '-btns">' +
-      (b1t ? '<a href="' + (b1s ? '#' : xA(b1u || '#')) + '" class="' + uid + '-b1"' +
-        (b1s ? ' onclick="var el=document.querySelector(\'' + xA(b1s) + '\');if(el){el.scrollIntoView({behavior:\'smooth\'});}return false;"' : '') +
-        '>' + xH(b1t) + '</a>' : '') +
-      (b2t ? '<a href="' + (b2s ? '#' : xA(b2u || '#')) + '" class="' + uid + '-b2"' +
-        (b2s ? ' onclick="var el=document.querySelector(\'' + xA(b2s) + '\');if(el){el.scrollIntoView({behavior:\'smooth\'});}return false;"' : '') +
-        '>' + xH(b2t) + '</a>' : '') +
+      (b1t ? '<a href="' + (b1s ? '#' : xA(b1u || '#')) + '" class="' + uid + '-b1"' + b1ScrollAttr + '>' + xH(b1t) + '</a>' : '') +
+      (b2t ? '<a href="' + (b2s ? '#' : xA(b2u || '#')) + '" class="' + uid + '-b2"' + b2ScrollAttr + '>' + xH(b2t) + '</a>' : '') +
       '</div>' : '') +
     (stats.length ? '<div class="' + uid + '-div"></div><div class="' + uid + '-stats">' + statsHtml + '</div>' : '') +
     '</div>';
 
   var fontLink = '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n';
-  var html = fontLink + css + '\n' + body;
+  var html = fontLink + css + '\n' + body + '\n' + buildScrollHelperScript(uid);
 
   document.getElementById('hero-code').textContent = html;
   document.getElementById('hero-preview-wrap').innerHTML = html;
@@ -6527,6 +6543,8 @@ function buildHeroHtml(data) {
   var statsHtml = (data.stats || []).map(function(stat) {
     return '<div class="' + uid + '-stat"><div class="' + uid + '-sv">' + xH(stat.v) + '</div><div class="' + uid + '-sl">' + xH(stat.l) + '</div></div>';
   }).join('');
+  var b1ScrollAttr = data.b1s ? ' onclick="return ' + uid + 'Scroll(' + JSON.stringify(String(data.b1s)).replace(/"/g, '&quot;') + ')"' : '';
+  var b2ScrollAttr = data.b2s ? ' onclick="return ' + uid + 'Scroll(' + JSON.stringify(String(data.b2s)).replace(/"/g, '&quot;') + ')"' : '';
   var h2Size = Math.round((parseInt(data.h1Size, 10) || 44) * 0.5);
 
   var css = '<style>'
@@ -6554,13 +6572,13 @@ function buildHeroHtml(data) {
     + (data.desc ? '<p class="' + uid + '-desc">' + xH(data.desc) + '</p>' : '')
     + (tagsHtml ? '<div class="' + uid + '-tags">' + tagsHtml + '</div>' : '')
     + ((data.b1t || data.b2t) ? '<div class="' + uid + '-btns">'
-      + (data.b1t ? '<a href="' + (data.b1s ? '#' : xA(data.b1u || '#')) + '" class="' + uid + '-b1"' + (data.b1s ? ' onclick="var el=document.querySelector(\'' + xA(data.b1s) + '\');if(el){el.scrollIntoView({behavior:\'smooth\'});}return false;"' : '') + '>' + xH(data.b1t) + '</a>' : '')
-      + (data.b2t ? '<a href="' + (data.b2s ? '#' : xA(data.b2u || '#')) + '" class="' + uid + '-b2"' + (data.b2s ? ' onclick="var el=document.querySelector(\'' + xA(data.b2s) + '\');if(el){el.scrollIntoView({behavior:\'smooth\'});}return false;"' : '') + '>' + xH(data.b2t) + '</a>' : '')
+      + (data.b1t ? '<a href="' + (data.b1s ? '#' : xA(data.b1u || '#')) + '" class="' + uid + '-b1"' + b1ScrollAttr + '>' + xH(data.b1t) + '</a>' : '')
+      + (data.b2t ? '<a href="' + (data.b2s ? '#' : xA(data.b2u || '#')) + '" class="' + uid + '-b2"' + b2ScrollAttr + '>' + xH(data.b2t) + '</a>' : '')
       + '</div>' : '')
     + (statsHtml ? '<div class="' + uid + '-div"></div><div class="' + uid + '-stats">' + statsHtml + '</div>' : '')
     + '</div>';
 
-  return '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n' + css + '\n' + body;
+  return '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n' + css + '\n' + body + '\n' + buildScrollHelperScript(uid);
 }
 
 function heroRenderCurrent(showPreview) {
