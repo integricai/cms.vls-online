@@ -4971,8 +4971,10 @@ function generateHero() {
   var desc    = document.getElementById('hero-desc').value.trim();
   var b1t     = document.getElementById('hero-btn1-text').value.trim();
   var b1u     = document.getElementById('hero-btn1-url').value.trim();
+  var b1s     = document.getElementById('hero-btn1-scroll').value.trim();
   var b2t     = document.getElementById('hero-btn2-text').value.trim();
   var b2u     = document.getElementById('hero-btn2-url').value.trim();
+  var b2s     = document.getElementById('hero-btn2-scroll').value.trim();
 
   var tags = [];
   document.querySelectorAll('#hero-tags .hero-tag-input').forEach(function(inp) {
@@ -5003,7 +5005,7 @@ function generateHero() {
   var css =
     '<style>' +
     '.' + uid + '{font-family:\'Poppins\',sans-serif;max-width:' + maxW + ';padding:' + padTop + 'px 0 ' + padBot + 'px;box-sizing:border-box;}' +
-    '.' + uid + '-ey{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#204280;margin-bottom:14px;}' +
+    '.' + uid + '-ey{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#204280;margin-bottom:14px;}' +
     '.' + uid + '-h1{font-size:' + h1Size + 'px;font-weight:700;color:#1a1a1a;line-height:1.15;margin:0 0 6px;}' +
     '.' + uid + '-h1 em{font-style:normal;color:#204280;}' +
     '.' + uid + '-h2{font-size:' + h2Size + 'px;font-weight:600;color:#374151;margin:10px 0 0;line-height:1.35;}' +
@@ -5021,14 +5023,18 @@ function generateHero() {
 
   var body =
     '<div class="' + uid + '">' +
-    (eyebrow ? '<div class="' + uid + '-ey">' + xH(eyebrow) + '</div>' : '') +
+    (eyebrow ? '<h2 class="' + uid + '-ey">' + xH(eyebrow) + '</h2>' : '') +
     (h1 ? '<h1 class="' + uid + '-h1">' + xH(h1) + (h1hl ? '<br><em>' + xH(h1hl) + '</em>' : '') + '</h1>' : '') +
     (h2  ? '<h2 class="' + uid + '-h2">' + xH(h2) + '</h2>' : '') +
     (desc ? '<p class="' + uid + '-desc">' + xH(desc) + '</p>' : '') +
     (tags.length ? '<div class="' + uid + '-tags">' + tagsHtml + '</div>' : '') +
     ((b1t || b2t) ? '<div class="' + uid + '-btns">' +
-      (b1t ? '<a href="' + xA(b1u || '#') + '" class="' + uid + '-b1">' + xH(b1t) + '</a>' : '') +
-      (b2t ? '<a href="' + xA(b2u || '#') + '" class="' + uid + '-b2">' + xH(b2t) + '</a>' : '') +
+      (b1t ? '<a href="' + (b1s ? '#' : xA(b1u || '#')) + '" class="' + uid + '-b1"' +
+        (b1s ? ' onclick="var el=document.querySelector(\'' + xA(b1s) + '\');if(el){el.scrollIntoView({behavior:\'smooth\'});}return false;"' : '') +
+        '>' + xH(b1t) + '</a>' : '') +
+      (b2t ? '<a href="' + (b2s ? '#' : xA(b2u || '#')) + '" class="' + uid + '-b2"' +
+        (b2s ? ' onclick="var el=document.querySelector(\'' + xA(b2s) + '\');if(el){el.scrollIntoView({behavior:\'smooth\'});}return false;"' : '') +
+        '>' + xH(b2t) + '</a>' : '') +
       '</div>' : '') +
     (stats.length ? '<div class="' + uid + '-div"></div><div class="' + uid + '-stats">' + statsHtml + '</div>' : '') +
     '</div>';
