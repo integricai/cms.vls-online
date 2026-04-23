@@ -252,6 +252,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-programs" onclick="switchScreen('programs')">Program Cards</div>
       <div class="nav-dd-item" id="nav-form" onclick="switchScreen('form')">Form</div>
       <div class="nav-dd-item" id="nav-feature-cards" onclick="switchScreen('feature-cards')">Feature Cards</div>
+      <div class="nav-dd-item" id="nav-steps-section" onclick="switchScreen('steps-section')">Steps Section</div>
     </div>
   </div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
@@ -295,12 +296,13 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       </div>
       <div class="home-tile">
         <div class="home-tile-title">Shared Components</div>
-        <div class="home-tile-desc">Reusable across multiple pages — FAQs, events calendar, program cards, feature cards, and enquiry forms.</div>
+        <div class="home-tile-desc">Reusable across multiple pages — FAQs, events calendar, program cards, feature cards, steps sections, and enquiry forms.</div>
         <div class="home-tile-links">
           <button class="home-tile-link" onclick="switchScreen('faq')">FAQ</button>
           <button class="home-tile-link" onclick="switchScreen('events')">Events</button>
           <button class="home-tile-link" onclick="switchScreen('programs')">Program Cards</button>
           <button class="home-tile-link" onclick="switchScreen('feature-cards')">Feature Cards</button>
+          <button class="home-tile-link" onclick="switchScreen('steps-section')">Steps Section</button>
           <button class="home-tile-link" onclick="switchScreen('form')">Form</button>
         </div>
       </div>
@@ -475,11 +477,12 @@ function doCopy(id, btn) {
 var _GLOBAL_SCREENS = ['header', 'footer', 'banner'];
 var _HOME_SCREENS   = ['hero'];
 var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
-var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards'];
+var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards', 'steps-section'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
   'feature-cards': '/screens/feature-cards.html',
+  'steps-section': '/screens/steps-section.html',
   intro:    '/screens/intro.html',
   desc:     '/screens/desc.html',
   tabs:     '/screens/tabs.html',
@@ -538,6 +541,7 @@ async function switchScreen(name) {
 
   if (name === 'hero'         && !_loadedScreens._heroInit)  { _loadedScreens._heroInit  = true; heroOnOpen();  }
   if (name === 'feature-cards' && !_loadedScreens._fcInit)   { _loadedScreens._fcInit    = true; featureCardsOnOpen(); }
+  if (name === 'steps-section' && !_loadedScreens._stepsInit) { _loadedScreens._stepsInit = true; stepsSectionOnOpen(); }
   if (name === 'intro' && !_loadedScreens._introInit) { _loadedScreens._introInit = true; introOnOpen(); }
   if (name === 'desc'  && !_loadedScreens._descInit)  { _loadedScreens._descInit  = true; descOnOpen();  }
   if (name === 'tabs'  && !_loadedScreens._tabsInit)  { _loadedScreens._tabsInit  = true; tabsOnOpen();  }
@@ -5038,6 +5042,97 @@ function generateFeatureCards() {
   document.getElementById('feature-cards-code').textContent = html;
   document.getElementById('feature-cards-preview-wrap').innerHTML = html;
   switchOut('feature-cards', 'preview');
+}
+
+// ── Steps Section ─────────────────────────────────────────────
+
+function stepsSectionOnOpen() {
+  var defaults = [
+    {title:'Choose a course', desc:'Browse by topic, or coach and find the right fit.'},
+    {title:'Enrol in minutes', desc:'Sign up via Zenler and get instant access on any device.'},
+    {title:'Learn at your pace', desc:'Video lessons, resources, and live coaching sessions.'},
+    {title:'Track your growth', desc:'Milestones, feedback, and a certificate on completion.'}
+  ];
+  defaults.forEach(function(d) { stepsSectionAddCard(d, true); });
+  generateStepsSection();
+}
+
+function stepsSectionAddCard(data, startCollapsed) {
+  var list  = document.getElementById('ss-cards');
+  var id    = 'ssc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var label = (data && data.title) ? data.title : 'New Step';
+  var div   = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">' +
+      '<span class="block-header-label">' + xH(label) + '</span>' +
+      '<span class="block-type-badge">Step</span>' +
+      '<button class="btn-sm danger" onclick="event.stopPropagation();document.getElementById(\'' + id + '\').remove()" style="margin-left:auto">Remove</button>' +
+    '</div>' +
+    '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">' +
+      '<div class="field"><label>Card title</label><input type="text" class="ss-ti" value="' + xA((data && data.title) || '') + '" placeholder="e.g. Choose a course" oninput="this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=this.value||\'New Step\'"></div>' +
+      '<div class="field"><label>Description</label><textarea class="ss-de" rows="3" placeholder="Briefly explain this step">' + xH((data && data.desc) || '') + '</textarea></div>' +
+    '</div>';
+  list.appendChild(div);
+}
+
+function generateStepsSection() {
+  var uid = 'ss' + Date.now().toString(36);
+
+  var secEy    = document.getElementById('ss-eyebrow').value.trim();
+  var secTitle = document.getElementById('ss-title').value.trim();
+  var secDesc  = document.getElementById('ss-desc').value.trim();
+  var bgHex    = document.getElementById('ss-bg-hex').value.trim();
+  var bg       = /^#[0-9a-fA-F]{6}$/.test(bgHex) ? bgHex : document.getElementById('ss-bg-cp').value;
+
+  var cards = [];
+  document.querySelectorAll('#ss-cards .block-item').forEach(function(item) {
+    var title = item.querySelector('.ss-ti').value.trim();
+    var desc  = item.querySelector('.ss-de').value.trim();
+    if (title || desc) cards.push({title:title, desc:desc});
+  });
+
+  var cardsHtml = cards.map(function(c, i) {
+    return '<div class="' + uid + '-card">' +
+      '<div class="' + uid + '-num">' + (i + 1) + '</div>' +
+      (c.title ? '<h3 class="' + uid + '-ctitle">' + xH(c.title) + '</h3>' : '') +
+      (c.desc ? '<p class="' + uid + '-cdesc">' + xH(c.desc) + '</p>' : '') +
+      '</div>';
+  }).join('\n');
+
+  var css =
+    '<style>' +
+    '.' + uid + '{font-family:\'Poppins\',sans-serif;background-color:' + xA(bg) + ';padding:48px 32px;box-sizing:border-box;}' +
+    '.' + uid + '-inner{max-width:1100px;margin:0 auto;}' +
+    '.' + uid + '-ey{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#204280;margin:0 0 10px;}' +
+    '.' + uid + '-title{font-size:26px;font-weight:600;color:#1a1a1a;margin:0 0 8px;line-height:1.25;}' +
+    '.' + uid + '-desc{font-size:15px;font-weight:400;color:#3f3f46;margin:0 0 28px;line-height:1.6;}' +
+    '.' + uid + '-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}' +
+    '.' + uid + '-card{background:rgba(255,255,255,.54);border-radius:6px;padding:16px 16px 18px;min-height:142px;box-sizing:border-box;}' +
+    '.' + uid + '-num{width:28px;height:28px;border-radius:999px;background:#0f1f3a;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;margin:0 0 10px;}' +
+    '.' + uid + '-ctitle{font-size:14px;font-weight:600;color:#202124;margin:0 0 6px;line-height:1.35;}' +
+    '.' + uid + '-cdesc{font-size:13px;font-weight:400;color:#30343b;margin:0;line-height:1.55;}' +
+    '@media(max-width:900px){.' + uid + '-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}' +
+    '@media(max-width:640px){.' + uid + '{padding:36px 20px;}.' + uid + '-title{font-size:24px;}.' + uid + '-grid{grid-template-columns:1fr;}}' +
+    '</style>';
+
+  var body =
+    '<section class="' + uid + '">' +
+      '<div class="' + uid + '-inner">' +
+        (secEy    ? '<div class="' + uid + '-ey">' + xH(secEy) + '</div>' : '') +
+        (secTitle ? '<h2 class="' + uid + '-title">' + xH(secTitle) + '</h2>' : '') +
+        (secDesc  ? '<p class="' + uid + '-desc">' + xH(secDesc) + '</p>' : '') +
+        (cards.length ? '<div class="' + uid + '-grid">' + cardsHtml + '</div>' : '') +
+      '</div>' +
+    '</section>';
+
+  var fontLink = '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n';
+  var html = fontLink + css + '\n' + body;
+
+  document.getElementById('steps-section-code').textContent = html;
+  document.getElementById('steps-section-preview-wrap').innerHTML = html;
+  switchOut('steps-section', 'preview');
 }
 
 function copyHdrCode() {

@@ -1,0 +1,45 @@
+<div id="screen-steps-section" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <div class="section-label">Section Header</div>
+    <div class="field">
+      <label>Eyebrow text</label>
+      <input type="text" id="ss-eyebrow" value="HOW IT WORKS">
+    </div>
+    <div class="field">
+      <label>Section title</label>
+      <input type="text" id="ss-title" value="Four steps to results">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="ss-desc" rows="3">No fluff. A clear path from sign-up to transformation.</textarea>
+    </div>
+    <div class="field">
+      <label>Section background colour</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="color" id="ss-bg-cp" value="#f7f6f1" oninput="document.getElementById('ss-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+        <input type="text" id="ss-bg-hex" value="#f7f6f1" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value))document.getElementById('ss-bg-cp').value=this.value">
+      </div>
+    </div>
+
+    <div class="section-label">Step Cards</div>
+    <div id="ss-cards" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="stepsSectionAddCard()">+ Add step card</button>
+
+    <button class="btn-gen" onclick="generateStepsSection()">Generate HTML</button>
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="steps-section-ot-preview" onclick="switchOut('steps-section','preview')">Preview</div>
+      <div class="out-tab" id="steps-section-ot-html" onclick="switchOut('steps-section','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="steps-section-preview-wrap" class="preview-wrap"></div>
+      <div id="steps-section-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('steps-section-code',this)">Copy</button>
+        <pre id="steps-section-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>
