@@ -5451,6 +5451,1300 @@ function generateHero() {
   switchOut('hero', 'preview');
 }
 
+// ── Persisted Section Managers ───────────────────────────────
+
+function cmsSetStatus(id, text, color, clearMs) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text || '';
+  el.style.color = color || 'var(--muted)';
+  if (clearMs) {
+    setTimeout(function() {
+      if (el.textContent === text) el.textContent = '';
+    }, clearMs);
+  }
+}
+
+function cmsMaxSectionCounter(sections, prefix) {
+  var max = 0;
+  (sections || []).forEach(function(sec) {
+    var num = parseInt(String((sec || {}).id || '').replace(prefix, ''), 10);
+    if (num > max) max = num;
+  });
+  return max;
+}
+
+function cmsRenderSectionList(listId, sections, activeId, selectFn, deleteFn, metaFn, emptyText) {
+  var list = document.getElementById(listId);
+  if (!list) return;
+  if (!sections.length) {
+    list.innerHTML = '<div style="text-align:center;padding:16px;font-size:12px;color:var(--muted);">' + xH(emptyText || 'No saved sections yet.') + '</div>';
+    return;
+  }
+  list.innerHTML = sections.map(function(sec) {
+    var active = sec.id === activeId;
+    var meta = metaFn ? metaFn(sec) : '';
+    return '<div class="block-item" style="cursor:pointer;border-color:' + (active ? 'var(--purple)' : 'var(--border)') + ';" onclick="' + selectFn + '(\'' + sec.id + '\')">'
+      + '<div class="block-body" style="border-top:none;padding:10px 12px;display:flex;flex-direction:row;align-items:center;gap:10px;background:' + (active ? 'var(--purple-light)' : '#fff') + ';">'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:12px;font-weight:600;color:' + (active ? 'var(--purple)' : 'var(--blue)') + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + xH(sec.name || 'Untitled section') + '</div>'
+      + (meta ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + xH(meta) + '</div>' : '')
+      + '</div>'
+      + (active ? '<span class="block-type-badge">Active</span>' : '')
+      + '<button class="btn-sm danger" onclick="event.stopPropagation();' + deleteFn + '(\'' + sec.id + '\')">Delete</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function cmsRenderScreenHtml(screenName, html, showPreview) {
+  var code = document.getElementById(screenName + '-code');
+  var preview = document.getElementById(screenName + '-preview-wrap');
+  if (code) code.textContent = html;
+  if (preview) preview.innerHTML = html;
+  if (showPreview) switchOut(screenName, 'preview');
+}
+
+function cmsRenderScreenEmpty(screenName, message, showPreview) {
+  var code = document.getElementById(screenName + '-code');
+  var preview = document.getElementById(screenName + '-preview-wrap');
+  if (code) code.textContent = '<!-- ' + message + ' -->';
+  if (preview) preview.innerHTML = '<div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">' + xH(message) + '</div>';
+  if (showPreview) switchOut(screenName, 'preview');
+}
+
+function cmsSaveSections(url, sections, statusId, savingText, savedText) {
+  cmsSetStatus(statusId, savingText || 'Saving…', 'var(--muted)');
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sections: sections })
+  })
+  .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+  .then(function(resp) {
+    if (resp.ok && resp.data && resp.data.ok) {
+      cmsSetStatus(statusId, savedText || 'Saved!', 'green', 1800);
+      return true;
+    }
+    cmsSetStatus(statusId, 'Error: ' + (((resp || {}).data || {}).error || 'Unknown'), 'red');
+    return false;
+  })
+  .catch(function() {
+    cmsSetStatus(statusId, 'Network error', 'red');
+    return false;
+  });
+}
+
+// ── Feature Cards persisted sections ─────────────────────────
+
+var featureCardsStore = { sections: [], activeId: '', counter: 0, loaded: false, bound: false, timer: null };
+
+function featureCardsDefaultSection() {
+  var id = 'fcs' + (++featureCardsStore.counter);
+  return {
+    id: id,
+    name: 'Feature Cards Section ' + featureCardsStore.counter,
+    eyebrow: 'FEATURED COURSES',
+    title: 'Start learning today',
+    desc: 'Structured courses built for real outcomes. Pick a track that matches your goals and get started in minutes.',
+    cards: [
+      { color: '#204280', eyebrow: 'Leadership', title: 'Leadership Fundamentals for Managers', subtitle: 'Coach: James Okafor', ctaText: 'Enrol →', ctaUrl: '#' },
+      { color: '#1a5c50', eyebrow: 'Mindset', title: 'Mindset & Resilience Coaching', subtitle: 'Coach: Priya Sharma', ctaText: 'Enrol →', ctaUrl: '#' },
+      { color: '#6b4c1a', eyebrow: 'Career', title: 'Career Acceleration: Land Your Next Role', subtitle: 'Coach: Marcus Bell', ctaText: 'Enrol →', ctaUrl: '#' }
+    ]
+  };
+}
+
+function featureCardsCurrentSection() {
+  return featureCardsStore.sections.find(function(sec) { return sec.id === featureCardsStore.activeId; }) || null;
+}
+
+function featureCardsReadFormData() {
+  return {
+    name: (document.getElementById('fc-name') || {}).value || '',
+    eyebrow: (document.getElementById('fc-eyebrow') || {}).value || '',
+    title: (document.getElementById('fc-title') || {}).value || '',
+    desc: (document.getElementById('fc-desc') || {}).value || '',
+    cards: Array.prototype.slice.call(document.querySelectorAll('#fc-cards .block-item')).map(function(item) {
+      return {
+        color: item.querySelector('.fc-cp').value,
+        eyebrow: item.querySelector('.fc-ey').value.trim(),
+        title: item.querySelector('.fc-ti').value.trim(),
+        subtitle: item.querySelector('.fc-su').value.trim(),
+        ctaText: item.querySelector('.fc-ctat').value.trim(),
+        ctaUrl: item.querySelector('.fc-ctau').value.trim()
+      };
+    }).filter(function(card) { return card.title; })
+  };
+}
+
+function featureCardsFillForm(sec) {
+  document.getElementById('fc-name').value = sec.name || '';
+  document.getElementById('fc-eyebrow').value = sec.eyebrow || '';
+  document.getElementById('fc-title').value = sec.title || '';
+  document.getElementById('fc-desc').value = sec.desc || '';
+  document.getElementById('fc-cards').innerHTML = '';
+  (sec.cards || []).forEach(function(card) { featureCardsAddCard(card, true, true); });
+}
+
+function featureCardsSyncCurrent() {
+  var sec = featureCardsCurrentSection();
+  if (!sec) return null;
+  var data = featureCardsReadFormData();
+  sec.name = data.name;
+  sec.eyebrow = data.eyebrow;
+  sec.title = data.title;
+  sec.desc = data.desc;
+  sec.cards = data.cards;
+  return sec;
+}
+
+function buildFeatureCardsHtml(data) {
+  var uid = 'fc' + Date.now().toString(36);
+  var cardsHtml = (data.cards || []).map(function(card) {
+    return '<div class="' + uid + '-card">'
+      + '<div class="' + uid + '-top" style="background:' + xA(card.color || '#204280') + '">'
+      + (card.eyebrow ? '<span class="' + uid + '-badge">' + xH(card.eyebrow) + '</span>' : '')
+      + '</div>'
+      + '<div class="' + uid + '-body">'
+      + '<h3 class="' + uid + '-ti">' + xH(card.title || '') + '</h3>'
+      + (card.subtitle ? '<p class="' + uid + '-su">' + xH(card.subtitle) + '</p>' : '')
+      + (card.ctaText ? '<a href="' + xA(card.ctaUrl || '#') + '" class="' + uid + '-cta">' + xH(card.ctaText) + '</a>' : '')
+      + '</div>'
+      + '</div>';
+  }).join('\n');
+
+  var css = '<style>'
+    + '.' + uid + '{font-family:\'Poppins\',sans-serif;}'
+    + '.' + uid + '-ey{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#204280;margin-bottom:12px;}'
+    + '.' + uid + '-stitle{font-size:32px;font-weight:700;color:#1a1a1a;margin:0 0 12px;line-height:1.2;}'
+    + '.' + uid + '-desc{font-size:15px;font-weight:400;color:#374151;margin:0 0 32px;line-height:1.7;}'
+    + '.' + uid + '-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}'
+    + '@media(max-width:900px){.' + uid + '-grid{grid-template-columns:repeat(2,1fr);}}'
+    + '@media(max-width:600px){.' + uid + '-grid{grid-template-columns:1fr;}}'
+    + '.' + uid + '-card{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#fff;}'
+    + '.' + uid + '-top{height:180px;padding:16px;display:flex;align-items:flex-end;}'
+    + '.' + uid + '-badge{display:inline-block;padding:5px 14px;background:rgba(255,255,255,0.2);border-radius:999px;font-size:12px;font-weight:600;color:#fff !important;letter-spacing:.04em;}'
+    + '.' + uid + '-body{padding:20px;}'
+    + '.' + uid + '-ti{font-size:16px;font-weight:700;color:#1a1a1a;margin:0 0 6px;line-height:1.35;}'
+    + '.' + uid + '-su{font-size:13px;color:#6b7280;margin:0 0 16px;font-weight:400;}'
+    + '.' + uid + '-cta{font-size:13px;font-weight:600;color:#204280 !important;text-decoration:none !important;}'
+    + '.' + uid + '-cta:hover{text-decoration:underline !important;}'
+    + '</style>';
+
+  var body = '<div class="' + uid + '">'
+    + (data.eyebrow ? '<div class="' + uid + '-ey">' + xH(data.eyebrow) + '</div>' : '')
+    + (data.title ? '<h2 class="' + uid + '-stitle">' + xH(data.title) + '</h2>' : '')
+    + (data.desc ? '<p class="' + uid + '-desc">' + xH(data.desc) + '</p>' : '')
+    + (cardsHtml ? '<div class="' + uid + '-grid">' + cardsHtml + '</div>' : '')
+    + '</div>';
+
+  return '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n' + css + '\n' + body;
+}
+
+function featureCardsRenderCurrent(showPreview) {
+  var sec = featureCardsCurrentSection();
+  if (!sec) {
+    cmsRenderScreenEmpty('feature-cards', 'Create a feature cards section to preview it here.', showPreview);
+    return;
+  }
+  cmsRenderScreenHtml('feature-cards', buildFeatureCardsHtml(sec), showPreview);
+}
+
+function featureCardsRenderSectionList() {
+  cmsRenderSectionList('fc-section-list', featureCardsStore.sections, featureCardsStore.activeId, 'featureCardsSelectSection', 'featureCardsDeleteSection', function(sec) {
+    return (sec.cards || []).length + ' card' + ((sec.cards || []).length === 1 ? '' : 's');
+  }, 'No saved sections yet. Click + New Section to get started.');
+}
+
+function featureCardsPersistNow(savingText, savedText, showPreview) {
+  clearTimeout(featureCardsStore.timer);
+  featureCardsSyncCurrent();
+  featureCardsRenderSectionList();
+  featureCardsRenderCurrent(showPreview);
+  return cmsSaveSections('/api/publish-feature-cards', featureCardsStore.sections, 'fc-status', savingText || 'Saving…', savedText || 'Saved!');
+}
+
+function featureCardsSchedulePersist() {
+  clearTimeout(featureCardsStore.timer);
+  featureCardsStore.timer = setTimeout(function() {
+    featureCardsPersistNow('Saving draft…', 'Draft saved', false);
+  }, 700);
+}
+
+function featureCardsHandleChange() {
+  if (!featureCardsCurrentSection()) return;
+  featureCardsSyncCurrent();
+  featureCardsRenderSectionList();
+  featureCardsRenderCurrent();
+  featureCardsSchedulePersist();
+}
+
+function featureCardsBindInputs() {
+  if (featureCardsStore.bound) return;
+  var screen = document.getElementById('screen-feature-cards');
+  var panel = screen && screen.querySelector('.form-panel');
+  if (!panel) return;
+  panel.addEventListener('input', function() { featureCardsHandleChange(); });
+  panel.addEventListener('change', function() { featureCardsHandleChange(); });
+  featureCardsStore.bound = true;
+}
+
+function featureCardsSelectSection(id) {
+  if (featureCardsStore.activeId === id) return;
+  featureCardsSyncCurrent();
+  featureCardsStore.activeId = id;
+  var sec = featureCardsCurrentSection();
+  if (!sec) return;
+  featureCardsFillForm(sec);
+  featureCardsRenderSectionList();
+  featureCardsRenderCurrent();
+}
+
+function featureCardsCreateSection(skipPersist) {
+  featureCardsSyncCurrent();
+  var sec = featureCardsDefaultSection();
+  featureCardsStore.sections.push(sec);
+  featureCardsStore.activeId = sec.id;
+  featureCardsFillForm(sec);
+  featureCardsRenderSectionList();
+  featureCardsRenderCurrent();
+  if (!skipPersist) featureCardsPersistNow();
+}
+
+function featureCardsDeleteSection(id) {
+  if (!confirm('Delete this feature cards section?')) return;
+  featureCardsSyncCurrent();
+  featureCardsStore.sections = featureCardsStore.sections.filter(function(sec) { return sec.id !== id; });
+  if (!featureCardsStore.sections.length) {
+    featureCardsCreateSection(true);
+  } else {
+    featureCardsStore.activeId = featureCardsStore.sections[0].id;
+    featureCardsFillForm(featureCardsCurrentSection());
+    featureCardsRenderSectionList();
+    featureCardsRenderCurrent();
+  }
+  featureCardsPersistNow();
+}
+
+function featureCardsOnOpen() {
+  featureCardsBindInputs();
+  if (featureCardsStore.loaded) {
+    if (!featureCardsStore.sections.length) featureCardsCreateSection(true);
+    if (!featureCardsStore.activeId && featureCardsStore.sections.length) featureCardsSelectSection(featureCardsStore.sections[0].id);
+    return;
+  }
+  fetch('/api/publish-feature-cards')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var saved = data.sections || [];
+      featureCardsStore.counter = cmsMaxSectionCounter(saved, 'fcs');
+      featureCardsStore.sections = saved.map(function(sec) {
+        return {
+          id: sec.id || ('fcs' + (++featureCardsStore.counter)),
+          name: sec.name || '',
+          eyebrow: sec.eyebrow || 'FEATURED COURSES',
+          title: sec.title || 'Start learning today',
+          desc: sec.desc || 'Structured courses built for real outcomes. Pick a track that matches your goals and get started in minutes.',
+          cards: (sec.cards || []).map(function(card) {
+            return {
+              color: card.color || '#204280',
+              eyebrow: card.eyebrow || '',
+              title: card.title || '',
+              subtitle: card.subtitle || '',
+              ctaText: card.ctaText || 'Enrol →',
+              ctaUrl: card.ctaUrl || ''
+            };
+          })
+        };
+      });
+      featureCardsStore.loaded = true;
+      if (!featureCardsStore.sections.length) featureCardsCreateSection(true);
+      featureCardsStore.activeId = featureCardsStore.sections[0].id;
+      featureCardsFillForm(featureCardsCurrentSection());
+      featureCardsRenderSectionList();
+      featureCardsRenderCurrent();
+    })
+    .catch(function() {
+      featureCardsStore.loaded = true;
+      cmsSetStatus('fc-status', 'Could not load saved sections.', 'red');
+      if (!featureCardsStore.sections.length) featureCardsCreateSection(true);
+    });
+}
+
+function featureCardsRemoveCard(id) {
+  var card = document.getElementById(id);
+  if (card) card.remove();
+  featureCardsHandleChange();
+}
+
+function featureCardsAddCard(data, startCollapsed, skipSync) {
+  if (!featureCardsCurrentSection()) featureCardsCreateSection(true);
+  var list = document.getElementById('fc-cards');
+  var id = 'fcc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var label = (data && data.title) ? data.title : 'New Card';
+  var color = (data && data.color) ? data.color : '#204280';
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+      + '<span class="block-header-label">' + xH(label) + '</span>'
+      + '<span class="block-type-badge">Card</span>'
+      + '<button class="btn-sm danger" onclick="event.stopPropagation();featureCardsRemoveCard(\'' + id + '\')" style="margin-left:auto">Remove</button>'
+      + '</div>'
+      + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
+      + '<div class="field"><label>Top colour</label>'
+      + '<div style="display:flex;gap:8px;align-items:center">'
+      + '<input type="color" class="fc-cp" value="' + xA(color) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">'
+      + '<input type="text" class="fc-chex" value="' + xA(color) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v">'
+      + '</div></div>'
+      + '<div class="field"><label>Eyebrow text</label><input type="text" class="fc-ey" value="' + xA((data && data.eyebrow) || '') + '" placeholder="e.g. Leadership"></div>'
+      + '<div class="field"><label>Card title</label><input type="text" class="fc-ti" value="' + xA((data && data.title) || '') + '" placeholder="e.g. Leadership Fundamentals for Managers" oninput="this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=this.value||\'New Card\'"></div>'
+      + '<div class="field"><label>Sub title</label><input type="text" class="fc-su" value="' + xA((data && data.subtitle) || '') + '" placeholder="e.g. Coach: James Okafor"></div>'
+      + '<div class="field"><label>CTA text</label><input type="text" class="fc-ctat" value="' + xA((data && data.ctaText) || 'Enrol →') + '"></div>'
+      + '<div class="field"><label>CTA URL</label><input type="text" class="fc-ctau" value="' + xA((data && data.ctaUrl) || '') + '" placeholder="https://"></div>'
+      + '</div>';
+  list.appendChild(div);
+  if (!skipSync) featureCardsHandleChange();
+}
+
+function generateFeatureCards() {
+  featureCardsPersistNow('Saving…', 'Saved!', true);
+}
+
+// ── Steps persisted sections ─────────────────────────────────
+
+var stepsSectionsStore = { sections: [], activeId: '', counter: 0, loaded: false, bound: false, timer: null };
+
+function stepsSectionDefaultSection() {
+  var id = 'sss' + (++stepsSectionsStore.counter);
+  return {
+    id: id,
+    name: 'Steps Section ' + stepsSectionsStore.counter,
+    eyebrow: 'HOW IT WORKS',
+    title: 'Four steps to results',
+    desc: 'No fluff. A clear path from sign-up to transformation.',
+    bg: '#f7f6f1',
+    cols: 4,
+    cards: [
+      { title: 'Choose a course', desc: 'Browse by topic, or coach and find the right fit.' },
+      { title: 'Enrol in minutes', desc: 'Sign up via Zenler and get instant access on any device.' },
+      { title: 'Learn at your pace', desc: 'Video lessons, resources, and live coaching sessions.' },
+      { title: 'Track your growth', desc: 'Milestones, feedback, and a certificate on completion.' }
+    ]
+  };
+}
+
+function stepsSectionCurrent() {
+  return stepsSectionsStore.sections.find(function(sec) { return sec.id === stepsSectionsStore.activeId; }) || null;
+}
+
+function stepsSectionReadFormData() {
+  return {
+    name: (document.getElementById('ss-name') || {}).value || '',
+    eyebrow: (document.getElementById('ss-eyebrow') || {}).value || '',
+    title: (document.getElementById('ss-title') || {}).value || '',
+    desc: (document.getElementById('ss-desc') || {}).value || '',
+    bg: (document.getElementById('ss-bg-hex') || {}).value || '#f7f6f1',
+    cols: Math.max(1, Math.min(6, parseInt((document.getElementById('ss-cols') || {}).value, 10) || 4)),
+    cards: Array.prototype.slice.call(document.querySelectorAll('#ss-cards .block-item')).map(function(item) {
+      return {
+        title: item.querySelector('.ss-ti').value.trim(),
+        desc: item.querySelector('.ss-de').value.trim()
+      };
+    }).filter(function(card) { return card.title || card.desc; })
+  };
+}
+
+function stepsSectionFillForm(sec) {
+  document.getElementById('ss-name').value = sec.name || '';
+  document.getElementById('ss-eyebrow').value = sec.eyebrow || '';
+  document.getElementById('ss-title').value = sec.title || '';
+  document.getElementById('ss-desc').value = sec.desc || '';
+  document.getElementById('ss-bg-cp').value = sec.bg || '#f7f6f1';
+  document.getElementById('ss-bg-hex').value = sec.bg || '#f7f6f1';
+  document.getElementById('ss-cols').value = sec.cols || 4;
+  document.getElementById('ss-cols-val').textContent = String(sec.cols || 4);
+  document.getElementById('ss-cards').innerHTML = '';
+  (sec.cards || []).forEach(function(card) { stepsSectionAddCard(card, true, true); });
+}
+
+function stepsSectionSyncCurrent() {
+  var sec = stepsSectionCurrent();
+  if (!sec) return null;
+  var data = stepsSectionReadFormData();
+  sec.name = data.name;
+  sec.eyebrow = data.eyebrow;
+  sec.title = data.title;
+  sec.desc = data.desc;
+  sec.bg = /^#[0-9a-fA-F]{6}$/.test(data.bg) ? data.bg : '#f7f6f1';
+  sec.cols = data.cols;
+  sec.cards = data.cards;
+  return sec;
+}
+
+function buildStepsSectionHtml(data) {
+  var uid = 'ss' + Date.now().toString(36);
+  var cols = Math.max(1, Math.min(6, parseInt(data.cols, 10) || 4));
+  var tabletCols = Math.min(cols, 2);
+  var cardsHtml = (data.cards || []).map(function(card, i) {
+    return '<div class="' + uid + '-card">'
+      + '<div class="' + uid + '-num">' + (i + 1) + '</div>'
+      + (card.title ? '<h3 class="' + uid + '-ctitle">' + xH(card.title) + '</h3>' : '')
+      + (card.desc ? '<p class="' + uid + '-cdesc">' + xH(card.desc) + '</p>' : '')
+      + '</div>';
+  }).join('\n');
+
+  var css = '<style>'
+    + '.' + uid + '{font-family:\'Poppins\',sans-serif;background-color:' + xA(data.bg || '#f7f6f1') + ';padding:48px 32px;box-sizing:border-box;}'
+    + '.' + uid + '-inner{max-width:1100px;margin:0 auto;}'
+    + '.' + uid + '-ey{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#204280;margin:0 0 10px;}'
+    + '.' + uid + '-title{font-size:26px;font-weight:600;color:#1a1a1a;margin:0 0 8px;line-height:1.25;}'
+    + '.' + uid + '-desc{font-size:15px;font-weight:400;color:#3f3f46;margin:0 0 28px;line-height:1.6;}'
+    + '.' + uid + '-grid{display:grid;grid-template-columns:repeat(' + cols + ',minmax(0,1fr));gap:14px;}'
+    + '.' + uid + '-card{background:rgba(255,255,255,.54);border-radius:6px;padding:16px 16px 18px;min-height:142px;box-sizing:border-box;}'
+    + '.' + uid + '-num{width:28px;height:28px;border-radius:999px;background:#0f1f3a;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;margin:0 0 10px;}'
+    + '.' + uid + '-ctitle{font-size:14px;font-weight:600;color:#202124;margin:0 0 6px;line-height:1.35;}'
+    + '.' + uid + '-cdesc{font-size:13px;font-weight:400;color:#30343b;margin:0;line-height:1.55;}'
+    + '@media(max-width:900px){.' + uid + '-grid{grid-template-columns:repeat(' + tabletCols + ',minmax(0,1fr));}}'
+    + '@media(max-width:640px){.' + uid + '{padding:36px 20px;}.' + uid + '-title{font-size:24px;}.' + uid + '-grid{grid-template-columns:1fr;}}'
+    + '</style>';
+
+  var body = '<section class="' + uid + '">'
+    + '<div class="' + uid + '-inner">'
+    + (data.eyebrow ? '<div class="' + uid + '-ey">' + xH(data.eyebrow) + '</div>' : '')
+    + (data.title ? '<h2 class="' + uid + '-title">' + xH(data.title) + '</h2>' : '')
+    + (data.desc ? '<p class="' + uid + '-desc">' + xH(data.desc) + '</p>' : '')
+    + (cardsHtml ? '<div class="' + uid + '-grid">' + cardsHtml + '</div>' : '')
+    + '</div>'
+    + '</section>';
+
+  return '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n' + css + '\n' + body;
+}
+
+function stepsSectionRenderCurrent(showPreview) {
+  var sec = stepsSectionCurrent();
+  if (!sec) {
+    cmsRenderScreenEmpty('steps-section', 'Create a steps section to preview it here.', showPreview);
+    return;
+  }
+  cmsRenderScreenHtml('steps-section', buildStepsSectionHtml(sec), showPreview);
+}
+
+function stepsSectionRenderList() {
+  cmsRenderSectionList('ss-section-list', stepsSectionsStore.sections, stepsSectionsStore.activeId, 'stepsSectionSelectSection', 'stepsSectionDeleteSection', function(sec) {
+    var count = (sec.cards || []).length;
+    return count + ' step' + (count === 1 ? '' : 's') + ' · ' + (sec.cols || 4) + ' per row';
+  }, 'No saved sections yet. Click + New Section to get started.');
+}
+
+function stepsSectionPersistNow(savingText, savedText, showPreview) {
+  clearTimeout(stepsSectionsStore.timer);
+  stepsSectionSyncCurrent();
+  stepsSectionRenderList();
+  stepsSectionRenderCurrent(showPreview);
+  return cmsSaveSections('/api/publish-steps-section', stepsSectionsStore.sections, 'ss-status', savingText || 'Saving…', savedText || 'Saved!');
+}
+
+function stepsSectionSchedulePersist() {
+  clearTimeout(stepsSectionsStore.timer);
+  stepsSectionsStore.timer = setTimeout(function() {
+    stepsSectionPersistNow('Saving draft…', 'Draft saved', false);
+  }, 700);
+}
+
+function stepsSectionHandleChange() {
+  if (!stepsSectionCurrent()) return;
+  stepsSectionSyncCurrent();
+  stepsSectionRenderList();
+  stepsSectionRenderCurrent();
+  stepsSectionSchedulePersist();
+}
+
+function stepsSectionBindInputs() {
+  if (stepsSectionsStore.bound) return;
+  var screen = document.getElementById('screen-steps-section');
+  var panel = screen && screen.querySelector('.form-panel');
+  if (!panel) return;
+  panel.addEventListener('input', function() { stepsSectionHandleChange(); });
+  panel.addEventListener('change', function() { stepsSectionHandleChange(); });
+  stepsSectionsStore.bound = true;
+}
+
+function stepsSectionSelectSection(id) {
+  if (stepsSectionsStore.activeId === id) return;
+  stepsSectionSyncCurrent();
+  stepsSectionsStore.activeId = id;
+  var sec = stepsSectionCurrent();
+  if (!sec) return;
+  stepsSectionFillForm(sec);
+  stepsSectionRenderList();
+  stepsSectionRenderCurrent();
+}
+
+function stepsSectionCreateSection(skipPersist) {
+  stepsSectionSyncCurrent();
+  var sec = stepsSectionDefaultSection();
+  stepsSectionsStore.sections.push(sec);
+  stepsSectionsStore.activeId = sec.id;
+  stepsSectionFillForm(sec);
+  stepsSectionRenderList();
+  stepsSectionRenderCurrent();
+  if (!skipPersist) stepsSectionPersistNow();
+}
+
+function stepsSectionDeleteSection(id) {
+  if (!confirm('Delete this steps section?')) return;
+  stepsSectionSyncCurrent();
+  stepsSectionsStore.sections = stepsSectionsStore.sections.filter(function(sec) { return sec.id !== id; });
+  if (!stepsSectionsStore.sections.length) {
+    stepsSectionCreateSection(true);
+  } else {
+    stepsSectionsStore.activeId = stepsSectionsStore.sections[0].id;
+    stepsSectionFillForm(stepsSectionCurrent());
+    stepsSectionRenderList();
+    stepsSectionRenderCurrent();
+  }
+  stepsSectionPersistNow();
+}
+
+function stepsSectionOnOpen() {
+  stepsSectionBindInputs();
+  if (stepsSectionsStore.loaded) {
+    if (!stepsSectionsStore.sections.length) stepsSectionCreateSection(true);
+    if (!stepsSectionsStore.activeId && stepsSectionsStore.sections.length) stepsSectionSelectSection(stepsSectionsStore.sections[0].id);
+    return;
+  }
+  fetch('/api/publish-steps-section')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var saved = data.sections || [];
+      stepsSectionsStore.counter = cmsMaxSectionCounter(saved, 'sss');
+      stepsSectionsStore.sections = saved.map(function(sec) {
+        return {
+          id: sec.id || ('sss' + (++stepsSectionsStore.counter)),
+          name: sec.name || '',
+          eyebrow: sec.eyebrow || 'HOW IT WORKS',
+          title: sec.title || 'Four steps to results',
+          desc: sec.desc || 'No fluff. A clear path from sign-up to transformation.',
+          bg: sec.bg || '#f7f6f1',
+          cols: Math.max(1, Math.min(6, parseInt(sec.cols, 10) || 4)),
+          cards: (sec.cards || []).map(function(card) {
+            return { title: card.title || '', desc: card.desc || '' };
+          })
+        };
+      });
+      stepsSectionsStore.loaded = true;
+      if (!stepsSectionsStore.sections.length) stepsSectionCreateSection(true);
+      stepsSectionsStore.activeId = stepsSectionsStore.sections[0].id;
+      stepsSectionFillForm(stepsSectionCurrent());
+      stepsSectionRenderList();
+      stepsSectionRenderCurrent();
+    })
+    .catch(function() {
+      stepsSectionsStore.loaded = true;
+      cmsSetStatus('ss-status', 'Could not load saved sections.', 'red');
+      if (!stepsSectionsStore.sections.length) stepsSectionCreateSection(true);
+    });
+}
+
+function stepsSectionRemoveCard(id) {
+  var card = document.getElementById(id);
+  if (card) card.remove();
+  stepsSectionHandleChange();
+}
+
+function stepsSectionAddCard(data, startCollapsed, skipSync) {
+  if (!stepsSectionCurrent()) stepsSectionCreateSection(true);
+  var list = document.getElementById('ss-cards');
+  var id = 'ssc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var label = (data && data.title) ? data.title : 'New Step';
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+      + '<span class="block-header-label">' + xH(label) + '</span>'
+      + '<span class="block-type-badge">Step</span>'
+      + '<button class="btn-sm danger" onclick="event.stopPropagation();stepsSectionRemoveCard(\'' + id + '\')" style="margin-left:auto">Remove</button>'
+      + '</div>'
+      + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
+      + '<div class="field"><label>Card title</label><input type="text" class="ss-ti" value="' + xA((data && data.title) || '') + '" placeholder="e.g. Choose a course" oninput="this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=this.value||\'New Step\'"></div>'
+      + '<div class="field"><label>Description</label><textarea class="ss-de" rows="3" placeholder="Briefly explain this step">' + xH((data && data.desc) || '') + '</textarea></div>'
+      + '</div>';
+  list.appendChild(div);
+  if (!skipSync) stepsSectionHandleChange();
+}
+
+function generateStepsSection() {
+  stepsSectionPersistNow('Saving…', 'Saved!', true);
+}
+
+// ── About Us persisted sections ──────────────────────────────
+
+var aboutUsStore = { sections: [], activeId: '', counter: 0, loaded: false, bound: false, timer: null };
+
+function aboutUsDefaultSection() {
+  var id = 'aus' + (++aboutUsStore.counter);
+  return {
+    id: id,
+    name: 'About Us Section ' + aboutUsStore.counter,
+    eyebrow: 'ABOUT VERTEX LEARNING SOLUTIONS',
+    title: 'What is VLS and who is it for?',
+    paragraphs: [
+      'Vertex Learning Solutions (VLS) is an online tutoring and coaching platform designed for working professionals, career changers, and motivated learners who want structured, expert-guided development without the constraints of a traditional classroom.',
+      'Founded on the belief that great coaching changes careers, VLS brings together a vetted community of specialist tutors and coaches who deliver practical, outcome-focused learning across leadership, communication, career planning, wellbeing, and more.',
+      'Our courses are hosted on Zenler - a modern learning platform that gives you HD video lessons, downloadable resources, live coaching sessions, and progress tracking all in one place. Study on desktop, tablet, or mobile, entirely at your own pace.',
+      'VLS is built for professionals across the UK whether you are a first-time manager, a graduate entering the workforce, or a seasoned professional looking to sharpen your edge.'
+    ],
+    ctaText: 'Learn more about VLS →',
+    ctaUrl: '#',
+    cards: [
+      { icon: 'user', title: 'Expert tutors & coaches', desc: 'Every VLS tutor is hand-picked for subject-matter expertise, real-world experience, and proven teaching ability.' },
+      { icon: 'book', title: 'Structured, outcome-led courses', desc: 'Courses are built around clear goals - not just content. Each module moves you measurably forward.' },
+      { icon: 'clock', title: 'Learn on your schedule', desc: 'On-demand video content, flexible coaching sessions, and lifetime access - study when it suits you.' },
+      { icon: 'check', title: 'Certificates & accreditation', desc: 'Complete a course and receive a recognised VLS certificate to add to your CV or LinkedIn profile.' }
+    ]
+  };
+}
+
+function aboutUsCurrentSection() {
+  return aboutUsStore.sections.find(function(sec) { return sec.id === aboutUsStore.activeId; }) || null;
+}
+
+function aboutUsReadFormData() {
+  return {
+    name: (document.getElementById('au-name') || {}).value || '',
+    eyebrow: (document.getElementById('au-eyebrow') || {}).value || '',
+    title: (document.getElementById('au-title') || {}).value || '',
+    paragraphs: Array.prototype.slice.call(document.querySelectorAll('#au-paragraphs .au-para')).map(function(inp) {
+      return inp.value.trim();
+    }).filter(Boolean),
+    ctaText: (document.getElementById('au-cta-text') || {}).value || '',
+    ctaUrl: (document.getElementById('au-cta-url') || {}).value || '',
+    cards: Array.prototype.slice.call(document.querySelectorAll('#au-cards .block-item')).map(function(item) {
+      return {
+        icon: item.querySelector('.au-icon').value,
+        title: item.querySelector('.au-card-title').value.trim(),
+        desc: item.querySelector('.au-card-desc').value.trim()
+      };
+    }).filter(function(card) { return card.title || card.desc; })
+  };
+}
+
+function aboutUsFillForm(sec) {
+  document.getElementById('au-name').value = sec.name || '';
+  document.getElementById('au-eyebrow').value = sec.eyebrow || '';
+  document.getElementById('au-title').value = sec.title || '';
+  document.getElementById('au-cta-text').value = sec.ctaText || '';
+  document.getElementById('au-cta-url').value = sec.ctaUrl || '';
+  document.getElementById('au-paragraphs').innerHTML = '';
+  document.getElementById('au-cards').innerHTML = '';
+  (sec.paragraphs || []).forEach(function(p) { aboutUsAddParagraph(p, true, true); });
+  (sec.cards || []).forEach(function(card) { aboutUsAddCard(card, true, true); });
+}
+
+function aboutUsSyncCurrent() {
+  var sec = aboutUsCurrentSection();
+  if (!sec) return null;
+  var data = aboutUsReadFormData();
+  sec.name = data.name;
+  sec.eyebrow = data.eyebrow;
+  sec.title = data.title;
+  sec.paragraphs = data.paragraphs;
+  sec.ctaText = data.ctaText;
+  sec.ctaUrl = data.ctaUrl;
+  sec.cards = data.cards;
+  return sec;
+}
+
+function buildAboutUsHtml(data) {
+  var uid = 'au' + Date.now().toString(36);
+  var paragraphHtml = (data.paragraphs || []).map(function(p) {
+    return '<p class="' + uid + '-para">' + xH(p) + '</p>';
+  }).join('');
+  var cardsHtml = (data.cards || []).map(function(card) {
+    var svg = ABOUT_US_ICONS[card.icon] || ABOUT_US_ICONS.star;
+    return '<div class="' + uid + '-card">'
+      + '<div class="' + uid + '-icon">' + svg + '</div>'
+      + '<div class="' + uid + '-card-copy">'
+      + (card.title ? '<h3 class="' + uid + '-card-title">' + xH(card.title) + '</h3>' : '')
+      + (card.desc ? '<p class="' + uid + '-card-desc">' + xH(card.desc) + '</p>' : '')
+      + '</div>'
+      + '</div>';
+  }).join('');
+
+  var css = '<style>'
+    + '.' + uid + '{font-family:\'Poppins\',sans-serif;background:#fff;padding:48px 24px;box-sizing:border-box;}'
+    + '.' + uid + '-inner{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,1fr);gap:56px;align-items:start;}'
+    + '.' + uid + '-ey{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#204280;margin:0 0 12px;}'
+    + '.' + uid + '-title{font-size:26px;font-weight:600;color:#202124;line-height:1.25;margin:0 0 18px;}'
+    + '.' + uid + '-para{font-size:14px;font-weight:400;color:#2f343b;line-height:1.75;margin:0 0 14px;}'
+    + '.' + uid + '-cta{display:inline-flex;align-items:center;gap:6px;margin-top:14px;font-size:14px;font-weight:600;color:#204280 !important;text-decoration:none !important;}'
+    + '.' + uid + '-cta:hover{text-decoration:underline !important;}'
+    + '.' + uid + '-cards{display:flex;flex-direction:column;gap:16px;}'
+    + '.' + uid + '-card{display:grid;grid-template-columns:38px minmax(0,1fr);gap:14px;align-items:start;background:#f4f3ee;border-radius:8px;padding:18px 20px;box-sizing:border-box;}'
+    + '.' + uid + '-icon{width:28px;height:28px;border-radius:6px;background:#0d2341;color:#fff;display:flex;align-items:center;justify-content:center;margin-top:1px;}'
+    + '.' + uid + '-icon svg{width:15px;height:15px;display:block;}'
+    + '.' + uid + '-card-title{font-size:14px;font-weight:700;color:#222;margin:0 0 4px;line-height:1.35;}'
+    + '.' + uid + '-card-desc{font-size:13px;font-weight:400;color:#2f343b;line-height:1.55;margin:0;}'
+    + '@media(max-width:800px){.' + uid + '-inner{grid-template-columns:1fr;gap:28px;}.' + uid + '{padding:38px 20px;}}'
+    + '@media(max-width:520px){.' + uid + '-title{font-size:24px;}.' + uid + '-card{grid-template-columns:34px minmax(0,1fr);padding:16px;}}'
+    + '</style>';
+
+  var body = '<section class="' + uid + '">'
+    + '<div class="' + uid + '-inner">'
+    + '<div class="' + uid + '-left">'
+    + (data.eyebrow ? '<div class="' + uid + '-ey">' + xH(data.eyebrow) + '</div>' : '')
+    + (data.title ? '<h2 class="' + uid + '-title">' + xH(data.title) + '</h2>' : '')
+    + paragraphHtml
+    + (data.ctaText ? '<a class="' + uid + '-cta" href="' + xA(data.ctaUrl || '#') + '">' + xH(data.ctaText) + '</a>' : '')
+    + '</div>'
+    + (cardsHtml ? '<div class="' + uid + '-cards">' + cardsHtml + '</div>' : '')
+    + '</div>'
+    + '</section>';
+
+  return '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n' + css + '\n' + body;
+}
+
+function aboutUsRenderCurrent(showPreview) {
+  var sec = aboutUsCurrentSection();
+  if (!sec) {
+    cmsRenderScreenEmpty('about-us', 'Create an About Us section to preview it here.', showPreview);
+    return;
+  }
+  cmsRenderScreenHtml('about-us', buildAboutUsHtml(sec), showPreview);
+}
+
+function aboutUsRenderList() {
+  cmsRenderSectionList('au-section-list', aboutUsStore.sections, aboutUsStore.activeId, 'aboutUsSelectSection', 'aboutUsDeleteSection', function(sec) {
+    return (sec.paragraphs || []).length + ' paragraph' + ((sec.paragraphs || []).length === 1 ? '' : 's') + ' · ' + (sec.cards || []).length + ' card' + ((sec.cards || []).length === 1 ? '' : 's');
+  }, 'No saved sections yet. Click + New Section to get started.');
+}
+
+function aboutUsPersistNow(savingText, savedText, showPreview) {
+  clearTimeout(aboutUsStore.timer);
+  aboutUsSyncCurrent();
+  aboutUsRenderList();
+  aboutUsRenderCurrent(showPreview);
+  return cmsSaveSections('/api/publish-about-us', aboutUsStore.sections, 'au-status', savingText || 'Saving…', savedText || 'Saved!');
+}
+
+function aboutUsSchedulePersist() {
+  clearTimeout(aboutUsStore.timer);
+  aboutUsStore.timer = setTimeout(function() {
+    aboutUsPersistNow('Saving draft…', 'Draft saved', false);
+  }, 700);
+}
+
+function aboutUsHandleChange() {
+  if (!aboutUsCurrentSection()) return;
+  aboutUsSyncCurrent();
+  aboutUsRenderList();
+  aboutUsRenderCurrent();
+  aboutUsSchedulePersist();
+}
+
+function aboutUsBindInputs() {
+  if (aboutUsStore.bound) return;
+  var screen = document.getElementById('screen-about-us');
+  var panel = screen && screen.querySelector('.form-panel');
+  if (!panel) return;
+  panel.addEventListener('input', function() { aboutUsHandleChange(); });
+  panel.addEventListener('change', function() { aboutUsHandleChange(); });
+  aboutUsStore.bound = true;
+}
+
+function aboutUsSelectSection(id) {
+  if (aboutUsStore.activeId === id) return;
+  aboutUsSyncCurrent();
+  aboutUsStore.activeId = id;
+  var sec = aboutUsCurrentSection();
+  if (!sec) return;
+  aboutUsFillForm(sec);
+  aboutUsRenderList();
+  aboutUsRenderCurrent();
+}
+
+function aboutUsCreateSection(skipPersist) {
+  aboutUsSyncCurrent();
+  var sec = aboutUsDefaultSection();
+  aboutUsStore.sections.push(sec);
+  aboutUsStore.activeId = sec.id;
+  aboutUsFillForm(sec);
+  aboutUsRenderList();
+  aboutUsRenderCurrent();
+  if (!skipPersist) aboutUsPersistNow();
+}
+
+function aboutUsDeleteSection(id) {
+  if (!confirm('Delete this About Us section?')) return;
+  aboutUsSyncCurrent();
+  aboutUsStore.sections = aboutUsStore.sections.filter(function(sec) { return sec.id !== id; });
+  if (!aboutUsStore.sections.length) {
+    aboutUsCreateSection(true);
+  } else {
+    aboutUsStore.activeId = aboutUsStore.sections[0].id;
+    aboutUsFillForm(aboutUsCurrentSection());
+    aboutUsRenderList();
+    aboutUsRenderCurrent();
+  }
+  aboutUsPersistNow();
+}
+
+function aboutUsOnOpen() {
+  aboutUsBindInputs();
+  if (aboutUsStore.loaded) {
+    if (!aboutUsStore.sections.length) aboutUsCreateSection(true);
+    if (!aboutUsStore.activeId && aboutUsStore.sections.length) aboutUsSelectSection(aboutUsStore.sections[0].id);
+    return;
+  }
+  fetch('/api/publish-about-us')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var saved = data.sections || [];
+      aboutUsStore.counter = cmsMaxSectionCounter(saved, 'aus');
+      aboutUsStore.sections = saved.map(function(sec) {
+        return {
+          id: sec.id || ('aus' + (++aboutUsStore.counter)),
+          name: sec.name || '',
+          eyebrow: sec.eyebrow || 'ABOUT VERTEX LEARNING SOLUTIONS',
+          title: sec.title || 'What is VLS and who is it for?',
+          paragraphs: (sec.paragraphs || []).slice(),
+          ctaText: sec.ctaText || 'Learn more about VLS →',
+          ctaUrl: sec.ctaUrl || '#',
+          cards: (sec.cards || []).map(function(card) {
+            return { icon: card.icon || 'star', title: card.title || '', desc: card.desc || '' };
+          })
+        };
+      });
+      aboutUsStore.loaded = true;
+      if (!aboutUsStore.sections.length) aboutUsCreateSection(true);
+      aboutUsStore.activeId = aboutUsStore.sections[0].id;
+      aboutUsFillForm(aboutUsCurrentSection());
+      aboutUsRenderList();
+      aboutUsRenderCurrent();
+    })
+    .catch(function() {
+      aboutUsStore.loaded = true;
+      cmsSetStatus('au-status', 'Could not load saved sections.', 'red');
+      if (!aboutUsStore.sections.length) aboutUsCreateSection(true);
+    });
+}
+
+function aboutUsRemoveParagraph(id) {
+  var item = document.getElementById(id);
+  if (item) item.remove();
+  aboutUsHandleChange();
+}
+
+function aboutUsRemoveCard(id) {
+  var item = document.getElementById(id);
+  if (item) item.remove();
+  aboutUsHandleChange();
+}
+
+function aboutUsAddParagraph(text, startCollapsed, skipSync) {
+  if (!aboutUsCurrentSection()) aboutUsCreateSection(true);
+  var list = document.getElementById('au-paragraphs');
+  var id = 'aup-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var label = text ? text.slice(0, 42) : 'New Paragraph';
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+      + '<span class="block-header-label">' + xH(label) + '</span>'
+      + '<span class="block-type-badge">Paragraph</span>'
+      + '<button class="btn-sm danger" onclick="event.stopPropagation();aboutUsRemoveParagraph(\'' + id + '\')" style="margin-left:auto">Remove</button>'
+      + '</div>'
+      + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
+      + '<div class="field"><label>Paragraph text</label><textarea class="au-para" rows="5" oninput="var t=this.value.trim();this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=t?t.slice(0,42):\'New Paragraph\'">' + xH(text || '') + '</textarea></div>'
+      + '</div>';
+  list.appendChild(div);
+  if (!skipSync) aboutUsHandleChange();
+}
+
+function aboutUsAddCard(data, startCollapsed, skipSync) {
+  if (!aboutUsCurrentSection()) aboutUsCreateSection(true);
+  var list = document.getElementById('au-cards');
+  var id = 'auc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var label = (data && data.title) ? data.title : 'New Feature Card';
+  var icon = (data && data.icon) || 'star';
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+      + '<span class="block-header-label">' + xH(label) + '</span>'
+      + '<span class="block-type-badge">Feature</span>'
+      + '<button class="btn-sm danger" onclick="event.stopPropagation();aboutUsRemoveCard(\'' + id + '\')" style="margin-left:auto">Remove</button>'
+      + '</div>'
+      + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
+      + '<div class="field"><label>Icon</label><select class="au-icon">' + aboutUsIconSelect(icon) + '</select></div>'
+      + '<div class="field"><label>Card title</label><input type="text" class="au-card-title" value="' + xA((data && data.title) || '') + '" placeholder="e.g. Expert tutors & coaches" oninput="this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=this.value||\'New Feature Card\'"></div>'
+      + '<div class="field"><label>Description</label><textarea class="au-card-desc" rows="3" placeholder="Briefly explain this feature">' + xH((data && data.desc) || '') + '</textarea></div>'
+      + '</div>';
+  list.appendChild(div);
+  if (!skipSync) aboutUsHandleChange();
+}
+
+function generateAboutUs() {
+  aboutUsPersistNow('Saving…', 'Saved!', true);
+}
+
+// ── Hero persisted sections ──────────────────────────────────
+
+var heroStore = { sections: [], activeId: '', counter: 0, loaded: false, bound: false, timer: null };
+
+function heroDefaultSection() {
+  var id = 'hs' + (++heroStore.counter);
+  return {
+    id: id,
+    name: 'Hero Section ' + heroStore.counter,
+    bg: '#ffffff',
+    maxW: '560px',
+    padTop: 48,
+    padBot: 48,
+    h1Size: 44,
+    eyebrow: 'VERTEX LEARNING SOLUTIONS',
+    h1: 'Expert-led tutoring & coaching',
+    h1hl: '— built for results.',
+    h2: '',
+    desc: 'Vertex Learning Solutions (VLS) connects ambitious learners with expert tutors across ACCA, CIMA, and CMA — giving you structured guidance, practical tools, and 1-to-1 support to pass your exams and grow your career.',
+    tags: ['ACCA tuition', 'CIMA coaching', 'Online tutoring', '1-to-1 coaching'],
+    b1t: 'Browse courses',
+    b1u: '',
+    b1s: '',
+    b2t: 'Enquire now ↓',
+    b2u: '',
+    b2s: '',
+    stats: [
+      { v: '2,400+', l: 'Students enrolled' },
+      { v: '98%', l: 'Satisfaction rate' },
+      { v: '35+', l: 'Courses available' }
+    ]
+  };
+}
+
+function heroCurrentSection() {
+  return heroStore.sections.find(function(sec) { return sec.id === heroStore.activeId; }) || null;
+}
+
+function heroReadFormData() {
+  var bg = (document.getElementById('hero-bg-text') || {}).value || '#ffffff';
+  return {
+    name: (document.getElementById('hero-name') || {}).value || '',
+    bg: /^#[0-9a-fA-F]{6}$/.test(bg) ? bg : '#ffffff',
+    maxW: (document.getElementById('hero-max-width') || {}).value || '560px',
+    padTop: parseInt((document.getElementById('hero-pad-top') || {}).value, 10) || 48,
+    padBot: parseInt((document.getElementById('hero-pad-bot') || {}).value, 10) || 48,
+    h1Size: parseInt((document.getElementById('hero-h1-size') || {}).value, 10) || 44,
+    eyebrow: (document.getElementById('hero-eyebrow') || {}).value || '',
+    h1: (document.getElementById('hero-h1') || {}).value || '',
+    h1hl: (document.getElementById('hero-h1-hl') || {}).value || '',
+    h2: (document.getElementById('hero-h2') || {}).value || '',
+    desc: (document.getElementById('hero-desc') || {}).value || '',
+    b1t: (document.getElementById('hero-btn1-text') || {}).value || '',
+    b1u: (document.getElementById('hero-btn1-url') || {}).value || '',
+    b1s: (document.getElementById('hero-btn1-scroll') || {}).value || '',
+    b2t: (document.getElementById('hero-btn2-text') || {}).value || '',
+    b2u: (document.getElementById('hero-btn2-url') || {}).value || '',
+    b2s: (document.getElementById('hero-btn2-scroll') || {}).value || '',
+    tags: Array.prototype.slice.call(document.querySelectorAll('#hero-tags .hero-tag-input')).map(function(inp) {
+      return inp.value.trim();
+    }).filter(Boolean),
+    stats: Array.prototype.slice.call(document.querySelectorAll('#hero-stats .block-item')).map(function(item) {
+      return {
+        v: item.querySelector('.hero-stat-val').value.trim(),
+        l: item.querySelector('.hero-stat-lbl').value.trim()
+      };
+    }).filter(function(stat) { return stat.v; })
+  };
+}
+
+function heroFillForm(sec) {
+  document.getElementById('hero-name').value = sec.name || '';
+  document.getElementById('hero-bg-picker').value = sec.bg || '#ffffff';
+  document.getElementById('hero-bg-text').value = sec.bg || '#ffffff';
+  document.getElementById('hero-max-width').value = sec.maxW || '560px';
+  document.getElementById('hero-pad-top').value = sec.padTop || 48;
+  document.getElementById('hero-pad-bot').value = sec.padBot || 48;
+  document.getElementById('hero-h1-size').value = sec.h1Size || 44;
+  document.getElementById('hero-eyebrow').value = sec.eyebrow || '';
+  document.getElementById('hero-h1').value = sec.h1 || '';
+  document.getElementById('hero-h1-hl').value = sec.h1hl || '';
+  document.getElementById('hero-h2').value = sec.h2 || '';
+  document.getElementById('hero-desc').value = sec.desc || '';
+  document.getElementById('hero-btn1-text').value = sec.b1t || '';
+  document.getElementById('hero-btn1-url').value = sec.b1u || '';
+  document.getElementById('hero-btn1-scroll').value = sec.b1s || '';
+  document.getElementById('hero-btn2-text').value = sec.b2t || '';
+  document.getElementById('hero-btn2-url').value = sec.b2u || '';
+  document.getElementById('hero-btn2-scroll').value = sec.b2s || '';
+  document.getElementById('hero-tags').innerHTML = '';
+  document.getElementById('hero-stats').innerHTML = '';
+  (sec.tags || []).forEach(function(tag) { heroAddTag(tag, true); });
+  (sec.stats || []).forEach(function(stat) { heroAddStat(stat.v, stat.l, true); });
+}
+
+function heroSyncCurrent() {
+  var sec = heroCurrentSection();
+  if (!sec) return null;
+  var data = heroReadFormData();
+  sec.name = data.name;
+  sec.bg = data.bg;
+  sec.maxW = data.maxW;
+  sec.padTop = data.padTop;
+  sec.padBot = data.padBot;
+  sec.h1Size = data.h1Size;
+  sec.eyebrow = data.eyebrow;
+  sec.h1 = data.h1;
+  sec.h1hl = data.h1hl;
+  sec.h2 = data.h2;
+  sec.desc = data.desc;
+  sec.b1t = data.b1t;
+  sec.b1u = data.b1u;
+  sec.b1s = data.b1s;
+  sec.b2t = data.b2t;
+  sec.b2u = data.b2u;
+  sec.b2s = data.b2s;
+  sec.tags = data.tags;
+  sec.stats = data.stats;
+  return sec;
+}
+
+function buildHeroHtml(data) {
+  var uid = 'h' + Date.now().toString(36);
+  var tagsHtml = (data.tags || []).map(function(tag) {
+    return '<span class="' + uid + '-tag">' + xH(tag) + '</span>';
+  }).join('');
+  var statsHtml = (data.stats || []).map(function(stat) {
+    return '<div class="' + uid + '-stat"><div class="' + uid + '-sv">' + xH(stat.v) + '</div><div class="' + uid + '-sl">' + xH(stat.l) + '</div></div>';
+  }).join('');
+  var h2Size = Math.round((parseInt(data.h1Size, 10) || 44) * 0.5);
+
+  var css = '<style>'
+    + '.' + uid + '{font-family:\'Poppins\',sans-serif;max-width:' + xA(data.maxW || '560px') + ';padding:' + (parseInt(data.padTop, 10) || 48) + 'px 0 ' + (parseInt(data.padBot, 10) || 48) + 'px;box-sizing:border-box;background-color:' + xA(data.bg || '#ffffff') + ';}'
+    + '.' + uid + '-ey{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#204280;margin-bottom:14px;}'
+    + '.' + uid + '-h1{font-size:' + (parseInt(data.h1Size, 10) || 44) + 'px;font-weight:700;color:#1a1a1a;line-height:1.15;margin:0 0 6px;}'
+    + '.' + uid + '-h1 em{font-style:normal;color:#204280;}'
+    + '.' + uid + '-h2{font-size:' + h2Size + 'px;font-weight:600;color:#374151;margin:10px 0 0;line-height:1.35;}'
+    + '.' + uid + '-desc{font-size:16px;font-weight:400;color:#374151;line-height:1.75;margin:20px 0 24px;}'
+    + '.' + uid + '-tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px;}'
+    + '.' + uid + '-tag{display:inline-block;padding:6px 16px;border:1.5px solid #cbd5e1;border-radius:999px;font-size:13px;font-weight:500;color:#374151;white-space:nowrap;}'
+    + '.' + uid + '-btns{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px;}'
+    + '.' + uid + '-b1{display:inline-block;padding:12px 26px;background:#204280;color:#fff !important;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none !important;border:none;cursor:pointer;}'
+    + '.' + uid + '-b2{display:inline-block;padding:11px 24px;background:#fff;color:#1a1a1a !important;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none !important;cursor:pointer;}'
+    + '.' + uid + '-div{border-top:1px solid #e2e8f0;margin-bottom:28px;}'
+    + '.' + uid + '-stats{display:flex;gap:36px;flex-wrap:wrap;}'
+    + '.' + uid + '-sv{font-size:26px;font-weight:700;color:#1a1a1a;line-height:1.1;}'
+    + '.' + uid + '-sl{font-size:13px;font-weight:400;color:#6b7280;margin-top:4px;}'
+    + '</style>';
+
+  var body = '<div class="' + uid + '">'
+    + (data.eyebrow ? '<h2 class="' + uid + '-ey">' + xH(data.eyebrow) + '</h2>' : '')
+    + (data.h1 ? '<h1 class="' + uid + '-h1">' + xH(data.h1) + (data.h1hl ? '<br><em>' + xH(data.h1hl) + '</em>' : '') + '</h1>' : '')
+    + (data.h2 ? '<h2 class="' + uid + '-h2">' + xH(data.h2) + '</h2>' : '')
+    + (data.desc ? '<p class="' + uid + '-desc">' + xH(data.desc) + '</p>' : '')
+    + (tagsHtml ? '<div class="' + uid + '-tags">' + tagsHtml + '</div>' : '')
+    + ((data.b1t || data.b2t) ? '<div class="' + uid + '-btns">'
+      + (data.b1t ? '<a href="' + (data.b1s ? '#' : xA(data.b1u || '#')) + '" class="' + uid + '-b1"' + (data.b1s ? ' onclick="var el=document.querySelector(\'' + xA(data.b1s) + '\');if(el){el.scrollIntoView({behavior:\'smooth\'});}return false;"' : '') + '>' + xH(data.b1t) + '</a>' : '')
+      + (data.b2t ? '<a href="' + (data.b2s ? '#' : xA(data.b2u || '#')) + '" class="' + uid + '-b2"' + (data.b2s ? ' onclick="var el=document.querySelector(\'' + xA(data.b2s) + '\');if(el){el.scrollIntoView({behavior:\'smooth\'});}return false;"' : '') + '>' + xH(data.b2t) + '</a>' : '')
+      + '</div>' : '')
+    + (statsHtml ? '<div class="' + uid + '-div"></div><div class="' + uid + '-stats">' + statsHtml + '</div>' : '')
+    + '</div>';
+
+  return '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n' + css + '\n' + body;
+}
+
+function heroRenderCurrent(showPreview) {
+  var sec = heroCurrentSection();
+  if (!sec) {
+    cmsRenderScreenEmpty('hero', 'Create a hero section to preview it here.', showPreview);
+    return;
+  }
+  cmsRenderScreenHtml('hero', buildHeroHtml(sec), showPreview);
+}
+
+function heroRenderList() {
+  cmsRenderSectionList('hero-section-list', heroStore.sections, heroStore.activeId, 'heroSelectSection', 'heroDeleteSection', function(sec) {
+    return (sec.tags || []).length + ' tag' + ((sec.tags || []).length === 1 ? '' : 's') + ' · ' + (sec.stats || []).length + ' stat' + ((sec.stats || []).length === 1 ? '' : 's');
+  }, 'No saved sections yet. Click + New Section to get started.');
+}
+
+function heroPersistNow(savingText, savedText, showPreview) {
+  clearTimeout(heroStore.timer);
+  heroSyncCurrent();
+  heroRenderList();
+  heroRenderCurrent(showPreview);
+  return cmsSaveSections('/api/publish-home-hero', heroStore.sections, 'hero-status', savingText || 'Saving…', savedText || 'Saved!');
+}
+
+function heroSchedulePersist() {
+  clearTimeout(heroStore.timer);
+  heroStore.timer = setTimeout(function() {
+    heroPersistNow('Saving draft…', 'Draft saved', false);
+  }, 700);
+}
+
+function heroHandleChange() {
+  if (!heroCurrentSection()) return;
+  heroSyncCurrent();
+  heroRenderList();
+  heroRenderCurrent();
+  heroSchedulePersist();
+}
+
+function heroBindInputs() {
+  if (heroStore.bound) return;
+  var screen = document.getElementById('screen-hero');
+  var panel = screen && screen.querySelector('.form-panel');
+  if (!panel) return;
+  panel.addEventListener('input', function() { heroHandleChange(); });
+  panel.addEventListener('change', function() { heroHandleChange(); });
+  heroStore.bound = true;
+}
+
+function heroSelectSection(id) {
+  if (heroStore.activeId === id) return;
+  heroSyncCurrent();
+  heroStore.activeId = id;
+  var sec = heroCurrentSection();
+  if (!sec) return;
+  heroFillForm(sec);
+  heroRenderList();
+  heroRenderCurrent();
+}
+
+function heroCreateSection(skipPersist) {
+  heroSyncCurrent();
+  var sec = heroDefaultSection();
+  heroStore.sections.push(sec);
+  heroStore.activeId = sec.id;
+  heroFillForm(sec);
+  heroRenderList();
+  heroRenderCurrent();
+  if (!skipPersist) heroPersistNow();
+}
+
+function heroDeleteSection(id) {
+  if (!confirm('Delete this hero section?')) return;
+  heroSyncCurrent();
+  heroStore.sections = heroStore.sections.filter(function(sec) { return sec.id !== id; });
+  if (!heroStore.sections.length) {
+    heroCreateSection(true);
+  } else {
+    heroStore.activeId = heroStore.sections[0].id;
+    heroFillForm(heroCurrentSection());
+    heroRenderList();
+    heroRenderCurrent();
+  }
+  heroPersistNow();
+}
+
+function heroOnOpen() {
+  heroBindInputs();
+  if (heroStore.loaded) {
+    if (!heroStore.sections.length) heroCreateSection(true);
+    if (!heroStore.activeId && heroStore.sections.length) heroSelectSection(heroStore.sections[0].id);
+    return;
+  }
+  fetch('/api/publish-home-hero')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var saved = data.sections || [];
+      heroStore.counter = cmsMaxSectionCounter(saved, 'hs');
+      heroStore.sections = saved.map(function(sec) {
+        return {
+          id: sec.id || ('hs' + (++heroStore.counter)),
+          name: sec.name || '',
+          bg: sec.bg || '#ffffff',
+          maxW: sec.maxW || '560px',
+          padTop: parseInt(sec.padTop, 10) || 48,
+          padBot: parseInt(sec.padBot, 10) || 48,
+          h1Size: parseInt(sec.h1Size, 10) || 44,
+          eyebrow: sec.eyebrow || 'VERTEX LEARNING SOLUTIONS',
+          h1: sec.h1 || 'Expert-led tutoring & coaching',
+          h1hl: sec.h1hl || '— built for results.',
+          h2: sec.h2 || '',
+          desc: sec.desc || 'Vertex Learning Solutions (VLS) connects ambitious learners with expert tutors across ACCA, CIMA, and CMA — giving you structured guidance, practical tools, and 1-to-1 support to pass your exams and grow your career.',
+          tags: (sec.tags || []).slice(),
+          b1t: sec.b1t || 'Browse courses',
+          b1u: sec.b1u || '',
+          b1s: sec.b1s || '',
+          b2t: sec.b2t || 'Enquire now ↓',
+          b2u: sec.b2u || '',
+          b2s: sec.b2s || '',
+          stats: (sec.stats || []).map(function(stat) {
+            return { v: stat.v || '', l: stat.l || '' };
+          })
+        };
+      });
+      heroStore.loaded = true;
+      if (!heroStore.sections.length) heroCreateSection(true);
+      heroStore.activeId = heroStore.sections[0].id;
+      heroFillForm(heroCurrentSection());
+      heroRenderList();
+      heroRenderCurrent();
+    })
+    .catch(function() {
+      heroStore.loaded = true;
+      cmsSetStatus('hero-status', 'Could not load saved sections.', 'red');
+      if (!heroStore.sections.length) heroCreateSection(true);
+    });
+}
+
+function heroRemoveStat(id) {
+  var stat = document.getElementById(id);
+  if (stat) stat.remove();
+  heroHandleChange();
+}
+
+function heroRemoveTag(id) {
+  var tag = document.getElementById(id);
+  if (tag) tag.remove();
+  heroHandleChange();
+}
+
+function heroAddStat(val, lbl, skipSync) {
+  if (!heroCurrentSection()) heroCreateSection(true);
+  var list = document.getElementById('hero-stats');
+  var id = 'hst-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-body" style="flex-direction:row;align-items:center;gap:6px;padding:8px 10px">'
+      + '<input type="text" class="hero-stat-val" placeholder="Value e.g. 2,400+" value="' + xA(val || '') + '" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none">'
+      + '<input type="text" class="hero-stat-lbl" placeholder="Label e.g. Students enrolled" value="' + xA(lbl || '') + '" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;flex:1.5;outline:none">'
+      + '<button class="btn-icon" title="Remove" onclick="heroRemoveStat(\'' + id + '\')" style="flex-shrink:0">&#x2715;</button>'
+      + '</div>';
+  list.appendChild(div);
+  if (!skipSync) heroHandleChange();
+}
+
+function heroAddTag(val, skipSync) {
+  if (!heroCurrentSection()) heroCreateSection(true);
+  var list = document.getElementById('hero-tags');
+  var id = 'htag-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-body" style="flex-direction:row;align-items:center;gap:6px;padding:8px 10px">'
+      + '<input type="text" class="hero-tag-input" value="' + xA(val || '') + '" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none">'
+      + '<button class="btn-icon" title="Remove" onclick="heroRemoveTag(\'' + id + '\')" style="flex-shrink:0">&#x2715;</button>'
+      + '</div>';
+  list.appendChild(div);
+  if (!skipSync) heroHandleChange();
+}
+
+function generateHero() {
+  heroPersistNow('Saving…', 'Saved!', true);
+}
+
 </script>
 </body>
 </html>
