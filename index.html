@@ -224,6 +224,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-header" onclick="switchScreen('header')">Header</div>
       <div class="nav-dd-item" id="nav-footer" onclick="switchScreen('footer')">Footer</div>
       <div class="nav-dd-item" id="nav-banner" onclick="switchScreen('banner')">Banner</div>
+      <div class="nav-dd-item" id="nav-promotion-section" onclick="switchScreen('promotion-section')">Promotion Section</div>
     </div>
   </div>
   <!-- Home Page dropdown -->
@@ -271,11 +272,12 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
     <div class="home-tiles">
       <div class="home-tile admin-tile" id="home-tile-global">
         <div class="home-tile-title">Global Components</div>
-        <div class="home-tile-desc">Site-wide elements shared across all pages — header, footer, and promotional banners.</div>
+        <div class="home-tile-desc">Site-wide elements shared across all pages — header, footer, promotional banners, and promotion sections.</div>
         <div class="home-tile-links">
           <button class="home-tile-link" onclick="switchScreen('header')">Header</button>
           <button class="home-tile-link" onclick="switchScreen('footer')">Footer</button>
           <button class="home-tile-link" onclick="switchScreen('banner')">Banner</button>
+          <button class="home-tile-link" onclick="switchScreen('promotion-section')">Promotion Section</button>
         </div>
       </div>
       <div class="home-tile">
@@ -476,7 +478,7 @@ function doCopy(id, btn) {
 
 // ── Screen switching ───────────────────────────────────────────
 
-var _GLOBAL_SCREENS = ['header', 'footer', 'banner'];
+var _GLOBAL_SCREENS = ['header', 'footer', 'banner', 'promotion-section'];
 var _HOME_SCREENS   = ['hero', 'about-us'];
 var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
 var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards', 'steps-section'];
@@ -486,6 +488,7 @@ var _screenFiles = {
   'about-us':    '/screens/about-us.html',
   'feature-cards': '/screens/feature-cards.html',
   'steps-section': '/screens/steps-section.html',
+  'promotion-section': '/screens/promotion-section.html',
   intro:    '/screens/intro.html',
   desc:     '/screens/desc.html',
   tabs:     '/screens/tabs.html',
@@ -553,6 +556,7 @@ async function switchScreen(name) {
   if (name === 'faq')     faqOnOpen();
   if (name === 'team')    teamOnOpen();
   if (name === 'banner')  bannerOnOpen();
+  if (name === 'promotion-section') promotionOnOpen();
   if (name === 'footer')  footerOnOpen();
   if (name === 'programs') programOnOpen();
   if (name === 'form')    formOnOpen();
@@ -6743,6 +6747,256 @@ function heroAddTag(val, skipSync) {
 
 function generateHero() {
   heroPersistNow('Saving…', 'Saved!', true);
+}
+
+// ── Promotion Section persisted sections ─────────────────────
+
+var promotionStore = { sections: [], activeId: '', counter: 0, loaded: false, bound: false, timer: null };
+
+function promotionDefaultSection() {
+  var id = 'prs' + (++promotionStore.counter);
+  return {
+    id: id,
+    name: 'Promotion Section ' + promotionStore.counter,
+    bg: '#deebf7',
+    btnBg: '#152b57',
+    title: 'Ready to take the next step?',
+    titleColor: '#164b8a',
+    titleSize: 22,
+    subtitle: 'Join 2,400+ learners already transforming their careers with Vertex Learning Solutions.',
+    subtitleColor: '#1f6ab4',
+    subtitleSize: 14,
+    ctaText: 'Start for free',
+    ctaUrl: '#',
+    ctaColor: '#ffffff',
+    ctaSize: 14
+  };
+}
+
+function promotionCurrentSection() {
+  return promotionStore.sections.find(function(sec) { return sec.id === promotionStore.activeId; }) || null;
+}
+
+function promotionSafeHex(v, fallback) {
+  return /^#[0-9a-fA-F]{6}$/.test(v || '') ? v : fallback;
+}
+
+function promotionReadFormData() {
+  return {
+    name: (document.getElementById('promo-name') || {}).value || '',
+    bg: promotionSafeHex((document.getElementById('promo-bg-text') || {}).value, '#deebf7'),
+    btnBg: promotionSafeHex((document.getElementById('promo-btn-bg-text') || {}).value, '#152b57'),
+    title: (document.getElementById('promo-title') || {}).value || '',
+    titleColor: promotionSafeHex((document.getElementById('promo-title-color-text') || {}).value, '#164b8a'),
+    titleSize: parseInt((document.getElementById('promo-title-size') || {}).value, 10) || 22,
+    subtitle: (document.getElementById('promo-subtitle') || {}).value || '',
+    subtitleColor: promotionSafeHex((document.getElementById('promo-subtitle-color-text') || {}).value, '#1f6ab4'),
+    subtitleSize: parseInt((document.getElementById('promo-subtitle-size') || {}).value, 10) || 14,
+    ctaText: (document.getElementById('promo-cta-text') || {}).value || '',
+    ctaUrl: (document.getElementById('promo-cta-url') || {}).value || '',
+    ctaColor: promotionSafeHex((document.getElementById('promo-cta-color-text') || {}).value, '#ffffff'),
+    ctaSize: parseInt((document.getElementById('promo-cta-size') || {}).value, 10) || 14
+  };
+}
+
+function promotionFillForm(sec) {
+  document.getElementById('promo-name').value = sec.name || '';
+  document.getElementById('promo-bg-picker').value = sec.bg || '#deebf7';
+  document.getElementById('promo-bg-text').value = sec.bg || '#deebf7';
+  document.getElementById('promo-btn-bg-picker').value = sec.btnBg || '#152b57';
+  document.getElementById('promo-btn-bg-text').value = sec.btnBg || '#152b57';
+  document.getElementById('promo-title').value = sec.title || '';
+  document.getElementById('promo-title-color-picker').value = sec.titleColor || '#164b8a';
+  document.getElementById('promo-title-color-text').value = sec.titleColor || '#164b8a';
+  document.getElementById('promo-title-size').value = sec.titleSize || 22;
+  document.getElementById('promo-subtitle').value = sec.subtitle || '';
+  document.getElementById('promo-subtitle-color-picker').value = sec.subtitleColor || '#1f6ab4';
+  document.getElementById('promo-subtitle-color-text').value = sec.subtitleColor || '#1f6ab4';
+  document.getElementById('promo-subtitle-size').value = sec.subtitleSize || 14;
+  document.getElementById('promo-cta-text').value = sec.ctaText || '';
+  document.getElementById('promo-cta-url').value = sec.ctaUrl || '';
+  document.getElementById('promo-cta-color-picker').value = sec.ctaColor || '#ffffff';
+  document.getElementById('promo-cta-color-text').value = sec.ctaColor || '#ffffff';
+  document.getElementById('promo-cta-size').value = sec.ctaSize || 14;
+}
+
+function promotionSyncCurrent() {
+  var sec = promotionCurrentSection();
+  if (!sec) return null;
+  var data = promotionReadFormData();
+  sec.name = data.name;
+  sec.bg = data.bg;
+  sec.btnBg = data.btnBg;
+  sec.title = data.title;
+  sec.titleColor = data.titleColor;
+  sec.titleSize = data.titleSize;
+  sec.subtitle = data.subtitle;
+  sec.subtitleColor = data.subtitleColor;
+  sec.subtitleSize = data.subtitleSize;
+  sec.ctaText = data.ctaText;
+  sec.ctaUrl = data.ctaUrl;
+  sec.ctaColor = data.ctaColor;
+  sec.ctaSize = data.ctaSize;
+  return sec;
+}
+
+function buildPromotionSectionHtml(data) {
+  var uid = 'promo' + Date.now().toString(36);
+  var css = '<style>'
+    + '.' + uid + '{font-family:\'Poppins\',sans-serif;background:' + xA(data.bg || '#deebf7') + ';padding:28px 24px;box-sizing:border-box;}'
+    + '.' + uid + '-inner{max-width:1120px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:24px;}'
+    + '.' + uid + '-copy{flex:1;min-width:0;}'
+    + '.' + uid + '-title{margin:0 0 6px;font-size:' + (parseInt(data.titleSize, 10) || 22) + 'px;font-weight:600;line-height:1.25;color:' + xA(data.titleColor || '#164b8a') + ';}'
+    + '.' + uid + '-subtitle{margin:0;font-size:' + (parseInt(data.subtitleSize, 10) || 14) + 'px;font-weight:500;line-height:1.5;color:' + xA(data.subtitleColor || '#1f6ab4') + ';}'
+    + '.' + uid + '-cta{display:inline-flex;align-items:center;justify-content:center;min-width:146px;padding:14px 28px;border-radius:8px;background:' + xA(data.btnBg || '#152b57') + ';color:' + xA(data.ctaColor || '#ffffff') + ' !important;font-size:' + (parseInt(data.ctaSize, 10) || 14) + 'px;font-weight:600;text-decoration:none !important;white-space:nowrap;flex-shrink:0;}'
+    + '.' + uid + '-cta:hover{opacity:.92;}'
+    + '@media(max-width:720px){.' + uid + '-inner{flex-direction:column;align-items:flex-start;}.' + uid + '-cta{width:100%;}}'
+    + '</style>';
+
+  var body = '<section class="' + uid + '">'
+    + '<div class="' + uid + '-inner">'
+    + '<div class="' + uid + '-copy">'
+    + (data.title ? '<h2 class="' + uid + '-title">' + xH(data.title) + '</h2>' : '')
+    + (data.subtitle ? '<p class="' + uid + '-subtitle">' + xH(data.subtitle) + '</p>' : '')
+    + '</div>'
+    + (data.ctaText ? '<a class="' + uid + '-cta" href="' + xA(data.ctaUrl || '#') + '">' + xH(data.ctaText) + '</a>' : '')
+    + '</div>'
+    + '</section>';
+
+  return '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n' + css + '\n' + body;
+}
+
+function promotionRenderCurrent(showPreview) {
+  var sec = promotionCurrentSection();
+  if (!sec) {
+    cmsRenderScreenEmpty('promotion-section', 'Create a promotion section to preview it here.', showPreview);
+    return;
+  }
+  cmsRenderScreenHtml('promotion-section', buildPromotionSectionHtml(sec), showPreview);
+}
+
+function promotionRenderList() {
+  cmsRenderSectionList('promotion-section-list', promotionStore.sections, promotionStore.activeId, 'promotionSelectSection', 'promotionDeleteSection', function(sec) {
+    return sec.title || 'Untitled promotion';
+  }, 'No saved sections yet. Click + New Section to get started.');
+}
+
+function promotionPersistNow(savingText, savedText, showPreview) {
+  clearTimeout(promotionStore.timer);
+  promotionSyncCurrent();
+  promotionRenderList();
+  promotionRenderCurrent(showPreview);
+  return cmsSaveSections('/api/publish-promotion-section', promotionStore.sections, 'promotion-status', savingText || 'Saving…', savedText || 'Saved!');
+}
+
+function promotionSchedulePersist() {
+  clearTimeout(promotionStore.timer);
+  promotionStore.timer = setTimeout(function() {
+    promotionPersistNow('Saving draft…', 'Draft saved', false);
+  }, 700);
+}
+
+function promotionHandleChange() {
+  if (!promotionCurrentSection()) return;
+  promotionSyncCurrent();
+  promotionRenderList();
+  promotionRenderCurrent(false);
+  promotionSchedulePersist();
+}
+
+function promotionBindInputs() {
+  if (promotionStore.bound) return;
+  var screen = document.getElementById('screen-promotion-section');
+  var panel = screen && screen.querySelector('.form-panel');
+  if (!panel) return;
+  panel.addEventListener('input', function() { promotionHandleChange(); });
+  panel.addEventListener('change', function() { promotionHandleChange(); });
+  promotionStore.bound = true;
+}
+
+function promotionSelectSection(id) {
+  if (promotionStore.activeId === id) return;
+  promotionSyncCurrent();
+  promotionStore.activeId = id;
+  var sec = promotionCurrentSection();
+  if (!sec) return;
+  promotionFillForm(sec);
+  promotionRenderList();
+  promotionRenderCurrent(false);
+}
+
+function promotionCreateSection(skipPersist) {
+  promotionSyncCurrent();
+  var sec = promotionDefaultSection();
+  promotionStore.sections.push(sec);
+  promotionStore.activeId = sec.id;
+  promotionFillForm(sec);
+  promotionRenderList();
+  promotionRenderCurrent(false);
+  if (!skipPersist) promotionPersistNow();
+}
+
+function promotionDeleteSection(id) {
+  if (!confirm('Delete this promotion section?')) return;
+  promotionSyncCurrent();
+  promotionStore.sections = promotionStore.sections.filter(function(sec) { return sec.id !== id; });
+  if (!promotionStore.sections.length) {
+    promotionCreateSection(true);
+  } else {
+    promotionStore.activeId = promotionStore.sections[0].id;
+    promotionFillForm(promotionCurrentSection());
+    promotionRenderList();
+    promotionRenderCurrent(false);
+  }
+  promotionPersistNow();
+}
+
+function promotionOnOpen() {
+  promotionBindInputs();
+  if (promotionStore.loaded) {
+    if (!promotionStore.sections.length) promotionCreateSection(true);
+    if (!promotionStore.activeId && promotionStore.sections.length) promotionSelectSection(promotionStore.sections[0].id);
+    return;
+  }
+  fetch('/api/publish-promotion-section')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var saved = data.sections || [];
+      promotionStore.counter = cmsMaxSectionCounter(saved, 'prs');
+      promotionStore.sections = saved.map(function(sec) {
+        return {
+          id: sec.id || ('prs' + (++promotionStore.counter)),
+          name: sec.name || '',
+          bg: sec.bg || '#deebf7',
+          btnBg: sec.btnBg || '#152b57',
+          title: sec.title || 'Ready to take the next step?',
+          titleColor: sec.titleColor || '#164b8a',
+          titleSize: parseInt(sec.titleSize, 10) || 22,
+          subtitle: sec.subtitle || 'Join 2,400+ learners already transforming their careers with Vertex Learning Solutions.',
+          subtitleColor: sec.subtitleColor || '#1f6ab4',
+          subtitleSize: parseInt(sec.subtitleSize, 10) || 14,
+          ctaText: sec.ctaText || 'Start for free',
+          ctaUrl: sec.ctaUrl || '#',
+          ctaColor: sec.ctaColor || '#ffffff',
+          ctaSize: parseInt(sec.ctaSize, 10) || 14
+        };
+      });
+      promotionStore.loaded = true;
+      if (!promotionStore.sections.length) promotionCreateSection(true);
+      promotionStore.activeId = promotionStore.sections[0].id;
+      promotionFillForm(promotionCurrentSection());
+      promotionRenderList();
+      promotionRenderCurrent(false);
+    })
+    .catch(function() {
+      promotionStore.loaded = true;
+      cmsSetStatus('promotion-status', 'Could not load saved sections.', 'red');
+      if (!promotionStore.sections.length) promotionCreateSection(true);
+    });
+}
+
+function generatePromotionSection() {
+  promotionPersistNow('Saving…', 'Saved!', true);
 }
 
 </script>

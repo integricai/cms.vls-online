@@ -1,0 +1,110 @@
+<div id="screen-promotion-section" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="section-label" style="margin:0;">Promotion Sections</div>
+      <button class="btn-add-block" onclick="promotionCreateSection()" style="margin:0;">+ New Section</button>
+    </div>
+    <div id="promotion-section-list" class="block-list"></div>
+    <div id="promotion-status" style="font-size:12px;min-height:18px;"></div>
+
+    <div class="section-label">Section Setup</div>
+    <div class="field">
+      <label>Section name <span class="hint">(for CMS identification)</span></label>
+      <input type="text" id="promo-name" value="Promotion Section 1">
+    </div>
+
+    <div class="section-label">Layout</div>
+    <div class="field">
+      <label>Section background colour</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="color" id="promo-bg-picker" value="#deebf7" oninput="document.getElementById('promo-bg-text').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+        <input type="text" id="promo-bg-text" value="#deebf7" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('promo-bg-picker').value=v">
+      </div>
+    </div>
+    <div class="field">
+      <label>CTA button background colour</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="color" id="promo-btn-bg-picker" value="#152b57" oninput="document.getElementById('promo-btn-bg-text').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+        <input type="text" id="promo-btn-bg-text" value="#152b57" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('promo-btn-bg-picker').value=v">
+      </div>
+    </div>
+
+    <div class="section-label">Title</div>
+    <div class="field">
+      <label>Title text</label>
+      <input type="text" id="promo-title" value="Ready to take the next step?">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Title colour</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="color" id="promo-title-color-picker" value="#164b8a" oninput="document.getElementById('promo-title-color-text').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="promo-title-color-text" value="#164b8a" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('promo-title-color-picker').value=v">
+        </div>
+      </div>
+      <div class="field">
+        <label>Title size (px)</label>
+        <input type="number" id="promo-title-size" value="22" min="12" max="64">
+      </div>
+    </div>
+
+    <div class="section-label">Subtitle</div>
+    <div class="field">
+      <label>Subtitle text</label>
+      <textarea id="promo-subtitle" rows="2">Join 2,400+ learners already transforming their careers with Vertex Learning Solutions.</textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Subtitle colour</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="color" id="promo-subtitle-color-picker" value="#1f6ab4" oninput="document.getElementById('promo-subtitle-color-text').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="promo-subtitle-color-text" value="#1f6ab4" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('promo-subtitle-color-picker').value=v">
+        </div>
+      </div>
+      <div class="field">
+        <label>Subtitle size (px)</label>
+        <input type="number" id="promo-subtitle-size" value="14" min="10" max="48">
+      </div>
+    </div>
+
+    <div class="section-label">CTA</div>
+    <div class="field">
+      <label>CTA text</label>
+      <input type="text" id="promo-cta-text" value="Start for free">
+    </div>
+    <div class="field">
+      <label>CTA URL</label>
+      <input type="text" id="promo-cta-url" value="#" placeholder="https://">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>CTA text colour</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="color" id="promo-cta-color-picker" value="#ffffff" oninput="document.getElementById('promo-cta-color-text').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="promo-cta-color-text" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('promo-cta-color-picker').value=v">
+        </div>
+      </div>
+      <div class="field">
+        <label>CTA text size (px)</label>
+        <input type="number" id="promo-cta-size" value="14" min="10" max="40">
+      </div>
+    </div>
+
+    <button class="btn-gen" onclick="generatePromotionSection()">Generate &amp; Save</button>
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="promotion-section-ot-preview" onclick="switchOut('promotion-section','preview')">Preview</div>
+      <div class="out-tab" id="promotion-section-ot-html" onclick="switchOut('promotion-section','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="promotion-section-preview-wrap" class="preview-wrap"></div>
+      <div id="promotion-section-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('promotion-section-code',this)">Copy</button>
+        <pre id="promotion-section-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>
