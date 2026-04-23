@@ -226,6 +226,13 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-banner" onclick="switchScreen('banner')">Banner</div>
     </div>
   </div>
+  <!-- Home Page dropdown -->
+  <div class="nav-dropdown" id="nav-homepage-dd">
+    <div class="nav-tab" id="nav-homepage" onclick="toggleNavDd('homepage',event)">Home Page <span class="nav-dd-arrow">▾</span></div>
+    <div class="nav-dd-menu" id="nav-homepage-menu">
+      <div class="nav-dd-item" id="nav-hero" onclick="switchScreen('hero')">Hero — Left Pane</div>
+    </div>
+  </div>
   <!-- Page dropdown -->
   <div class="nav-dropdown" id="nav-page-dd">
     <div class="nav-tab" id="nav-page" onclick="toggleNavDd('page',event)">Page <span class="nav-dd-arrow">▾</span></div>
@@ -266,6 +273,13 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <button class="home-tile-link" onclick="switchScreen('header')">Header</button>
           <button class="home-tile-link" onclick="switchScreen('footer')">Footer</button>
           <button class="home-tile-link" onclick="switchScreen('banner')">Banner</button>
+        </div>
+      </div>
+      <div class="home-tile">
+        <div class="home-tile-title">Home Page Components</div>
+        <div class="home-tile-desc">Custom sections for the VLS home page — hero banners, testimonials, and more.</div>
+        <div class="home-tile-links">
+          <button class="home-tile-link" onclick="switchScreen('hero')">Hero Left Pane</button>
         </div>
       </div>
       <div class="home-tile">
@@ -457,10 +471,12 @@ function doCopy(id, btn) {
 // ── Screen switching ───────────────────────────────────────────
 
 var _GLOBAL_SCREENS = ['header', 'footer', 'banner'];
+var _HOME_SCREENS   = ['hero'];
 var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
 var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form'];
 
 var _screenFiles = {
+  hero:     '/screens/homepage-hero.html',
   intro:    '/screens/intro.html',
   desc:     '/screens/desc.html',
   tabs:     '/screens/tabs.html',
@@ -506,6 +522,9 @@ async function switchScreen(name) {
   } else if (_GLOBAL_SCREENS.indexOf(name) >= 0) {
     document.getElementById('nav-global').classList.add('active');
     var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
+  } else if (_HOME_SCREENS.indexOf(name) >= 0) {
+    document.getElementById('nav-homepage').classList.add('active');
+    var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
   } else if (_PAGE_SCREENS.indexOf(name) >= 0) {
     document.getElementById('nav-page').classList.add('active');
     var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
@@ -514,6 +533,7 @@ async function switchScreen(name) {
     var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
   }
 
+  if (name === 'hero'  && !_loadedScreens._heroInit)  { _loadedScreens._heroInit  = true; heroOnOpen();  }
   if (name === 'intro' && !_loadedScreens._introInit) { _loadedScreens._introInit = true; introOnOpen(); }
   if (name === 'desc'  && !_loadedScreens._descInit)  { _loadedScreens._descInit  = true; descOnOpen();  }
   if (name === 'tabs'  && !_loadedScreens._tabsInit)  { _loadedScreens._tabsInit  = true; tabsOnOpen();  }
@@ -4913,6 +4933,112 @@ function copyHdrCode() {
   var box = document.getElementById('hdr-code-box');
   box.select();
   document.execCommand('copy');
+}
+
+// ── Hero Left Pane ─────────────────────────────────────────────
+
+function heroOnOpen() {
+  var defaults = ['ACCA tuition', 'CIMA coaching', 'Online tutoring', '1-to-1 coaching'];
+  defaults.forEach(function(t) { heroAddTag(t); });
+}
+
+function heroAddTag(val) {
+  var list = document.getElementById('hero-tags');
+  var id = 'htag-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-body" style="flex-direction:row;align-items:center;gap:6px;padding:8px 10px">' +
+      '<input type="text" class="hero-tag-input" value="' + xA(val || '') + '" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none">' +
+      '<button class="btn-icon" title="Remove" onclick="document.getElementById(\'' + id + '\').remove()" style="flex-shrink:0">&#x2715;</button>' +
+    '</div>';
+  list.appendChild(div);
+}
+
+function generateHero() {
+  var uid = 'h' + Date.now().toString(36);
+
+  var maxW   = document.getElementById('hero-max-width').value;
+  var padTop = parseInt(document.getElementById('hero-pad-top').value) || 48;
+  var padBot = parseInt(document.getElementById('hero-pad-bot').value) || 48;
+  var h1Size = parseInt(document.getElementById('hero-h1-size').value) || 44;
+
+  var eyebrow = document.getElementById('hero-eyebrow').value.trim();
+  var h1      = document.getElementById('hero-h1').value.trim();
+  var h1hl    = document.getElementById('hero-h1-hl').value.trim();
+  var h2      = document.getElementById('hero-h2').value.trim();
+  var desc    = document.getElementById('hero-desc').value.trim();
+  var b1t     = document.getElementById('hero-btn1-text').value.trim();
+  var b1u     = document.getElementById('hero-btn1-url').value.trim();
+  var b2t     = document.getElementById('hero-btn2-text').value.trim();
+  var b2u     = document.getElementById('hero-btn2-url').value.trim();
+
+  var tags = [];
+  document.querySelectorAll('#hero-tags .hero-tag-input').forEach(function(inp) {
+    var v = inp.value.trim(); if (v) tags.push(v);
+  });
+
+  var stats = [];
+  [[1],[2],[3]].forEach(function(a) {
+    var i = a[0];
+    var v = document.getElementById('hero-s' + i + 'v').value.trim();
+    var l = document.getElementById('hero-s' + i + 'l').value.trim();
+    if (v) stats.push({v: v, l: l});
+  });
+
+  var tagsHtml = tags.map(function(t) {
+    return '<span class="' + uid + '-tag">' + xH(t) + '</span>';
+  }).join('');
+
+  var statsHtml = stats.map(function(s) {
+    return '<div class="' + uid + '-stat">' +
+      '<div class="' + uid + '-sv">' + xH(s.v) + '</div>' +
+      '<div class="' + uid + '-sl">' + xH(s.l) + '</div>' +
+      '</div>';
+  }).join('');
+
+  var h2Size = Math.round(h1Size * 0.5);
+
+  var css =
+    '<style>' +
+    '.' + uid + '{font-family:\'Poppins\',sans-serif;max-width:' + maxW + ';padding:' + padTop + 'px 0 ' + padBot + 'px;box-sizing:border-box;}' +
+    '.' + uid + '-ey{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#204280;margin-bottom:14px;}' +
+    '.' + uid + '-h1{font-size:' + h1Size + 'px;font-weight:700;color:#1a1a1a;line-height:1.15;margin:0 0 6px;}' +
+    '.' + uid + '-h1 em{font-style:normal;color:#204280;}' +
+    '.' + uid + '-h2{font-size:' + h2Size + 'px;font-weight:600;color:#374151;margin:10px 0 0;line-height:1.35;}' +
+    '.' + uid + '-desc{font-size:16px;font-weight:400;color:#374151;line-height:1.75;margin:20px 0 24px;}' +
+    '.' + uid + '-tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px;}' +
+    '.' + uid + '-tag{display:inline-block;padding:6px 16px;border:1.5px solid #cbd5e1;border-radius:999px;font-size:13px;font-weight:500;color:#374151;white-space:nowrap;}' +
+    '.' + uid + '-btns{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px;}' +
+    '.' + uid + '-b1{display:inline-block;padding:12px 26px;background:#204280;color:#fff !important;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none !important;border:none;cursor:pointer;}' +
+    '.' + uid + '-b2{display:inline-block;padding:11px 24px;background:#fff;color:#1a1a1a !important;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none !important;cursor:pointer;}' +
+    '.' + uid + '-div{border-top:1px solid #e2e8f0;margin-bottom:28px;}' +
+    '.' + uid + '-stats{display:flex;gap:36px;flex-wrap:wrap;}' +
+    '.' + uid + '-sv{font-size:26px;font-weight:700;color:#1a1a1a;line-height:1.1;}' +
+    '.' + uid + '-sl{font-size:13px;font-weight:400;color:#6b7280;margin-top:4px;}' +
+    '</style>';
+
+  var body =
+    '<div class="' + uid + '">' +
+    (eyebrow ? '<div class="' + uid + '-ey">' + xH(eyebrow) + '</div>' : '') +
+    (h1 ? '<h1 class="' + uid + '-h1">' + xH(h1) + (h1hl ? '<br><em>' + xH(h1hl) + '</em>' : '') + '</h1>' : '') +
+    (h2  ? '<h2 class="' + uid + '-h2">' + xH(h2) + '</h2>' : '') +
+    (desc ? '<p class="' + uid + '-desc">' + xH(desc) + '</p>' : '') +
+    (tags.length ? '<div class="' + uid + '-tags">' + tagsHtml + '</div>' : '') +
+    ((b1t || b2t) ? '<div class="' + uid + '-btns">' +
+      (b1t ? '<a href="' + xA(b1u || '#') + '" class="' + uid + '-b1">' + xH(b1t) + '</a>' : '') +
+      (b2t ? '<a href="' + xA(b2u || '#') + '" class="' + uid + '-b2">' + xH(b2t) + '</a>' : '') +
+      '</div>' : '') +
+    (stats.length ? '<div class="' + uid + '-div"></div><div class="' + uid + '-stats">' + statsHtml + '</div>' : '') +
+    '</div>';
+
+  var fontLink = '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n';
+  var html = fontLink + css + '\n' + body;
+
+  document.getElementById('hero-code').textContent = html;
+  document.getElementById('hero-preview-wrap').innerHTML = html;
+  switchOut('hero', 'preview');
 }
 
 </script>

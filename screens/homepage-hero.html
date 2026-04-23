@@ -1,0 +1,107 @@
+<div id="screen-hero" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <div class="section-label">Layout</div>
+    <div class="field">
+      <label>Max width</label>
+      <select id="hero-max-width">
+        <option value="480px">Narrow — 480px</option>
+        <option value="560px" selected>Default — 560px</option>
+        <option value="640px">Wide — 640px</option>
+        <option value="720px">Wider — 720px</option>
+        <option value="100%">Full — 100%</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Padding top (px)</label>
+        <input type="number" id="hero-pad-top" value="48" min="0" max="200">
+      </div>
+      <div class="field">
+        <label>Padding bottom (px)</label>
+        <input type="number" id="hero-pad-bot" value="48" min="0" max="200">
+      </div>
+    </div>
+    <div class="field">
+      <label>H1 font size (px)</label>
+      <input type="number" id="hero-h1-size" value="44" min="24" max="80">
+    </div>
+
+    <div class="section-label">Eyebrow</div>
+    <div class="field">
+      <label>Eyebrow text <span class="hint">(small label above heading)</span></label>
+      <input type="text" id="hero-eyebrow" value="VERTEX LEARNING SOLUTIONS">
+    </div>
+
+    <div class="section-label">Heading</div>
+    <div class="field">
+      <label>H1 — Main line</label>
+      <input type="text" id="hero-h1" value="Expert-led tutoring &amp; coaching">
+    </div>
+    <div class="field">
+      <label>H1 — Highlighted line <span class="hint">(displays in VLS blue)</span></label>
+      <input type="text" id="hero-h1-hl" value="— built for results.">
+    </div>
+    <div class="field">
+      <label>H2 — Sub-heading <span class="hint">(optional, appears below H1)</span></label>
+      <input type="text" id="hero-h2" placeholder="Optional sub-heading">
+    </div>
+
+    <div class="section-label">Description</div>
+    <div class="field">
+      <label>Body text</label>
+      <textarea id="hero-desc" rows="4">Vertex Learning Solutions (VLS) connects ambitious learners with expert tutors across ACCA, CIMA, and CMA — giving you structured guidance, practical tools, and 1-to-1 support to pass your exams and grow your career.</textarea>
+    </div>
+
+    <div class="section-label">Tag Pills</div>
+    <div id="hero-tags" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="heroAddTag()">+ Add tag</button>
+
+    <div class="section-label">Call to Action Buttons</div>
+    <div class="field"><label>Primary button text</label><input type="text" id="hero-btn1-text" value="Browse courses"></div>
+    <div class="field"><label>Primary button URL</label><input type="text" id="hero-btn1-url" placeholder="https://"></div>
+    <div class="field"><label>Secondary button text</label><input type="text" id="hero-btn2-text" value="Enquire now ↓"></div>
+    <div class="field"><label>Secondary button URL</label><input type="text" id="hero-btn2-url" placeholder="https://"></div>
+
+    <div class="section-label">Stats <span class="hint" style="text-transform:none;letter-spacing:0">(leave value blank to hide)</span></div>
+    <div style="display:flex;flex-direction:column;gap:10px" id="hero-stats-wrap">
+      <div class="more-card">
+        <div class="more-card-label">Stat 1</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="field"><label>Value</label><input type="text" id="hero-s1v" value="2,400+"></div>
+          <div class="field"><label>Label</label><input type="text" id="hero-s1l" value="Students enrolled"></div>
+        </div>
+      </div>
+      <div class="more-card">
+        <div class="more-card-label">Stat 2</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="field"><label>Value</label><input type="text" id="hero-s2v" value="98%"></div>
+          <div class="field"><label>Label</label><input type="text" id="hero-s2l" value="Satisfaction rate"></div>
+        </div>
+      </div>
+      <div class="more-card">
+        <div class="more-card-label">Stat 3</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="field"><label>Value</label><input type="text" id="hero-s3v" value="35+"></div>
+          <div class="field"><label>Label</label><input type="text" id="hero-s3l" value="Courses available"></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-gen" onclick="generateHero()">Generate HTML</button>
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="hero-ot-preview" onclick="switchOut('hero','preview')">Preview</div>
+      <div class="out-tab" id="hero-ot-html" onclick="switchOut('hero','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="hero-preview-wrap" class="preview-wrap" style="background:#f8f9fc"></div>
+      <div id="hero-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('hero-code',this)">Copy</button>
+        <pre id="hero-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>
