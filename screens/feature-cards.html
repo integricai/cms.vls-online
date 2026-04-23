@@ -1,0 +1,38 @@
+<div id="screen-feature-cards" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <div class="section-label">Section Header</div>
+    <div class="field">
+      <label>Eyebrow text</label>
+      <input type="text" id="fc-eyebrow" value="FEATURED COURSES">
+    </div>
+    <div class="field">
+      <label>Section title</label>
+      <input type="text" id="fc-title" value="Start learning today">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="fc-desc" rows="3">Structured courses built for real outcomes. Pick a track that matches your goals and get started in minutes.</textarea>
+    </div>
+
+    <div class="section-label">Cards</div>
+    <div id="fc-cards" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="featureCardsAddCard()">+ Add card</button>
+
+    <button class="btn-gen" onclick="generateFeatureCards()">Generate HTML</button>
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="feature-cards-ot-preview" onclick="switchOut('feature-cards','preview')">Preview</div>
+      <div class="out-tab" id="feature-cards-ot-html" onclick="switchOut('feature-cards','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="feature-cards-preview-wrap" class="preview-wrap"></div>
+      <div id="feature-cards-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('feature-cards-code',this)">Copy</button>
+        <pre id="feature-cards-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>

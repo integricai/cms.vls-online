@@ -251,6 +251,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-events" onclick="switchScreen('events')">Events</div>
       <div class="nav-dd-item" id="nav-programs" onclick="switchScreen('programs')">Program Cards</div>
       <div class="nav-dd-item" id="nav-form" onclick="switchScreen('form')">Form</div>
+      <div class="nav-dd-item" id="nav-feature-cards" onclick="switchScreen('feature-cards')">Feature Cards</div>
     </div>
   </div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
@@ -294,11 +295,12 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       </div>
       <div class="home-tile">
         <div class="home-tile-title">Shared Components</div>
-        <div class="home-tile-desc">Reusable across multiple pages — FAQs, events calendar, program cards, and enquiry forms.</div>
+        <div class="home-tile-desc">Reusable across multiple pages — FAQs, events calendar, program cards, feature cards, and enquiry forms.</div>
         <div class="home-tile-links">
           <button class="home-tile-link" onclick="switchScreen('faq')">FAQ</button>
           <button class="home-tile-link" onclick="switchScreen('events')">Events</button>
           <button class="home-tile-link" onclick="switchScreen('programs')">Program Cards</button>
+          <button class="home-tile-link" onclick="switchScreen('feature-cards')">Feature Cards</button>
           <button class="home-tile-link" onclick="switchScreen('form')">Form</button>
         </div>
       </div>
@@ -473,10 +475,11 @@ function doCopy(id, btn) {
 var _GLOBAL_SCREENS = ['header', 'footer', 'banner'];
 var _HOME_SCREENS   = ['hero'];
 var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
-var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form'];
+var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards'];
 
 var _screenFiles = {
-  hero:     '/screens/homepage-hero.html',
+  hero:          '/screens/homepage-hero.html',
+  'feature-cards': '/screens/feature-cards.html',
   intro:    '/screens/intro.html',
   desc:     '/screens/desc.html',
   tabs:     '/screens/tabs.html',
@@ -533,7 +536,8 @@ async function switchScreen(name) {
     var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
   }
 
-  if (name === 'hero'  && !_loadedScreens._heroInit)  { _loadedScreens._heroInit  = true; heroOnOpen();  }
+  if (name === 'hero'         && !_loadedScreens._heroInit)  { _loadedScreens._heroInit  = true; heroOnOpen();  }
+  if (name === 'feature-cards' && !_loadedScreens._fcInit)   { _loadedScreens._fcInit    = true; featureCardsOnOpen(); }
   if (name === 'intro' && !_loadedScreens._introInit) { _loadedScreens._introInit = true; introOnOpen(); }
   if (name === 'desc'  && !_loadedScreens._descInit)  { _loadedScreens._descInit  = true; descOnOpen();  }
   if (name === 'tabs'  && !_loadedScreens._tabsInit)  { _loadedScreens._tabsInit  = true; tabsOnOpen();  }
@@ -4927,6 +4931,113 @@ function switchHdrOut(mode) {
   document.getElementById('hdr-out-code').style.display    = mode === 'code'    ? '' : 'none';
   document.getElementById('hdr-ot-preview').classList.toggle('active', mode === 'preview');
   document.getElementById('hdr-ot-code').classList.toggle('active', mode === 'code');
+}
+
+// ── Feature Cards Section ──────────────────────────────────────
+
+function featureCardsOnOpen() {
+  var defaults = [
+    {color:'#204280', eyebrow:'Leadership', title:'Leadership Fundamentals for Managers', subtitle:'Coach: James Okafor', ctaText:'Enrol →', ctaUrl:'#'},
+    {color:'#1a5c50', eyebrow:'Mindset',    title:'Mindset & Resilience Coaching',        subtitle:'Coach: Priya Sharma',  ctaText:'Enrol →', ctaUrl:'#'},
+    {color:'#6b4c1a', eyebrow:'Career',     title:'Career Acceleration: Land Your Next Role', subtitle:'Coach: Marcus Bell', ctaText:'Enrol →', ctaUrl:'#'},
+  ];
+  defaults.forEach(function(d) { featureCardsAddCard(d, true); });
+}
+
+function featureCardsAddCard(data, startCollapsed) {
+  var list  = document.getElementById('fc-cards');
+  var id    = 'fcc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var label = (data && data.title) ? data.title : 'New Card';
+  var color = (data && data.color) ? data.color : '#204280';
+  var div   = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">' +
+      '<span class="block-header-label">' + xH(label) + '</span>' +
+      '<span class="block-type-badge">Card</span>' +
+      '<button class="btn-sm danger" onclick="event.stopPropagation();document.getElementById(\'' + id + '\').remove()" style="margin-left:auto">Remove</button>' +
+    '</div>' +
+    '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">' +
+      '<div class="field"><label>Top colour</label>' +
+        '<div style="display:flex;gap:8px;align-items:center">' +
+          '<input type="color" class="fc-cp" value="' + xA(color) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">' +
+          '<input type="text"  class="fc-chex" value="' + xA(color) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v">' +
+        '</div>' +
+      '</div>' +
+      '<div class="field"><label>Eyebrow text</label><input type="text" class="fc-ey" value="' + xA((data && data.eyebrow) || '') + '" placeholder="e.g. Leadership"></div>' +
+      '<div class="field"><label>Card title</label><input type="text" class="fc-ti" value="' + xA((data && data.title) || '') + '" placeholder="e.g. Leadership Fundamentals for Managers" oninput="this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=this.value||\'New Card\'"></div>' +
+      '<div class="field"><label>Sub title</label><input type="text" class="fc-su" value="' + xA((data && data.subtitle) || '') + '" placeholder="e.g. Coach: James Okafor"></div>' +
+      '<div class="field"><label>CTA text</label><input type="text" class="fc-ctat" value="' + xA((data && data.ctaText) || 'Enrol →') + '"></div>' +
+      '<div class="field"><label>CTA URL</label><input type="text" class="fc-ctau" value="' + xA((data && data.ctaUrl) || '') + '" placeholder="https://"></div>' +
+    '</div>';
+  list.appendChild(div);
+}
+
+function generateFeatureCards() {
+  var uid = 'fc' + Date.now().toString(36);
+
+  var secEy    = document.getElementById('fc-eyebrow').value.trim();
+  var secTitle = document.getElementById('fc-title').value.trim();
+  var secDesc  = document.getElementById('fc-desc').value.trim();
+
+  var cards = [];
+  document.querySelectorAll('#fc-cards .block-item').forEach(function(item) {
+    var color   = item.querySelector('.fc-cp').value;
+    var eyebrow = item.querySelector('.fc-ey').value.trim();
+    var title   = item.querySelector('.fc-ti').value.trim();
+    var subtitle= item.querySelector('.fc-su').value.trim();
+    var ctaText = item.querySelector('.fc-ctat').value.trim();
+    var ctaUrl  = item.querySelector('.fc-ctau').value.trim();
+    if (title) cards.push({color:color, eyebrow:eyebrow, title:title, subtitle:subtitle, ctaText:ctaText, ctaUrl:ctaUrl});
+  });
+
+  var cardsHtml = cards.map(function(c) {
+    return '<div class="' + uid + '-card">' +
+      '<div class="' + uid + '-top" style="background:' + xA(c.color) + '">' +
+        (c.eyebrow ? '<span class="' + uid + '-badge">' + xH(c.eyebrow) + '</span>' : '') +
+      '</div>' +
+      '<div class="' + uid + '-body">' +
+        '<h3 class="' + uid + '-ti">' + xH(c.title) + '</h3>' +
+        (c.subtitle ? '<p class="' + uid + '-su">' + xH(c.subtitle) + '</p>' : '') +
+        (c.ctaText ? '<a href="' + xA(c.ctaUrl || '#') + '" class="' + uid + '-cta">' + xH(c.ctaText) + '</a>' : '') +
+      '</div>' +
+      '</div>';
+  }).join('\n');
+
+  var css =
+    '<style>' +
+    '.' + uid + '{font-family:\'Poppins\',sans-serif;}' +
+    '.' + uid + '-ey{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#204280;margin-bottom:12px;}' +
+    '.' + uid + '-stitle{font-size:32px;font-weight:700;color:#1a1a1a;margin:0 0 12px;line-height:1.2;}' +
+    '.' + uid + '-desc{font-size:15px;font-weight:400;color:#374151;margin:0 0 32px;line-height:1.7;}' +
+    '.' + uid + '-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}' +
+    '@media(max-width:900px){.' + uid + '-grid{grid-template-columns:repeat(2,1fr);}}' +
+    '@media(max-width:600px){.' + uid + '-grid{grid-template-columns:1fr;}}' +
+    '.' + uid + '-card{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#fff;}' +
+    '.' + uid + '-top{height:180px;padding:16px;display:flex;align-items:flex-end;}' +
+    '.' + uid + '-badge{display:inline-block;padding:5px 14px;background:rgba(255,255,255,0.2);border-radius:999px;font-size:12px;font-weight:600;color:#fff !important;letter-spacing:.04em;}' +
+    '.' + uid + '-body{padding:20px;}' +
+    '.' + uid + '-ti{font-size:16px;font-weight:700;color:#1a1a1a;margin:0 0 6px;line-height:1.35;}' +
+    '.' + uid + '-su{font-size:13px;color:#6b7280;margin:0 0 16px;font-weight:400;}' +
+    '.' + uid + '-cta{font-size:13px;font-weight:600;color:#204280 !important;text-decoration:none !important;}' +
+    '.' + uid + '-cta:hover{text-decoration:underline !important;}' +
+    '</style>';
+
+  var body =
+    '<div class="' + uid + '">' +
+    (secEy    ? '<div class="' + uid + '-ey">' + xH(secEy) + '</div>' : '') +
+    (secTitle ? '<h2 class="' + uid + '-stitle">' + xH(secTitle) + '</h2>' : '') +
+    (secDesc  ? '<p class="' + uid + '-desc">' + xH(secDesc) + '</p>' : '') +
+    (cards.length ? '<div class="' + uid + '-grid">' + cardsHtml + '</div>' : '') +
+    '</div>';
+
+  var fontLink = '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n';
+  var html = fontLink + css + '\n' + body;
+
+  document.getElementById('feature-cards-code').textContent = html;
+  document.getElementById('feature-cards-preview-wrap').innerHTML = html;
+  switchOut('feature-cards', 'preview');
 }
 
 function copyHdrCode() {
