@@ -5089,6 +5089,8 @@ function generateStepsSection() {
   var secDesc  = document.getElementById('ss-desc').value.trim();
   var bgHex    = document.getElementById('ss-bg-hex').value.trim();
   var bg       = /^#[0-9a-fA-F]{6}$/.test(bgHex) ? bgHex : document.getElementById('ss-bg-cp').value;
+  var cols     = Math.max(1, Math.min(6, parseInt(document.getElementById('ss-cols').value, 10) || 4));
+  var tabletCols = Math.min(cols, 2);
 
   var cards = [];
   document.querySelectorAll('#ss-cards .block-item').forEach(function(item) {
@@ -5112,12 +5114,12 @@ function generateStepsSection() {
     '.' + uid + '-ey{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#204280;margin:0 0 10px;}' +
     '.' + uid + '-title{font-size:26px;font-weight:600;color:#1a1a1a;margin:0 0 8px;line-height:1.25;}' +
     '.' + uid + '-desc{font-size:15px;font-weight:400;color:#3f3f46;margin:0 0 28px;line-height:1.6;}' +
-    '.' + uid + '-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}' +
+    '.' + uid + '-grid{display:grid;grid-template-columns:repeat(' + cols + ',minmax(0,1fr));gap:14px;}' +
     '.' + uid + '-card{background:rgba(255,255,255,.54);border-radius:6px;padding:16px 16px 18px;min-height:142px;box-sizing:border-box;}' +
     '.' + uid + '-num{width:28px;height:28px;border-radius:999px;background:#0f1f3a;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;margin:0 0 10px;}' +
     '.' + uid + '-ctitle{font-size:14px;font-weight:600;color:#202124;margin:0 0 6px;line-height:1.35;}' +
     '.' + uid + '-cdesc{font-size:13px;font-weight:400;color:#30343b;margin:0;line-height:1.55;}' +
-    '@media(max-width:900px){.' + uid + '-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}' +
+    '@media(max-width:900px){.' + uid + '-grid{grid-template-columns:repeat(' + tabletCols + ',minmax(0,1fr));}}' +
     '@media(max-width:640px){.' + uid + '{padding:36px 20px;}.' + uid + '-title{font-size:24px;}.' + uid + '-grid{grid-template-columns:1fr;}}' +
     '</style>';
 

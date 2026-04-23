@@ -21,6 +21,13 @@
         <input type="text" id="ss-bg-hex" value="#f7f6f1" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value))document.getElementById('ss-bg-cp').value=this.value">
       </div>
     </div>
+    <div class="field">
+      <label>Cards per row <span class="hint">(desktop)</span></label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="range" id="ss-cols" min="1" max="6" value="4" oninput="document.getElementById('ss-cols-val').textContent=this.value" style="flex:1">
+        <span id="ss-cols-val" style="min-width:18px;font-size:13px;font-weight:600;color:var(--blue);text-align:right">4</span>
+      </div>
+    </div>
 
     <div class="section-label">Step Cards</div>
     <div id="ss-cards" class="block-list"></div>
