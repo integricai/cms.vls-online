@@ -1,6 +1,19 @@
 <div id="screen-hero" class="screen">
   <div class="form-panel"><div class="form-inner">
 
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="section-label" style="margin:0;">Hero Sections</div>
+      <button class="btn-add-block" onclick="heroCreateSection()" style="margin:0;">+ New Section</button>
+    </div>
+    <div id="hero-section-list" class="block-list"></div>
+    <div id="hero-status" style="font-size:12px;min-height:18px;"></div>
+
+    <div class="section-label">Section Setup</div>
+    <div class="field">
+      <label>Section name <span class="hint">(for CMS identification)</span></label>
+      <input type="text" id="hero-name" value="Hero Section 1">
+    </div>
+
     <div class="section-label">Layout</div>
     <div class="field">
       <label>Background colour</label>
@@ -82,7 +95,7 @@
     <div id="hero-stats" class="block-list"></div>
     <button class="btn-add-block" style="margin-top:6px" onclick="heroAddStat()">+ Add stat</button>
 
-    <button class="btn-gen" onclick="generateHero()">Generate HTML</button>
+    <button class="btn-gen" onclick="generateHero()">Generate &amp; Save</button>
   </div></div>
 
   <div class="output-panel">

@@ -1,6 +1,19 @@
 <div id="screen-feature-cards" class="screen">
   <div class="form-panel"><div class="form-inner">
 
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="section-label" style="margin:0;">Feature Card Sections</div>
+      <button class="btn-add-block" onclick="featureCardsCreateSection()" style="margin:0;">+ New Section</button>
+    </div>
+    <div id="fc-section-list" class="block-list"></div>
+    <div id="fc-status" style="font-size:12px;min-height:18px;"></div>
+
+    <div class="section-label">Section Setup</div>
+    <div class="field">
+      <label>Section name <span class="hint">(for CMS identification)</span></label>
+      <input type="text" id="fc-name" value="Feature Cards Section 1">
+    </div>
+
     <div class="section-label">Section Header</div>
     <div class="field">
       <label>Eyebrow text</label>
@@ -19,7 +32,7 @@
     <div id="fc-cards" class="block-list"></div>
     <button class="btn-add-block" style="margin-top:6px" onclick="featureCardsAddCard()">+ Add card</button>
 
-    <button class="btn-gen" onclick="generateFeatureCards()">Generate HTML</button>
+    <button class="btn-gen" onclick="generateFeatureCards()">Generate &amp; Save</button>
   </div></div>
 
   <div class="output-panel">
