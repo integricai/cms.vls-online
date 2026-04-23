@@ -4938,8 +4938,26 @@ function copyHdrCode() {
 // ── Hero Left Pane ─────────────────────────────────────────────
 
 function heroOnOpen() {
-  var defaults = ['ACCA tuition', 'CIMA coaching', 'Online tutoring', '1-to-1 coaching'];
-  defaults.forEach(function(t) { heroAddTag(t); });
+  var tags = ['ACCA tuition', 'CIMA coaching', 'Online tutoring', '1-to-1 coaching'];
+  tags.forEach(function(t) { heroAddTag(t); });
+  heroAddStat('2,400+', 'Students enrolled');
+  heroAddStat('98%',    'Satisfaction rate');
+  heroAddStat('35+',    'Courses available');
+}
+
+function heroAddStat(val, lbl) {
+  var list = document.getElementById('hero-stats');
+  var id = 'hst-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-body" style="flex-direction:row;align-items:center;gap:6px;padding:8px 10px">' +
+      '<input type="text" class="hero-stat-val" placeholder="Value e.g. 2,400+" value="' + xA(val || '') + '" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none">' +
+      '<input type="text" class="hero-stat-lbl" placeholder="Label e.g. Students enrolled" value="' + xA(lbl || '') + '" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;flex:1.5;outline:none">' +
+      '<button class="btn-icon" title="Remove" onclick="document.getElementById(\'' + id + '\').remove()" style="flex-shrink:0">&#x2715;</button>' +
+    '</div>';
+  list.appendChild(div);
 }
 
 function heroAddTag(val) {
@@ -4959,6 +4977,7 @@ function heroAddTag(val) {
 function generateHero() {
   var uid = 'h' + Date.now().toString(36);
 
+  var bg     = document.getElementById('hero-bg-text').value.trim() || '#ffffff';
   var maxW   = document.getElementById('hero-max-width').value;
   var padTop = parseInt(document.getElementById('hero-pad-top').value) || 48;
   var padBot = parseInt(document.getElementById('hero-pad-bot').value) || 48;
@@ -4982,10 +5001,9 @@ function generateHero() {
   });
 
   var stats = [];
-  [[1],[2],[3]].forEach(function(a) {
-    var i = a[0];
-    var v = document.getElementById('hero-s' + i + 'v').value.trim();
-    var l = document.getElementById('hero-s' + i + 'l').value.trim();
+  document.querySelectorAll('#hero-stats .block-item').forEach(function(item) {
+    var v = item.querySelector('.hero-stat-val').value.trim();
+    var l = item.querySelector('.hero-stat-lbl').value.trim();
     if (v) stats.push({v: v, l: l});
   });
 
@@ -5004,7 +5022,7 @@ function generateHero() {
 
   var css =
     '<style>' +
-    '.' + uid + '{font-family:\'Poppins\',sans-serif;max-width:' + maxW + ';padding:' + padTop + 'px 0 ' + padBot + 'px;box-sizing:border-box;}' +
+    '.' + uid + '{font-family:\'Poppins\',sans-serif;max-width:' + maxW + ';padding:' + padTop + 'px 0 ' + padBot + 'px;box-sizing:border-box;background-color:' + xA(bg) + ';}' +
     '.' + uid + '-ey{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#204280;margin-bottom:14px;}' +
     '.' + uid + '-h1{font-size:' + h1Size + 'px;font-weight:700;color:#1a1a1a;line-height:1.15;margin:0 0 6px;}' +
     '.' + uid + '-h1 em{font-style:normal;color:#204280;}' +

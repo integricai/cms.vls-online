@@ -3,6 +3,13 @@
 
     <div class="section-label">Layout</div>
     <div class="field">
+      <label>Background colour</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="color" id="hero-bg-picker" value="#ffffff" oninput="document.getElementById('hero-bg-text').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+        <input type="text" id="hero-bg-text" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('hero-bg-picker').value=v" style="font-family:'Poppins',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none">
+      </div>
+    </div>
+    <div class="field">
       <label>Max width</label>
       <select id="hero-max-width">
         <option value="480px">Narrow — 480px</option>
@@ -71,30 +78,9 @@
       <input type="text" id="hero-btn2-scroll" placeholder=".my-section or #my-section">
     </div>
 
-    <div class="section-label">Stats <span class="hint" style="text-transform:none;letter-spacing:0">(leave value blank to hide)</span></div>
-    <div style="display:flex;flex-direction:column;gap:10px" id="hero-stats-wrap">
-      <div class="more-card">
-        <div class="more-card-label">Stat 1</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div class="field"><label>Value</label><input type="text" id="hero-s1v" value="2,400+"></div>
-          <div class="field"><label>Label</label><input type="text" id="hero-s1l" value="Students enrolled"></div>
-        </div>
-      </div>
-      <div class="more-card">
-        <div class="more-card-label">Stat 2</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div class="field"><label>Value</label><input type="text" id="hero-s2v" value="98%"></div>
-          <div class="field"><label>Label</label><input type="text" id="hero-s2l" value="Satisfaction rate"></div>
-        </div>
-      </div>
-      <div class="more-card">
-        <div class="more-card-label">Stat 3</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div class="field"><label>Value</label><input type="text" id="hero-s3v" value="35+"></div>
-          <div class="field"><label>Label</label><input type="text" id="hero-s3l" value="Courses available"></div>
-        </div>
-      </div>
-    </div>
+    <div class="section-label">Stats</div>
+    <div id="hero-stats" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="heroAddStat()">+ Add stat</button>
 
     <button class="btn-gen" onclick="generateHero()">Generate HTML</button>
   </div></div>
