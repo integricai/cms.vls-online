@@ -231,6 +231,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
     <div class="nav-tab" id="nav-homepage" onclick="toggleNavDd('homepage',event)">Home Page <span class="nav-dd-arrow">▾</span></div>
     <div class="nav-dd-menu" id="nav-homepage-menu">
       <div class="nav-dd-item" id="nav-hero" onclick="switchScreen('hero')">Hero — Left Pane</div>
+      <div class="nav-dd-item" id="nav-about-us" onclick="switchScreen('about-us')">About Us</div>
     </div>
   </div>
   <!-- Page dropdown -->
@@ -279,9 +280,10 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       </div>
       <div class="home-tile">
         <div class="home-tile-title">Home Page Components</div>
-        <div class="home-tile-desc">Custom sections for the VLS home page — hero banners, testimonials, and more.</div>
+        <div class="home-tile-desc">Custom sections for the VLS home page — hero banners, about sections, testimonials, and more.</div>
         <div class="home-tile-links">
           <button class="home-tile-link" onclick="switchScreen('hero')">Hero Left Pane</button>
+          <button class="home-tile-link" onclick="switchScreen('about-us')">About Us</button>
         </div>
       </div>
       <div class="home-tile">
@@ -475,12 +477,13 @@ function doCopy(id, btn) {
 // ── Screen switching ───────────────────────────────────────────
 
 var _GLOBAL_SCREENS = ['header', 'footer', 'banner'];
-var _HOME_SCREENS   = ['hero'];
+var _HOME_SCREENS   = ['hero', 'about-us'];
 var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
 var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards', 'steps-section'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
+  'about-us':    '/screens/about-us.html',
   'feature-cards': '/screens/feature-cards.html',
   'steps-section': '/screens/steps-section.html',
   intro:    '/screens/intro.html',
@@ -540,6 +543,7 @@ async function switchScreen(name) {
   }
 
   if (name === 'hero'         && !_loadedScreens._heroInit)  { _loadedScreens._heroInit  = true; heroOnOpen();  }
+  if (name === 'about-us'     && !_loadedScreens._aboutInit) { _loadedScreens._aboutInit = true; aboutUsOnOpen(); }
   if (name === 'feature-cards' && !_loadedScreens._fcInit)   { _loadedScreens._fcInit    = true; featureCardsOnOpen(); }
   if (name === 'steps-section' && !_loadedScreens._stepsInit) { _loadedScreens._stepsInit = true; stepsSectionOnOpen(); }
   if (name === 'intro' && !_loadedScreens._introInit) { _loadedScreens._introInit = true; introOnOpen(); }
@@ -5139,6 +5143,180 @@ function copyHdrCode() {
   var box = document.getElementById('hdr-code-box');
   box.select();
   document.execCommand('copy');
+}
+
+// ── About Us Section ──────────────────────────────────────────
+
+var ABOUT_US_ICON_OPTIONS = [
+  ['user', 'User'],
+  ['users', 'Users'],
+  ['book', 'Book'],
+  ['graduation', 'Graduation'],
+  ['clock', 'Clock'],
+  ['check', 'Check'],
+  ['award', 'Award'],
+  ['target', 'Target'],
+  ['chart', 'Chart'],
+  ['shield', 'Shield'],
+  ['heart', 'Heart'],
+  ['star', 'Star']
+];
+
+var ABOUT_US_ICONS = {
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>',
+  users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21a6 6 0 0 0-12 0"/><circle cx="10" cy="7" r="4"/><path d="M22 21a5 5 0 0 0-4-4.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></svg>',
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 6h8"/></svg>',
+  graduation: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m22 10-10-5-10 5 10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/><path d="M22 10v6"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>',
+  award: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="m8.5 12.5-1.5 8 5-3 5 3-1.5-8"/></svg>',
+  target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',
+  chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5"/><path d="M12 16V8"/><path d="M16 16v-3"/></svg>',
+  shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
+  heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>',
+  star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3L5.8 21 7 14.2 2 9.3l6.9-1L12 2z"/></svg>'
+};
+
+function aboutUsIconSelect(selected) {
+  return ABOUT_US_ICON_OPTIONS.map(function(opt) {
+    return '<option value="' + xA(opt[0]) + '"' + (selected === opt[0] ? ' selected' : '') + '>' + xH(opt[1]) + '</option>';
+  }).join('');
+}
+
+function aboutUsOnOpen() {
+  [
+    'Vertex Learning Solutions (VLS) is an online tutoring and coaching platform designed for working professionals, career changers, and motivated learners who want structured, expert-guided development without the constraints of a traditional classroom.',
+    'Founded on the belief that great coaching changes careers, VLS brings together a vetted community of specialist tutors and coaches who deliver practical, outcome-focused learning across leadership, communication, career planning, wellbeing, and more.',
+    'Our courses are hosted on Zenler - a modern learning platform that gives you HD video lessons, downloadable resources, live coaching sessions, and progress tracking all in one place. Study on desktop, tablet, or mobile, entirely at your own pace.',
+    'VLS is built for professionals across the UK whether you are a first-time manager, a graduate entering the workforce, or a seasoned professional looking to sharpen your edge.'
+  ].forEach(function(p) { aboutUsAddParagraph(p, true); });
+
+  [
+    {icon:'user', title:'Expert tutors & coaches', desc:'Every VLS tutor is hand-picked for subject-matter expertise, real-world experience, and proven teaching ability.'},
+    {icon:'book', title:'Structured, outcome-led courses', desc:'Courses are built around clear goals - not just content. Each module moves you measurably forward.'},
+    {icon:'clock', title:'Learn on your schedule', desc:'On-demand video content, flexible coaching sessions, and lifetime access - study when it suits you.'},
+    {icon:'check', title:'Certificates & accreditation', desc:'Complete a course and receive a recognised VLS certificate to add to your CV or LinkedIn profile.'}
+  ].forEach(function(c) { aboutUsAddCard(c, true); });
+
+  generateAboutUs();
+}
+
+function aboutUsAddParagraph(text, startCollapsed) {
+  var list = document.getElementById('au-paragraphs');
+  var id = 'aup-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var label = text ? text.slice(0, 42) : 'New Paragraph';
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">' +
+      '<span class="block-header-label">' + xH(label) + '</span>' +
+      '<span class="block-type-badge">Paragraph</span>' +
+      '<button class="btn-sm danger" onclick="event.stopPropagation();document.getElementById(\'' + id + '\').remove()" style="margin-left:auto">Remove</button>' +
+    '</div>' +
+    '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">' +
+      '<div class="field"><label>Paragraph text</label><textarea class="au-para" rows="5" oninput="var t=this.value.trim();this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=t?t.slice(0,42):\'New Paragraph\'">' + xH(text || '') + '</textarea></div>' +
+    '</div>';
+  list.appendChild(div);
+}
+
+function aboutUsAddCard(data, startCollapsed) {
+  var list = document.getElementById('au-cards');
+  var id = 'auc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var label = (data && data.title) ? data.title : 'New Feature Card';
+  var icon = (data && data.icon) || 'star';
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">' +
+      '<span class="block-header-label">' + xH(label) + '</span>' +
+      '<span class="block-type-badge">Feature</span>' +
+      '<button class="btn-sm danger" onclick="event.stopPropagation();document.getElementById(\'' + id + '\').remove()" style="margin-left:auto">Remove</button>' +
+    '</div>' +
+    '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">' +
+      '<div class="field"><label>Icon</label><select class="au-icon">' + aboutUsIconSelect(icon) + '</select></div>' +
+      '<div class="field"><label>Card title</label><input type="text" class="au-card-title" value="' + xA((data && data.title) || '') + '" placeholder="e.g. Expert tutors & coaches" oninput="this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=this.value||\'New Feature Card\'"></div>' +
+      '<div class="field"><label>Description</label><textarea class="au-card-desc" rows="3" placeholder="Briefly explain this feature">' + xH((data && data.desc) || '') + '</textarea></div>' +
+    '</div>';
+  list.appendChild(div);
+}
+
+function generateAboutUs() {
+  var uid = 'au' + Date.now().toString(36);
+
+  var eyebrow = document.getElementById('au-eyebrow').value.trim();
+  var title = document.getElementById('au-title').value.trim();
+  var ctaText = document.getElementById('au-cta-text').value.trim();
+  var ctaUrl = document.getElementById('au-cta-url').value.trim();
+
+  var paragraphs = [];
+  document.querySelectorAll('#au-paragraphs .au-para').forEach(function(inp) {
+    var v = inp.value.trim();
+    if (v) paragraphs.push(v);
+  });
+
+  var cards = [];
+  document.querySelectorAll('#au-cards .block-item').forEach(function(item) {
+    var icon = item.querySelector('.au-icon').value;
+    var cardTitle = item.querySelector('.au-card-title').value.trim();
+    var cardDesc = item.querySelector('.au-card-desc').value.trim();
+    if (cardTitle || cardDesc) cards.push({icon:icon, title:cardTitle, desc:cardDesc});
+  });
+
+  var paragraphHtml = paragraphs.map(function(p) {
+    return '<p class="' + uid + '-para">' + xH(p) + '</p>';
+  }).join('');
+
+  var cardsHtml = cards.map(function(card) {
+    var svg = ABOUT_US_ICONS[card.icon] || ABOUT_US_ICONS.star;
+    return '<div class="' + uid + '-card">' +
+      '<div class="' + uid + '-icon">' + svg + '</div>' +
+      '<div class="' + uid + '-card-copy">' +
+        (card.title ? '<h3 class="' + uid + '-card-title">' + xH(card.title) + '</h3>' : '') +
+        (card.desc ? '<p class="' + uid + '-card-desc">' + xH(card.desc) + '</p>' : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  var css =
+    '<style>' +
+    '.' + uid + '{font-family:\'Poppins\',sans-serif;background:#fff;padding:48px 24px;box-sizing:border-box;}' +
+    '.' + uid + '-inner{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,1fr);gap:56px;align-items:start;}' +
+    '.' + uid + '-ey{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#204280;margin:0 0 12px;}' +
+    '.' + uid + '-title{font-size:26px;font-weight:600;color:#202124;line-height:1.25;margin:0 0 18px;}' +
+    '.' + uid + '-para{font-size:14px;font-weight:400;color:#2f343b;line-height:1.75;margin:0 0 14px;}' +
+    '.' + uid + '-cta{display:inline-flex;align-items:center;gap:6px;margin-top:14px;font-size:14px;font-weight:600;color:#204280 !important;text-decoration:none !important;}' +
+    '.' + uid + '-cta:hover{text-decoration:underline !important;}' +
+    '.' + uid + '-cards{display:flex;flex-direction:column;gap:16px;}' +
+    '.' + uid + '-card{display:grid;grid-template-columns:38px minmax(0,1fr);gap:14px;align-items:start;background:#f4f3ee;border-radius:8px;padding:18px 20px;box-sizing:border-box;}' +
+    '.' + uid + '-icon{width:28px;height:28px;border-radius:6px;background:#0d2341;color:#fff;display:flex;align-items:center;justify-content:center;margin-top:1px;}' +
+    '.' + uid + '-icon svg{width:15px;height:15px;display:block;}' +
+    '.' + uid + '-card-title{font-size:14px;font-weight:700;color:#222;margin:0 0 4px;line-height:1.35;}' +
+    '.' + uid + '-card-desc{font-size:13px;font-weight:400;color:#2f343b;line-height:1.55;margin:0;}' +
+    '@media(max-width:800px){.' + uid + '-inner{grid-template-columns:1fr;gap:28px;}.' + uid + '{padding:38px 20px;}}' +
+    '@media(max-width:520px){.' + uid + '-title{font-size:24px;}.' + uid + '-card{grid-template-columns:34px minmax(0,1fr);padding:16px;}}' +
+    '</style>';
+
+  var body =
+    '<section class="' + uid + '">' +
+      '<div class="' + uid + '-inner">' +
+        '<div class="' + uid + '-left">' +
+          (eyebrow ? '<div class="' + uid + '-ey">' + xH(eyebrow) + '</div>' : '') +
+          (title ? '<h2 class="' + uid + '-title">' + xH(title) + '</h2>' : '') +
+          paragraphHtml +
+          (ctaText ? '<a class="' + uid + '-cta" href="' + xA(ctaUrl || '#') + '">' + xH(ctaText) + '</a>' : '') +
+        '</div>' +
+        (cards.length ? '<div class="' + uid + '-cards">' + cardsHtml + '</div>' : '') +
+      '</div>' +
+    '</section>';
+
+  var fontLink = '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n';
+  var html = fontLink + css + '\n' + body;
+
+  document.getElementById('about-us-code').textContent = html;
+  document.getElementById('about-us-preview-wrap').innerHTML = html;
+  switchOut('about-us', 'preview');
 }
 
 // ── Hero Left Pane ─────────────────────────────────────────────

@@ -1,0 +1,48 @@
+<div id="screen-about-us" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <div class="section-label">Section Header</div>
+    <div class="field">
+      <label>Eyebrow text</label>
+      <input type="text" id="au-eyebrow" value="ABOUT VERTEX LEARNING SOLUTIONS">
+    </div>
+    <div class="field">
+      <label>Section title</label>
+      <input type="text" id="au-title" value="What is VLS and who is it for?">
+    </div>
+
+    <div class="section-label">Paragraphs</div>
+    <div id="au-paragraphs" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="aboutUsAddParagraph()">+ Add paragraph</button>
+
+    <div class="section-label">CTA</div>
+    <div class="field">
+      <label>CTA text</label>
+      <input type="text" id="au-cta-text" value="Learn more about VLS &rarr;">
+    </div>
+    <div class="field">
+      <label>CTA URL</label>
+      <input type="text" id="au-cta-url" value="#" placeholder="https://">
+    </div>
+
+    <div class="section-label">Right Panel Feature Cards</div>
+    <div id="au-cards" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="aboutUsAddCard()">+ Add feature card</button>
+
+    <button class="btn-gen" onclick="generateAboutUs()">Generate HTML</button>
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="about-us-ot-preview" onclick="switchOut('about-us','preview')">Preview</div>
+      <div class="out-tab" id="about-us-ot-html" onclick="switchOut('about-us','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="about-us-preview-wrap" class="preview-wrap"></div>
+      <div id="about-us-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('about-us-code',this)">Copy</button>
+        <pre id="about-us-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>
