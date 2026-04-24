@@ -667,6 +667,10 @@ async function loadScreen(name) {
 
 async function switchScreen(name) {
   closeAllNavDds();
+  var currentScreen = cmsCurrentScreenName();
+  if (currentScreen && currentScreen !== name && !cmsConfirmTrackedNavigation(currentScreen, 'You have unsaved changes on this screen. Leave without saving?')) {
+    return;
+  }
 
   if (name !== 'home') await loadScreen(name);
 
@@ -5685,6 +5689,87 @@ function cmsSetStatus(id, text, color, clearMs) {
   }
 }
 
+var CMS_TRACKED_SCREENS = ['feature-cards', 'steps-section', 'about-us', 'hero', 'promotion-section'];
+var cmsDirtyState = {};
+
+function cmsCurrentScreenName() {
+  var active = document.querySelector('.screen.active');
+  return active ? String(active.id || '').replace(/^screen-/, '') : 'home';
+}
+
+function cmsDirtyStatusId(screenName) {
+  return {
+    'feature-cards': 'fc-status',
+    'steps-section': 'ss-status',
+    'about-us': 'au-status',
+    'hero': 'hero-status',
+    'promotion-section': 'promotion-status'
+  }[screenName] || '';
+}
+
+function cmsDirtyMeta(screenName) {
+  if (!cmsDirtyState[screenName]) cmsDirtyState[screenName] = { dirty: false, acknowledged: false };
+  return cmsDirtyState[screenName];
+}
+
+function cmsMarkScreenDirty(screenName) {
+  if (CMS_TRACKED_SCREENS.indexOf(screenName) < 0) return;
+  var meta = cmsDirtyMeta(screenName);
+  meta.dirty = true;
+  meta.acknowledged = false;
+  var statusId = cmsDirtyStatusId(screenName);
+  if (statusId) cmsSetStatus(statusId, 'Unsaved changes', '#b45309');
+}
+
+function cmsMarkScreenSaved(screenName) {
+  if (CMS_TRACKED_SCREENS.indexOf(screenName) < 0) return;
+  var meta = cmsDirtyMeta(screenName);
+  meta.dirty = false;
+  meta.acknowledged = false;
+}
+
+function cmsScreenHasUnsaved(screenName) {
+  return !!cmsDirtyMeta(screenName).dirty;
+}
+
+function cmsScreenNeedsWarning(screenName) {
+  var meta = cmsDirtyMeta(screenName);
+  return !!(meta.dirty && !meta.acknowledged);
+}
+
+function cmsAcknowledgeTrackedNavigation(screenName) {
+  if (CMS_TRACKED_SCREENS.indexOf(screenName) < 0) return;
+  cmsDirtyMeta(screenName).acknowledged = true;
+}
+
+function cmsSyncTrackedScreen(screenName) {
+  if (screenName === 'feature-cards') return featureCardsSyncCurrent();
+  if (screenName === 'steps-section') return stepsSectionSyncCurrent();
+  if (screenName === 'about-us') return aboutUsSyncCurrent();
+  if (screenName === 'hero') return heroSyncCurrent();
+  if (screenName === 'promotion-section') return promotionSyncCurrent();
+  return null;
+}
+
+function cmsConfirmTrackedNavigation(screenName, message) {
+  if (CMS_TRACKED_SCREENS.indexOf(screenName) < 0) return true;
+  cmsSyncTrackedScreen(screenName);
+  if (!cmsScreenNeedsWarning(screenName)) return true;
+  var ok = confirm(message || 'You have unsaved changes. Leave without saving?');
+  if (ok) cmsAcknowledgeTrackedNavigation(screenName);
+  return ok;
+}
+
+window.addEventListener('beforeunload', function(event) {
+  var hasUnsaved = CMS_TRACKED_SCREENS.some(function(screenName) {
+    return cmsScreenHasUnsaved(screenName);
+  });
+  if (!hasUnsaved) return;
+  event.preventDefault();
+  event.returnValue = '';
+  return '';
+});
+
 function cmsMaxSectionCounter(sections, prefix) {
   var max = 0;
   (sections || []).forEach(function(sec) {
@@ -5893,14 +5978,11 @@ function featureCardsPersistNow(savingText, savedText, showPreview) {
   featureCardsSyncCurrent();
   featureCardsRenderSectionList();
   featureCardsRenderCurrent(showPreview);
-  return cmsSaveSections('/api/publish-feature-cards', featureCardsStore.sections, 'fc-status', savingText || 'Saving…', savedText || 'Saved!');
-}
-
-function featureCardsSchedulePersist() {
-  clearTimeout(featureCardsStore.timer);
-  featureCardsStore.timer = setTimeout(function() {
-    featureCardsPersistNow('Saving draft…', 'Draft saved', false);
-  }, 700);
+  return cmsSaveSections('/api/publish-feature-cards', featureCardsStore.sections, 'fc-status', savingText || 'Saving…', savedText || 'Saved!')
+    .then(function(ok) {
+      if (ok) cmsMarkScreenSaved('feature-cards');
+      return ok;
+    });
 }
 
 function featureCardsHandleChange() {
@@ -5908,7 +5990,7 @@ function featureCardsHandleChange() {
   featureCardsSyncCurrent();
   featureCardsRenderSectionList();
   featureCardsRenderCurrent();
-  featureCardsSchedulePersist();
+  cmsMarkScreenDirty('feature-cards');
 }
 
 function featureCardsBindInputs() {
@@ -5923,6 +6005,7 @@ function featureCardsBindInputs() {
 
 function featureCardsSelectSection(id) {
   if (featureCardsStore.activeId === id) return;
+  if (!cmsConfirmTrackedNavigation('feature-cards', 'You have unsaved changes in Feature Cards. Switch sections without saving?')) return;
   featureCardsSyncCurrent();
   featureCardsStore.activeId = id;
   var sec = featureCardsCurrentSection();
@@ -5940,7 +6023,7 @@ function featureCardsCreateSection(skipPersist) {
   featureCardsFillForm(sec);
   featureCardsRenderSectionList();
   featureCardsRenderCurrent();
-  if (!skipPersist) featureCardsPersistNow();
+  if (!skipPersist) cmsMarkScreenDirty('feature-cards');
 }
 
 function featureCardsDeleteSection(id) {
@@ -5955,7 +6038,7 @@ function featureCardsDeleteSection(id) {
     featureCardsRenderSectionList();
     featureCardsRenderCurrent();
   }
-  featureCardsPersistNow();
+  cmsMarkScreenDirty('feature-cards');
 }
 
 function featureCardsOnOpen() {
@@ -6190,14 +6273,11 @@ function stepsSectionPersistNow(savingText, savedText, showPreview) {
   stepsSectionSyncCurrent();
   stepsSectionRenderList();
   stepsSectionRenderCurrent(showPreview);
-  return cmsSaveSections('/api/publish-steps-section', stepsSectionsStore.sections, 'ss-status', savingText || 'Saving…', savedText || 'Saved!');
-}
-
-function stepsSectionSchedulePersist() {
-  clearTimeout(stepsSectionsStore.timer);
-  stepsSectionsStore.timer = setTimeout(function() {
-    stepsSectionPersistNow('Saving draft…', 'Draft saved', false);
-  }, 700);
+  return cmsSaveSections('/api/publish-steps-section', stepsSectionsStore.sections, 'ss-status', savingText || 'Saving…', savedText || 'Saved!')
+    .then(function(ok) {
+      if (ok) cmsMarkScreenSaved('steps-section');
+      return ok;
+    });
 }
 
 function stepsSectionHandleChange() {
@@ -6205,7 +6285,7 @@ function stepsSectionHandleChange() {
   stepsSectionSyncCurrent();
   stepsSectionRenderList();
   stepsSectionRenderCurrent();
-  stepsSectionSchedulePersist();
+  cmsMarkScreenDirty('steps-section');
 }
 
 function stepsSectionBindInputs() {
@@ -6220,6 +6300,7 @@ function stepsSectionBindInputs() {
 
 function stepsSectionSelectSection(id) {
   if (stepsSectionsStore.activeId === id) return;
+  if (!cmsConfirmTrackedNavigation('steps-section', 'You have unsaved changes in Steps Section. Switch sections without saving?')) return;
   stepsSectionSyncCurrent();
   stepsSectionsStore.activeId = id;
   var sec = stepsSectionCurrent();
@@ -6237,7 +6318,7 @@ function stepsSectionCreateSection(skipPersist) {
   stepsSectionFillForm(sec);
   stepsSectionRenderList();
   stepsSectionRenderCurrent();
-  if (!skipPersist) stepsSectionPersistNow();
+  if (!skipPersist) cmsMarkScreenDirty('steps-section');
 }
 
 function stepsSectionDeleteSection(id) {
@@ -6252,7 +6333,7 @@ function stepsSectionDeleteSection(id) {
     stepsSectionRenderList();
     stepsSectionRenderCurrent();
   }
-  stepsSectionPersistNow();
+  cmsMarkScreenDirty('steps-section');
 }
 
 function stepsSectionOnOpen() {
@@ -6480,14 +6561,11 @@ function aboutUsPersistNow(savingText, savedText, showPreview) {
   aboutUsSyncCurrent();
   aboutUsRenderList();
   aboutUsRenderCurrent(showPreview);
-  return cmsSaveSections('/api/publish-about-us', aboutUsStore.sections, 'au-status', savingText || 'Saving…', savedText || 'Saved!');
-}
-
-function aboutUsSchedulePersist() {
-  clearTimeout(aboutUsStore.timer);
-  aboutUsStore.timer = setTimeout(function() {
-    aboutUsPersistNow('Saving draft…', 'Draft saved', false);
-  }, 700);
+  return cmsSaveSections('/api/publish-about-us', aboutUsStore.sections, 'au-status', savingText || 'Saving…', savedText || 'Saved!')
+    .then(function(ok) {
+      if (ok) cmsMarkScreenSaved('about-us');
+      return ok;
+    });
 }
 
 function aboutUsHandleChange() {
@@ -6495,7 +6573,7 @@ function aboutUsHandleChange() {
   aboutUsSyncCurrent();
   aboutUsRenderList();
   aboutUsRenderCurrent();
-  aboutUsSchedulePersist();
+  cmsMarkScreenDirty('about-us');
 }
 
 function aboutUsBindInputs() {
@@ -6510,6 +6588,7 @@ function aboutUsBindInputs() {
 
 function aboutUsSelectSection(id) {
   if (aboutUsStore.activeId === id) return;
+  if (!cmsConfirmTrackedNavigation('about-us', 'You have unsaved changes in About Us. Switch sections without saving?')) return;
   aboutUsSyncCurrent();
   aboutUsStore.activeId = id;
   var sec = aboutUsCurrentSection();
@@ -6527,7 +6606,7 @@ function aboutUsCreateSection(skipPersist) {
   aboutUsFillForm(sec);
   aboutUsRenderList();
   aboutUsRenderCurrent();
-  if (!skipPersist) aboutUsPersistNow();
+  if (!skipPersist) cmsMarkScreenDirty('about-us');
 }
 
 function aboutUsDeleteSection(id) {
@@ -6542,7 +6621,7 @@ function aboutUsDeleteSection(id) {
     aboutUsRenderList();
     aboutUsRenderCurrent();
   }
-  aboutUsPersistNow();
+  cmsMarkScreenDirty('about-us');
 }
 
 function aboutUsOnOpen() {
@@ -6849,14 +6928,11 @@ function heroPersistNow(savingText, savedText, showPreview) {
   heroSyncCurrent();
   heroRenderList();
   heroRenderCurrent(showPreview);
-  return cmsSaveSections('/api/publish-home-hero', heroStore.sections, 'hero-status', savingText || 'Saving…', savedText || 'Saved!');
-}
-
-function heroSchedulePersist() {
-  clearTimeout(heroStore.timer);
-  heroStore.timer = setTimeout(function() {
-    heroPersistNow('Saving draft…', 'Draft saved', false);
-  }, 700);
+  return cmsSaveSections('/api/publish-home-hero', heroStore.sections, 'hero-status', savingText || 'Saving…', savedText || 'Saved!')
+    .then(function(ok) {
+      if (ok) cmsMarkScreenSaved('hero');
+      return ok;
+    });
 }
 
 function heroHandleChange() {
@@ -6864,7 +6940,7 @@ function heroHandleChange() {
   heroSyncCurrent();
   heroRenderList();
   heroRenderCurrent();
-  heroSchedulePersist();
+  cmsMarkScreenDirty('hero');
 }
 
 function heroBindInputs() {
@@ -6879,6 +6955,7 @@ function heroBindInputs() {
 
 function heroSelectSection(id) {
   if (heroStore.activeId === id) return;
+  if (!cmsConfirmTrackedNavigation('hero', 'You have unsaved changes in Hero. Switch sections without saving?')) return;
   heroSyncCurrent();
   heroStore.activeId = id;
   var sec = heroCurrentSection();
@@ -6896,7 +6973,7 @@ function heroCreateSection(skipPersist) {
   heroFillForm(sec);
   heroRenderList();
   heroRenderCurrent();
-  if (!skipPersist) heroPersistNow();
+  if (!skipPersist) cmsMarkScreenDirty('hero');
 }
 
 function heroDeleteSection(id) {
@@ -6911,7 +6988,7 @@ function heroDeleteSection(id) {
     heroRenderList();
     heroRenderCurrent();
   }
-  heroPersistNow();
+  cmsMarkScreenDirty('hero');
 }
 
 function heroOnOpen() {
@@ -7159,14 +7236,11 @@ function promotionPersistNow(savingText, savedText, showPreview) {
   promotionSyncCurrent();
   promotionRenderList();
   promotionRenderCurrent(showPreview);
-  return cmsSaveSections('/api/publish-promotion-section', promotionStore.sections, 'promotion-status', savingText || 'Saving…', savedText || 'Saved!');
-}
-
-function promotionSchedulePersist() {
-  clearTimeout(promotionStore.timer);
-  promotionStore.timer = setTimeout(function() {
-    promotionPersistNow('Saving draft…', 'Draft saved', false);
-  }, 700);
+  return cmsSaveSections('/api/publish-promotion-section', promotionStore.sections, 'promotion-status', savingText || 'Saving…', savedText || 'Saved!')
+    .then(function(ok) {
+      if (ok) cmsMarkScreenSaved('promotion-section');
+      return ok;
+    });
 }
 
 function promotionHandleChange() {
@@ -7174,7 +7248,7 @@ function promotionHandleChange() {
   promotionSyncCurrent();
   promotionRenderList();
   promotionRenderCurrent(false);
-  promotionSchedulePersist();
+  cmsMarkScreenDirty('promotion-section');
 }
 
 function promotionBindInputs() {
@@ -7189,6 +7263,7 @@ function promotionBindInputs() {
 
 function promotionSelectSection(id) {
   if (promotionStore.activeId === id) return;
+  if (!cmsConfirmTrackedNavigation('promotion-section', 'You have unsaved changes in Promotion Section. Switch sections without saving?')) return;
   promotionSyncCurrent();
   promotionStore.activeId = id;
   var sec = promotionCurrentSection();
@@ -7206,7 +7281,7 @@ function promotionCreateSection(skipPersist) {
   promotionFillForm(sec);
   promotionRenderList();
   promotionRenderCurrent(false);
-  if (!skipPersist) promotionPersistNow();
+  if (!skipPersist) cmsMarkScreenDirty('promotion-section');
 }
 
 function promotionDeleteSection(id) {
@@ -7221,7 +7296,7 @@ function promotionDeleteSection(id) {
     promotionRenderList();
     promotionRenderCurrent(false);
   }
-  promotionPersistNow();
+  cmsMarkScreenDirty('promotion-section');
 }
 
 function promotionOnOpen() {
