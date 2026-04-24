@@ -54,13 +54,13 @@ async function listBlobVersions(blobFile) {
   });
 }
 
-async function readLatestBlobVersion(blobFile) {
+export async function readLatestBlobVersion(blobFile) {
   var blobs = await listBlobVersions(blobFile);
   if (!blobs.length) return null;
   return readBlobJson(blobs[blobs.length - 1].pathname);
 }
 
-async function writeBlobVersion(blobFile, doc) {
+export async function writeBlobVersion(blobFile, doc) {
   await put(buildBlobPath(blobFile), JSON.stringify(doc, null, 2), {
     access: CMS_BLOB_ACCESS,
     addRandomSuffix: false,
@@ -78,7 +78,7 @@ async function pruneBlobVersions(blobFile) {
   }));
 }
 
-async function readLegacyGistDocument(legacyFile) {
+export async function readLegacyGistDocument(legacyFile) {
   var token = process.env.GITHUB_TOKEN;
   var gistId = process.env.GIST_ID;
   if (!token || !gistId || !legacyFile) return null;
@@ -101,7 +101,7 @@ async function readLegacyGistDocument(legacyFile) {
   }
 }
 
-async function readDocument(blobFile, legacyFile) {
+export async function readDocument(blobFile, legacyFile) {
   var doc = await readLatestBlobVersion(blobFile);
   if (doc) return doc;
 
@@ -112,10 +112,18 @@ async function readDocument(blobFile, legacyFile) {
   return legacyDoc;
 }
 
-function requireBlobToken(res) {
+export function requireBlobToken(res) {
   if (process.env.BLOB_READ_WRITE_TOKEN) return true;
   res.status(500).json({ error: 'Server misconfigured — BLOB_READ_WRITE_TOKEN missing. Connect a private Vercel Blob store to this project and redeploy.' });
   return false;
+}
+
+export function hasLegacyGistConfig() {
+  return !!(process.env.GITHUB_TOKEN && process.env.GIST_ID);
+}
+
+export function setCmsHeadersPublic(res, methods) {
+  return setCmsHeaders(res, methods);
 }
 
 export function createCmsValueHandler(options) {
