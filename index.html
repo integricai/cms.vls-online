@@ -27,6 +27,14 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 .field input,.field textarea,.field select{font-family:'Poppins',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);width:100%;outline:none}
 .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--purple)}
 .field textarea{resize:vertical;line-height:1.6}
+.cms-paragraph-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}
+.cms-paragraph-control{display:flex;flex-direction:column;gap:4px}
+.cms-paragraph-control label{font-size:11px;font-weight:500;color:#262a32}
+.cms-paragraph-control input,.cms-paragraph-control select{font-family:'Poppins',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);width:100%;outline:none}
+.cms-paragraph-control input:focus,.cms-paragraph-control select:focus{border-color:var(--purple)}
+.cms-paragraph-color-row{display:flex;gap:8px;align-items:center}
+.cms-paragraph-color-row input[type=color]{width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0}
+@media(max-width:520px){.cms-paragraph-controls{grid-template-columns:1fr}}
 .hint{font-size:11px;color:var(--muted)}
 .btn-gen{background:var(--purple);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:600;cursor:pointer;width:100%;margin-top:4px}
 .btn-gen:hover{background:#3C3489}
@@ -467,6 +475,128 @@ function xH(s) {
 function xA(s) {
   return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
 }
+function cmsClampInt(value, fallback, min, max) {
+  var n = parseInt(value, 10);
+  if (isNaN(n)) n = fallback;
+  if (typeof min === 'number' && n < min) n = min;
+  if (typeof max === 'number' && n > max) n = max;
+  return n;
+}
+function cmsSafeHex(value, fallback) {
+  return /^#[0-9a-fA-F]{6}$/.test(String(value || '').trim()) ? String(value).trim() : fallback;
+}
+function cmsNormalizeWeight(value) {
+  return String(value).toLowerCase() === '700' || String(value).toLowerCase() === 'bold' || value === true ? '700' : '400';
+}
+function cmsParagraphText(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return String(value.text || '');
+  return String(value || '');
+}
+function cmsNormalizeParagraphData(value, defaults) {
+  var base = defaults || {};
+  var data = value;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) data = { text: value == null ? '' : String(value) };
+  return {
+    text: String(data.text || ''),
+    size: cmsClampInt(data.size, cmsClampInt(base.size, 16, 10, 72), 10, 72),
+    color: cmsSafeHex(data.color, cmsSafeHex(base.color, '#262a32')),
+    weight: cmsNormalizeWeight(data.weight != null ? data.weight : data.bold)
+  };
+}
+function cmsParagraphControlsHtml(value, defaults) {
+  var p = cmsNormalizeParagraphData(value, defaults);
+  return '<div class="cms-paragraph-controls">'
+    + '<div class="cms-paragraph-control"><label>Font size (px)</label><input type="number" class="cms-paragraph-size" value="' + xA(String(p.size)) + '" min="10" max="72"></div>'
+    + '<div class="cms-paragraph-control"><label>Font colour</label><div class="cms-paragraph-color-row">'
+    + '<input type="color" class="cms-paragraph-color" value="' + xA(p.color) + '" oninput="this.nextElementSibling.value=this.value">'
+    + '<input type="text" class="cms-paragraph-color-text" value="' + xA(p.color) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v">'
+    + '</div></div>'
+    + '<div class="cms-paragraph-control"><label>Font weight</label><select class="cms-paragraph-weight">'
+    + '<option value="400"' + (p.weight === '400' ? ' selected' : '') + '>Regular</option>'
+    + '<option value="700"' + (p.weight === '700' ? ' selected' : '') + '>Bold</option>'
+    + '</select></div>'
+    + '</div>';
+}
+function cmsParagraphFieldHtml(labelHtml, textareaClass, value, options) {
+  var opts = options || {};
+  var p = cmsNormalizeParagraphData(value, opts.defaults);
+  var attrs = ' class="' + xA(((textareaClass || '') + ' cms-paragraph-text').trim()) + '" rows="' + xA(String(opts.rows || 3)) + '"';
+  if (opts.id) attrs += ' id="' + xA(opts.id) + '"';
+  if (opts.placeholder) attrs += ' placeholder="' + xA(opts.placeholder) + '"';
+  if (opts.oninput) attrs += ' oninput="' + xA(opts.oninput) + '"';
+  return '<div class="field"><label>' + labelHtml + '</label><textarea' + attrs + '>' + xH(p.text) + '</textarea>' + cmsParagraphControlsHtml(p, opts.defaults) + '</div>';
+}
+function cmsFindParagraphControls(textarea) {
+  var el = textarea && textarea.nextElementSibling;
+  return el && el.classList && el.classList.contains('cms-paragraph-controls') ? el : null;
+}
+function cmsInitParagraphField(textareaId, options) {
+  var textarea = document.getElementById(textareaId);
+  if (!textarea) return;
+  var opts = options || {};
+  if (textarea.dataset.cmsParagraphInit === '1') {
+    if (Object.prototype.hasOwnProperty.call(opts, 'value')) cmsSetParagraphField(textareaId, opts.value, opts.defaults);
+    return;
+  }
+  var p = cmsNormalizeParagraphData(Object.prototype.hasOwnProperty.call(opts, 'value') ? opts.value : textarea.value, opts.defaults);
+  textarea.value = p.text;
+  textarea.classList.add('cms-paragraph-text');
+  textarea.insertAdjacentHTML('afterend', cmsParagraphControlsHtml(p, opts.defaults));
+  textarea.dataset.cmsParagraphInit = '1';
+}
+function cmsSetParagraphField(textareaId, value, defaults) {
+  var textarea = typeof textareaId === 'string' ? document.getElementById(textareaId) : textareaId;
+  if (!textarea) return;
+  if (textarea.dataset.cmsParagraphInit !== '1' && textarea.id) cmsInitParagraphField(textarea.id, { value: value, defaults: defaults });
+  var p = cmsNormalizeParagraphData(value, defaults);
+  textarea.value = p.text;
+  var controls = cmsFindParagraphControls(textarea);
+  if (!controls) return;
+  var size = controls.querySelector('.cms-paragraph-size');
+  var color = controls.querySelector('.cms-paragraph-color');
+  var colorText = controls.querySelector('.cms-paragraph-color-text');
+  var weight = controls.querySelector('.cms-paragraph-weight');
+  if (size) size.value = String(p.size);
+  if (color) color.value = p.color;
+  if (colorText) colorText.value = p.color;
+  if (weight) weight.value = p.weight;
+}
+function cmsReadParagraphField(textareaId, defaults) {
+  var textarea = typeof textareaId === 'string' ? document.getElementById(textareaId) : textareaId;
+  if (!textarea) return cmsNormalizeParagraphData('', defaults);
+  var p = cmsNormalizeParagraphData(textarea.value, defaults);
+  var controls = cmsFindParagraphControls(textarea);
+  if (!controls) return p;
+  var size = controls.querySelector('.cms-paragraph-size');
+  var colorText = controls.querySelector('.cms-paragraph-color-text');
+  var weight = controls.querySelector('.cms-paragraph-weight');
+  if (size) p.size = cmsClampInt(size.value, p.size, 10, 72);
+  if (colorText) p.color = cmsSafeHex(colorText.value, p.color);
+  if (weight) p.weight = cmsNormalizeWeight(weight.value);
+  return p;
+}
+function cmsParagraphStyle(value, defaults) {
+  var p = cmsNormalizeParagraphData(value, defaults);
+  return 'font-size:' + p.size + 'px;font-weight:' + p.weight + ';color:' + xA(p.color) + ';';
+}
+var CMS_PARAGRAPH_DEFAULTS = {
+  intro:          { size: 16, color: '#1a1a1a', weight: '400' },
+  desc:           { size: 16, color: '#1a1a1a', weight: '400' },
+  descNote:       { size: 13, color: '#262a32', weight: '400' },
+  tabs:           { size: 16, color: '#262a32', weight: '400' },
+  event:          { size: 14, color: '#262a32', weight: '400' },
+  team:           { size: 14, color: '#262a32', weight: '400' },
+  faq:            { size: 15, color: '#262a32', weight: '400' },
+  program:        { size: 13, color: '#4b5563', weight: '400' },
+  formThank:      { size: 15, color: '#4b5563', weight: '400' },
+  hero:           { size: 16, color: '#374151', weight: '400' },
+  featureSection: { size: 15, color: '#374151', weight: '400' },
+  stepsSection:   { size: 15, color: '#3f3f46', weight: '400' },
+  stepsCard:      { size: 13, color: '#30343b', weight: '400' },
+  aboutParagraph: { size: 14, color: '#2f343b', weight: '400' },
+  aboutCard:      { size: 13, color: '#2f343b', weight: '400' },
+  promoSubtitle:  { size: 14, color: '#1f6ab4', weight: '400' }
+};
 function buildScrollHelperScript(uid) {
   return '<script data-cfasync="false">(function(){'
     + 'window.' + uid + 'Scroll=function(sel){'
@@ -643,7 +773,8 @@ function loadIntroTemplate() {
 function addIntroParagraph(data) {
   var list = document.getElementById('intro-paragraphs');
   var id = 'ip' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-  var preview = (data && data.text) ? (data.text.slice(0, 42) + (data.text.length > 42 ? '…' : '')) : 'New paragraph';
+  var paragraph = cmsNormalizeParagraphData(data, CMS_PARAGRAPH_DEFAULTS.intro);
+  var preview = paragraph.text ? (paragraph.text.slice(0, 42) + (paragraph.text.length > 42 ? '…' : '')) : 'New paragraph';
   var div = document.createElement('div');
   div.className = 'block-item';
   div.id = id;
@@ -654,16 +785,7 @@ function addIntroParagraph(data) {
       '<button class="btn-sm danger" onclick="event.stopPropagation();document.getElementById(\'' + id + '\').remove()" style="margin-left:auto">Remove</button>' +
     '</div>' +
     '<div class="block-body">' +
-      '<div class="field"><label>Text</label>' +
-        '<textarea class="ip-text" rows="3" oninput="this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=this.value.slice(0,42)||(\'New paragraph\')">' + xA((data && data.text) || '') + '</textarea>' +
-      '</div>' +
-      '<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">' +
-        '<div class="field"><label>Font size (px)</label><input type="number" class="ip-size" value="' + xA(String((data && data.size) || 16)) + '" min="10" max="48" style="width:100%"></div>' +
-        '<div class="field" style="flex-direction:row;align-items:center;gap:8px;padding-bottom:9px">' +
-          '<input type="checkbox" class="ip-bold" id="' + id + '-bold"' + ((data && data.bold) ? ' checked' : '') + ' style="width:16px;height:16px;cursor:pointer;accent-color:var(--purple);flex-shrink:0">' +
-          '<label for="' + id + '-bold" style="font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;margin:0;color:#262a32">Bold</label>' +
-        '</div>' +
-      '</div>' +
+      cmsParagraphFieldHtml('Text', 'ip-text', paragraph, { rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.intro, oninput: 'this.closest(\\\'.block-item\\\').querySelector(\\\'.block-header-label\\\').textContent=this.value.slice(0,42)||(\\\'New paragraph\\\')' }) +
     '</div>';
   list.appendChild(div);
 }
@@ -693,10 +815,8 @@ function generateIntro() {
 
   var paras = [];
   document.querySelectorAll('#intro-paragraphs .block-item').forEach(function(item) {
-    var text = item.querySelector('.ip-text').value.trim();
-    var size = parseInt(item.querySelector('.ip-size').value) || 16;
-    var bold = item.querySelector('.ip-bold').checked;
-    if (text) paras.push({text: text, size: size, bold: bold});
+    var para = cmsReadParagraphField(item.querySelector('.ip-text'), CMS_PARAGRAPH_DEFAULTS.intro);
+    if (para.text.trim()) paras.push(para);
   });
 
   var ticksHtml = features.map(function(f) {
@@ -737,7 +857,7 @@ function generateIntro() {
   lines.push('      </div>');
 
   paras.forEach(function(p) {
-    lines.push('      <p style="font-family:\'Poppins\',sans-serif;font-size:' + p.size + 'px;font-weight:' + (p.bold ? '700' : '400') + ';color:#1a1a1a;line-height:1.7;margin:16px 0 0;text-align:left;">' + xH(p.text) + '</p>');
+    lines.push('      <p style="font-family:\'Poppins\',sans-serif;line-height:1.7;margin:16px 0 0;text-align:left;' + cmsParagraphStyle(p, CMS_PARAGRAPH_DEFAULTS.intro) + '">' + xH(p.text) + '</p>');
   });
 
   lines.push('      <div style="margin-top:' + (paras.length ? '20' : '8') + 'px;text-align:left;">');
@@ -773,10 +893,10 @@ function addDescBlock(type, data) {
 
   var body = '';
   if (type === 'paragraph') {
-    body = '<div class="field"><label>Paragraph text</label><textarea rows="3" id="' + id + '-p">' + xA((data && data.p) || '') + '</textarea></div>';
+    body = cmsParagraphFieldHtml('Paragraph text', '', data && data.p, { id: id + '-p', rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.desc });
   } else if (type === 'heading-paragraph') {
     body = '<div class="field"><label>Heading</label><input type="text" id="' + id + '-h" value="' + xA((data && data.h) || '') + '"></div>'
-         + '<div class="field"><label>Paragraph text</label><textarea rows="3" id="' + id + '-p">' + xA((data && data.p) || '') + '</textarea></div>';
+         + cmsParagraphFieldHtml('Paragraph text', '', data && data.p, { id: id + '-p', rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.desc });
   } else if (type === 'heading-bullets') {
     var bl = '';
     if (data && data.bullets) data.bullets.forEach(function(b) { bl += makeBulletRow(id, b); });
@@ -795,7 +915,7 @@ function addDescBlock(type, data) {
          + '<div id="' + id + '-items">' + il + '</div>'
          + '<button class="btn-add-block" onclick="addItemRow(\'' + id + '\')">+ Add item</button>';
   } else if (type === 'note') {
-    body = '<div class="field"><label>Note text</label><textarea rows="3" id="' + id + '-p">' + xA((data && data.p) || '') + '</textarea></div>';
+    body = cmsParagraphFieldHtml('Note text', '', data && data.p, { id: id + '-p', rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.descNote });
   }
 
   var div = document.createElement('div');
@@ -833,7 +953,7 @@ function makeItemRow(h, p) {
   var rid = 'ir' + Date.now() + Math.random().toString(36).slice(2);
   return '<div class="block-item" id="' + rid + '" style="margin-bottom:6px;">'
        + '<div class="field" style="padding:8px 12px 0"><label>Item heading</label><input type="text" class="item-h" value="' + xA(h || '') + '"></div>'
-       + '<div class="field" style="padding:0 12px 8px"><label>Item paragraph</label><textarea rows="2" class="item-p">' + xA(p || '') + '</textarea></div>'
+       + '<div style="padding:0 12px 8px">' + cmsParagraphFieldHtml('Item paragraph', 'item-p', p, { rows: 2, defaults: CMS_PARAGRAPH_DEFAULTS.desc }) + '</div>'
        + '<div style="text-align:right;padding:0 12px 8px"><button class="btn-sm danger" onclick="document.getElementById(\'' + rid + '\').remove()">Remove</button></div>'
        + '</div>';
 }
@@ -856,28 +976,30 @@ function moveBlock(id, dir) {
 
 function generateDesc() {
   var boldLine = document.getElementById('desc-intro-bold').value;
-  var p1       = document.getElementById('desc-intro-p1').value;
-  var p2       = document.getElementById('desc-intro-p2').value;
+  var p1       = cmsReadParagraphField('desc-intro-p1', CMS_PARAGRAPH_DEFAULTS.desc);
+  var p2       = cmsReadParagraphField('desc-intro-p2', CMS_PARAGRAPH_DEFAULTS.desc);
 
-  var PS  = "font-family:'Poppins',sans-serif;font-size:16px;font-weight:400;line-height:25px;text-align:left;overflow-wrap:break-word;word-break:break-word;";
+  var PS  = "font-family:'Poppins',sans-serif;line-height:25px;text-align:left;overflow-wrap:break-word;word-break:break-word;";
   var H3S = "font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;line-height:1.3;margin:1.5rem 0 0.4rem;text-align:left;color:#204280;";
   var H4S = "font-family:'Poppins',sans-serif;font-size:16px;font-weight:700;line-height:25px;color:#204280;margin:1rem 0 0.25rem;text-align:left;";
 
   var uid = 'rm' + Date.now();
 
   var above = '<p style="' + PS + '"><strong>' + xH(boldLine) + '</strong></p>\n'
-            + '<p style="' + PS + '">' + xH(p1) + '</p>\n'
-            + (p2.trim() ? '<p style="' + PS + '">' + xH(p2) + '</p>\n' : '');
+            + (p1.text.trim() ? '<p style="' + PS + cmsParagraphStyle(p1, CMS_PARAGRAPH_DEFAULTS.desc) + '">' + xH(p1.text) + '</p>\n' : '')
+            + (p2.text.trim() ? '<p style="' + PS + cmsParagraphStyle(p2, CMS_PARAGRAPH_DEFAULTS.desc) + '">' + xH(p2.text) + '</p>\n' : '');
 
   var inner = '';
   document.querySelectorAll('#desc-blocks .block-item').forEach(function(block) {
     var id   = block.id;
     var type = block.dataset.type;
     if (type === 'paragraph') {
-      inner += '<p style="' + PS + '">' + xH(document.getElementById(id + '-p').value) + '</p>\n';
+      var para = cmsReadParagraphField(id + '-p', CMS_PARAGRAPH_DEFAULTS.desc);
+      if (para.text.trim()) inner += '<p style="' + PS + cmsParagraphStyle(para, CMS_PARAGRAPH_DEFAULTS.desc) + '">' + xH(para.text) + '</p>\n';
     } else if (type === 'heading-paragraph') {
+      var hpPara = cmsReadParagraphField(id + '-p', CMS_PARAGRAPH_DEFAULTS.desc);
       inner += '<h3 style="' + H3S + '">' + xH(document.getElementById(id + '-h').value) + '</h3>\n'
-             + '<p style="' + PS + '">' + xH(document.getElementById(id + '-p').value) + '</p>\n';
+             + (hpPara.text.trim() ? '<p style="' + PS + cmsParagraphStyle(hpPara, CMS_PARAGRAPH_DEFAULTS.desc) + '">' + xH(hpPara.text) + '</p>\n' : '');
     } else if (type === 'heading-bullets') {
       var h = document.getElementById(id + '-h') ? document.getElementById(id + '-h').value : '';
       var bullets = [];
@@ -897,13 +1019,17 @@ function generateDesc() {
       if (h) inner += '<h3 style="' + H3S + '">' + xH(h) + '</h3>\n';
       inner += '<div style="padding-left:0;margin:0 0 1rem;text-align:left;">\n';
       block.querySelectorAll('#' + id + '-items .block-item').forEach(function(item) {
+        var itemPara = cmsReadParagraphField(item.querySelector('.item-p'), CMS_PARAGRAPH_DEFAULTS.desc);
         inner += '  <h4 style="' + H4S + '">' + xH(item.querySelector('.item-h').value) + '</h4>'
-               + '<p style="' + PS + '">' + xH(item.querySelector('.item-p').value) + '</p>\n';
+               + (itemPara.text.trim() ? '<p style="' + PS + cmsParagraphStyle(itemPara, CMS_PARAGRAPH_DEFAULTS.desc) + '">' + xH(itemPara.text) + '</p>\n' : '');
       });
       inner += '</div>\n';
     } else if (type === 'note') {
-      inner += '<p style="font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:400;line-height:22px;color:#262a32;border-left:3px solid #ddd;padding-left:12px;margin-top:1.25rem;text-align:left;">'
-             + xH(document.getElementById(id + '-p').value) + '</p>\n';
+      var notePara = cmsReadParagraphField(id + '-p', CMS_PARAGRAPH_DEFAULTS.descNote);
+      if (notePara.text.trim()) {
+        inner += '<p style="font-family:\'Poppins\',sans-serif;line-height:22px;border-left:3px solid #ddd;padding-left:12px;margin-top:1.25rem;text-align:left;' + cmsParagraphStyle(notePara, CMS_PARAGRAPH_DEFAULTS.descNote) + '">'
+               + xH(notePara.text) + '</p>\n';
+      }
     }
   });
 
@@ -1007,7 +1133,7 @@ function tabsSaveActiveBlocks() {
     blk.data = blk.data || {};
     if (blk.type === 'heading-para') {
       blk.data.heading = (el.querySelector('.blk-heading') || {}).value || '';
-      blk.data.para    = (el.querySelector('.blk-para')    || {}).value || '';
+      blk.data.para    = cmsReadParagraphField(el.querySelector('.blk-para'), CMS_PARAGRAPH_DEFAULTS.tabs);
     } else if (blk.type === 'bullets') {
       blk.data.heading = (el.querySelector('.blk-heading') || {}).value || '';
       blk.data.items   = [];
@@ -1015,13 +1141,13 @@ function tabsSaveActiveBlocks() {
         if (inp.value.trim()) blk.data.items.push(inp.value.trim());
       });
     } else if (blk.type === 'paragraph') {
-      blk.data.para = (el.querySelector('.blk-para') || {}).value || '';
+      blk.data.para = cmsReadParagraphField(el.querySelector('.blk-para'), CMS_PARAGRAPH_DEFAULTS.tabs);
     } else if (blk.type === 'promo-cards') {
       blk.data.cards = [];
       el.querySelectorAll('.more-card').forEach(function(card) {
         blk.data.cards.push({
           h:   (card.querySelector('.pc-h')   || {}).value || '',
-          p:   (card.querySelector('.pc-p')   || {}).value || '',
+          p:   cmsReadParagraphField(card.querySelector('.pc-p'), CMS_PARAGRAPH_DEFAULTS.tabs),
           cta: (card.querySelector('.pc-cta') || {}).value || '',
           url: (card.querySelector('.pc-url') || {}).value || ''
         });
@@ -1116,7 +1242,7 @@ function tabsRenderBlock(blk, pf) {
   if (blk.type === 'heading-para') {
     bodyHtml =
       '<div class="field"><label>Heading</label><input type="text" class="blk-heading" value="' + xA(pf.heading || '') + '"></div>'
-      + '<div class="field"><label>Paragraph</label><textarea rows="3" class="blk-para">' + xH(pf.para || '') + '</textarea></div>';
+      + cmsParagraphFieldHtml('Paragraph', 'blk-para', pf.para, { rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.tabs });
 
   } else if (blk.type === 'bullets') {
     var bListId = 'blist-' + blk.id;
@@ -1129,7 +1255,7 @@ function tabsRenderBlock(blk, pf) {
 
   } else if (blk.type === 'paragraph') {
     bodyHtml =
-      '<div class="field"><label>Paragraph</label><textarea rows="4" class="blk-para">' + xH(pf.para || '') + '</textarea></div>';
+      cmsParagraphFieldHtml('Paragraph', 'blk-para', pf.para, { rows: 4, defaults: CMS_PARAGRAPH_DEFAULTS.tabs });
 
   } else if (blk.type === 'promo-cards') {
     var cListId = 'clist-' + blk.id;
@@ -1183,7 +1309,7 @@ function tabsAddCardItem(listId, data) {
   div.innerHTML =
     '<span class="more-card-label">Card</span>'
     + '<div class="field"><label>Heading</label><input type="text" class="pc-h" value="' + xA(d.h || '') + '"></div>'
-    + '<div class="field"><label>Description</label><textarea rows="2" class="pc-p">' + xH(d.p || '') + '</textarea></div>'
+    + cmsParagraphFieldHtml('Description', 'pc-p', d.p, { rows: 2, defaults: CMS_PARAGRAPH_DEFAULTS.tabs })
     + '<div class="field"><label>Button label</label><input type="text" class="pc-cta" value="' + xA(d.cta || '') + '"></div>'
     + '<div class="field"><label>Button URL</label><input type="text" class="pc-url" value="' + xA(d.url || '') + '"></div>'
     + '<div class="block-actions"><button class="btn-sm danger" onclick="document.getElementById(\'pc-' + id + '\').remove()">Remove</button></div>';
@@ -1234,10 +1360,11 @@ function generateTabs() {
       var d = blk.data || blk.prefill || {};
 
       if (blk.type === 'heading-para') {
+        var hpPara = cmsNormalizeParagraphData(d.para, CMS_PARAGRAPH_DEFAULTS.tabs);
         // Rendered as a white callout card with purple left accent — stands out against page background
         out += '  <div style="background:#fff;border:1px solid #e5e7eb;border-left:3px solid #534AB7;border-radius:0 8px 8px 0;padding:0.85rem 1.25rem;margin-bottom:1.25rem;">\n';
         if (d.heading) out += '    <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#534AB7;line-height:25px;margin:0 0 0.4rem;text-align:left;">' + xH(d.heading) + '</h3>\n';
-        if (d.para)    out += '    <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#262a32;line-height:25px;margin:0;text-align:left;">' + xH(d.para) + '</p>\n';
+        if (hpPara.text) out += '    <p style="font-family:\'Poppins\',sans-serif;line-height:25px;margin:0;text-align:left;' + cmsParagraphStyle(hpPara, CMS_PARAGRAPH_DEFAULTS.tabs) + '">' + xH(hpPara.text) + '</p>\n';
         out += '  </div>\n';
 
       } else if (blk.type === 'bullets') {
@@ -1252,16 +1379,18 @@ function generateTabs() {
         out += '    </ul>\n  </div>\n';
 
       } else if (blk.type === 'paragraph') {
-        if (d.para) out += '  <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#262a32;line-height:25px;margin-bottom:1.25rem;text-align:left;">' + xH(d.para) + '</p>\n';
+        var para = cmsNormalizeParagraphData(d.para, CMS_PARAGRAPH_DEFAULTS.tabs);
+        if (para.text) out += '  <p style="font-family:\'Poppins\',sans-serif;line-height:25px;margin-bottom:1.25rem;text-align:left;' + cmsParagraphStyle(para, CMS_PARAGRAPH_DEFAULTS.tabs) + '">' + xH(para.text) + '</p>\n';
 
       } else if (blk.type === 'promo-cards') {
         var cards = d.cards || [];
         if (cards.length) {
           out += '  <div class="' + uid + '-grid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:1.25rem;">\n';
           cards.forEach(function(card) {
+            var cardPara = cmsNormalizeParagraphData(card.p, CMS_PARAGRAPH_DEFAULTS.tabs);
             out += '    <div style="background:#fff;border:0.5px solid #e5e7eb;border-radius:12px;padding:1.25rem;display:flex;flex-direction:column;gap:10px;text-align:center;">\n';
             if (card.h)   out += '      <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:500;color:#000;line-height:25px;text-align:center;">' + xH(card.h) + '</h3>\n';
-            if (card.p)   out += '      <p style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:400;color:#262a32;line-height:25px;flex:1;text-align:center;">' + xH(card.p) + '</p>\n';
+            if (cardPara.text) out += '      <p style="font-family:\'Poppins\',sans-serif;line-height:25px;flex:1;text-align:center;' + cmsParagraphStyle(cardPara, CMS_PARAGRAPH_DEFAULTS.tabs) + '">' + xH(cardPara.text) + '</p>\n';
             if (card.cta) out += '      <a href="' + xA(card.url) + '" style="display:inline-block;padding:8px 20px;background:#534AB7;color:#fff;font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:500;border-radius:6px;text-decoration:none;align-self:center;">' + xH(card.cta) + '</a>\n';
             out += '    </div>\n';
           });
@@ -1287,6 +1416,8 @@ function introOnOpen() {
 }
 
 function descOnOpen() {
+  cmsInitParagraphField('desc-intro-p1', { defaults: CMS_PARAGRAPH_DEFAULTS.desc });
+  cmsInitParagraphField('desc-intro-p2', { defaults: CMS_PARAGRAPH_DEFAULTS.desc });
   addDescBlock('heading-paragraph', { h: 'What this course covers', p: 'The FA1 syllabus is structured around five core capability areas, and our course walks you through each one systematically.' });
   addDescBlock('items', { h: '', items: [
     { h: 'Business transactions and documentation', p: 'Understand the types of transactions that occur in a business and the source documents that capture them: invoices, receipts, credit notes, and more. You\'ll learn how to identify and process these documents accurately.' },
@@ -1965,9 +2096,9 @@ function evtAddBlock(typeOverride, prefill) {
 
   if (type === 'heading-para') {
     body = '<div class="field"><label>Heading</label><input type="text" id="' + id + '-h" value="' + xA(pf.heading || '') + '"></div>'
-         + '<div class="field"><label>Paragraph</label><textarea rows="3" id="' + id + '-p">' + xH(pf.para || '') + '</textarea></div>';
+         + cmsParagraphFieldHtml('Paragraph', '', pf.para, { id: id + '-p', rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.event });
   } else if (type === 'paragraph') {
-    body = '<div class="field"><label>Paragraph</label><textarea rows="3" id="' + id + '-p">' + xH(pf.para || '') + '</textarea></div>';
+    body = cmsParagraphFieldHtml('Paragraph', '', pf.para, { id: id + '-p', rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.event });
   } else if (type === 'list') {
     var rows = '';
     (pf.items || ['']).forEach(function(item) {
@@ -2006,9 +2137,9 @@ function evtCollectBlocks() {
     var type = el.dataset.type;
     var id   = el.dataset.blkid;
     if (type === 'heading-para') {
-      blocks.push({ type: type, heading: (el.querySelector('#' + id + '-h') || {}).value || '', para: (el.querySelector('#' + id + '-p') || {}).value || '' });
+      blocks.push({ type: type, heading: (el.querySelector('#' + id + '-h') || {}).value || '', para: cmsReadParagraphField(el.querySelector('#' + id + '-p'), CMS_PARAGRAPH_DEFAULTS.event) });
     } else if (type === 'paragraph') {
-      blocks.push({ type: type, para: (el.querySelector('#' + id + '-p') || {}).value || '' });
+      blocks.push({ type: type, para: cmsReadParagraphField(el.querySelector('#' + id + '-p'), CMS_PARAGRAPH_DEFAULTS.event) });
     } else if (type === 'list') {
       var items = [];
       el.querySelectorAll('#' + id + '-items input').forEach(function(i) { if (i.value.trim()) items.push(i.value.trim()); });
@@ -2108,15 +2239,17 @@ function buildEvtListEmbedCode(rawUrl) {
   L.push('function fmtMon(s){try{return MONS[new Date(s).getMonth()];}catch(e){return "";}}');
   L.push('function fmtDay(s){try{return new Date(s).getDate();}catch(e){return "";}}');
   L.push('function fmtTime(s,tz){try{return new Date(s).toLocaleString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:tz,timeZoneName:"short"});}catch(e){return s;}}');
+  L.push('function ptxt(p){return typeof p==="string"?(p||""):((p&&p.text)||"");}');
+  L.push('function psty(p){var size=parseInt((p&&p.size),10)||14;var color=/^#[0-9a-fA-F]{6}$/.test((p&&p.color)||"")?p.color:"#262a32";var weight=(String((p&&p.weight)||"").toLowerCase()==="700"||String((p&&p.weight)||"").toLowerCase()==="bold"||((p||{}).bold===true))?"700":"400";return "font-family:Poppins,sans-serif;font-size:"+size+"px;font-weight:"+weight+";color:"+color+";line-height:1.6;margin:0 0 10px;text-align:left;";}');
   L.push('function renderDesc(blocks){');
   L.push('  if(!blocks||!blocks.length)return "";');
   L.push('  var h="";');
   L.push('  blocks.forEach(function(b){');
   L.push('    if(b.type==="heading-para"){');
   L.push('      if(b.heading)h+="<h3 style=\\"font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:#204280;margin:0 0 5px;text-align:left;\\">"+esc(b.heading)+"</h3>";');
-  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:14px;font-weight:400;color:#262a32;line-height:1.6;margin:0 0 10px;text-align:left;\\">"+esc(b.para)+"</p>";');
+  L.push('      var t=ptxt(b.para);if(t)h+="<p style=\\""+psty(b.para)+"\\">"+esc(t)+"</p>";');
   L.push('    }else if(b.type==="paragraph"){');
-  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:14px;font-weight:400;color:#262a32;line-height:1.6;margin:0 0 10px;text-align:left;\\">"+esc(b.para)+"</p>";');
+  L.push('      var t=ptxt(b.para);if(t)h+="<p style=\\""+psty(b.para)+"\\">"+esc(t)+"</p>";');
   L.push('    }else if(b.type==="list"){');
   L.push('      h+="<ul style=\\"padding-left:0;list-style:none;margin:0 0 10px;\\">";');
   L.push('      (b.items||[]).forEach(function(item){h+="<li style=\\"font-family:Poppins,sans-serif;font-size:14px;font-weight:400;color:#262a32;padding:2px 0;display:flex;gap:8px;align-items:flex-start;\\"><span style=\\"color:#534AB7;font-weight:700;flex-shrink:0;\\">•</span>"+esc(item)+"</li>";});');
@@ -2182,10 +2315,12 @@ function renderEvtCardHtml(ev) {
   function descHtml(blocks) {
     return (blocks||[]).map(function(b) {
       if (b.type === 'heading-para') {
+        var headingPara = cmsNormalizeParagraphData(b.para, CMS_PARAGRAPH_DEFAULTS.event);
         return (b.heading ? '<h3 style="font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:#204280;margin:0 0 5px;text-align:left;">' + esc(b.heading) + '</h3>' : '')
-             + (b.para    ? '<p style="font-family:Poppins,sans-serif;font-size:14px;font-weight:400;color:#262a32;line-height:1.6;margin:0 0 10px;text-align:left;">' + esc(b.para) + '</p>' : '');
+             + (headingPara.text ? '<p style="' + cmsParagraphStyle(headingPara, CMS_PARAGRAPH_DEFAULTS.event) + 'line-height:1.6;margin:0 0 10px;text-align:left;">' + esc(headingPara.text) + '</p>' : '');
       } else if (b.type === 'paragraph') {
-        return b.para ? '<p style="font-family:Poppins,sans-serif;font-size:14px;font-weight:400;color:#262a32;line-height:1.6;margin:0 0 10px;text-align:left;">' + esc(b.para) + '</p>' : '';
+        var para = cmsNormalizeParagraphData(b.para, CMS_PARAGRAPH_DEFAULTS.event);
+        return para.text ? '<p style="' + cmsParagraphStyle(para, CMS_PARAGRAPH_DEFAULTS.event) + 'line-height:1.6;margin:0 0 10px;text-align:left;">' + esc(para.text) + '</p>' : '';
       } else if (b.type === 'list') {
         return '<ul style="padding-left:0;list-style:none;margin:0 0 10px;">'
           + (b.items||[]).map(function(i) { return '<li style="font-family:Poppins,sans-serif;font-size:14px;font-weight:400;color:#262a32;padding:2px 0;display:flex;gap:8px;align-items:flex-start;"><span style="color:#534AB7;font-weight:700;flex-shrink:0;">•</span>' + esc(i) + '</li>'; }).join('')
@@ -2250,15 +2385,17 @@ function buildEvtEmbedCode(evtId, rawUrl) {
   L.push('function fmtMon(s){try{return MONS[new Date(s).getMonth()];}catch(e){return "";}}');
   L.push('function fmtDay(s){try{return new Date(s).getDate();}catch(e){return "";}}');
   L.push('function fmtTime(s,tz){try{return new Date(s).toLocaleString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:tz,timeZoneName:"short"});}catch(e){return s;}}');
+  L.push('function ptxt(p){return typeof p==="string"?(p||""):((p&&p.text)||"");}');
+  L.push('function psty(p){var size=parseInt((p&&p.size),10)||14;var color=/^#[0-9a-fA-F]{6}$/.test((p&&p.color)||"")?p.color:"#262a32";var weight=(String((p&&p.weight)||"").toLowerCase()==="700"||String((p&&p.weight)||"").toLowerCase()==="bold"||((p||{}).bold===true))?"700":"400";return "font-family:Poppins,sans-serif;font-size:"+size+"px;font-weight:"+weight+";color:"+color+";line-height:1.6;margin:0 0 10px;text-align:left;";}');
   L.push('function renderDesc(blocks){');
   L.push('  if(!blocks||!blocks.length)return "";');
   L.push('  var h="";');
   L.push('  blocks.forEach(function(b){');
   L.push('    if(b.type==="heading-para"){');
   L.push('      if(b.heading)h+="<h3 style=\\"font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:#204280;margin:0 0 5px;text-align:left;\\">"+esc(b.heading)+"</h3>";');
-  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:14px;font-weight:400;color:#262a32;line-height:1.6;margin:0 0 10px;text-align:left;\\">"+esc(b.para)+"</p>";');
+  L.push('      var t=ptxt(b.para);if(t)h+="<p style=\\""+psty(b.para)+"\\">"+esc(t)+"</p>";');
   L.push('    }else if(b.type==="paragraph"){');
-  L.push('      if(b.para)h+="<p style=\\"font-family:Poppins,sans-serif;font-size:14px;font-weight:400;color:#262a32;line-height:1.6;margin:0 0 10px;text-align:left;\\">"+esc(b.para)+"</p>";');
+  L.push('      var t=ptxt(b.para);if(t)h+="<p style=\\""+psty(b.para)+"\\">"+esc(t)+"</p>";');
   L.push('    }else if(b.type==="list"){');
   L.push('      h+="<ul style=\\"padding-left:0;list-style:none;margin:0 0 10px;\\">";');
   L.push('      (b.items||[]).forEach(function(item){h+="<li style=\\"font-family:Poppins,sans-serif;font-size:14px;font-weight:400;color:#262a32;padding:2px 0;display:flex;gap:8px;align-items:flex-start;\\"><span style=\\"color:#534AB7;font-weight:700;flex-shrink:0;\\">•</span>"+esc(item)+"</li>";});');
@@ -2335,6 +2472,7 @@ async function loadTeamFromGist() {
           var n = parseInt(String(c.id).replace('tm', ''));
           if (!isNaN(n) && n > teamIdCounter) teamIdCounter = n;
         }
+        c.paras = (c.paras || []).map(function(p) { return cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.team); });
         return c;
       });
       renderTeamBlocks();
@@ -2371,14 +2509,14 @@ function saveTeamState() {
     card.imgUrl      = ((document.getElementById('team-img-url-' + id) || {}).value || '');
     card.paras = [];
     var pc = document.getElementById('team-paras-' + id);
-    if (pc) pc.querySelectorAll('textarea').forEach(function(ta) { card.paras.push(ta.value); });
+    if (pc) pc.querySelectorAll('.team-para').forEach(function(ta) { card.paras.push(cmsReadParagraphField(ta, CMS_PARAGRAPH_DEFAULTS.team)); });
   });
 }
 
 function addTeamCard() {
   saveTeamState();
   var id = 'tm' + (++teamIdCounter);
-  teamCards.push({ id: id, name: '', designation: '', imgUrl: '', paras: [''] });
+  teamCards.push({ id: id, name: '', designation: '', imgUrl: '', paras: [cmsNormalizeParagraphData('', CMS_PARAGRAPH_DEFAULTS.team)] });
   renderTeamBlocks();
   setTimeout(function() {
     var el = document.getElementById('team-block-' + id);
@@ -2420,8 +2558,9 @@ function buildTeamBlockHtml(card, num) {
   var id       = card.id;
   var imgSrc   = card.imgUrl || TEAM_PLACEHOLDER;
   var parasHtml = (card.paras && card.paras.length ? card.paras : ['']).map(function(p) {
+    var paragraph = cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.team);
     return '<div class="feature-item" style="align-items:flex-start;">'
-      + '<textarea rows="3" placeholder="Bio paragraph..." style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);resize:vertical;line-height:1.6;outline:none;">' + xH(p) + '</textarea>'
+      + '<div style="flex:1;">' + cmsParagraphFieldHtml('Bio paragraph', 'team-para', paragraph, { rows: 3, placeholder: 'Bio paragraph...', defaults: CMS_PARAGRAPH_DEFAULTS.team }) + '</div>'
       + '<button class="btn-icon" style="margin-top:6px;flex-shrink:0;" onclick="this.parentNode.remove()" title="Remove">&#x2715;</button>'
       + '</div>';
   }).join('');
@@ -2513,7 +2652,7 @@ function teamAddPara(id) {
   var d = document.createElement('div');
   d.className = 'feature-item';
   d.style.alignItems = 'flex-start';
-  d.innerHTML = '<textarea rows="3" placeholder="Bio paragraph..." style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);resize:vertical;line-height:1.6;outline:none;"></textarea>'
+  d.innerHTML = '<div style="flex:1;">' + cmsParagraphFieldHtml('Bio paragraph', 'team-para', '', { rows: 3, placeholder: 'Bio paragraph...', defaults: CMS_PARAGRAPH_DEFAULTS.team }) + '</div>'
     + '<button class="btn-icon" style="margin-top:6px;flex-shrink:0;" onclick="this.parentNode.remove()" title="Remove">&#x2715;</button>';
   c.appendChild(d);
 }
@@ -2521,7 +2660,7 @@ function teamAddPara(id) {
 function collectTeamData() {
   return teamCards.map(function(c) {
     return { id: c.id, name: c.name, designation: c.designation, imgUrl: c.imgUrl,
-             paras: (c.paras || []).filter(function(p) { return p.trim(); }) };
+             paras: (c.paras || []).map(function(p) { return cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.team); }).filter(function(p) { return p.text.trim(); }) };
   }).filter(function(c) { return c.name.trim(); });
 }
 
@@ -2547,7 +2686,8 @@ function teamCardHtml(card) {
       + '<span style="font-family:Poppins,sans-serif;font-size:34px;font-weight:700;color:#534AB7;">' + e(teamInitials(card.name)) + '</span></div>';
 
   var paras = (card.paras || []).map(function(p, i, arr) {
-    return '<p style="font-family:Poppins,sans-serif;font-size:14px;color:#262a32;line-height:1.75;margin:0' + (i < arr.length - 1 ? ' 0 12px' : '') + ';text-align:left;">' + e(p) + '</p>';
+    var para = cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.team);
+    return '<p style="font-family:Poppins,sans-serif;line-height:1.75;margin:0' + (i < arr.length - 1 ? ' 0 12px' : '') + ';text-align:left;' + cmsParagraphStyle(para, CMS_PARAGRAPH_DEFAULTS.team) + '">' + e(para.text) + '</p>';
   }).join('');
 
   return '<div style="display:flex;gap:28px;align-items:flex-start;background:#fff;border-radius:16px;padding:28px;box-shadow:0 2px 16px rgba(0,0,0,.08);border:1px solid #f0f0f5;">'
@@ -2587,7 +2727,7 @@ function renderTeamCode(cards) {
   L.push('.' + uid + '-body{flex:1;min-width:0;}');
   L.push('.' + uid + '-name{font-family:Poppins,sans-serif;font-size:19px;font-weight:700;color:#1a1a1a;margin:0 0 4px;text-align:left;}');
   L.push('.' + uid + '-role{font-family:Poppins,sans-serif;font-size:14px;font-weight:600;color:#534AB7;margin:0 0 16px;text-align:left;}');
-  L.push('.' + uid + '-para{font-family:Poppins,sans-serif;font-size:14px;color:#262a32;line-height:1.75;margin:0 0 12px;text-align:left;}');
+  L.push('.' + uid + '-para{font-family:Poppins,sans-serif;line-height:1.75;margin:0 0 12px;text-align:left;}');
   L.push('.' + uid + '-para:last-child{margin-bottom:0;}');
   L.push('@media(max-width:600px){'
     + '.' + uid + '-card{flex-direction:column;align-items:center;padding:20px;gap:16px;}'
@@ -2611,7 +2751,10 @@ function renderTeamCode(cards) {
     L.push('    <div class="' + uid + '-body">');
     L.push('      <h3 class="' + uid + '-name">' + e(card.name) + '</h3>');
     if (card.designation) L.push('      <p class="' + uid + '-role">' + e(card.designation) + '</p>');
-    (card.paras || []).forEach(function(p) { L.push('      <p class="' + uid + '-para">' + e(p) + '</p>'); });
+    (card.paras || []).forEach(function(p) {
+      var para = cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.team);
+      L.push('      <p class="' + uid + '-para" style="' + cmsParagraphStyle(para, CMS_PARAGRAPH_DEFAULTS.team) + '">' + e(para.text) + '</p>');
+    });
     L.push('    </div>');
     L.push('  </div>');
   });
@@ -3061,7 +3204,7 @@ function loadFaqFromGist() {
           name: sec.name || '',
           expanded: false,
           items: (sec.items || []).map(function(f) {
-            return { id: f.id, type: f.type || 'paragraph', question: f.question || '', heading: f.heading || '', para: f.para || '', items: f.items || [] };
+            return { id: f.id, type: f.type || 'paragraph', question: f.question || '', heading: f.heading || '', para: cmsNormalizeParagraphData(f.para, CMS_PARAGRAPH_DEFAULTS.faq), items: f.items || [] };
           })
         };
       });
@@ -3081,7 +3224,7 @@ function saveFaqSectionsState() {
       f.type     = typeEl.value;
       f.question = ((document.getElementById('faq-q-' + id) || {}).value || '');
       f.heading  = ((document.getElementById('faq-h-' + id) || {}).value || '');
-      f.para     = ((document.getElementById('faq-p-' + id) || {}).value || '');
+      f.para     = cmsReadParagraphField('faq-p-' + id, CMS_PARAGRAPH_DEFAULTS.faq);
       f.items    = [];
       var itemsEl = document.getElementById('faq-items-' + id);
       if (itemsEl) itemsEl.querySelectorAll('input').forEach(function(inp) { f.items.push(inp.value); });
@@ -3241,7 +3384,7 @@ function buildFaqAnswerHtml(id, type, f) {
     html += '<div class="field"><label>Heading</label><input type="text" id="faq-h-' + id + '" value="' + xA((f && f.heading) || '') + '" placeholder="Answer heading"></div>';
   }
   if (type === 'paragraph' || type === 'heading-para') {
-    html += '<div class="field"><label>Paragraph</label><textarea id="faq-p-' + id + '" rows="3" placeholder="Enter answer text...">' + xH((f && f.para) || '') + '</textarea></div>';
+    html += cmsParagraphFieldHtml('Paragraph', '', f && f.para, { id: 'faq-p-' + id, rows: 3, placeholder: 'Enter answer text...', defaults: CMS_PARAGRAPH_DEFAULTS.faq });
   }
   if (type === 'bullets' || type === 'heading-bullets') {
     var items = (f && f.items && f.items.length) ? f.items : [''];
@@ -3286,11 +3429,11 @@ function faqAnswerInnerHtml(f) {
   var e = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
   var h = '';
   var HS  = 'font-family:Poppins,sans-serif;font-size:16px;font-weight:700;color:#204280;margin:0 0 8px;text-align:left;';
-  var PS  = 'font-family:Poppins,sans-serif;font-size:15px;font-weight:400;color:#262a32;line-height:1.7;margin:0 0 8px;text-align:left;';
   var ULS = 'padding-left:0;list-style:none;margin:0 0 4px;';
   var LIS = 'font-family:Poppins,sans-serif;font-size:15px;font-weight:400;color:#262a32;line-height:1.7;display:flex;gap:8px;align-items:flex-start;padding:2px 0;text-align:left;';
+  var para = cmsNormalizeParagraphData(f.para, CMS_PARAGRAPH_DEFAULTS.faq);
   if (f.heading) h += '<h3 style="' + HS + '">' + e(f.heading) + '</h3>';
-  if (f.para)    h += '<p style="' + PS + '">' + e(f.para) + '</p>';
+  if (para.text) h += '<p style="' + cmsParagraphStyle(para, CMS_PARAGRAPH_DEFAULTS.faq) + 'line-height:1.7;margin:0 0 8px;text-align:left;">' + e(para.text) + '</p>';
   if (f.items && f.items.length) {
     h += '<ul style="' + ULS + '">';
     f.items.forEach(function(item) {
@@ -3304,7 +3447,7 @@ function faqAnswerInnerHtml(f) {
 function faqAnswerPlainText(f) {
   var parts = [];
   if (f.heading) parts.push(f.heading);
-  if (f.para)    parts.push(f.para);
+  if (cmsParagraphText(f.para)) parts.push(cmsParagraphText(f.para));
   if (f.items && f.items.length) parts.push(f.items.join('. '));
   return parts.join(' ');
 }
@@ -3475,7 +3618,7 @@ function loadProgramsFromGist() {
               title: t.title || '',
               expanded: false,
               cards: (t.cards || []).map(function(c) {
-                return { id: c.id, title: c.title || '', desc: c.desc || '', url: c.url || '', cta: c.cta || 'See Details' };
+                return { id: c.id, title: c.title || '', desc: cmsNormalizeParagraphData(c.desc, CMS_PARAGRAPH_DEFAULTS.program), url: c.url || '', cta: c.cta || 'See Details' };
               })
             };
           })
@@ -3496,7 +3639,7 @@ function saveProgramState() {
       t.cards.forEach(function(c) {
         var el;
         el = document.getElementById('pc-title-' + c.id); if (el) c.title = el.value;
-        el = document.getElementById('pc-desc-'  + c.id); if (el) c.desc  = el.value;
+        el = document.getElementById('pc-desc-'  + c.id); if (el) c.desc  = cmsReadParagraphField(el, CMS_PARAGRAPH_DEFAULTS.program);
         el = document.getElementById('pc-url-'   + c.id); if (el) c.url   = el.value;
         el = document.getElementById('pc-cta-'   + c.id); if (el) c.cta   = el.value;
       });
@@ -3744,8 +3887,7 @@ function buildProgramCardHtml(c, cidx, cardTotal, sid, tid) {
     + '</div>'
     + '<div class="field" style="margin-bottom:5px;"><label style="font-size:11px;">Course Title</label>'
     + '<input type="text" id="pc-title-' + cid + '" value="' + xA(c.title || '') + '" placeholder="Course title"></div>'
-    + '<div class="field" style="margin-bottom:5px;"><label style="font-size:11px;">Short Description</label>'
-    + '<textarea id="pc-desc-' + cid + '" rows="2" placeholder="Short course description..." style="resize:vertical;">' + xH(c.desc || '') + '</textarea></div>'
+    + '<div style="margin-bottom:5px;">' + cmsParagraphFieldHtml('Short Description', '', c.desc, { id: 'pc-desc-' + cid, rows: 2, placeholder: 'Short course description...', defaults: CMS_PARAGRAPH_DEFAULTS.program }) + '</div>'
     + '<div class="field" style="margin-bottom:5px;"><label style="font-size:11px;">CTA URL</label>'
     + '<input type="text" id="pc-url-' + cid + '" value="' + xA(c.url || '') + '" placeholder="https://..."></div>'
     + '<div class="field" style="margin-bottom:0;"><label style="font-size:11px;">CTA Button Text</label>'
@@ -3925,7 +4067,7 @@ function buildProgramsHtml(uid, topics, allCards) {
     + '.' + uid + '-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;min-height:580px;align-content:start;}\n'
     + '.' + uid + '-card{border:1px solid #e5e7eb;border-radius:8px;padding:20px;display:flex;flex-direction:column;background:#fff;}\n'
     + '.' + uid + '-card-title{font-weight:700;font-size:15px;color:#1a1a1a;margin:0 0 8px;text-align:left;}\n'
-    + '.' + uid + '-card-desc{font-size:13px;font-weight:400;color:#4b5563;line-height:1.6;flex:1;margin:0 0 16px;text-align:left;}\n'
+    + '.' + uid + '-card-desc{line-height:1.6;flex:1;margin:0 0 16px;text-align:left;}\n'
     + '.' + uid + '-card-btn{display:block;width:100%;box-sizing:border-box;padding:10px;background:#204280;color:#fff;border:none;border-radius:6px;font-family:Poppins,sans-serif;font-size:13px;font-weight:600;text-align:center;cursor:pointer;text-decoration:none;}\n'
     + '.' + uid + '-card-btn:hover{background:#1a3570;color:#fff;}\n'
     + '.' + uid + '-pager{display:flex;gap:6px;margin-top:20px;flex-wrap:wrap;align-items:center;}\n'
@@ -3959,9 +4101,11 @@ function buildProgramsHtml(uid, topics, allCards) {
     + '  var st={t:"all",p:1,q:""};\n'
     + '  function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}\n'
     + '  function esca(s){return String(s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;");}\n'
+    + '  function ptxt(p){return typeof p==="string"?(p||""):((p&&p.text)||"");}\n'
+    + '  function pstyle(p){var size=parseInt((p&&p.size),10)||13;var color=/^#[0-9a-fA-F]{6}$/.test((p&&p.color)||"")?p.color:"#4b5563";var weight=(String((p&&p.weight)||"").toLowerCase()==="700"||String((p&&p.weight)||"").toLowerCase()==="bold"||((p||{}).bold===true))?"700":"400";return "font-size:"+size+"px;font-weight:"+weight+";color:"+color+";";}\n'
     + '  function getCards(){\n'
     + '    var c=st.t==="all"?D.cards:D.cards.filter(function(x){return x.topicId===st.t;});\n'
-    + '    if(st.q){var q=st.q.toLowerCase();c=c.filter(function(x){return(x.title+" "+x.desc).toLowerCase().indexOf(q)>=0;});}\n'
+    + '    if(st.q){var q=st.q.toLowerCase();c=c.filter(function(x){return(x.title+" "+ptxt(x.desc)).toLowerCase().indexOf(q)>=0;});}\n'
     + '    return c;\n'
     + '  }\n'
     + '  function render(){\n'
@@ -3979,7 +4123,7 @@ function buildProgramsHtml(uid, topics, allCards) {
     + '    g.innerHTML=sl.map(function(c){\n'
     + '      return \'<div class="' + uid + '-card">\'\n'
     + '        +\'<div class="' + uid + '-card-title">\'+esc(c.title)+\'</div>\'\n'
-    + '        +\'<div class="' + uid + '-card-desc">\'+esc(c.desc)+\'</div>\'\n'
+    + '        +\'<div class="' + uid + '-card-desc" style="\'+pstyle(c.desc)+\'">\'+esc(ptxt(c.desc))+\'</div>\'\n'
     + '        +\'<a class="' + uid + '-card-btn" href="\'+esca(c.url)+\'">\'+esc(c.cta||"See Details")+\'</a>\'\n'
     + '        +\'</div>\';\n'
     + '    }).join("");\n'
@@ -4031,7 +4175,7 @@ var FORM_DEFAULTS = {
   formTitle:  'Course Enquiry Form',
   submitText: 'Submit Form',
   thankTitle: 'Form submitted',
-  thankDesc:  'Thank you for sharing the information. We will contact you soon.'
+  thankDesc:  cmsNormalizeParagraphData('Thank you for sharing the information. We will contact you soon.', CMS_PARAGRAPH_DEFAULTS.formThank)
 };
 
 var formEnquiryOptions = [];  // [{ id, label }]
@@ -4087,6 +4231,7 @@ var FORM_COUNTRY_CODES = [
 ];
 
 function formOnOpen() {
+  cmsInitParagraphField('form-ty-desc', { defaults: CMS_PARAGRAPH_DEFAULTS.formThank });
   if (!formLoaded) loadFormConfigFromGist();
 }
 
@@ -4101,7 +4246,7 @@ function loadFormConfigFromGist() {
       setVal('form-title',       cfg.formTitle  || FORM_DEFAULTS.formTitle);
       setVal('form-submit-text', cfg.submitText || FORM_DEFAULTS.submitText);
       setVal('form-ty-title',    cfg.thankTitle  || FORM_DEFAULTS.thankTitle);
-      setVal('form-ty-desc',     cfg.thankDesc   || FORM_DEFAULTS.thankDesc);
+      cmsSetParagraphField('form-ty-desc', cfg.thankDesc || FORM_DEFAULTS.thankDesc, CMS_PARAGRAPH_DEFAULTS.formThank);
       if (cfg.recipients && cfg.recipients.length) setVal('form-recipients', cfg.recipients.join('; '));
       if (cfg.enquiryOptions && cfg.enquiryOptions.length) {
         cfg.enquiryOptions.forEach(function(opt) {
@@ -4129,7 +4274,7 @@ function saveFormConfigState() {
     formTitle:       getVal('form-title')       || FORM_DEFAULTS.formTitle,
     submitText:      getVal('form-submit-text') || FORM_DEFAULTS.submitText,
     thankTitle:      getVal('form-ty-title')    || FORM_DEFAULTS.thankTitle,
-    thankDesc:       getVal('form-ty-desc')     || FORM_DEFAULTS.thankDesc,
+    thankDesc:       cmsReadParagraphField('form-ty-desc', CMS_PARAGRAPH_DEFAULTS.formThank),
     recipients:      recipients,
     enquiryOptions:  formEnquiryOptions.map(function(o) { return { id: o.id, label: o.label }; })
   };
@@ -4235,6 +4380,7 @@ function generateFormHtml() {
 function buildFormOutputHtml(uid, cfg, apiUrl) {
   var e  = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
   var ea = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); };
+  var thankDesc = cmsNormalizeParagraphData(cfg.thankDesc, CMS_PARAGRAPH_DEFAULTS.formThank);
 
   var countryOpts = '<option value="">Country code</option>\n'
     + FORM_COUNTRY_CODES.map(function(cc) {
@@ -4272,7 +4418,7 @@ function buildFormOutputHtml(uid, cfg, apiUrl) {
     + '.' + uid + '-err{color:#dc2626;font-size:13px;margin-top:10px;text-align:center;display:none;}\n'
     + '.' + uid + '-ok{text-align:center;padding:16px 0;display:none;}\n'
     + '.' + uid + '-ok h3{font-family:Poppins,sans-serif;font-size:20px;font-weight:700;color:#262a32;margin:0 0 10px;}\n'
-    + '.' + uid + '-ok p{font-family:Poppins,sans-serif;font-size:15px;font-weight:400;color:#4b5563;margin:0 0 28px;line-height:1.65;}\n'
+    + '.' + uid + '-ok p{margin:0 0 28px;line-height:1.65;}\n'
     + '@media(max-width:480px){.' + uid + '-row{flex-direction:column;gap:0;}.' + uid + '-phone{flex-direction:column;gap:8px;}.' + uid + '-pcode{width:100%;}}\n'
     + '</style>';
 
@@ -4302,7 +4448,7 @@ function buildFormOutputHtml(uid, cfg, apiUrl) {
     + '    </div>\n'
     + '    <div class="' + uid + '-ok" id="' + uid + '-ok">\n'
     + '      <h3>' + e(cfg.thankTitle) + '</h3>\n'
-    + '      <p>' + e(cfg.thankDesc) + '</p>\n'
+    + '      <p style="' + cmsParagraphStyle(thankDesc, CMS_PARAGRAPH_DEFAULTS.formThank) + '">' + e(thankDesc.text) + '</p>\n'
     + '      ' + successSvg + '\n'
     + '    </div>\n'
     + '  </div>\n'
@@ -5607,7 +5753,7 @@ function featureCardsDefaultSection() {
     name: 'Feature Cards Section ' + featureCardsStore.counter,
     eyebrow: 'FEATURED COURSES',
     title: 'Start learning today',
-    desc: 'Structured courses built for real outcomes. Pick a track that matches your goals and get started in minutes.',
+    desc: cmsNormalizeParagraphData('Structured courses built for real outcomes. Pick a track that matches your goals and get started in minutes.', CMS_PARAGRAPH_DEFAULTS.featureSection),
     cards: [
       { color: '#204280', eyebrow: 'Leadership', title: 'Leadership Fundamentals for Managers', subtitle: 'Coach: James Okafor', ctaText: 'Enrol →', ctaUrl: '#' },
       { color: '#1a5c50', eyebrow: 'Mindset', title: 'Mindset & Resilience Coaching', subtitle: 'Coach: Priya Sharma', ctaText: 'Enrol →', ctaUrl: '#' },
@@ -5625,7 +5771,7 @@ function featureCardsReadFormData() {
     name: (document.getElementById('fc-name') || {}).value || '',
     eyebrow: (document.getElementById('fc-eyebrow') || {}).value || '',
     title: (document.getElementById('fc-title') || {}).value || '',
-    desc: (document.getElementById('fc-desc') || {}).value || '',
+    desc: cmsReadParagraphField('fc-desc', CMS_PARAGRAPH_DEFAULTS.featureSection),
     cards: Array.prototype.slice.call(document.querySelectorAll('#fc-cards .block-item')).map(function(item) {
       return {
         color: item.querySelector('.fc-cp').value,
@@ -5643,7 +5789,7 @@ function featureCardsFillForm(sec) {
   document.getElementById('fc-name').value = sec.name || '';
   document.getElementById('fc-eyebrow').value = sec.eyebrow || '';
   document.getElementById('fc-title').value = sec.title || '';
-  document.getElementById('fc-desc').value = sec.desc || '';
+  cmsSetParagraphField('fc-desc', sec.desc, CMS_PARAGRAPH_DEFAULTS.featureSection);
   document.getElementById('fc-cards').innerHTML = '';
   (sec.cards || []).forEach(function(card) { featureCardsAddCard(card, true, true); });
 }
@@ -5662,6 +5808,7 @@ function featureCardsSyncCurrent() {
 
 function buildFeatureCardsHtml(data) {
   var uid = 'fc' + Date.now().toString(36);
+  var desc = cmsNormalizeParagraphData(data.desc, CMS_PARAGRAPH_DEFAULTS.featureSection);
   var cardsHtml = (data.cards || []).map(function(card) {
     return '<div class="' + uid + '-card">'
       + '<div class="' + uid + '-top" style="background:' + xA(card.color || '#204280') + '">'
@@ -5679,7 +5826,7 @@ function buildFeatureCardsHtml(data) {
     + '.' + uid + '{font-family:\'Poppins\',sans-serif;}'
     + '.' + uid + '-ey{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#204280;margin-bottom:12px;}'
     + '.' + uid + '-stitle{font-size:32px;font-weight:700;color:#1a1a1a;margin:0 0 12px;line-height:1.2;}'
-    + '.' + uid + '-desc{font-size:15px;font-weight:400;color:#374151;margin:0 0 32px;line-height:1.7;}'
+    + '.' + uid + '-desc{margin:0 0 32px;line-height:1.7;}'
     + '.' + uid + '-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}'
     + '@media(max-width:900px){.' + uid + '-grid{grid-template-columns:repeat(2,1fr);}}'
     + '@media(max-width:600px){.' + uid + '-grid{grid-template-columns:1fr;}}'
@@ -5696,7 +5843,7 @@ function buildFeatureCardsHtml(data) {
   var body = '<div class="' + uid + '">'
     + (data.eyebrow ? '<div class="' + uid + '-ey">' + xH(data.eyebrow) + '</div>' : '')
     + (data.title ? '<h2 class="' + uid + '-stitle">' + xH(data.title) + '</h2>' : '')
-    + (data.desc ? '<p class="' + uid + '-desc">' + xH(data.desc) + '</p>' : '')
+    + (desc.text ? '<p class="' + uid + '-desc" style="' + cmsParagraphStyle(desc, CMS_PARAGRAPH_DEFAULTS.featureSection) + '">' + xH(desc.text) + '</p>' : '')
     + (cardsHtml ? '<div class="' + uid + '-grid">' + cardsHtml + '</div>' : '')
     + '</div>';
 
@@ -5790,6 +5937,7 @@ function featureCardsDeleteSection(id) {
 
 function featureCardsOnOpen() {
   featureCardsBindInputs();
+  cmsInitParagraphField('fc-desc', { defaults: CMS_PARAGRAPH_DEFAULTS.featureSection });
   if (featureCardsStore.loaded) {
     if (!featureCardsStore.sections.length) featureCardsCreateSection(true);
     if (!featureCardsStore.activeId && featureCardsStore.sections.length) featureCardsSelectSection(featureCardsStore.sections[0].id);
@@ -5806,7 +5954,7 @@ function featureCardsOnOpen() {
           name: sec.name || '',
           eyebrow: sec.eyebrow || 'FEATURED COURSES',
           title: sec.title || 'Start learning today',
-          desc: sec.desc || 'Structured courses built for real outcomes. Pick a track that matches your goals and get started in minutes.',
+          desc: cmsNormalizeParagraphData(sec.desc, CMS_PARAGRAPH_DEFAULTS.featureSection),
           cards: (sec.cards || []).map(function(card) {
             return {
               color: card.color || '#204280',
@@ -5885,14 +6033,14 @@ function stepsSectionDefaultSection() {
     name: 'Steps Section ' + stepsSectionsStore.counter,
     eyebrow: 'HOW IT WORKS',
     title: 'Four steps to results',
-    desc: 'No fluff. A clear path from sign-up to transformation.',
+    desc: cmsNormalizeParagraphData('No fluff. A clear path from sign-up to transformation.', CMS_PARAGRAPH_DEFAULTS.stepsSection),
     bg: '#f7f6f1',
     cols: 4,
     cards: [
-      { title: 'Choose a course', desc: 'Browse by topic, or coach and find the right fit.' },
-      { title: 'Enrol in minutes', desc: 'Sign up via Zenler and get instant access on any device.' },
-      { title: 'Learn at your pace', desc: 'Video lessons, resources, and live coaching sessions.' },
-      { title: 'Track your growth', desc: 'Milestones, feedback, and a certificate on completion.' }
+      { title: 'Choose a course', desc: cmsNormalizeParagraphData('Browse by topic, or coach and find the right fit.', CMS_PARAGRAPH_DEFAULTS.stepsCard) },
+      { title: 'Enrol in minutes', desc: cmsNormalizeParagraphData('Sign up via Zenler and get instant access on any device.', CMS_PARAGRAPH_DEFAULTS.stepsCard) },
+      { title: 'Learn at your pace', desc: cmsNormalizeParagraphData('Video lessons, resources, and live coaching sessions.', CMS_PARAGRAPH_DEFAULTS.stepsCard) },
+      { title: 'Track your growth', desc: cmsNormalizeParagraphData('Milestones, feedback, and a certificate on completion.', CMS_PARAGRAPH_DEFAULTS.stepsCard) }
     ]
   };
 }
@@ -5906,15 +6054,15 @@ function stepsSectionReadFormData() {
     name: (document.getElementById('ss-name') || {}).value || '',
     eyebrow: (document.getElementById('ss-eyebrow') || {}).value || '',
     title: (document.getElementById('ss-title') || {}).value || '',
-    desc: (document.getElementById('ss-desc') || {}).value || '',
+    desc: cmsReadParagraphField('ss-desc', CMS_PARAGRAPH_DEFAULTS.stepsSection),
     bg: (document.getElementById('ss-bg-hex') || {}).value || '#f7f6f1',
     cols: Math.max(1, Math.min(6, parseInt((document.getElementById('ss-cols') || {}).value, 10) || 4)),
     cards: Array.prototype.slice.call(document.querySelectorAll('#ss-cards .block-item')).map(function(item) {
       return {
         title: item.querySelector('.ss-ti').value.trim(),
-        desc: item.querySelector('.ss-de').value.trim()
+        desc: cmsReadParagraphField(item.querySelector('.ss-de'), CMS_PARAGRAPH_DEFAULTS.stepsCard)
       };
-    }).filter(function(card) { return card.title || card.desc; })
+    }).filter(function(card) { return card.title || cmsParagraphText(card.desc).trim(); })
   };
 }
 
@@ -5922,7 +6070,7 @@ function stepsSectionFillForm(sec) {
   document.getElementById('ss-name').value = sec.name || '';
   document.getElementById('ss-eyebrow').value = sec.eyebrow || '';
   document.getElementById('ss-title').value = sec.title || '';
-  document.getElementById('ss-desc').value = sec.desc || '';
+  cmsSetParagraphField('ss-desc', sec.desc, CMS_PARAGRAPH_DEFAULTS.stepsSection);
   document.getElementById('ss-bg-cp').value = sec.bg || '#f7f6f1';
   document.getElementById('ss-bg-hex').value = sec.bg || '#f7f6f1';
   document.getElementById('ss-cols').value = sec.cols || 4;
@@ -5949,11 +6097,13 @@ function buildStepsSectionHtml(data) {
   var uid = 'ss' + Date.now().toString(36);
   var cols = Math.max(1, Math.min(6, parseInt(data.cols, 10) || 4));
   var tabletCols = Math.min(cols, 2);
+  var desc = cmsNormalizeParagraphData(data.desc, CMS_PARAGRAPH_DEFAULTS.stepsSection);
   var cardsHtml = (data.cards || []).map(function(card, i) {
+    var cardDesc = cmsNormalizeParagraphData(card.desc, CMS_PARAGRAPH_DEFAULTS.stepsCard);
     return '<div class="' + uid + '-card">'
       + '<div class="' + uid + '-num">' + (i + 1) + '</div>'
       + (card.title ? '<h3 class="' + uid + '-ctitle">' + xH(card.title) + '</h3>' : '')
-      + (card.desc ? '<p class="' + uid + '-cdesc">' + xH(card.desc) + '</p>' : '')
+      + (cardDesc.text ? '<p class="' + uid + '-cdesc" style="' + cmsParagraphStyle(cardDesc, CMS_PARAGRAPH_DEFAULTS.stepsCard) + '">' + xH(cardDesc.text) + '</p>' : '')
       + '</div>';
   }).join('\n');
 
@@ -5962,12 +6112,12 @@ function buildStepsSectionHtml(data) {
     + '.' + uid + '-inner{max-width:1100px;margin:0 auto;}'
     + '.' + uid + '-ey{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#204280;margin:0 0 10px;}'
     + '.' + uid + '-title{font-size:26px;font-weight:600;color:#1a1a1a;margin:0 0 8px;line-height:1.25;}'
-    + '.' + uid + '-desc{font-size:15px;font-weight:400;color:#3f3f46;margin:0 0 28px;line-height:1.6;}'
+    + '.' + uid + '-desc{margin:0 0 28px;line-height:1.6;}'
     + '.' + uid + '-grid{display:grid;grid-template-columns:repeat(' + cols + ',minmax(0,1fr));gap:14px;}'
     + '.' + uid + '-card{background:rgba(255,255,255,.54);border-radius:6px;padding:16px 16px 18px;min-height:142px;box-sizing:border-box;}'
     + '.' + uid + '-num{width:28px;height:28px;border-radius:999px;background:#0f1f3a;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;margin:0 0 10px;}'
     + '.' + uid + '-ctitle{font-size:14px;font-weight:600;color:#202124;margin:0 0 6px;line-height:1.35;}'
-    + '.' + uid + '-cdesc{font-size:13px;font-weight:400;color:#30343b;margin:0;line-height:1.55;}'
+    + '.' + uid + '-cdesc{margin:0;line-height:1.55;}'
     + '@media(max-width:900px){.' + uid + '-grid{grid-template-columns:repeat(' + tabletCols + ',minmax(0,1fr));}}'
     + '@media(max-width:640px){.' + uid + '{padding:36px 20px;}.' + uid + '-title{font-size:24px;}.' + uid + '-grid{grid-template-columns:1fr;}}'
     + '</style>';
@@ -5976,7 +6126,7 @@ function buildStepsSectionHtml(data) {
     + '<div class="' + uid + '-inner">'
     + (data.eyebrow ? '<div class="' + uid + '-ey">' + xH(data.eyebrow) + '</div>' : '')
     + (data.title ? '<h2 class="' + uid + '-title">' + xH(data.title) + '</h2>' : '')
-    + (data.desc ? '<p class="' + uid + '-desc">' + xH(data.desc) + '</p>' : '')
+    + (desc.text ? '<p class="' + uid + '-desc" style="' + cmsParagraphStyle(desc, CMS_PARAGRAPH_DEFAULTS.stepsSection) + '">' + xH(desc.text) + '</p>' : '')
     + (cardsHtml ? '<div class="' + uid + '-grid">' + cardsHtml + '</div>' : '')
     + '</div>'
     + '</section>';
@@ -6072,6 +6222,7 @@ function stepsSectionDeleteSection(id) {
 
 function stepsSectionOnOpen() {
   stepsSectionBindInputs();
+  cmsInitParagraphField('ss-desc', { defaults: CMS_PARAGRAPH_DEFAULTS.stepsSection });
   if (stepsSectionsStore.loaded) {
     if (!stepsSectionsStore.sections.length) stepsSectionCreateSection(true);
     if (!stepsSectionsStore.activeId && stepsSectionsStore.sections.length) stepsSectionSelectSection(stepsSectionsStore.sections[0].id);
@@ -6088,11 +6239,11 @@ function stepsSectionOnOpen() {
           name: sec.name || '',
           eyebrow: sec.eyebrow || 'HOW IT WORKS',
           title: sec.title || 'Four steps to results',
-          desc: sec.desc || 'No fluff. A clear path from sign-up to transformation.',
+          desc: cmsNormalizeParagraphData(sec.desc, CMS_PARAGRAPH_DEFAULTS.stepsSection),
           bg: sec.bg || '#f7f6f1',
           cols: Math.max(1, Math.min(6, parseInt(sec.cols, 10) || 4)),
           cards: (sec.cards || []).map(function(card) {
-            return { title: card.title || '', desc: card.desc || '' };
+            return { title: card.title || '', desc: cmsNormalizeParagraphData(card.desc, CMS_PARAGRAPH_DEFAULTS.stepsCard) };
           })
         };
       });
@@ -6121,6 +6272,7 @@ function stepsSectionAddCard(data, startCollapsed, skipSync) {
   var list = document.getElementById('ss-cards');
   var id = 'ssc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   var label = (data && data.title) ? data.title : 'New Step';
+  var desc = cmsNormalizeParagraphData(data && data.desc, CMS_PARAGRAPH_DEFAULTS.stepsCard);
   var div = document.createElement('div');
   div.className = 'block-item';
   div.id = id;
@@ -6132,7 +6284,7 @@ function stepsSectionAddCard(data, startCollapsed, skipSync) {
       + '</div>'
       + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
       + '<div class="field"><label>Card title</label><input type="text" class="ss-ti" value="' + xA((data && data.title) || '') + '" placeholder="e.g. Choose a course" oninput="this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=this.value||\'New Step\'"></div>'
-      + '<div class="field"><label>Description</label><textarea class="ss-de" rows="3" placeholder="Briefly explain this step">' + xH((data && data.desc) || '') + '</textarea></div>'
+      + cmsParagraphFieldHtml('Description', 'ss-de', desc, { rows: 3, placeholder: 'Briefly explain this step', defaults: CMS_PARAGRAPH_DEFAULTS.stepsCard })
       + '</div>';
   list.appendChild(div);
   if (!skipSync) stepsSectionHandleChange();
@@ -6154,18 +6306,18 @@ function aboutUsDefaultSection() {
     eyebrow: 'ABOUT VERTEX LEARNING SOLUTIONS',
     title: 'What is VLS and who is it for?',
     paragraphs: [
-      'Vertex Learning Solutions (VLS) is an online tutoring and coaching platform designed for working professionals, career changers, and motivated learners who want structured, expert-guided development without the constraints of a traditional classroom.',
-      'Founded on the belief that great coaching changes careers, VLS brings together a vetted community of specialist tutors and coaches who deliver practical, outcome-focused learning across leadership, communication, career planning, wellbeing, and more.',
-      'Our courses are hosted on Zenler - a modern learning platform that gives you HD video lessons, downloadable resources, live coaching sessions, and progress tracking all in one place. Study on desktop, tablet, or mobile, entirely at your own pace.',
-      'VLS is built for professionals across the UK whether you are a first-time manager, a graduate entering the workforce, or a seasoned professional looking to sharpen your edge.'
+      cmsNormalizeParagraphData('Vertex Learning Solutions (VLS) is an online tutoring and coaching platform designed for working professionals, career changers, and motivated learners who want structured, expert-guided development without the constraints of a traditional classroom.', CMS_PARAGRAPH_DEFAULTS.aboutParagraph),
+      cmsNormalizeParagraphData('Founded on the belief that great coaching changes careers, VLS brings together a vetted community of specialist tutors and coaches who deliver practical, outcome-focused learning across leadership, communication, career planning, wellbeing, and more.', CMS_PARAGRAPH_DEFAULTS.aboutParagraph),
+      cmsNormalizeParagraphData('Our courses are hosted on Zenler - a modern learning platform that gives you HD video lessons, downloadable resources, live coaching sessions, and progress tracking all in one place. Study on desktop, tablet, or mobile, entirely at your own pace.', CMS_PARAGRAPH_DEFAULTS.aboutParagraph),
+      cmsNormalizeParagraphData('VLS is built for professionals across the UK whether you are a first-time manager, a graduate entering the workforce, or a seasoned professional looking to sharpen your edge.', CMS_PARAGRAPH_DEFAULTS.aboutParagraph)
     ],
     ctaText: 'Learn more about VLS →',
     ctaUrl: '#',
     cards: [
-      { icon: 'user', title: 'Expert tutors & coaches', desc: 'Every VLS tutor is hand-picked for subject-matter expertise, real-world experience, and proven teaching ability.' },
-      { icon: 'book', title: 'Structured, outcome-led courses', desc: 'Courses are built around clear goals - not just content. Each module moves you measurably forward.' },
-      { icon: 'clock', title: 'Learn on your schedule', desc: 'On-demand video content, flexible coaching sessions, and lifetime access - study when it suits you.' },
-      { icon: 'check', title: 'Certificates & accreditation', desc: 'Complete a course and receive a recognised VLS certificate to add to your CV or LinkedIn profile.' }
+      { icon: 'user', title: 'Expert tutors & coaches', desc: cmsNormalizeParagraphData('Every VLS tutor is hand-picked for subject-matter expertise, real-world experience, and proven teaching ability.', CMS_PARAGRAPH_DEFAULTS.aboutCard) },
+      { icon: 'book', title: 'Structured, outcome-led courses', desc: cmsNormalizeParagraphData('Courses are built around clear goals - not just content. Each module moves you measurably forward.', CMS_PARAGRAPH_DEFAULTS.aboutCard) },
+      { icon: 'clock', title: 'Learn on your schedule', desc: cmsNormalizeParagraphData('On-demand video content, flexible coaching sessions, and lifetime access - study when it suits you.', CMS_PARAGRAPH_DEFAULTS.aboutCard) },
+      { icon: 'check', title: 'Certificates & accreditation', desc: cmsNormalizeParagraphData('Complete a course and receive a recognised VLS certificate to add to your CV or LinkedIn profile.', CMS_PARAGRAPH_DEFAULTS.aboutCard) }
     ]
   };
 }
@@ -6180,17 +6332,17 @@ function aboutUsReadFormData() {
     eyebrow: (document.getElementById('au-eyebrow') || {}).value || '',
     title: (document.getElementById('au-title') || {}).value || '',
     paragraphs: Array.prototype.slice.call(document.querySelectorAll('#au-paragraphs .au-para')).map(function(inp) {
-      return inp.value.trim();
-    }).filter(Boolean),
+      return cmsReadParagraphField(inp, CMS_PARAGRAPH_DEFAULTS.aboutParagraph);
+    }).filter(function(p) { return cmsParagraphText(p).trim(); }),
     ctaText: (document.getElementById('au-cta-text') || {}).value || '',
     ctaUrl: (document.getElementById('au-cta-url') || {}).value || '',
     cards: Array.prototype.slice.call(document.querySelectorAll('#au-cards .block-item')).map(function(item) {
       return {
         icon: item.querySelector('.au-icon').value,
         title: item.querySelector('.au-card-title').value.trim(),
-        desc: item.querySelector('.au-card-desc').value.trim()
+        desc: cmsReadParagraphField(item.querySelector('.au-card-desc'), CMS_PARAGRAPH_DEFAULTS.aboutCard)
       };
-    }).filter(function(card) { return card.title || card.desc; })
+    }).filter(function(card) { return card.title || cmsParagraphText(card.desc).trim(); })
   };
 }
 
@@ -6223,15 +6375,17 @@ function aboutUsSyncCurrent() {
 function buildAboutUsHtml(data) {
   var uid = 'au' + Date.now().toString(36);
   var paragraphHtml = (data.paragraphs || []).map(function(p) {
-    return '<p class="' + uid + '-para">' + xH(p) + '</p>';
+    var para = cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.aboutParagraph);
+    return para.text ? '<p class="' + uid + '-para" style="' + cmsParagraphStyle(para, CMS_PARAGRAPH_DEFAULTS.aboutParagraph) + '">' + xH(para.text) + '</p>' : '';
   }).join('');
   var cardsHtml = (data.cards || []).map(function(card) {
     var svg = ABOUT_US_ICONS[card.icon] || ABOUT_US_ICONS.star;
+    var cardDesc = cmsNormalizeParagraphData(card.desc, CMS_PARAGRAPH_DEFAULTS.aboutCard);
     return '<div class="' + uid + '-card">'
       + '<div class="' + uid + '-icon">' + svg + '</div>'
       + '<div class="' + uid + '-card-copy">'
       + (card.title ? '<h3 class="' + uid + '-card-title">' + xH(card.title) + '</h3>' : '')
-      + (card.desc ? '<p class="' + uid + '-card-desc">' + xH(card.desc) + '</p>' : '')
+      + (cardDesc.text ? '<p class="' + uid + '-card-desc" style="' + cmsParagraphStyle(cardDesc, CMS_PARAGRAPH_DEFAULTS.aboutCard) + '">' + xH(cardDesc.text) + '</p>' : '')
       + '</div>'
       + '</div>';
   }).join('');
@@ -6241,7 +6395,7 @@ function buildAboutUsHtml(data) {
     + '.' + uid + '-inner{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,1fr);gap:56px;align-items:start;}'
     + '.' + uid + '-ey{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#204280;margin:0 0 12px;}'
     + '.' + uid + '-title{font-size:26px;font-weight:600;color:#202124;line-height:1.25;margin:0 0 18px;}'
-    + '.' + uid + '-para{font-size:14px;font-weight:400;color:#2f343b;line-height:1.75;margin:0 0 14px;}'
+    + '.' + uid + '-para{line-height:1.75;margin:0 0 14px;}'
     + '.' + uid + '-cta{display:inline-flex;align-items:center;gap:6px;margin-top:14px;font-size:14px;font-weight:600;color:#204280 !important;text-decoration:none !important;}'
     + '.' + uid + '-cta:hover{text-decoration:underline !important;}'
     + '.' + uid + '-cards{display:flex;flex-direction:column;gap:16px;}'
@@ -6249,7 +6403,7 @@ function buildAboutUsHtml(data) {
     + '.' + uid + '-icon{width:28px;height:28px;border-radius:6px;background:#0d2341;color:#fff;display:flex;align-items:center;justify-content:center;margin-top:1px;}'
     + '.' + uid + '-icon svg{width:15px;height:15px;display:block;}'
     + '.' + uid + '-card-title{font-size:14px;font-weight:700;color:#222;margin:0 0 4px;line-height:1.35;}'
-    + '.' + uid + '-card-desc{font-size:13px;font-weight:400;color:#2f343b;line-height:1.55;margin:0;}'
+    + '.' + uid + '-card-desc{line-height:1.55;margin:0;}'
     + '@media(max-width:800px){.' + uid + '-inner{grid-template-columns:1fr;gap:28px;}.' + uid + '{padding:38px 20px;}}'
     + '@media(max-width:520px){.' + uid + '-title{font-size:24px;}.' + uid + '-card{grid-template-columns:34px minmax(0,1fr);padding:16px;}}'
     + '</style>';
@@ -6372,11 +6526,11 @@ function aboutUsOnOpen() {
           name: sec.name || '',
           eyebrow: sec.eyebrow || 'ABOUT VERTEX LEARNING SOLUTIONS',
           title: sec.title || 'What is VLS and who is it for?',
-          paragraphs: (sec.paragraphs || []).slice(),
+          paragraphs: (sec.paragraphs || []).map(function(p) { return cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.aboutParagraph); }),
           ctaText: sec.ctaText || 'Learn more about VLS →',
           ctaUrl: sec.ctaUrl || '#',
           cards: (sec.cards || []).map(function(card) {
-            return { icon: card.icon || 'star', title: card.title || '', desc: card.desc || '' };
+            return { icon: card.icon || 'star', title: card.title || '', desc: cmsNormalizeParagraphData(card.desc, CMS_PARAGRAPH_DEFAULTS.aboutCard) };
           })
         };
       });
@@ -6410,7 +6564,8 @@ function aboutUsAddParagraph(text, startCollapsed, skipSync) {
   if (!aboutUsCurrentSection()) aboutUsCreateSection(true);
   var list = document.getElementById('au-paragraphs');
   var id = 'aup-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-  var label = text ? text.slice(0, 42) : 'New Paragraph';
+  var paragraph = cmsNormalizeParagraphData(text, CMS_PARAGRAPH_DEFAULTS.aboutParagraph);
+  var label = paragraph.text ? paragraph.text.slice(0, 42) : 'New Paragraph';
   var div = document.createElement('div');
   div.className = 'block-item';
   div.id = id;
@@ -6421,7 +6576,7 @@ function aboutUsAddParagraph(text, startCollapsed, skipSync) {
       + '<button class="btn-sm danger" onclick="event.stopPropagation();aboutUsRemoveParagraph(\'' + id + '\')" style="margin-left:auto">Remove</button>'
       + '</div>'
       + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
-      + '<div class="field"><label>Paragraph text</label><textarea class="au-para" rows="5" oninput="var t=this.value.trim();this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=t?t.slice(0,42):\'New Paragraph\'">' + xH(text || '') + '</textarea></div>'
+      + cmsParagraphFieldHtml('Paragraph text', 'au-para', paragraph, { rows: 5, defaults: CMS_PARAGRAPH_DEFAULTS.aboutParagraph, oninput: 'var t=this.value.trim();this.closest(\\\'.block-item\\\').querySelector(\\\'.block-header-label\\\').textContent=t?t.slice(0,42):\\\'New Paragraph\\\'' })
       + '</div>';
   list.appendChild(div);
   if (!skipSync) aboutUsHandleChange();
@@ -6433,6 +6588,7 @@ function aboutUsAddCard(data, startCollapsed, skipSync) {
   var id = 'auc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   var label = (data && data.title) ? data.title : 'New Feature Card';
   var icon = (data && data.icon) || 'star';
+  var desc = cmsNormalizeParagraphData(data && data.desc, CMS_PARAGRAPH_DEFAULTS.aboutCard);
   var div = document.createElement('div');
   div.className = 'block-item';
   div.id = id;
@@ -6445,7 +6601,7 @@ function aboutUsAddCard(data, startCollapsed, skipSync) {
       + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
       + '<div class="field"><label>Icon</label><select class="au-icon">' + aboutUsIconSelect(icon) + '</select></div>'
       + '<div class="field"><label>Card title</label><input type="text" class="au-card-title" value="' + xA((data && data.title) || '') + '" placeholder="e.g. Expert tutors & coaches" oninput="this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=this.value||\'New Feature Card\'"></div>'
-      + '<div class="field"><label>Description</label><textarea class="au-card-desc" rows="3" placeholder="Briefly explain this feature">' + xH((data && data.desc) || '') + '</textarea></div>'
+      + cmsParagraphFieldHtml('Description', 'au-card-desc', desc, { rows: 3, placeholder: 'Briefly explain this feature', defaults: CMS_PARAGRAPH_DEFAULTS.aboutCard })
       + '</div>';
   list.appendChild(div);
   if (!skipSync) aboutUsHandleChange();
@@ -6473,7 +6629,7 @@ function heroDefaultSection() {
     h1: 'Expert-led tutoring & coaching',
     h1hl: '— built for results.',
     h2: '',
-    desc: 'Vertex Learning Solutions (VLS) connects ambitious learners with expert tutors across ACCA, CIMA, and CMA — giving you structured guidance, practical tools, and 1-to-1 support to pass your exams and grow your career.',
+    desc: cmsNormalizeParagraphData('Vertex Learning Solutions (VLS) connects ambitious learners with expert tutors across ACCA, CIMA, and CMA — giving you structured guidance, practical tools, and 1-to-1 support to pass your exams and grow your career.', CMS_PARAGRAPH_DEFAULTS.hero),
     tags: ['ACCA tuition', 'CIMA coaching', 'Online tutoring', '1-to-1 coaching'],
     b1t: 'Browse courses',
     b1u: '',
@@ -6506,7 +6662,7 @@ function heroReadFormData() {
     h1: (document.getElementById('hero-h1') || {}).value || '',
     h1hl: (document.getElementById('hero-h1-hl') || {}).value || '',
     h2: (document.getElementById('hero-h2') || {}).value || '',
-    desc: (document.getElementById('hero-desc') || {}).value || '',
+    desc: cmsReadParagraphField('hero-desc', CMS_PARAGRAPH_DEFAULTS.hero),
     b1t: (document.getElementById('hero-btn1-text') || {}).value || '',
     b1u: (document.getElementById('hero-btn1-url') || {}).value || '',
     b1s: (document.getElementById('hero-btn1-scroll') || {}).value || '',
@@ -6537,7 +6693,7 @@ function heroFillForm(sec) {
   document.getElementById('hero-h1').value = sec.h1 || '';
   document.getElementById('hero-h1-hl').value = sec.h1hl || '';
   document.getElementById('hero-h2').value = sec.h2 || '';
-  document.getElementById('hero-desc').value = sec.desc || '';
+  cmsSetParagraphField('hero-desc', sec.desc, CMS_PARAGRAPH_DEFAULTS.hero);
   document.getElementById('hero-btn1-text').value = sec.b1t || '';
   document.getElementById('hero-btn1-url').value = sec.b1u || '';
   document.getElementById('hero-btn1-scroll').value = sec.b1s || '';
@@ -6578,6 +6734,7 @@ function heroSyncCurrent() {
 
 function buildHeroHtml(data) {
   var uid = 'h' + Date.now().toString(36);
+  var desc = cmsNormalizeParagraphData(data.desc, CMS_PARAGRAPH_DEFAULTS.hero);
   var tagsHtml = (data.tags || []).map(function(tag) {
     return '<span class="' + uid + '-tag">' + xH(tag) + '</span>';
   }).join('');
@@ -6594,7 +6751,7 @@ function buildHeroHtml(data) {
     + '.' + uid + '-h1{font-size:' + (parseInt(data.h1Size, 10) || 44) + 'px;font-weight:700;color:#1a1a1a;line-height:1.15;margin:0 0 6px;}'
     + '.' + uid + '-h1 em{font-style:normal;color:#204280;}'
     + '.' + uid + '-h2{font-size:' + h2Size + 'px;font-weight:600;color:#374151;margin:10px 0 0;line-height:1.35;}'
-    + '.' + uid + '-desc{font-size:16px;font-weight:400;color:#374151;line-height:1.75;margin:20px 0 24px;}'
+    + '.' + uid + '-desc{line-height:1.75;margin:20px 0 24px;}'
     + '.' + uid + '-tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px;}'
     + '.' + uid + '-tag{display:inline-block;padding:6px 16px;border:1.5px solid #cbd5e1;border-radius:999px;font-size:13px;font-weight:500;color:#374151;white-space:nowrap;}'
     + '.' + uid + '-btns{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px;}'
@@ -6610,7 +6767,7 @@ function buildHeroHtml(data) {
     + (data.eyebrow ? '<h2 class="' + uid + '-ey">' + xH(data.eyebrow) + '</h2>' : '')
     + (data.h1 ? '<h1 class="' + uid + '-h1">' + xH(data.h1) + (data.h1hl ? '<br><em>' + xH(data.h1hl) + '</em>' : '') + '</h1>' : '')
     + (data.h2 ? '<h2 class="' + uid + '-h2">' + xH(data.h2) + '</h2>' : '')
-    + (data.desc ? '<p class="' + uid + '-desc">' + xH(data.desc) + '</p>' : '')
+    + (desc.text ? '<p class="' + uid + '-desc" style="' + cmsParagraphStyle(desc, CMS_PARAGRAPH_DEFAULTS.hero) + '">' + xH(desc.text) + '</p>' : '')
     + (tagsHtml ? '<div class="' + uid + '-tags">' + tagsHtml + '</div>' : '')
     + ((data.b1t || data.b2t) ? '<div class="' + uid + '-btns">'
       + (data.b1t ? '<a href="' + (data.b1s ? '#' : xA(data.b1u || '#')) + '" class="' + uid + '-b1"' + b1ScrollAttr + '>' + xH(data.b1t) + '</a>' : '')
@@ -6709,6 +6866,7 @@ function heroDeleteSection(id) {
 
 function heroOnOpen() {
   heroBindInputs();
+  cmsInitParagraphField('hero-desc', { defaults: CMS_PARAGRAPH_DEFAULTS.hero });
   if (heroStore.loaded) {
     if (!heroStore.sections.length) heroCreateSection(true);
     if (!heroStore.activeId && heroStore.sections.length) heroSelectSection(heroStore.sections[0].id);
@@ -6732,7 +6890,7 @@ function heroOnOpen() {
           h1: sec.h1 || 'Expert-led tutoring & coaching',
           h1hl: sec.h1hl || '— built for results.',
           h2: sec.h2 || '',
-          desc: sec.desc || 'Vertex Learning Solutions (VLS) connects ambitious learners with expert tutors across ACCA, CIMA, and CMA — giving you structured guidance, practical tools, and 1-to-1 support to pass your exams and grow your career.',
+          desc: cmsNormalizeParagraphData(sec.desc, CMS_PARAGRAPH_DEFAULTS.hero),
           tags: (sec.tags || []).slice(),
           b1t: sec.b1t || 'Browse courses',
           b1u: sec.b1u || '',
@@ -6822,9 +6980,7 @@ function promotionDefaultSection() {
     title: 'Ready to take the next step?',
     titleColor: '#164b8a',
     titleSize: 22,
-    subtitle: 'Join 2,400+ learners already transforming their careers with Vertex Learning Solutions.',
-    subtitleColor: '#1f6ab4',
-    subtitleSize: 14,
+    subtitle: cmsNormalizeParagraphData('Join 2,400+ learners already transforming their careers with Vertex Learning Solutions.', CMS_PARAGRAPH_DEFAULTS.promoSubtitle),
     ctaText: 'Start for free',
     ctaUrl: '#',
     ctaColor: '#ffffff',
@@ -6837,7 +6993,7 @@ function promotionCurrentSection() {
 }
 
 function promotionSafeHex(v, fallback) {
-  return /^#[0-9a-fA-F]{6}$/.test(v || '') ? v : fallback;
+  return cmsSafeHex(v, fallback);
 }
 
 function promotionReadFormData() {
@@ -6848,9 +7004,7 @@ function promotionReadFormData() {
     title: (document.getElementById('promo-title') || {}).value || '',
     titleColor: promotionSafeHex((document.getElementById('promo-title-color-text') || {}).value, '#164b8a'),
     titleSize: parseInt((document.getElementById('promo-title-size') || {}).value, 10) || 22,
-    subtitle: (document.getElementById('promo-subtitle') || {}).value || '',
-    subtitleColor: promotionSafeHex((document.getElementById('promo-subtitle-color-text') || {}).value, '#1f6ab4'),
-    subtitleSize: parseInt((document.getElementById('promo-subtitle-size') || {}).value, 10) || 14,
+    subtitle: cmsReadParagraphField('promo-subtitle', CMS_PARAGRAPH_DEFAULTS.promoSubtitle),
     ctaText: (document.getElementById('promo-cta-text') || {}).value || '',
     ctaUrl: (document.getElementById('promo-cta-url') || {}).value || '',
     ctaColor: promotionSafeHex((document.getElementById('promo-cta-color-text') || {}).value, '#ffffff'),
@@ -6868,10 +7022,7 @@ function promotionFillForm(sec) {
   document.getElementById('promo-title-color-picker').value = sec.titleColor || '#164b8a';
   document.getElementById('promo-title-color-text').value = sec.titleColor || '#164b8a';
   document.getElementById('promo-title-size').value = sec.titleSize || 22;
-  document.getElementById('promo-subtitle').value = sec.subtitle || '';
-  document.getElementById('promo-subtitle-color-picker').value = sec.subtitleColor || '#1f6ab4';
-  document.getElementById('promo-subtitle-color-text').value = sec.subtitleColor || '#1f6ab4';
-  document.getElementById('promo-subtitle-size').value = sec.subtitleSize || 14;
+  cmsSetParagraphField('promo-subtitle', sec.subtitle, CMS_PARAGRAPH_DEFAULTS.promoSubtitle);
   document.getElementById('promo-cta-text').value = sec.ctaText || '';
   document.getElementById('promo-cta-url').value = sec.ctaUrl || '';
   document.getElementById('promo-cta-color-picker').value = sec.ctaColor || '#ffffff';
@@ -6890,8 +7041,6 @@ function promotionSyncCurrent() {
   sec.titleColor = data.titleColor;
   sec.titleSize = data.titleSize;
   sec.subtitle = data.subtitle;
-  sec.subtitleColor = data.subtitleColor;
-  sec.subtitleSize = data.subtitleSize;
   sec.ctaText = data.ctaText;
   sec.ctaUrl = data.ctaUrl;
   sec.ctaColor = data.ctaColor;
@@ -6901,12 +7050,13 @@ function promotionSyncCurrent() {
 
 function buildPromotionSectionHtml(data) {
   var uid = 'promo' + Date.now().toString(36);
+  var subtitle = cmsNormalizeParagraphData(data.subtitle, CMS_PARAGRAPH_DEFAULTS.promoSubtitle);
   var css = '<style>'
     + '.' + uid + '{font-family:\'Poppins\',sans-serif;background:' + xA(data.bg || '#deebf7') + ';padding:28px 24px;box-sizing:border-box;}'
     + '.' + uid + '-inner{max-width:1120px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:24px;}'
     + '.' + uid + '-copy{flex:1;min-width:0;}'
     + '.' + uid + '-title{margin:0 0 6px;font-size:' + (parseInt(data.titleSize, 10) || 22) + 'px;font-weight:600;line-height:1.25;color:' + xA(data.titleColor || '#164b8a') + ';}'
-    + '.' + uid + '-subtitle{margin:0;font-size:' + (parseInt(data.subtitleSize, 10) || 14) + 'px;font-weight:500;line-height:1.5;color:' + xA(data.subtitleColor || '#1f6ab4') + ';}'
+    + '.' + uid + '-subtitle{margin:0;line-height:1.5;}'
     + '.' + uid + '-cta{display:inline-flex;align-items:center;justify-content:center;min-width:146px;padding:14px 28px;border-radius:8px;background:' + xA(data.btnBg || '#152b57') + ';color:' + xA(data.ctaColor || '#ffffff') + ' !important;font-size:' + (parseInt(data.ctaSize, 10) || 14) + 'px;font-weight:600;text-decoration:none !important;white-space:nowrap;flex-shrink:0;}'
     + '.' + uid + '-cta:hover{opacity:.92;}'
     + '@media(max-width:720px){.' + uid + '-inner{flex-direction:column;align-items:flex-start;}.' + uid + '-cta{width:100%;}}'
@@ -6916,7 +7066,7 @@ function buildPromotionSectionHtml(data) {
     + '<div class="' + uid + '-inner">'
     + '<div class="' + uid + '-copy">'
     + (data.title ? '<h2 class="' + uid + '-title">' + xH(data.title) + '</h2>' : '')
-    + (data.subtitle ? '<p class="' + uid + '-subtitle">' + xH(data.subtitle) + '</p>' : '')
+    + (subtitle.text ? '<p class="' + uid + '-subtitle" style="' + cmsParagraphStyle(subtitle, CMS_PARAGRAPH_DEFAULTS.promoSubtitle) + '">' + xH(subtitle.text) + '</p>' : '')
     + '</div>'
     + (data.ctaText ? '<a class="' + uid + '-cta" href="' + xA(data.ctaUrl || '#') + '">' + xH(data.ctaText) + '</a>' : '')
     + '</div>'
@@ -7012,6 +7162,7 @@ function promotionDeleteSection(id) {
 
 function promotionOnOpen() {
   promotionBindInputs();
+  cmsInitParagraphField('promo-subtitle', { defaults: CMS_PARAGRAPH_DEFAULTS.promoSubtitle });
   if (promotionStore.loaded) {
     if (!promotionStore.sections.length) promotionCreateSection(true);
     if (!promotionStore.activeId && promotionStore.sections.length) promotionSelectSection(promotionStore.sections[0].id);
@@ -7023,6 +7174,11 @@ function promotionOnOpen() {
       var saved = data.sections || [];
       promotionStore.counter = cmsMaxSectionCounter(saved, 'prs');
       promotionStore.sections = saved.map(function(sec) {
+        var subtitleDefaults = {
+          size: parseInt(sec.subtitleSize, 10) || CMS_PARAGRAPH_DEFAULTS.promoSubtitle.size,
+          color: sec.subtitleColor || CMS_PARAGRAPH_DEFAULTS.promoSubtitle.color,
+          weight: CMS_PARAGRAPH_DEFAULTS.promoSubtitle.weight
+        };
         return {
           id: sec.id || ('prs' + (++promotionStore.counter)),
           name: sec.name || '',
@@ -7031,9 +7187,7 @@ function promotionOnOpen() {
           title: sec.title || 'Ready to take the next step?',
           titleColor: sec.titleColor || '#164b8a',
           titleSize: parseInt(sec.titleSize, 10) || 22,
-          subtitle: sec.subtitle || 'Join 2,400+ learners already transforming their careers with Vertex Learning Solutions.',
-          subtitleColor: sec.subtitleColor || '#1f6ab4',
-          subtitleSize: parseInt(sec.subtitleSize, 10) || 14,
+          subtitle: cmsNormalizeParagraphData(sec.subtitle, subtitleDefaults),
           ctaText: sec.ctaText || 'Start for free',
           ctaUrl: sec.ctaUrl || '#',
           ctaColor: sec.ctaColor || '#ffffff',

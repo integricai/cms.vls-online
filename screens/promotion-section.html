@@ -54,19 +54,6 @@
       <label>Subtitle text</label>
       <textarea id="promo-subtitle" rows="2">Join 2,400+ learners already transforming their careers with Vertex Learning Solutions.</textarea>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field">
-        <label>Subtitle colour</label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="color" id="promo-subtitle-color-picker" value="#1f6ab4" oninput="document.getElementById('promo-subtitle-color-text').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
-          <input type="text" id="promo-subtitle-color-text" value="#1f6ab4" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('promo-subtitle-color-picker').value=v">
-        </div>
-      </div>
-      <div class="field">
-        <label>Subtitle size (px)</label>
-        <input type="number" id="promo-subtitle-size" value="14" min="10" max="48">
-      </div>
-    </div>
 
     <div class="section-label">CTA</div>
     <div class="field">
