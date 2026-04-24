@@ -5936,17 +5936,31 @@ function cmsSaveSections(url, sections, statusId, savingText, savedText) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sections: sections })
   })
-  .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+  .then(function(r) {
+    return r.text().then(function(text) {
+      var data = null;
+      try { data = text ? JSON.parse(text) : null; } catch (e) {}
+      return {
+        ok: r.ok,
+        status: r.status,
+        data: data,
+        text: text
+      };
+    });
+  })
   .then(function(resp) {
     if (resp.ok && resp.data && resp.data.ok) {
       cmsSetStatus(statusId, savedText || 'Saved!', 'green', 1800);
       return true;
     }
-    cmsSetStatus(statusId, 'Error: ' + (((resp || {}).data || {}).error || 'Unknown'), 'red');
+    var message = (((resp || {}).data || {}).error || '').trim();
+    if (!message && (resp.text || '').trim()) message = resp.text.trim();
+    if (!message) message = 'HTTP ' + ((resp || {}).status || 'Unknown');
+    cmsSetStatus(statusId, 'Error: ' + message, 'red');
     return false;
   })
-  .catch(function() {
-    cmsSetStatus(statusId, 'Network error', 'red');
+  .catch(function(error) {
+    cmsSetStatus(statusId, 'Network error' + (error && error.message ? ': ' + error.message : ''), 'red');
     return false;
   });
 }

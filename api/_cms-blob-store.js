@@ -114,7 +114,7 @@ async function readDocument(blobFile, legacyFile) {
 
 function requireBlobToken(res) {
   if (process.env.BLOB_READ_WRITE_TOKEN) return true;
-  res.status(500).json({ error: 'Server misconfigured — BLOB_READ_WRITE_TOKEN missing' });
+  res.status(500).json({ error: 'Server misconfigured — BLOB_READ_WRITE_TOKEN missing. Connect a private Vercel Blob store to this project and redeploy.' });
   return false;
 }
 
@@ -126,50 +126,52 @@ export function createCmsValueHandler(options) {
   var extraResponseData = options.extraResponseData;
 
   return async function handler(req, res) {
-    if (req.method === 'OPTIONS') {
-      setCmsHeaders(res, 'GET, POST, OPTIONS');
-      return res.status(204).end();
+    setCmsHeaders(res, 'GET, POST, OPTIONS');
+    try {
+      if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+      }
+
+      if (!requireBlobToken(res)) return;
+
+      if (req.method === 'GET') {
+        var doc = await readDocument(blobFile, legacyFile);
+        var value = doc && Object.prototype.hasOwnProperty.call(doc, key) ? doc[key] : cloneValue(emptyValue);
+        var payload = {};
+        payload[key] = value;
+        if (typeof extraResponseData === 'function') {
+          Object.assign(payload, extraResponseData(req, { selfUrl: getSelfUrl(req) }) || {});
+        }
+        return res.status(200).json(payload);
+      }
+
+      if (req.method === 'POST') {
+        var body;
+        try {
+          body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+        } catch (error) {
+          return res.status(400).json({ error: 'Invalid JSON body' });
+        }
+
+        var docToSave = {};
+        docToSave[key] = Object.prototype.hasOwnProperty.call(body, key) ? body[key] : cloneValue(emptyValue);
+
+        try {
+          await writeBlobVersion(blobFile, docToSave);
+        } catch (error) {
+          return res.status(500).json({ error: error && error.message ? error.message : 'Blob save failed' });
+        }
+
+        var responsePayload = { ok: true };
+        if (typeof extraResponseData === 'function') {
+          Object.assign(responsePayload, extraResponseData(req, { selfUrl: getSelfUrl(req) }) || {});
+        }
+        return res.status(200).json(responsePayload);
+      }
+
+      return res.status(405).json({ error: 'Method not allowed' });
+    } catch (error) {
+      return res.status(500).json({ error: error && error.message ? error.message : 'Blob handler failed' });
     }
-
-    if (!requireBlobToken(res)) return;
-
-    if (req.method === 'GET') {
-      setCmsHeaders(res, 'GET, POST, OPTIONS');
-      var doc = await readDocument(blobFile, legacyFile);
-      var value = doc && Object.prototype.hasOwnProperty.call(doc, key) ? doc[key] : cloneValue(emptyValue);
-      var payload = {};
-      payload[key] = value;
-      if (typeof extraResponseData === 'function') {
-        Object.assign(payload, extraResponseData(req, { selfUrl: getSelfUrl(req) }) || {});
-      }
-      return res.status(200).json(payload);
-    }
-
-    if (req.method === 'POST') {
-      setCmsHeaders(res, 'GET, POST, OPTIONS');
-      var body;
-      try {
-        body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-      } catch (error) {
-        return res.status(400).json({ error: 'Invalid JSON body' });
-      }
-
-      var docToSave = {};
-      docToSave[key] = Object.prototype.hasOwnProperty.call(body, key) ? body[key] : cloneValue(emptyValue);
-
-      try {
-        await writeBlobVersion(blobFile, docToSave);
-      } catch (error) {
-        return res.status(500).json({ error: error && error.message ? error.message : 'Blob save failed' });
-      }
-
-      var responsePayload = { ok: true };
-      if (typeof extraResponseData === 'function') {
-        Object.assign(responsePayload, extraResponseData(req, { selfUrl: getSelfUrl(req) }) || {});
-      }
-      return res.status(200).json(responsePayload);
-    }
-
-    return res.status(405).json({ error: 'Method not allowed' });
   };
 }
