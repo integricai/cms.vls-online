@@ -262,6 +262,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-programs" onclick="switchScreen('programs')">Program Cards</div>
       <div class="nav-dd-item" id="nav-form" onclick="switchScreen('form')">Form</div>
       <div class="nav-dd-item" id="nav-feature-cards" onclick="switchScreen('feature-cards')">Feature Cards</div>
+      <div class="nav-dd-item" id="nav-feature-cards-2" onclick="switchScreen('feature-cards-2')">Feature Card 2</div>
       <div class="nav-dd-item" id="nav-steps-section" onclick="switchScreen('steps-section')">Steps Section</div>
     </div>
   </div>
@@ -314,6 +315,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <button class="home-tile-link" onclick="switchScreen('events')">Events</button>
           <button class="home-tile-link" onclick="switchScreen('programs')">Program Cards</button>
           <button class="home-tile-link" onclick="switchScreen('feature-cards')">Feature Cards</button>
+          <button class="home-tile-link" onclick="switchScreen('feature-cards-2')">Feature Card 2</button>
           <button class="home-tile-link" onclick="switchScreen('steps-section')">Steps Section</button>
           <button class="home-tile-link" onclick="switchScreen('form')">Form</button>
         </div>
@@ -629,12 +631,13 @@ function doCopy(id, btn) {
 var _GLOBAL_SCREENS = ['header', 'footer', 'banner', 'promotion-section'];
 var _HOME_SCREENS   = ['hero', 'about-us'];
 var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
-var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards', 'steps-section'];
+var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards', 'feature-cards-2', 'steps-section'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
   'about-us':    '/screens/about-us.html',
-  'feature-cards': '/screens/feature-cards.html',
+  'feature-cards':   '/screens/feature-cards.html',
+  'feature-cards-2': '/screens/feature-cards-2.html',
   'steps-section': '/screens/steps-section.html',
   'promotion-section': '/screens/promotion-section.html',
   intro:    '/screens/intro.html',
@@ -699,7 +702,8 @@ async function switchScreen(name) {
 
   if (name === 'hero'         && !_loadedScreens._heroInit)  { _loadedScreens._heroInit  = true; heroOnOpen();  }
   if (name === 'about-us'     && !_loadedScreens._aboutInit) { _loadedScreens._aboutInit = true; aboutUsOnOpen(); }
-  if (name === 'feature-cards' && !_loadedScreens._fcInit)   { _loadedScreens._fcInit    = true; featureCardsOnOpen(); }
+  if (name === 'feature-cards'   && !_loadedScreens._fcInit)   { _loadedScreens._fcInit   = true; featureCardsOnOpen(); }
+  if (name === 'feature-cards-2' && !_loadedScreens._fc2Init)  { _loadedScreens._fc2Init  = true; fc2OnOpen(); }
   if (name === 'steps-section' && !_loadedScreens._stepsInit) { _loadedScreens._stepsInit = true; stepsSectionOnOpen(); }
   if (name === 'intro' && !_loadedScreens._introInit) { _loadedScreens._introInit = true; introOnOpen(); }
   if (name === 'desc'  && !_loadedScreens._descInit)  { _loadedScreens._descInit  = true; descOnOpen();  }
@@ -5365,6 +5369,105 @@ function generateStepsSection() {
   document.getElementById('steps-section-code').textContent = html;
   document.getElementById('steps-section-preview-wrap').innerHTML = html;
   switchOut('steps-section', 'preview');
+}
+
+// ── Feature Card 2 ─────────────────────────────────────────────
+
+function fc2OnOpen() {
+  var defaults = [
+    {title:'ACCA Qualifications',      desc:'We offer ACCA exam preparation courses for ACCA Foundation Diploma, ACCA Professional Qualifications and IFRS Diploma.',   ctaText:'Learn More', ctaUrl:'#', bg:'#ffffff'},
+    {title:'ACCA Annual Subscription', desc:'Get access to the ACCA Applied Knowledge, Skills, and Strategic Professional papers, and all of these courses come with active tutor support.', ctaText:'Learn More', ctaUrl:'#', bg:'#ffffff'},
+    {title:'CIMA',                     desc:'Our CIMA courses are affordable and offer you comprehensive content with practice questions, videos and quizzes and tests.',  ctaText:'Learn More', ctaUrl:'#', bg:'#ffffff'},
+    {title:'CMA (USA)',                desc:'Our CMA courses cover complete syllabus areas with hundreds of MCQs and Essay Type questions to prepare you for the exam.',  ctaText:'Learn More', ctaUrl:'#', bg:'#ffffff'},
+    {title:'ACCA Diploma in IFRS',     desc:'Our IFRS course is a global best seller. It has more than 6000 five-star reviews and is delivered by our experienced tutor.', ctaText:'Learn More', ctaUrl:'#', bg:'#ffffff'},
+    {title:'Other Courses',            desc:'There are a range of other short courses which cover the essential knowledge for the accounting and finance professionals.',   ctaText:'Learn More', ctaUrl:'#', bg:'#ffffff'},
+  ];
+  defaults.forEach(function(d) { fc2AddCard(d, true); });
+}
+
+function fc2AddCard(data, startCollapsed) {
+  var list  = document.getElementById('fc2-cards');
+  var id    = 'fc2c-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var label = (data && data.title) ? data.title : 'New Card';
+  var bg    = (data && data.bg)    ? data.bg    : '#ffffff';
+  var div   = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">' +
+      '<span class="block-header-label">' + xH(label) + '</span>' +
+      '<span class="block-type-badge">Card</span>' +
+      '<button class="btn-sm danger" onclick="event.stopPropagation();document.getElementById(\'' + id + '\').remove()" style="margin-left:auto">Remove</button>' +
+    '</div>' +
+    '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">' +
+      '<div class="field"><label>Card background colour</label>' +
+        '<div style="display:flex;gap:8px;align-items:center">' +
+          '<input type="color" class="fc2-cp" value="' + xA(bg) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">' +
+          '<input type="text"  class="fc2-chex" value="' + xA(bg) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v">' +
+        '</div>' +
+      '</div>' +
+      '<div class="field"><label>Title</label><input type="text" class="fc2-ti" value="' + xA((data && data.title) || '') + '" oninput="this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=this.value||\'New Card\'"></div>' +
+      '<div class="field"><label>Description</label><textarea class="fc2-de" rows="3">' + xA((data && data.desc) || '') + '</textarea></div>' +
+      '<div class="field"><label>CTA text</label><input type="text" class="fc2-ctat" value="' + xA((data && data.ctaText) || 'Learn More') + '"></div>' +
+      '<div class="field"><label>CTA URL</label><input type="text" class="fc2-ctau" value="' + xA((data && data.ctaUrl) || '') + '" placeholder="https://"></div>' +
+    '</div>';
+  list.appendChild(div);
+}
+
+function generateFeatureCards2() {
+  var uid     = 'fc2' + Date.now().toString(36);
+  var bg      = document.getElementById('fc2-bg-text').value.trim()   || '#f0f4f8';
+  var divClr  = document.getElementById('fc2-div-text').value.trim()  || '#204280';
+  var fontClr = document.getElementById('fc2-fc-text').value.trim()   || '#204280';
+  var padTop  = parseInt(document.getElementById('fc2-pad-top').value)  || 60;
+  var padBot  = parseInt(document.getElementById('fc2-pad-bot').value)  || 60;
+  var padL    = parseInt(document.getElementById('fc2-pad-left').value) || 0;
+  var padR    = parseInt(document.getElementById('fc2-pad-right').value)|| 0;
+  var fSize   = parseInt(document.getElementById('fc2-font-size').value)|| 14;
+  var cols    = parseInt(document.getElementById('fc2-cols').value)     || 3;
+  var bold    = document.getElementById('fc2-bold').checked;
+  var titleSize = fSize + 4;
+
+  var cards = [];
+  document.querySelectorAll('#fc2-cards .block-item').forEach(function(item) {
+    var cardBg  = item.querySelector('.fc2-cp').value;
+    var title   = item.querySelector('.fc2-ti').value.trim();
+    var desc    = item.querySelector('.fc2-de').value.trim();
+    var ctaText = item.querySelector('.fc2-ctat').value.trim();
+    var ctaUrl  = item.querySelector('.fc2-ctau').value.trim();
+    if (title) cards.push({bg: cardBg, title: title, desc: desc, ctaText: ctaText, ctaUrl: ctaUrl});
+  });
+
+  var colBreak = cols > 2 ? 'repeat(2,1fr)' : '1fr';
+  var css =
+    '<style>' +
+    '.' + uid + '{font-family:\'Poppins\',sans-serif;background:' + xA(bg) + ';padding:' + padTop + 'px ' + padR + 'px ' + padBot + 'px ' + padL + 'px;box-sizing:border-box;}' +
+    '.' + uid + '-grid{display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:24px;}' +
+    '@media(max-width:900px){.' + uid + '-grid{grid-template-columns:' + colBreak + ';}}' +
+    '@media(max-width:600px){.' + uid + '-grid{grid-template-columns:1fr;}}' +
+    '.' + uid + '-card{padding:32px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;}' +
+    '.' + uid + '-ti{font-size:' + titleSize + 'px;font-weight:' + (bold ? '700' : '500') + ';color:' + xA(fontClr) + ';text-transform:uppercase;letter-spacing:.06em;margin:0 0 12px;line-height:1.25;}' +
+    '.' + uid + '-div{width:50px;height:3px;background:' + xA(divClr) + ';border-radius:2px;margin:0 0 20px;flex-shrink:0;}' +
+    '.' + uid + '-de{font-size:' + fSize + 'px;font-weight:400;color:#4a5568;line-height:1.75;margin:0 0 24px;flex:1;}' +
+    '.' + uid + '-cta{display:inline-block;padding:10px 24px;border:2px solid ' + xA(fontClr) + ';color:' + xA(fontClr) + ' !important;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;text-decoration:none !important;}' +
+    '.' + uid + '-cta:hover{background:' + xA(fontClr) + ';color:#fff !important;}' +
+    '</style>';
+
+  var cardsHtml = cards.map(function(c) {
+    return '<div class="' + uid + '-card" style="background:' + xA(c.bg) + '">' +
+      '<div class="' + uid + '-ti">' + xH(c.title) + '</div>' +
+      '<div class="' + uid + '-div"></div>' +
+      (c.desc    ? '<p class="' + uid + '-de">' + xH(c.desc) + '</p>' : '') +
+      (c.ctaText ? '<a href="' + xA(c.ctaUrl || '#') + '" class="' + uid + '-cta">' + xH(c.ctaText) + '</a>' : '') +
+      '</div>';
+  }).join('\n');
+
+  var fontLink = '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n';
+  var html = fontLink + css + '\n<div class="' + uid + '"><div class="' + uid + '-grid">\n' + cardsHtml + '\n</div></div>';
+
+  document.getElementById('feature-cards-2-code').textContent = html;
+  document.getElementById('feature-cards-2-preview-wrap').innerHTML = html;
+  switchOut('feature-cards-2', 'preview');
 }
 
 function copyHdrCode() {
