@@ -2493,7 +2493,10 @@ async function loadTeamFromGist() {
           var n = parseInt(String(c.id).replace('tm', ''));
           if (!isNaN(n) && n > teamIdCounter) teamIdCounter = n;
         }
-        c.paras = (c.paras || []).map(function(p) { return cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.team); });
+        c.eyebrow  = c.eyebrow  || '';
+        c.features = Array.isArray(c.features) ? c.features : [];
+        c.tags     = Array.isArray(c.tags)     ? c.tags     : [];
+        c.paras    = (c.paras || []).map(function(p) { return cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.team); });
         return c;
       });
       renderTeamBlocks();
@@ -2525,19 +2528,32 @@ async function publishTeam() {
 function saveTeamState() {
   teamCards.forEach(function(card) {
     var id = card.id;
-    card.name        = ((document.getElementById('team-name-'    + id) || {}).value || '');
-    card.designation = ((document.getElementById('team-desig-'   + id) || {}).value || '');
-    card.imgUrl      = ((document.getElementById('team-img-url-' + id) || {}).value || '');
+    card.eyebrow     = ((document.getElementById('team-eyebrow-'  + id) || {}).value || '');
+    card.name        = ((document.getElementById('team-name-'     + id) || {}).value || '');
+    card.designation = ((document.getElementById('team-desig-'    + id) || {}).value || '');
+    card.imgUrl      = ((document.getElementById('team-img-url-'  + id) || {}).value || '');
+    card.features = [];
+    var fc = document.getElementById('team-feats-' + id);
+    if (fc) fc.querySelectorAll('.team-feat-item').forEach(function(item) {
+      var val = ((item.querySelector('.team-feat-val') || {}).value || '').trim();
+      var lbl = ((item.querySelector('.team-feat-lbl') || {}).value || '').trim();
+      card.features.push({ value: val, label: lbl });
+    });
     card.paras = [];
     var pc = document.getElementById('team-paras-' + id);
     if (pc) pc.querySelectorAll('.team-para').forEach(function(ta) { card.paras.push(cmsReadParagraphField(ta, CMS_PARAGRAPH_DEFAULTS.team)); });
+    card.tags = [];
+    var tc = document.getElementById('team-tags-' + id);
+    if (tc) tc.querySelectorAll('.team-tag-input').forEach(function(inp) {
+      var v = inp.value.trim(); if (v) card.tags.push(v);
+    });
   });
 }
 
 function addTeamCard() {
   saveTeamState();
   var id = 'tm' + (++teamIdCounter);
-  teamCards.push({ id: id, name: '', designation: '', imgUrl: '', paras: [cmsNormalizeParagraphData('', CMS_PARAGRAPH_DEFAULTS.team)] });
+  teamCards.push({ id: id, eyebrow: 'MEET YOUR TUTOR', name: '', designation: '', imgUrl: '', features: [], paras: [cmsNormalizeParagraphData('', CMS_PARAGRAPH_DEFAULTS.team)], tags: [] });
   renderTeamBlocks();
   setTimeout(function() {
     var el = document.getElementById('team-block-' + id);
@@ -2576,13 +2592,29 @@ function renderTeamBlocks() {
 }
 
 function buildTeamBlockHtml(card, num) {
-  var id       = card.id;
-  var imgSrc   = card.imgUrl || TEAM_PLACEHOLDER;
+  var id     = card.id;
+  var imgSrc = card.imgUrl || TEAM_PLACEHOLDER;
+
   var parasHtml = (card.paras && card.paras.length ? card.paras : ['']).map(function(p) {
     var paragraph = cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.team);
     return '<div class="feature-item" style="align-items:flex-start;">'
       + '<div style="flex:1;">' + cmsParagraphFieldHtml('Bio paragraph', 'team-para', paragraph, { rows: 3, placeholder: 'Bio paragraph...', defaults: CMS_PARAGRAPH_DEFAULTS.team }) + '</div>'
       + '<button class="btn-icon" style="margin-top:6px;flex-shrink:0;" onclick="this.parentNode.remove()" title="Remove">&#x2715;</button>'
+      + '</div>';
+  }).join('');
+
+  var featsHtml = (card.features || []).map(function(f) {
+    return '<div class="feature-item team-feat-item" style="gap:6px;align-items:center;">'
+      + '<input type="text" class="team-feat-val" value="' + xA(f.value || '') + '" placeholder="e.g. 20+" style="font-family:Poppins,sans-serif;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;width:72px;flex-shrink:0;outline:none;">'
+      + '<input type="text" class="team-feat-lbl" value="' + xA(f.label || '') + '" placeholder="e.g. YEARS EXP." style="font-family:Poppins,sans-serif;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none;">'
+      + '<button class="btn-icon" style="flex-shrink:0;" onclick="this.parentNode.remove()" title="Remove">&#x2715;</button>'
+      + '</div>';
+  }).join('');
+
+  var tagsFormHtml = (card.tags || []).map(function(t) {
+    return '<div class="feature-item" style="gap:6px;align-items:center;">'
+      + '<input type="text" class="team-tag-input" value="' + xA(t) + '" placeholder="e.g. Financial Reporting" style="font-family:Poppins,sans-serif;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none;">'
+      + '<button class="btn-icon" style="flex-shrink:0;" onclick="this.parentNode.remove()" title="Remove">&#x2715;</button>'
       + '</div>';
   }).join('');
 
@@ -2601,26 +2633,41 @@ function buildTeamBlockHtml(card, num) {
     +   '<button class="btn-sm danger" onclick="removeTeamCard(\'' + id + '\');event.stopPropagation()">Remove</button>'
     + '</div>'
     + '<div class="faq-block-body" id="team-body-' + id + '">'
+    +   '<div class="field"><label>Eyebrow text</label>'
+    +     '<input type="text" id="team-eyebrow-' + id + '" value="' + xA(card.eyebrow || '') + '" placeholder="e.g. MEET YOUR TUTOR">'
+    +   '</div>'
     +   '<div class="field"><label>Full name</label>'
     +     '<input type="text" id="team-name-' + id + '" value="' + xA(card.name) + '" placeholder="e.g. Syed M Ali" oninput="teamUpdateHeader(\'' + id + '\')">'
     +   '</div>'
     +   '<div class="field"><label>Designation / Role</label>'
-    +     '<input type="text" id="team-desig-' + id + '" value="' + xA(card.designation) + '" placeholder="e.g. Senior Tutor for ACCA & CIMA" oninput="teamUpdateHeader(\'' + id + '\')">'
+    +     '<input type="text" id="team-desig-' + id + '" value="' + xA(card.designation) + '" placeholder="e.g. Senior Tutor for ACCA &amp; CIMA" oninput="teamUpdateHeader(\'' + id + '\')">'
     +   '</div>'
     +   '<div class="field"><label>Photo</label>'
     +     '<div style="display:flex;gap:12px;align-items:center;">'
-    +       '<img class="member-preview" id="team-img-prev-' + id + '" src="' + imgSrc + '">'
+    +       '<img class="member-preview" id="team-img-prev-' + id + '" src="' + imgSrc + '" style="width:64px;height:64px;border-radius:50%;object-fit:cover;object-position:top center;">'
     +       '<div style="flex:1;display:flex;flex-direction:column;gap:6px;">'
     +         '<input type="text" id="team-img-url-' + id + '" value="' + xA(card.imgUrl) + '" placeholder="Paste image URL..." oninput="teamUpdateHeader(\'' + id + '\')">'
-    +         '<label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--purple);cursor:pointer;font-weight:500;padding:2px 0;">'
+    +         '<label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--purple);cursor:pointer;font-weight:500;">'
     +           '<input type="file" accept="image/*" style="display:none" onchange="teamImageUpload(\'' + id + '\',this)">&#x2191; Upload from device</label>'
-    +         '<span style="font-size:11px;color:var(--muted);">Uploaded images are resized to 300px automatically.</span>'
+    +         '<span style="font-size:11px;color:var(--muted);">Uploaded images are cropped to a circle at fixed size.</span>'
     +       '</div>'
     +     '</div>'
+    +   '</div>'
+    +   '<div class="field"><label>Stat features <span class="hint">(value + label, e.g. 20+ / YEARS EXP. — leave empty to hide)</span></label>'
+    +     '<div style="display:flex;gap:4px;margin-bottom:4px;">'
+    +       '<span style="font-size:10px;font-weight:600;color:var(--muted);width:72px;flex-shrink:0;text-transform:uppercase;letter-spacing:.04em;">Value</span>'
+    +       '<span style="font-size:10px;font-weight:600;color:var(--muted);flex:1;text-transform:uppercase;letter-spacing:.04em;">Label</span>'
+    +     '</div>'
+    +     '<div id="team-feats-' + id + '" style="display:flex;flex-direction:column;gap:6px;">' + featsHtml + '</div>'
+    +     '<button class="btn-add-block" style="margin-top:6px" onclick="teamAddFeature(\'' + id + '\')">+ Add stat</button>'
     +   '</div>'
     +   '<div class="field"><label>Bio paragraphs</label>'
     +     '<div id="team-paras-' + id + '" style="display:flex;flex-direction:column;gap:8px;">' + parasHtml + '</div>'
     +     '<button class="btn-add-block" style="margin-top:6px" onclick="teamAddPara(\'' + id + '\')">+ Add paragraph</button>'
+    +   '</div>'
+    +   '<div class="field"><label>Specialization tags <span class="hint">(rendered as pill badges)</span></label>'
+    +     '<div id="team-tags-' + id + '" style="display:flex;flex-direction:column;gap:6px;">' + tagsFormHtml + '</div>'
+    +     '<button class="btn-add-block" style="margin-top:6px" onclick="teamAddTag(\'' + id + '\')">+ Add tag</button>'
     +   '</div>'
     + '</div>'
     + '</div>';
@@ -2667,6 +2714,31 @@ function teamImageUpload(id, input) {
   reader.readAsDataURL(file);
 }
 
+function teamAddFeature(cardId) {
+  var c = document.getElementById('team-feats-' + cardId);
+  if (!c) return;
+  var div = document.createElement('div');
+  div.className = 'feature-item team-feat-item';
+  div.style.cssText = 'gap:6px;align-items:center;';
+  div.innerHTML =
+    '<input type="text" class="team-feat-val" placeholder="e.g. 20+" style="font-family:Poppins,sans-serif;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;width:72px;flex-shrink:0;outline:none;">'
+    + '<input type="text" class="team-feat-lbl" placeholder="e.g. YEARS EXP." style="font-family:Poppins,sans-serif;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none;">'
+    + '<button class="btn-icon" style="flex-shrink:0;" onclick="this.parentNode.remove()" title="Remove">&#x2715;</button>';
+  c.appendChild(div);
+}
+
+function teamAddTag(cardId) {
+  var c = document.getElementById('team-tags-' + cardId);
+  if (!c) return;
+  var div = document.createElement('div');
+  div.className = 'feature-item';
+  div.style.cssText = 'gap:6px;align-items:center;';
+  div.innerHTML =
+    '<input type="text" class="team-tag-input" placeholder="e.g. Financial Reporting" style="font-family:Poppins,sans-serif;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none;">'
+    + '<button class="btn-icon" style="flex-shrink:0;" onclick="this.parentNode.remove()" title="Remove">&#x2715;</button>';
+  c.appendChild(div);
+}
+
 function teamAddPara(id) {
   var c = document.getElementById('team-paras-' + id);
   if (!c) return;
@@ -2680,8 +2752,16 @@ function teamAddPara(id) {
 
 function collectTeamData() {
   return teamCards.map(function(c) {
-    return { id: c.id, name: c.name, designation: c.designation, imgUrl: c.imgUrl,
-             paras: (c.paras || []).map(function(p) { return cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.team); }).filter(function(p) { return p.text.trim(); }) };
+    return {
+      id:          c.id,
+      eyebrow:     c.eyebrow     || '',
+      name:        c.name        || '',
+      designation: c.designation || '',
+      imgUrl:      c.imgUrl      || '',
+      features:    (c.features || []).filter(function(f) { return (f.value || '').trim(); }),
+      paras:       (c.paras || []).map(function(p) { return cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.team); }).filter(function(p) { return p.text.trim(); }),
+      tags:        (c.tags || []).filter(function(t) { return t.trim(); })
+    };
   }).filter(function(c) { return c.name.trim(); });
 }
 
@@ -2701,23 +2781,55 @@ function teamCardHtml(card) {
   var esc = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
   var e   = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
 
+  // Photo — fixed circular frame; object-fit:cover keeps any image size contained
   var photo = card.imgUrl
-    ? '<img src="' + esc(card.imgUrl) + '" alt="' + esc(card.name) + '" style="width:120px;height:120px;border-radius:50%;object-fit:cover;object-position:top center;display:block;border:3px solid #534AB7;">'
-    : '<div style="width:120px;height:120px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;border:3px solid #534AB7;">'
-      + '<span style="font-family:Poppins,sans-serif;font-size:34px;font-weight:700;color:#534AB7;">' + e(teamInitials(card.name)) + '</span></div>';
+    ? '<img src="' + esc(card.imgUrl) + '" alt="' + esc(card.name) + '" style="width:100px;height:100px;border-radius:50%;object-fit:cover;object-position:top center;display:block;border:3px solid #534AB7;flex-shrink:0;">'
+    : '<div style="width:100px;height:100px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;border:3px solid #534AB7;flex-shrink:0;">'
+      + '<span style="font-family:Poppins,sans-serif;font-size:28px;font-weight:700;color:#534AB7;">' + e(teamInitials(card.name)) + '</span></div>';
+
+  // Stat features — only rendered if at least one has a value
+  var featsHtml = '';
+  var validFeats = (card.features || []).filter(function(f) { return (f.value || '').trim(); });
+  if (validFeats.length) {
+    featsHtml = validFeats.map(function(f) {
+      return '<div style="width:100%;background:#fff;border-radius:8px;padding:10px 8px;text-align:center;border:1px solid #e8eaf0;box-sizing:border-box;">'
+        + '<div style="font-family:Poppins,sans-serif;font-size:18px;font-weight:700;color:#1a1a1a;line-height:1.1;">' + e(f.value) + '</div>'
+        + (f.label ? '<div style="font-family:Poppins,sans-serif;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;margin-top:4px;">' + e(f.label) + '</div>' : '')
+        + '</div>';
+    }).join('');
+  }
 
   var paras = (card.paras || []).map(function(p, i, arr) {
     var para = cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.team);
     return '<p style="font-family:Poppins,sans-serif;line-height:1.75;margin:0' + (i < arr.length - 1 ? ' 0 12px' : '') + ';text-align:left;' + cmsParagraphStyle(para, CMS_PARAGRAPH_DEFAULTS.team) + '">' + e(para.text) + '</p>';
   }).join('');
 
-  return '<div style="display:flex;gap:28px;align-items:flex-start;background:#fff;border-radius:16px;padding:28px;box-shadow:0 2px 16px rgba(0,0,0,.08);border:1px solid #f0f0f5;">'
-    + '<div style="flex-shrink:0;">' + photo + '</div>'
-    + '<div style="flex:1;min-width:0;">'
-    +   '<h3 style="font-family:Poppins,sans-serif;font-size:19px;font-weight:700;color:#1a1a1a;margin:0 0 4px;text-align:left;">' + e(card.name) + '</h3>'
+  var tagsHtml = '';
+  var validTags = (card.tags || []).filter(function(t) { return t.trim(); });
+  if (validTags.length) {
+    tagsHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;">'
+      + validTags.map(function(t) {
+          return '<span style="display:inline-block;padding:5px 14px;border:1.5px solid #e2e8f0;border-radius:999px;font-family:Poppins,sans-serif;font-size:12px;font-weight:500;color:#374151;">' + e(t) + '</span>';
+        }).join('')
+      + '</div>';
+  }
+
+  return '<div style="display:flex;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.08);border:1px solid #f0f0f5;">'
+    // Left panel
+    + '<div style="width:160px;flex-shrink:0;background:#f8f9fb;border-right:1px solid #e8eaf0;padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:12px;">'
+    +   photo
+    + (card.designation ? '<span style="display:inline-block;padding:4px 12px;background:#EEEDFE;border-radius:999px;font-family:Poppins,sans-serif;font-size:11px;font-weight:600;color:#534AB7;text-align:center;word-break:break-word;">' + e(card.designation) + '</span>' : '')
+    +   featsHtml
+    + '</div>'
+    // Right panel
+    + '<div style="flex:1;min-width:0;padding:28px 28px 24px;">'
+    + (card.eyebrow ? '<div style="font-family:Poppins,sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#204280;margin-bottom:8px;">' + e(card.eyebrow) + '</div>' : '')
+    + '<h3 style="font-family:Poppins,sans-serif;font-size:24px;font-weight:700;color:#1a1a1a;margin:0 0 4px;text-align:left;">' + e(card.name) + '</h3>'
     + (card.designation ? '<p style="font-family:Poppins,sans-serif;font-size:14px;font-weight:600;color:#534AB7;margin:0 0 16px;text-align:left;">' + e(card.designation) + '</p>' : '')
-    + paras
-    + '</div></div>';
+    +   paras
+    +   tagsHtml
+    + '</div>'
+    + '</div>';
 }
 
 function renderTeamPreview(cards) {
@@ -2738,22 +2850,31 @@ function renderTeamCode(cards) {
   var uid = 'vlsteam' + Math.random().toString(36).slice(2, 7);
   var L = [];
 
+  L.push('<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">');
   L.push('<style>');
-  L.push('.' + uid + '{display:flex;flex-direction:column;gap:20px;font-family:Poppins,sans-serif;width:100%;}');
-  L.push('.' + uid + '-card{display:flex;gap:28px;align-items:flex-start;background:#fff;border-radius:16px;padding:28px;box-shadow:0 2px 16px rgba(0,0,0,.08);border:1px solid #f0f0f5;}');
-  L.push('.' + uid + '-photo{flex-shrink:0;}');
-  L.push('.' + uid + '-photo img{width:120px;height:120px;border-radius:50%;object-fit:cover;object-position:top center;display:block;border:3px solid #534AB7;}');
-  L.push('.' + uid + '-initials{width:120px;height:120px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;border:3px solid #534AB7;}');
-  L.push('.' + uid + '-initials span{font-family:Poppins,sans-serif;font-size:34px;font-weight:700;color:#534AB7;}');
-  L.push('.' + uid + '-body{flex:1;min-width:0;}');
-  L.push('.' + uid + '-name{font-family:Poppins,sans-serif;font-size:19px;font-weight:700;color:#1a1a1a;margin:0 0 4px;text-align:left;}');
-  L.push('.' + uid + '-role{font-family:Poppins,sans-serif;font-size:14px;font-weight:600;color:#534AB7;margin:0 0 16px;text-align:left;}');
+  L.push('.' + uid + '{display:flex;flex-direction:column;gap:24px;width:100%;}');
+  L.push('.' + uid + '-card{display:flex;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.08);border:1px solid #f0f0f5;}');
+  L.push('.' + uid + '-left{width:160px;flex-shrink:0;background:#f8f9fb;border-right:1px solid #e8eaf0;padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:12px;}');
+  L.push('.' + uid + '-photo{width:100px;height:100px;border-radius:50%;object-fit:cover;object-position:top center;display:block;border:3px solid #534AB7;}');
+  L.push('.' + uid + '-initials{width:100px;height:100px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;border:3px solid #534AB7;}');
+  L.push('.' + uid + '-initials span{font-family:Poppins,sans-serif;font-size:28px;font-weight:700;color:#534AB7;}');
+  L.push('.' + uid + '-badge{display:inline-block;padding:4px 12px;background:#EEEDFE;border-radius:999px;font-family:Poppins,sans-serif;font-size:11px;font-weight:600;color:#534AB7;text-align:center;word-break:break-word;}');
+  L.push('.' + uid + '-feat{width:100%;background:#fff;border-radius:8px;padding:10px 8px;text-align:center;border:1px solid #e8eaf0;box-sizing:border-box;}');
+  L.push('.' + uid + '-fv{font-family:Poppins,sans-serif;font-size:18px;font-weight:700;color:#1a1a1a;line-height:1.1;}');
+  L.push('.' + uid + '-fl{font-family:Poppins,sans-serif;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;margin-top:4px;}');
+  L.push('.' + uid + '-right{flex:1;min-width:0;padding:28px 28px 24px;}');
+  L.push('.' + uid + '-ey{font-family:Poppins,sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#204280;margin-bottom:8px;}');
+  L.push('.' + uid + '-name{font-family:Poppins,sans-serif;font-size:24px;font-weight:700;color:#1a1a1a;margin:0 0 4px;}');
+  L.push('.' + uid + '-role{font-family:Poppins,sans-serif;font-size:14px;font-weight:600;color:#534AB7;margin:0 0 16px;}');
   L.push('.' + uid + '-para{font-family:Poppins,sans-serif;line-height:1.75;margin:0 0 12px;text-align:left;}');
-  L.push('.' + uid + '-para:last-child{margin-bottom:0;}');
-  L.push('@media(max-width:600px){'
-    + '.' + uid + '-card{flex-direction:column;align-items:center;padding:20px;gap:16px;}'
-    + '.' + uid + '-name,.' + uid + '-role,.' + uid + '-para{text-align:center;}'
-    + '}');
+  L.push('.' + uid + '-para:last-of-type{margin-bottom:0;}');
+  L.push('.' + uid + '-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}');
+  L.push('.' + uid + '-tag{display:inline-block;padding:5px 14px;border:1.5px solid #e2e8f0;border-radius:999px;font-family:Poppins,sans-serif;font-size:12px;font-weight:500;color:#374151;}');
+  L.push('@media(max-width:640px){');
+  L.push('  .' + uid + '-card{flex-direction:column;}');
+  L.push('  .' + uid + '-left{width:100%;border-right:none;border-bottom:1px solid #e8eaf0;flex-direction:row;flex-wrap:wrap;justify-content:center;gap:10px;padding:20px;}');
+  L.push('  .' + uid + '-right{padding:20px;}');
+  L.push('}');
   L.push('</style>');
   L.push('');
   L.push('<div class="' + uid + '">');
@@ -2761,22 +2882,46 @@ function renderTeamCode(cards) {
   cards.forEach(function(card) {
     var esc = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
     var e   = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+    var validFeats = (card.features || []).filter(function(f) { return (f.value||'').trim(); });
+    var validTags  = (card.tags     || []).filter(function(t) { return t.trim(); });
+
     L.push('  <div class="' + uid + '-card">');
-    L.push('    <div class="' + uid + '-photo">');
+
+    // Left panel
+    L.push('    <div class="' + uid + '-left">');
     if (card.imgUrl) {
-      L.push('      <img src="' + esc(card.imgUrl) + '" alt="' + esc(card.name) + '">');
+      L.push('      <img class="' + uid + '-photo" src="' + esc(card.imgUrl) + '" alt="' + esc(card.name) + '">');
     } else {
       L.push('      <div class="' + uid + '-initials"><span>' + e(teamInitials(card.name)) + '</span></div>');
     }
+    if (card.designation) {
+      L.push('      <span class="' + uid + '-badge">' + e(card.designation) + '</span>');
+    }
+    validFeats.forEach(function(f) {
+      L.push('      <div class="' + uid + '-feat">');
+      L.push('        <div class="' + uid + '-fv">' + e(f.value) + '</div>');
+      if (f.label) L.push('        <div class="' + uid + '-fl">' + e(f.label) + '</div>');
+      L.push('      </div>');
+    });
     L.push('    </div>');
-    L.push('    <div class="' + uid + '-body">');
+
+    // Right panel
+    L.push('    <div class="' + uid + '-right">');
+    if (card.eyebrow) L.push('      <div class="' + uid + '-ey">' + e(card.eyebrow) + '</div>');
     L.push('      <h3 class="' + uid + '-name">' + e(card.name) + '</h3>');
     if (card.designation) L.push('      <p class="' + uid + '-role">' + e(card.designation) + '</p>');
     (card.paras || []).forEach(function(p) {
       var para = cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.team);
+      if (!para.text.trim()) return;
       L.push('      <p class="' + uid + '-para" style="' + cmsParagraphStyle(para, CMS_PARAGRAPH_DEFAULTS.team) + '">' + e(para.text) + '</p>');
     });
+    if (validTags.length) {
+      L.push('      <div class="' + uid + '-tags">');
+      validTags.forEach(function(t) { L.push('        <span class="' + uid + '-tag">' + e(t) + '</span>'); });
+      L.push('      </div>');
+    }
     L.push('    </div>');
+
     L.push('  </div>');
   });
 
