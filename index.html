@@ -803,6 +803,8 @@ function addFeature(val) {
 function generateIntro() {
   var h1      = document.getElementById('intro-h1').value;
   var h2      = document.getElementById('intro-h2').value;
+  var padLeft = cmsClampInt((document.getElementById('intro-pad-left') || {}).value, 0, 0, 200);
+  var padRight= cmsClampInt((document.getElementById('intro-pad-right') || {}).value, 0, 0, 200);
   var featH   = document.getElementById('intro-feat-heading').value;
   var ctaTxt  = document.getElementById('intro-cta-text').value;
   var ctaUrl  = document.getElementById('intro-cta-url').value;
@@ -840,7 +842,7 @@ function generateIntro() {
   lines.push('}');
   lines.push('</style>');
   lines.push('');
-  lines.push('<div style="font-family:\'Poppins\',sans-serif;color:#1a1a1a;text-align:left;">');
+  lines.push('<div style="font-family:\'Poppins\',sans-serif;color:#1a1a1a;text-align:left;padding:0 ' + padRight + 'px 0 ' + padLeft + 'px;box-sizing:border-box;">');
   lines.push('');
   lines.push('  <h1 class="' + uid + '-h1" style="font-family:\'Poppins\',sans-serif;font-size:40px;font-weight:600;color:rgb(32,66,128);text-align:left;margin:35px 0 10px 0;line-height:1.2;">' + xH(h1) + '</h1>');
   lines.push('');
@@ -1543,7 +1545,7 @@ function addBanner() {
   banners.push({
     id: id, name: '', title: '', sub: '', ctaText: '', ctaUrl: '',
     days: 0, hours: 0, mins: 0, secs: 0, visible: true,
-    bg: '#204280', fg: '#ffffff', btnBg: '#e63946', btnFg: '#ffffff', expanded: true
+    bg: '#204280', fg: '#ffffff', btnBg: '#e63946', btnFg: '#ffffff', padLeft: 24, padRight: 24, expanded: true
   });
   renderBannerBlocks();
   setTimeout(function() {
@@ -1589,6 +1591,8 @@ function saveBannerState() {
     b.fg    = (document.getElementById('bn-fg-'     + b.id) || {}).value || '#ffffff';
     b.btnBg = (document.getElementById('bn-btn-bg-' + b.id) || {}).value || '#e63946';
     b.btnFg = (document.getElementById('bn-btn-fg-' + b.id) || {}).value || '#ffffff';
+    b.padLeft = cmsClampInt((document.getElementById('bn-pad-left-' + b.id) || {}).value, 24, 0, 200);
+    b.padRight = cmsClampInt((document.getElementById('bn-pad-right-' + b.id) || {}).value, 24, 0, 200);
   });
 }
 
@@ -1636,6 +1640,11 @@ function buildBannerBlockHtml(b) {
     html += '<div class="field"><label>Text colour</label><input type="color" id="bn-fg-' + id + '" value="' + (b.fg || '#ffffff') + '" style="height:36px;padding:2px 4px;cursor:pointer;"></div>';
     html += '<div class="field"><label>Button background</label><input type="color" id="bn-btn-bg-' + id + '" value="' + (b.btnBg || '#e63946') + '" style="height:36px;padding:2px 4px;cursor:pointer;"></div>';
     html += '<div class="field"><label>Button text</label><input type="color" id="bn-btn-fg-' + id + '" value="' + (b.btnFg || '#ffffff') + '" style="height:36px;padding:2px 4px;cursor:pointer;"></div>';
+    html += '</div>';
+    html += '<div class="section-label" style="margin-top:12px;">Banner spacing</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    html += '<div class="field"><label>Padding left (px)</label><input type="number" id="bn-pad-left-' + id + '" min="0" max="200" value="' + cmsClampInt(b.padLeft, 24, 0, 200) + '"></div>';
+    html += '<div class="field"><label>Padding right (px)</label><input type="number" id="bn-pad-right-' + id + '" min="0" max="200" value="' + cmsClampInt(b.padRight, 24, 0, 200) + '"></div>';
     html += '</div>';
     html += '<div style="display:flex;gap:8px;margin-top:14px;align-items:center;">';
     html += '<button class="btn-gen" style="flex:1;padding:10px;" onclick="saveBannerPreview(\'' + id + '\')">&#x25B6; Save (Preview)</button>';
@@ -1693,6 +1702,8 @@ function buildBannerPreviewHtml(b, deadline) {
   var fg    = b.fg    || '#ffffff';
   var btnBg = b.btnBg || '#e63946';
   var btnFg = b.btnFg || '#ffffff';
+  var padLeft = cmsClampInt(b.padLeft, 24, 0, 200);
+  var padRight = cmsClampInt(b.padRight, 24, 0, 200);
   var r = Math.max(0, deadline - Date.now());
   function pad(n) { return String(n).padStart(2,'0'); }
   var d = Math.floor(r / 86400000);
@@ -1703,7 +1714,7 @@ function buildBannerPreviewHtml(b, deadline) {
   var ns = 'font-size:20px;font-weight:700;line-height:1;font-family:\'Poppins\',sans-serif;color:' + fg + ';';
   var ls = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;opacity:0.75;font-family:\'Poppins\',sans-serif;color:' + fg + ';';
   var ss = 'font-size:24px;font-weight:700;line-height:1;padding:0 4px;margin-top:-4px;color:' + fg + ';opacity:0.6;';
-  var html = '<div style="background:' + bg + ';padding:10px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;">';
+  var html = '<div style="background:' + bg + ';padding:10px ' + padRight + 'px 10px ' + padLeft + 'px;display:flex;align-items:center;justify-content:space-between;gap:16px;">';
   html += '<div style="flex:1;min-width:0;">';
   if (b.title) html += '<div style="font-family:\'Poppins\',sans-serif;font-size:15px;font-weight:600;color:' + fg + ';line-height:1.3;">' + bnEsc(b.title) + '</div>';
   if (b.sub)   html += '<div style="font-family:\'Poppins\',sans-serif;font-size:12px;color:' + fg + ';opacity:0.8;margin-top:3px;">' + bnEsc(b.sub) + '</div>';
@@ -1801,8 +1812,10 @@ function buildBannerInjectCode(b, apiUrl) {
   lines.push('      document.body.insertBefore(bEl,document.body.firstChild);}');
   lines.push('    bEl.style.background=b.bg||"#204280";');
   lines.push('    var fg=b.fg||"#fff";var btnBg=b.btnBg||"#e63946";var btnFg=b.btnFg||"#fff";');
+  lines.push('    var padLeft=parseInt(b.padLeft,10);if(isNaN(padLeft))padLeft=24;padLeft=Math.max(0,Math.min(200,padLeft));');
+  lines.push('    var padRight=parseInt(b.padRight,10);if(isNaN(padRight))padRight=24;padRight=Math.max(0,Math.min(200,padRight));');
   lines.push('    bEl.innerHTML=');
-  lines.push('      \'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 24px;gap:16px;">\'');
+  lines.push('      \'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px \'+padRight+\'px 10px \'+padLeft+\'px;gap:16px;">\'');
   lines.push('      +\'<div style="flex:1;min-width:0;">\'');
   lines.push('      +(b.title?\'<div style="font-family:Poppins,sans-serif;font-size:15px;font-weight:600;color:\'+fg+\';line-height:1.3;">\'+b.title+"<\\/div>":"")');
   lines.push('      +(b.sub?\'<div style="font-family:Poppins,sans-serif;font-size:12px;color:\'+fg+\';opacity:0.8;margin-top:3px;">\'+b.sub+"<\\/div>":"")');
@@ -5751,6 +5764,8 @@ function featureCardsDefaultSection() {
   return {
     id: id,
     name: 'Feature Cards Section ' + featureCardsStore.counter,
+    padLeft: 0,
+    padRight: 0,
     eyebrow: 'FEATURED COURSES',
     title: 'Start learning today',
     desc: cmsNormalizeParagraphData('Structured courses built for real outcomes. Pick a track that matches your goals and get started in minutes.', CMS_PARAGRAPH_DEFAULTS.featureSection),
@@ -5769,6 +5784,8 @@ function featureCardsCurrentSection() {
 function featureCardsReadFormData() {
   return {
     name: (document.getElementById('fc-name') || {}).value || '',
+    padLeft: cmsClampInt((document.getElementById('fc-pad-left') || {}).value, 0, 0, 200),
+    padRight: cmsClampInt((document.getElementById('fc-pad-right') || {}).value, 0, 0, 200),
     eyebrow: (document.getElementById('fc-eyebrow') || {}).value || '',
     title: (document.getElementById('fc-title') || {}).value || '',
     desc: cmsReadParagraphField('fc-desc', CMS_PARAGRAPH_DEFAULTS.featureSection),
@@ -5787,6 +5804,8 @@ function featureCardsReadFormData() {
 
 function featureCardsFillForm(sec) {
   document.getElementById('fc-name').value = sec.name || '';
+  document.getElementById('fc-pad-left').value = cmsClampInt(sec.padLeft, 0, 0, 200);
+  document.getElementById('fc-pad-right').value = cmsClampInt(sec.padRight, 0, 0, 200);
   document.getElementById('fc-eyebrow').value = sec.eyebrow || '';
   document.getElementById('fc-title').value = sec.title || '';
   cmsSetParagraphField('fc-desc', sec.desc, CMS_PARAGRAPH_DEFAULTS.featureSection);
@@ -5799,6 +5818,8 @@ function featureCardsSyncCurrent() {
   if (!sec) return null;
   var data = featureCardsReadFormData();
   sec.name = data.name;
+  sec.padLeft = data.padLeft;
+  sec.padRight = data.padRight;
   sec.eyebrow = data.eyebrow;
   sec.title = data.title;
   sec.desc = data.desc;
@@ -5809,6 +5830,8 @@ function featureCardsSyncCurrent() {
 function buildFeatureCardsHtml(data) {
   var uid = 'fc' + Date.now().toString(36);
   var desc = cmsNormalizeParagraphData(data.desc, CMS_PARAGRAPH_DEFAULTS.featureSection);
+  var padLeft = cmsClampInt(data.padLeft, 0, 0, 200);
+  var padRight = cmsClampInt(data.padRight, 0, 0, 200);
   var cardsHtml = (data.cards || []).map(function(card) {
     return '<div class="' + uid + '-card">'
       + '<div class="' + uid + '-top" style="background:' + xA(card.color || '#204280') + '">'
@@ -5823,7 +5846,7 @@ function buildFeatureCardsHtml(data) {
   }).join('\n');
 
   var css = '<style>'
-    + '.' + uid + '{font-family:\'Poppins\',sans-serif;}'
+    + '.' + uid + '{font-family:\'Poppins\',sans-serif;padding:0 ' + padRight + 'px 0 ' + padLeft + 'px;box-sizing:border-box;}'
     + '.' + uid + '-ey{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#204280;margin-bottom:12px;}'
     + '.' + uid + '-stitle{font-size:32px;font-weight:700;color:#1a1a1a;margin:0 0 12px;line-height:1.2;}'
     + '.' + uid + '-desc{margin:0 0 32px;line-height:1.7;}'
@@ -5952,6 +5975,8 @@ function featureCardsOnOpen() {
         return {
           id: sec.id || ('fcs' + (++featureCardsStore.counter)),
           name: sec.name || '',
+          padLeft: cmsClampInt(sec.padLeft, 0, 0, 200),
+          padRight: cmsClampInt(sec.padRight, 0, 0, 200),
           eyebrow: sec.eyebrow || 'FEATURED COURSES',
           title: sec.title || 'Start learning today',
           desc: cmsNormalizeParagraphData(sec.desc, CMS_PARAGRAPH_DEFAULTS.featureSection),
@@ -6035,6 +6060,8 @@ function stepsSectionDefaultSection() {
     title: 'Four steps to results',
     desc: cmsNormalizeParagraphData('No fluff. A clear path from sign-up to transformation.', CMS_PARAGRAPH_DEFAULTS.stepsSection),
     bg: '#f7f6f1',
+    padLeft: 32,
+    padRight: 32,
     cols: 4,
     cards: [
       { title: 'Choose a course', desc: cmsNormalizeParagraphData('Browse by topic, or coach and find the right fit.', CMS_PARAGRAPH_DEFAULTS.stepsCard) },
@@ -6056,6 +6083,8 @@ function stepsSectionReadFormData() {
     title: (document.getElementById('ss-title') || {}).value || '',
     desc: cmsReadParagraphField('ss-desc', CMS_PARAGRAPH_DEFAULTS.stepsSection),
     bg: (document.getElementById('ss-bg-hex') || {}).value || '#f7f6f1',
+    padLeft: cmsClampInt((document.getElementById('ss-pad-left') || {}).value, 32, 0, 200),
+    padRight: cmsClampInt((document.getElementById('ss-pad-right') || {}).value, 32, 0, 200),
     cols: Math.max(1, Math.min(6, parseInt((document.getElementById('ss-cols') || {}).value, 10) || 4)),
     cards: Array.prototype.slice.call(document.querySelectorAll('#ss-cards .block-item')).map(function(item) {
       return {
@@ -6073,6 +6102,8 @@ function stepsSectionFillForm(sec) {
   cmsSetParagraphField('ss-desc', sec.desc, CMS_PARAGRAPH_DEFAULTS.stepsSection);
   document.getElementById('ss-bg-cp').value = sec.bg || '#f7f6f1';
   document.getElementById('ss-bg-hex').value = sec.bg || '#f7f6f1';
+  document.getElementById('ss-pad-left').value = cmsClampInt(sec.padLeft, 32, 0, 200);
+  document.getElementById('ss-pad-right').value = cmsClampInt(sec.padRight, 32, 0, 200);
   document.getElementById('ss-cols').value = sec.cols || 4;
   document.getElementById('ss-cols-val').textContent = String(sec.cols || 4);
   document.getElementById('ss-cards').innerHTML = '';
@@ -6088,6 +6119,8 @@ function stepsSectionSyncCurrent() {
   sec.title = data.title;
   sec.desc = data.desc;
   sec.bg = /^#[0-9a-fA-F]{6}$/.test(data.bg) ? data.bg : '#f7f6f1';
+  sec.padLeft = data.padLeft;
+  sec.padRight = data.padRight;
   sec.cols = data.cols;
   sec.cards = data.cards;
   return sec;
@@ -6097,6 +6130,8 @@ function buildStepsSectionHtml(data) {
   var uid = 'ss' + Date.now().toString(36);
   var cols = Math.max(1, Math.min(6, parseInt(data.cols, 10) || 4));
   var tabletCols = Math.min(cols, 2);
+  var padLeft = cmsClampInt(data.padLeft, 32, 0, 200);
+  var padRight = cmsClampInt(data.padRight, 32, 0, 200);
   var desc = cmsNormalizeParagraphData(data.desc, CMS_PARAGRAPH_DEFAULTS.stepsSection);
   var cardsHtml = (data.cards || []).map(function(card, i) {
     var cardDesc = cmsNormalizeParagraphData(card.desc, CMS_PARAGRAPH_DEFAULTS.stepsCard);
@@ -6108,7 +6143,7 @@ function buildStepsSectionHtml(data) {
   }).join('\n');
 
   var css = '<style>'
-    + '.' + uid + '{font-family:\'Poppins\',sans-serif;background-color:' + xA(data.bg || '#f7f6f1') + ';padding:48px 32px;box-sizing:border-box;}'
+    + '.' + uid + '{font-family:\'Poppins\',sans-serif;background-color:' + xA(data.bg || '#f7f6f1') + ';padding:48px ' + padRight + 'px 48px ' + padLeft + 'px;box-sizing:border-box;}'
     + '.' + uid + '-inner{max-width:1100px;margin:0 auto;}'
     + '.' + uid + '-ey{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#204280;margin:0 0 10px;}'
     + '.' + uid + '-title{font-size:26px;font-weight:600;color:#1a1a1a;margin:0 0 8px;line-height:1.25;}'
@@ -6119,7 +6154,7 @@ function buildStepsSectionHtml(data) {
     + '.' + uid + '-ctitle{font-size:14px;font-weight:600;color:#202124;margin:0 0 6px;line-height:1.35;}'
     + '.' + uid + '-cdesc{margin:0;line-height:1.55;}'
     + '@media(max-width:900px){.' + uid + '-grid{grid-template-columns:repeat(' + tabletCols + ',minmax(0,1fr));}}'
-    + '@media(max-width:640px){.' + uid + '{padding:36px 20px;}.' + uid + '-title{font-size:24px;}.' + uid + '-grid{grid-template-columns:1fr;}}'
+    + '@media(max-width:640px){.' + uid + '{padding:36px ' + padRight + 'px 36px ' + padLeft + 'px;}.' + uid + '-title{font-size:24px;}.' + uid + '-grid{grid-template-columns:1fr;}}'
     + '</style>';
 
   var body = '<section class="' + uid + '">'
@@ -6241,6 +6276,8 @@ function stepsSectionOnOpen() {
           title: sec.title || 'Four steps to results',
           desc: cmsNormalizeParagraphData(sec.desc, CMS_PARAGRAPH_DEFAULTS.stepsSection),
           bg: sec.bg || '#f7f6f1',
+          padLeft: cmsClampInt(sec.padLeft, 32, 0, 200),
+          padRight: cmsClampInt(sec.padRight, 32, 0, 200),
           cols: Math.max(1, Math.min(6, parseInt(sec.cols, 10) || 4)),
           cards: (sec.cards || []).map(function(card) {
             return { title: card.title || '', desc: cmsNormalizeParagraphData(card.desc, CMS_PARAGRAPH_DEFAULTS.stepsCard) };
@@ -6624,6 +6661,8 @@ function heroDefaultSection() {
     maxW: '560px',
     padTop: 48,
     padBot: 48,
+    padLeft: 0,
+    padRight: 0,
     h1Size: 44,
     eyebrow: 'VERTEX LEARNING SOLUTIONS',
     h1: 'Expert-led tutoring & coaching',
@@ -6655,9 +6694,11 @@ function heroReadFormData() {
     name: (document.getElementById('hero-name') || {}).value || '',
     bg: /^#[0-9a-fA-F]{6}$/.test(bg) ? bg : '#ffffff',
     maxW: (document.getElementById('hero-max-width') || {}).value || '560px',
-    padTop: parseInt((document.getElementById('hero-pad-top') || {}).value, 10) || 48,
-    padBot: parseInt((document.getElementById('hero-pad-bot') || {}).value, 10) || 48,
-    h1Size: parseInt((document.getElementById('hero-h1-size') || {}).value, 10) || 44,
+    padTop: cmsClampInt((document.getElementById('hero-pad-top') || {}).value, 48, 0, 200),
+    padBot: cmsClampInt((document.getElementById('hero-pad-bot') || {}).value, 48, 0, 200),
+    padLeft: cmsClampInt((document.getElementById('hero-pad-left') || {}).value, 0, 0, 200),
+    padRight: cmsClampInt((document.getElementById('hero-pad-right') || {}).value, 0, 0, 200),
+    h1Size: cmsClampInt((document.getElementById('hero-h1-size') || {}).value, 44, 24, 80),
     eyebrow: (document.getElementById('hero-eyebrow') || {}).value || '',
     h1: (document.getElementById('hero-h1') || {}).value || '',
     h1hl: (document.getElementById('hero-h1-hl') || {}).value || '',
@@ -6686,9 +6727,11 @@ function heroFillForm(sec) {
   document.getElementById('hero-bg-picker').value = sec.bg || '#ffffff';
   document.getElementById('hero-bg-text').value = sec.bg || '#ffffff';
   document.getElementById('hero-max-width').value = sec.maxW || '560px';
-  document.getElementById('hero-pad-top').value = sec.padTop || 48;
-  document.getElementById('hero-pad-bot').value = sec.padBot || 48;
-  document.getElementById('hero-h1-size').value = sec.h1Size || 44;
+  document.getElementById('hero-pad-top').value = cmsClampInt(sec.padTop, 48, 0, 200);
+  document.getElementById('hero-pad-bot').value = cmsClampInt(sec.padBot, 48, 0, 200);
+  document.getElementById('hero-pad-left').value = cmsClampInt(sec.padLeft, 0, 0, 200);
+  document.getElementById('hero-pad-right').value = cmsClampInt(sec.padRight, 0, 0, 200);
+  document.getElementById('hero-h1-size').value = cmsClampInt(sec.h1Size, 44, 24, 80);
   document.getElementById('hero-eyebrow').value = sec.eyebrow || '';
   document.getElementById('hero-h1').value = sec.h1 || '';
   document.getElementById('hero-h1-hl').value = sec.h1hl || '';
@@ -6715,6 +6758,8 @@ function heroSyncCurrent() {
   sec.maxW = data.maxW;
   sec.padTop = data.padTop;
   sec.padBot = data.padBot;
+  sec.padLeft = data.padLeft;
+  sec.padRight = data.padRight;
   sec.h1Size = data.h1Size;
   sec.eyebrow = data.eyebrow;
   sec.h1 = data.h1;
@@ -6735,6 +6780,11 @@ function heroSyncCurrent() {
 function buildHeroHtml(data) {
   var uid = 'h' + Date.now().toString(36);
   var desc = cmsNormalizeParagraphData(data.desc, CMS_PARAGRAPH_DEFAULTS.hero);
+  var padTop = cmsClampInt(data.padTop, 48, 0, 200);
+  var padBot = cmsClampInt(data.padBot, 48, 0, 200);
+  var padLeft = cmsClampInt(data.padLeft, 0, 0, 200);
+  var padRight = cmsClampInt(data.padRight, 0, 0, 200);
+  var h1Size = cmsClampInt(data.h1Size, 44, 24, 80);
   var tagsHtml = (data.tags || []).map(function(tag) {
     return '<span class="' + uid + '-tag">' + xH(tag) + '</span>';
   }).join('');
@@ -6743,12 +6793,12 @@ function buildHeroHtml(data) {
   }).join('');
   var b1ScrollAttr = data.b1s ? ' onclick="return ' + uid + 'Scroll(' + JSON.stringify(String(data.b1s)).replace(/"/g, '&quot;') + ')"' : '';
   var b2ScrollAttr = data.b2s ? ' onclick="return ' + uid + 'Scroll(' + JSON.stringify(String(data.b2s)).replace(/"/g, '&quot;') + ')"' : '';
-  var h2Size = Math.round((parseInt(data.h1Size, 10) || 44) * 0.5);
+  var h2Size = Math.round(h1Size * 0.5);
 
   var css = '<style>'
-    + '.' + uid + '{font-family:\'Poppins\',sans-serif;max-width:' + xA(data.maxW || '560px') + ';padding:' + (parseInt(data.padTop, 10) || 48) + 'px 0 ' + (parseInt(data.padBot, 10) || 48) + 'px;box-sizing:border-box;background-color:' + xA(data.bg || '#ffffff') + ';}'
+    + '.' + uid + '{font-family:\'Poppins\',sans-serif;max-width:' + xA(data.maxW || '560px') + ';padding:' + padTop + 'px ' + padRight + 'px ' + padBot + 'px ' + padLeft + 'px;box-sizing:border-box;background-color:' + xA(data.bg || '#ffffff') + ';}'
     + '.' + uid + '-ey{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#204280;margin-bottom:14px;}'
-    + '.' + uid + '-h1{font-size:' + (parseInt(data.h1Size, 10) || 44) + 'px;font-weight:700;color:#1a1a1a;line-height:1.15;margin:0 0 6px;}'
+    + '.' + uid + '-h1{font-size:' + h1Size + 'px;font-weight:700;color:#1a1a1a;line-height:1.15;margin:0 0 6px;}'
     + '.' + uid + '-h1 em{font-style:normal;color:#204280;}'
     + '.' + uid + '-h2{font-size:' + h2Size + 'px;font-weight:600;color:#374151;margin:10px 0 0;line-height:1.35;}'
     + '.' + uid + '-desc{line-height:1.75;margin:20px 0 24px;}'
@@ -6883,9 +6933,11 @@ function heroOnOpen() {
           name: sec.name || '',
           bg: sec.bg || '#ffffff',
           maxW: sec.maxW || '560px',
-          padTop: parseInt(sec.padTop, 10) || 48,
-          padBot: parseInt(sec.padBot, 10) || 48,
-          h1Size: parseInt(sec.h1Size, 10) || 44,
+          padTop: cmsClampInt(sec.padTop, 48, 0, 200),
+          padBot: cmsClampInt(sec.padBot, 48, 0, 200),
+          padLeft: cmsClampInt(sec.padLeft, 0, 0, 200),
+          padRight: cmsClampInt(sec.padRight, 0, 0, 200),
+          h1Size: cmsClampInt(sec.h1Size, 44, 24, 80),
           eyebrow: sec.eyebrow || 'VERTEX LEARNING SOLUTIONS',
           h1: sec.h1 || 'Expert-led tutoring & coaching',
           h1hl: sec.h1hl || '— built for results.',
@@ -6977,6 +7029,8 @@ function promotionDefaultSection() {
     name: 'Promotion Section ' + promotionStore.counter,
     bg: '#deebf7',
     btnBg: '#152b57',
+    padLeft: 24,
+    padRight: 24,
     title: 'Ready to take the next step?',
     titleColor: '#164b8a',
     titleSize: 22,
@@ -7001,14 +7055,16 @@ function promotionReadFormData() {
     name: (document.getElementById('promo-name') || {}).value || '',
     bg: promotionSafeHex((document.getElementById('promo-bg-text') || {}).value, '#deebf7'),
     btnBg: promotionSafeHex((document.getElementById('promo-btn-bg-text') || {}).value, '#152b57'),
+    padLeft: cmsClampInt((document.getElementById('promo-pad-left') || {}).value, 24, 0, 200),
+    padRight: cmsClampInt((document.getElementById('promo-pad-right') || {}).value, 24, 0, 200),
     title: (document.getElementById('promo-title') || {}).value || '',
     titleColor: promotionSafeHex((document.getElementById('promo-title-color-text') || {}).value, '#164b8a'),
-    titleSize: parseInt((document.getElementById('promo-title-size') || {}).value, 10) || 22,
+    titleSize: cmsClampInt((document.getElementById('promo-title-size') || {}).value, 22, 12, 64),
     subtitle: cmsReadParagraphField('promo-subtitle', CMS_PARAGRAPH_DEFAULTS.promoSubtitle),
     ctaText: (document.getElementById('promo-cta-text') || {}).value || '',
     ctaUrl: (document.getElementById('promo-cta-url') || {}).value || '',
     ctaColor: promotionSafeHex((document.getElementById('promo-cta-color-text') || {}).value, '#ffffff'),
-    ctaSize: parseInt((document.getElementById('promo-cta-size') || {}).value, 10) || 14
+    ctaSize: cmsClampInt((document.getElementById('promo-cta-size') || {}).value, 14, 10, 40)
   };
 }
 
@@ -7018,16 +7074,18 @@ function promotionFillForm(sec) {
   document.getElementById('promo-bg-text').value = sec.bg || '#deebf7';
   document.getElementById('promo-btn-bg-picker').value = sec.btnBg || '#152b57';
   document.getElementById('promo-btn-bg-text').value = sec.btnBg || '#152b57';
+  document.getElementById('promo-pad-left').value = cmsClampInt(sec.padLeft, 24, 0, 200);
+  document.getElementById('promo-pad-right').value = cmsClampInt(sec.padRight, 24, 0, 200);
   document.getElementById('promo-title').value = sec.title || '';
   document.getElementById('promo-title-color-picker').value = sec.titleColor || '#164b8a';
   document.getElementById('promo-title-color-text').value = sec.titleColor || '#164b8a';
-  document.getElementById('promo-title-size').value = sec.titleSize || 22;
+  document.getElementById('promo-title-size').value = cmsClampInt(sec.titleSize, 22, 12, 64);
   cmsSetParagraphField('promo-subtitle', sec.subtitle, CMS_PARAGRAPH_DEFAULTS.promoSubtitle);
   document.getElementById('promo-cta-text').value = sec.ctaText || '';
   document.getElementById('promo-cta-url').value = sec.ctaUrl || '';
   document.getElementById('promo-cta-color-picker').value = sec.ctaColor || '#ffffff';
   document.getElementById('promo-cta-color-text').value = sec.ctaColor || '#ffffff';
-  document.getElementById('promo-cta-size').value = sec.ctaSize || 14;
+  document.getElementById('promo-cta-size').value = cmsClampInt(sec.ctaSize, 14, 10, 40);
 }
 
 function promotionSyncCurrent() {
@@ -7037,6 +7095,8 @@ function promotionSyncCurrent() {
   sec.name = data.name;
   sec.bg = data.bg;
   sec.btnBg = data.btnBg;
+  sec.padLeft = data.padLeft;
+  sec.padRight = data.padRight;
   sec.title = data.title;
   sec.titleColor = data.titleColor;
   sec.titleSize = data.titleSize;
@@ -7051,13 +7111,17 @@ function promotionSyncCurrent() {
 function buildPromotionSectionHtml(data) {
   var uid = 'promo' + Date.now().toString(36);
   var subtitle = cmsNormalizeParagraphData(data.subtitle, CMS_PARAGRAPH_DEFAULTS.promoSubtitle);
+  var padLeft = cmsClampInt(data.padLeft, 24, 0, 200);
+  var padRight = cmsClampInt(data.padRight, 24, 0, 200);
+  var titleSize = cmsClampInt(data.titleSize, 22, 12, 64);
+  var ctaSize = cmsClampInt(data.ctaSize, 14, 10, 40);
   var css = '<style>'
-    + '.' + uid + '{font-family:\'Poppins\',sans-serif;background:' + xA(data.bg || '#deebf7') + ';padding:28px 24px;box-sizing:border-box;}'
+    + '.' + uid + '{font-family:\'Poppins\',sans-serif;background:' + xA(data.bg || '#deebf7') + ';padding:28px ' + padRight + 'px 28px ' + padLeft + 'px;box-sizing:border-box;}'
     + '.' + uid + '-inner{max-width:1120px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:24px;}'
     + '.' + uid + '-copy{flex:1;min-width:0;}'
-    + '.' + uid + '-title{margin:0 0 6px;font-size:' + (parseInt(data.titleSize, 10) || 22) + 'px;font-weight:600;line-height:1.25;color:' + xA(data.titleColor || '#164b8a') + ';}'
+    + '.' + uid + '-title{margin:0 0 6px;font-size:' + titleSize + 'px;font-weight:600;line-height:1.25;color:' + xA(data.titleColor || '#164b8a') + ';}'
     + '.' + uid + '-subtitle{margin:0;line-height:1.5;}'
-    + '.' + uid + '-cta{display:inline-flex;align-items:center;justify-content:center;min-width:146px;padding:14px 28px;border-radius:8px;background:' + xA(data.btnBg || '#152b57') + ';color:' + xA(data.ctaColor || '#ffffff') + ' !important;font-size:' + (parseInt(data.ctaSize, 10) || 14) + 'px;font-weight:600;text-decoration:none !important;white-space:nowrap;flex-shrink:0;}'
+    + '.' + uid + '-cta{display:inline-flex;align-items:center;justify-content:center;min-width:146px;padding:14px 28px;border-radius:8px;background:' + xA(data.btnBg || '#152b57') + ';color:' + xA(data.ctaColor || '#ffffff') + ' !important;font-size:' + ctaSize + 'px;font-weight:600;text-decoration:none !important;white-space:nowrap;flex-shrink:0;}'
     + '.' + uid + '-cta:hover{opacity:.92;}'
     + '@media(max-width:720px){.' + uid + '-inner{flex-direction:column;align-items:flex-start;}.' + uid + '-cta{width:100%;}}'
     + '</style>';
@@ -7184,14 +7248,16 @@ function promotionOnOpen() {
           name: sec.name || '',
           bg: sec.bg || '#deebf7',
           btnBg: sec.btnBg || '#152b57',
+          padLeft: cmsClampInt(sec.padLeft, 24, 0, 200),
+          padRight: cmsClampInt(sec.padRight, 24, 0, 200),
           title: sec.title || 'Ready to take the next step?',
           titleColor: sec.titleColor || '#164b8a',
-          titleSize: parseInt(sec.titleSize, 10) || 22,
+          titleSize: cmsClampInt(sec.titleSize, 22, 12, 64),
           subtitle: cmsNormalizeParagraphData(sec.subtitle, subtitleDefaults),
           ctaText: sec.ctaText || 'Start for free',
           ctaUrl: sec.ctaUrl || '#',
           ctaColor: sec.ctaColor || '#ffffff',
-          ctaSize: parseInt(sec.ctaSize, 10) || 14
+          ctaSize: cmsClampInt(sec.ctaSize, 14, 10, 40)
         };
       });
       promotionStore.loaded = true;

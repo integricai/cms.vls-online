@@ -34,6 +34,16 @@
         <input type="text" id="ss-bg-hex" value="#f7f6f1" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value))document.getElementById('ss-bg-cp').value=this.value">
       </div>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Padding left (px)</label>
+        <input type="number" id="ss-pad-left" value="32" min="0" max="200">
+      </div>
+      <div class="field">
+        <label>Padding right (px)</label>
+        <input type="number" id="ss-pad-right" value="32" min="0" max="200">
+      </div>
+    </div>
     <div class="field">
       <label>Cards per row <span class="hint">(desktop)</span></label>
       <div style="display:flex;align-items:center;gap:10px">
