@@ -735,7 +735,12 @@ function generateIntro() {
   lines.push('        ' + ticksHtml);
   lines.push('        </div>');
   lines.push('      </div>');
-  lines.push('      <div style="margin-top:8px;text-align:left;">');
+
+  paras.forEach(function(p) {
+    lines.push('      <p style="font-family:\'Poppins\',sans-serif;font-size:' + p.size + 'px;font-weight:' + (p.bold ? '700' : '400') + ';color:#1a1a1a;line-height:1.7;margin:16px 0 0;text-align:left;">' + xH(p.text) + '</p>');
+  });
+
+  lines.push('      <div style="margin-top:' + (paras.length ? '20' : '8') + 'px;text-align:left;">');
   lines.push('        <a href="' + xA(ctaUrl) + '" class="btn btn-primary zen-custom-elm" style="display:inline-block;padding:15px 40px;font-size:16px;background-color:rgb(52,152,219);border:1px solid transparent;font-family:\'Poppins\',sans-serif;font-weight:500;border-radius:0;color:#fff;text-decoration:none;">' + xH(ctaTxt) + '<span class="fas fa-arrow-circle-right" style="margin-left:10px;"></span></a>');
   lines.push('      </div>');
   lines.push('    </div>');
@@ -744,12 +749,6 @@ function generateIntro() {
   lines.push('');
   lines.push('  </div>');
   lines.push('');
-
-  paras.forEach(function(p) {
-    lines.push('  <p style="font-family:\'Poppins\',sans-serif;font-size:' + p.size + 'px;font-weight:' + (p.bold ? '700' : '400') + ';color:#1a1a1a;line-height:1.7;margin:16px 0 0;text-align:left;">' + xH(p.text) + '</p>');
-    lines.push('');
-  });
-
   lines.push('</div>');
 
   var html = lines.join('\n');
