@@ -640,6 +640,34 @@ function loadIntroTemplate() {
   introData[type].items.forEach(function(item) { addFeature(item); });
 }
 
+function addIntroParagraph(data) {
+  var list = document.getElementById('intro-paragraphs');
+  var id = 'ip' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var preview = (data && data.text) ? (data.text.slice(0, 42) + (data.text.length > 42 ? '…' : '')) : 'New paragraph';
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">' +
+      '<span class="block-header-label">' + xH(preview) + '</span>' +
+      '<span class="block-type-badge">Paragraph</span>' +
+      '<button class="btn-sm danger" onclick="event.stopPropagation();document.getElementById(\'' + id + '\').remove()" style="margin-left:auto">Remove</button>' +
+    '</div>' +
+    '<div class="block-body">' +
+      '<div class="field"><label>Text</label>' +
+        '<textarea class="ip-text" rows="3" oninput="this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=this.value.slice(0,42)||(\'New paragraph\')">' + xA((data && data.text) || '') + '</textarea>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">' +
+        '<div class="field"><label>Font size (px)</label><input type="number" class="ip-size" value="' + xA(String((data && data.size) || 16)) + '" min="10" max="48" style="width:100%"></div>' +
+        '<div class="field" style="flex-direction:row;align-items:center;gap:8px;padding-bottom:9px">' +
+          '<input type="checkbox" class="ip-bold" id="' + id + '-bold"' + ((data && data.bold) ? ' checked' : '') + ' style="width:16px;height:16px;cursor:pointer;accent-color:var(--purple);flex-shrink:0">' +
+          '<label for="' + id + '-bold" style="font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;margin:0;color:#262a32">Bold</label>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  list.appendChild(div);
+}
+
 function addFeature(val) {
   var container = document.getElementById('intro-features');
   var id = 'f' + Date.now() + Math.random().toString(36).slice(2);
@@ -661,6 +689,14 @@ function generateIntro() {
   var features = [];
   document.querySelectorAll('#intro-features .feature-item input').forEach(function(inp) {
     if (inp.value.trim()) features.push(inp.value.trim());
+  });
+
+  var paras = [];
+  document.querySelectorAll('#intro-paragraphs .block-item').forEach(function(item) {
+    var text = item.querySelector('.ip-text').value.trim();
+    var size = parseInt(item.querySelector('.ip-size').value) || 16;
+    var bold = item.querySelector('.ip-bold').checked;
+    if (text) paras.push({text: text, size: size, bold: bold});
   });
 
   var ticksHtml = features.map(function(f) {
@@ -708,6 +744,12 @@ function generateIntro() {
   lines.push('');
   lines.push('  </div>');
   lines.push('');
+
+  paras.forEach(function(p) {
+    lines.push('  <p style="font-family:\'Poppins\',sans-serif;font-size:' + p.size + 'px;font-weight:' + (p.bold ? '700' : '400') + ';color:#1a1a1a;line-height:1.7;margin:16px 0 0;text-align:left;">' + xH(p.text) + '</p>');
+    lines.push('');
+  });
+
   lines.push('</div>');
 
   var html = lines.join('\n');
