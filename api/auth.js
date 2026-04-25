@@ -84,6 +84,18 @@ function parseDelimitedUsers(raw, users) {
   return count;
 }
 
+function isEmptyUsersContainer(value) {
+  if (value == null) return true;
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value !== 'object') return false;
+  if ((value.users && typeof value.users === 'object') || (value.admins && typeof value.admins === 'object')) {
+    return isEmptyUsersContainer(value.users || value.admins);
+  }
+  const singleUserKey = value.email ?? value.username ?? value.user ?? value.login ?? value.name;
+  if (singleUserKey != null) return false;
+  return Object.keys(value).length === 0;
+}
+
 function parseUsers(envVar) {
   const raw = String(process.env[envVar] || '').trim();
   if (!raw) return { users: {}, error: null };
@@ -93,6 +105,7 @@ function parseUsers(envVar) {
     const parsed = JSON.parse(raw);
     const count = normalizeUsersShape(parsed, users);
     if (count > 0) return { users, error: null };
+    if (isEmptyUsersContainer(parsed)) return { users: {}, error: null };
     return {
       users: null,
       error: `${envVar} env var is valid JSON but does not contain any readable user records`
@@ -113,6 +126,15 @@ function matchesUser(users, username, password, hash) {
   if (record.hash && record.hash === hash) return true;
   if (record.plain != null && record.plain === String(password)) return true;
   return false;
+}
+
+function authDebugEnabled() {
+  return String(process.env.AUTH_DEBUG || '').trim() === '1';
+}
+
+function logAuthAttempt(info) {
+  if (!authDebugEnabled()) return;
+  console.warn('[auth]', JSON.stringify(info));
 }
 
 export default async function handler(req, res) {
@@ -141,10 +163,20 @@ export default async function handler(req, res) {
   const regular = parseUsers('AUTH_USERS');
   if (regular.error) return res.status(500).json({ error: `Server misconfigured — ${regular.error}` });
 
-  if (matchesUser(admin.users, key, password, hash)) {
+  const adminMatch = matchesUser(admin.users, key, password, hash);
+  const userMatch = !adminMatch && matchesUser(regular.users, key, password, hash);
+  logAuthAttempt({
+    email: key,
+    adminUsers: Object.keys(admin.users || {}).length,
+    regularUsers: Object.keys(regular.users || {}).length,
+    adminMatch: adminMatch,
+    userMatch: userMatch
+  });
+
+  if (adminMatch) {
     return res.status(200).json({ ok: true, role: 'admin' });
   }
-  if (matchesUser(regular.users, key, password, hash)) {
+  if (userMatch) {
     return res.status(200).json({ ok: true, role: 'user' });
   }
 
