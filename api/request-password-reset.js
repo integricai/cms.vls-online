@@ -1,6 +1,10 @@
 import { randomBytes } from 'crypto';
 import { put } from '@vercel/blob';
 
+function normalizeEmail(value) {
+  return String(value == null ? '' : value).trim().toLowerCase();
+}
+
 function emailExistsInEnv(normalizedEmail, envVar) {
   const raw = String(process.env[envVar] || '').trim();
   if (!raw) return false;
@@ -34,7 +38,7 @@ function emailExistsInEnv(normalizedEmail, envVar) {
 }
 
 function findUserRole(email) {
-  const key = String(email || '').trim().toLowerCase();
+  const key = normalizeEmail(email);
   if (!key) return null;
   if (emailExistsInEnv(key, 'ADMIN_AUTH_USERS')) return 'admin';
   if (emailExistsInEnv(key, 'AUTH_USERS'))       return 'user';
@@ -87,11 +91,35 @@ export default async function handler(req, res) {
   try { body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body; }
   catch (_) { return res.status(400).json({ error: 'Invalid request' }); }
 
-  const email = String((body || {}).email || '').trim();
+  const email = normalizeEmail((body || {}).email || '');
   if (!email) return res.status(400).json({ error: 'Email address is required.' });
 
+  // Diagnostic logging — visible in Vercel function logs
+  const adminRaw = String(process.env.ADMIN_AUTH_USERS || '');
+  const userRaw  = String(process.env.AUTH_USERS || '');
+  console.warn('[reset] email:', email);
+  console.warn('[reset] ADMIN_AUTH_USERS set:', !!adminRaw, '| length:', adminRaw.length, '| starts:', adminRaw.slice(0, 40));
+  console.warn('[reset] AUTH_USERS set:', !!userRaw, '| length:', userRaw.length);
+  console.warn('[reset] adminExists:', emailExistsInEnv(email, 'ADMIN_AUTH_USERS'));
+  console.warn('[reset] userExists:',  emailExistsInEnv(email, 'AUTH_USERS'));
+
   const role = findUserRole(email);
+  console.warn('[reset] role:', role);
+
   if (!role) {
+    // If AUTH_DEBUG=1, include diagnostic detail in the response to help troubleshoot
+    if (String(process.env.AUTH_DEBUG || '') === '1') {
+      return res.status(404).json({
+        error: 'No account found with that email address.',
+        _debug: {
+          email,
+          adminAuthUsersSet: !!adminRaw,
+          adminAuthUsersLength: adminRaw.length,
+          adminAuthUsersStart: adminRaw.slice(0, 60),
+          adminExistsCheck: emailExistsInEnv(email, 'ADMIN_AUTH_USERS'),
+        }
+      });
+    }
     return res.status(404).json({ error: 'No account found with that email address.' });
   }
 
@@ -107,7 +135,7 @@ export default async function handler(req, res) {
 
   await put(
     `cms/reset-tokens/${token}.json`,
-    JSON.stringify({ email: normalizeKey(email), role, expires }),
+    JSON.stringify({ email, role, expires }),
     { access: 'private', addRandomSuffix: false }
   );
 
@@ -123,9 +151,9 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         from: { email: 'noreply@vls-online.com', name: 'VLS Online CMS' },
-        to:   [{ email: normalizeKey(email) }],
+        to:   [{ email }],
         subject: 'Reset your CMS password',
-        html: buildResetEmail(normalizeKey(email), resetUrl)
+        html: buildResetEmail(email, resetUrl)
       })
     });
     if (!msResp.ok) {
@@ -140,6 +168,6 @@ export default async function handler(req, res) {
 
   return res.status(200).json({
     ok: true,
-    message: `A password reset link has been sent to ${normalizeKey(email)}. It expires in 30 minutes.`
+    message: `A password reset link has been sent to ${email}. It expires in 30 minutes.`
   });
 }
