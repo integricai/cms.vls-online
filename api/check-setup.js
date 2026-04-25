@@ -4,10 +4,6 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(204).end();
 
-  if (String(process.env.AUTH_DEBUG || '').trim() !== '1') {
-    return res.status(403).json({ error: 'Set AUTH_DEBUG=1 to enable this endpoint.' });
-  }
-
   const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
 
   return res.status(200).json({
