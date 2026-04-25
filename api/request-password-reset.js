@@ -1,47 +1,43 @@
 import { randomBytes } from 'crypto';
 import { put } from '@vercel/blob';
 
-function normalizeKey(value) {
-  return String(value == null ? '' : value).trim().toLowerCase();
-}
-
-function parseKeysFromEnv(envVar) {
+function emailExistsInEnv(normalizedEmail, envVar) {
   const raw = String(process.env[envVar] || '').trim();
-  if (!raw) return {};
-  const keys = {};
+  if (!raw) return false;
+
+  // ── JSON format ──────────────────────────────────────────────
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      parsed.forEach(function(entry) {
-        if (!entry) return;
-        const email = entry.email ?? entry.username ?? entry.user ?? entry.login ?? entry.name;
-        if (email != null) keys[normalizeKey(String(email))] = true;
+
+    // Plain object: {"email@example.com": "password_or_hash", ...}
+    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return Object.keys(parsed).some(function(k) {
+        return String(k).trim().toLowerCase() === normalizedEmail;
       });
-    } else if (typeof parsed === 'object') {
-      const nested = parsed.users || parsed.admins;
-      const source = (nested && typeof nested === 'object') ? nested : parsed;
-      const singleKey = source.email ?? source.username ?? source.user ?? source.login ?? source.name;
-      if (singleKey != null) {
-        keys[normalizeKey(String(singleKey))] = true;
-      } else {
-        Object.keys(source).forEach(function(k) { keys[normalizeKey(k)] = true; });
-      }
     }
-  } catch (_) {
-    raw.split(/\r?\n|[;,]+/).forEach(function(part) {
-      const match = part.trim().match(/^([^:=]+)\s*[:=]/);
-      if (match) keys[normalizeKey(match[1])] = true;
-    });
-  }
-  return keys;
+
+    // Array of objects: [{"email":"...", "password":"..."}, ...]
+    if (Array.isArray(parsed)) {
+      return parsed.some(function(entry) {
+        if (!entry || typeof entry !== 'object') return false;
+        const candidate = entry.email || entry.username || entry.user || entry.login || entry.name;
+        return candidate && String(candidate).trim().toLowerCase() === normalizedEmail;
+      });
+    }
+  } catch (_) { /* not JSON — fall through to delimited */ }
+
+  // ── Delimited format: "email:password,email2:password2" ──────
+  return raw.split(/[\r\n;,]+/).some(function(part) {
+    const match = part.trim().match(/^([^:=]+)\s*[:=]/);
+    return match && String(match[1]).trim().toLowerCase() === normalizedEmail;
+  });
 }
 
 function findUserRole(email) {
-  const key = normalizeKey(email);
-  const adminKeys = parseKeysFromEnv('ADMIN_AUTH_USERS');
-  if (adminKeys[key]) return 'admin';
-  const userKeys = parseKeysFromEnv('AUTH_USERS');
-  if (userKeys[key]) return 'user';
+  const key = String(email || '').trim().toLowerCase();
+  if (!key) return null;
+  if (emailExistsInEnv(key, 'ADMIN_AUTH_USERS')) return 'admin';
+  if (emailExistsInEnv(key, 'AUTH_USERS'))       return 'user';
   return null;
 }
 
