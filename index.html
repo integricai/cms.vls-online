@@ -302,6 +302,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-feature-cards" onclick="switchScreen('feature-cards')">Feature Cards</div>
       <div class="nav-dd-item" id="nav-feature-cards-2" onclick="switchScreen('feature-cards-2')">Feature Card 2</div>
       <div class="nav-dd-item" id="nav-steps-section" onclick="switchScreen('steps-section')">Steps Section</div>
+      <div class="nav-dd-item" id="nav-dcs" onclick="switchScreen('dcs')">Double Column</div>
     </div>
   </div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
@@ -355,6 +356,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <button class="home-tile-link" onclick="switchScreen('feature-cards')">Feature Cards</button>
           <button class="home-tile-link" onclick="switchScreen('feature-cards-2')">Feature Card 2</button>
           <button class="home-tile-link" onclick="switchScreen('steps-section')">Steps Section</button>
+          <button class="home-tile-link" onclick="switchScreen('dcs')">Double Column</button>
           <button class="home-tile-link" onclick="switchScreen('form')">Form</button>
         </div>
       </div>
@@ -878,7 +880,16 @@ var CMS_PARAGRAPH_DEFAULTS = {
   promoCta:            { size: 14, color: '#ffffff', weight: '700', letterSpacing: 0 },
   fc2Title:            { size: 18, color: '#204280', weight: '500', letterSpacing: 0.06 },
   fc2Desc:             { size: 14, color: '#4a5568', weight: '400', letterSpacing: 0 },
-  fc2Cta:              { size: 12, color: '#204280', weight: '700', letterSpacing: 0.1 }
+  fc2Cta:              { size: 12, color: '#204280', weight: '700', letterSpacing: 0.1 },
+  dcsLeftLabel:        { size: 11, color: '#4a90d9', weight: '600', letterSpacing: 0.12 },
+  dcsLeftTitle:        { size: 36, color: '#ffffff', weight: '700', letterSpacing: 0    },
+  dcsLeftPara:         { size: 15, color: '#c8d4e8', weight: '400', letterSpacing: 0    },
+  dcsLeftBullet:       { size: 15, color: '#d0d8e8', weight: '400', letterSpacing: 0    },
+  dcsRightLabel:       { size: 11, color: '#204280', weight: '600', letterSpacing: 0.12 },
+  dcsStatValue:        { size: 28, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
+  dcsStatLabel:        { size: 13, color: '#6b7280', weight: '400', letterSpacing: 0    },
+  dcsQuoteText:        { size: 15, color: '#1a1a1a', weight: '400', letterSpacing: 0    },
+  dcsQuoteAttrib:      { size: 13, color: '#6b7280', weight: '400', letterSpacing: 0    }
 };
 var CMS_TEXT_DEFAULTS = CMS_PARAGRAPH_DEFAULTS;
 function cmsParagraphText(value) {
@@ -922,7 +933,7 @@ function doCopy(id, btn) {
 var _GLOBAL_SCREENS = ['header', 'footer', 'banner', 'promotion-section'];
 var _HOME_SCREENS   = ['hero', 'about-us'];
 var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
-var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards', 'feature-cards-2', 'steps-section'];
+var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards', 'feature-cards-2', 'steps-section', 'dcs'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
@@ -942,6 +953,7 @@ var _screenFiles = {
   programs: '/screens/programs.html',
   header:   '/screens/header.html',
   form:     '/screens/form.html',
+  dcs:      '/screens/double-column.html',
 };
 var _loadedScreens = {};
 
@@ -1004,6 +1016,7 @@ async function switchScreen(name) {
   if (name === 'intro' && !_loadedScreens._introInit) { _loadedScreens._introInit = true; introOnOpen(); introCmpInit(); cmpAttachDirty('intro'); }
   if (name === 'desc'  && !_loadedScreens._descInit)  { _loadedScreens._descInit  = true; descOnOpen();  descCmpInit();  cmpAttachDirty('desc');  }
   if (name === 'tabs'  && !_loadedScreens._tabsInit)  { _loadedScreens._tabsInit  = true; tabsOnOpen();  tabsCmpInit();  cmpAttachDirty('tabs');  }
+  if (name === 'dcs'   && !_loadedScreens._dcsInit)   { _loadedScreens._dcsInit   = true; dcsOnOpen();   dcsCmpInit();   cmpAttachDirty('dcs');   }
   if (name === 'events')  eventsOnOpen();
   if (name === 'faq')     faqOnOpen();
   if (name === 'team')    teamOnOpen();
@@ -1192,7 +1205,7 @@ function generateIntro() {
 
 var descBc = 0;
 var _dirtyScreens = {};
-var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] } };
+var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] } };
 
 function toggleBlockPicker() {
   var p = document.getElementById('block-type-picker');
@@ -6922,6 +6935,331 @@ function generateAboutUs() {
   document.getElementById('about-us-code').textContent = html;
   document.getElementById('about-us-preview-wrap').innerHTML = html;
   switchOut('about-us', 'preview');
+}
+
+// ── Double Column Section (DCS) ────────────────────────────────
+
+function dcsOnOpen() {
+  cmsInitTextField('dcs-left-label', { defaults: CMS_PARAGRAPH_DEFAULTS.dcsLeftLabel });
+  cmsInitTextField('dcs-left-title', { defaults: CMS_PARAGRAPH_DEFAULTS.dcsLeftTitle });
+  cmsInitTextField('dcs-right-label', { defaults: CMS_PARAGRAPH_DEFAULTS.dcsRightLabel });
+  cmsInitParagraphField('dcs-quote-text',   { defaults: CMS_PARAGRAPH_DEFAULTS.dcsQuoteText });
+  cmsInitTextField('dcs-quote-attrib', { defaults: CMS_PARAGRAPH_DEFAULTS.dcsQuoteAttrib });
+  // seed default content
+  dcsAddPara({ text: 'We pursue the success of our students, business partners, shareholders, and employees. We strive to offer high-quality service and follow the highest standards of professionalism in all areas we serve.' });
+  dcsAddPara({ text: 'Key to our strategy has always been to attract and retain people who share our passion — based on our core purpose and values.' });
+  dcsAddBullet({ text: 'Integrity &amp; honesty' });
+  dcsAddBullet({ text: 'Unending enthusiasm' });
+  dcsAddBullet({ text: 'Continuing spirit of inquiry' });
+  dcsAddStat({ value: { text: '2,400+' }, label: { text: 'Students worldwide' } });
+  dcsAddStat({ value: { text: '20+'    }, label: { text: 'Years expertise'    } });
+  dcsAddStat({ value: { text: '200+'   }, label: { text: 'Corporate clients'  } });
+  dcsAddStat({ value: { text: '98%'    }, label: { text: 'Satisfaction rate'  } });
+}
+
+// ── DCS component manager ────────────────────────────────────────
+
+async function dcsCmpInit() {
+  var comps = await cmpFetchAll('dcs');
+  _cmpState.dcs.components = comps;
+  cmpPopulateSelect('dcs', comps, null);
+}
+
+async function dcsCmpLoad(id) {
+  if (!id) { dcsCmpNew(); return; }
+  var comp = (_cmpState.dcs.components || []).filter(function(c){ return c.id === id; })[0];
+  if (!comp) return;
+  _cmpState.dcs.id = comp.id;
+  var nameEl = document.getElementById('dcs-cmp-name');
+  if (nameEl) nameEl.value = comp.name || '';
+  document.getElementById('dcs-cmp-del').style.display = '';
+  restoreDcsState(comp.data || {});
+  delete _dirtyScreens.dcs;
+  cmpSetStatus('dcs', '');
+}
+
+async function dcsCmpSave() {
+  var nameEl = document.getElementById('dcs-cmp-name');
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { alert('Please enter a component name before saving.'); if (nameEl) nameEl.focus(); return; }
+  cmpSetStatus('dcs', 'Saving…', 'var(--muted)');
+  var state = collectDcsState();
+  var comps = _cmpState.dcs.components || [];
+  var id = _cmpState.dcs.id;
+  if (id) {
+    var found = false;
+    comps = comps.map(function(c){ if (c.id === id) { found = true; return { id: id, name: name, data: state }; } return c; });
+    if (!found) { id = 'dcs-' + Date.now().toString(36); comps.push({ id: id, name: name, data: state }); _cmpState.dcs.id = id; }
+  } else {
+    id = 'dcs-' + Date.now().toString(36);
+    comps.push({ id: id, name: name, data: state });
+    _cmpState.dcs.id = id;
+  }
+  _cmpState.dcs.components = comps;
+  var ok = await cmpSaveAll('dcs', comps);
+  if (ok) {
+    delete _dirtyScreens.dcs;
+    cmpPopulateSelect('dcs', comps, id);
+    cmpSetStatus('dcs', '✓ Saved', '#16a34a');
+    setTimeout(function(){ cmpSetStatus('dcs', ''); }, 3000);
+  } else {
+    cmpSetStatus('dcs', '✗ Save failed', '#e63946');
+  }
+}
+
+function dcsCmpNew() {
+  _cmpState.dcs.id = null;
+  var nameEl = document.getElementById('dcs-cmp-name'); if (nameEl) nameEl.value = '';
+  var sel    = document.getElementById('dcs-cmp-sel');  if (sel)    sel.value = '';
+  var del    = document.getElementById('dcs-cmp-del');  if (del)    del.style.display = 'none';
+  restoreDcsState({});
+  delete _dirtyScreens.dcs;
+  cmpSetStatus('dcs', '');
+}
+
+async function dcsCmpDelete() {
+  var id = _cmpState.dcs.id;
+  if (!id) return;
+  var comp = (_cmpState.dcs.components || []).filter(function(c){ return c.id === id; })[0];
+  if (!window.confirm('Delete "' + (comp ? comp.name : 'this component') + '"? This cannot be undone.')) return;
+  var comps = (_cmpState.dcs.components || []).filter(function(c){ return c.id !== id; });
+  var ok = await cmpSaveAll('dcs', comps);
+  if (ok) { _cmpState.dcs.components = comps; _cmpState.dcs.id = null; cmpPopulateSelect('dcs', comps, null); dcsCmpNew(); }
+}
+
+// ── DCS form helpers ─────────────────────────────────────────────
+
+function dcsAddPara(data) {
+  var list = document.getElementById('dcs-left-paras');
+  if (!list) return;
+  var id = 'dcsp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var p  = cmsNormalizeParagraphData(data, CMS_PARAGRAPH_DEFAULTS.dcsLeftPara);
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH((p.text || 'Paragraph').slice(0, 48)) + '</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body">'
+    + cmsParagraphFieldHtml('Text', 'dcsp-txt', p, { rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.dcsLeftPara,
+        oninput: 'this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=(this.value||\'Paragraph\').slice(0,48)' })
+    + '</div>';
+  list.appendChild(div);
+}
+
+function dcsAddBullet(data) {
+  var list = document.getElementById('dcs-left-bullets');
+  if (!list) return;
+  var id = 'dcsb-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var b  = cmsNormalizeTextData(data, CMS_PARAGRAPH_DEFAULTS.dcsLeftBullet);
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH((b.text || 'Bullet point').slice(0, 48)) + '</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body">'
+    + cmsTextFieldHtml('Text', 'dcsb-txt', b, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.dcsLeftBullet,
+        oninput: 'this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=(this.value||\'Bullet point\').slice(0,48)' })
+    + '</div>';
+  list.appendChild(div);
+}
+
+function dcsAddStat(data) {
+  var list = document.getElementById('dcs-stats');
+  if (!list) return;
+  var id  = 'dcss-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var val = cmsNormalizeTextData(data && data.value, CMS_PARAGRAPH_DEFAULTS.dcsStatValue);
+  var lbl = cmsNormalizeTextData(data && data.label, CMS_PARAGRAPH_DEFAULTS.dcsStatLabel);
+  var preview = (val.text || '') + (lbl.text ? ' — ' + lbl.text : '');
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH(preview.slice(0, 48) || 'Stat item') + '</span>'
+    + '<span class="block-type-badge">Stat</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body collapsed">'
+    + cmsTextFieldHtml('Value', 'dcss-val', val, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.dcsStatValue, placeholder: 'e.g. 2,400+' })
+    + cmsTextFieldHtml('Label', 'dcss-lbl', lbl, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.dcsStatLabel, placeholder: 'e.g. Students worldwide' })
+    + '</div>';
+  list.appendChild(div);
+}
+
+// ── DCS state collect / restore ──────────────────────────────────
+
+function dcsGet(id) { return document.getElementById(id) || {}; }
+
+function collectDcsState() {
+  return {
+    padTop:       dcsGet('dcs-pad-top').value   || '60',
+    padBot:       dcsGet('dcs-pad-bot').value   || '60',
+    padLeft:      dcsGet('dcs-pad-left').value  || '48',
+    padRight:     dcsGet('dcs-pad-right').value || '48',
+    leftWidth:    dcsGet('dcs-left-width').value || '50',
+    leftBg:       dcsGet('dcs-left-bg-hex').value  || '#132239',
+    rightBg:      dcsGet('dcs-right-bg-hex').value || '#f9fafb',
+    leftLabel:    cmsReadTextField('dcs-left-label',  CMS_PARAGRAPH_DEFAULTS.dcsLeftLabel),
+    leftTitle:    cmsReadTextField('dcs-left-title',  CMS_PARAGRAPH_DEFAULTS.dcsLeftTitle),
+    leftParas:    Array.from(document.querySelectorAll('#dcs-left-paras .block-item')).map(function(el) {
+      return cmsReadParagraphField(el.querySelector('.dcsp-txt'), CMS_PARAGRAPH_DEFAULTS.dcsLeftPara);
+    }),
+    bulletColor:  dcsGet('dcs-bullet-hex').value || '#4a90d9',
+    leftBullets:  Array.from(document.querySelectorAll('#dcs-left-bullets .block-item')).map(function(el) {
+      return cmsReadTextField(el.querySelector('.dcsb-txt'), CMS_PARAGRAPH_DEFAULTS.dcsLeftBullet);
+    }),
+    rightLabel:   cmsReadTextField('dcs-right-label', CMS_PARAGRAPH_DEFAULTS.dcsRightLabel),
+    statBg:       dcsGet('dcs-stat-bg-hex').value     || '#ffffff',
+    statBorder:   dcsGet('dcs-stat-border-hex').value || '#e5e7eb',
+    statsPerRow:  dcsGet('dcs-stats-per-row').value   || '2',
+    stats:        Array.from(document.querySelectorAll('#dcs-stats .block-item')).map(function(el) {
+      return {
+        value: cmsReadTextField(el.querySelector('.dcss-val'), CMS_PARAGRAPH_DEFAULTS.dcsStatValue),
+        label: cmsReadTextField(el.querySelector('.dcss-lbl'), CMS_PARAGRAPH_DEFAULTS.dcsStatLabel)
+      };
+    }),
+    quoteShow:    dcsGet('dcs-quote-show').checked !== false,
+    quoteBg:      dcsGet('dcs-quote-bg-hex').value || '#eef2f8',
+    quoteText:    cmsReadParagraphField('dcs-quote-text',  CMS_PARAGRAPH_DEFAULTS.dcsQuoteText),
+    quoteAttrib:  cmsReadTextField('dcs-quote-attrib', CMS_PARAGRAPH_DEFAULTS.dcsQuoteAttrib)
+  };
+}
+
+function dcsSetColor(cpId, hexId, val, fallback) {
+  var c = cmsSafeHex(val, fallback);
+  var cp = document.getElementById(cpId); if (cp) cp.value = c;
+  var hx = document.getElementById(hexId); if (hx) hx.value = c;
+}
+
+function restoreDcsState(d) {
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+  set('dcs-pad-top',   d.padTop   || '60');
+  set('dcs-pad-bot',   d.padBot   || '60');
+  set('dcs-pad-left',  d.padLeft  || '48');
+  set('dcs-pad-right', d.padRight || '48');
+  set('dcs-left-width', d.leftWidth || '50');
+  dcsSetColor('dcs-left-bg-cp',     'dcs-left-bg-hex',     d.leftBg,      '#132239');
+  dcsSetColor('dcs-right-bg-cp',    'dcs-right-bg-hex',    d.rightBg,     '#f9fafb');
+  dcsSetColor('dcs-bullet-cp',      'dcs-bullet-hex',      d.bulletColor, '#4a90d9');
+  dcsSetColor('dcs-stat-bg-cp',     'dcs-stat-bg-hex',     d.statBg,      '#ffffff');
+  dcsSetColor('dcs-stat-border-cp', 'dcs-stat-border-hex', d.statBorder,  '#e5e7eb');
+  dcsSetColor('dcs-quote-bg-cp',    'dcs-quote-bg-hex',    d.quoteBg,     '#eef2f8');
+  cmsSetTextField('dcs-left-label',  d.leftLabel,  CMS_PARAGRAPH_DEFAULTS.dcsLeftLabel);
+  cmsSetTextField('dcs-left-title',  d.leftTitle,  CMS_PARAGRAPH_DEFAULTS.dcsLeftTitle);
+  cmsSetTextField('dcs-right-label', d.rightLabel, CMS_PARAGRAPH_DEFAULTS.dcsRightLabel);
+  cmsSetParagraphField('dcs-quote-text',  d.quoteText,  CMS_PARAGRAPH_DEFAULTS.dcsQuoteText);
+  cmsSetTextField('dcs-quote-attrib', d.quoteAttrib, CMS_PARAGRAPH_DEFAULTS.dcsQuoteAttrib);
+  var qShow = d.quoteShow !== false;
+  var qCheck = document.getElementById('dcs-quote-show'); if (qCheck) qCheck.checked = qShow;
+  var qFields = document.getElementById('dcs-quote-fields'); if (qFields) qFields.style.display = qShow ? '' : 'none';
+  set('dcs-stats-per-row', d.statsPerRow || '2');
+  var pl = document.getElementById('dcs-left-paras');   if (pl) { pl.innerHTML = ''; (d.leftParas  || []).forEach(function(p){ dcsAddPara(p);   }); }
+  var bl = document.getElementById('dcs-left-bullets'); if (bl) { bl.innerHTML = ''; (d.leftBullets|| []).forEach(function(b){ dcsAddBullet(b); }); }
+  var sl = document.getElementById('dcs-stats');        if (sl) { sl.innerHTML = ''; (d.stats       || []).forEach(function(s){ dcsAddStat(s);   }); }
+}
+
+// ── DCS HTML generator ───────────────────────────────────────────
+
+function generateDcs() {
+  var d    = collectDcsState();
+  var uid  = 'dcs' + Date.now().toString(36);
+  var lw   = cmsClampInt(d.leftWidth, 50, 30, 70);
+  var rw   = 100 - lw;
+  var pTop = cmsClampInt(d.padTop,  60, 0, 300);
+  var pBot = cmsClampInt(d.padBot,  60, 0, 300);
+  var pL   = cmsClampInt(d.padLeft, 48, 0, 300);
+  var pR   = cmsClampInt(d.padRight,48, 0, 300);
+  var cols = cmsClampInt(d.statsPerRow, 2, 2, 3);
+
+  var inner = cmsClampInt(pL, 48, 0, 300);
+  var innerR = cmsClampInt(pR, 48, 0, 300);
+
+  var lb  = cmsSafeHex(d.leftBg,    '#132239');
+  var rb  = cmsSafeHex(d.rightBg,   '#f9fafb');
+  var bc  = cmsSafeHex(d.bulletColor,'#4a90d9');
+  var sbg = cmsSafeHex(d.statBg,    '#ffffff');
+  var sbd = cmsSafeHex(d.statBorder,'#e5e7eb');
+  var qbg = cmsSafeHex(d.quoteBg,   '#eef2f8');
+
+  // ── Left column HTML ──
+  var leftParts = [];
+  // eyebrow
+  var lLabel = cmsNormalizeTextData(d.leftLabel, CMS_PARAGRAPH_DEFAULTS.dcsLeftLabel);
+  if (lLabel.text) leftParts.push('<p style="font-family:\'Poppins\',sans-serif;margin:0 0 12px;text-transform:uppercase;' + cmsTextStyle(lLabel, CMS_PARAGRAPH_DEFAULTS.dcsLeftLabel) + '">' + xH(lLabel.text) + '</p>');
+  // title
+  var lTitle = cmsNormalizeTextData(d.leftTitle, CMS_PARAGRAPH_DEFAULTS.dcsLeftTitle);
+  if (lTitle.text) leftParts.push('<h2 style="font-family:\'Poppins\',sans-serif;margin:0 0 20px;line-height:1.2;' + cmsTextStyle(lTitle, CMS_PARAGRAPH_DEFAULTS.dcsLeftTitle) + '">' + xH(lTitle.text) + '</h2>');
+  // paragraphs
+  (d.leftParas || []).forEach(function(p) {
+    var pn = cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.dcsLeftPara);
+    if (pn.text) leftParts.push('<p style="font-family:\'Poppins\',sans-serif;margin:0 0 14px;line-height:1.7;' + cmsParagraphStyle(pn, CMS_PARAGRAPH_DEFAULTS.dcsLeftPara) + '">' + xH(pn.text) + '</p>');
+  });
+  // bullets
+  if ((d.leftBullets || []).length) {
+    var lis = (d.leftBullets || []).map(function(b) {
+      var bn = cmsNormalizeTextData(b, CMS_PARAGRAPH_DEFAULTS.dcsLeftBullet);
+      return '<li style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+        + '<span style="width:8px;height:8px;border-radius:50%;background:' + xA(bc) + ';flex-shrink:0;display:inline-block;"></span>'
+        + '<span style="font-family:\'Poppins\',sans-serif;' + cmsTextStyle(bn, CMS_PARAGRAPH_DEFAULTS.dcsLeftBullet) + '">' + xH(bn.text) + '</span>'
+        + '</li>';
+    }).join('\n    ');
+    leftParts.push('<ul style="list-style:none;padding:0;margin:8px 0 0;">\n    ' + lis + '\n  </ul>');
+  }
+
+  // ── Right column HTML ──
+  var rightParts = [];
+  var rLabel = cmsNormalizeTextData(d.rightLabel, CMS_PARAGRAPH_DEFAULTS.dcsRightLabel);
+  if (rLabel.text) rightParts.push('<p style="font-family:\'Poppins\',sans-serif;margin:0 0 16px;text-transform:uppercase;' + cmsTextStyle(rLabel, CMS_PARAGRAPH_DEFAULTS.dcsRightLabel) + '">' + xH(rLabel.text) + '</p>');
+  // stats grid
+  if ((d.stats || []).length) {
+    var statItems = (d.stats || []).map(function(s) {
+      var sv = cmsNormalizeTextData(s.value, CMS_PARAGRAPH_DEFAULTS.dcsStatValue);
+      var sl = cmsNormalizeTextData(s.label, CMS_PARAGRAPH_DEFAULTS.dcsStatLabel);
+      return '<div style="background:' + xA(sbg) + ';border:1px solid ' + xA(sbd) + ';border-radius:8px;padding:20px 16px;">'
+        + '<div style="font-family:\'Poppins\',sans-serif;margin:0 0 4px;' + cmsTextStyle(sv, CMS_PARAGRAPH_DEFAULTS.dcsStatValue) + '">' + xH(sv.text) + '</div>'
+        + '<div style="font-family:\'Poppins\',sans-serif;margin:0;' + cmsTextStyle(sl, CMS_PARAGRAPH_DEFAULTS.dcsStatLabel) + '">' + xH(sl.text) + '</div>'
+        + '</div>';
+    }).join('\n    ');
+    rightParts.push('<div style="display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:12px;margin-bottom:20px;">\n    ' + statItems + '\n  </div>');
+  }
+  // quote
+  if (d.quoteShow !== false) {
+    var qt  = cmsNormalizeParagraphData(d.quoteText,  CMS_PARAGRAPH_DEFAULTS.dcsQuoteText);
+    var qa  = cmsNormalizeTextData(d.quoteAttrib, CMS_PARAGRAPH_DEFAULTS.dcsQuoteAttrib);
+    var qParts = ['<div style="background:' + xA(qbg) + ';border-radius:8px;padding:20px 24px;">'];
+    if (qt.text) qParts.push('  <p style="font-family:\'Poppins\',sans-serif;margin:0 0 10px;font-style:italic;line-height:1.7;' + cmsParagraphStyle(qt, CMS_PARAGRAPH_DEFAULTS.dcsQuoteText) + '">' + xH(qt.text) + '</p>');
+    if (qa.text) qParts.push('  <p style="font-family:\'Poppins\',sans-serif;margin:0;' + cmsTextStyle(qa, CMS_PARAGRAPH_DEFAULTS.dcsQuoteAttrib) + '">' + xH(qa.text) + '</p>');
+    qParts.push('</div>');
+    rightParts.push(qParts.join('\n'));
+  }
+
+  // ── Assemble ──
+  var html = [
+    '<div class="' + uid + '" style="display:flex;flex-wrap:wrap;width:100%;">',
+    '  <!-- Left column -->',
+    '  <div style="width:' + lw + '%;background:' + xA(lb) + ';padding:' + pTop + 'px ' + pR + 'px ' + pBot + 'px ' + pL + 'px;box-sizing:border-box;">',
+    '    ' + leftParts.join('\n    '),
+    '  </div>',
+    '  <!-- Right column -->',
+    '  <div style="width:' + rw + '%;background:' + xA(rb) + ';padding:' + pTop + 'px ' + pR + 'px ' + pBot + 'px ' + pL + 'px;box-sizing:border-box;">',
+    '    ' + rightParts.join('\n    '),
+    '  </div>',
+    '</div>'
+  ].join('\n');
+
+  var preview = document.getElementById('dcs-preview-wrap');
+  if (preview) preview.innerHTML = html;
+  var code = document.getElementById('dcs-code');
+  if (code) code.textContent = html;
+  switchOut('dcs', 'preview');
+
+  dcsCmpSave();
 }
 
 // ── Hero Left Pane ─────────────────────────────────────────────
