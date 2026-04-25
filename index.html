@@ -4720,11 +4720,12 @@ function loadHeaderFromGist() {
       if (cfg.menuHover)    hdrSetVal('hdr-menu-hover', cfg.menuHover);
       if (cfg.dropBg)       hdrSetVal('hdr-drop-bg', cfg.dropBg);
       if (cfg.dropText)     hdrSetVal('hdr-drop-text', cfg.dropText);
-      if (cfg.padLeft)      hdrSetVal('hdr-pad-left',     cfg.padLeft);
-      if (cfg.padRight)     hdrSetVal('hdr-pad-right',    cfg.padRight);
-      if (cfg.padTop)       hdrSetVal('hdr-pad-top',      cfg.padTop);
-      if (cfg.padBottom)    hdrSetVal('hdr-pad-bottom',   cfg.padBottom);
-      if (cfg.dropSpacing)  hdrSetVal('hdr-drop-spacing', cfg.dropSpacing);
+      if (cfg.containerWidth) hdrSetVal('hdr-container-width', cfg.containerWidth);
+      if (cfg.padLeft)        hdrSetVal('hdr-pad-left',        cfg.padLeft);
+      if (cfg.padRight)       hdrSetVal('hdr-pad-right',       cfg.padRight);
+      if (cfg.padTop)         hdrSetVal('hdr-pad-top',         cfg.padTop);
+      if (cfg.padBottom)      hdrSetVal('hdr-pad-bottom',      cfg.padBottom);
+      if (cfg.dropSpacing)    hdrSetVal('hdr-drop-spacing',    cfg.dropSpacing);
       if (cfg.ctas && cfg.ctas.length) {
         cfg.ctas.forEach(function(c) {
           var n = parseInt((c.id||'').replace('hc',''),10);
@@ -4942,11 +4943,12 @@ function generateHeaderHtml() {
     ctas:        readHdrCtaItems(),
     menuItems:   hdrMenuItems,
     useZenMenu:  !!(document.getElementById('hdr-zen-menu')||{}).checked,
-    padLeft:     hdrGetVal('hdr-pad-left')     || '24',
-    padRight:    hdrGetVal('hdr-pad-right')    || '24',
-    padTop:      hdrGetVal('hdr-pad-top')      || '8',
-    padBottom:   hdrGetVal('hdr-pad-bottom')   || '8',
-    dropSpacing: hdrGetVal('hdr-drop-spacing') || '10'
+    containerWidth: hdrGetVal('hdr-container-width') || '1280',
+    padLeft:        hdrGetVal('hdr-pad-left')        || '24',
+    padRight:       hdrGetVal('hdr-pad-right')       || '24',
+    padTop:         hdrGetVal('hdr-pad-top')         || '8',
+    padBottom:      hdrGetVal('hdr-pad-bottom')      || '8',
+    dropSpacing:    hdrGetVal('hdr-drop-spacing')    || '10'
   };
 
   var uid = 'vlsh' + Math.random().toString(36).slice(2,7);
@@ -4985,6 +4987,7 @@ function buildHeaderOutputHtml(uid, cfg) {
   var logoHeightCss = isFinite(logoHeightNum) ? Math.round(logoHeightNum * 1.2) + 'px' : q(cfg.logoHeight || '67px');
   var menuFontSize  = '16px';
   var dropFontSize  = '15px';
+  var containerW    = parseInt(cfg.containerWidth || 1280) || 1280;
   var padL          = parseInt(cfg.padLeft     || 24) || 24;
   var padR          = parseInt(cfg.padRight    || 24) || 24;
   var padTop        = parseInt(cfg.padTop      || 8)  || 8;
@@ -5043,7 +5046,7 @@ function buildHeaderOutputHtml(uid, cfg) {
     + '.'+uid+'-wrap{font-family:Arial,sans-serif;width:100%;}'
     /* Top bar */
     + '.'+uid+'-topbar{background:#ffffff;padding:8px 0 6px;border-top:2px solid '+topbarLineColor+';}'
-    + '.'+uid+'-topbar-inner{max-width:1280px;margin:0 auto;padding:0 '+padR+'px 0 '+padL+'px;display:flex;justify-content:flex-end;align-items:center;min-height:38px;}'
+    + '.'+uid+'-topbar-inner{max-width:'+containerW+'px;margin:0 auto;padding:0 '+padR+'px 0 '+padL+'px;display:flex;justify-content:flex-end;align-items:center;min-height:38px;}'
     + '.'+uid+'-login-brand{display:flex;align-items:center;align-self:center;flex-shrink:0;}'
     + '.'+uid+'-login-brand .navbar-buttons{margin:0!important;padding:0!important;align-items:center!important;}'
     + '.'+uid+'-login-brand a,.'+uid+'-login-brand button,.'+uid+'-login-brand span{color:'+dropTextColor+'!important;font-size:'+menuFontSize+'!important;}'
@@ -5052,7 +5055,7 @@ function buildHeaderOutputHtml(uid, cfg) {
     + '.'+uid+'-login-menu a,.'+uid+'-login-menu button,.'+uid+'-login-menu span{color:'+menuTextColor+'!important;font-size:14px!important;}'
     /* Brand bar */
     + '.'+uid+'-brand{background:'+q(cfg.brandBg)+';padding:'+padTop+'px 0 '+padBot+'px;border-bottom:1px solid #e5e7eb;position:relative;width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);}'
-    + '.'+uid+'-brand-inner{max-width:1280px;margin:0 auto;padding:0 '+padR+'px 0 '+padL+'px;display:flex;align-items:flex-end;gap:16px;}'
+    + '.'+uid+'-brand-inner{max-width:'+containerW+'px;margin:0 auto;padding:0 '+padR+'px 0 '+padL+'px;display:flex;align-items:flex-end;gap:16px;}'
     + '.'+uid+'-logo{height:'+logoHeightCss+';width:auto;display:block;}'
     + '.'+uid+'-namewrap{display:flex;flex-direction:column;justify-content:flex-end;gap:2px;}'
     + '.'+uid+'-sitename{font-size:'+q(cfg.titleSize)+'px;font-weight:700;color:'+q(cfg.titleColor)+';line-height:1.2;text-align:left;}'
@@ -5064,7 +5067,7 @@ function buildHeaderOutputHtml(uid, cfg) {
     + '.'+uid+'-cta:hover{opacity:.85;}'
     /* Menu bar */
     + '.'+uid+'-menubar{background:'+q(cfg.menuBg)+';position:relative;width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);border-bottom:3px solid '+q(cfg.titleColor||'#204280')+';}'
-    + '.'+uid+'-menu-inner{max-width:1280px;margin:0 auto;padding:0 '+padR+'px 0 '+padL+'px;display:flex;align-items:center;}'
+    + '.'+uid+'-menu-inner{max-width:'+containerW+'px;margin:0 auto;padding:0 '+padR+'px 0 '+padL+'px;display:flex;align-items:center;}'
     /* Nav */
     + '.'+uid+'-nav{flex:1;}'
     + '.'+uid+'-ul{list-style:none;margin:0;padding:0;display:flex;align-items:center;}'
