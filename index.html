@@ -5921,113 +5921,307 @@ function generateStepsSection() {
   switchOut('steps-section', 'preview');
 }
 
-// ── Feature Card 2 ─────────────────────────────────────────────
+// ── Feature Card 2 persisted sections ────────────────────────
 
-function fc2OnOpen() {
-  var defaults = [
-    {title:'ACCA Qualifications',      desc:'We offer ACCA exam preparation courses for ACCA Foundation Diploma, ACCA Professional Qualifications and IFRS Diploma.',   ctaText:'Learn More', ctaUrl:'#', lineColor:'#1a5c9e'},
-    {title:'ACCA Annual Subscription', desc:'Get access to the ACCA Applied Knowledge, Skills, and Strategic Professional papers, and all of these courses come with active tutor support.', ctaText:'Learn More', ctaUrl:'#', lineColor:'#d4881a'},
-    {title:'CIMA',                     desc:'Our CIMA courses are affordable and offer you comprehensive content with practice questions, videos and quizzes and tests.',  ctaText:'Learn More', ctaUrl:'#', lineColor:'#6b4ab7'},
-    {title:'CMA (USA)',                desc:'Our CMA courses cover complete syllabus areas with hundreds of MCQs and Essay Type questions to prepare you for the exam.',  ctaText:'Learn More', ctaUrl:'#', lineColor:'#b81a4a'},
-    {title:'ACCA Diploma in IFRS',     desc:'Our IFRS course is a global best seller. It has more than 6000 five-star reviews and is delivered by our experienced tutor.', ctaText:'Learn More', ctaUrl:'#', lineColor:'#d94040'},
-    {title:'Other Courses',            desc:'There are a range of other short courses which cover the essential knowledge for the accounting and finance professionals.',   ctaText:'Learn More', ctaUrl:'#', lineColor:'#3d8c3d'},
-  ];
-  defaults.forEach(function(d) { fc2AddCard(d, true); });
+var fc2Store = { sections: [], activeId: '', counter: 0, loaded: false, bound: false, timer: null };
+
+function fc2DefaultSection() {
+  var id = 'fc2s' + (++fc2Store.counter);
+  return {
+    id: id,
+    name: 'Feature Card 2 Section ' + fc2Store.counter,
+    bg: '#f0f4f8',
+    sepColor: '#204280',
+    padTop: 60,
+    padBottom: 60,
+    padLeft: 0,
+    padRight: 0,
+    cols: 3,
+    cards: [
+      { title: cmsNormalizeTextData('ACCA Qualifications', CMS_PARAGRAPH_DEFAULTS.fc2Title), desc: cmsNormalizeParagraphData('We offer ACCA exam preparation courses for ACCA Foundation Diploma, ACCA Professional Qualifications and IFRS Diploma.', CMS_PARAGRAPH_DEFAULTS.fc2Desc), ctaText: cmsNormalizeTextData('Learn More', CMS_PARAGRAPH_DEFAULTS.fc2Cta), ctaUrl: '#', lineColor: '#1a5c9e' },
+      { title: cmsNormalizeTextData('ACCA Annual Subscription', CMS_PARAGRAPH_DEFAULTS.fc2Title), desc: cmsNormalizeParagraphData('Get access to the ACCA Applied Knowledge, Skills, and Strategic Professional papers, and all of these courses come with active tutor support.', CMS_PARAGRAPH_DEFAULTS.fc2Desc), ctaText: cmsNormalizeTextData('Learn More', CMS_PARAGRAPH_DEFAULTS.fc2Cta), ctaUrl: '#', lineColor: '#d4881a' },
+      { title: cmsNormalizeTextData('CIMA', CMS_PARAGRAPH_DEFAULTS.fc2Title), desc: cmsNormalizeParagraphData('Our CIMA courses are affordable and offer you comprehensive content with practice questions, videos and quizzes and tests.', CMS_PARAGRAPH_DEFAULTS.fc2Desc), ctaText: cmsNormalizeTextData('Learn More', CMS_PARAGRAPH_DEFAULTS.fc2Cta), ctaUrl: '#', lineColor: '#6b4ab7' }
+    ]
+  };
 }
 
-function fc2AddCard(data, startCollapsed) {
-  var list  = document.getElementById('fc2-cards');
-  var id    = 'fc2c-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-  var title     = cmsNormalizeTextData(data && data.title, CMS_PARAGRAPH_DEFAULTS.fc2Title);
-  var desc      = cmsNormalizeParagraphData(data && data.desc, CMS_PARAGRAPH_DEFAULTS.fc2Desc);
-  var ctaText   = cmsNormalizeTextData(data && data.ctaText, CMS_PARAGRAPH_DEFAULTS.fc2Cta);
-  var label     = title.text || 'New Card';
-  var lineColor = (data && data.lineColor) ? data.lineColor : '#204280';
-  var div   = document.createElement('div');
+function fc2CurrentSection() {
+  return fc2Store.sections.find(function(sec) { return sec.id === fc2Store.activeId; }) || null;
+}
+
+function fc2ReadFormData() {
+  return {
+    name: (document.getElementById('fc2-name') || {}).value || '',
+    bg: cmsSafeHex((document.getElementById('fc2-bg-text') || {}).value, '#f0f4f8'),
+    sepColor: cmsSafeHex((document.getElementById('fc2-div-text') || {}).value, '#204280'),
+    padTop: cmsClampInt((document.getElementById('fc2-pad-top') || {}).value, 60, 0, 200),
+    padBottom: cmsClampInt((document.getElementById('fc2-pad-bot') || {}).value, 60, 0, 200),
+    padLeft: cmsClampInt((document.getElementById('fc2-pad-left') || {}).value, 0, 0, 200),
+    padRight: cmsClampInt((document.getElementById('fc2-pad-right') || {}).value, 0, 0, 200),
+    cols: cmsClampInt((document.getElementById('fc2-cols') || {}).value, 3, 2, 4),
+    cards: Array.prototype.slice.call(document.querySelectorAll('#fc2-cards .block-item')).map(function(item) {
+      return {
+        lineColor: cmsSafeHex(item.querySelector('.fc2-chex').value, '#204280'),
+        title: cmsReadTextField(item.querySelector('.fc2-ti'), CMS_PARAGRAPH_DEFAULTS.fc2Title),
+        desc: cmsReadParagraphField(item.querySelector('.fc2-de'), CMS_PARAGRAPH_DEFAULTS.fc2Desc),
+        ctaText: cmsReadTextField(item.querySelector('.fc2-ctat'), CMS_PARAGRAPH_DEFAULTS.fc2Cta),
+        ctaUrl: item.querySelector('.fc2-ctau').value.trim()
+      };
+    }).filter(function(card) { return cmsTextContent(card.title).trim(); })
+  };
+}
+
+function fc2FillForm(sec) {
+  document.getElementById('fc2-name').value = sec.name || '';
+  document.getElementById('fc2-bg-picker').value = cmsSafeHex(sec.bg, '#f0f4f8');
+  document.getElementById('fc2-bg-text').value = cmsSafeHex(sec.bg, '#f0f4f8');
+  document.getElementById('fc2-div-picker').value = cmsSafeHex(sec.sepColor, '#204280');
+  document.getElementById('fc2-div-text').value = cmsSafeHex(sec.sepColor, '#204280');
+  document.getElementById('fc2-pad-top').value = cmsClampInt(sec.padTop, 60, 0, 200);
+  document.getElementById('fc2-pad-bot').value = cmsClampInt(sec.padBottom, 60, 0, 200);
+  document.getElementById('fc2-pad-left').value = cmsClampInt(sec.padLeft, 0, 0, 200);
+  document.getElementById('fc2-pad-right').value = cmsClampInt(sec.padRight, 0, 0, 200);
+  document.getElementById('fc2-cols').value = String(cmsClampInt(sec.cols, 3, 2, 4));
+  document.getElementById('fc2-cards').innerHTML = '';
+  (sec.cards || []).forEach(function(card) { fc2AddCard(card, true, true); });
+}
+
+function fc2SyncCurrent() {
+  var sec = fc2CurrentSection();
+  if (!sec) return null;
+  var data = fc2ReadFormData();
+  sec.name = data.name;
+  sec.bg = data.bg;
+  sec.sepColor = data.sepColor;
+  sec.padTop = data.padTop;
+  sec.padBottom = data.padBottom;
+  sec.padLeft = data.padLeft;
+  sec.padRight = data.padRight;
+  sec.cols = data.cols;
+  sec.cards = data.cards;
+  return sec;
+}
+
+function buildFeatureCards2Html(data) {
+  var uid = 'fc2' + Date.now().toString(36);
+  var bg = cmsSafeHex(data.bg, '#f0f4f8');
+  var padTop = cmsClampInt(data.padTop, 60, 0, 200);
+  var padBottom = cmsClampInt(data.padBottom, 60, 0, 200);
+  var padLeft = cmsClampInt(data.padLeft, 0, 0, 200);
+  var padRight = cmsClampInt(data.padRight, 0, 0, 200);
+  var cols = cmsClampInt(data.cols, 3, 2, 4);
+  var sepColor = cmsSafeHex(data.sepColor, '#204280');
+  var cards = (data.cards || []).filter(function(card) { return cmsTextContent(card.title).trim(); });
+  var nthDesktop = cols;
+  var nthTablet = cols > 1 ? 2 : 1;
+
+  var css = '<style>'
+    + '.' + uid + '{font-family:\'Poppins\',sans-serif;background:' + xA(bg) + ';padding:' + padTop + 'px ' + padRight + 'px ' + padBottom + 'px ' + padLeft + 'px;box-sizing:border-box;}'
+    + '.' + uid + '-grid{display:grid;grid-template-columns:repeat(' + cols + ',1fr);column-gap:0;row-gap:40px;}'
+    + '.' + uid + '-card{padding:32px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;border-right:1px dotted ' + xA(sepColor) + ';}'
+    + '.' + uid + '-card:nth-child(' + nthDesktop + 'n){border-right:none;}'
+    + '@media(max-width:900px){'
+      + '.' + uid + '-grid{grid-template-columns:repeat(' + nthTablet + ',1fr);}'
+      + '.' + uid + '-card{border-right:1px dotted ' + xA(sepColor) + ';}'
+      + '.' + uid + '-card:nth-child(' + nthTablet + 'n){border-right:none;}'
+    + '}'
+    + '@media(max-width:600px){.' + uid + '-grid{grid-template-columns:1fr;}.' + uid + '-card{border-right:none;}}'
+    + '.' + uid + '-ti{text-transform:uppercase;margin:0 0 12px;line-height:1.25;}'
+    + '.' + uid + '-line{width:65%;height:3px;border-radius:2px;margin:0 0 20px;flex-shrink:0;}'
+    + '.' + uid + '-de{line-height:1.75;margin:0 0 24px;flex:1;}'
+    + '.' + uid + '-cta{display:inline-block;padding:10px 24px;border:2px solid var(--fc2-cta-color,currentColor);text-transform:uppercase;text-decoration:none !important;}'
+    + '.' + uid + '-cta:hover{background:var(--fc2-cta-color,currentColor);color:#fff !important;}'
+    + '</style>';
+
+  var cardsHtml = cards.map(function(card) {
+    var title = cmsNormalizeTextData(card.title, CMS_PARAGRAPH_DEFAULTS.fc2Title);
+    var desc = cmsNormalizeParagraphData(card.desc, CMS_PARAGRAPH_DEFAULTS.fc2Desc);
+    var ctaText = cmsNormalizeTextData(card.ctaText, CMS_PARAGRAPH_DEFAULTS.fc2Cta);
+    return '<div class="' + uid + '-card">'
+      + '<div class="' + uid + '-ti" style="' + cmsTextStyle(title, CMS_PARAGRAPH_DEFAULTS.fc2Title) + '">' + xH(title.text) + '</div>'
+      + '<div class="' + uid + '-line" style="background:' + xA(card.lineColor || '#204280') + '"></div>'
+      + (desc.text ? '<p class="' + uid + '-de" style="' + cmsParagraphStyle(desc, CMS_PARAGRAPH_DEFAULTS.fc2Desc) + '">' + xH(desc.text) + '</p>' : '')
+      + (ctaText.text ? '<a href="' + xA(card.ctaUrl || '#') + '" class="' + uid + '-cta" style="--fc2-cta-color:' + xA(ctaText.color) + ';' + cmsTextStyle(ctaText, CMS_PARAGRAPH_DEFAULTS.fc2Cta) + '">' + xH(ctaText.text) + '</a>' : '')
+      + '</div>';
+  }).join('\n');
+
+  return '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
+    + css
+    + '\n<div class="' + uid + '"><div class="' + uid + '-grid">\n' + cardsHtml + '\n</div></div>';
+}
+
+function fc2RenderCurrent(showPreview) {
+  var sec = fc2CurrentSection();
+  if (!sec) {
+    cmsRenderScreenEmpty('feature-cards-2', 'Create a feature card 2 section to preview it here.', showPreview);
+    return;
+  }
+  cmsRenderScreenHtml('feature-cards-2', buildFeatureCards2Html(sec), showPreview);
+}
+
+function fc2RenderSectionList() {
+  cmsRenderSectionList('fc2-section-list', fc2Store.sections, fc2Store.activeId, 'fc2SelectSection', 'fc2DeleteSection', function(sec) {
+    return (sec.cards || []).length + ' card' + ((sec.cards || []).length === 1 ? '' : 's') + ' · ' + cmsClampInt(sec.cols, 3, 2, 4) + ' col';
+  }, 'No saved sections yet. Click + New Section to get started.');
+}
+
+function fc2PersistNow(savingText, savedText, showPreview) {
+  clearTimeout(fc2Store.timer);
+  fc2SyncCurrent();
+  fc2RenderSectionList();
+  fc2RenderCurrent(showPreview);
+  return cmsSaveSections('/api/publish-feature-cards-2', fc2Store.sections, 'fc2-status', savingText || 'Saving…', savedText || 'Saved!')
+    .then(function(ok) {
+      if (ok) cmsMarkScreenSaved('feature-cards-2');
+      return ok;
+    });
+}
+
+function fc2HandleChange() {
+  if (!fc2CurrentSection()) return;
+  fc2SyncCurrent();
+  fc2RenderSectionList();
+  fc2RenderCurrent();
+  cmsMarkScreenDirty('feature-cards-2');
+}
+
+function fc2BindInputs() {
+  if (fc2Store.bound) return;
+  var screen = document.getElementById('screen-feature-cards-2');
+  var panel = screen && screen.querySelector('.form-panel');
+  if (!panel) return;
+  panel.addEventListener('input', function() { fc2HandleChange(); });
+  panel.addEventListener('change', function() { fc2HandleChange(); });
+  fc2Store.bound = true;
+}
+
+function fc2SelectSection(id) {
+  if (fc2Store.activeId === id) return;
+  if (!cmsConfirmTrackedNavigation('feature-cards-2', 'You have unsaved changes in Feature Card 2. Switch sections without saving?')) return;
+  fc2SyncCurrent();
+  fc2Store.activeId = id;
+  var sec = fc2CurrentSection();
+  if (!sec) return;
+  fc2FillForm(sec);
+  fc2RenderSectionList();
+  fc2RenderCurrent();
+}
+
+function fc2CreateSection(skipPersist) {
+  fc2SyncCurrent();
+  var sec = fc2DefaultSection();
+  fc2Store.sections.push(sec);
+  fc2Store.activeId = sec.id;
+  fc2FillForm(sec);
+  fc2RenderSectionList();
+  fc2RenderCurrent();
+  if (!skipPersist) cmsMarkScreenDirty('feature-cards-2');
+}
+
+function fc2DeleteSection(id) {
+  if (!confirm('Delete this feature card 2 section?')) return;
+  fc2SyncCurrent();
+  fc2Store.sections = fc2Store.sections.filter(function(sec) { return sec.id !== id; });
+  if (!fc2Store.sections.length) {
+    fc2CreateSection(true);
+  } else {
+    fc2Store.activeId = fc2Store.sections[0].id;
+    fc2FillForm(fc2CurrentSection());
+    fc2RenderSectionList();
+    fc2RenderCurrent();
+  }
+  cmsMarkScreenDirty('feature-cards-2');
+}
+
+function fc2OnOpen() {
+  fc2BindInputs();
+  if (fc2Store.loaded) {
+    if (!fc2Store.sections.length) fc2CreateSection(true);
+    if (!fc2Store.activeId && fc2Store.sections.length) fc2SelectSection(fc2Store.sections[0].id);
+    return;
+  }
+  fetch('/api/publish-feature-cards-2')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var saved = data.sections || [];
+      fc2Store.counter = cmsMaxSectionCounter(saved, 'fc2s');
+      fc2Store.sections = saved.map(function(sec) {
+        return {
+          id: sec.id || ('fc2s' + (++fc2Store.counter)),
+          name: sec.name || '',
+          bg: cmsSafeHex(sec.bg, '#f0f4f8'),
+          sepColor: cmsSafeHex(sec.sepColor || sec.sepClr, '#204280'),
+          padTop: cmsClampInt(sec.padTop, 60, 0, 200),
+          padBottom: cmsClampInt(sec.padBottom, 60, 0, 200),
+          padLeft: cmsClampInt(sec.padLeft, 0, 0, 200),
+          padRight: cmsClampInt(sec.padRight, 0, 0, 200),
+          cols: cmsClampInt(sec.cols, 3, 2, 4),
+          cards: (sec.cards || []).map(function(card) {
+            return {
+              lineColor: cmsSafeHex(card.lineColor || card.lineClr, '#204280'),
+              title: cmsNormalizeTextData(card.title, CMS_PARAGRAPH_DEFAULTS.fc2Title),
+              desc: cmsNormalizeParagraphData(card.desc, CMS_PARAGRAPH_DEFAULTS.fc2Desc),
+              ctaText: cmsNormalizeTextData(card.ctaText, CMS_PARAGRAPH_DEFAULTS.fc2Cta),
+              ctaUrl: card.ctaUrl || '#'
+            };
+          })
+        };
+      });
+      fc2Store.loaded = true;
+      if (!fc2Store.sections.length) fc2CreateSection(true);
+      fc2Store.activeId = fc2Store.sections[0].id;
+      fc2FillForm(fc2CurrentSection());
+      fc2RenderSectionList();
+      fc2RenderCurrent();
+    })
+    .catch(function() {
+      fc2Store.loaded = true;
+      cmsSetStatus('fc2-status', 'Could not load saved sections.', 'red');
+      if (!fc2Store.sections.length) fc2CreateSection(true);
+    });
+}
+
+function fc2RemoveCard(id) {
+  var item = document.getElementById(id);
+  if (item) item.remove();
+  fc2HandleChange();
+}
+
+function fc2AddCard(data, startCollapsed, skipSync) {
+  if (!fc2CurrentSection()) fc2CreateSection(true);
+  var list = document.getElementById('fc2-cards');
+  var id = 'fc2c-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var title = cmsNormalizeTextData(data && data.title, CMS_PARAGRAPH_DEFAULTS.fc2Title);
+  var desc = cmsNormalizeParagraphData(data && data.desc, CMS_PARAGRAPH_DEFAULTS.fc2Desc);
+  var ctaText = cmsNormalizeTextData(data && data.ctaText, CMS_PARAGRAPH_DEFAULTS.fc2Cta);
+  var label = title.text || 'New Card';
+  var lineColor = cmsSafeHex(data && (data.lineColor || data.lineClr), '#204280');
+  var div = document.createElement('div');
   div.className = 'block-item';
   div.id = id;
   div.innerHTML =
-    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">' +
-      '<span class="block-header-label">' + xH(label) + '</span>' +
-      '<span class="block-type-badge">Card</span>' +
-      '<button class="btn-sm danger" onclick="event.stopPropagation();document.getElementById(\'' + id + '\').remove()" style="margin-left:auto">Remove</button>' +
-    '</div>' +
-    '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">' +
-      '<div class="field"><label>Accent line colour <span class=\\"hint\\">(coloured line below title)</span></label>' +
-        '<div style="display:flex;gap:8px;align-items:center">' +
-          '<input type="color" class="fc2-cp" value="' + xA(lineColor) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">' +
-          '<input type="text"  class="fc2-chex" value="' + xA(lineColor) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v">' +
-        '</div>' +
-      '</div>' +
-      cmsTextFieldHtml('Title', 'fc2-ti', title, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.fc2Title, placeholder: 'e.g. ACCA Qualifications', oninput: 'this.closest(\\\'.block-item\\\').querySelector(\\\'.block-header-label\\\').textContent=this.value||\\\'New Card\\\'' }) +
-      cmsParagraphFieldHtml('Description', 'fc2-de', desc, { rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.fc2Desc, placeholder: 'Briefly explain this offer or course area.' }) +
-      cmsTextFieldHtml('CTA text', 'fc2-ctat', ctaText, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.fc2Cta, placeholder: 'Learn More' }) +
-      '<div class="field"><label>CTA URL</label><input type="text" class="fc2-ctau" value="' + xA((data && data.ctaUrl) || '') + '" placeholder="https://"></div>' +
-    '</div>';
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+      + '<span class="block-header-label">' + xH(label) + '</span>'
+      + '<span class="block-type-badge">Card</span>'
+      + '<button class="btn-sm danger" onclick="event.stopPropagation();fc2RemoveCard(\'' + id + '\')" style="margin-left:auto">Remove</button>'
+      + '</div>'
+      + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
+      + '<div class="field"><label>Accent line colour <span class="hint">(coloured line below title)</span></label>'
+      + '<div style="display:flex;gap:8px;align-items:center">'
+      + '<input type="color" class="fc2-cp" value="' + xA(lineColor) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">'
+      + '<input type="text" class="fc2-chex" value="' + xA(lineColor) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v">'
+      + '</div></div>'
+      + cmsTextFieldHtml('Title', 'fc2-ti', title, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.fc2Title, placeholder: 'e.g. ACCA Qualifications', oninput: 'this.closest(\\\'.block-item\\\').querySelector(\\\'.block-header-label\\\').textContent=this.value||\\\'New Card\\\'' })
+      + cmsParagraphFieldHtml('Description', 'fc2-de', desc, { rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.fc2Desc, placeholder: 'Briefly explain this offer or course area.' })
+      + cmsTextFieldHtml('CTA text', 'fc2-ctat', ctaText, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.fc2Cta, placeholder: 'Learn More' })
+      + '<div class="field"><label>CTA URL</label><input type="text" class="fc2-ctau" value="' + xA((data && data.ctaUrl) || '') + '" placeholder="https://"></div>'
+      + '</div>';
   list.appendChild(div);
+  if (!skipSync) fc2HandleChange();
 }
 
 function generateFeatureCards2() {
-  var uid     = 'fc2' + Date.now().toString(36);
-  var bg      = document.getElementById('fc2-bg-text').value.trim()  || '#f0f4f8';
-  var padTop  = parseInt(document.getElementById('fc2-pad-top').value)  || 60;
-  var padBot  = parseInt(document.getElementById('fc2-pad-bot').value)  || 60;
-  var padL    = parseInt(document.getElementById('fc2-pad-left').value) || 0;
-  var padR    = parseInt(document.getElementById('fc2-pad-right').value)|| 0;
-  var cols    = parseInt(document.getElementById('fc2-cols').value)     || 3;
-
-  var sepClr  = document.getElementById('fc2-div-text').value.trim() || '#94a3b8';
-
-  var cards = [];
-  document.querySelectorAll('#fc2-cards .block-item').forEach(function(item) {
-    var lineClr = item.querySelector('.fc2-cp').value;
-    var title   = cmsReadTextField(item.querySelector('.fc2-ti'), CMS_PARAGRAPH_DEFAULTS.fc2Title);
-    var desc    = cmsReadParagraphField(item.querySelector('.fc2-de'), CMS_PARAGRAPH_DEFAULTS.fc2Desc);
-    var ctaText = cmsReadTextField(item.querySelector('.fc2-ctat'), CMS_PARAGRAPH_DEFAULTS.fc2Cta);
-    var ctaUrl  = item.querySelector('.fc2-ctau').value.trim();
-    if (title.text.trim()) cards.push({lineClr: lineClr, title: title, desc: desc, ctaText: ctaText, ctaUrl: ctaUrl});
-  });
-
-  // nth-child rule removes right border from last card in each row
-  var nthDesktop  = cols;
-  var nthTablet   = cols > 1 ? 2 : 1;
-  var css =
-    '<style>' +
-    '.' + uid + '{font-family:\'Poppins\',sans-serif;background:' + xA(bg) + ';padding:' + padTop + 'px ' + padR + 'px ' + padBot + 'px ' + padL + 'px;box-sizing:border-box;}' +
-    '.' + uid + '-grid{display:grid;grid-template-columns:repeat(' + cols + ',1fr);column-gap:0;row-gap:40px;}' +
-    '.' + uid + '-card{padding:32px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;border-right:1px dotted ' + xA(sepClr) + ';}' +
-    '.' + uid + '-card:nth-child(' + nthDesktop + 'n){border-right:none;}' +
-    '@media(max-width:900px){' +
-      '.' + uid + '-grid{grid-template-columns:repeat(' + nthTablet + ',1fr);}' +
-      '.' + uid + '-card{border-right:1px dotted ' + xA(sepClr) + ';}' +
-      '.' + uid + '-card:nth-child(' + nthTablet + 'n){border-right:none;}' +
-    '}' +
-    '@media(max-width:600px){.' + uid + '-grid{grid-template-columns:1fr;}.' + uid + '-card{border-right:none;}}' +
-    '.' + uid + '-ti{text-transform:uppercase;margin:0 0 12px;line-height:1.25;}' +
-    '.' + uid + '-line{width:65%;height:3px;border-radius:2px;margin:0 0 20px;flex-shrink:0;}' +
-    '.' + uid + '-de{line-height:1.75;margin:0 0 24px;flex:1;}' +
-    '.' + uid + '-cta{display:inline-block;padding:10px 24px;border:2px solid var(--fc2-cta-color,currentColor);text-transform:uppercase;text-decoration:none !important;}' +
-    '.' + uid + '-cta:hover{background:var(--fc2-cta-color,currentColor);color:#fff !important;}' +
-    '</style>';
-
-  var cardsHtml = cards.map(function(c) {
-    var title = cmsNormalizeTextData(c.title, CMS_PARAGRAPH_DEFAULTS.fc2Title);
-    var desc = cmsNormalizeParagraphData(c.desc, CMS_PARAGRAPH_DEFAULTS.fc2Desc);
-    var ctaText = cmsNormalizeTextData(c.ctaText, CMS_PARAGRAPH_DEFAULTS.fc2Cta);
-    return '<div class="' + uid + '-card">' +
-      '<div class="' + uid + '-ti" style="' + cmsTextStyle(title, CMS_PARAGRAPH_DEFAULTS.fc2Title) + '">' + xH(title.text) + '</div>' +
-      '<div class="' + uid + '-line" style="background:' + xA(c.lineClr) + '"></div>' +
-      (desc.text ? '<p class="' + uid + '-de" style="' + cmsParagraphStyle(desc, CMS_PARAGRAPH_DEFAULTS.fc2Desc) + '">' + xH(desc.text) + '</p>' : '') +
-      (ctaText.text ? '<a href="' + xA(c.ctaUrl || '#') + '" class="' + uid + '-cta" style="--fc2-cta-color:' + xA(ctaText.color) + ';' + cmsTextStyle(ctaText, CMS_PARAGRAPH_DEFAULTS.fc2Cta) + '">' + xH(ctaText.text) + '</a>' : '') +
-      '</div>';
-  }).join('\n');
-
-  var fontLink = '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n';
-  var html = fontLink + css + '\n<div class="' + uid + '"><div class="' + uid + '-grid">\n' + cardsHtml + '\n</div></div>';
-
-  document.getElementById('feature-cards-2-code').textContent = html;
-  document.getElementById('feature-cards-2-preview-wrap').innerHTML = html;
-  switchOut('feature-cards-2', 'preview');
+  fc2PersistNow('Saving…', 'Saved!', true);
 }
 
 // ── Page Component Manager (shared) ───────────────────────────
@@ -6693,7 +6887,7 @@ function cmsSetStatus(id, text, color, clearMs) {
   }
 }
 
-var CMS_TRACKED_SCREENS = ['feature-cards', 'steps-section', 'about-us', 'hero', 'promotion-section'];
+var CMS_TRACKED_SCREENS = ['feature-cards', 'feature-cards-2', 'steps-section', 'about-us', 'hero', 'promotion-section'];
 var cmsDirtyState = {};
 
 function cmsCurrentScreenName() {
@@ -6704,6 +6898,7 @@ function cmsCurrentScreenName() {
 function cmsDirtyStatusId(screenName) {
   return {
     'feature-cards': 'fc-status',
+    'feature-cards-2': 'fc2-status',
     'steps-section': 'ss-status',
     'about-us': 'au-status',
     'hero': 'hero-status',
@@ -6748,6 +6943,7 @@ function cmsAcknowledgeTrackedNavigation(screenName) {
 
 function cmsSyncTrackedScreen(screenName) {
   if (screenName === 'feature-cards') return featureCardsSyncCurrent();
+  if (screenName === 'feature-cards-2') return fc2SyncCurrent();
   if (screenName === 'steps-section') return stepsSectionSyncCurrent();
   if (screenName === 'about-us') return aboutUsSyncCurrent();
   if (screenName === 'hero') return heroSyncCurrent();
@@ -7457,6 +7653,8 @@ function aboutUsDefaultSection() {
   return {
     id: id,
     name: 'About Us Section ' + aboutUsStore.counter,
+    padLeft: 24,
+    padRight: 24,
     eyebrow: 'ABOUT VERTEX LEARNING SOLUTIONS',
     title: 'What is VLS and who is it for?',
     paragraphs: [
@@ -7483,6 +7681,8 @@ function aboutUsCurrentSection() {
 function aboutUsReadFormData() {
   return {
     name: (document.getElementById('au-name') || {}).value || '',
+    padLeft: cmsClampInt((document.getElementById('au-pad-left') || {}).value, 24, 0, 200),
+    padRight: cmsClampInt((document.getElementById('au-pad-right') || {}).value, 24, 0, 200),
     eyebrow: cmsReadTextField('au-eyebrow', CMS_PARAGRAPH_DEFAULTS.aboutEyebrow),
     title: cmsReadTextField('au-title', CMS_PARAGRAPH_DEFAULTS.aboutTitle),
     paragraphs: Array.prototype.slice.call(document.querySelectorAll('#au-paragraphs .au-para')).map(function(inp) {
@@ -7502,6 +7702,8 @@ function aboutUsReadFormData() {
 
 function aboutUsFillForm(sec) {
   document.getElementById('au-name').value = sec.name || '';
+  document.getElementById('au-pad-left').value = cmsClampInt(sec.padLeft, 24, 0, 200);
+  document.getElementById('au-pad-right').value = cmsClampInt(sec.padRight, 24, 0, 200);
   cmsSetTextField('au-eyebrow', sec.eyebrow, CMS_PARAGRAPH_DEFAULTS.aboutEyebrow);
   cmsSetTextField('au-title', sec.title, CMS_PARAGRAPH_DEFAULTS.aboutTitle);
   cmsSetTextField('au-cta-text', sec.ctaText, CMS_PARAGRAPH_DEFAULTS.aboutCta);
@@ -7517,6 +7719,8 @@ function aboutUsSyncCurrent() {
   if (!sec) return null;
   var data = aboutUsReadFormData();
   sec.name = data.name;
+  sec.padLeft = data.padLeft;
+  sec.padRight = data.padRight;
   sec.eyebrow = data.eyebrow;
   sec.title = data.title;
   sec.paragraphs = data.paragraphs;
@@ -7531,6 +7735,8 @@ function buildAboutUsHtml(data) {
   var eyebrow = cmsNormalizeTextData(data.eyebrow, CMS_PARAGRAPH_DEFAULTS.aboutEyebrow);
   var title = cmsNormalizeTextData(data.title, CMS_PARAGRAPH_DEFAULTS.aboutTitle);
   var ctaText = cmsNormalizeTextData(data.ctaText, CMS_PARAGRAPH_DEFAULTS.aboutCta);
+  var padLeft = cmsClampInt(data.padLeft, 24, 0, 200);
+  var padRight = cmsClampInt(data.padRight, 24, 0, 200);
   var paragraphHtml = (data.paragraphs || []).map(function(p) {
     var para = cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.aboutParagraph);
     return para.text ? '<p class="' + uid + '-para" style="' + cmsParagraphStyle(para, CMS_PARAGRAPH_DEFAULTS.aboutParagraph) + '">' + xH(para.text) + '</p>' : '';
@@ -7549,7 +7755,7 @@ function buildAboutUsHtml(data) {
   }).join('');
 
   var css = '<style>'
-    + '.' + uid + '{font-family:\'Poppins\',sans-serif;background:#fff;padding:48px 24px;box-sizing:border-box;}'
+    + '.' + uid + '{font-family:\'Poppins\',sans-serif;background:#fff;padding:48px ' + padRight + 'px 48px ' + padLeft + 'px;box-sizing:border-box;}'
     + '.' + uid + '-inner{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,1fr);gap:56px;align-items:start;}'
     + '.' + uid + '-ey{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#204280;margin:0 0 12px;}'
     + '.' + uid + '-title{font-size:26px;font-weight:600;color:#202124;line-height:1.25;margin:0 0 18px;}'
@@ -7562,7 +7768,7 @@ function buildAboutUsHtml(data) {
     + '.' + uid + '-icon svg{width:15px;height:15px;display:block;}'
     + '.' + uid + '-card-title{font-size:14px;font-weight:700;color:#222;margin:0 0 4px;line-height:1.35;}'
     + '.' + uid + '-card-desc{line-height:1.55;margin:0;}'
-    + '@media(max-width:800px){.' + uid + '-inner{grid-template-columns:1fr;gap:28px;}.' + uid + '{padding:38px 20px;}}'
+    + '@media(max-width:800px){.' + uid + '-inner{grid-template-columns:1fr;gap:28px;}.' + uid + '{padding:38px ' + padRight + 'px 38px ' + padLeft + 'px;}}'
     + '@media(max-width:520px){.' + uid + '-title{font-size:24px;}.' + uid + '-card{grid-template-columns:34px minmax(0,1fr);padding:16px;}}'
     + '</style>';
 
@@ -7683,6 +7889,8 @@ function aboutUsOnOpen() {
         return {
           id: sec.id || ('aus' + (++aboutUsStore.counter)),
           name: sec.name || '',
+          padLeft: cmsClampInt(sec.padLeft, 24, 0, 200),
+          padRight: cmsClampInt(sec.padRight, 24, 0, 200),
           eyebrow: cmsNormalizeTextData(sec.eyebrow, CMS_PARAGRAPH_DEFAULTS.aboutEyebrow),
           title: cmsNormalizeTextData(sec.title, CMS_PARAGRAPH_DEFAULTS.aboutTitle),
           paragraphs: (sec.paragraphs || []).map(function(p) { return cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.aboutParagraph); }),
