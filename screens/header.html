@@ -76,6 +76,25 @@
       </div>
 
       <div class="banner-block" style="margin-top:8px;">
+        <div class="banner-block-hd" onclick="toggleHdrBlock('spacing')">
+          <span class="banner-block-title">Layout &amp; Spacing</span>
+          <span id="hdr-arrow-spacing" class="banner-block-arrow">▼</span>
+        </div>
+        <div class="banner-block-body collapsed" id="hdr-body-spacing">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="field"><label>Padding left (px)</label><input type="number" id="hdr-pad-left" value="24" min="0" max="300"></div>
+            <div class="field"><label>Padding right (px)</label><input type="number" id="hdr-pad-right" value="24" min="0" max="300"></div>
+            <div class="field"><label>Padding top (px)</label><input type="number" id="hdr-pad-top" value="8" min="0" max="80"></div>
+            <div class="field"><label>Padding bottom (px)</label><input type="number" id="hdr-pad-bottom" value="8" min="0" max="80"></div>
+          </div>
+          <div class="field" style="margin-top:4px;">
+            <label>Sub-menu item spacing (px) <span style="font-weight:400;color:var(--muted);font-size:11px;">— vertical padding per item</span></label>
+            <input type="number" id="hdr-drop-spacing" value="10" min="2" max="24">
+          </div>
+        </div>
+      </div>
+
+      <div class="banner-block" style="margin-top:8px;">
         <div class="banner-block-hd" onclick="toggleHdrBlock('ctas')">
           <span class="banner-block-title">Call to Actions <span style="font-weight:400;font-size:11px;">(max 2)</span></span>
           <span id="hdr-arrow-ctas" class="banner-block-arrow">▼</span>
