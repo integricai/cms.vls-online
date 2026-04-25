@@ -669,6 +669,11 @@ async function loadScreen(name) {
 }
 
 async function switchScreen(name) {
+  var _activeEl = document.querySelector('.screen.active');
+  var _activeId = _activeEl ? _activeEl.id.replace('screen-', '') : '';
+  if (_dirtyScreens[_activeId] && ['intro','desc','tabs'].indexOf(_activeId) >= 0) {
+    if (!window.confirm('You have unsaved changes on this screen. Leave without saving?')) return;
+  }
   closeAllNavDds();
   var currentScreen = cmsCurrentScreenName();
   if (currentScreen && currentScreen !== name && !cmsConfirmTrackedNavigation(currentScreen, 'You have unsaved changes on this screen. Leave without saving?')) {
@@ -705,9 +710,9 @@ async function switchScreen(name) {
   if (name === 'feature-cards'   && !_loadedScreens._fcInit)   { _loadedScreens._fcInit   = true; featureCardsOnOpen(); }
   if (name === 'feature-cards-2' && !_loadedScreens._fc2Init)  { _loadedScreens._fc2Init  = true; fc2OnOpen(); }
   if (name === 'steps-section' && !_loadedScreens._stepsInit) { _loadedScreens._stepsInit = true; stepsSectionOnOpen(); }
-  if (name === 'intro' && !_loadedScreens._introInit) { _loadedScreens._introInit = true; introOnOpen(); }
-  if (name === 'desc'  && !_loadedScreens._descInit)  { _loadedScreens._descInit  = true; descOnOpen();  }
-  if (name === 'tabs'  && !_loadedScreens._tabsInit)  { _loadedScreens._tabsInit  = true; tabsOnOpen();  }
+  if (name === 'intro' && !_loadedScreens._introInit) { _loadedScreens._introInit = true; introOnOpen(); introCmpInit(); cmpAttachDirty('intro'); }
+  if (name === 'desc'  && !_loadedScreens._descInit)  { _loadedScreens._descInit  = true; descOnOpen();  descCmpInit();  cmpAttachDirty('desc');  }
+  if (name === 'tabs'  && !_loadedScreens._tabsInit)  { _loadedScreens._tabsInit  = true; tabsOnOpen();  tabsCmpInit();  cmpAttachDirty('tabs');  }
   if (name === 'events')  eventsOnOpen();
   if (name === 'faq')     faqOnOpen();
   if (name === 'team')    teamOnOpen();
@@ -890,6 +895,8 @@ function generateIntro() {
 // ── SCREEN 2: DESCRIPTION ──────────────────────────────────────
 
 var descBc = 0;
+var _dirtyScreens = {};
+var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] } };
 
 function toggleBlockPicker() {
   var p = document.getElementById('block-type-picker');
@@ -5639,6 +5646,337 @@ function generateFeatureCards2() {
   document.getElementById('feature-cards-2-code').textContent = html;
   document.getElementById('feature-cards-2-preview-wrap').innerHTML = html;
   switchOut('feature-cards-2', 'preview');
+}
+
+// ── Page Component Manager (shared) ───────────────────────────
+
+function cmpAttachDirty(screen) {
+  setTimeout(function() {
+    var panel = document.querySelector('#screen-' + screen + ' .form-panel');
+    if (panel && !panel.dataset.dirtyWired) {
+      panel.dataset.dirtyWired = '1';
+      panel.addEventListener('input', function(e) {
+        // ignore the component name field itself — that's not content
+        if (e.target && e.target.id === screen + '-cmp-name') return;
+        if (!_dirtyScreens[screen]) {
+          _dirtyScreens[screen] = true;
+          cmpSetStatus(screen, '● Unsaved changes', '#e08020');
+        }
+      });
+    }
+  }, 300);
+}
+
+function cmpSetStatus(screen, msg, color) {
+  var el = document.getElementById(screen + '-cmp-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = color || 'var(--muted)';
+}
+
+function cmpPopulateSelect(screen, components, selectedId) {
+  var sel = document.getElementById(screen + '-cmp-sel');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— select to load —</option>'
+    + (components || []).map(function(c) {
+        return '<option value="' + xA(c.id) + '"' + (c.id === selectedId ? ' selected' : '') + '>' + xH(c.name || '(unnamed)') + '</option>';
+      }).join('');
+  var delBtn = document.getElementById(screen + '-cmp-del');
+  if (delBtn) delBtn.style.display = selectedId ? '' : 'none';
+}
+
+async function cmpFetchAll(screen) {
+  try {
+    var r = await fetch('/api/publish-' + screen + '-components');
+    if (!r.ok) return [];
+    var d = await r.json();
+    return d.components || [];
+  } catch(e) { return []; }
+}
+
+async function cmpSaveAll(screen, components) {
+  try {
+    var r = await fetch('/api/publish-' + screen + '-components', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ components: components })
+    });
+    return r.ok;
+  } catch(e) { return false; }
+}
+
+// ── Intro component manager ────────────────────────────────────
+
+async function introCmpInit() {
+  var comps = await cmpFetchAll('intro');
+  _cmpState.intro.components = comps;
+  cmpPopulateSelect('intro', comps, null);
+}
+
+async function introCmpLoad(id) {
+  if (!id) { introCmpNew(); return; }
+  var comp = (_cmpState.intro.components || []).filter(function(c){return c.id===id;})[0];
+  if (!comp) return;
+  _cmpState.intro.id = comp.id;
+  var nameEl = document.getElementById('intro-cmp-name');
+  if (nameEl) nameEl.value = comp.name || '';
+  document.getElementById('intro-cmp-del').style.display = '';
+  restoreIntroState(comp.data || {});
+  delete _dirtyScreens.intro;
+  cmpSetStatus('intro', '');
+}
+
+async function introCmpSave() {
+  var nameEl = document.getElementById('intro-cmp-name');
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { alert('Please enter a component name before saving.'); if (nameEl) nameEl.focus(); return; }
+  cmpSetStatus('intro', 'Saving…', 'var(--muted)');
+  var state = collectIntroState();
+  var comps = _cmpState.intro.components || [];
+  var id = _cmpState.intro.id;
+  if (id) {
+    var found = false;
+    comps = comps.map(function(c){ if (c.id===id) { found=true; return {id:id,name:name,data:state}; } return c; });
+    if (!found) { id = 'ic-'+Date.now().toString(36); comps.push({id:id,name:name,data:state}); _cmpState.intro.id = id; }
+  } else {
+    id = 'ic-'+Date.now().toString(36);
+    comps.push({id:id,name:name,data:state});
+    _cmpState.intro.id = id;
+  }
+  _cmpState.intro.components = comps;
+  var ok = await cmpSaveAll('intro', comps);
+  if (ok) {
+    delete _dirtyScreens.intro;
+    cmpPopulateSelect('intro', comps, id);
+    cmpSetStatus('intro', '✓ Saved', '#16a34a');
+    setTimeout(function(){ cmpSetStatus('intro',''); }, 3000);
+  } else {
+    cmpSetStatus('intro', '✗ Save failed', '#e63946');
+  }
+}
+
+function introCmpNew() {
+  _cmpState.intro.id = null;
+  var nameEl = document.getElementById('intro-cmp-name'); if (nameEl) nameEl.value = '';
+  var sel = document.getElementById('intro-cmp-sel'); if (sel) sel.value = '';
+  var del = document.getElementById('intro-cmp-del'); if (del) del.style.display = 'none';
+  loadIntroTemplate();
+  var pc = document.getElementById('intro-paragraphs'); if (pc) pc.innerHTML = '';
+  delete _dirtyScreens.intro;
+  cmpSetStatus('intro', '');
+}
+
+async function introCmpDelete() {
+  var id = _cmpState.intro.id;
+  if (!id) return;
+  var comp = (_cmpState.intro.components||[]).filter(function(c){return c.id===id;})[0];
+  if (!window.confirm('Delete "' + (comp ? comp.name : 'this component') + '"? This cannot be undone.')) return;
+  var comps = (_cmpState.intro.components||[]).filter(function(c){return c.id!==id;});
+  var ok = await cmpSaveAll('intro', comps);
+  if (ok) { _cmpState.intro.components = comps; _cmpState.intro.id = null; cmpPopulateSelect('intro', comps, null); introCmpNew(); }
+}
+
+function collectIntroState() {
+  var set = function(id) { return (document.getElementById(id)||{}).value||''; };
+  return {
+    templateType: set('intro-type'),
+    h1: set('intro-h1'), h2: set('intro-h2'),
+    padLeft: set('intro-pad-left'), padRight: set('intro-pad-right'),
+    featHeading: set('intro-feat-heading'),
+    features: Array.from(document.querySelectorAll('#intro-features .feature-item input')).map(function(i){return i.value;}).filter(function(v){return v.trim();}),
+    paras: Array.from(document.querySelectorAll('#intro-paragraphs .block-item')).map(function(item){
+      return { text: (item.querySelector('.ip-text')||{}).value||'', size: parseInt((item.querySelector('.ip-size')||{}).value)||16, bold: !!(item.querySelector('.ip-bold')||{}).checked };
+    }),
+    ctaText: set('intro-cta-text'), ctaUrl: set('intro-cta-url')
+  };
+}
+
+function restoreIntroState(data) {
+  var set = function(id, v) { var el=document.getElementById(id); if(el) el.value=v||''; };
+  set('intro-type', data.templateType || 'course');
+  set('intro-h1', data.h1); set('intro-h2', data.h2);
+  set('intro-pad-left', data.padLeft||'0'); set('intro-pad-right', data.padRight||'0');
+  set('intro-feat-heading', data.featHeading);
+  set('intro-cta-text', data.ctaText); set('intro-cta-url', data.ctaUrl);
+  var fc = document.getElementById('intro-features');
+  if (fc) { fc.innerHTML=''; (data.features||[]).forEach(function(f){addFeature(f);}); }
+  var pc = document.getElementById('intro-paragraphs');
+  if (pc) { pc.innerHTML=''; (data.paras||[]).forEach(function(p){addIntroParagraph(p);}); }
+}
+
+// ── Desc component manager ─────────────────────────────────────
+
+async function descCmpInit() {
+  var comps = await cmpFetchAll('desc');
+  _cmpState.desc.components = comps;
+  cmpPopulateSelect('desc', comps, null);
+}
+
+async function descCmpLoad(id) {
+  if (!id) { descCmpNew(); return; }
+  var comp = (_cmpState.desc.components || []).filter(function(c){return c.id===id;})[0];
+  if (!comp) return;
+  _cmpState.desc.id = comp.id;
+  var nameEl = document.getElementById('desc-cmp-name'); if (nameEl) nameEl.value = comp.name || '';
+  document.getElementById('desc-cmp-del').style.display = '';
+  restoreDescState(comp.data || {});
+  delete _dirtyScreens.desc;
+  cmpSetStatus('desc', '');
+}
+
+async function descCmpSave() {
+  var nameEl = document.getElementById('desc-cmp-name');
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { alert('Please enter a component name before saving.'); if (nameEl) nameEl.focus(); return; }
+  cmpSetStatus('desc', 'Saving…', 'var(--muted)');
+  var state = collectDescState();
+  var comps = _cmpState.desc.components || [];
+  var id = _cmpState.desc.id;
+  if (id) {
+    var found = false;
+    comps = comps.map(function(c){ if(c.id===id){found=true;return{id:id,name:name,data:state};}return c; });
+    if (!found) { id='dc-'+Date.now().toString(36); comps.push({id:id,name:name,data:state}); _cmpState.desc.id=id; }
+  } else { id='dc-'+Date.now().toString(36); comps.push({id:id,name:name,data:state}); _cmpState.desc.id=id; }
+  _cmpState.desc.components = comps;
+  var ok = await cmpSaveAll('desc', comps);
+  if (ok) {
+    delete _dirtyScreens.desc;
+    cmpPopulateSelect('desc', comps, id);
+    cmpSetStatus('desc', '✓ Saved', '#16a34a');
+    setTimeout(function(){ cmpSetStatus('desc',''); }, 3000);
+  } else { cmpSetStatus('desc', '✗ Save failed', '#e63946'); }
+}
+
+function descCmpNew() {
+  _cmpState.desc.id = null;
+  var nameEl = document.getElementById('desc-cmp-name'); if (nameEl) nameEl.value = '';
+  var sel = document.getElementById('desc-cmp-sel'); if (sel) sel.value = '';
+  var del = document.getElementById('desc-cmp-del'); if (del) del.style.display = 'none';
+  var container = document.getElementById('desc-blocks'); if (container) container.innerHTML = '';
+  descOnOpen();
+  delete _dirtyScreens.desc;
+  cmpSetStatus('desc', '');
+}
+
+async function descCmpDelete() {
+  var id = _cmpState.desc.id; if (!id) return;
+  var comp = (_cmpState.desc.components||[]).filter(function(c){return c.id===id;})[0];
+  if (!window.confirm('Delete "' + (comp ? comp.name : 'this component') + '"?')) return;
+  var comps = (_cmpState.desc.components||[]).filter(function(c){return c.id!==id;});
+  var ok = await cmpSaveAll('desc', comps);
+  if (ok) { _cmpState.desc.components=comps; _cmpState.desc.id=null; cmpPopulateSelect('desc',comps,null); descCmpNew(); }
+}
+
+function collectDescState() {
+  var blocks = [];
+  document.querySelectorAll('#desc-blocks .block-item').forEach(function(block) {
+    var id = block.id, type = block.dataset.type, b = {type: type};
+    if (type === 'paragraph') {
+      b.p = cmsReadParagraphField(id+'-p', CMS_PARAGRAPH_DEFAULTS.desc);
+    } else if (type === 'heading-paragraph') {
+      b.h = (document.getElementById(id+'-h')||{}).value||'';
+      b.p = cmsReadParagraphField(id+'-p', CMS_PARAGRAPH_DEFAULTS.desc);
+    } else if (type === 'heading-bullets') {
+      b.h = (document.getElementById(id+'-h')||{}).value||'';
+      b.bullets = Array.from(document.querySelectorAll('#'+id+'-bullets .feature-item input')).map(function(i){return i.value;});
+    } else if (type === 'bullets') {
+      b.bullets = Array.from(document.querySelectorAll('#'+id+'-bullets .feature-item input')).map(function(i){return i.value;});
+    } else if (type === 'items') {
+      b.h = (document.getElementById(id+'-h')||{}).value||'';
+      b.items = Array.from(document.querySelectorAll('#'+id+'-items .block-item')).map(function(item){
+        return { h: (item.querySelector('.item-h')||{}).value||'', p: cmsReadParagraphField(item.querySelector('.item-p'), CMS_PARAGRAPH_DEFAULTS.desc) };
+      });
+    } else if (type === 'note') {
+      b.p = cmsReadParagraphField(id+'-p', CMS_PARAGRAPH_DEFAULTS.descNote);
+    }
+    blocks.push(b);
+  });
+  return {
+    introBold: (document.getElementById('desc-intro-bold')||{}).value||'',
+    introP1: cmsReadParagraphField('desc-intro-p1', CMS_PARAGRAPH_DEFAULTS.desc),
+    introP2: cmsReadParagraphField('desc-intro-p2', CMS_PARAGRAPH_DEFAULTS.desc),
+    blocks: blocks
+  };
+}
+
+function restoreDescState(data) {
+  var el = document.getElementById('desc-intro-bold'); if (el) el.value = data.introBold||'';
+  cmsSetParagraphField('desc-intro-p1', data.introP1, CMS_PARAGRAPH_DEFAULTS.desc);
+  cmsSetParagraphField('desc-intro-p2', data.introP2, CMS_PARAGRAPH_DEFAULTS.desc);
+  var container = document.getElementById('desc-blocks');
+  if (container) { container.innerHTML=''; (data.blocks||[]).forEach(function(b){ addDescBlock(b.type, b); }); }
+}
+
+// ── Tabs component manager ─────────────────────────────────────
+
+async function tabsCmpInit() {
+  var comps = await cmpFetchAll('tabs');
+  _cmpState.tabs.components = comps;
+  cmpPopulateSelect('tabs', comps, null);
+}
+
+async function tabsCmpLoad(id) {
+  if (!id) { tabsCmpNew(); return; }
+  var comp = (_cmpState.tabs.components || []).filter(function(c){return c.id===id;})[0];
+  if (!comp) return;
+  _cmpState.tabs.id = comp.id;
+  var nameEl = document.getElementById('tabs-cmp-name'); if (nameEl) nameEl.value = comp.name||'';
+  document.getElementById('tabs-cmp-del').style.display = '';
+  restoreTabsState(comp.data || {});
+  delete _dirtyScreens.tabs;
+  cmpSetStatus('tabs', '');
+}
+
+async function tabsCmpSave() {
+  var nameEl = document.getElementById('tabs-cmp-name');
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { alert('Please enter a component name before saving.'); if (nameEl) nameEl.focus(); return; }
+  cmpSetStatus('tabs', 'Saving…', 'var(--muted)');
+  var state = collectTabsState();
+  var comps = _cmpState.tabs.components || [];
+  var id = _cmpState.tabs.id;
+  if (id) {
+    var found = false;
+    comps = comps.map(function(c){ if(c.id===id){found=true;return{id:id,name:name,data:state};}return c; });
+    if (!found) { id='tc-'+Date.now().toString(36); comps.push({id:id,name:name,data:state}); _cmpState.tabs.id=id; }
+  } else { id='tc-'+Date.now().toString(36); comps.push({id:id,name:name,data:state}); _cmpState.tabs.id=id; }
+  _cmpState.tabs.components = comps;
+  var ok = await cmpSaveAll('tabs', comps);
+  if (ok) {
+    delete _dirtyScreens.tabs;
+    cmpPopulateSelect('tabs', comps, id);
+    cmpSetStatus('tabs', '✓ Saved', '#16a34a');
+    setTimeout(function(){ cmpSetStatus('tabs',''); }, 3000);
+  } else { cmpSetStatus('tabs', '✗ Save failed', '#e63946'); }
+}
+
+function tabsCmpNew() {
+  _cmpState.tabs.id = null;
+  var nameEl = document.getElementById('tabs-cmp-name'); if (nameEl) nameEl.value = '';
+  var sel = document.getElementById('tabs-cmp-sel'); if (sel) sel.value = '';
+  var del = document.getElementById('tabs-cmp-del'); if (del) del.style.display = 'none';
+  tabsOnOpen();
+  delete _dirtyScreens.tabs;
+  cmpSetStatus('tabs', '');
+}
+
+async function tabsCmpDelete() {
+  var id = _cmpState.tabs.id; if (!id) return;
+  var comp = (_cmpState.tabs.components||[]).filter(function(c){return c.id===id;})[0];
+  if (!window.confirm('Delete "' + (comp ? comp.name : 'this component') + '"?')) return;
+  var comps = (_cmpState.tabs.components||[]).filter(function(c){return c.id!==id;});
+  var ok = await cmpSaveAll('tabs', comps);
+  if (ok) { _cmpState.tabs.components=comps; _cmpState.tabs.id=null; cmpPopulateSelect('tabs',comps,null); tabsCmpNew(); }
+}
+
+function collectTabsState() {
+  tabsSaveActiveLabel();
+  tabsSaveActiveBlocks();
+  return { tabs: JSON.parse(JSON.stringify(vlsTabs)) };
+}
+
+function restoreTabsState(data) {
+  tabsInit(data.tabs || []);
 }
 
 function copyHdrCode() {

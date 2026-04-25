@@ -1,5 +1,23 @@
 <div id="screen-desc" class="screen">
   <div class="form-panel"><div class="form-inner">
+    <div style="background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:2px;">
+      <div class="section-label" style="margin:0 0 10px">Saved Components</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <select id="desc-cmp-sel" onchange="descCmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none;background:#fff;color:var(--text);">
+          <option value="">— select to load —</option>
+        </select>
+        <button class="btn-sm" onclick="descCmpNew()">+ New</button>
+        <button class="btn-sm danger" id="desc-cmp-del" style="display:none" onclick="descCmpDelete()">Delete</button>
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>Component name</label>
+        <input type="text" id="desc-cmp-name" placeholder="e.g. FA1 Description — Course Page">
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span id="desc-cmp-status" style="font-size:12px;"></span>
+        <button class="btn-gen" style="width:auto;padding:8px 20px;margin:0" onclick="descCmpSave()">Save Component</button>
+      </div>
+    </div>
     <div class="section-label">Above "Read More" — always visible</div>
     <div class="field"><label>Bold intro line</label><input type="text" id="desc-intro-bold" value="Start your ACCA journey with the qualification's first building block."></div>
     <div class="field"><label>Paragraph 1</label><textarea id="desc-intro-p1" rows="3">FA1 Recording Financial Transactions is the entry point into the ACCA Foundations in Accountancy (FIA) pathway. Whether you're brand new to accounting or returning to formalise your skills, this course gives you everything you need to understand how financial information flows through a business from the very first document all the way to the trial balance.</textarea></div>
