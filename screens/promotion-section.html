@@ -45,19 +45,6 @@
       <label>Title text</label>
       <input type="text" id="promo-title" value="Ready to take the next step?">
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field">
-        <label>Title colour</label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="color" id="promo-title-color-picker" value="#164b8a" oninput="document.getElementById('promo-title-color-text').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
-          <input type="text" id="promo-title-color-text" value="#164b8a" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('promo-title-color-picker').value=v">
-        </div>
-      </div>
-      <div class="field">
-        <label>Title size (px)</label>
-        <input type="number" id="promo-title-size" value="22" min="12" max="64">
-      </div>
-    </div>
 
     <div class="section-label">Subtitle</div>
     <div class="field">
@@ -73,19 +60,6 @@
     <div class="field">
       <label>CTA URL</label>
       <input type="text" id="promo-cta-url" value="#" placeholder="https://">
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field">
-        <label>CTA text colour</label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="color" id="promo-cta-color-picker" value="#ffffff" oninput="document.getElementById('promo-cta-color-text').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
-          <input type="text" id="promo-cta-color-text" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('promo-cta-color-picker').value=v">
-        </div>
-      </div>
-      <div class="field">
-        <label>CTA text size (px)</label>
-        <input type="number" id="promo-cta-size" value="14" min="10" max="40">
-      </div>
     </div>
 
     <button class="btn-gen" onclick="generatePromotionSection()">Generate &amp; Save</button>

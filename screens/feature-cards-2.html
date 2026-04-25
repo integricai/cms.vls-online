@@ -29,7 +29,6 @@
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field"><label>Font size — desc (px)</label><input type="number" id="fc2-font-size" value="14" min="10" max="24"></div>
       <div class="field">
         <label>Columns</label>
         <select id="fc2-cols">
@@ -38,19 +37,8 @@
           <option value="4">4 columns</option>
         </select>
       </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
-      <div class="field">
-        <label>Font colour — titles</label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="color" id="fc2-fc-picker" value="#204280" oninput="document.getElementById('fc2-fc-text').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
-          <input type="text" id="fc2-fc-text" value="#204280" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('fc2-fc-picker').value=v" style="font-family:'Poppins',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none">
-        </div>
-      </div>
-      <div class="field" style="flex-direction:row;align-items:center;gap:8px;padding-bottom:9px">
-        <input type="checkbox" id="fc2-bold" checked style="width:16px;height:16px;cursor:pointer;accent-color:var(--purple);flex-shrink:0">
-        <label for="fc2-bold" style="font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;margin:0;color:#262a32">Bold titles</label>
+      <div style="display:flex;align-items:center;font-size:11px;color:var(--muted);line-height:1.5;">
+        Each card title, description, and CTA now has its own text formatting controls inside the card editor.
       </div>
     </div>
 
