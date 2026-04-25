@@ -93,6 +93,9 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 .pw-btn{width:100%;background:#534AB7;color:#fff;border:none;border-radius:8px;padding:11px;font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
 .pw-btn:hover{background:#3C3489}
 .pw-error{font-size:12px;color:#e63946;text-align:center;min-height:16px}
+.pw-link{font-size:12px;color:#534AB7;cursor:pointer;text-align:center;margin-top:-6px}
+.pw-link:hover{text-decoration:underline}
+.pw-success{font-size:12px;color:#059669;text-align:center;min-height:16px}
 
 /* ── Calendar ── */
 .cal-wrap{display:flex;flex-direction:column;height:100%;}
@@ -212,12 +215,46 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 <div id="global-auth-gate">
   <div class="pw-card">
     <div class="pw-logo">VLS Online CMS</div>
-    <div class="pw-title">Sign in</div>
-    <div class="pw-sub">Enter your credentials to access the CMS</div>
-    <input class="pw-input" type="email" id="global-email" placeholder="Email address" autocomplete="email">
-    <input class="pw-input" type="password" id="global-password" placeholder="Password" onkeydown="if(event.key==='Enter')globalLogin()">
-    <button class="pw-btn" onclick="globalLogin()">Sign in</button>
-    <div class="pw-error" id="global-auth-error"></div>
+
+    <!-- Step: Sign in -->
+    <div id="pw-step-login" style="width:100%;display:flex;flex-direction:column;gap:20px;align-items:center">
+      <div class="pw-title">Sign in</div>
+      <div class="pw-sub">Enter your credentials to access the CMS</div>
+      <input class="pw-input" type="email" id="global-email" placeholder="Email address" autocomplete="email">
+      <input class="pw-input" type="password" id="global-password" placeholder="Password" onkeydown="if(event.key==='Enter')globalLogin()">
+      <button class="pw-btn" onclick="globalLogin()">Sign in</button>
+      <div class="pw-error" id="global-auth-error"></div>
+      <div class="pw-link" onclick="globalShowForgot()">Forgot password?</div>
+    </div>
+
+    <!-- Step: Request reset -->
+    <div id="pw-step-forgot" style="display:none;width:100%;flex-direction:column;gap:20px;align-items:center">
+      <div class="pw-title">Forgot password</div>
+      <div class="pw-sub">Enter your email and we'll send you a reset link</div>
+      <input class="pw-input" type="email" id="global-reset-email" placeholder="Email address" autocomplete="email" onkeydown="if(event.key==='Enter')globalRequestReset()">
+      <button class="pw-btn" onclick="globalRequestReset()">Send reset link</button>
+      <div class="pw-error" id="global-reset-error"></div>
+      <div class="pw-link" onclick="globalShowLogin()">&larr; Back to sign in</div>
+    </div>
+
+    <!-- Step: Email sent confirmation -->
+    <div id="pw-step-sent" style="display:none;width:100%;flex-direction:column;gap:20px;align-items:center">
+      <div class="pw-title">Check your email</div>
+      <div class="pw-sub" id="pw-sent-msg">A reset link has been sent to your email address.</div>
+      <button class="pw-btn" onclick="globalShowLogin()">Back to sign in</button>
+    </div>
+
+    <!-- Step: Set new password (entered via reset link URL) -->
+    <div id="pw-step-reset" style="display:none;width:100%;flex-direction:column;gap:20px;align-items:center">
+      <div class="pw-title">Set new password</div>
+      <div class="pw-sub">Choose a new password for your account</div>
+      <input class="pw-input" type="password" id="global-new-pw" placeholder="New password (min 8 chars)" onkeydown="if(event.key==='Enter')globalResetPassword()">
+      <input class="pw-input" type="password" id="global-new-pw2" placeholder="Confirm new password" onkeydown="if(event.key==='Enter')globalResetPassword()">
+      <button class="pw-btn" onclick="globalResetPassword()">Set password</button>
+      <div class="pw-error" id="global-reset-pw-error"></div>
+      <div class="pw-success" id="global-reset-pw-ok"></div>
+    </div>
+
   </div>
 </div>
 
@@ -364,6 +401,14 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 // ── Global auth ────────────────────────────────────────────────
 
 var AUTH_ROLE_KEY = 'vls_auth_role';
+var _pendingResetToken = null;
+
+function showPwStep(step) {
+  ['login','forgot','sent','reset'].forEach(function(s) {
+    var el = document.getElementById('pw-step-' + s);
+    if (el) el.style.display = (s === step) ? 'flex' : 'none';
+  });
+}
 
 function applyRole(role) {
   var globalDd = document.getElementById('nav-global-dd');
@@ -409,12 +454,25 @@ document.addEventListener('click', function(e) {
 });
 
 function globalCheckAuth() {
+  // If URL contains a password reset token, show the set-new-password step
+  var params = new URLSearchParams(window.location.search);
+  var resetToken = params.get('reset_token');
+  if (resetToken) {
+    _pendingResetToken = resetToken;
+    window.history.replaceState({}, '', window.location.pathname);
+    showPwStep('reset');
+    document.getElementById('global-auth-gate').classList.remove('hidden');
+    setTimeout(function() { var e = document.getElementById('global-new-pw'); if (e) e.focus(); }, 80);
+    return;
+  }
+
   var role = sessionStorage.getItem(AUTH_ROLE_KEY);
   if (role) {
     document.getElementById('global-auth-gate').classList.add('hidden');
     applyRole(role);
     switchScreen('home');
   } else {
+    showPwStep('login');
     document.getElementById('global-auth-gate').classList.remove('hidden');
     setTimeout(function() { var e = document.getElementById('global-email'); if (e) e.focus(); }, 80);
   }
@@ -463,6 +521,103 @@ async function globalLogin() {
 function globalSignOut() {
   sessionStorage.removeItem(AUTH_ROLE_KEY);
   globalCheckAuth();
+}
+
+function globalShowForgot() {
+  var loginEmail = document.getElementById('global-email');
+  var resetEmail = document.getElementById('global-reset-email');
+  if (loginEmail && resetEmail) resetEmail.value = loginEmail.value;
+  document.getElementById('global-reset-error').textContent = '';
+  showPwStep('forgot');
+  setTimeout(function() { var e = document.getElementById('global-reset-email'); if (e) e.focus(); }, 80);
+}
+
+function globalShowLogin() {
+  document.getElementById('global-auth-error').textContent = '';
+  showPwStep('login');
+  setTimeout(function() { var e = document.getElementById('global-email'); if (e) e.focus(); }, 80);
+}
+
+async function globalRequestReset() {
+  var emailEl = document.getElementById('global-reset-email');
+  var errEl   = document.getElementById('global-reset-error');
+  var btn     = document.querySelector('#pw-step-forgot .pw-btn');
+  var email   = emailEl.value.trim();
+  if (!email) { errEl.textContent = 'Please enter your email address.'; return; }
+
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    var resp = await fetch('/api/request-password-reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    });
+    var data = await resp.json();
+    if (resp.ok) {
+      document.getElementById('pw-sent-msg').textContent = data.message ||
+        'A reset link has been sent to ' + email + '. Check your inbox.';
+      showPwStep('sent');
+    } else {
+      errEl.textContent = data.error || 'Something went wrong. Please try again.';
+    }
+  } catch(e) {
+    errEl.textContent = 'Network error. Please try again.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send reset link';
+  }
+}
+
+async function globalResetPassword() {
+  var pw1El  = document.getElementById('global-new-pw');
+  var pw2El  = document.getElementById('global-new-pw2');
+  var errEl  = document.getElementById('global-reset-pw-error');
+  var okEl   = document.getElementById('global-reset-pw-ok');
+  var btn    = document.querySelector('#pw-step-reset .pw-btn');
+  var pw1    = pw1El.value;
+  var pw2    = pw2El.value;
+
+  errEl.textContent = '';
+  okEl.textContent  = '';
+  if (!pw1) { errEl.textContent = 'Please enter a new password.'; return; }
+  if (pw1.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; return; }
+  if (pw1 !== pw2)    { errEl.textContent = 'Passwords do not match.'; return; }
+  if (!_pendingResetToken) {
+    errEl.textContent = 'Reset token missing. Please request a new reset link.'; return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    var resp = await fetch('/api/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: _pendingResetToken, password: pw1 })
+    });
+    var data = await resp.json();
+    if (resp.ok) {
+      _pendingResetToken = null;
+      pw1El.value = '';
+      pw2El.value = '';
+      okEl.textContent = 'Password updated! Redirecting to sign in…';
+      setTimeout(function() {
+        okEl.textContent = '';
+        showPwStep('login');
+        setTimeout(function() { var e = document.getElementById('global-email'); if (e) e.focus(); }, 80);
+      }, 1800);
+    } else {
+      errEl.textContent = data.error || 'Something went wrong. Please try again.';
+    }
+  } catch(e) {
+    errEl.textContent = 'Network error. Please try again.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Set password';
+  }
 }
 
 window.addEventListener('DOMContentLoaded', function() {

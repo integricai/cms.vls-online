@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { readLatestBlobVersion } from './_cms-blob-store.js';
 
 function normalizeKey(value) {
   return String(value == null ? '' : value).trim().toLowerCase();
@@ -128,6 +129,15 @@ function matchesUser(users, username, password, hash) {
   return false;
 }
 
+async function readPasswordOverrides() {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
+  try {
+    return await readLatestBlobVersion('password-overrides');
+  } catch (_) {
+    return null;
+  }
+}
+
 function authDebugEnabled() {
   return String(process.env.AUTH_DEBUG || '').trim() === '1';
 }
@@ -156,6 +166,22 @@ export default async function handler(req, res) {
 
   const key = email.toLowerCase().trim();
   const hash = createHash('sha256').update(password).digest('hex');
+
+  // Passwords set via the forgot-password flow take precedence over env-var credentials.
+  const overrides = await readPasswordOverrides();
+  if (overrides && overrides[key] != null) {
+    const ov       = overrides[key];
+    const ovRole   = (ov && ov.role) ? ov.role : 'user';
+    const ovRaw    = (ov && typeof ov === 'object' && ov.password != null) ? ov.password : ov;
+    const ovSecret = normalizeSecret(ovRaw);
+    const ovMatch  = ovSecret && (
+      (ovSecret.hash  && ovSecret.hash  === hash) ||
+      (ovSecret.plain != null && ovSecret.plain === String(password))
+    );
+    logAuthAttempt({ email: key, source: 'blob-override', match: !!ovMatch, role: ovRole });
+    if (ovMatch) return res.status(200).json({ ok: true, role: ovRole });
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
 
   const admin = parseUsers('ADMIN_AUTH_USERS');
   if (admin.error) return res.status(500).json({ error: `Server misconfigured — ${admin.error}` });
