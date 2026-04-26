@@ -311,6 +311,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-dcs2" onclick="switchScreen('dcs2')">Two Column Section 2</div>
       <div class="nav-dd-item" id="nav-dcs3" onclick="switchScreen('dcs3')">Two Column Section 3</div>
       <div class="nav-dd-item" id="nav-reach" onclick="switchScreen('reach')">Global Reach Section</div>
+      <div class="nav-dd-item" id="nav-policy" onclick="switchScreen('policy')">Privacy Policy Page</div>
     </div>
   </div>
   <!-- Forms dropdown -->
@@ -382,6 +383,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <button class="home-tile-link" onclick="switchScreen('dcs2')">Two Column Section 2</button>
           <button class="home-tile-link" onclick="switchScreen('dcs3')">Two Column Section 3</button>
           <button class="home-tile-link" onclick="switchScreen('reach')">Global Reach Section</button>
+          <button class="home-tile-link" onclick="switchScreen('policy')">Privacy Policy Page</button>
         </div>
       </div>
       <div class="home-tile">
@@ -994,7 +996,7 @@ var _GLOBAL_SCREENS = ['header', 'footer', 'banner', 'promotion-section', 'conta
 var _HOME_SCREENS   = ['hero', 'about-us'];
 var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
 var _SHARED_SCREENS = ['faq', 'events', 'programs', 'feature-cards', 'feature-cards-2'];
-var _COMMON_SECTION_SCREENS = ['steps-section', 'dcs', 'dcs2', 'dcs3', 'reach'];
+var _COMMON_SECTION_SCREENS = ['steps-section', 'dcs', 'dcs2', 'dcs3', 'reach', 'policy'];
 var _FORM_SCREENS   = ['form'];
 
 var _screenFiles = {
@@ -1020,6 +1022,7 @@ var _screenFiles = {
   dcs3:     '/screens/double-column-3.html',
   reach:           '/screens/reach.html',
   'contact-footer':'/screens/contact-footer.html',
+  policy:          '/screens/policy.html',
 };
 var _loadedScreens = {};
 
@@ -1093,6 +1096,7 @@ async function switchScreen(name) {
   if (name === 'dcs3'  && !_loadedScreens._dcs3Init)  { _loadedScreens._dcs3Init  = true; dcs3OnOpen();  dcs3CmpInit();  cmpAttachDirty('dcs3');  }
   if (name === 'reach'          && !_loadedScreens._reachInit) { _loadedScreens._reachInit = true; reachOnOpen(); reachCmpInit(); cmpAttachDirty('reach'); }
   if (name === 'contact-footer' && !_loadedScreens._cfInit)    { _loadedScreens._cfInit    = true; cfOnOpen();    cfCmpInit();   cmpAttachDirty('contact-footer'); }
+  if (name === 'policy'         && !_loadedScreens._polInit)   { _loadedScreens._polInit   = true; policyOnOpen();polCmpInit();  cmpAttachDirty('policy'); }
   if (name === 'events')  eventsOnOpen();
   if (name === 'faq')     faqOnOpen();
   if (name === 'team')    teamOnOpen();
@@ -1281,7 +1285,7 @@ function generateIntro() {
 
 var descBc = 0;
 var _dirtyScreens = {};
-var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] }, dcs3: { id: null, components: [] }, reach: { id: null, components: [] }, cf: { id: null, components: [] } };
+var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] }, dcs3: { id: null, components: [] }, reach: { id: null, components: [] }, cf: { id: null, components: [] }, policy: { id: null, components: [] } };
 
 function toggleBlockPicker() {
   var p = document.getElementById('block-type-picker');
@@ -7074,6 +7078,571 @@ function generateAboutUs() {
   document.getElementById('about-us-code').textContent = html;
   document.getElementById('about-us-preview-wrap').innerHTML = html;
   switchOut('about-us', 'preview');
+}
+
+// ── Privacy Policy Page ──────────────────────────────────────────
+
+function policyOnOpen() {
+  // Seed with the first three sample sections shown in screenshots
+  polAddMeta('Vertex Learning Solutions Ltd');
+  polAddMeta('Last updated: 2024');
+  polAddMeta('GDPR compliant');
+  polAddSection({
+    title: 'Introduction',
+    blocks: [
+      { type: 'paragraph', text: 'This privacy notice applies to this website and other interactions you may have with us — including when you create an account, purchase or sign up for a course, subscribe to our newsletter, open a support ticket, or contact us by email, phone, or social media.' },
+      { type: 'paragraph', text: 'If you do not agree with the terms of this policy, please do not access our website or any other aspect of our services.' }
+    ]
+  });
+  polAddSection({
+    title: 'What Data Do We Collect?',
+    blocks: [
+      { type: 'paragraph', text: 'Personal data means any information capable of identifying an individual. It does not include anonymised data. We may collect and process your personal data in the following ways:' },
+      { type: 'cards', items: [
+        { label: 'COMMUNICATION DATA', text: 'Any communication you send us — via contact forms, email, text, or social media messaging.' },
+        { label: 'CUSTOMER DATA',      text: 'Data relating to purchases — your name, billing address, email, phone number, and payment details.' },
+        { label: 'USER DATA',          text: 'How you use our website and online services, including content, courses, quizzes, and surveys you interact with.' },
+        { label: 'TECHNICAL DATA',     text: 'IP address, browser details, login data, page views, navigation paths, and time zone settings.' },
+        { label: 'MARKETING DATA',     text: 'Your preferences for receiving marketing from us and third parties, and your communication preferences.' }
+      ]}
+    ]
+  });
+  polAddSection({
+    title: 'Other Information Collected',
+    blocks: [
+      { type: 'paragraph', text: 'We may collect data directly from you (e.g. by filling in forms or sending emails), automatically via cookies and similar technologies, or from third parties such as analytics providers and advertising networks.' }
+    ]
+  });
+  polAddSection({
+    title: 'Disclosures of Your Personal Data',
+    blocks: [
+      { type: 'paragraph', text: 'We may share your data with the following parties:' },
+      { type: 'definitions', items: [
+        { term: 'Zenler.com',                       desc: 'our course platform provider and data processor, under a formal data processing addendum' },
+        { term: 'Infrastructure & hosting providers', desc: 'Amazon, Sendgrid, FileStack, Vimeo, Zoom' },
+        { term: 'Professional advisers',             desc: 'lawyers, bankers, auditors and insurers' },
+        { term: 'Government bodies',                 desc: 'where required to report processing activities' },
+        { term: 'Business transfer parties',         desc: 'in the event of a sale, merger, or asset transfer' }
+      ]},
+      { type: 'paragraph', text: 'All third parties are required to respect the security of your data and treat it in accordance with the law. We only allow them to process your data for specified purposes and in accordance with our instructions.' }
+    ]
+  });
+  polAddSection({
+    title: 'Your Rights',
+    blocks: [
+      { type: 'paragraph', text: 'Under GDPR and UK data protection law, you have the following rights regarding your personal data:' },
+      { type: 'rights', items: [
+        { icon: '👁', title: 'Right to Access',        text: 'Request a copy of the personal data we hold about you.' },
+        { icon: '✏️', title: 'Right to Rectification', text: 'Request correction of inaccurate or incomplete data.' },
+        { icon: '🗑', title: 'Right to Erasure',        text: 'Request deletion of your data where there is no lawful reason to retain it.' },
+        { icon: '⏸',  title: 'Right to Restriction',   text: 'Request that we restrict processing of your data in certain circumstances.' },
+        { icon: '📦', title: 'Right to Portability',   text: 'Request transfer of your data to you or a third party in a structured format.' },
+        { icon: '🚫', title: 'Right to Object',         text: 'Object to processing based on legitimate interests or for direct marketing.' }
+      ]}
+    ]
+  });
+}
+
+// ── Policy component manager ─────────────────────────────────────
+
+async function polCmpInit() {
+  var comps = await cmpFetchAll('policy');
+  _cmpState.policy.components = comps;
+  cmpPopulateSelect('pol', comps, null);
+}
+
+async function polCmpLoad(id) {
+  if (!id) { polCmpNew(); return; }
+  var comp = (_cmpState.policy.components || []).filter(function(c){ return c.id === id; })[0];
+  if (!comp) return;
+  _cmpState.policy.id = comp.id;
+  var nameEl = document.getElementById('pol-cmp-name'); if (nameEl) nameEl.value = comp.name || '';
+  var delBtn = document.getElementById('pol-cmp-del');  if (delBtn) delBtn.style.display = '';
+  restorePolicyState(comp.data || {});
+  delete _dirtyScreens.policy;
+  cmpSetStatus('pol', '');
+}
+
+async function polCmpSave() {
+  var nameEl = document.getElementById('pol-cmp-name');
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { alert('Please enter a component name before saving.'); if (nameEl) nameEl.focus(); return; }
+  cmpSetStatus('pol', 'Saving…', 'var(--muted)');
+  var state = collectPolicyState();
+  var comps = _cmpState.policy.components || [];
+  var id = _cmpState.policy.id;
+  if (id) {
+    var found = false;
+    comps = comps.map(function(c){ if (c.id === id) { found = true; return { id: id, name: name, data: state }; } return c; });
+    if (!found) { id = 'pol-' + Date.now().toString(36); comps.push({ id: id, name: name, data: state }); _cmpState.policy.id = id; }
+  } else {
+    id = 'pol-' + Date.now().toString(36);
+    comps.push({ id: id, name: name, data: state });
+    _cmpState.policy.id = id;
+  }
+  _cmpState.policy.components = comps;
+  try {
+    var r = await fetch('/api/publish-policy-components', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ components: comps })
+    });
+    var data = await r.json();
+    if (r.ok) {
+      delete _dirtyScreens.policy;
+      cmpPopulateSelect('pol', comps, id);
+      cmpSetStatus('pol', '✓ Saved', '#16a34a');
+      setTimeout(function(){ cmpSetStatus('pol', ''); }, 3000);
+    } else {
+      cmpSetStatus('pol', '✗ Save failed', '#e63946');
+      alert('Save failed: ' + (data.error || 'Unknown error'));
+    }
+  } catch(e) { cmpSetStatus('pol', '✗ Save failed', '#e63946'); }
+}
+
+function polCmpNew() {
+  _cmpState.policy.id = null;
+  var nameEl = document.getElementById('pol-cmp-name'); if (nameEl) nameEl.value = '';
+  var sel    = document.getElementById('pol-cmp-sel');  if (sel)    sel.value = '';
+  var del    = document.getElementById('pol-cmp-del');  if (del)    del.style.display = 'none';
+  restorePolicyState({});
+  delete _dirtyScreens.policy;
+  cmpSetStatus('pol', '');
+}
+
+async function polCmpDelete() {
+  var id = _cmpState.policy.id; if (!id) return;
+  var comp = (_cmpState.policy.components || []).filter(function(c){ return c.id === id; })[0];
+  if (!window.confirm('Delete "' + (comp ? comp.name : 'this component') + '"?')) return;
+  var comps = (_cmpState.policy.components || []).filter(function(c){ return c.id !== id; });
+  var ok = await cmpSaveAll('policy', comps);
+  if (ok) { _cmpState.policy.components = comps; _cmpState.policy.id = null; cmpPopulateSelect('pol', comps, null); polCmpNew(); }
+}
+
+// ── Policy form helpers ──────────────────────────────────────────
+
+function polAddMeta(text) {
+  var list = document.getElementById('pol-meta-list'); if (!list) return;
+  var id = 'polm-' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+  var div = document.createElement('div'); div.className = 'block-item'; div.id = id;
+  div.innerHTML =
+    '<div class="block-body" style="border-top:none;padding:8px 12px;display:flex;gap:8px;align-items:center;">'
+    + '<input type="text" class="polm-text" value="' + xA(text || '') + '" placeholder="e.g. Last updated: 2024" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;">'
+    + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button>'
+    + '</div>';
+  list.appendChild(div);
+}
+
+function polAddSection(data) {
+  var list = document.getElementById('pol-sections'); if (!list) return;
+  var sid = 'pols-' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+  var title = (data && data.title) || 'New Section';
+  var div = document.createElement('div'); div.className = 'block-item'; div.id = sid;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH(title.slice(0,50)) + '</span>'
+    + '<span class="block-type-badge">Section</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body">'
+    + '<div class="field"><label>Section title</label>'
+    + '<input type="text" class="pols-title" value="' + xA(title) + '" placeholder="e.g. Introduction"'
+    + ' oninput="this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=this.value.slice(0,50)||\'New Section\'">'
+    + '</div>'
+    + '<div class="section-label" style="font-size:10px;border:none;padding-bottom:0;margin-top:4px">Content blocks</div>'
+    + '<div class="pols-blocks block-list" style="margin-top:4px"></div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'
+    + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'paragraph\')">+ Paragraph</button>'
+    + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'bullets\')">+ Bullets</button>'
+    + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'table\')">+ Table</button>'
+    + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'cards\')">+ Cards</button>'
+    + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'rights\')">+ Rights Cards</button>'
+    + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'tags\')">+ Tags</button>'
+    + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'definitions\')">+ Definitions</button>'
+    + '</div>'
+    + '</div>';
+  list.appendChild(div);
+  var blocksEl = div.querySelector('.pols-blocks');
+  if (data && data.blocks && blocksEl) {
+    data.blocks.forEach(function(b) { polAddBlockToEl(blocksEl, b.type, b); });
+  }
+}
+
+function polAddBlock(sid, type) {
+  var sec = document.getElementById(sid); if (!sec) return;
+  var blocksEl = sec.querySelector('.pols-blocks'); if (!blocksEl) return;
+  polAddBlockToEl(blocksEl, type, null);
+}
+
+function polAddBlockToEl(blocksEl, type, data) {
+  var bid = 'polb-' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+  var labels = { paragraph:'Paragraph', bullets:'Bullets', table:'Table', cards:'Cards', rights:'Rights Cards', tags:'Tags' };
+  var content = '';
+
+  if (type === 'paragraph') {
+    var txt = (data && data.text) || '';
+    content = '<div class="field"><label>Text</label>'
+      + '<textarea class="polb-para" rows="4" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:6px;width:100%;resize:vertical;">'
+      + xH(txt) + '</textarea></div>';
+
+  } else if (type === 'bullets') {
+    var items = (data && data.items) || [''];
+    content = '<div class="polb-bullet-list block-list"></div>'
+      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddBulletItem(this.previousElementSibling)">+ Add bullet</button>';
+
+  } else if (type === 'table') {
+    var headers = (data && data.headers) || 'Column 1 | Column 2 | Column 3';
+    var rows    = (data && data.rows)    || 'Row 1 Col 1 | Row 1 Col 2 | Row 1 Col 3\nRow 2 Col 1 | Row 2 Col 2 | Row 2 Col 3';
+    content = '<div class="hint" style="margin-bottom:6px">Use <code>|</code> to separate columns. First textarea = headers, second = data rows (one row per line).</div>'
+      + '<div class="field"><label>Headers</label><input type="text" class="polb-thead" value="' + xA(String(headers)) + '" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:6px;width:100%;"></div>'
+      + '<div class="field"><label>Rows</label><textarea class="polb-trows" rows="4" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:6px;width:100%;resize:vertical;">' + xH(String(rows)) + '</textarea></div>';
+
+  } else if (type === 'cards') {
+    var cardItems = (data && data.items) || [];
+    content = '<div class="polb-cards-list block-list"></div>'
+      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddCardItem(this.previousElementSibling)">+ Add card</button>';
+
+  } else if (type === 'rights') {
+    var rightItems = (data && data.items) || [];
+    content = '<div class="polb-rights-list block-list"></div>'
+      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddRightItem(this.previousElementSibling)">+ Add card</button>';
+
+  } else if (type === 'tags') {
+    var tagItems = (data && data.items) || [''];
+    content = '<div class="polb-tags-list block-list"></div>'
+      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddTagItem(this.previousElementSibling)">+ Add tag</button>';
+  } else if (type === 'definitions') {
+    content = '<div class="hint" style="margin-bottom:6px"><strong>Term</strong> — Description format. Bold term shown before the dash.</div>'
+      + '<div class="polb-defs-list block-list"></div>'
+      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddDefItem(this.previousElementSibling)">+ Add definition</button>';
+  }
+
+  var div = document.createElement('div'); div.className = 'block-item'; div.id = bid;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-type-badge">' + (labels[type] || type) + '</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body">' + content + '</div>';
+  blocksEl.appendChild(div);
+
+  // Seed items for dynamic block types
+  if (type === 'definitions') {
+    var dList = div.querySelector('.polb-defs-list');
+    ((data && data.items) || []).forEach(function(it) { polAddDefItem(dList, it); });
+    if (!(data && data.items && data.items.length)) polAddDefItem(dList);
+  } else if (type === 'bullets') {
+    var bList = div.querySelector('.polb-bullet-list');
+    ((data && data.items) || ['']).forEach(function(t) { polAddBulletItem(bList, t); });
+  } else if (type === 'cards') {
+    var cList = div.querySelector('.polb-cards-list');
+    ((data && data.items) || []).forEach(function(it) { polAddCardItem(cList, it); });
+    if (!(data && data.items && data.items.length)) polAddCardItem(cList);
+  } else if (type === 'rights') {
+    var rList = div.querySelector('.polb-rights-list');
+    ((data && data.items) || []).forEach(function(it) { polAddRightItem(rList, it); });
+    if (!(data && data.items && data.items.length)) polAddRightItem(rList);
+  } else if (type === 'tags') {
+    var tList = div.querySelector('.polb-tags-list');
+    ((data && data.items) || ['']).forEach(function(t) { polAddTagItem(tList, t); });
+  }
+}
+
+function polAddBulletItem(listEl, text) {
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:6px 10px;display:flex;gap:8px;align-items:center;">'
+    + '<input type="text" class="polb-bullet-text" value="' + xA(text || '') + '" placeholder="Bullet item text…" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button></div>';
+  listEl.appendChild(div);
+}
+
+function polAddCardItem(listEl, data) {
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:8px 12px;display:flex;flex-direction:column;gap:6px;">'
+    + '<input type="text" class="polb-card-label" value="' + xA((data && data.label) || '') + '" placeholder="EYEBROW LABEL (uppercase)" style="font-family:\'Poppins\',sans-serif;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<textarea class="polb-card-text" rows="2" placeholder="Card body text…" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;resize:vertical;">' + xH((data && data.text) || '') + '</textarea>'
+    + '<button class="btn-sm danger" style="align-self:flex-end" onclick="this.closest(\'.block-item\').remove()">Remove</button></div>';
+  listEl.appendChild(div);
+}
+
+function polAddRightItem(listEl, data) {
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:8px 12px;display:flex;flex-direction:column;gap:6px;">'
+    + '<div style="display:flex;gap:8px">'
+    + '<input type="text" class="polb-right-icon" value="' + xA((data && data.icon) || '📋') + '" placeholder="Icon" style="width:60px;font-size:18px;padding:4px;border:1px solid var(--border);border-radius:5px;text-align:center;">'
+    + '<input type="text" class="polb-right-title" value="' + xA((data && data.title) || '') + '" placeholder="Right title, e.g. Right to Access" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '</div>'
+    + '<textarea class="polb-right-text" rows="2" placeholder="Description…" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;resize:vertical;">' + xH((data && data.text) || '') + '</textarea>'
+    + '<button class="btn-sm danger" style="align-self:flex-end" onclick="this.closest(\'.block-item\').remove()">Remove</button></div>';
+  listEl.appendChild(div);
+}
+
+function polAddDefItem(listEl, data) {
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:6px 10px;display:flex;flex-direction:column;gap:5px;">'
+    + '<div style="display:flex;gap:8px;align-items:center">'
+    + '<input type="text" class="polb-def-term" value="' + xA((data && data.term) || '') + '" placeholder="Bold term, e.g. Zenler.com" style="flex:0 0 200px;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-weight:600;">'
+    + '<input type="text" class="polb-def-desc" value="' + xA((data && data.desc) || '') + '" placeholder="Description after the dash" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button>'
+    + '</div></div>';
+  listEl.appendChild(div);
+}
+
+function polAddTagItem(listEl, text) {
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:6px 10px;display:flex;gap:8px;align-items:center;">'
+    + '<input type="text" class="polb-tag-text" value="' + xA(text || '') + '" placeholder="e.g. Zapier.com" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button></div>';
+  listEl.appendChild(div);
+}
+
+// ── Policy state ─────────────────────────────────────────────────
+
+function collectPolicyState() {
+  var metaItems = Array.from(document.querySelectorAll('#pol-meta-list .polm-text')).map(function(i){ return i.value.trim(); }).filter(Boolean);
+  var sections  = Array.from(document.querySelectorAll('#pol-sections > .block-item')).map(function(secEl) {
+    var title = (secEl.querySelector('.pols-title') || {}).value || '';
+    var blocks = Array.from(secEl.querySelectorAll('.pols-blocks > .block-item')).map(function(blkEl) {
+      var badge = (blkEl.querySelector('.block-type-badge') || {}).textContent || '';
+      var type = { 'Paragraph':'paragraph','Bullets':'bullets','Table':'table','Cards':'cards','Rights Cards':'rights','Tags':'tags','Definitions':'definitions' }[badge] || badge;
+
+      if (type === 'paragraph') {
+        return { type: 'paragraph', text: (blkEl.querySelector('.polb-para') || {}).value || '' };
+      } else if (type === 'bullets') {
+        return { type: 'bullets', items: Array.from(blkEl.querySelectorAll('.polb-bullet-text')).map(function(i){ return i.value; }) };
+      } else if (type === 'table') {
+        return { type: 'table',
+          headers: (blkEl.querySelector('.polb-thead') || {}).value || '',
+          rows:    (blkEl.querySelector('.polb-trows') || {}).value || ''
+        };
+      } else if (type === 'cards') {
+        return { type: 'cards', items: Array.from(blkEl.querySelectorAll('.polb-cards-list > .block-item')).map(function(c){
+          return { label: (c.querySelector('.polb-card-label')||{}).value||'', text: (c.querySelector('.polb-card-text')||{}).value||'' };
+        })};
+      } else if (type === 'rights') {
+        return { type: 'rights', items: Array.from(blkEl.querySelectorAll('.polb-rights-list > .block-item')).map(function(c){
+          return { icon: (c.querySelector('.polb-right-icon')||{}).value||'📋', title: (c.querySelector('.polb-right-title')||{}).value||'', text: (c.querySelector('.polb-right-text')||{}).value||'' };
+        })};
+      } else if (type === 'tags') {
+        return { type: 'tags', items: Array.from(blkEl.querySelectorAll('.polb-tag-text')).map(function(i){ return i.value; }) };
+      } else if (type === 'definitions') {
+        return { type: 'definitions', items: Array.from(blkEl.querySelectorAll('.polb-defs-list > .block-item')).map(function(c){
+          return { term: (c.querySelector('.polb-def-term')||{}).value||'', desc: (c.querySelector('.polb-def-desc')||{}).value||'' };
+        })};
+      }
+      return { type: type };
+    });
+    return { title: title, blocks: blocks };
+  });
+  return {
+    hdrBg:    (document.getElementById('pol-hdr-bg-hex')  || {}).value || '#0d1f3c',
+    eyebrow:  (document.getElementById('pol-eyebrow')     || {}).value || '',
+    title:    (document.getElementById('pol-title')       || {}).value || '',
+    navWidth: (document.getElementById('pol-nav-width')   || {}).value || '220',
+    navBg:    (document.getElementById('pol-nav-bg-hex')  || {}).value || '#f8fafc',
+    accent:   (document.getElementById('pol-accent-hex')  || {}).value || '#1a56a3',
+    meta: metaItems,
+    sections: sections
+  };
+}
+
+function restorePolicyState(d) {
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+  var setColor = function(cpId, hexId, val, fallback) {
+    var c = cmsSafeHex(val, fallback);
+    var cp = document.getElementById(cpId); if (cp) cp.value = c;
+    var hx = document.getElementById(hexId); if (hx) hx.value = c;
+  };
+  setColor('pol-hdr-bg-cp',  'pol-hdr-bg-hex',  d.hdrBg,  '#0d1f3c');
+  setColor('pol-nav-bg-cp',  'pol-nav-bg-hex',  d.navBg,  '#f8fafc');
+  setColor('pol-accent-cp',  'pol-accent-hex',  d.accent, '#1a56a3');
+  set('pol-eyebrow',  d.eyebrow  || '');
+  set('pol-title',    d.title    || '');
+  set('pol-nav-width',d.navWidth || '220');
+  var ml = document.getElementById('pol-meta-list'); if (ml) { ml.innerHTML = ''; (d.meta || []).forEach(function(m){ polAddMeta(m); }); }
+  var sl = document.getElementById('pol-sections');  if (sl) { sl.innerHTML = ''; (d.sections || []).forEach(function(s){ polAddSection(s); }); }
+}
+
+// ── Policy HTML generator ────────────────────────────────────────
+
+function generatePolicy() {
+  var d   = collectPolicyState();
+  var uid = 'pol' + Date.now().toString(36);
+  var hdrBg  = cmsSafeHex(d.hdrBg,  '#0d1f3c');
+  var navBg  = cmsSafeHex(d.navBg,  '#f8fafc');
+  var accent = cmsSafeHex(d.accent, '#1a56a3');
+  var navW   = cmsClampInt(d.navWidth, 220, 140, 340);
+
+  // ── Header ──
+  var metaDots = (d.meta || []).map(function(m) {
+    return '<span style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#94a3b8;">&#8226; ' + xH(m) + '</span>';
+  }).join(' ');
+
+  var headerHtml = '<div style="background:' + xA(hdrBg) + ';padding:40px 48px;">'
+    + (d.eyebrow ? '<p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;color:' + xA(accent) + ';letter-spacing:0.12em;margin:0 0 10px;">' + xH(d.eyebrow) + '</p>' : '')
+    + '<h1 style="font-family:\'Poppins\',sans-serif;font-size:36px;font-weight:700;color:#ffffff;margin:0 0 14px;">' + xH(d.title || '') + '</h1>'
+    + (metaDots ? '<div style="display:flex;flex-wrap:wrap;gap:14px;">' + metaDots + '</div>' : '')
+    + '</div>';
+
+  // ── Left nav ──
+  var navItems = (d.sections || []).map(function(sec, i) {
+    var n = i + 1;
+    return '<li style="list-style:none;">'
+      + '<a href="#' + uid + '-s' + n + '" id="' + uid + '-nav' + n + '"'
+      + ' onclick="(function(uid,n){var all=document.querySelectorAll(\'.\'+uid+\'-navlink\');all.forEach(function(a){a.style.background=\'\';a.style.color=\'\'});var t=document.getElementById(uid+\'-nav\'+n);if(t){t.style.background=\'#e8f0fe\';t.style.color=\'' + accent + '\';}})(\''+uid+'\','+n+');return true;"'
+      + ' class="' + uid + '-navlink"'
+      + ' style="display:flex;align-items:center;gap:10px;padding:8px 20px;text-decoration:none;color:#374151;font-size:13px;font-family:\'Poppins\',sans-serif;transition:background 0.15s;">'
+      + '<span style="width:22px;height:22px;min-width:22px;border-radius:50%;background:' + xA(accent) + ';color:#fff;font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;">' + n + '</span>'
+      + xH(sec.title)
+      + '</a></li>';
+  }).join('');
+
+  var navHtml = '<div style="width:' + navW + 'px;flex-shrink:0;position:sticky;top:0;max-height:100vh;overflow-y:auto;background:' + xA(navBg) + ';border-right:1px solid #e5e7eb;">'
+    + '<p style="font-family:\'Poppins\',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#94a3b8;padding:20px 20px 10px;margin:0;">CONTENTS</p>'
+    + '<ul style="padding:0;margin:0;">' + navItems + '</ul>'
+    + '</div>';
+
+  // ── Section content ──
+  var sectionsHtml = (d.sections || []).map(function(sec, i) {
+    var n = i + 1;
+    var blocksHtml = (sec.blocks || []).map(function(b) { return polBuildBlock(b, accent); }).join('');
+    return '<div id="' + uid + '-s' + n + '" style="padding:40px 48px;border-bottom:1px solid #e5e7eb;">'
+      + '<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">'
+      + '<span style="width:36px;height:36px;min-width:36px;border-radius:8px;background:' + xA(hdrBg) + ';color:#fff;font-size:16px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;font-family:\'Poppins\',sans-serif;">' + n + '</span>'
+      + '<h2 style="font-family:\'Poppins\',sans-serif;font-size:22px;font-weight:700;color:#1a1a1a;margin:0;">' + xH(sec.title) + '</h2>'
+      + '</div>'
+      + blocksHtml
+      + '</div>';
+  }).join('');
+
+  // ── Scroll-spy script ──
+  var scrollScript = '<script data-cfasync="false">(function(){'
+    + 'var uid="' + uid + '";'
+    + 'var secs=document.querySelectorAll("[id^=\'"+uid+"-s\']");'
+    + 'if(!secs.length||!window.IntersectionObserver)return;'
+    + 'var obs=new IntersectionObserver(function(entries){'
+    + '  entries.forEach(function(e){'
+    + '    if(e.isIntersecting){'
+    + '      var all=document.querySelectorAll("."+uid+"-navlink");'
+    + '      all.forEach(function(a){a.style.background="";a.style.color="";});'
+    + '      var n=e.target.id.replace(uid+"-s","");'
+    + '      var t=document.getElementById(uid+"-nav"+n);'
+    + '      if(t){t.style.background="#e8f0fe";t.style.color="' + accent + '";}'
+    + '    }'
+    + '  });'
+    + '},{threshold:0.25,rootMargin:"-10% 0px -60% 0px"});'
+    + 'secs.forEach(function(s){obs.observe(s);});'
+    + '})();<\/script>';
+
+  var html = '<div id="' + uid + '" style="font-family:\'Poppins\',sans-serif;max-width:100%;box-sizing:border-box;">'
+    + headerHtml
+    + '<div style="display:flex;align-items:flex-start;">'
+    + navHtml
+    + '<div style="flex:1;min-width:0;">' + sectionsHtml + '</div>'
+    + '</div>'
+    + '</div>'
+    + scrollScript;
+
+  var preview = document.getElementById('policy-preview-wrap'); if (preview) preview.innerHTML = html;
+  var code    = document.getElementById('policy-code');          if (code) code.textContent = html;
+  switchOut('policy', 'preview');
+  polCmpSave();
+}
+
+function polBuildBlock(b, accent) {
+  if (!b || !b.type) return '';
+  var acc = accent || '#1a56a3';
+
+  if (b.type === 'paragraph') {
+    return '<p style="font-family:\'Poppins\',sans-serif;font-size:15px;color:#374151;line-height:1.7;margin:0 0 16px;">' + xH(b.text || '') + '</p>';
+  }
+
+  if (b.type === 'bullets') {
+    var items = (b.items || []).filter(function(t){ return t.trim(); });
+    if (!items.length) return '';
+    return '<ul style="margin:0 0 16px;padding:0;list-style:none;">'
+      + items.map(function(t) {
+          return '<li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;font-family:\'Poppins\',sans-serif;font-size:15px;color:#374151;line-height:1.6;">'
+            + '<span style="color:' + xA(acc) + ';font-size:18px;line-height:1.4;flex-shrink:0;margin-top:1px;">&#8226;</span>'
+            + '<span>' + xH(t) + '</span>'
+            + '</li>';
+        }).join('')
+      + '</ul>';
+  }
+
+  if (b.type === 'table') {
+    var headers = String(b.headers || '').split('|').map(function(h){ return h.trim(); }).filter(Boolean);
+    if (!headers.length) return '';
+    var dataRows = String(b.rows || '').split(/\r?\n/).filter(function(r){ return r.trim(); }).map(function(r){
+      return r.split('|').map(function(c){ return c.trim(); });
+    });
+    var headHtml = headers.map(function(h) {
+      return '<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#ffffff;font-family:\'Poppins\',sans-serif;white-space:nowrap;">' + xH(h) + '</th>';
+    }).join('');
+    var bodyHtml = dataRows.map(function(row, ri) {
+      var cells = headers.map(function(_, ci) {
+        return '<td style="padding:12px 14px;font-size:14px;color:#374151;font-family:\'Poppins\',sans-serif;border-bottom:1px solid #e5e7eb;">' + xH(row[ci] || '') + '</td>';
+      }).join('');
+      return '<tr' + (ri % 2 === 1 ? ' style="background:#f9fafb;"' : '') + '>' + cells + '</tr>';
+    }).join('');
+    return '<div style="overflow-x:auto;margin:0 0 16px;">'
+      + '<table style="width:100%;border-collapse:collapse;border-radius:8px;overflow:hidden;">'
+      + '<thead><tr style="background:' + xA(acc) + ';">' + headHtml + '</tr></thead>'
+      + '<tbody>' + bodyHtml + '</tbody>'
+      + '</table></div>';
+  }
+
+  if (b.type === 'cards') {
+    var items = (b.items || []).filter(function(c){ return c.label || c.text; });
+    if (!items.length) return '';
+    var cardHtml = items.map(function(c) {
+      return '<div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;">'
+        + (c.label ? '<p style="font-family:\'Poppins\',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:' + xA(acc) + ';margin:0 0 8px;">' + xH(c.label) + '</p>' : '')
+        + '<p style="font-family:\'Poppins\',sans-serif;font-size:14px;color:#374151;line-height:1.5;margin:0;">' + xH(c.text || '') + '</p>'
+        + '</div>';
+    }).join('');
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin:0 0 16px;">' + cardHtml + '</div>';
+  }
+
+  if (b.type === 'rights') {
+    var items = (b.items || []).filter(function(r){ return r.title || r.text; });
+    if (!items.length) return '';
+    var rightHtml = items.map(function(r) {
+      return '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:18px;">'
+        + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+        + '<span style="font-size:22px;line-height:1;">' + xH(r.icon || '📋') + '</span>'
+        + '<p style="font-family:\'Poppins\',sans-serif;font-weight:700;font-size:15px;color:#1a1a1a;margin:0;">' + xH(r.title || '') + '</p>'
+        + '</div>'
+        + '<p style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#6b7280;line-height:1.5;margin:0;">' + xH(r.text || '') + '</p>'
+        + '</div>';
+    }).join('');
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:0 0 16px;">' + rightHtml + '</div>';
+  }
+
+  if (b.type === 'tags') {
+    var items = (b.items || []).filter(function(t){ return t.trim(); });
+    if (!items.length) return '';
+    return '<div style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;">'
+      + items.map(function(t) {
+          return '<span style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#374151;padding:6px 16px;border:1px solid #e5e7eb;border-radius:6px;">' + xH(t) + '</span>';
+        }).join('')
+      + '</div>';
+  }
+
+  if (b.type === 'definitions') {
+    var items = (b.items || []).filter(function(d){ return d.term || d.desc; });
+    if (!items.length) return '';
+    return '<ul style="margin:0 0 16px;padding:0;list-style:none;">'
+      + items.map(function(d) {
+          return '<li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-family:\'Poppins\',sans-serif;font-size:15px;color:#374151;line-height:1.6;">'
+            + '<span style="color:' + xA(acc) + ';font-size:18px;line-height:1.4;flex-shrink:0;margin-top:1px;">&#8226;</span>'
+            + '<span><strong style="color:#1a1a1a;">' + xH(d.term) + '</strong>'
+            + (d.desc ? ' &#8212; ' + xH(d.desc) : '')
+            + '</span></li>';
+        }).join('')
+      + '</ul>';
+  }
+
+  return '';
 }
 
 // ── Contact Footer (CF) ──────────────────────────────────────────
