@@ -1507,6 +1507,7 @@ function tabsAddTab() {
   vlsTabs.push({ id: tabsMakeId(), label: 'New Tab', blocks: [] });
   vlsActiveTab = vlsTabs.length - 1;
   tabsRender();
+  cmpMarkDirty('tabs');
   setTimeout(function() {
     var inp = document.getElementById('tabs-active-label');
     if (inp) { inp.focus(); inp.select(); }
@@ -1520,6 +1521,25 @@ function tabsRemoveTab(i) {
   vlsTabs.splice(i, 1);
   if (vlsActiveTab >= vlsTabs.length) vlsActiveTab = vlsTabs.length - 1;
   tabsRender();
+  cmpMarkDirty('tabs');
+}
+
+function tabsMoveTab(i, dir) {
+  var next = i + dir;
+  if (i < 0 || i >= vlsTabs.length || next < 0 || next >= vlsTabs.length) return;
+  tabsSaveActiveLabel();
+  tabsSaveActiveBlocks();
+  var moved = vlsTabs.splice(i, 1)[0];
+  vlsTabs.splice(next, 0, moved);
+  if (vlsActiveTab === i) {
+    vlsActiveTab = next;
+  } else if (i < vlsActiveTab && next >= vlsActiveTab) {
+    vlsActiveTab -= 1;
+  } else if (i > vlsActiveTab && next <= vlsActiveTab) {
+    vlsActiveTab += 1;
+  }
+  tabsRender();
+  cmpMarkDirty('tabs');
 }
 
 function tabsSwitchTo(i) {
@@ -1599,6 +1619,10 @@ function tabsRenderEditor() {
 
   area.innerHTML =
     cmsTextFieldHtml('Tab label', 'tabs-active-label', tab.label, { id: 'tabs-active-label', multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.tabsLabel, oninput: 'tabsSaveActiveLabel();tabsRenderPills();' })
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:-6px;">'
+    + '<button class="btn-sm" onclick="tabsMoveTab(' + vlsActiveTab + ',-1)"' + (vlsActiveTab === 0 ? ' disabled style="opacity:.35;cursor:default;"' : '') + '>Move Left</button>'
+    + '<button class="btn-sm" onclick="tabsMoveTab(' + vlsActiveTab + ',1)"' + (vlsActiveTab === vlsTabs.length - 1 ? ' disabled style="opacity:.35;cursor:default;"' : '') + '>Move Right</button>'
+    + '</div>'
     + '<div class="section-label">Content blocks</div>'
     + '<div id="tabs-blocks-list" class="block-list"></div>'
     + '<div style="display:flex;gap:8px;margin-top:4px;">'
@@ -1634,6 +1658,7 @@ function tabsAddBlock() {
   tab.blocks.push(blk);
   tabsRenderBlock(blk, null);
   if (sel) sel.value = '';
+  cmpMarkDirty('tabs');
 }
 
 function tabsRemoveBlock(blkId) {
@@ -1642,6 +1667,19 @@ function tabsRemoveBlock(blkId) {
   tab.blocks = tab.blocks.filter(function(b) { return b.id !== blkId; });
   var el = document.getElementById('blk-' + blkId);
   if (el) el.remove();
+  cmpMarkDirty('tabs');
+}
+
+function tabsRemoveBulletItem(id) {
+  var el = document.getElementById(id);
+  if (el) el.remove();
+  cmpMarkDirty('tabs');
+}
+
+function tabsRemoveCardItem(id) {
+  var el = document.getElementById(id);
+  if (el) el.remove();
+  cmpMarkDirty('tabs');
 }
 
 function tabsRenderBlock(blk, pf) {
@@ -1690,14 +1728,14 @@ function tabsRenderBlock(blk, pf) {
 
   // Pre-fill bullet items and cards after insertion
   if (blk.type === 'bullets' && pf.items) {
-    pf.items.forEach(function(val) { tabsAddBulletItem('blist-' + blk.id, val); });
+    pf.items.forEach(function(val) { tabsAddBulletItem('blist-' + blk.id, val, true); });
   }
   if (blk.type === 'promo-cards' && pf.cards) {
-    pf.cards.forEach(function(c) { tabsAddCardItem('clist-' + blk.id, c); });
+    pf.cards.forEach(function(c) { tabsAddCardItem('clist-' + blk.id, c, true); });
   }
 }
 
-function tabsAddBulletItem(listId, val) {
+function tabsAddBulletItem(listId, val, skipDirty) {
   var list = document.getElementById(listId);
   if (!list) return;
   var id = tabsMakeId();
@@ -1709,11 +1747,12 @@ function tabsAddBulletItem(listId, val) {
   div.innerHTML =
     '<div style="flex:1;">'
     + cmsTextFieldHtml('Bullet text', 'blk-bullet-item', item, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.tabsBullet, placeholder: 'Bullet item' })
-    + '</div><button class="btn-icon" onclick="document.getElementById(\'bi-' + id + '\').remove()" style="margin-top:28px">&#x2715;</button>';
+    + '</div><button class="btn-icon" onclick="tabsRemoveBulletItem(\'bi-' + id + '\')" style="margin-top:28px">&#x2715;</button>';
   list.appendChild(div);
+  if (!skipDirty) cmpMarkDirty('tabs');
 }
 
-function tabsAddCardItem(listId, data) {
+function tabsAddCardItem(listId, data, skipDirty) {
   var list = document.getElementById(listId);
   if (!list) return;
   var d = data || {};
@@ -1727,8 +1766,9 @@ function tabsAddCardItem(listId, data) {
     + cmsParagraphFieldHtml('Description', 'pc-p', d.p, { rows: 2, defaults: CMS_PARAGRAPH_DEFAULTS.tabs })
     + cmsTextFieldHtml('Button label', 'pc-cta', d.cta, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.tabsCardCta, placeholder: 'Button label' })
     + '<div class="field"><label>Button URL</label><input type="text" class="pc-url" value="' + xA(d.url || '') + '"></div>'
-    + '<div class="block-actions"><button class="btn-sm danger" onclick="document.getElementById(\'pc-' + id + '\').remove()">Remove</button></div>';
+    + '<div class="block-actions"><button class="btn-sm danger" onclick="tabsRemoveCardItem(\'pc-' + id + '\')">Remove</button></div>';
   list.appendChild(div);
+  if (!skipDirty) cmpMarkDirty('tabs');
 }
 
 function generateTabs() {
@@ -6517,6 +6557,12 @@ function cmpAttachDirty(screen) {
       });
     }
   }, 300);
+}
+
+function cmpMarkDirty(screen) {
+  if (_dirtyScreens[screen]) return;
+  _dirtyScreens[screen] = true;
+  cmpSetStatus(screen, '● Unsaved changes', '#e08020');
 }
 
 function cmpSetStatus(screen, msg, color) {
