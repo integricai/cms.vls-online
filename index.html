@@ -7286,6 +7286,8 @@ function polAddSection(data) {
     + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'rights\')">+ Rights Cards</button>'
     + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'tags\')">+ Tags</button>'
     + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'definitions\')">+ Definitions</button>'
+    + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'alpha-list\')">+ Alpha List</button>'
+    + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'callout\')">+ Callout</button>'
     + '</div>'
     + '</div>';
   list.appendChild(div);
@@ -7303,7 +7305,7 @@ function polAddBlock(sid, type) {
 
 function polAddBlockToEl(blocksEl, type, data) {
   var bid = 'polb-' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-  var labels = { paragraph:'Paragraph', bullets:'Bullets', table:'Table', cards:'Cards', rights:'Rights Cards', tags:'Tags' };
+  var labels = { paragraph:'Paragraph', bullets:'Bullets', table:'Table', cards:'Cards', rights:'Rights Cards', tags:'Tags', definitions:'Definitions', 'alpha-list':'Alpha List', callout:'Callout' };
   var content = '';
 
   if (type === 'paragraph') {
@@ -7342,6 +7344,22 @@ function polAddBlockToEl(blocksEl, type, data) {
     content = '<div class="hint" style="margin-bottom:6px"><strong>Term</strong> — Description format. Bold term shown before the dash.</div>'
       + '<div class="polb-defs-list block-list"></div>'
       + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddDefItem(this.previousElementSibling)">+ Add definition</button>';
+
+  } else if (type === 'alpha-list') {
+    content = '<div class="polb-alpha-list block-list"></div>'
+      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddAlphaItem(this.previousElementSibling)">+ Add item</button>';
+
+  } else if (type === 'callout') {
+    var cbg   = (data && data.bg)   || '#fff7ed';
+    var ccol  = (data && data.color)|| '#b45309';
+    var cicon = (data && data.icon) || '⚠️';
+    var ctxt  = (data && data.text) || '';
+    content = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">'
+      + '<div class="field"><label>Icon</label><input type="text" class="polb-callout-icon" value="' + xA(cicon) + '" style="font-size:18px;padding:4px;border:1px solid var(--border);border-radius:5px;text-align:center;width:100%"></div>'
+      + '<div class="field"><label>Background</label><div class="cms-paragraph-color-row"><input type="color" class="polb-callout-bg-cp" value="' + xA(cbg) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer"><input type="text" class="polb-callout-bg" value="' + xA(cbg) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v"></div></div>'
+      + '<div class="field"><label>Text colour</label><div class="cms-paragraph-color-row"><input type="color" class="polb-callout-col-cp" value="' + xA(ccol) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer"><input type="text" class="polb-callout-col" value="' + xA(ccol) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v"></div></div>'
+      + '</div>'
+      + '<div class="field"><label>Callout text</label><textarea class="polb-callout-text" rows="3" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:6px;width:100%;resize:vertical;">' + xH(ctxt) + '</textarea></div>';
   }
 
   var div = document.createElement('div'); div.className = 'block-item'; div.id = bid;
@@ -7358,6 +7376,9 @@ function polAddBlockToEl(blocksEl, type, data) {
     var dList = div.querySelector('.polb-defs-list');
     ((data && data.items) || []).forEach(function(it) { polAddDefItem(dList, it); });
     if (!(data && data.items && data.items.length)) polAddDefItem(dList);
+  } else if (type === 'alpha-list') {
+    var aList = div.querySelector('.polb-alpha-list');
+    ((data && data.items) || ['']).forEach(function(t) { polAddAlphaItem(aList, t); });
   } else if (type === 'bullets') {
     var bList = div.querySelector('.polb-bullet-list');
     ((data && data.items) || ['']).forEach(function(t) { polAddBulletItem(bList, t); });
@@ -7404,6 +7425,28 @@ function polAddRightItem(listEl, data) {
   listEl.appendChild(div);
 }
 
+function polAddAlphaItem(listEl, text) {
+  var idx = listEl.children.length;
+  var letter = String.fromCharCode(65 + idx); // A, B, C ...
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:6px 10px;display:flex;gap:8px;align-items:center;">'
+    + '<span class="polb-alpha-badge" style="width:26px;height:26px;min-width:26px;border-radius:6px;background:#0d1f3c;color:#fff;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">' + xH(letter) + '</span>'
+    + '<input type="text" class="polb-alpha-text" value="' + xA(text || '') + '" placeholder="Item text…" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<button class="btn-sm danger" onclick="polRemoveAlphaItem(this)">✕</button></div>';
+  listEl.appendChild(div);
+}
+
+function polRemoveAlphaItem(btn) {
+  btn.closest('.block-item').remove();
+  // Re-letter remaining items
+  var list = btn.closest('.polb-alpha-list') || btn.closest('.block-body').querySelector('.polb-alpha-list');
+  if (!list) return;
+  Array.from(list.children).forEach(function(item, idx) {
+    var badge = item.querySelector('.polb-alpha-badge');
+    if (badge) badge.textContent = String.fromCharCode(65 + idx);
+  });
+}
+
 function polAddDefItem(listEl, data) {
   var div = document.createElement('div'); div.className = 'block-item';
   div.innerHTML = '<div class="block-body" style="border-top:none;padding:6px 10px;display:flex;flex-direction:column;gap:5px;">'
@@ -7431,7 +7474,7 @@ function collectPolicyState() {
     var title = (secEl.querySelector('.pols-title') || {}).value || '';
     var blocks = Array.from(secEl.querySelectorAll('.pols-blocks > .block-item')).map(function(blkEl) {
       var badge = (blkEl.querySelector('.block-type-badge') || {}).textContent || '';
-      var type = { 'Paragraph':'paragraph','Bullets':'bullets','Table':'table','Cards':'cards','Rights Cards':'rights','Tags':'tags','Definitions':'definitions' }[badge] || badge;
+      var type = { 'Paragraph':'paragraph','Bullets':'bullets','Table':'table','Cards':'cards','Rights Cards':'rights','Tags':'tags','Definitions':'definitions','Alpha List':'alpha-list','Callout':'callout' }[badge] || badge;
 
       if (type === 'paragraph') {
         return { type: 'paragraph', text: (blkEl.querySelector('.polb-para') || {}).value || '' };
@@ -7456,6 +7499,15 @@ function collectPolicyState() {
         return { type: 'definitions', items: Array.from(blkEl.querySelectorAll('.polb-defs-list > .block-item')).map(function(c){
           return { term: (c.querySelector('.polb-def-term')||{}).value||'', desc: (c.querySelector('.polb-def-desc')||{}).value||'' };
         })};
+      } else if (type === 'alpha-list') {
+        return { type: 'alpha-list', items: Array.from(blkEl.querySelectorAll('.polb-alpha-text')).map(function(i){ return i.value; }) };
+      } else if (type === 'callout') {
+        return { type: 'callout',
+          icon:  (blkEl.querySelector('.polb-callout-icon') ||{}).value ||'⚠️',
+          bg:    (blkEl.querySelector('.polb-callout-bg')   ||{}).value ||'#fff7ed',
+          color: (blkEl.querySelector('.polb-callout-col')  ||{}).value ||'#b45309',
+          text:  (blkEl.querySelector('.polb-callout-text') ||{}).value ||''
+        };
       }
       return { type: type };
     });
@@ -7700,6 +7752,29 @@ function polBuildBlock(b, accent) {
       + items.map(function(t) {
           return '<span style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#374151;padding:6px 16px;border:1px solid #e5e7eb;border-radius:6px;">' + xH(t) + '</span>';
         }).join('')
+      + '</div>';
+  }
+
+  if (b.type === 'alpha-list') {
+    var items = (b.items || []).filter(function(t){ return String(t).trim(); });
+    if (!items.length) return '';
+    return '<ul style="margin:0 0 16px;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;">'
+      + items.map(function(t, i) {
+          var letter = String.fromCharCode(65 + i);
+          return '<li style="display:flex;align-items:flex-start;gap:14px;">'
+            + '<span style="width:32px;height:32px;min-width:32px;border-radius:7px;background:' + xA(acc) + ';color:#fff;font-size:13px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;">' + letter + '</span>'
+            + '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;flex:1;font-family:\'Poppins\',sans-serif;font-size:14px;color:#374151;line-height:1.5;">' + xH(t) + '</div>'
+            + '</li>';
+        }).join('')
+      + '</ul>';
+  }
+
+  if (b.type === 'callout') {
+    var cbg  = cmsSafeHex(b.bg,    '#fff7ed');
+    var ccol = cmsSafeHex(b.color, '#b45309');
+    return '<div style="background:' + xA(cbg) + ';border:1px solid ' + xA(ccol) + '33;border-radius:10px;padding:16px 20px;margin:0 0 16px;display:flex;align-items:flex-start;gap:14px;">'
+      + '<span style="font-size:22px;line-height:1;flex-shrink:0;margin-top:1px;">' + xH(b.icon || '⚠️') + '</span>'
+      + '<p style="font-family:\'Poppins\',sans-serif;font-size:14px;color:' + xA(ccol) + ';line-height:1.6;margin:0;">' + xH(b.text || '') + '</p>'
       + '</div>';
   }
 
