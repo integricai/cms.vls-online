@@ -27,15 +27,14 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 .field input,.field textarea,.field select{font-family:'Poppins',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);width:100%;outline:none}
 .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--purple)}
 .field textarea{resize:vertical;line-height:1.6}
-.cms-paragraph-controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}
-.cms-paragraph-control{display:flex;flex-direction:column;gap:4px}
+.cms-paragraph-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.cms-paragraph-control{display:flex;flex-direction:column;gap:4px;min-width:0}
 .cms-paragraph-control label{font-size:11px;font-weight:500;color:#262a32}
 .cms-paragraph-control input,.cms-paragraph-control select{font-family:'Poppins',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);width:100%;outline:none}
 .cms-paragraph-control input:focus,.cms-paragraph-control select:focus{border-color:var(--purple)}
 .cms-paragraph-color-row{display:flex;gap:8px;align-items:center}
 .cms-paragraph-color-row input[type=color]{width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0}
-@media(max-width:840px){.cms-paragraph-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:520px){.cms-paragraph-controls{grid-template-columns:1fr}}
+.cms-paragraph-color-row input[type=text]{min-width:0}
 .hint{font-size:11px;color:var(--muted)}
 .btn-gen{background:var(--purple);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:600;cursor:pointer;width:100%;margin-top:4px}
 .btn-gen:hover{background:#3C3489}
@@ -719,16 +718,16 @@ function cmsTextControlsHtml(value, defaults) {
   var p = cmsNormalizeTextData(value, defaults);
   return '<div class="cms-paragraph-controls">'
     + '<div class="cms-paragraph-control"><label>Font size (px)</label><input type="number" class="cms-paragraph-size" value="' + xA(String(p.size)) + '" min="10" max="72"></div>'
-    + '<div class="cms-paragraph-control"><label>Font colour</label><div class="cms-paragraph-color-row">'
-    + '<input type="color" class="cms-paragraph-color" value="' + xA(p.color) + '" oninput="this.nextElementSibling.value=this.value">'
-    + '<input type="text" class="cms-paragraph-color-text" value="' + xA(p.color) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v">'
-    + '</div></div>'
+    + '<div class="cms-paragraph-control"><label>Letter spacing (px)</label><input type="number" class="cms-paragraph-spacing" value="' + xA(cmsFormatLetterSpacing(p.letterSpacing)) + '" min="-2" max="12" step="0.01"></div>'
     + '<div class="cms-paragraph-control"><label>Font weight</label><select class="cms-paragraph-weight">'
     + '<option value="400"' + (p.weight === '400' ? ' selected' : '') + '>Regular</option>'
     + '<option value="500"' + (p.weight === '500' ? ' selected' : '') + '>Medium</option>'
     + '<option value="700"' + (p.weight === '700' ? ' selected' : '') + '>Bold</option>'
     + '</select></div>'
-    + '<div class="cms-paragraph-control"><label>Letter spacing (px)</label><input type="number" class="cms-paragraph-spacing" value="' + xA(cmsFormatLetterSpacing(p.letterSpacing)) + '" min="-2" max="12" step="0.01"></div>'
+    + '<div class="cms-paragraph-control"><label>Font colour</label><div class="cms-paragraph-color-row">'
+    + '<input type="color" class="cms-paragraph-color" value="' + xA(p.color) + '" oninput="this.nextElementSibling.value=this.value">'
+    + '<input type="text" class="cms-paragraph-color-text" value="' + xA(p.color) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v">'
+    + '</div></div>'
     + '</div>';
 }
 function cmsTextFieldHtml(labelHtml, inputClass, value, options) {
