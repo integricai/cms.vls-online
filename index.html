@@ -7505,7 +7505,7 @@ function generatePolicy() {
     return '<span style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#94a3b8;">&#8226; ' + xH(m) + '</span>';
   }).join(' ');
 
-  var headerHtml = '<div style="background:' + xA(hdrBg) + ';padding:40px 48px;">'
+  var headerHtml = '<div class="' + uid + '-header" style="background:' + xA(hdrBg) + ';">'
     + (d.eyebrow ? '<p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;color:' + xA(accent) + ';letter-spacing:0.12em;margin:0 0 10px;">' + xH(d.eyebrow) + '</p>' : '')
     + '<h1 style="font-family:\'Poppins\',sans-serif;font-size:36px;font-weight:700;color:#ffffff;margin:0 0 14px;">' + xH(d.title || '') + '</h1>'
     + (metaDots ? '<div style="display:flex;flex-wrap:wrap;gap:14px;">' + metaDots + '</div>' : '')
@@ -7516,24 +7516,24 @@ function generatePolicy() {
     var n = i + 1;
     return '<li style="list-style:none;">'
       + '<a href="#' + uid + '-s' + n + '" id="' + uid + '-nav' + n + '"'
-      + ' onclick="(function(uid,n){var all=document.querySelectorAll(\'.\'+uid+\'-navlink\');all.forEach(function(a){a.style.background=\'\';a.style.color=\'\'});var t=document.getElementById(uid+\'-nav\'+n);if(t){t.style.background=\'#e8f0fe\';t.style.color=\'' + accent + '\';}})(\''+uid+'\','+n+');return true;"'
+      + ' data-section="' + n + '"'
       + ' class="' + uid + '-navlink"'
       + ' style="display:flex;align-items:center;gap:10px;padding:8px 20px;text-decoration:none;color:#374151;font-size:13px;font-family:\'Poppins\',sans-serif;transition:background 0.15s;">'
-      + '<span style="width:22px;height:22px;min-width:22px;border-radius:50%;background:' + xA(accent) + ';color:#fff;font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;">' + n + '</span>'
+      + '<span class="' + uid + '-navnum" style="width:22px;height:22px;min-width:22px;border-radius:50%;background:' + xA(accent) + ';color:#fff;font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;">' + n + '</span>'
       + xH(sec.title)
       + '</a></li>';
   }).join('');
 
-  var navHtml = '<div style="width:' + navW + 'px;flex-shrink:0;position:sticky;top:0;max-height:100vh;overflow-y:auto;background:' + xA(navBg) + ';border-right:1px solid #e5e7eb;">'
-    + '<p style="font-family:\'Poppins\',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#94a3b8;padding:20px 20px 10px;margin:0;">CONTENTS</p>'
-    + '<ul style="padding:0;margin:0;">' + navItems + '</ul>'
+  var navHtml = '<div class="' + uid + '-nav" style="width:' + navW + 'px;background:' + xA(navBg) + ';">'
+    + '<p class="' + uid + '-navtitle" style="font-family:\'Poppins\',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#94a3b8;padding:20px 20px 10px;margin:0;">CONTENTS</p>'
+    + '<ul class="' + uid + '-navlist" style="padding:0;margin:0;">' + navItems + '</ul>'
     + '</div>';
 
   // ── Section content ──
   var sectionsHtml = (d.sections || []).map(function(sec, i) {
     var n = i + 1;
     var blocksHtml = (sec.blocks || []).map(function(b) { return polBuildBlock(b, accent); }).join('');
-    return '<div id="' + uid + '-s' + n + '" style="padding:40px 48px;border-bottom:1px solid #e5e7eb;">'
+    return '<div id="' + uid + '-s' + n + '" class="' + uid + '-section" data-section="' + n + '" tabindex="-1" style="border-bottom:1px solid #e5e7eb;">'
       + '<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">'
       + '<span style="width:36px;height:36px;min-width:36px;border-radius:8px;background:' + xA(hdrBg) + ';color:#fff;font-size:16px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;font-family:\'Poppins\',sans-serif;">' + n + '</span>'
       + '<h2 style="font-family:\'Poppins\',sans-serif;font-size:22px;font-weight:700;color:#1a1a1a;margin:0;">' + xH(sec.title) + '</h2>'
@@ -7542,30 +7542,77 @@ function generatePolicy() {
       + '</div>';
   }).join('');
 
+  var styleHtml = '<style>'
+    + '#' + uid + '{font-family:Poppins,sans-serif;max-width:100%;box-sizing:border-box;}'
+    + '#' + uid + ' *,#' + uid + ' *:before,#' + uid + ' *:after{box-sizing:border-box;}'
+    + '.' + uid + '-header{padding:40px 48px;}'
+    + '.' + uid + '-layout{display:flex;align-items:flex-start;}'
+    + '.' + uid + '-nav{flex-shrink:0;position:sticky;top:0;max-height:100vh;overflow-y:auto;border-right:1px solid #e5e7eb;}'
+    + '.' + uid + '-navlist{padding:0;margin:0;}'
+    + '.' + uid + '-navlink.' + uid + '-navlink-active{background:#e8f0fe;color:' + xA(accent) + ';}'
+    + '.' + uid + '-content{flex:1;min-width:0;}'
+    + '.' + uid + '-section{padding:40px 48px;scroll-margin-top:84px;}'
+    + '.' + uid + '-section.' + uid + '-section-focus{box-shadow:inset 4px 0 0 ' + xA(accent) + ';}'
+    + '@media (max-width:767px){'
+    + '.' + uid + '-layout{display:block;}'
+    + '.' + uid + '-nav{width:100%!important;position:static;top:auto;max-height:none;overflow:visible;border-right:none;border-bottom:1px solid #e5e7eb;}'
+    + '.' + uid + '-header{padding:28px 20px;}'
+    + '.' + uid + '-section{padding:28px 20px;scroll-margin-top:72px;}'
+    + '.' + uid + '-navlink{padding:10px 20px;}'
+    + '}'
+    + '</style>';
+
   // ── Scroll-spy script ──
   var scrollScript = '<script data-cfasync="false">(function(){'
     + 'var uid="' + uid + '";'
-    + 'var secs=document.querySelectorAll("[id^=\'"+uid+"-s\']");'
-    + 'if(!secs.length||!window.IntersectionObserver)return;'
-    + 'var obs=new IntersectionObserver(function(entries){'
-    + '  entries.forEach(function(e){'
-    + '    if(e.isIntersecting){'
-    + '      var all=document.querySelectorAll("."+uid+"-navlink");'
-    + '      all.forEach(function(a){a.style.background="";a.style.color="";});'
-    + '      var n=e.target.id.replace(uid+"-s","");'
-    + '      var t=document.getElementById(uid+"-nav"+n);'
-    + '      if(t){t.style.background="#e8f0fe";t.style.color="' + accent + '";}'
-    + '    }'
-    + '  });'
-    + '},{threshold:0.25,rootMargin:"-10% 0px -60% 0px"});'
-    + 'secs.forEach(function(s){obs.observe(s);});'
+    + 'var activeClass=uid+"-navlink-active";'
+    + 'var focusClass=uid+"-section-focus";'
+    + 'var secs=document.querySelectorAll("."+uid+"-section");'
+    + 'function setActive(n){'
+    + '  var all=document.querySelectorAll("."+uid+"-navlink");'
+    + '  all.forEach(function(a){a.classList.remove(activeClass);});'
+    + '  var t=document.getElementById(uid+"-nav"+n);'
+    + '  if(t)t.classList.add(activeClass);'
+    + '}'
+    + 'function focusSection(n,updateHash){'
+    + '  var s=document.getElementById(uid+"-s"+n);'
+    + '  if(!s)return false;'
+    + '  setActive(n);'
+    + '  s.classList.remove(focusClass);'
+    + '  try{s.focus({preventScroll:true});}catch(err){try{s.focus();}catch(_err){}}'
+    + '  if(s.scrollIntoView)s.scrollIntoView({behavior:"smooth",block:"start"});'
+    + '  s.classList.add(focusClass);'
+    + '  window.setTimeout(function(){s.classList.remove(focusClass);},1200);'
+    + '  if(updateHash){'
+    + '    if(window.history&&window.history.replaceState)window.history.replaceState(null,"","#"+s.id);'
+    + '    else window.location.hash=s.id;'
+    + '  }'
+    + '  return false;'
+    + '}'
+    + 'var links=document.querySelectorAll("."+uid+"-navlink");'
+    + 'links.forEach(function(a){a.addEventListener("click",function(e){e.preventDefault();focusSection(this.getAttribute("data-section"),true);});});'
+    + 'if(secs.length&&window.IntersectionObserver){'
+    + '  var obs=new IntersectionObserver(function(entries){'
+    + '    entries.forEach(function(e){'
+    + '      if(e.isIntersecting){'
+    + '        var n=e.target.getAttribute("data-section");'
+    + '        if(n)setActive(n);'
+    + '      }'
+    + '    });'
+    + '  },{threshold:0.25,rootMargin:"-10% 0px -60% 0px"});'
+    + '  secs.forEach(function(s){obs.observe(s);});'
+    + '}'
+    + 'var hash=(window.location.hash||"").replace("#","");'
+    + 'if(hash.indexOf(uid+"-s")===0){window.setTimeout(function(){focusSection(hash.replace(uid+"-s",""),false);},30);}'
+    + 'else if(secs[0]){setActive(secs[0].getAttribute("data-section")||"1");}'
     + '})();<\/script>';
 
   var html = '<div id="' + uid + '" style="font-family:\'Poppins\',sans-serif;max-width:100%;box-sizing:border-box;">'
+    + styleHtml
     + headerHtml
-    + '<div style="display:flex;align-items:flex-start;">'
+    + '<div class="' + uid + '-layout">'
     + navHtml
-    + '<div style="flex:1;min-width:0;">' + sectionsHtml + '</div>'
+    + '<div class="' + uid + '-content">' + sectionsHtml + '</div>'
     + '</div>'
     + '</div>'
     + scrollScript;
