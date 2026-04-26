@@ -7232,6 +7232,17 @@ function polAddMeta(text) {
   list.appendChild(div);
 }
 
+function polMoveSection(btn, dir) {
+  var item = btn.closest('.block-item');
+  if (dir === 'up') {
+    var prev = item.previousElementSibling;
+    if (prev) item.parentNode.insertBefore(item, prev);
+  } else {
+    var next = item.nextElementSibling;
+    if (next) item.parentNode.insertBefore(next, item);
+  }
+}
+
 function polAddSection(data) {
   var list = document.getElementById('pol-sections'); if (!list) return;
   var sid = 'pols-' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
@@ -7241,7 +7252,9 @@ function polAddSection(data) {
     '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
     + '<span class="block-header-label">' + xH(title.slice(0,50)) + '</span>'
     + '<span class="block-type-badge">Section</span>'
-    + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="margin-left:auto">Remove</button>'
+    + '<button class="btn-sm" title="Move up"   onclick="event.stopPropagation();polMoveSection(this,\'up\')"   style="margin-left:auto;padding:4px 8px;font-size:12px;">↑</button>'
+    + '<button class="btn-sm" title="Move down" onclick="event.stopPropagation();polMoveSection(this,\'down\')" style="padding:4px 8px;font-size:12px;">↓</button>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="padding:4px 8px;">✕</button>'
     + '</div>'
     + '<div class="block-body">'
     + '<div class="field"><label>Section title</label>'
