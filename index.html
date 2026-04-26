@@ -299,14 +299,26 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-faq" onclick="switchScreen('faq')">FAQ</div>
       <div class="nav-dd-item" id="nav-events" onclick="switchScreen('events')">Events</div>
       <div class="nav-dd-item" id="nav-programs" onclick="switchScreen('programs')">Program Cards</div>
-      <div class="nav-dd-item" id="nav-form" onclick="switchScreen('form')">Contact Form</div>
       <div class="nav-dd-item" id="nav-feature-cards" onclick="switchScreen('feature-cards')">Feature Cards</div>
       <div class="nav-dd-item" id="nav-feature-cards-2" onclick="switchScreen('feature-cards-2')">Feature Card 2</div>
+    </div>
+  </div>
+  <!-- Common Sections dropdown -->
+  <div class="nav-dropdown" id="nav-common-sections-dd">
+    <div class="nav-tab" id="nav-common-sections" onclick="toggleNavDd('common-sections',event)">Common Sections <span class="nav-dd-arrow">▾</span></div>
+    <div class="nav-dd-menu" id="nav-common-sections-menu">
       <div class="nav-dd-item" id="nav-steps-section" onclick="switchScreen('steps-section')">Steps Section</div>
       <div class="nav-dd-item" id="nav-dcs" onclick="switchScreen('dcs')">Two Column Section</div>
       <div class="nav-dd-item" id="nav-dcs2" onclick="switchScreen('dcs2')">Two Column Section 2</div>
       <div class="nav-dd-item" id="nav-dcs3" onclick="switchScreen('dcs3')">Two Column Section 3</div>
       <div class="nav-dd-item" id="nav-reach" onclick="switchScreen('reach')">Global Reach Section</div>
+    </div>
+  </div>
+  <!-- Forms dropdown -->
+  <div class="nav-dropdown" id="nav-forms-dd">
+    <div class="nav-tab" id="nav-forms" onclick="toggleNavDd('forms',event)">Forms <span class="nav-dd-arrow">▾</span></div>
+    <div class="nav-dd-menu" id="nav-forms-menu">
+      <div class="nav-dd-item" id="nav-form" onclick="switchScreen('form')">Contact Form</div>
     </div>
   </div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
@@ -982,7 +994,9 @@ function doCopy(id, btn) {
 var _GLOBAL_SCREENS = ['header', 'footer', 'banner', 'promotion-section', 'contact-footer'];
 var _HOME_SCREENS   = ['hero', 'about-us'];
 var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
-var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards', 'feature-cards-2', 'steps-section', 'dcs', 'dcs2', 'dcs3', 'reach'];
+var _SHARED_SCREENS = ['faq', 'events', 'programs', 'feature-cards', 'feature-cards-2'];
+var _COMMON_SECTION_SCREENS = ['steps-section', 'dcs', 'dcs2', 'dcs3', 'reach'];
+var _FORM_SCREENS   = ['form'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
@@ -1058,6 +1072,12 @@ async function switchScreen(name) {
     var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
   } else if (_SHARED_SCREENS.indexOf(name) >= 0) {
     document.getElementById('nav-shared').classList.add('active');
+    var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
+  } else if (_COMMON_SECTION_SCREENS.indexOf(name) >= 0) {
+    document.getElementById('nav-common-sections').classList.add('active');
+    var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
+  } else if (_FORM_SCREENS.indexOf(name) >= 0) {
+    document.getElementById('nav-forms').classList.add('active');
     var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
   }
 
