@@ -304,6 +304,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-steps-section" onclick="switchScreen('steps-section')">Steps Section</div>
       <div class="nav-dd-item" id="nav-dcs" onclick="switchScreen('dcs')">Double Column</div>
       <div class="nav-dd-item" id="nav-dcs2" onclick="switchScreen('dcs2')">Double Column v2</div>
+      <div class="nav-dd-item" id="nav-dcs3" onclick="switchScreen('dcs3')">Double Column v3</div>
     </div>
   </div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
@@ -359,6 +360,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <button class="home-tile-link" onclick="switchScreen('steps-section')">Steps Section</button>
           <button class="home-tile-link" onclick="switchScreen('dcs')">Double Column</button>
           <button class="home-tile-link" onclick="switchScreen('dcs2')">Double Column v2</button>
+          <button class="home-tile-link" onclick="switchScreen('dcs3')">Double Column v3</button>
           <button class="home-tile-link" onclick="switchScreen('form')">Form</button>
         </div>
       </div>
@@ -897,7 +899,17 @@ var CMS_PARAGRAPH_DEFAULTS = {
   dcs2LeftPara:        { size: 15, color: '#374151', weight: '400', letterSpacing: 0    },
   dcs2RightLabel:      { size: 11, color: '#94a3b8', weight: '600', letterSpacing: 0.12 },
   dcs2CardTitle:       { size: 16, color: '#ffffff', weight: '700', letterSpacing: 0    },
-  dcs2CardDesc:        { size: 13, color: '#94a3b8', weight: '400', letterSpacing: 0    }
+  dcs2CardDesc:        { size: 13, color: '#94a3b8', weight: '400', letterSpacing: 0    },
+  dcs3LeftLabel:       { size: 11, color: '#1a56a3', weight: '600', letterSpacing: 0.12 },
+  dcs3LeftTitle:       { size: 32, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
+  dcs3LeftPara:        { size: 15, color: '#374151', weight: '400', letterSpacing: 0    },
+  dcs3FeatTitle:       { size: 14, color: '#1a56a3', weight: '600', letterSpacing: 0    },
+  dcs3FeatDesc:        { size: 13, color: '#4b5563', weight: '400', letterSpacing: 0    },
+  dcs3RightLabel:      { size: 11, color: '#bfdbfe', weight: '600', letterSpacing: 0.12 },
+  dcs3RightTitle:      { size: 28, color: '#ffffff', weight: '700', letterSpacing: 0    },
+  dcs3RightPara:       { size: 15, color: '#dbeafe', weight: '400', letterSpacing: 0    },
+  dcs3TagText:         { size: 14, color: '#ffffff', weight: '500', letterSpacing: 0    },
+  dcs3CtaText:         { size: 14, color: '#ffffff', weight: '600', letterSpacing: 0    }
 };
 var CMS_TEXT_DEFAULTS = CMS_PARAGRAPH_DEFAULTS;
 function cmsParagraphText(value) {
@@ -941,7 +953,7 @@ function doCopy(id, btn) {
 var _GLOBAL_SCREENS = ['header', 'footer', 'banner', 'promotion-section'];
 var _HOME_SCREENS   = ['hero', 'about-us'];
 var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
-var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards', 'feature-cards-2', 'steps-section', 'dcs', 'dcs2'];
+var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards', 'feature-cards-2', 'steps-section', 'dcs', 'dcs2', 'dcs3'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
@@ -963,6 +975,7 @@ var _screenFiles = {
   form:     '/screens/form.html',
   dcs:      '/screens/double-column.html',
   dcs2:     '/screens/double-column-2.html',
+  dcs3:     '/screens/double-column-3.html',
 };
 var _loadedScreens = {};
 
@@ -1027,6 +1040,7 @@ async function switchScreen(name) {
   if (name === 'tabs'  && !_loadedScreens._tabsInit)  { _loadedScreens._tabsInit  = true; tabsOnOpen();  tabsCmpInit();  cmpAttachDirty('tabs');  }
   if (name === 'dcs'   && !_loadedScreens._dcsInit)   { _loadedScreens._dcsInit   = true; dcsOnOpen();   dcsCmpInit();   cmpAttachDirty('dcs');   }
   if (name === 'dcs2'  && !_loadedScreens._dcs2Init)  { _loadedScreens._dcs2Init  = true; dcs2OnOpen();  dcs2CmpInit();  cmpAttachDirty('dcs2');  }
+  if (name === 'dcs3'  && !_loadedScreens._dcs3Init)  { _loadedScreens._dcs3Init  = true; dcs3OnOpen();  dcs3CmpInit();  cmpAttachDirty('dcs3');  }
   if (name === 'events')  eventsOnOpen();
   if (name === 'faq')     faqOnOpen();
   if (name === 'team')    teamOnOpen();
@@ -1215,7 +1229,7 @@ function generateIntro() {
 
 var descBc = 0;
 var _dirtyScreens = {};
-var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] } };
+var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] }, dcs3: { id: null, components: [] } };
 
 function toggleBlockPicker() {
   var p = document.getElementById('block-type-picker');
@@ -6945,6 +6959,314 @@ function generateAboutUs() {
   document.getElementById('about-us-code').textContent = html;
   document.getElementById('about-us-preview-wrap').innerHTML = html;
   switchOut('about-us', 'preview');
+}
+
+// ── Double Column Section v3 (DCS3) ─────────────────────────────
+
+function dcs3OnOpen() {
+  cmsInitTextField('dcs3-left-label',  { defaults: CMS_PARAGRAPH_DEFAULTS.dcs3LeftLabel  });
+  cmsInitTextField('dcs3-left-title',  { defaults: CMS_PARAGRAPH_DEFAULTS.dcs3LeftTitle  });
+  cmsInitParagraphField('dcs3-left-para',  { defaults: CMS_PARAGRAPH_DEFAULTS.dcs3LeftPara   });
+  cmsInitTextField('dcs3-right-label', { defaults: CMS_PARAGRAPH_DEFAULTS.dcs3RightLabel });
+  cmsInitTextField('dcs3-right-title', { defaults: CMS_PARAGRAPH_DEFAULTS.dcs3RightTitle });
+  cmsInitParagraphField('dcs3-right-para', { defaults: CMS_PARAGRAPH_DEFAULTS.dcs3RightPara  });
+  cmsInitTextField('dcs3-cta-text',    { defaults: CMS_PARAGRAPH_DEFAULTS.dcs3CtaText    });
+  dcs3AddFeature({ title: { text: 'HD Lecture Videos'    }, desc: { text: 'Optimised streaming, always available'    } });
+  dcs3AddFeature({ title: { text: 'Full Syllabus Coverage'}, desc: { text: 'Every topic, every exam'                 } });
+  dcs3AddFeature({ title: { text: 'Exam Practice Q&A'    }, desc: { text: 'Questions with solution videos'           } });
+  dcs3AddFeature({ title: { text: 'Short Revision Notes' }, desc: { text: 'Built for exam-day prep'                  } });
+  dcs3AddFeature({ title: { text: 'Graded Quizzes'       }, desc: { text: 'Automated with full solutions'            } });
+  dcs3AddFeature({ title: { text: 'Assignment Upload'    }, desc: { text: 'Submit work directly in-platform'         } });
+  dcs3AddFeature({ title: { text: 'Discussion Boards'    }, desc: { text: 'Professional community access'            } });
+  dcs3AddFeature({ title: { text: 'WhatsApp Support'     }, desc: { text: 'Direct tutor group access'                } });
+  dcs3AddTag({ icon: '🖥', text: 'Desktop' });
+  dcs3AddTag({ icon: '📱', text: 'Mobile'  });
+  dcs3AddTag({ icon: '📊', text: 'Tablet'  });
+}
+
+// ── DCS3 component manager ───────────────────────────────────────
+
+async function dcs3CmpInit() {
+  var comps = await cmpFetchAll('dcs3');
+  _cmpState.dcs3.components = comps;
+  cmpPopulateSelect('dcs3', comps, null);
+}
+
+async function dcs3CmpLoad(id) {
+  if (!id) { dcs3CmpNew(); return; }
+  var comp = (_cmpState.dcs3.components || []).filter(function(c){ return c.id === id; })[0];
+  if (!comp) return;
+  _cmpState.dcs3.id = comp.id;
+  var nameEl = document.getElementById('dcs3-cmp-name');
+  if (nameEl) nameEl.value = comp.name || '';
+  document.getElementById('dcs3-cmp-del').style.display = '';
+  restoreDcs3State(comp.data || {});
+  delete _dirtyScreens.dcs3;
+  cmpSetStatus('dcs3', '');
+}
+
+async function dcs3CmpSave() {
+  var nameEl = document.getElementById('dcs3-cmp-name');
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { alert('Please enter a component name before saving.'); if (nameEl) nameEl.focus(); return; }
+  cmpSetStatus('dcs3', 'Saving…', 'var(--muted)');
+  var state = collectDcs3State();
+  var comps = _cmpState.dcs3.components || [];
+  var id = _cmpState.dcs3.id;
+  if (id) {
+    var found = false;
+    comps = comps.map(function(c){ if (c.id === id) { found = true; return { id: id, name: name, data: state }; } return c; });
+    if (!found) { id = 'dcs3-' + Date.now().toString(36); comps.push({ id: id, name: name, data: state }); _cmpState.dcs3.id = id; }
+  } else {
+    id = 'dcs3-' + Date.now().toString(36);
+    comps.push({ id: id, name: name, data: state });
+    _cmpState.dcs3.id = id;
+  }
+  _cmpState.dcs3.components = comps;
+  var ok = await cmpSaveAll('dcs3', comps);
+  if (ok) {
+    delete _dirtyScreens.dcs3;
+    cmpPopulateSelect('dcs3', comps, id);
+    cmpSetStatus('dcs3', '✓ Saved', '#16a34a');
+    setTimeout(function(){ cmpSetStatus('dcs3', ''); }, 3000);
+  } else {
+    cmpSetStatus('dcs3', '✗ Save failed', '#e63946');
+  }
+}
+
+function dcs3CmpNew() {
+  _cmpState.dcs3.id = null;
+  var nameEl = document.getElementById('dcs3-cmp-name'); if (nameEl) nameEl.value = '';
+  var sel    = document.getElementById('dcs3-cmp-sel');  if (sel)    sel.value = '';
+  var del    = document.getElementById('dcs3-cmp-del');  if (del)    del.style.display = 'none';
+  restoreDcs3State({});
+  delete _dirtyScreens.dcs3;
+  cmpSetStatus('dcs3', '');
+}
+
+async function dcs3CmpDelete() {
+  var id = _cmpState.dcs3.id;
+  if (!id) return;
+  var comp = (_cmpState.dcs3.components || []).filter(function(c){ return c.id === id; })[0];
+  if (!window.confirm('Delete "' + (comp ? comp.name : 'this component') + '"? This cannot be undone.')) return;
+  var comps = (_cmpState.dcs3.components || []).filter(function(c){ return c.id !== id; });
+  var ok = await cmpSaveAll('dcs3', comps);
+  if (ok) { _cmpState.dcs3.components = comps; _cmpState.dcs3.id = null; cmpPopulateSelect('dcs3', comps, null); dcs3CmpNew(); }
+}
+
+// ── DCS3 form helpers ────────────────────────────────────────────
+
+function dcs3AddFeature(data) {
+  var list = document.getElementById('dcs3-features');
+  if (!list) return;
+  var id    = 'dcs3f-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var title = cmsNormalizeTextData(data && data.title, CMS_PARAGRAPH_DEFAULTS.dcs3FeatTitle);
+  var desc  = cmsNormalizeParagraphData(data && data.desc, CMS_PARAGRAPH_DEFAULTS.dcs3FeatDesc);
+  var div   = document.createElement('div');
+  div.className = 'block-item'; div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH((title.text || 'Feature').slice(0, 48)) + '</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body collapsed">'
+    + cmsTextFieldHtml('Title', 'dcs3f-ti', title, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.dcs3FeatTitle, placeholder: 'e.g. HD Lecture Videos',
+        oninput: 'this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=(this.value||\'Feature\').slice(0,48)' })
+    + cmsParagraphFieldHtml('Description', 'dcs3f-de', desc, { rows: 2, defaults: CMS_PARAGRAPH_DEFAULTS.dcs3FeatDesc, placeholder: 'Short description' })
+    + '</div>';
+  list.appendChild(div);
+}
+
+function dcs3AddTag(data) {
+  var list = document.getElementById('dcs3-tags');
+  if (!list) return;
+  var id   = 'dcs3t-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var icon = (data && data.icon) || '📌';
+  var txt  = cmsNormalizeTextData(data && data.text != null ? { text: String(data.text || '') } : null, CMS_PARAGRAPH_DEFAULTS.dcs3TagText);
+  var div  = document.createElement('div');
+  div.className = 'block-item'; div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH(icon + ' ' + (txt.text || 'Tag')) + '</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body collapsed">'
+    + '<div class="field"><label>Icon (emoji)</label><input type="text" class="dcs3t-icon" value="' + xA(icon) + '" placeholder="e.g. 🖥" style="width:80px"></div>'
+    + cmsTextFieldHtml('Label', 'dcs3t-txt', txt, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.dcs3TagText, placeholder: 'e.g. Desktop',
+        oninput: 'var ic=this.closest(\'.block-item\').querySelector(\'.dcs3t-icon\');this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=(ic?ic.value:\'\')+" "+(this.value||\'Tag\')' })
+    + '</div>';
+  list.appendChild(div);
+}
+
+// ── DCS3 state ───────────────────────────────────────────────────
+
+function dcs3Get(id) { return document.getElementById(id) || {}; }
+
+function collectDcs3State() {
+  return {
+    padTop:      dcs3Get('dcs3-pad-top').value    || '60',
+    padBot:      dcs3Get('dcs3-pad-bot').value    || '60',
+    leftPadH:    dcs3Get('dcs3-left-padh').value  || '48',
+    rightPadH:   dcs3Get('dcs3-right-padh').value || '48',
+    leftWidth:   dcs3Get('dcs3-left-width').value || '50',
+    leftBg:      dcs3Get('dcs3-left-bg-hex').value  || '#f8fafc',
+    rightBg:     dcs3Get('dcs3-right-bg-hex').value || '#1a56a3',
+    checkColor:  dcs3Get('dcs3-check-hex').value    || '#1a56a3',
+    featBg:      dcs3Get('dcs3-feat-bg-hex').value  || '#ffffff',
+    featCols:    dcs3Get('dcs3-feat-cols').value    || '2',
+    tagBg:       dcs3Get('dcs3-tag-bg-hex').value   || '#ffffff26',
+    ctaUrl:      dcs3Get('dcs3-cta-url').value      || '#',
+    ctaColor:    dcs3Get('dcs3-cta-color-hex').value  || '#ffffff',
+    ctaBorder:   dcs3Get('dcs3-cta-border-hex').value || '#ffffff',
+    ctaFill:     dcs3Get('dcs3-cta-fill-hex').value   || '#1a56a3',
+    leftLabel:   cmsReadTextField('dcs3-left-label',  CMS_PARAGRAPH_DEFAULTS.dcs3LeftLabel),
+    leftTitle:   cmsReadTextField('dcs3-left-title',  CMS_PARAGRAPH_DEFAULTS.dcs3LeftTitle),
+    leftPara:    cmsReadParagraphField('dcs3-left-para',  CMS_PARAGRAPH_DEFAULTS.dcs3LeftPara),
+    rightLabel:  cmsReadTextField('dcs3-right-label', CMS_PARAGRAPH_DEFAULTS.dcs3RightLabel),
+    rightTitle:  cmsReadTextField('dcs3-right-title', CMS_PARAGRAPH_DEFAULTS.dcs3RightTitle),
+    rightPara:   cmsReadParagraphField('dcs3-right-para', CMS_PARAGRAPH_DEFAULTS.dcs3RightPara),
+    ctaText:     cmsReadTextField('dcs3-cta-text',    CMS_PARAGRAPH_DEFAULTS.dcs3CtaText),
+    features:    Array.from(document.querySelectorAll('#dcs3-features .block-item')).map(function(el) {
+      return {
+        title: cmsReadTextField(el.querySelector('.dcs3f-ti'), CMS_PARAGRAPH_DEFAULTS.dcs3FeatTitle),
+        desc:  cmsReadParagraphField(el.querySelector('.dcs3f-de'), CMS_PARAGRAPH_DEFAULTS.dcs3FeatDesc)
+      };
+    }),
+    tags: Array.from(document.querySelectorAll('#dcs3-tags .block-item')).map(function(el) {
+      return {
+        icon: (el.querySelector('.dcs3t-icon') || {}).value || '📌',
+        text: cmsReadTextField(el.querySelector('.dcs3t-txt'), CMS_PARAGRAPH_DEFAULTS.dcs3TagText)
+      };
+    })
+  };
+}
+
+function dcs3SetColor(cpId, hexId, val, fallback) {
+  var c = cmsSafeHex(val, fallback);
+  var cp = document.getElementById(cpId); if (cp) cp.value = c;
+  var hx = document.getElementById(hexId); if (hx) hx.value = c;
+}
+
+function restoreDcs3State(d) {
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+  set('dcs3-pad-top',    d.padTop    || '60');
+  set('dcs3-pad-bot',    d.padBot    || '60');
+  set('dcs3-left-padh',  d.leftPadH  || '48');
+  set('dcs3-right-padh', d.rightPadH || '48');
+  set('dcs3-left-width', d.leftWidth || '50');
+  dcs3SetColor('dcs3-left-bg-cp',     'dcs3-left-bg-hex',     d.leftBg,    '#f8fafc');
+  dcs3SetColor('dcs3-right-bg-cp',    'dcs3-right-bg-hex',    d.rightBg,   '#1a56a3');
+  dcs3SetColor('dcs3-check-cp',       'dcs3-check-hex',       d.checkColor,'#1a56a3');
+  dcs3SetColor('dcs3-feat-bg-cp',     'dcs3-feat-bg-hex',     d.featBg,    '#ffffff');
+  dcs3SetColor('dcs3-cta-color-cp',   'dcs3-cta-color-hex',   d.ctaColor,  '#ffffff');
+  dcs3SetColor('dcs3-cta-border-cp',  'dcs3-cta-border-hex',  d.ctaBorder, '#ffffff');
+  dcs3SetColor('dcs3-cta-fill-cp',    'dcs3-cta-fill-hex',    d.ctaFill,   '#1a56a3');
+  set('dcs3-feat-cols', d.featCols || '2');
+  set('dcs3-tag-bg-hex', d.tagBg || '#ffffff26');
+  set('dcs3-cta-url', d.ctaUrl || '#');
+  cmsSetTextField('dcs3-left-label',  d.leftLabel,  CMS_PARAGRAPH_DEFAULTS.dcs3LeftLabel);
+  cmsSetTextField('dcs3-left-title',  d.leftTitle,  CMS_PARAGRAPH_DEFAULTS.dcs3LeftTitle);
+  cmsSetParagraphField('dcs3-left-para',  d.leftPara,  CMS_PARAGRAPH_DEFAULTS.dcs3LeftPara);
+  cmsSetTextField('dcs3-right-label', d.rightLabel, CMS_PARAGRAPH_DEFAULTS.dcs3RightLabel);
+  cmsSetTextField('dcs3-right-title', d.rightTitle, CMS_PARAGRAPH_DEFAULTS.dcs3RightTitle);
+  cmsSetParagraphField('dcs3-right-para', d.rightPara, CMS_PARAGRAPH_DEFAULTS.dcs3RightPara);
+  cmsSetTextField('dcs3-cta-text',    d.ctaText,    CMS_PARAGRAPH_DEFAULTS.dcs3CtaText);
+  var fl = document.getElementById('dcs3-features'); if (fl) { fl.innerHTML = ''; (d.features || []).forEach(function(f){ dcs3AddFeature(f); }); }
+  var tl = document.getElementById('dcs3-tags');     if (tl) { tl.innerHTML = ''; (d.tags     || []).forEach(function(t){ dcs3AddTag(t);    }); }
+}
+
+// ── DCS3 HTML generator ──────────────────────────────────────────
+
+function generateDcs3() {
+  var d   = collectDcs3State();
+  var uid = 'dcs3-' + Date.now().toString(36);
+  var lw  = cmsClampInt(d.leftWidth, 50, 30, 70);
+  var rw  = 100 - lw;
+  var pT  = cmsClampInt(d.padTop,    60, 0, 300);
+  var pB  = cmsClampInt(d.padBot,    60, 0, 300);
+  var lpH = cmsClampInt(d.leftPadH,  48, 0, 200);
+  var rpH = cmsClampInt(d.rightPadH, 48, 0, 200);
+  var lb  = cmsSafeHex(d.leftBg,    '#f8fafc');
+  var rb  = cmsSafeHex(d.rightBg,   '#1a56a3');
+  var chk = cmsSafeHex(d.checkColor,'#1a56a3');
+  var fbg = cmsSafeHex(d.featBg,    '#ffffff');
+  var cols = cmsClampInt(d.featCols, 2, 1, 3);
+  var tagBg = d.tagBg || 'rgba(255,255,255,0.15)';
+  var ctaColor  = cmsSafeHex(d.ctaColor,  '#ffffff');
+  var ctaBorder = cmsSafeHex(d.ctaBorder, '#ffffff');
+  var ctaFill   = cmsSafeHex(d.ctaFill,   '#1a56a3');
+
+  // Check icon SVG
+  var checkSvg = '<svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  // ── Left column ──
+  var leftParts = [];
+  var lLabel = cmsNormalizeTextData(d.leftLabel, CMS_PARAGRAPH_DEFAULTS.dcs3LeftLabel);
+  if (lLabel.text) leftParts.push('<p style="font-family:\'Poppins\',sans-serif;margin:0 0 10px;text-transform:uppercase;' + cmsTextStyle(lLabel, CMS_PARAGRAPH_DEFAULTS.dcs3LeftLabel) + '">' + xH(lLabel.text) + '</p>');
+  var lTitle = cmsNormalizeTextData(d.leftTitle, CMS_PARAGRAPH_DEFAULTS.dcs3LeftTitle);
+  if (lTitle.text) leftParts.push('<h2 style="font-family:\'Poppins\',sans-serif;margin:0 0 16px;line-height:1.2;' + cmsTextStyle(lTitle, CMS_PARAGRAPH_DEFAULTS.dcs3LeftTitle) + '">' + xH(lTitle.text) + '</h2>');
+  var lPara = cmsNormalizeParagraphData(d.leftPara, CMS_PARAGRAPH_DEFAULTS.dcs3LeftPara);
+  if (lPara.text) leftParts.push('<p style="font-family:\'Poppins\',sans-serif;margin:0 0 24px;line-height:1.7;' + cmsParagraphStyle(lPara, CMS_PARAGRAPH_DEFAULTS.dcs3LeftPara) + '">' + xH(lPara.text) + '</p>');
+
+  if ((d.features || []).length) {
+    var featureItems = (d.features || []).map(function(f) {
+      var ft = cmsNormalizeTextData(f.title, CMS_PARAGRAPH_DEFAULTS.dcs3FeatTitle);
+      var fd = cmsNormalizeParagraphData(f.desc, CMS_PARAGRAPH_DEFAULTS.dcs3FeatDesc);
+      return '<div style="display:flex;align-items:flex-start;gap:10px;background:' + xA(fbg) + ';border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;">'
+        + '<span style="width:20px;height:20px;min-width:20px;border-radius:50%;background:' + xA(chk) + ';display:inline-flex;align-items:center;justify-content:center;margin-top:1px;">' + checkSvg + '</span>'
+        + '<div>'
+        + (ft.text ? '<p style="font-family:\'Poppins\',sans-serif;margin:0 0 3px;' + cmsTextStyle(ft, CMS_PARAGRAPH_DEFAULTS.dcs3FeatTitle) + '">' + xH(ft.text) + '</p>' : '')
+        + (fd.text ? '<p style="font-family:\'Poppins\',sans-serif;margin:0;line-height:1.5;' + cmsParagraphStyle(fd, CMS_PARAGRAPH_DEFAULTS.dcs3FeatDesc) + '">' + xH(fd.text) + '</p>' : '')
+        + '</div></div>';
+    }).join('\n    ');
+    leftParts.push('<div style="display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:12px;">\n    ' + featureItems + '\n  </div>');
+  }
+
+  // ── Right column ──
+  var rightParts = [];
+  var rLabel = cmsNormalizeTextData(d.rightLabel, CMS_PARAGRAPH_DEFAULTS.dcs3RightLabel);
+  if (rLabel.text) rightParts.push('<p style="font-family:\'Poppins\',sans-serif;margin:0 0 12px;text-transform:uppercase;' + cmsTextStyle(rLabel, CMS_PARAGRAPH_DEFAULTS.dcs3RightLabel) + '">' + xH(rLabel.text) + '</p>');
+  var rTitle = cmsNormalizeTextData(d.rightTitle, CMS_PARAGRAPH_DEFAULTS.dcs3RightTitle);
+  if (rTitle.text) rightParts.push('<h2 style="font-family:\'Poppins\',sans-serif;margin:0 0 16px;line-height:1.2;' + cmsTextStyle(rTitle, CMS_PARAGRAPH_DEFAULTS.dcs3RightTitle) + '">' + xH(rTitle.text) + '</h2>');
+  var rPara = cmsNormalizeParagraphData(d.rightPara, CMS_PARAGRAPH_DEFAULTS.dcs3RightPara);
+  if (rPara.text) rightParts.push('<p style="font-family:\'Poppins\',sans-serif;margin:0 0 24px;line-height:1.7;' + cmsParagraphStyle(rPara, CMS_PARAGRAPH_DEFAULTS.dcs3RightPara) + '">' + xH(rPara.text) + '</p>');
+
+  if ((d.tags || []).length) {
+    var tagItems = (d.tags || []).map(function(t) {
+      var tt = cmsNormalizeTextData(t.text, CMS_PARAGRAPH_DEFAULTS.dcs3TagText);
+      return '<div style="display:inline-flex;align-items:center;gap:8px;background:' + xA(tagBg) + ';border-radius:8px;padding:10px 16px;">'
+        + '<span style="font-size:18px;line-height:1;">' + xH(t.icon || '📌') + '</span>'
+        + '<span style="font-family:\'Poppins\',sans-serif;' + cmsTextStyle(tt, CMS_PARAGRAPH_DEFAULTS.dcs3TagText) + '">' + xH(tt.text) + '</span>'
+        + '</div>';
+    }).join('\n    ');
+    rightParts.push('<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px;">\n    ' + tagItems + '\n  </div>');
+  }
+
+  var ctaTxt = cmsNormalizeTextData(d.ctaText, CMS_PARAGRAPH_DEFAULTS.dcs3CtaText);
+  if (ctaTxt.text) {
+    rightParts.push('<a href="' + xA(d.ctaUrl || '#') + '" style="display:inline-flex;align-items:center;gap:8px;background:' + xA(ctaFill) + ';border:1.5px solid ' + xA(ctaBorder) + ';border-radius:8px;padding:12px 28px;text-decoration:none;font-family:\'Poppins\',sans-serif;' + cmsTextStyle(ctaTxt, CMS_PARAGRAPH_DEFAULTS.dcs3CtaText) + '">' + xH(ctaTxt.text) + '</a>');
+  }
+
+  var html = [
+    '<div class="' + uid + '" style="display:flex;flex-wrap:wrap;width:100%;">',
+    '  <!-- Left column -->',
+    '  <div style="width:' + lw + '%;background:' + xA(lb) + ';padding:' + pT + 'px ' + lpH + 'px ' + pB + 'px ' + lpH + 'px;box-sizing:border-box;">',
+    '    ' + leftParts.join('\n    '),
+    '  </div>',
+    '  <!-- Right column -->',
+    '  <div style="width:' + rw + '%;background:' + xA(rb) + ';padding:' + pT + 'px ' + rpH + 'px ' + pB + 'px ' + rpH + 'px;box-sizing:border-box;">',
+    '    ' + rightParts.join('\n    '),
+    '  </div>',
+    '</div>'
+  ].join('\n');
+
+  var preview = document.getElementById('dcs3-preview-wrap');
+  if (preview) preview.innerHTML = html;
+  var code = document.getElementById('dcs3-code');
+  if (code) code.textContent = html;
+  switchOut('dcs3', 'preview');
+
+  dcs3CmpSave();
 }
 
 // ── Double Column Section v2 (DCS2) ─────────────────────────────

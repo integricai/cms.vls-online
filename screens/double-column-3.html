@@ -1,0 +1,156 @@
+<div id="screen-dcs3" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <!-- ── Saved components ── -->
+    <div style="background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:2px;">
+      <div class="section-label" style="margin:0 0 10px">Saved Components</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <select id="dcs3-cmp-sel" onchange="dcs3CmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none;background:#fff;color:var(--text);">
+          <option value="">— select to load —</option>
+        </select>
+        <button class="btn-sm" onclick="dcs3CmpNew()">+ New</button>
+        <button class="btn-sm danger" id="dcs3-cmp-del" style="display:none" onclick="dcs3CmpDelete()">Delete</button>
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>Component name</label>
+        <input type="text" id="dcs3-cmp-name" placeholder="e.g. LMS — Platform Section">
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span id="dcs3-cmp-status" style="font-size:12px;"></span>
+        <button class="btn-gen" style="width:auto;padding:8px 20px;margin:0" onclick="dcs3CmpSave()">Save Component</button>
+      </div>
+    </div>
+
+    <!-- ── Layout / Panel sizing ── -->
+    <div class="section-label">Layout &amp; Panel sizing</div>
+    <div class="field">
+      <label>Column split</label>
+      <select id="dcs3-left-width">
+        <option value="35">35 / 65</option>
+        <option value="40">40 / 60</option>
+        <option value="45">45 / 55</option>
+        <option value="50" selected>50 / 50</option>
+        <option value="55">55 / 45</option>
+        <option value="60">60 / 40</option>
+        <option value="65">65 / 35</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field"><label>Top padding (px)</label><input type="number" id="dcs3-pad-top" value="60" min="0" max="300"></div>
+      <div class="field"><label>Bottom padding (px)</label><input type="number" id="dcs3-pad-bot" value="60" min="0" max="300"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field"><label>Left col — H padding (px)</label><input type="number" id="dcs3-left-padh" value="48" min="0" max="200"></div>
+      <div class="field"><label>Right col — H padding (px)</label><input type="number" id="dcs3-right-padh" value="48" min="0" max="200"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Left column bg</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="dcs3-left-bg-cp" value="#f8fafc" oninput="document.getElementById('dcs3-left-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="dcs3-left-bg-hex" value="#f8fafc" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('dcs3-left-bg-cp').value=v">
+        </div>
+      </div>
+      <div class="field">
+        <label>Right column bg</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="dcs3-right-bg-cp" value="#1a56a3" oninput="document.getElementById('dcs3-right-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="dcs3-right-bg-hex" value="#1a56a3" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('dcs3-right-bg-cp').value=v">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Left column ── -->
+    <div class="section-label">Left column — content</div>
+    <div class="field"><label>Eyebrow label</label><input type="text" id="dcs3-left-label" placeholder="e.g. THE PLATFORM" value="THE PLATFORM"></div>
+    <div class="field"><label>Heading</label><textarea id="dcs3-left-title" rows="2">Learning Management System</textarea></div>
+    <div class="field"><label>Paragraph</label><textarea id="dcs3-left-para" rows="3">Our LMS contains everything needed to create a captivating learning experience — fully optimised for web and mobile, accessible from desktops, tablets, and smartphones.</textarea></div>
+
+    <div class="section-label" style="font-size:10px;border:none;padding-bottom:0;margin-top:4px">Feature grid</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+      <div class="field">
+        <label>Check icon colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="dcs3-check-cp" value="#1a56a3" oninput="document.getElementById('dcs3-check-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="dcs3-check-hex" value="#1a56a3" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('dcs3-check-cp').value=v">
+        </div>
+      </div>
+      <div class="field">
+        <label>Feature card bg</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="dcs3-feat-bg-cp" value="#ffffff" oninput="document.getElementById('dcs3-feat-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="dcs3-feat-bg-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('dcs3-feat-bg-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Features per row</label>
+      <select id="dcs3-feat-cols">
+        <option value="1">1 per row</option>
+        <option value="2" selected>2 per row</option>
+      </select>
+    </div>
+    <div id="dcs3-features" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="dcs3AddFeature()">+ Add feature</button>
+
+    <!-- ── Right column ── -->
+    <div class="section-label">Right column — content</div>
+    <div class="field"><label>Eyebrow label</label><input type="text" id="dcs3-right-label" placeholder="e.g. POWERED BY ZENLER" value="POWERED BY ZENLER"></div>
+    <div class="field"><label>Heading</label><textarea id="dcs3-right-title" rows="2">Study anywhere, on any device</textarea></div>
+    <div class="field"><label>Paragraph</label><textarea id="dcs3-right-para" rows="3">Our platform is built for the modern learner. Whether you're commuting, at your desk, or revising at home — your course content, quizzes, and tutor support are always within reach.</textarea></div>
+
+    <div class="section-label" style="font-size:10px;border:none;padding-bottom:0;margin-top:4px">Tag / pill buttons</div>
+    <div class="field" style="margin-top:4px">
+      <label>Tag button bg</label>
+      <div class="cms-paragraph-color-row">
+        <input type="color" id="dcs3-tag-bg-cp" value="#ffffff26" oninput="document.getElementById('dcs3-tag-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+        <input type="text" id="dcs3-tag-bg-hex" value="#ffffff26" placeholder="rgba or hex" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('dcs3-tag-bg-cp').value=v">
+      </div>
+    </div>
+    <div id="dcs3-tags" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="dcs3AddTag()">+ Add tag button</button>
+
+    <div class="section-label" style="font-size:10px;border:none;padding-bottom:0;margin-top:8px">CTA button</div>
+    <div class="field" style="margin-top:4px"><label>Button text</label><input type="text" id="dcs3-cta-text" value="Browse all courses →"></div>
+    <div class="field"><label>Button URL</label><input type="text" id="dcs3-cta-url" value="#" placeholder="https://"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Text colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="dcs3-cta-color-cp" value="#ffffff" oninput="document.getElementById('dcs3-cta-color-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="dcs3-cta-color-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('dcs3-cta-color-cp').value=v">
+        </div>
+      </div>
+      <div class="field">
+        <label>Border colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="dcs3-cta-border-cp" value="#ffffff" oninput="document.getElementById('dcs3-cta-border-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="dcs3-cta-border-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('dcs3-cta-border-cp').value=v">
+        </div>
+      </div>
+      <div class="field">
+        <label>Fill colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="dcs3-cta-fill-cp" value="#1a56a3" oninput="document.getElementById('dcs3-cta-fill-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="dcs3-cta-fill-hex" value="#1a56a3" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('dcs3-cta-fill-cp').value=v">
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-gen" style="margin-top:8px" onclick="generateDcs3()">Generate HTML</button>
+
+  </div></div>
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="dcs3-ot-preview" onclick="switchOut('dcs3','preview')">Preview</div>
+      <div class="out-tab" id="dcs3-ot-html" onclick="switchOut('dcs3','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="dcs3-preview-wrap" class="preview-wrap" style="padding:0"></div>
+      <div id="dcs3-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('dcs3-code',this)">Copy</button>
+        <pre id="dcs3-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>
