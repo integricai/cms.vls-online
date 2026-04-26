@@ -8579,7 +8579,7 @@ function generateDcs3() {
         + (fd.text ? '<p style="font-family:\'Poppins\',sans-serif;margin:0;line-height:1.5;' + cmsParagraphStyle(fd, CMS_PARAGRAPH_DEFAULTS.dcs3FeatDesc) + '">' + xH(fd.text) + '</p>' : '')
         + '</div></div>';
     }).join('\n    ');
-    leftParts.push('<div style="display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:12px;">\n    ' + featureItems + '\n  </div>');
+    leftParts.push('<div class="' + uid + '-featgrid">\n    ' + featureItems + '\n  </div>');
   }
 
   // ── Right column ──
@@ -8607,14 +8607,23 @@ function generateDcs3() {
     rightParts.push('<a href="' + xA(d.ctaUrl || '#') + '" style="display:inline-flex;align-items:center;gap:8px;background:' + xA(ctaFill) + ';border:1.5px solid ' + xA(ctaBorder) + ';border-radius:8px;padding:12px 28px;text-decoration:none;font-family:\'Poppins\',sans-serif;' + cmsTextStyle(ctaTxt, CMS_PARAGRAPH_DEFAULTS.dcs3CtaText) + '">' + xH(ctaTxt.text) + '</a>');
   }
 
+  var css = '<style>'
+    + '.' + uid + '{display:flex;flex-wrap:wrap;width:100%;}'
+    + '.' + uid + '-left,.' + uid + '-right{box-sizing:border-box;min-width:0;}'
+    + '.' + uid + '-featgrid{display:grid;grid-template-columns:repeat(' + cols + ',minmax(0,1fr));gap:12px;}'
+    + '@media(max-width:900px){.' + uid + '{display:block !important;}.' + uid + '-left,.' + uid + '-right{width:100% !important;display:block !important;}}'
+    + '@media(max-width:640px){.' + uid + '-featgrid{grid-template-columns:1fr !important;}}'
+    + '</style>';
+
   var html = [
-    '<div class="' + uid + '" style="display:flex;flex-wrap:wrap;width:100%;">',
+    css,
+    '<div class="' + uid + '">',
     '  <!-- Left column -->',
-    '  <div style="width:' + lw + '%;background:' + xA(lb) + ';padding:' + pT + 'px ' + lpH + 'px ' + pB + 'px ' + lpH + 'px;box-sizing:border-box;">',
+    '  <div class="' + uid + '-left" style="width:' + lw + '%;background:' + xA(lb) + ';padding:' + pT + 'px ' + lpH + 'px ' + pB + 'px ' + lpH + 'px;box-sizing:border-box;">',
     '    ' + leftParts.join('\n    '),
     '  </div>',
     '  <!-- Right column -->',
-    '  <div style="width:' + rw + '%;background:' + xA(rb) + ';padding:' + pT + 'px ' + rpH + 'px ' + pB + 'px ' + rpH + 'px;box-sizing:border-box;">',
+    '  <div class="' + uid + '-right" style="width:' + rw + '%;background:' + xA(rb) + ';padding:' + pT + 'px ' + rpH + 'px ' + pB + 'px ' + rpH + 'px;box-sizing:border-box;">',
     '    ' + rightParts.join('\n    '),
     '  </div>',
     '</div>'
@@ -8867,14 +8876,21 @@ function generateDcs2() {
   }).join('\n    ');
   if (cardItems) rightParts.push('<div style="display:flex;flex-direction:column;gap:12px;">\n    ' + cardItems + '\n  </div>');
 
+  var css = '<style>'
+    + '.' + uid + '{display:flex;flex-wrap:wrap;width:100%;}'
+    + '.' + uid + '-left,.' + uid + '-right{box-sizing:border-box;min-width:0;}'
+    + '@media(max-width:900px){.' + uid + '{display:block !important;}.' + uid + '-left,.' + uid + '-right{width:100% !important;display:block !important;}}'
+    + '</style>';
+
   var html = [
-    '<div class="' + uid + '" style="display:flex;flex-wrap:wrap;width:100%;">',
+    css,
+    '<div class="' + uid + '">',
     '  <!-- Left column -->',
-    '  <div style="width:' + lw + '%;background:' + xA(lb) + ';padding:' + pT + 'px ' + pR + 'px ' + pB + 'px ' + pL + 'px;box-sizing:border-box;">',
+    '  <div class="' + uid + '-left" style="width:' + lw + '%;background:' + xA(lb) + ';padding:' + pT + 'px ' + pR + 'px ' + pB + 'px ' + pL + 'px;box-sizing:border-box;">',
     '    ' + leftParts.join('\n    '),
     '  </div>',
     '  <!-- Right column -->',
-    '  <div style="width:' + rw + '%;background:' + xA(rb) + ';padding:' + pT + 'px ' + pR + 'px ' + pB + 'px ' + pL + 'px;box-sizing:border-box;">',
+    '  <div class="' + uid + '-right" style="width:' + rw + '%;background:' + xA(rb) + ';padding:' + pT + 'px ' + pR + 'px ' + pB + 'px ' + pL + 'px;box-sizing:border-box;">',
     '    ' + rightParts.join('\n    '),
     '  </div>',
     '</div>'
@@ -9178,7 +9194,7 @@ function generateDcs() {
         + '<div style="font-family:\'Poppins\',sans-serif;margin:0;' + cmsTextStyle(sl, CMS_PARAGRAPH_DEFAULTS.dcsStatLabel) + '">' + xH(sl.text) + '</div>'
         + '</div>';
     }).join('\n    ');
-    rightParts.push('<div style="display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:12px;margin-bottom:20px;">\n    ' + statItems + '\n  </div>');
+    rightParts.push('<div class="' + uid + '-stats">\n    ' + statItems + '\n  </div>');
   }
   // quote
   if (d.quoteShow !== false) {
@@ -9191,15 +9207,24 @@ function generateDcs() {
     rightParts.push(qParts.join('\n'));
   }
 
+  var css = '<style>'
+    + '.' + uid + '{display:flex;flex-wrap:wrap;width:100%;}'
+    + '.' + uid + '-left,.' + uid + '-right{box-sizing:border-box;min-width:0;}'
+    + '.' + uid + '-stats{display:grid;grid-template-columns:repeat(' + cols + ',minmax(0,1fr));gap:12px;margin-bottom:20px;}'
+    + '@media(max-width:900px){.' + uid + '{display:block !important;}.' + uid + '-left,.' + uid + '-right{width:100% !important;display:block !important;}}'
+    + '@media(max-width:640px){.' + uid + '-stats{grid-template-columns:1fr !important;}}'
+    + '</style>';
+
   // ── Assemble ──
   var html = [
-    '<div class="' + uid + '" style="display:flex;flex-wrap:wrap;width:100%;">',
+    css,
+    '<div class="' + uid + '">',
     '  <!-- Left column -->',
-    '  <div style="width:' + lw + '%;background:' + xA(lb) + ';padding:' + pTop + 'px ' + pR + 'px ' + pBot + 'px ' + pL + 'px;box-sizing:border-box;">',
+    '  <div class="' + uid + '-left" style="width:' + lw + '%;background:' + xA(lb) + ';padding:' + pTop + 'px ' + pR + 'px ' + pBot + 'px ' + pL + 'px;box-sizing:border-box;">',
     '    ' + leftParts.join('\n    '),
     '  </div>',
     '  <!-- Right column -->',
-    '  <div style="width:' + rw + '%;background:' + xA(rb) + ';padding:' + pTop + 'px ' + pR + 'px ' + pBot + 'px ' + pL + 'px;box-sizing:border-box;">',
+    '  <div class="' + uid + '-right" style="width:' + rw + '%;background:' + xA(rb) + ';padding:' + pTop + 'px ' + pR + 'px ' + pBot + 'px ' + pL + 'px;box-sizing:border-box;">',
     '    ' + rightParts.join('\n    '),
     '  </div>',
     '</div>'
