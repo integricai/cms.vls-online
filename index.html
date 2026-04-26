@@ -7272,9 +7272,16 @@ function polAddSection(data) {
     + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="padding:4px 8px;">✕</button>'
     + '</div>'
     + '<div class="block-body">'
+    + '<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">'
     + '<div class="field"><label>Section title</label>'
     + '<input type="text" class="pols-title" value="' + xA(title) + '" placeholder="e.g. Introduction"'
     + ' oninput="this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=this.value.slice(0,50)||\'New Section\'">'
+    + '</div>'
+    + '<div class="field"><label>Section bg</label>'
+    + '<div class="cms-paragraph-color-row">'
+    + '<input type="color" class="pols-bg-cp" value="' + xA((data && data.bg) || '#ffffff') + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">'
+    + '<input type="text" class="pols-bg" value="' + xA((data && data.bg) || '#ffffff') + '" style="width:80px" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v">'
+    + '</div></div>'
     + '</div>'
     + '<div class="section-label" style="font-size:10px;border:none;padding-bottom:0;margin-top:4px">Content blocks</div>'
     + '<div class="pols-blocks block-list" style="margin-top:4px"></div>'
@@ -7526,6 +7533,7 @@ function collectPolicyState() {
   var metaItems = Array.from(document.querySelectorAll('#pol-meta-list .polm-text')).map(function(i){ return i.value.trim(); }).filter(Boolean);
   var sections  = Array.from(document.querySelectorAll('#pol-sections > .block-item')).map(function(secEl) {
     var title = (secEl.querySelector('.pols-title') || {}).value || '';
+    var bg    = (secEl.querySelector('.pols-bg')    || {}).value || '#ffffff';
     var blocks = Array.from(secEl.querySelectorAll('.pols-blocks > .block-item')).map(function(blkEl) {
       var badge = (blkEl.querySelector('.block-type-badge') || {}).textContent || '';
       var type = { 'Paragraph':'paragraph','Bullets':'bullets','Table':'table','Cards':'cards','Rights Cards':'rights','Tags':'tags','Definitions':'definitions','Alpha List':'alpha-list','Callout':'callout','Link Cards':'link-cards','CTA Banner':'cta-banner' }[badge] || badge;
@@ -7581,7 +7589,7 @@ function collectPolicyState() {
       }
       return { type: type };
     });
-    return { title: title, blocks: blocks };
+    return { title: title, bg: bg, blocks: blocks };
   });
   return {
     hdrBg:    (document.getElementById('pol-hdr-bg-hex')  || {}).value || '#0d1f3c',
@@ -7655,12 +7663,15 @@ function generatePolicy() {
   var sectionsHtml = (d.sections || []).map(function(sec, i) {
     var n = i + 1;
     var blocksHtml = (sec.blocks || []).map(function(b) { return polBuildBlock(b, accent); }).join('');
-    return '<div id="' + uid + '-s' + n + '" class="' + uid + '-section" data-section="' + n + '" tabindex="-1" style="border-bottom:1px solid #e5e7eb;">'
+    var secBg = cmsSafeHex(sec.bg, '#ffffff');
+    return '<div id="' + uid + '-s' + n + '" class="' + uid + '-section" data-section="' + n + '" tabindex="-1" style="background:' + xA(secBg) + ';border-bottom:1px solid #e5e7eb;">'
+      + '<div style="padding:40px 48px;">'
       + '<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">'
       + '<span style="width:36px;height:36px;min-width:36px;border-radius:8px;background:' + xA(hdrBg) + ';color:#fff;font-size:16px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;font-family:\'Poppins\',sans-serif;">' + n + '</span>'
       + '<h2 style="font-family:\'Poppins\',sans-serif;font-size:22px;font-weight:700;color:#1a1a1a;margin:0;">' + xH(sec.title) + '</h2>'
       + '</div>'
       + blocksHtml
+      + '</div>'   // close padding div
       + '</div>';
   }).join('');
 
