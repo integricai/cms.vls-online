@@ -7551,7 +7551,7 @@ function generateReach() {
   var imgHtml;
   if (d.imgUrl && d.imgUrl.trim()) {
     imgHtml = '<div style="background:' + xA(imgBg) + ';border-radius:12px;height:' + imgH + 'px;margin-bottom:32px;overflow:hidden;">'
-      + '<img src="' + xA(d.imgUrl.trim()) + '" alt="' + xA(d.imgAlt || '') + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
+      + '<img src="' + xA(d.imgUrl.trim()) + '" alt="' + xA(d.imgAlt || '') + '" style="width:100%;height:100%;object-fit:contain;display:block;">'
       + '</div>';
   } else {
     imgHtml = '<div style="background:' + xA(imgBg) + ';border-radius:12px;height:' + imgH + 'px;margin-bottom:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1.5px dashed rgba(255,255,255,0.15);">'
