@@ -303,6 +303,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-feature-cards-2" onclick="switchScreen('feature-cards-2')">Feature Card 2</div>
       <div class="nav-dd-item" id="nav-steps-section" onclick="switchScreen('steps-section')">Steps Section</div>
       <div class="nav-dd-item" id="nav-dcs" onclick="switchScreen('dcs')">Double Column</div>
+      <div class="nav-dd-item" id="nav-dcs2" onclick="switchScreen('dcs2')">Double Column v2</div>
     </div>
   </div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
@@ -357,6 +358,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <button class="home-tile-link" onclick="switchScreen('feature-cards-2')">Feature Card 2</button>
           <button class="home-tile-link" onclick="switchScreen('steps-section')">Steps Section</button>
           <button class="home-tile-link" onclick="switchScreen('dcs')">Double Column</button>
+          <button class="home-tile-link" onclick="switchScreen('dcs2')">Double Column v2</button>
           <button class="home-tile-link" onclick="switchScreen('form')">Form</button>
         </div>
       </div>
@@ -889,7 +891,13 @@ var CMS_PARAGRAPH_DEFAULTS = {
   dcsStatValue:        { size: 28, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
   dcsStatLabel:        { size: 13, color: '#6b7280', weight: '400', letterSpacing: 0    },
   dcsQuoteText:        { size: 15, color: '#1a1a1a', weight: '400', letterSpacing: 0    },
-  dcsQuoteAttrib:      { size: 13, color: '#6b7280', weight: '400', letterSpacing: 0    }
+  dcsQuoteAttrib:      { size: 13, color: '#6b7280', weight: '400', letterSpacing: 0    },
+  dcs2LeftLabel:       { size: 11, color: '#4a90d9', weight: '600', letterSpacing: 0.12 },
+  dcs2LeftTitle:       { size: 36, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
+  dcs2LeftPara:        { size: 15, color: '#374151', weight: '400', letterSpacing: 0    },
+  dcs2RightLabel:      { size: 11, color: '#94a3b8', weight: '600', letterSpacing: 0.12 },
+  dcs2CardTitle:       { size: 16, color: '#ffffff', weight: '700', letterSpacing: 0    },
+  dcs2CardDesc:        { size: 13, color: '#94a3b8', weight: '400', letterSpacing: 0    }
 };
 var CMS_TEXT_DEFAULTS = CMS_PARAGRAPH_DEFAULTS;
 function cmsParagraphText(value) {
@@ -933,7 +941,7 @@ function doCopy(id, btn) {
 var _GLOBAL_SCREENS = ['header', 'footer', 'banner', 'promotion-section'];
 var _HOME_SCREENS   = ['hero', 'about-us'];
 var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
-var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards', 'feature-cards-2', 'steps-section', 'dcs'];
+var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards', 'feature-cards-2', 'steps-section', 'dcs', 'dcs2'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
@@ -954,6 +962,7 @@ var _screenFiles = {
   header:   '/screens/header.html',
   form:     '/screens/form.html',
   dcs:      '/screens/double-column.html',
+  dcs2:     '/screens/double-column-2.html',
 };
 var _loadedScreens = {};
 
@@ -1017,6 +1026,7 @@ async function switchScreen(name) {
   if (name === 'desc'  && !_loadedScreens._descInit)  { _loadedScreens._descInit  = true; descOnOpen();  descCmpInit();  cmpAttachDirty('desc');  }
   if (name === 'tabs'  && !_loadedScreens._tabsInit)  { _loadedScreens._tabsInit  = true; tabsOnOpen();  tabsCmpInit();  cmpAttachDirty('tabs');  }
   if (name === 'dcs'   && !_loadedScreens._dcsInit)   { _loadedScreens._dcsInit   = true; dcsOnOpen();   dcsCmpInit();   cmpAttachDirty('dcs');   }
+  if (name === 'dcs2'  && !_loadedScreens._dcs2Init)  { _loadedScreens._dcs2Init  = true; dcs2OnOpen();  dcs2CmpInit();  cmpAttachDirty('dcs2');  }
   if (name === 'events')  eventsOnOpen();
   if (name === 'faq')     faqOnOpen();
   if (name === 'team')    teamOnOpen();
@@ -1205,7 +1215,7 @@ function generateIntro() {
 
 var descBc = 0;
 var _dirtyScreens = {};
-var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] } };
+var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] } };
 
 function toggleBlockPicker() {
   var p = document.getElementById('block-type-picker');
@@ -6935,6 +6945,266 @@ function generateAboutUs() {
   document.getElementById('about-us-code').textContent = html;
   document.getElementById('about-us-preview-wrap').innerHTML = html;
   switchOut('about-us', 'preview');
+}
+
+// ── Double Column Section v2 (DCS2) ─────────────────────────────
+
+function dcs2OnOpen() {
+  cmsInitTextField('dcs2-left-label',  { defaults: CMS_PARAGRAPH_DEFAULTS.dcs2LeftLabel });
+  cmsInitTextField('dcs2-left-title',  { defaults: CMS_PARAGRAPH_DEFAULTS.dcs2LeftTitle });
+  cmsInitTextField('dcs2-right-label', { defaults: CMS_PARAGRAPH_DEFAULTS.dcs2RightLabel });
+  dcs2AddPara({ text: 'Vertex\'s staff and student community are built on a foundation of respect for one another, the community, society, and the legal frameworks in which we operate.' });
+  dcs2AddPara({ text: 'Diversity is celebrated. Differences are welcome. Our aim is to build communities in which all can feel welcome and create a sense of belonging where we all can achieve our potential and thrive.' });
+  dcs2AddPara({ text: 'Vertex Learning Solutions believes diversity is a strength — diverse communities and teams achieve more and learn important things from one another.' });
+  dcs2AddCard({ icon: '💛', iconBg: '#f59e0b', title: { text: 'Respect & Integrity' }, desc: { text: 'Built on mutual respect for one another, our community, and the legal frameworks in which we operate.' } });
+  dcs2AddCard({ icon: '🌍', iconBg: '#3b82f6', title: { text: 'Diversity & Inclusion' }, desc: { text: 'We celebrate differences and actively build communities where everyone can feel welcome and thrive.' } });
+  dcs2AddCard({ icon: '🚀', iconBg: '#8b5cf6', title: { text: 'Growth Mindset' }, desc: { text: 'Great minds don\'t all think alike. We value different perspectives because they help us all grow further.' } });
+}
+
+// ── DCS2 component manager ───────────────────────────────────────
+
+async function dcs2CmpInit() {
+  var comps = await cmpFetchAll('dcs2');
+  _cmpState.dcs2.components = comps;
+  cmpPopulateSelect('dcs2', comps, null);
+}
+
+async function dcs2CmpLoad(id) {
+  if (!id) { dcs2CmpNew(); return; }
+  var comp = (_cmpState.dcs2.components || []).filter(function(c){ return c.id === id; })[0];
+  if (!comp) return;
+  _cmpState.dcs2.id = comp.id;
+  var nameEl = document.getElementById('dcs2-cmp-name');
+  if (nameEl) nameEl.value = comp.name || '';
+  document.getElementById('dcs2-cmp-del').style.display = '';
+  restoreDcs2State(comp.data || {});
+  delete _dirtyScreens.dcs2;
+  cmpSetStatus('dcs2', '');
+}
+
+async function dcs2CmpSave() {
+  var nameEl = document.getElementById('dcs2-cmp-name');
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { alert('Please enter a component name before saving.'); if (nameEl) nameEl.focus(); return; }
+  cmpSetStatus('dcs2', 'Saving…', 'var(--muted)');
+  var state = collectDcs2State();
+  var comps = _cmpState.dcs2.components || [];
+  var id = _cmpState.dcs2.id;
+  if (id) {
+    var found = false;
+    comps = comps.map(function(c){ if (c.id === id) { found = true; return { id: id, name: name, data: state }; } return c; });
+    if (!found) { id = 'dcs2-' + Date.now().toString(36); comps.push({ id: id, name: name, data: state }); _cmpState.dcs2.id = id; }
+  } else {
+    id = 'dcs2-' + Date.now().toString(36);
+    comps.push({ id: id, name: name, data: state });
+    _cmpState.dcs2.id = id;
+  }
+  _cmpState.dcs2.components = comps;
+  var ok = await cmpSaveAll('dcs2', comps);
+  if (ok) {
+    delete _dirtyScreens.dcs2;
+    cmpPopulateSelect('dcs2', comps, id);
+    cmpSetStatus('dcs2', '✓ Saved', '#16a34a');
+    setTimeout(function(){ cmpSetStatus('dcs2', ''); }, 3000);
+  } else {
+    cmpSetStatus('dcs2', '✗ Save failed', '#e63946');
+  }
+}
+
+function dcs2CmpNew() {
+  _cmpState.dcs2.id = null;
+  var nameEl = document.getElementById('dcs2-cmp-name'); if (nameEl) nameEl.value = '';
+  var sel    = document.getElementById('dcs2-cmp-sel');  if (sel)    sel.value = '';
+  var del    = document.getElementById('dcs2-cmp-del');  if (del)    del.style.display = 'none';
+  restoreDcs2State({});
+  delete _dirtyScreens.dcs2;
+  cmpSetStatus('dcs2', '');
+}
+
+async function dcs2CmpDelete() {
+  var id = _cmpState.dcs2.id;
+  if (!id) return;
+  var comp = (_cmpState.dcs2.components || []).filter(function(c){ return c.id === id; })[0];
+  if (!window.confirm('Delete "' + (comp ? comp.name : 'this component') + '"? This cannot be undone.')) return;
+  var comps = (_cmpState.dcs2.components || []).filter(function(c){ return c.id !== id; });
+  var ok = await cmpSaveAll('dcs2', comps);
+  if (ok) { _cmpState.dcs2.components = comps; _cmpState.dcs2.id = null; cmpPopulateSelect('dcs2', comps, null); dcs2CmpNew(); }
+}
+
+// ── DCS2 form helpers ────────────────────────────────────────────
+
+function dcs2AddPara(data) {
+  var list = document.getElementById('dcs2-left-paras');
+  if (!list) return;
+  var id = 'dcs2p-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var p  = cmsNormalizeParagraphData(data, CMS_PARAGRAPH_DEFAULTS.dcs2LeftPara);
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH((p.text || 'Paragraph').slice(0, 48)) + '</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body">'
+    + cmsParagraphFieldHtml('Text', 'dcs2p-txt', p, { rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.dcs2LeftPara,
+        oninput: 'this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=(this.value||\'Paragraph\').slice(0,48)' })
+    + '</div>';
+  list.appendChild(div);
+}
+
+function dcs2AddCard(data) {
+  var list = document.getElementById('dcs2-cards');
+  if (!list) return;
+  var id      = 'dcs2c-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var icon    = (data && data.icon)  || '★';
+  var iconBg  = cmsSafeHex(data && data.iconBg, '#3b82f6');
+  var title   = cmsNormalizeTextData(data && data.title, CMS_PARAGRAPH_DEFAULTS.dcs2CardTitle);
+  var desc    = cmsNormalizeParagraphData(data && data.desc, CMS_PARAGRAPH_DEFAULTS.dcs2CardDesc);
+  var preview = title.text || 'New card';
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH(preview.slice(0, 48)) + '</span>'
+    + '<span class="block-type-badge">Card</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body collapsed">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    + '<div class="field"><label>Icon (emoji or text)</label><input type="text" class="dcs2c-icon" value="' + xA(icon) + '" placeholder="e.g. 💛"></div>'
+    + '<div class="field"><label>Icon background</label>'
+    + '<div class="cms-paragraph-color-row">'
+    + '<input type="color" class="dcs2c-iconbg-cp" value="' + xA(iconBg) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">'
+    + '<input type="text" class="dcs2c-iconbg-hex" value="' + xA(iconBg) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v">'
+    + '</div></div>'
+    + '</div>'
+    + cmsTextFieldHtml('Title', 'dcs2c-ti', title, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.dcs2CardTitle, placeholder: 'e.g. Respect & Integrity',
+        oninput: 'this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=(this.value||\'New card\').slice(0,48)' })
+    + cmsParagraphFieldHtml('Description', 'dcs2c-de', desc, { rows: 2, defaults: CMS_PARAGRAPH_DEFAULTS.dcs2CardDesc, placeholder: 'Short description of this value or item.' })
+    + '</div>';
+  list.appendChild(div);
+}
+
+// ── DCS2 state ───────────────────────────────────────────────────
+
+function dcs2Get(id) { return document.getElementById(id) || {}; }
+
+function collectDcs2State() {
+  return {
+    padTop:      dcs2Get('dcs2-pad-top').value   || '60',
+    padBot:      dcs2Get('dcs2-pad-bot').value   || '60',
+    padLeft:     dcs2Get('dcs2-pad-left').value  || '48',
+    padRight:    dcs2Get('dcs2-pad-right').value || '48',
+    leftWidth:   dcs2Get('dcs2-left-width').value || '45',
+    leftBg:      dcs2Get('dcs2-left-bg-hex').value  || '#ffffff',
+    rightBg:     dcs2Get('dcs2-right-bg-hex').value || '#132239',
+    cardBg:      dcs2Get('dcs2-card-bg-hex').value  || '#1e3550',
+    leftLabel:   cmsReadTextField('dcs2-left-label',  CMS_PARAGRAPH_DEFAULTS.dcs2LeftLabel),
+    leftTitle:   cmsReadTextField('dcs2-left-title',  CMS_PARAGRAPH_DEFAULTS.dcs2LeftTitle),
+    leftParas:   Array.from(document.querySelectorAll('#dcs2-left-paras .block-item')).map(function(el) {
+      return cmsReadParagraphField(el.querySelector('.dcs2p-txt'), CMS_PARAGRAPH_DEFAULTS.dcs2LeftPara);
+    }),
+    rightLabel:  cmsReadTextField('dcs2-right-label', CMS_PARAGRAPH_DEFAULTS.dcs2RightLabel),
+    cards:       Array.from(document.querySelectorAll('#dcs2-cards .block-item')).map(function(el) {
+      return {
+        icon:   (el.querySelector('.dcs2c-icon')       || {}).value || '★',
+        iconBg: (el.querySelector('.dcs2c-iconbg-hex') || {}).value || '#3b82f6',
+        title:  cmsReadTextField(el.querySelector('.dcs2c-ti'), CMS_PARAGRAPH_DEFAULTS.dcs2CardTitle),
+        desc:   cmsReadParagraphField(el.querySelector('.dcs2c-de'), CMS_PARAGRAPH_DEFAULTS.dcs2CardDesc)
+      };
+    })
+  };
+}
+
+function dcs2SetColor(cpId, hexId, val, fallback) {
+  var c = cmsSafeHex(val, fallback);
+  var cp = document.getElementById(cpId); if (cp) cp.value = c;
+  var hx = document.getElementById(hexId); if (hx) hx.value = c;
+}
+
+function restoreDcs2State(d) {
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+  set('dcs2-pad-top',    d.padTop   || '60');
+  set('dcs2-pad-bot',    d.padBot   || '60');
+  set('dcs2-pad-left',   d.padLeft  || '48');
+  set('dcs2-pad-right',  d.padRight || '48');
+  set('dcs2-left-width', d.leftWidth || '45');
+  dcs2SetColor('dcs2-left-bg-cp',  'dcs2-left-bg-hex',  d.leftBg,  '#ffffff');
+  dcs2SetColor('dcs2-right-bg-cp', 'dcs2-right-bg-hex', d.rightBg, '#132239');
+  dcs2SetColor('dcs2-card-bg-cp',  'dcs2-card-bg-hex',  d.cardBg,  '#1e3550');
+  cmsSetTextField('dcs2-left-label',  d.leftLabel,  CMS_PARAGRAPH_DEFAULTS.dcs2LeftLabel);
+  cmsSetTextField('dcs2-left-title',  d.leftTitle,  CMS_PARAGRAPH_DEFAULTS.dcs2LeftTitle);
+  cmsSetTextField('dcs2-right-label', d.rightLabel, CMS_PARAGRAPH_DEFAULTS.dcs2RightLabel);
+  var pl = document.getElementById('dcs2-left-paras'); if (pl) { pl.innerHTML = ''; (d.leftParas || []).forEach(function(p){ dcs2AddPara(p); }); }
+  var cl = document.getElementById('dcs2-cards');      if (cl) { cl.innerHTML = ''; (d.cards     || []).forEach(function(c){ dcs2AddCard(c); }); }
+}
+
+// ── DCS2 HTML generator ──────────────────────────────────────────
+
+function generateDcs2() {
+  var d   = collectDcs2State();
+  var uid = 'dcs2-' + Date.now().toString(36);
+  var lw  = cmsClampInt(d.leftWidth, 45, 30, 70);
+  var rw  = 100 - lw;
+  var pT  = cmsClampInt(d.padTop,   60, 0, 300);
+  var pB  = cmsClampInt(d.padBot,   60, 0, 300);
+  var pL  = cmsClampInt(d.padLeft,  48, 0, 300);
+  var pR  = cmsClampInt(d.padRight, 48, 0, 300);
+  var lb  = cmsSafeHex(d.leftBg,  '#ffffff');
+  var rb  = cmsSafeHex(d.rightBg, '#132239');
+  var cbg = cmsSafeHex(d.cardBg,  '#1e3550');
+
+  // ── Left column ──
+  var leftParts = [];
+  var lLabel = cmsNormalizeTextData(d.leftLabel, CMS_PARAGRAPH_DEFAULTS.dcs2LeftLabel);
+  if (lLabel.text) leftParts.push('<p style="font-family:\'Poppins\',sans-serif;margin:0 0 12px;text-transform:uppercase;' + cmsTextStyle(lLabel, CMS_PARAGRAPH_DEFAULTS.dcs2LeftLabel) + '">' + xH(lLabel.text) + '</p>');
+  var lTitle = cmsNormalizeTextData(d.leftTitle, CMS_PARAGRAPH_DEFAULTS.dcs2LeftTitle);
+  if (lTitle.text) leftParts.push('<h2 style="font-family:\'Poppins\',sans-serif;margin:0 0 24px;line-height:1.2;' + cmsTextStyle(lTitle, CMS_PARAGRAPH_DEFAULTS.dcs2LeftTitle) + '">' + xH(lTitle.text) + '</h2>');
+  (d.leftParas || []).forEach(function(p) {
+    var pn = cmsNormalizeParagraphData(p, CMS_PARAGRAPH_DEFAULTS.dcs2LeftPara);
+    if (pn.text) leftParts.push('<p style="font-family:\'Poppins\',sans-serif;margin:0 0 16px;line-height:1.7;' + cmsParagraphStyle(pn, CMS_PARAGRAPH_DEFAULTS.dcs2LeftPara) + '">' + xH(pn.text) + '</p>');
+  });
+
+  // ── Right column ──
+  var rightParts = [];
+  var rLabel = cmsNormalizeTextData(d.rightLabel, CMS_PARAGRAPH_DEFAULTS.dcs2RightLabel);
+  if (rLabel.text) rightParts.push('<p style="font-family:\'Poppins\',sans-serif;margin:0 0 20px;text-transform:uppercase;' + cmsTextStyle(rLabel, CMS_PARAGRAPH_DEFAULTS.dcs2RightLabel) + '">' + xH(rLabel.text) + '</p>');
+  var cardItems = (d.cards || []).map(function(c) {
+    var ct  = cmsNormalizeTextData(c.title, CMS_PARAGRAPH_DEFAULTS.dcs2CardTitle);
+    var cd  = cmsNormalizeParagraphData(c.desc, CMS_PARAGRAPH_DEFAULTS.dcs2CardDesc);
+    var ibg = cmsSafeHex(c.iconBg, '#3b82f6');
+    return '<div style="display:flex;align-items:flex-start;gap:16px;background:' + xA(cbg) + ';border-radius:10px;padding:18px 20px;">'
+      + '<div style="width:42px;height:42px;border-radius:8px;background:' + xA(ibg) + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px;line-height:1;">' + xH(c.icon || '★') + '</div>'
+      + '<div style="flex:1;">'
+      + (ct.text ? '<p style="font-family:\'Poppins\',sans-serif;margin:0 0 5px;' + cmsTextStyle(ct, CMS_PARAGRAPH_DEFAULTS.dcs2CardTitle) + '">' + xH(ct.text) + '</p>' : '')
+      + (cd.text ? '<p style="font-family:\'Poppins\',sans-serif;margin:0;line-height:1.6;' + cmsParagraphStyle(cd, CMS_PARAGRAPH_DEFAULTS.dcs2CardDesc) + '">' + xH(cd.text) + '</p>' : '')
+      + '</div>'
+      + '</div>';
+  }).join('\n    ');
+  if (cardItems) rightParts.push('<div style="display:flex;flex-direction:column;gap:12px;">\n    ' + cardItems + '\n  </div>');
+
+  var html = [
+    '<div class="' + uid + '" style="display:flex;flex-wrap:wrap;width:100%;">',
+    '  <!-- Left column -->',
+    '  <div style="width:' + lw + '%;background:' + xA(lb) + ';padding:' + pT + 'px ' + pR + 'px ' + pB + 'px ' + pL + 'px;box-sizing:border-box;">',
+    '    ' + leftParts.join('\n    '),
+    '  </div>',
+    '  <!-- Right column -->',
+    '  <div style="width:' + rw + '%;background:' + xA(rb) + ';padding:' + pT + 'px ' + pR + 'px ' + pB + 'px ' + pL + 'px;box-sizing:border-box;">',
+    '    ' + rightParts.join('\n    '),
+    '  </div>',
+    '</div>'
+  ].join('\n');
+
+  var preview = document.getElementById('dcs2-preview-wrap');
+  if (preview) preview.innerHTML = html;
+  var code = document.getElementById('dcs2-code');
+  if (code) code.textContent = html;
+  switchOut('dcs2', 'preview');
+
+  dcs2CmpSave();
 }
 
 // ── Double Column Section (DCS) ────────────────────────────────
