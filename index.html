@@ -10226,6 +10226,7 @@ function buildAboutUsHtml(data) {
   var css = '<style>'
     + '.' + uid + '{font-family:\'Poppins\',sans-serif;background:#fff;padding:48px ' + padRight + 'px 48px ' + padLeft + 'px;box-sizing:border-box;}'
     + '.' + uid + '-inner{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,1fr);gap:56px;align-items:start;}'
+    + '.' + uid + '-left,.' + uid + '-right{min-width:0;}'
     + '.' + uid + '-ey{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#204280;margin:0 0 12px;}'
     + '.' + uid + '-title{font-size:26px;font-weight:600;color:#202124;line-height:1.25;margin:0 0 18px;}'
     + '.' + uid + '-para{line-height:1.75;margin:0 0 14px;}'
@@ -10237,7 +10238,7 @@ function buildAboutUsHtml(data) {
     + '.' + uid + '-icon svg{width:15px;height:15px;display:block;}'
     + '.' + uid + '-card-title{font-size:14px;font-weight:700;color:#222;margin:0 0 4px;line-height:1.35;}'
     + '.' + uid + '-card-desc{line-height:1.55;margin:0;}'
-    + '@media(max-width:800px){.' + uid + '-inner{grid-template-columns:1fr;gap:28px;}.' + uid + '{padding:38px ' + padRight + 'px 38px ' + padLeft + 'px;}}'
+    + '@media(max-width:900px){.' + uid + '-inner{display:flex !important;flex-direction:column !important;grid-template-columns:1fr !important;gap:28px;}.' + uid + '-left,.' + uid + '-right{width:100% !important;max-width:none !important;}.' + uid + '{padding:38px ' + padRight + 'px 38px ' + padLeft + 'px;}}'
     + '@media(max-width:520px){.' + uid + '-title{font-size:24px;}.' + uid + '-card{grid-template-columns:34px minmax(0,1fr);padding:16px;}}'
     + '</style>';
 
@@ -10249,7 +10250,7 @@ function buildAboutUsHtml(data) {
     + paragraphHtml
     + (ctaText.text ? '<a class="' + uid + '-cta" href="' + xA(data.ctaUrl || '#') + '" style="' + cmsTextStyle(ctaText, CMS_PARAGRAPH_DEFAULTS.aboutCta) + '">' + xH(ctaText.text) + '</a>' : '')
     + '</div>'
-    + (cardsHtml ? '<div class="' + uid + '-cards">' + cardsHtml + '</div>' : '')
+    + (cardsHtml ? '<div class="' + uid + '-right"><div class="' + uid + '-cards">' + cardsHtml + '</div></div>' : '')
     + '</div>'
     + '</section>';
 
