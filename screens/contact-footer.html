@@ -1,0 +1,86 @@
+<div id="screen-contact-footer" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <!-- ── Saved components ── -->
+    <div style="background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:2px;">
+      <div class="section-label" style="margin:0 0 10px">Saved Components</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <select id="cf-cmp-sel" onchange="cfCmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none;background:#fff;color:var(--text);">
+          <option value="">— select to load —</option>
+        </select>
+        <button class="btn-sm" onclick="cfCmpNew()">+ New</button>
+        <button class="btn-sm danger" id="cf-cmp-del" style="display:none" onclick="cfCmpDelete()">Delete</button>
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>Component name</label>
+        <input type="text" id="cf-cmp-name" placeholder="e.g. VLS — Contact Footer">
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span id="cf-cmp-status" style="font-size:12px;"></span>
+        <button class="btn-gen" style="width:auto;padding:8px 20px;margin:0" onclick="cfCmpSave()">Save Component</button>
+      </div>
+    </div>
+
+    <!-- ── Section styling ── -->
+    <div class="section-label">Section styling</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field"><label>Padding top (px)</label><input type="number" id="cf-pad-top" value="24" min="0" max="200"></div>
+      <div class="field"><label>Padding bottom (px)</label><input type="number" id="cf-pad-bot" value="24" min="0" max="200"></div>
+      <div class="field"><label>Padding left (px)</label><input type="number" id="cf-pad-left" value="48" min="0" max="300"></div>
+      <div class="field"><label>Padding right (px)</label><input type="number" id="cf-pad-right" value="48" min="0" max="300"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Background</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="cf-bg-cp" value="#ffffff" oninput="document.getElementById('cf-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="cf-bg-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('cf-bg-cp').value=v">
+        </div>
+      </div>
+      <div class="field">
+        <label>Border top colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="cf-border-cp" value="#e5e7eb" oninput="document.getElementById('cf-border-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="cf-border-hex" value="#e5e7eb" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('cf-border-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Left column width %</label>
+      <select id="cf-left-width">
+        <option value="40">40 / 60</option>
+        <option value="45">45 / 55</option>
+        <option value="50">50 / 50</option>
+        <option value="55" selected>55 / 45</option>
+        <option value="60">60 / 40</option>
+      </select>
+    </div>
+
+    <!-- ── Left — company info ── -->
+    <div class="section-label">Left column — company info</div>
+    <div class="field"><label>Eyebrow label</label><input type="text" id="cf-label" placeholder="e.g. GET IN TOUCH" value="GET IN TOUCH"></div>
+    <div class="field"><label>Company name</label><input type="text" id="cf-company" value="Vertex Learning Solutions Ltd"></div>
+    <div class="field"><label>Address / tagline</label><textarea id="cf-address" rows="2">Kemp House, 128 City Road, London, EC1V 2NX, United Kingdom</textarea></div>
+
+    <!-- ── Right — contact items ── -->
+    <div class="section-label">Right column — contact items</div>
+    <div id="cf-items" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="cfAddItem()">+ Add contact item</button>
+
+    <button class="btn-gen" style="margin-top:8px" onclick="generateCf()">Generate HTML</button>
+
+  </div></div>
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="cf-ot-preview" onclick="switchOut('contact-footer','preview')">Preview</div>
+      <div class="out-tab" id="cf-ot-html" onclick="switchOut('contact-footer','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="contact-footer-preview-wrap" class="preview-wrap" style="padding:0"></div>
+      <div id="contact-footer-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('cf-code',this)">Copy</button>
+        <pre id="cf-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>

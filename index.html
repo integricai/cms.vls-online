@@ -271,6 +271,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-footer" onclick="switchScreen('footer')">Footer</div>
       <div class="nav-dd-item" id="nav-banner" onclick="switchScreen('banner')">Banner</div>
       <div class="nav-dd-item" id="nav-promotion-section" onclick="switchScreen('promotion-section')">Promotion Section</div>
+      <div class="nav-dd-item" id="nav-contact-footer" onclick="switchScreen('contact-footer')">Contact Footer</div>
     </div>
   </div>
   <!-- Home Page dropdown -->
@@ -329,6 +330,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <button class="home-tile-link" onclick="switchScreen('footer')">Footer</button>
           <button class="home-tile-link" onclick="switchScreen('banner')">Banner</button>
           <button class="home-tile-link" onclick="switchScreen('promotion-section')">Promotion Section</button>
+          <button class="home-tile-link" onclick="switchScreen('contact-footer')">Contact Footer</button>
         </div>
       </div>
       <div class="home-tile">
@@ -428,7 +430,7 @@ function applyRole(role) {
     globalDd.classList.add('hidden');
     if (globalTile) { globalTile.classList.remove('visible'); }
     var active = document.querySelector('.screen.active');
-    if (active && ['screen-banner','screen-footer','screen-header'].indexOf(active.id) >= 0) {
+    if (active && ['screen-banner','screen-footer','screen-header','screen-contact-footer'].indexOf(active.id) >= 0) {
       switchScreen('home');
     }
   }
@@ -919,7 +921,12 @@ var CMS_PARAGRAPH_DEFAULTS = {
   reachStatLabel:      { size: 11, color: '#94a3b8', weight: '500', letterSpacing: 0.08 },
   reachRegionName:     { size: 14, color: '#ffffff', weight: '700', letterSpacing: 0    },
   reachRegionSub:      { size: 12, color: '#94a3b8', weight: '400', letterSpacing: 0    },
-  reachRegionCode:     { size: 10, color: '#94a3b8', weight: '500', letterSpacing: 0.06 }
+  reachRegionCode:     { size: 10, color: '#94a3b8', weight: '500', letterSpacing: 0.06 },
+  cfLabel:             { size: 11, color: '#1a56a3', weight: '600', letterSpacing: 0.12 },
+  cfCompany:           { size: 22, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
+  cfAddress:           { size: 14, color: '#6b7280', weight: '400', letterSpacing: 0    },
+  cfItemTitle:         { size: 14, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
+  cfItemValue:         { size: 13, color: '#1a56a3', weight: '400', letterSpacing: 0    }
 };
 var CMS_TEXT_DEFAULTS = CMS_PARAGRAPH_DEFAULTS;
 function cmsParagraphText(value) {
@@ -960,7 +967,7 @@ function doCopy(id, btn) {
 
 // ── Screen switching ───────────────────────────────────────────
 
-var _GLOBAL_SCREENS = ['header', 'footer', 'banner', 'promotion-section'];
+var _GLOBAL_SCREENS = ['header', 'footer', 'banner', 'promotion-section', 'contact-footer'];
 var _HOME_SCREENS   = ['hero', 'about-us'];
 var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
 var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards', 'feature-cards-2', 'steps-section', 'dcs', 'dcs2', 'dcs3', 'reach'];
@@ -986,7 +993,8 @@ var _screenFiles = {
   dcs:      '/screens/double-column.html',
   dcs2:     '/screens/double-column-2.html',
   dcs3:     '/screens/double-column-3.html',
-  reach:    '/screens/reach.html',
+  reach:           '/screens/reach.html',
+  'contact-footer':'/screens/contact-footer.html',
 };
 var _loadedScreens = {};
 
@@ -1052,7 +1060,8 @@ async function switchScreen(name) {
   if (name === 'dcs'   && !_loadedScreens._dcsInit)   { _loadedScreens._dcsInit   = true; dcsOnOpen();   dcsCmpInit();   cmpAttachDirty('dcs');   }
   if (name === 'dcs2'  && !_loadedScreens._dcs2Init)  { _loadedScreens._dcs2Init  = true; dcs2OnOpen();  dcs2CmpInit();  cmpAttachDirty('dcs2');  }
   if (name === 'dcs3'  && !_loadedScreens._dcs3Init)  { _loadedScreens._dcs3Init  = true; dcs3OnOpen();  dcs3CmpInit();  cmpAttachDirty('dcs3');  }
-  if (name === 'reach' && !_loadedScreens._reachInit) { _loadedScreens._reachInit = true; reachOnOpen(); reachCmpInit(); cmpAttachDirty('reach'); }
+  if (name === 'reach'          && !_loadedScreens._reachInit) { _loadedScreens._reachInit = true; reachOnOpen(); reachCmpInit(); cmpAttachDirty('reach'); }
+  if (name === 'contact-footer' && !_loadedScreens._cfInit)    { _loadedScreens._cfInit    = true; cfOnOpen();    cfCmpInit();   cmpAttachDirty('contact-footer'); }
   if (name === 'events')  eventsOnOpen();
   if (name === 'faq')     faqOnOpen();
   if (name === 'team')    teamOnOpen();
@@ -1241,7 +1250,7 @@ function generateIntro() {
 
 var descBc = 0;
 var _dirtyScreens = {};
-var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] }, dcs3: { id: null, components: [] }, reach: { id: null, components: [] } };
+var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] }, dcs3: { id: null, components: [] }, reach: { id: null, components: [] }, cf: { id: null, components: [] } };
 
 function toggleBlockPicker() {
   var p = document.getElementById('block-type-picker');
@@ -6971,6 +6980,241 @@ function generateAboutUs() {
   document.getElementById('about-us-code').textContent = html;
   document.getElementById('about-us-preview-wrap').innerHTML = html;
   switchOut('about-us', 'preview');
+}
+
+// ── Contact Footer (CF) ──────────────────────────────────────────
+
+function cfOnOpen() {
+  cmsInitTextField('cf-label',   { defaults: CMS_PARAGRAPH_DEFAULTS.cfLabel   });
+  cmsInitTextField('cf-company', { defaults: CMS_PARAGRAPH_DEFAULTS.cfCompany });
+  cmsInitParagraphField('cf-address', { defaults: CMS_PARAGRAPH_DEFAULTS.cfAddress });
+  cfAddItem({ icon: '📞', iconBg: '#1e3a5f', title: { text: 'Call / WhatsApp'    }, value: { text: '+44 7446 426261'       }, href: 'tel:+447446426261'             });
+  cfAddItem({ icon: '✉️',  iconBg: '#1e3a5f', title: { text: 'Email us'           }, value: { text: 'office@vls-online.com' }, href: 'mailto:office@vls-online.com'  });
+  cfAddItem({ icon: '📍', iconBg: '#2d1f5e', title: { text: 'Registered office'  }, value: { text: 'London, United Kingdom'}, href: ''                              });
+}
+
+// ── CF component manager ─────────────────────────────────────────
+
+async function cfCmpInit() {
+  var comps = await cmpFetchAll('cf');
+  _cmpState.cf.components = comps;
+  cmpPopulateSelect('contact-footer', comps, null);
+}
+
+async function cfCmpLoad(id) {
+  if (!id) { cfCmpNew(); return; }
+  var comp = (_cmpState.cf.components || []).filter(function(c){ return c.id === id; })[0];
+  if (!comp) return;
+  _cmpState.cf.id = comp.id;
+  var nameEl = document.getElementById('cf-cmp-name');
+  if (nameEl) nameEl.value = comp.name || '';
+  document.getElementById('cf-cmp-del').style.display = '';
+  restoreCfState(comp.data || {});
+  delete _dirtyScreens['contact-footer'];
+  cmpSetStatus('contact-footer', '');
+}
+
+async function cfCmpSave() {
+  var nameEl = document.getElementById('cf-cmp-name');
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { alert('Please enter a component name before saving.'); if (nameEl) nameEl.focus(); return; }
+  cmpSetStatus('contact-footer', 'Saving…', 'var(--muted)');
+  var state = collectCfState();
+  var comps = _cmpState.cf.components || [];
+  var id = _cmpState.cf.id;
+  if (id) {
+    var found = false;
+    comps = comps.map(function(c){ if (c.id === id) { found = true; return { id: id, name: name, data: state }; } return c; });
+    if (!found) { id = 'cf-' + Date.now().toString(36); comps.push({ id: id, name: name, data: state }); _cmpState.cf.id = id; }
+  } else {
+    id = 'cf-' + Date.now().toString(36);
+    comps.push({ id: id, name: name, data: state });
+    _cmpState.cf.id = id;
+  }
+  _cmpState.cf.components = comps;
+  var ok = await cmpSaveAll('cf', comps);
+  if (ok) {
+    delete _dirtyScreens['contact-footer'];
+    cmpPopulateSelect('contact-footer', comps, id);
+    cmpSetStatus('contact-footer', '✓ Saved', '#16a34a');
+    setTimeout(function(){ cmpSetStatus('contact-footer', ''); }, 3000);
+  } else {
+    cmpSetStatus('contact-footer', '✗ Save failed', '#e63946');
+  }
+}
+
+function cfCmpNew() {
+  _cmpState.cf.id = null;
+  var nameEl = document.getElementById('cf-cmp-name'); if (nameEl) nameEl.value = '';
+  var sel    = document.getElementById('cf-cmp-sel');  if (sel)    sel.value = '';
+  var del    = document.getElementById('cf-cmp-del');  if (del)    del.style.display = 'none';
+  restoreCfState({});
+  delete _dirtyScreens['contact-footer'];
+  cmpSetStatus('contact-footer', '');
+}
+
+async function cfCmpDelete() {
+  var id = _cmpState.cf.id;
+  if (!id) return;
+  var comp = (_cmpState.cf.components || []).filter(function(c){ return c.id === id; })[0];
+  if (!window.confirm('Delete "' + (comp ? comp.name : 'this component') + '"? This cannot be undone.')) return;
+  var comps = (_cmpState.cf.components || []).filter(function(c){ return c.id !== id; });
+  var ok = await cmpSaveAll('cf', comps);
+  if (ok) { _cmpState.cf.components = comps; _cmpState.cf.id = null; cmpPopulateSelect('contact-footer', comps, null); cfCmpNew(); }
+}
+
+// ── CF form helpers ──────────────────────────────────────────────
+
+function cfAddItem(data) {
+  var list = document.getElementById('cf-items');
+  if (!list) return;
+  var id    = 'cfi-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var icon  = (data && data.icon)  || '📌';
+  var iconBg= cmsSafeHex(data && data.iconBg, '#1e3a5f');
+  var title = cmsNormalizeTextData(data && data.title, CMS_PARAGRAPH_DEFAULTS.cfItemTitle);
+  var value = cmsNormalizeTextData(data && data.value, CMS_PARAGRAPH_DEFAULTS.cfItemValue);
+  var href  = (data && data.href)  || '';
+  var preview = title.text || 'Contact item';
+  var div   = document.createElement('div');
+  div.className = 'block-item'; div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH(icon + ' ' + preview.slice(0, 40)) + '</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body collapsed">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    + '<div class="field"><label>Icon (emoji)</label><input type="text" class="cfi-icon" value="' + xA(icon) + '" placeholder="📞"></div>'
+    + '<div class="field"><label>Icon background</label>'
+    + '<div class="cms-paragraph-color-row">'
+    + '<input type="color" class="cfi-iconbg-cp" value="' + xA(iconBg) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">'
+    + '<input type="text" class="cfi-iconbg-hex" value="' + xA(iconBg) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v">'
+    + '</div></div>'
+    + '</div>'
+    + cmsTextFieldHtml('Title', 'cfi-title', title, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.cfItemTitle, placeholder: 'e.g. Call / WhatsApp',
+        oninput: 'var ic=this.closest(\'.block-item\').querySelector(\'.cfi-icon\');this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=(ic?ic.value:\'\')+" "+(this.value||\'Contact item\').slice(0,40)' })
+    + cmsTextFieldHtml('Value / detail', 'cfi-value', value, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.cfItemValue, placeholder: 'e.g. +44 7446 426261' })
+    + '<div class="field"><label>Link URL <span class="hint">(optional — tel:, mailto:, or https://)</span></label>'
+    + '<input type="text" class="cfi-href" value="' + xA(href) + '" placeholder="tel:+447446426261"></div>'
+    + '</div>';
+  list.appendChild(div);
+}
+
+// ── CF state ─────────────────────────────────────────────────────
+
+function cfGet(id) { return document.getElementById(id) || {}; }
+
+function collectCfState() {
+  return {
+    padTop:    cfGet('cf-pad-top').value   || '24',
+    padBot:    cfGet('cf-pad-bot').value   || '24',
+    padLeft:   cfGet('cf-pad-left').value  || '48',
+    padRight:  cfGet('cf-pad-right').value || '48',
+    bg:        cfGet('cf-bg-hex').value     || '#ffffff',
+    border:    cfGet('cf-border-hex').value || '#e5e7eb',
+    leftWidth: cfGet('cf-left-width').value || '55',
+    label:     cmsReadTextField('cf-label',   CMS_PARAGRAPH_DEFAULTS.cfLabel),
+    company:   cmsReadTextField('cf-company', CMS_PARAGRAPH_DEFAULTS.cfCompany),
+    address:   cmsReadParagraphField('cf-address', CMS_PARAGRAPH_DEFAULTS.cfAddress),
+    items:     Array.from(document.querySelectorAll('#cf-items .block-item')).map(function(el) {
+      return {
+        icon:   (el.querySelector('.cfi-icon')       || {}).value || '📌',
+        iconBg: (el.querySelector('.cfi-iconbg-hex') || {}).value || '#1e3a5f',
+        title:  cmsReadTextField(el.querySelector('.cfi-title'), CMS_PARAGRAPH_DEFAULTS.cfItemTitle),
+        value:  cmsReadTextField(el.querySelector('.cfi-value'), CMS_PARAGRAPH_DEFAULTS.cfItemValue),
+        href:   (el.querySelector('.cfi-href') || {}).value || ''
+      };
+    })
+  };
+}
+
+function cfSetColor(cpId, hexId, val, fallback) {
+  var c = cmsSafeHex(val, fallback);
+  var cp = document.getElementById(cpId); if (cp) cp.value = c;
+  var hx = document.getElementById(hexId); if (hx) hx.value = c;
+}
+
+function restoreCfState(d) {
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+  set('cf-pad-top',    d.padTop    || '24');
+  set('cf-pad-bot',    d.padBot    || '24');
+  set('cf-pad-left',   d.padLeft   || '48');
+  set('cf-pad-right',  d.padRight  || '48');
+  set('cf-left-width', d.leftWidth || '55');
+  cfSetColor('cf-bg-cp',     'cf-bg-hex',     d.bg,     '#ffffff');
+  cfSetColor('cf-border-cp', 'cf-border-hex', d.border, '#e5e7eb');
+  cmsSetTextField('cf-label',   d.label,   CMS_PARAGRAPH_DEFAULTS.cfLabel);
+  cmsSetTextField('cf-company', d.company, CMS_PARAGRAPH_DEFAULTS.cfCompany);
+  cmsSetParagraphField('cf-address', d.address, CMS_PARAGRAPH_DEFAULTS.cfAddress);
+  var il = document.getElementById('cf-items');
+  if (il) { il.innerHTML = ''; (d.items || []).forEach(function(item){ cfAddItem(item); }); }
+}
+
+// ── CF HTML generator ────────────────────────────────────────────
+
+function generateCf() {
+  var d   = collectCfState();
+  var uid = 'cf-' + Date.now().toString(36);
+  var pT  = cmsClampInt(d.padTop,   24, 0, 200);
+  var pB  = cmsClampInt(d.padBot,   24, 0, 200);
+  var pL  = cmsClampInt(d.padLeft,  48, 0, 300);
+  var pR  = cmsClampInt(d.padRight, 48, 0, 300);
+  var lw  = cmsClampInt(d.leftWidth, 55, 30, 70);
+  var rw  = 100 - lw;
+  var bg  = cmsSafeHex(d.bg,     '#ffffff');
+  var bdr = cmsSafeHex(d.border, '#e5e7eb');
+
+  // ── Left column ──
+  var lbl     = cmsNormalizeTextData(d.label,   CMS_PARAGRAPH_DEFAULTS.cfLabel);
+  var company = cmsNormalizeTextData(d.company, CMS_PARAGRAPH_DEFAULTS.cfCompany);
+  var addr    = cmsNormalizeParagraphData(d.address, CMS_PARAGRAPH_DEFAULTS.cfAddress);
+
+  var leftHtml = '';
+  if (lbl.text)     leftHtml += '<p style="font-family:\'Poppins\',sans-serif;margin:0 0 8px;text-transform:uppercase;' + cmsTextStyle(lbl, CMS_PARAGRAPH_DEFAULTS.cfLabel) + '">' + xH(lbl.text) + '</p>';
+  if (company.text) leftHtml += '<h3 style="font-family:\'Poppins\',sans-serif;margin:0 0 6px;' + cmsTextStyle(company, CMS_PARAGRAPH_DEFAULTS.cfCompany) + '">' + xH(company.text) + '</h3>';
+  if (addr.text)    leftHtml += '<p style="font-family:\'Poppins\',sans-serif;margin:0;line-height:1.5;' + cmsParagraphStyle(addr, CMS_PARAGRAPH_DEFAULTS.cfAddress) + '">' + xH(addr.text) + '</p>';
+
+  // ── Right column — contact items ──
+  var itemsHtml = (d.items || []).map(function(item) {
+    var title  = cmsNormalizeTextData(item.title, CMS_PARAGRAPH_DEFAULTS.cfItemTitle);
+    var value  = cmsNormalizeTextData(item.value, CMS_PARAGRAPH_DEFAULTS.cfItemValue);
+    var ibg    = cmsSafeHex(item.iconBg, '#1e3a5f');
+    var valHtml = value.text
+      ? (item.href
+          ? '<a href="' + xA(item.href) + '" style="font-family:\'Poppins\',sans-serif;text-decoration:none;' + cmsTextStyle(value, CMS_PARAGRAPH_DEFAULTS.cfItemValue) + '">' + xH(value.text) + '</a>'
+          : '<span style="font-family:\'Poppins\',sans-serif;' + cmsTextStyle(value, CMS_PARAGRAPH_DEFAULTS.cfItemValue) + '">' + xH(value.text) + '</span>')
+      : '';
+    return '<div style="display:flex;align-items:center;gap:12px;">'
+      + '<div style="width:36px;height:36px;min-width:36px;border-radius:8px;background:' + xA(ibg) + ';display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1;">' + xH(item.icon || '📌') + '</div>'
+      + '<div>'
+      + (title.text ? '<p style="font-family:\'Poppins\',sans-serif;margin:0 0 1px;' + cmsTextStyle(title, CMS_PARAGRAPH_DEFAULTS.cfItemTitle) + '">' + xH(title.text) + '</p>' : '')
+      + (valHtml ? '<p style="margin:0;">' + valHtml + '</p>' : '')
+      + '</div>'
+      + '</div>';
+  }).join('\n    ');
+
+  var rightHtml = '<div style="display:flex;flex-direction:column;gap:14px;">\n    ' + itemsHtml + '\n  </div>';
+
+  var html = [
+    '<div class="' + uid + '" style="background:' + xA(bg) + ';border-top:1px solid ' + xA(bdr) + ';padding:' + pT + 'px ' + pR + 'px ' + pB + 'px ' + pL + 'px;box-sizing:border-box;">',
+    '  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:24px;">',
+    '    <div style="flex:0 0 ' + lw + '%;min-width:220px;">',
+    '      ' + leftHtml,
+    '    </div>',
+    '    <div style="flex:1;min-width:200px;">',
+    '      ' + rightHtml,
+    '    </div>',
+    '  </div>',
+    '</div>'
+  ].join('\n');
+
+  var preview = document.getElementById('contact-footer-preview-wrap');
+  if (preview) preview.innerHTML = html;
+  var code = document.getElementById('cf-code');
+  if (code) code.textContent = html;
+  switchOut('contact-footer', 'preview');
+
+  cfCmpSave();
 }
 
 // ── Global Reach Section ─────────────────────────────────────────
