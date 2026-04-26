@@ -2112,12 +2112,22 @@ function buildBannerPreviewHtml(b, deadline) {
   var ns = 'font-size:20px;font-weight:700;line-height:1;font-family:\'Poppins\',sans-serif;color:' + fg + ';';
   var ls = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;opacity:0.75;font-family:\'Poppins\',sans-serif;color:' + fg + ';';
   var ss = 'font-size:24px;font-weight:700;line-height:1;padding:0 4px;margin-top:-4px;color:' + fg + ';opacity:0.6;';
-  var html = '<div style="background:' + bg + ';padding:10px ' + padRight + 'px 10px ' + padLeft + 'px;display:flex;align-items:center;justify-content:space-between;gap:16px;">';
-  html += '<div style="flex:1;min-width:0;">';
+  // Responsive styles scoped to this preview instance
+  var html = '<style>'
+    + '@media(max-width:600px){'
+    + '.vls-bnp-wrap{flex-direction:column!important;padding-top:12px!important;padding-bottom:12px!important;}'
+    + '.vls-bnp-text{width:100%!important;flex:none!important;}'
+    + '.vls-bnp-right{width:100%!important;align-items:center!important;margin-top:10px!important;}'
+    + '.vls-bnp-cta{display:none!important;}'
+    + '}'
+    + '</style>';
+  html += '<div style="background:' + bg + ';padding:10px ' + padRight + 'px 10px ' + padLeft + 'px;">';
+  html += '<div class="vls-bnp-wrap" style="display:flex;align-items:center;justify-content:space-between;gap:16px;">';
+  html += '<div class="vls-bnp-text" style="flex:1;min-width:0;">';
   if (title.text) html += '<div style="font-family:\'Poppins\',sans-serif;line-height:1.3;' + cmsTextStyle(title, CMS_PARAGRAPH_DEFAULTS.bannerTitle) + '">' + bnEsc(title.text) + '</div>';
   if (subtitle.text)   html += '<div style="font-family:\'Poppins\',sans-serif;opacity:0.8;margin-top:3px;' + cmsTextStyle(subtitle, CMS_PARAGRAPH_DEFAULTS.bannerSubtitle) + '">' + bnEsc(subtitle.text) + '</div>';
   html += '</div>';
-  html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">';
+  html += '<div class="vls-bnp-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">';
   html += '<div style="display:flex;align-items:center;gap:6px;">';
   html += '<div style="' + us + '"><span id="vprev-d" style="' + ns + '">' + pad(d) + '</span><span style="' + ls + '">Days</span></div>';
   html += '<span style="' + ss + '">:</span>';
@@ -2128,8 +2138,9 @@ function buildBannerPreviewHtml(b, deadline) {
   html += '<div style="' + us + '"><span id="vprev-s" style="' + ns + '">' + pad(s) + '</span><span style="' + ls + '">Secs</span></div>';
   html += '</div>';
   if (ctaText.text) {
-    html += '<div><a href="' + bnEsc(b.ctaUrl || '#') + '" style="display:inline-block;padding:8px 20px;background:' + btnBg + ';border-radius:6px;text-decoration:none;white-space:nowrap;' + cmsTextStyle(ctaText, CMS_PARAGRAPH_DEFAULTS.bannerCta) + '">' + bnEsc(ctaText.text) + '</a></div>';
+    html += '<div class="vls-bnp-cta"><a href="' + bnEsc(b.ctaUrl || '#') + '" style="display:inline-block;padding:8px 20px;background:' + btnBg + ';border-radius:6px;text-decoration:none;white-space:nowrap;' + cmsTextStyle(ctaText, CMS_PARAGRAPH_DEFAULTS.bannerCta) + '">' + bnEsc(ctaText.text) + '</a></div>';
   }
+  html += '</div>';
   html += '</div>';
   html += '</div>';
   return html;
@@ -2176,7 +2187,8 @@ function buildBannerInjectCode(b, apiUrl) {
   lines.push('      ".vls-unit{display:flex;flex-direction:column;align-items:center;gap:2px;}",');
   lines.push('      ".vls-num{font-size:20px;font-weight:700;line-height:1;font-family:Poppins,sans-serif;}",');
   lines.push('      ".vls-lbl{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;opacity:0.75;font-family:Poppins,sans-serif;}",');
-  lines.push('      ".vls-sep{font-size:24px;font-weight:700;line-height:1;padding:0 4px;margin-top:-4px;opacity:0.6;}"');
+  lines.push('      ".vls-sep{font-size:24px;font-weight:700;line-height:1;padding:0 4px;margin-top:-4px;opacity:0.6;}",');
+  lines.push('      "@media(max-width:600px){#vls-bn-' + bid + ' .vls-bn-wrap{flex-direction:column!important;padding-top:12px!important;padding-bottom:12px!important;}#vls-bn-' + bid + ' .vls-bn-text{width:100%!important;flex:none!important;}#vls-bn-' + bid + ' .vls-bn-right{width:100%!important;align-items:center!important;margin-top:10px!important;}#vls-bn-' + bid + ' .vls-bn-cta{display:none!important;}}"');
   lines.push('    ].join("");');
   lines.push('    document.head.appendChild(s);');
   lines.push('  }');
@@ -2227,12 +2239,12 @@ function buildBannerInjectCode(b, apiUrl) {
   lines.push('    var padLeft=parseInt(b.padLeft,10);if(isNaN(padLeft))padLeft=24;padLeft=Math.max(0,Math.min(200,padLeft));');
   lines.push('    var padRight=parseInt(b.padRight,10);if(isNaN(padRight))padRight=24;padRight=Math.max(0,Math.min(200,padRight));');
   lines.push('    bEl.innerHTML=');
-  lines.push('      \'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px \'+padRight+\'px 10px \'+padLeft+\'px;gap:16px;">\'');
-  lines.push('      +\'<div style="flex:1;min-width:0;">\'');
+  lines.push('      \'<div class="vls-bn-wrap" style="display:flex;align-items:center;justify-content:space-between;padding:10px \'+padRight+\'px 10px \'+padLeft+\'px;gap:16px;">\'');
+  lines.push('      +\'<div class="vls-bn-text" style="flex:1;min-width:0;">\'');
   lines.push('      +(title.text?\'<div style="font-family:Poppins,sans-serif;line-height:1.3;\'+textStyle(title)+\'">\'+escHtml(title.text)+"<\\/div>":"")');
   lines.push('      +(sub.text?\'<div style="font-family:Poppins,sans-serif;opacity:0.8;margin-top:3px;\'+textStyle(sub)+\'">\'+escHtml(sub.text)+"<\\/div>":"")');
   lines.push('      +"<\\/div>"');
-  lines.push('      +\'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">\'');
+  lines.push('      +\'<div class="vls-bn-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">\'');
   lines.push('      +\'<div style="display:flex;align-items:center;gap:6px;">\'');
   lines.push('      +\'<div class="vls-unit"><span class="vls-num" id="vls-' + bid + '-d" style="color:\'+fg+\'">00</span><span class="vls-lbl" style="color:\'+fg+\'">Days</span></div>\'');
   lines.push('      +\'<span class="vls-sep" style="color:\'+fg+\'">:</span>\'');
@@ -2242,7 +2254,7 @@ function buildBannerInjectCode(b, apiUrl) {
   lines.push('      +\'<span class="vls-sep" style="color:\'+fg+\'">:</span>\'');
   lines.push('      +\'<div class="vls-unit"><span class="vls-num" id="vls-' + bid + '-s" style="color:\'+fg+\'">00</span><span class="vls-lbl" style="color:\'+fg+\'">Secs</span></div>\'');
   lines.push('      +"<\\/div>"');
-  lines.push('      +(cta.text?\'<div><a href="\'+escAttr(b.ctaUrl||"#")+\'" style="display:inline-block;padding:8px 20px;background:\'+btnBg+\';border-radius:6px;text-decoration:none;white-space:nowrap;\'+textStyle(cta)+\'">\'+escHtml(cta.text)+"<\\/a><\\/div>":"")');
+  lines.push('      +(cta.text?\'<div class="vls-bn-cta"><a href="\'+escAttr(b.ctaUrl||"#")+\'" style="display:inline-block;padding:8px 20px;background:\'+btnBg+\';border-radius:6px;text-decoration:none;white-space:nowrap;\'+textStyle(cta)+\'">\'+escHtml(cta.text)+"<\\/a><\\/div>":"")');
   lines.push('      +"<\\/div>"');
   lines.push('      +"<\\/div>";');
   lines.push('    startCountdown(b.deadline||Date.now(),fg);');
