@@ -6998,7 +6998,7 @@ function cfOnOpen() {
 async function cfCmpInit() {
   var comps = await cmpFetchAll('cf');
   _cmpState.cf.components = comps;
-  cmpPopulateSelect('contact-footer', comps, null);
+  cmpPopulateSelect('cf', comps, null);
 }
 
 async function cfCmpLoad(id) {
@@ -7008,17 +7008,17 @@ async function cfCmpLoad(id) {
   _cmpState.cf.id = comp.id;
   var nameEl = document.getElementById('cf-cmp-name');
   if (nameEl) nameEl.value = comp.name || '';
-  document.getElementById('cf-cmp-del').style.display = '';
+  var delBtn = document.getElementById('cf-cmp-del'); if (delBtn) delBtn.style.display = '';
   restoreCfState(comp.data || {});
   delete _dirtyScreens['contact-footer'];
-  cmpSetStatus('contact-footer', '');
+  cmpSetStatus('cf', '');
 }
 
 async function cfCmpSave() {
   var nameEl = document.getElementById('cf-cmp-name');
   var name = nameEl ? nameEl.value.trim() : '';
   if (!name) { alert('Please enter a component name before saving.'); if (nameEl) nameEl.focus(); return; }
-  cmpSetStatus('contact-footer', 'Saving…', 'var(--muted)');
+  cmpSetStatus('cf', 'Saving…', 'var(--muted)');
   var state = collectCfState();
   var comps = _cmpState.cf.components || [];
   var id = _cmpState.cf.id;
@@ -7032,14 +7032,24 @@ async function cfCmpSave() {
     _cmpState.cf.id = id;
   }
   _cmpState.cf.components = comps;
-  var ok = await cmpSaveAll('cf', comps);
-  if (ok) {
-    delete _dirtyScreens['contact-footer'];
-    cmpPopulateSelect('contact-footer', comps, id);
-    cmpSetStatus('contact-footer', '✓ Saved', '#16a34a');
-    setTimeout(function(){ cmpSetStatus('contact-footer', ''); }, 3000);
-  } else {
-    cmpSetStatus('contact-footer', '✗ Save failed', '#e63946');
+  try {
+    var r = await fetch('/api/publish-cf-components', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ components: comps })
+    });
+    var data = await r.json();
+    if (r.ok) {
+      delete _dirtyScreens['contact-footer'];
+      cmpPopulateSelect('cf', comps, id);
+      cmpSetStatus('cf', '✓ Saved', '#16a34a');
+      setTimeout(function(){ cmpSetStatus('cf', ''); }, 3000);
+    } else {
+      cmpSetStatus('cf', '✗ Save failed', '#e63946');
+      alert('Save failed: ' + (data.error || 'Unknown error'));
+    }
+  } catch(e) {
+    cmpSetStatus('cf', '✗ Save failed', '#e63946');
   }
 }
 
@@ -7050,7 +7060,7 @@ function cfCmpNew() {
   var del    = document.getElementById('cf-cmp-del');  if (del)    del.style.display = 'none';
   restoreCfState({});
   delete _dirtyScreens['contact-footer'];
-  cmpSetStatus('contact-footer', '');
+  cmpSetStatus('cf', '');
 }
 
 async function cfCmpDelete() {
@@ -7060,7 +7070,7 @@ async function cfCmpDelete() {
   if (!window.confirm('Delete "' + (comp ? comp.name : 'this component') + '"? This cannot be undone.')) return;
   var comps = (_cmpState.cf.components || []).filter(function(c){ return c.id !== id; });
   var ok = await cmpSaveAll('cf', comps);
-  if (ok) { _cmpState.cf.components = comps; _cmpState.cf.id = null; cmpPopulateSelect('contact-footer', comps, null); cfCmpNew(); }
+  if (ok) { _cmpState.cf.components = comps; _cmpState.cf.id = null; cmpPopulateSelect('cf', comps, null); cfCmpNew(); }
 }
 
 // ── CF form helpers ──────────────────────────────────────────────
@@ -7210,7 +7220,7 @@ function generateCf() {
 
   var preview = document.getElementById('contact-footer-preview-wrap');
   if (preview) preview.innerHTML = html;
-  var code = document.getElementById('cf-code');
+  var code = document.getElementById('contact-footer-code');
   if (code) code.textContent = html;
   switchOut('contact-footer', 'preview');
 
