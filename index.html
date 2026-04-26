@@ -6529,10 +6529,19 @@ function cmpSetStatus(screen, msg, color) {
 function cmpPopulateSelect(screen, components, selectedId) {
   var sel = document.getElementById(screen + '-cmp-sel');
   if (!sel) return;
+  var items = components || [];
   sel.innerHTML = '<option value="">— select to load —</option>'
-    + (components || []).map(function(c) {
+    + items.map(function(c) {
         return '<option value="' + xA(c.id) + '"' + (c.id === selectedId ? ' selected' : '') + '>' + xH(c.name || '(unnamed)') + '</option>';
       }).join('');
+  if (items.length > 5) {
+    sel.size = Math.min(items.length + 1, 8);
+    sel.title = 'Scroll to view all saved components';
+  } else {
+    sel.size = 1;
+    sel.title = '';
+  }
+  sel.value = selectedId || '';
   var delBtn = document.getElementById(screen + '-cmp-del');
   if (delBtn) delBtn.style.display = selectedId ? '' : 'none';
 }
