@@ -305,6 +305,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-dcs" onclick="switchScreen('dcs')">Double Column</div>
       <div class="nav-dd-item" id="nav-dcs2" onclick="switchScreen('dcs2')">Double Column v2</div>
       <div class="nav-dd-item" id="nav-dcs3" onclick="switchScreen('dcs3')">Double Column v3</div>
+      <div class="nav-dd-item" id="nav-reach" onclick="switchScreen('reach')">Global Reach</div>
     </div>
   </div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
@@ -361,6 +362,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <button class="home-tile-link" onclick="switchScreen('dcs')">Double Column</button>
           <button class="home-tile-link" onclick="switchScreen('dcs2')">Double Column v2</button>
           <button class="home-tile-link" onclick="switchScreen('dcs3')">Double Column v3</button>
+          <button class="home-tile-link" onclick="switchScreen('reach')">Global Reach</button>
           <button class="home-tile-link" onclick="switchScreen('form')">Form</button>
         </div>
       </div>
@@ -909,7 +911,15 @@ var CMS_PARAGRAPH_DEFAULTS = {
   dcs3RightTitle:      { size: 28, color: '#ffffff', weight: '700', letterSpacing: 0    },
   dcs3RightPara:       { size: 15, color: '#dbeafe', weight: '400', letterSpacing: 0    },
   dcs3TagText:         { size: 14, color: '#ffffff', weight: '500', letterSpacing: 0    },
-  dcs3CtaText:         { size: 14, color: '#ffffff', weight: '600', letterSpacing: 0    }
+  dcs3CtaText:         { size: 14, color: '#ffffff', weight: '600', letterSpacing: 0    },
+  reachLabel:          { size: 11, color: '#4a90d9', weight: '600', letterSpacing: 0.12 },
+  reachTitle:          { size: 36, color: '#ffffff', weight: '700', letterSpacing: 0    },
+  reachPara:           { size: 15, color: '#94a3b8', weight: '400', letterSpacing: 0    },
+  reachStatValue:      { size: 30, color: '#ffffff', weight: '700', letterSpacing: 0    },
+  reachStatLabel:      { size: 11, color: '#94a3b8', weight: '500', letterSpacing: 0.08 },
+  reachRegionName:     { size: 14, color: '#ffffff', weight: '700', letterSpacing: 0    },
+  reachRegionSub:      { size: 12, color: '#94a3b8', weight: '400', letterSpacing: 0    },
+  reachRegionCode:     { size: 10, color: '#94a3b8', weight: '500', letterSpacing: 0.06 }
 };
 var CMS_TEXT_DEFAULTS = CMS_PARAGRAPH_DEFAULTS;
 function cmsParagraphText(value) {
@@ -953,7 +963,7 @@ function doCopy(id, btn) {
 var _GLOBAL_SCREENS = ['header', 'footer', 'banner', 'promotion-section'];
 var _HOME_SCREENS   = ['hero', 'about-us'];
 var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
-var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards', 'feature-cards-2', 'steps-section', 'dcs', 'dcs2', 'dcs3'];
+var _SHARED_SCREENS = ['faq', 'events', 'programs', 'form', 'feature-cards', 'feature-cards-2', 'steps-section', 'dcs', 'dcs2', 'dcs3', 'reach'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
@@ -976,6 +986,7 @@ var _screenFiles = {
   dcs:      '/screens/double-column.html',
   dcs2:     '/screens/double-column-2.html',
   dcs3:     '/screens/double-column-3.html',
+  reach:    '/screens/reach.html',
 };
 var _loadedScreens = {};
 
@@ -1041,6 +1052,7 @@ async function switchScreen(name) {
   if (name === 'dcs'   && !_loadedScreens._dcsInit)   { _loadedScreens._dcsInit   = true; dcsOnOpen();   dcsCmpInit();   cmpAttachDirty('dcs');   }
   if (name === 'dcs2'  && !_loadedScreens._dcs2Init)  { _loadedScreens._dcs2Init  = true; dcs2OnOpen();  dcs2CmpInit();  cmpAttachDirty('dcs2');  }
   if (name === 'dcs3'  && !_loadedScreens._dcs3Init)  { _loadedScreens._dcs3Init  = true; dcs3OnOpen();  dcs3CmpInit();  cmpAttachDirty('dcs3');  }
+  if (name === 'reach' && !_loadedScreens._reachInit) { _loadedScreens._reachInit = true; reachOnOpen(); reachCmpInit(); cmpAttachDirty('reach'); }
   if (name === 'events')  eventsOnOpen();
   if (name === 'faq')     faqOnOpen();
   if (name === 'team')    teamOnOpen();
@@ -1229,7 +1241,7 @@ function generateIntro() {
 
 var descBc = 0;
 var _dirtyScreens = {};
-var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] }, dcs3: { id: null, components: [] } };
+var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] }, dcs3: { id: null, components: [] }, reach: { id: null, components: [] } };
 
 function toggleBlockPicker() {
   var p = document.getElementById('block-type-picker');
@@ -6959,6 +6971,352 @@ function generateAboutUs() {
   document.getElementById('about-us-code').textContent = html;
   document.getElementById('about-us-preview-wrap').innerHTML = html;
   switchOut('about-us', 'preview');
+}
+
+// ── Global Reach Section ─────────────────────────────────────────
+
+function reachOnOpen() {
+  cmsInitTextField('rch-label', { defaults: CMS_PARAGRAPH_DEFAULTS.reachLabel });
+  cmsInitTextField('rch-title', { defaults: CMS_PARAGRAPH_DEFAULTS.reachTitle });
+  cmsInitParagraphField('rch-para', { defaults: CMS_PARAGRAPH_DEFAULTS.reachPara });
+  reachAddStat({ value: { text: '40+'     }, label: { text: 'COUNTRIES'   } });
+  reachAddStat({ value: { text: '2,400+'  }, label: { text: 'STUDENTS'    } });
+  reachAddStat({ value: { text: '6'       }, label: { text: 'CONTINENTS'  } });
+  reachAddRegion({ flag: '🇬🇧', code: 'GB', name: { text: 'United Kingdom'  }, sub: { text: 'London HQ'        } });
+  reachAddRegion({ flag: '🇦🇪', code: 'AE', name: { text: 'Middle East'     }, sub: { text: 'Largest cluster'  } });
+  reachAddRegion({ flag: '🇵🇰', code: 'PK', name: { text: 'South Asia'      }, sub: { text: 'Growing fast'     } });
+  reachAddRegion({ flag: '🌍', code: '',   name: { text: 'Africa'          }, sub: { text: 'Multiple countries'} });
+  reachAddRegion({ flag: '🌏', code: '',   name: { text: 'Southeast Asia'  }, sub: { text: 'Expanding'         } });
+}
+
+// ── Reach component manager ──────────────────────────────────────
+
+async function reachCmpInit() {
+  var comps = await cmpFetchAll('reach');
+  _cmpState.reach.components = comps;
+  cmpPopulateSelect('reach', comps, null);
+}
+
+async function reachCmpLoad(id) {
+  if (!id) { reachCmpNew(); return; }
+  var comp = (_cmpState.reach.components || []).filter(function(c){ return c.id === id; })[0];
+  if (!comp) return;
+  _cmpState.reach.id = comp.id;
+  var nameEl = document.getElementById('rch-cmp-name');
+  if (nameEl) nameEl.value = comp.name || '';
+  document.getElementById('rch-cmp-del').style.display = '';
+  restoreReachState(comp.data || {});
+  delete _dirtyScreens.reach;
+  cmpSetStatus('reach', '');
+}
+
+async function reachCmpSave() {
+  var nameEl = document.getElementById('rch-cmp-name');
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { alert('Please enter a component name before saving.'); if (nameEl) nameEl.focus(); return; }
+  cmpSetStatus('reach', 'Saving…', 'var(--muted)');
+  var state = collectReachState();
+  var comps = _cmpState.reach.components || [];
+  var id = _cmpState.reach.id;
+  if (id) {
+    var found = false;
+    comps = comps.map(function(c){ if (c.id === id) { found = true; return { id: id, name: name, data: state }; } return c; });
+    if (!found) { id = 'rch-' + Date.now().toString(36); comps.push({ id: id, name: name, data: state }); _cmpState.reach.id = id; }
+  } else {
+    id = 'rch-' + Date.now().toString(36);
+    comps.push({ id: id, name: name, data: state });
+    _cmpState.reach.id = id;
+  }
+  _cmpState.reach.components = comps;
+  var ok = await cmpSaveAll('reach', comps);
+  if (ok) {
+    delete _dirtyScreens.reach;
+    cmpPopulateSelect('reach', comps, id);
+    cmpSetStatus('reach', '✓ Saved', '#16a34a');
+    setTimeout(function(){ cmpSetStatus('reach', ''); }, 3000);
+  } else {
+    cmpSetStatus('reach', '✗ Save failed', '#e63946');
+  }
+}
+
+function reachCmpNew() {
+  _cmpState.reach.id = null;
+  var nameEl = document.getElementById('rch-cmp-name'); if (nameEl) nameEl.value = '';
+  var sel    = document.getElementById('rch-cmp-sel');  if (sel)    sel.value = '';
+  var del    = document.getElementById('rch-cmp-del');  if (del)    del.style.display = 'none';
+  restoreReachState({});
+  delete _dirtyScreens.reach;
+  cmpSetStatus('reach', '');
+}
+
+async function reachCmpDelete() {
+  var id = _cmpState.reach.id;
+  if (!id) return;
+  var comp = (_cmpState.reach.components || []).filter(function(c){ return c.id === id; })[0];
+  if (!window.confirm('Delete "' + (comp ? comp.name : 'this component') + '"? This cannot be undone.')) return;
+  var comps = (_cmpState.reach.components || []).filter(function(c){ return c.id !== id; });
+  var ok = await cmpSaveAll('reach', comps);
+  if (ok) { _cmpState.reach.components = comps; _cmpState.reach.id = null; cmpPopulateSelect('reach', comps, null); reachCmpNew(); }
+}
+
+// ── Reach form helpers ───────────────────────────────────────────
+
+function reachAddStat(data) {
+  var list = document.getElementById('rch-stats');
+  if (!list) return;
+  var id  = 'rchs-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var val = cmsNormalizeTextData(data && data.value, CMS_PARAGRAPH_DEFAULTS.reachStatValue);
+  var lbl = cmsNormalizeTextData(data && data.label, CMS_PARAGRAPH_DEFAULTS.reachStatLabel);
+  var preview = (val.text || '') + (lbl.text ? ' / ' + lbl.text : '');
+  var div = document.createElement('div');
+  div.className = 'block-item'; div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH(preview.slice(0, 48) || 'Stat') + '</span>'
+    + '<span class="block-type-badge">Stat</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body collapsed">'
+    + cmsTextFieldHtml('Value', 'rchs-val', val, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.reachStatValue, placeholder: 'e.g. 2,400+' })
+    + cmsTextFieldHtml('Label', 'rchs-lbl', lbl, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.reachStatLabel, placeholder: 'e.g. STUDENTS' })
+    + '</div>';
+  list.appendChild(div);
+}
+
+function reachAddRegion(data) {
+  var list = document.getElementById('rch-regions');
+  if (!list) return;
+  var id   = 'rchr-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var flag = (data && data.flag) || '🌐';
+  var code = (data && data.code) || '';
+  var name = cmsNormalizeTextData(data && data.name, CMS_PARAGRAPH_DEFAULTS.reachRegionName);
+  var sub  = cmsNormalizeTextData(data && data.sub,  CMS_PARAGRAPH_DEFAULTS.reachRegionSub);
+  var div  = document.createElement('div');
+  div.className = 'block-item'; div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH(flag + ' ' + (name.text || 'Region')) + '</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body collapsed">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    + '<div class="field"><label>Flag (emoji)</label><input type="text" class="rchr-flag" value="' + xA(flag) + '" placeholder="🌐" style="width:60px"></div>'
+    + '<div class="field"><label>Country code <span class="hint">(e.g. GB)</span></label><input type="text" class="rchr-code" value="' + xA(code) + '" placeholder="GB" style="width:60px"></div>'
+    + '</div>'
+    + cmsTextFieldHtml('Region name', 'rchr-name', name, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.reachRegionName, placeholder: 'e.g. United Kingdom',
+        oninput: 'var fl=this.closest(\'.block-item\').querySelector(\'.rchr-flag\');this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=(fl?fl.value:\'\')+\' \'+(this.value||\'Region\')' })
+    + cmsTextFieldHtml('Sub-label', 'rchr-sub', sub, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.reachRegionSub, placeholder: 'e.g. London HQ' })
+    + '</div>';
+  list.appendChild(div);
+}
+
+// ── Reach image upload ───────────────────────────────────────────
+
+function reachPreviewImage(url) {
+  var wrap  = document.getElementById('rch-img-preview');
+  var thumb = document.getElementById('rch-img-thumb');
+  if (url && url.trim()) {
+    thumb.src = url.trim();
+    wrap.style.display = '';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+async function reachUploadImage(inputEl) {
+  var file = inputEl.files && inputEl.files[0];
+  if (!file) return;
+  var statusEl = document.getElementById('rch-img-upload-status');
+  var MAX_MB = 4;
+  if (file.size > MAX_MB * 1024 * 1024) {
+    statusEl.textContent = 'File too large (max ' + MAX_MB + ' MB). Compress or paste a URL.';
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+  statusEl.textContent = 'Uploading…';
+  statusEl.style.color = 'var(--muted)';
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    var dataUrl = e.target.result;
+    var base64  = dataUrl.split(',')[1];
+    try {
+      var resp = await fetch('/api/upload-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, contentType: file.type, data: base64 })
+      });
+      var result = await resp.json();
+      if (result.url) {
+        document.getElementById('rch-img-url').value = result.url;
+        reachPreviewImage(result.url);
+        statusEl.textContent = '✓ Uploaded';
+        statusEl.style.color = '#16a34a';
+      } else {
+        statusEl.textContent = result.error || 'Upload failed — paste a URL instead.';
+        statusEl.style.color = 'var(--red)';
+      }
+    } catch (_) {
+      statusEl.textContent = 'Network error — paste a URL instead.';
+      statusEl.style.color = 'var(--red)';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Reach state ──────────────────────────────────────────────────
+
+function rchGet(id) { return document.getElementById(id) || {}; }
+
+function collectReachState() {
+  return {
+    padTop:      rchGet('rch-pad-top').value   || '60',
+    padBot:      rchGet('rch-pad-bot').value   || '60',
+    padLeft:     rchGet('rch-pad-left').value  || '48',
+    padRight:    rchGet('rch-pad-right').value || '48',
+    bg:          rchGet('rch-bg-hex').value          || '#0d1f3c',
+    leftWidth:   rchGet('rch-left-width').value      || '45',
+    statBg:      rchGet('rch-stat-bg-hex').value     || '#1e3550',
+    imgHeight:   rchGet('rch-img-height').value      || '300',
+    imgBg:       rchGet('rch-img-bg-hex').value      || '#1e3550',
+    imgUrl:      rchGet('rch-img-url').value         || '',
+    imgAlt:      rchGet('rch-img-alt').value         || 'Student map',
+    imgPlaceholder: rchGet('rch-img-placeholder').value || 'Interactive student map',
+    regionBg:    rchGet('rch-region-bg-hex').value   || '#1e3550',
+    label:  cmsReadTextField('rch-label', CMS_PARAGRAPH_DEFAULTS.reachLabel),
+    title:  cmsReadTextField('rch-title', CMS_PARAGRAPH_DEFAULTS.reachTitle),
+    para:   cmsReadParagraphField('rch-para', CMS_PARAGRAPH_DEFAULTS.reachPara),
+    stats:  Array.from(document.querySelectorAll('#rch-stats .block-item')).map(function(el) {
+      return {
+        value: cmsReadTextField(el.querySelector('.rchs-val'), CMS_PARAGRAPH_DEFAULTS.reachStatValue),
+        label: cmsReadTextField(el.querySelector('.rchs-lbl'), CMS_PARAGRAPH_DEFAULTS.reachStatLabel)
+      };
+    }),
+    regions: Array.from(document.querySelectorAll('#rch-regions .block-item')).map(function(el) {
+      return {
+        flag: (el.querySelector('.rchr-flag') || {}).value || '🌐',
+        code: (el.querySelector('.rchr-code') || {}).value || '',
+        name: cmsReadTextField(el.querySelector('.rchr-name'), CMS_PARAGRAPH_DEFAULTS.reachRegionName),
+        sub:  cmsReadTextField(el.querySelector('.rchr-sub'),  CMS_PARAGRAPH_DEFAULTS.reachRegionSub)
+      };
+    })
+  };
+}
+
+function rchSetColor(cpId, hexId, val, fallback) {
+  var c = cmsSafeHex(val, fallback);
+  var cp = document.getElementById(cpId); if (cp) cp.value = c;
+  var hx = document.getElementById(hexId); if (hx) hx.value = c;
+}
+
+function restoreReachState(d) {
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+  set('rch-pad-top',    d.padTop   || '60');
+  set('rch-pad-bot',    d.padBot   || '60');
+  set('rch-pad-left',   d.padLeft  || '48');
+  set('rch-pad-right',  d.padRight || '48');
+  set('rch-left-width', d.leftWidth || '45');
+  set('rch-img-height', d.imgHeight || '300');
+  set('rch-img-url',    d.imgUrl || '');
+  set('rch-img-alt',    d.imgAlt || 'Student map');
+  set('rch-img-placeholder', d.imgPlaceholder || 'Interactive student map');
+  rchSetColor('rch-bg-cp',        'rch-bg-hex',        d.bg,       '#0d1f3c');
+  rchSetColor('rch-stat-bg-cp',   'rch-stat-bg-hex',   d.statBg,   '#1e3550');
+  rchSetColor('rch-img-bg-cp',    'rch-img-bg-hex',    d.imgBg,    '#1e3550');
+  rchSetColor('rch-region-bg-cp', 'rch-region-bg-hex', d.regionBg, '#1e3550');
+  cmsSetTextField('rch-label', d.label, CMS_PARAGRAPH_DEFAULTS.reachLabel);
+  cmsSetTextField('rch-title', d.title, CMS_PARAGRAPH_DEFAULTS.reachTitle);
+  cmsSetParagraphField('rch-para', d.para, CMS_PARAGRAPH_DEFAULTS.reachPara);
+  reachPreviewImage(d.imgUrl || '');
+  var sl = document.getElementById('rch-stats');   if (sl) { sl.innerHTML = ''; (d.stats   || []).forEach(function(s){ reachAddStat(s);   }); }
+  var rl = document.getElementById('rch-regions'); if (rl) { rl.innerHTML = ''; (d.regions || []).forEach(function(r){ reachAddRegion(r); }); }
+}
+
+// ── Reach HTML generator ─────────────────────────────────────────
+
+function generateReach() {
+  var d   = collectReachState();
+  var uid = 'reach-' + Date.now().toString(36);
+  var pT  = cmsClampInt(d.padTop,   60, 0, 300);
+  var pB  = cmsClampInt(d.padBot,   60, 0, 300);
+  var pL  = cmsClampInt(d.padLeft,  48, 0, 300);
+  var pR  = cmsClampInt(d.padRight, 48, 0, 300);
+  var lw  = cmsClampInt(d.leftWidth, 45, 25, 70);
+  var bg      = cmsSafeHex(d.bg,       '#0d1f3c');
+  var statBg  = cmsSafeHex(d.statBg,   '#1e3550');
+  var imgBg   = cmsSafeHex(d.imgBg,    '#1e3550');
+  var regBg   = cmsSafeHex(d.regionBg, '#1e3550');
+  var imgH    = cmsClampInt(d.imgHeight, 300, 80, 800);
+
+  // ── Top row ──
+  var lbl   = cmsNormalizeTextData(d.label, CMS_PARAGRAPH_DEFAULTS.reachLabel);
+  var title = cmsNormalizeTextData(d.title, CMS_PARAGRAPH_DEFAULTS.reachTitle);
+  var para  = cmsNormalizeParagraphData(d.para, CMS_PARAGRAPH_DEFAULTS.reachPara);
+
+  var leftHtml = '';
+  if (lbl.text)   leftHtml += '<p style="font-family:\'Poppins\',sans-serif;margin:0 0 10px;text-transform:uppercase;' + cmsTextStyle(lbl, CMS_PARAGRAPH_DEFAULTS.reachLabel) + '">' + xH(lbl.text) + '</p>';
+  if (title.text) leftHtml += '<h2 style="font-family:\'Poppins\',sans-serif;margin:0 0 16px;line-height:1.2;' + cmsTextStyle(title, CMS_PARAGRAPH_DEFAULTS.reachTitle) + '">' + xH(title.text) + '</h2>';
+  if (para.text)  leftHtml += '<p style="font-family:\'Poppins\',sans-serif;margin:0;line-height:1.7;' + cmsParagraphStyle(para, CMS_PARAGRAPH_DEFAULTS.reachPara) + '">' + xH(para.text) + '</p>';
+
+  var statItems = (d.stats || []).map(function(s) {
+    var sv = cmsNormalizeTextData(s.value, CMS_PARAGRAPH_DEFAULTS.reachStatValue);
+    var sl = cmsNormalizeTextData(s.label, CMS_PARAGRAPH_DEFAULTS.reachStatLabel);
+    return '<div style="flex:1;background:' + xA(statBg) + ';border-radius:10px;padding:20px 16px;text-align:center;">'
+      + (sv.text ? '<p style="font-family:\'Poppins\',sans-serif;margin:0 0 4px;' + cmsTextStyle(sv, CMS_PARAGRAPH_DEFAULTS.reachStatValue) + '">' + xH(sv.text) + '</p>' : '')
+      + (sl.text ? '<p style="font-family:\'Poppins\',sans-serif;margin:0;' + cmsTextStyle(sl, CMS_PARAGRAPH_DEFAULTS.reachStatLabel) + '">' + xH(sl.text) + '</p>' : '')
+      + '</div>';
+  }).join('\n      ');
+
+  var topHtml = '<div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start;margin-bottom:32px;">'
+    + '\n  <div style="flex:0 0 ' + lw + '%;min-width:240px;">' + leftHtml + '</div>'
+    + '\n  <div style="flex:1;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;">\n      ' + statItems + '\n  </div>'
+    + '\n</div>';
+
+  // ── Image area ──
+  var imgHtml;
+  if (d.imgUrl && d.imgUrl.trim()) {
+    imgHtml = '<div style="background:' + xA(imgBg) + ';border-radius:12px;height:' + imgH + 'px;margin-bottom:32px;overflow:hidden;">'
+      + '<img src="' + xA(d.imgUrl.trim()) + '" alt="' + xA(d.imgAlt || '') + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
+      + '</div>';
+  } else {
+    imgHtml = '<div style="background:' + xA(imgBg) + ';border-radius:12px;height:' + imgH + 'px;margin-bottom:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1.5px dashed rgba(255,255,255,0.15);">'
+      + '<p style="font-family:\'Poppins\',sans-serif;font-size:14px;color:rgba(255,255,255,0.4);margin:0;text-align:center;">' + xH(d.imgPlaceholder || 'Add image URL or upload an image') + '</p>'
+      + '</div>';
+  }
+
+  // ── Region boxes ──
+  var regionItems = (d.regions || []).map(function(r) {
+    var rn = cmsNormalizeTextData(r.name, CMS_PARAGRAPH_DEFAULTS.reachRegionName);
+    var rs = cmsNormalizeTextData(r.sub,  CMS_PARAGRAPH_DEFAULTS.reachRegionSub);
+    var rc = cmsNormalizeTextData({ text: (r.code || '') }, CMS_PARAGRAPH_DEFAULTS.reachRegionCode);
+    return '<div style="flex:1;min-width:130px;background:' + xA(regBg) + ';border-radius:8px;padding:14px 16px;">'
+      + '<p style="font-family:\'Poppins\',sans-serif;margin:0 0 5px;display:flex;align-items:center;gap:5px;">'
+      + '<span style="font-size:14px;">' + xH(r.flag || '') + '</span>'
+      + (rc.text ? '<span style="' + cmsTextStyle(rc, CMS_PARAGRAPH_DEFAULTS.reachRegionCode) + 'font-family:\'Poppins\',sans-serif;">' + xH(rc.text) + '</span>' : '')
+      + '</p>'
+      + (rn.text ? '<p style="font-family:\'Poppins\',sans-serif;margin:0 0 3px;' + cmsTextStyle(rn, CMS_PARAGRAPH_DEFAULTS.reachRegionName) + '">' + xH(rn.text) + '</p>' : '')
+      + (rs.text ? '<p style="font-family:\'Poppins\',sans-serif;margin:0;' + cmsTextStyle(rs, CMS_PARAGRAPH_DEFAULTS.reachRegionSub) + '">' + xH(rs.text) + '</p>' : '')
+      + '</div>';
+  }).join('\n    ');
+
+  var regHtml = (d.regions || []).length
+    ? '<div style="display:flex;flex-wrap:wrap;gap:12px;">\n    ' + regionItems + '\n  </div>'
+    : '';
+
+  var html = [
+    '<div class="' + uid + '" style="background:' + xA(bg) + ';padding:' + pT + 'px ' + pR + 'px ' + pB + 'px ' + pL + 'px;box-sizing:border-box;">',
+    '  ' + topHtml,
+    '  ' + imgHtml,
+    '  ' + regHtml,
+    '</div>'
+  ].join('\n');
+
+  var preview = document.getElementById('reach-preview-wrap');
+  if (preview) preview.innerHTML = html;
+  var code = document.getElementById('reach-code');
+  if (code) code.textContent = html;
+  switchOut('reach', 'preview');
+
+  reachCmpSave();
 }
 
 // ── Double Column Section v3 (DCS3) ─────────────────────────────

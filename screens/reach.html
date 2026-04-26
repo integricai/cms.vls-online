@@ -1,0 +1,130 @@
+<div id="screen-reach" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <!-- ── Saved components ── -->
+    <div style="background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:2px;">
+      <div class="section-label" style="margin:0 0 10px">Saved Components</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <select id="rch-cmp-sel" onchange="reachCmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none;background:#fff;color:var(--text);">
+          <option value="">— select to load —</option>
+        </select>
+        <button class="btn-sm" onclick="reachCmpNew()">+ New</button>
+        <button class="btn-sm danger" id="rch-cmp-del" style="display:none" onclick="reachCmpDelete()">Delete</button>
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>Component name</label>
+        <input type="text" id="rch-cmp-name" placeholder="e.g. Global Reach — Homepage">
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span id="rch-cmp-status" style="font-size:12px;"></span>
+        <button class="btn-gen" style="width:auto;padding:8px 20px;margin:0" onclick="reachCmpSave()">Save Component</button>
+      </div>
+    </div>
+
+    <!-- ── Section styling ── -->
+    <div class="section-label">Section styling</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field"><label>Padding top (px)</label><input type="number" id="rch-pad-top" value="60" min="0" max="300"></div>
+      <div class="field"><label>Padding bottom (px)</label><input type="number" id="rch-pad-bot" value="60" min="0" max="300"></div>
+      <div class="field"><label>Padding left (px)</label><input type="number" id="rch-pad-left" value="48" min="0" max="300"></div>
+      <div class="field"><label>Padding right (px)</label><input type="number" id="rch-pad-right" value="48" min="0" max="300"></div>
+    </div>
+    <div class="field">
+      <label>Section background</label>
+      <div class="cms-paragraph-color-row">
+        <input type="color" id="rch-bg-cp" value="#0d1f3c" oninput="document.getElementById('rch-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+        <input type="text" id="rch-bg-hex" value="#0d1f3c" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('rch-bg-cp').value=v">
+      </div>
+    </div>
+
+    <!-- ── Top left text ── -->
+    <div class="section-label">Top left — text</div>
+    <div class="field"><label>Left column width %</label>
+      <select id="rch-left-width">
+        <option value="35">35%</option>
+        <option value="40">40%</option>
+        <option value="45" selected>45%</option>
+        <option value="50">50%</option>
+        <option value="55">55%</option>
+      </select>
+    </div>
+    <div class="field"><label>Eyebrow label</label><input type="text" id="rch-label" placeholder="e.g. OUR REACH" value="OUR REACH"></div>
+    <div class="field"><label>Heading</label><textarea id="rch-title" rows="2">A Global Student Community</textarea></div>
+    <div class="field"><label>Paragraph</label><textarea id="rch-para" rows="3">VLS students span the globe — from the United Kingdom and Middle East to South Asia, Africa, and beyond. Our exam-focused approach works wherever you are in the world.</textarea></div>
+
+    <!-- ── Stats (top right) ── -->
+    <div class="section-label">Stats — top right</div>
+    <div class="field">
+      <label>Stat card background</label>
+      <div class="cms-paragraph-color-row">
+        <input type="color" id="rch-stat-bg-cp" value="#1e3550" oninput="document.getElementById('rch-stat-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+        <input type="text" id="rch-stat-bg-hex" value="#1e3550" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('rch-stat-bg-cp').value=v">
+      </div>
+    </div>
+    <div id="rch-stats" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="reachAddStat()">+ Add stat</button>
+
+    <!-- ── Image / map ── -->
+    <div class="section-label">Image / map area</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field"><label>Area height (px)</label><input type="number" id="rch-img-height" value="300" min="80" max="800"></div>
+      <div class="field">
+        <label>Area background</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="rch-img-bg-cp" value="#1e3550" oninput="document.getElementById('rch-img-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="rch-img-bg-hex" value="#1e3550" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('rch-img-bg-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Image URL <span class="hint">(paste or upload below)</span></label>
+      <input type="text" id="rch-img-url" placeholder="https://..." oninput="reachPreviewImage(this.value)">
+    </div>
+    <div class="field">
+      <label>Upload image</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="file" id="rch-img-file" accept="image/*" style="font-family:'Poppins',sans-serif;font-size:12px;flex:1" onchange="reachUploadImage(this)">
+        <span id="rch-img-upload-status" style="font-size:12px;color:var(--muted);white-space:nowrap"></span>
+      </div>
+    </div>
+    <div id="rch-img-preview" style="display:none;margin-top:4px;border-radius:8px;overflow:hidden;max-height:120px">
+      <img id="rch-img-thumb" src="" alt="" style="width:100%;height:120px;object-fit:cover;display:block">
+    </div>
+    <div class="field">
+      <label>Placeholder text <span class="hint">(shown when no image set)</span></label>
+      <input type="text" id="rch-img-placeholder" value="Interactive student map">
+    </div>
+    <div class="field">
+      <label>Image alt text</label>
+      <input type="text" id="rch-img-alt" value="Student map">
+    </div>
+
+    <!-- ── Region boxes ── -->
+    <div class="section-label">Region boxes</div>
+    <div class="field">
+      <label>Region card background</label>
+      <div class="cms-paragraph-color-row">
+        <input type="color" id="rch-region-bg-cp" value="#1e3550" oninput="document.getElementById('rch-region-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+        <input type="text" id="rch-region-bg-hex" value="#1e3550" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('rch-region-bg-cp').value=v">
+      </div>
+    </div>
+    <div id="rch-regions" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="reachAddRegion()">+ Add region</button>
+
+    <button class="btn-gen" style="margin-top:8px" onclick="generateReach()">Generate HTML</button>
+
+  </div></div>
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="reach-ot-preview" onclick="switchOut('reach','preview')">Preview</div>
+      <div class="out-tab" id="reach-ot-html" onclick="switchOut('reach','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="reach-preview-wrap" class="preview-wrap" style="padding:0"></div>
+      <div id="reach-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('reach-code',this)">Copy</button>
+        <pre id="reach-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>
