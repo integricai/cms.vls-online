@@ -7260,7 +7260,7 @@ function reachOnOpen() {
 async function reachCmpInit() {
   var comps = await cmpFetchAll('reach');
   _cmpState.reach.components = comps;
-  cmpPopulateSelect('reach', comps, null);
+  cmpPopulateSelect('rch', comps, null);
 }
 
 async function reachCmpLoad(id) {
@@ -7270,17 +7270,17 @@ async function reachCmpLoad(id) {
   _cmpState.reach.id = comp.id;
   var nameEl = document.getElementById('rch-cmp-name');
   if (nameEl) nameEl.value = comp.name || '';
-  document.getElementById('rch-cmp-del').style.display = '';
+  var delBtn = document.getElementById('rch-cmp-del'); if (delBtn) delBtn.style.display = '';
   restoreReachState(comp.data || {});
   delete _dirtyScreens.reach;
-  cmpSetStatus('reach', '');
+  cmpSetStatus('rch', '');
 }
 
 async function reachCmpSave() {
   var nameEl = document.getElementById('rch-cmp-name');
   var name = nameEl ? nameEl.value.trim() : '';
   if (!name) { alert('Please enter a component name before saving.'); if (nameEl) nameEl.focus(); return; }
-  cmpSetStatus('reach', 'Saving…', 'var(--muted)');
+  cmpSetStatus('rch', 'Saving…', 'var(--muted)');
   var state = collectReachState();
   var comps = _cmpState.reach.components || [];
   var id = _cmpState.reach.id;
@@ -7294,14 +7294,24 @@ async function reachCmpSave() {
     _cmpState.reach.id = id;
   }
   _cmpState.reach.components = comps;
-  var ok = await cmpSaveAll('reach', comps);
-  if (ok) {
-    delete _dirtyScreens.reach;
-    cmpPopulateSelect('reach', comps, id);
-    cmpSetStatus('reach', '✓ Saved', '#16a34a');
-    setTimeout(function(){ cmpSetStatus('reach', ''); }, 3000);
-  } else {
-    cmpSetStatus('reach', '✗ Save failed', '#e63946');
+  try {
+    var r = await fetch('/api/publish-reach-components', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ components: comps })
+    });
+    var data = await r.json();
+    if (r.ok) {
+      delete _dirtyScreens.reach;
+      cmpPopulateSelect('rch', comps, id);
+      cmpSetStatus('rch', '✓ Saved', '#16a34a');
+      setTimeout(function(){ cmpSetStatus('rch', ''); }, 3000);
+    } else {
+      cmpSetStatus('rch', '✗ Save failed', '#e63946');
+      alert('Save failed: ' + (data.error || 'Unknown error'));
+    }
+  } catch(e) {
+    cmpSetStatus('rch', '✗ Save failed', '#e63946');
   }
 }
 
@@ -7312,7 +7322,7 @@ function reachCmpNew() {
   var del    = document.getElementById('rch-cmp-del');  if (del)    del.style.display = 'none';
   restoreReachState({});
   delete _dirtyScreens.reach;
-  cmpSetStatus('reach', '');
+  cmpSetStatus('rch', '');
 }
 
 async function reachCmpDelete() {
@@ -7322,7 +7332,7 @@ async function reachCmpDelete() {
   if (!window.confirm('Delete "' + (comp ? comp.name : 'this component') + '"? This cannot be undone.')) return;
   var comps = (_cmpState.reach.components || []).filter(function(c){ return c.id !== id; });
   var ok = await cmpSaveAll('reach', comps);
-  if (ok) { _cmpState.reach.components = comps; _cmpState.reach.id = null; cmpPopulateSelect('reach', comps, null); reachCmpNew(); }
+  if (ok) { _cmpState.reach.components = comps; _cmpState.reach.id = null; cmpPopulateSelect('rch', comps, null); reachCmpNew(); }
 }
 
 // ── Reach form helpers ───────────────────────────────────────────
