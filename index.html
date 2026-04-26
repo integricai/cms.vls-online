@@ -7288,6 +7288,8 @@ function polAddSection(data) {
     + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'definitions\')">+ Definitions</button>'
     + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'alpha-list\')">+ Alpha List</button>'
     + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'callout\')">+ Callout</button>'
+    + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'link-cards\')">+ Link Cards</button>'
+    + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'cta-banner\')">+ CTA Banner</button>'
     + '</div>'
     + '</div>';
   list.appendChild(div);
@@ -7305,7 +7307,7 @@ function polAddBlock(sid, type) {
 
 function polAddBlockToEl(blocksEl, type, data) {
   var bid = 'polb-' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-  var labels = { paragraph:'Paragraph', bullets:'Bullets', table:'Table', cards:'Cards', rights:'Rights Cards', tags:'Tags', definitions:'Definitions', 'alpha-list':'Alpha List', callout:'Callout' };
+  var labels = { paragraph:'Paragraph', bullets:'Bullets', table:'Table', cards:'Cards', rights:'Rights Cards', tags:'Tags', definitions:'Definitions', 'alpha-list':'Alpha List', callout:'Callout', 'link-cards':'Link Cards', 'cta-banner':'CTA Banner' };
   var content = '';
 
   if (type === 'paragraph') {
@@ -7360,6 +7362,38 @@ function polAddBlockToEl(blocksEl, type, data) {
       + '<div class="field"><label>Text colour</label><div class="cms-paragraph-color-row"><input type="color" class="polb-callout-col-cp" value="' + xA(ccol) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer"><input type="text" class="polb-callout-col" value="' + xA(ccol) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v"></div></div>'
       + '</div>'
       + '<div class="field"><label>Callout text</label><textarea class="polb-callout-text" rows="3" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:6px;width:100%;resize:vertical;">' + xH(ctxt) + '</textarea></div>';
+
+  } else if (type === 'link-cards') {
+    content = '<div class="polb-linkcards-list block-list"></div>'
+      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddLinkCardItem(this.previousElementSibling)">+ Add card</button>';
+
+  } else if (type === 'cta-banner') {
+    var cbg  = cmsSafeHex((data && data.bg),      '#0d1f3c');
+    var ctc  = cmsSafeHex((data && data.titleColor),'#ffffff');
+    var cdc  = cmsSafeHex((data && data.descColor), '#94a3b8');
+    var cbtbg= cmsSafeHex((data && data.btnBg),    '#1a56a3');
+    var cbtc = cmsSafeHex((data && data.btnColor),  '#ffffff');
+    content = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+      + '<div class="field"><label>Banner background</label><div class="cms-paragraph-color-row">'
+      + '<input type="color" class="polb-cta-bg-cp" value="' + xA(cbg) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer">'
+      + '<input type="text" class="polb-cta-bg" value="' + xA(cbg) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v"></div></div>'
+      + '<div class="field"><label>Title colour</label><div class="cms-paragraph-color-row">'
+      + '<input type="color" class="polb-cta-tc-cp" value="' + xA(ctc) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer">'
+      + '<input type="text" class="polb-cta-tc" value="' + xA(ctc) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v"></div></div>'
+      + '<div class="field"><label>Description colour</label><div class="cms-paragraph-color-row">'
+      + '<input type="color" class="polb-cta-dc-cp" value="' + xA(cdc) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer">'
+      + '<input type="text" class="polb-cta-dc" value="' + xA(cdc) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v"></div></div>'
+      + '<div class="field"><label>Button background</label><div class="cms-paragraph-color-row">'
+      + '<input type="color" class="polb-cta-btbg-cp" value="' + xA(cbtbg) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer">'
+      + '<input type="text" class="polb-cta-btbg" value="' + xA(cbtbg) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v"></div></div>'
+      + '</div>'
+      + '<div class="field"><label>Heading</label><input type="text" class="polb-cta-title" value="' + xA((data && data.title)||'') + '" placeholder="e.g. Questions about these terms?" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;"></div>'
+      + '<div class="field"><label>Description</label><textarea class="polb-cta-desc" rows="2" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;resize:vertical;">' + xH((data && data.desc)||'') + '</textarea></div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
+      + '<div class="field" style="grid-column:1/3"><label>Button text</label><input type="text" class="polb-cta-bttext" value="' + xA((data && data.btnText)||'Contact us →') + '" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;"></div>'
+      + '<div class="field"><label>Button colour</label><div class="cms-paragraph-color-row"><input type="color" class="polb-cta-btc-cp" value="' + xA(cbtc) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer"><input type="text" class="polb-cta-btc" value="' + xA(cbtc) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v"></div></div>'
+      + '</div>'
+      + '<div class="field"><label>Button URL</label><input type="text" class="polb-cta-bturl" value="' + xA((data && data.btnUrl)||'#') + '" placeholder="https://" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;"></div>';
   }
 
   var div = document.createElement('div'); div.className = 'block-item'; div.id = bid;
@@ -7379,6 +7413,10 @@ function polAddBlockToEl(blocksEl, type, data) {
   } else if (type === 'alpha-list') {
     var aList = div.querySelector('.polb-alpha-list');
     ((data && data.items) || ['']).forEach(function(t) { polAddAlphaItem(aList, t); });
+  } else if (type === 'link-cards') {
+    var lcList = div.querySelector('.polb-linkcards-list');
+    ((data && data.items) || []).forEach(function(it) { polAddLinkCardItem(lcList, it); });
+    if (!(data && data.items && data.items.length)) polAddLinkCardItem(lcList);
   } else if (type === 'bullets') {
     var bList = div.querySelector('.polb-bullet-list');
     ((data && data.items) || ['']).forEach(function(t) { polAddBulletItem(bList, t); });
@@ -7422,6 +7460,22 @@ function polAddRightItem(listEl, data) {
     + '</div>'
     + '<textarea class="polb-right-text" rows="2" placeholder="Description…" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;resize:vertical;">' + xH((data && data.text) || '') + '</textarea>'
     + '<button class="btn-sm danger" style="align-self:flex-end" onclick="this.closest(\'.block-item\').remove()">Remove</button></div>';
+  listEl.appendChild(div);
+}
+
+function polAddLinkCardItem(listEl, data) {
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:8px 12px;display:flex;flex-direction:column;gap:5px;">'
+    + '<div style="display:flex;gap:8px">'
+    + '<input type="text" class="polb-lc-icon" value="' + xA((data && data.icon)||'📄') + '" placeholder="Icon" style="width:50px;font-size:18px;padding:4px;border:1px solid var(--border);border-radius:5px;text-align:center;">'
+    + '<input type="text" class="polb-lc-title" value="' + xA((data && data.title)||'') + '" placeholder="Card title" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:600;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '</div>'
+    + '<input type="text" class="polb-lc-desc" value="' + xA((data && data.desc)||'') + '" placeholder="Short description" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<div style="display:flex;gap:8px">'
+    + '<input type="text" class="polb-lc-linktxt" value="' + xA((data && data.linkText)||'Read →') + '" placeholder="Link text" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<input type="text" class="polb-lc-url" value="' + xA((data && data.url)||'') + '" placeholder="https://" style="flex:2;font-family:\'Poppins\',sans-serif;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">Remove</button>'
+    + '</div></div>';
   listEl.appendChild(div);
 }
 
@@ -7474,7 +7528,7 @@ function collectPolicyState() {
     var title = (secEl.querySelector('.pols-title') || {}).value || '';
     var blocks = Array.from(secEl.querySelectorAll('.pols-blocks > .block-item')).map(function(blkEl) {
       var badge = (blkEl.querySelector('.block-type-badge') || {}).textContent || '';
-      var type = { 'Paragraph':'paragraph','Bullets':'bullets','Table':'table','Cards':'cards','Rights Cards':'rights','Tags':'tags','Definitions':'definitions','Alpha List':'alpha-list','Callout':'callout' }[badge] || badge;
+      var type = { 'Paragraph':'paragraph','Bullets':'bullets','Table':'table','Cards':'cards','Rights Cards':'rights','Tags':'tags','Definitions':'definitions','Alpha List':'alpha-list','Callout':'callout','Link Cards':'link-cards','CTA Banner':'cta-banner' }[badge] || badge;
 
       if (type === 'paragraph') {
         return { type: 'paragraph', text: (blkEl.querySelector('.polb-para') || {}).value || '' };
@@ -7501,6 +7555,22 @@ function collectPolicyState() {
         })};
       } else if (type === 'alpha-list') {
         return { type: 'alpha-list', items: Array.from(blkEl.querySelectorAll('.polb-alpha-text')).map(function(i){ return i.value; }) };
+      } else if (type === 'link-cards') {
+        return { type: 'link-cards', items: Array.from(blkEl.querySelectorAll('.polb-linkcards-list > .block-item')).map(function(c){
+          return { icon: (c.querySelector('.polb-lc-icon')||{}).value||'📄', title: (c.querySelector('.polb-lc-title')||{}).value||'', desc: (c.querySelector('.polb-lc-desc')||{}).value||'', linkText: (c.querySelector('.polb-lc-linktxt')||{}).value||'Read →', url: (c.querySelector('.polb-lc-url')||{}).value||'' };
+        })};
+      } else if (type === 'cta-banner') {
+        return { type: 'cta-banner',
+          bg:        (blkEl.querySelector('.polb-cta-bg')    ||{}).value||'#0d1f3c',
+          titleColor:(blkEl.querySelector('.polb-cta-tc')    ||{}).value||'#ffffff',
+          descColor: (blkEl.querySelector('.polb-cta-dc')    ||{}).value||'#94a3b8',
+          btnBg:     (blkEl.querySelector('.polb-cta-btbg')  ||{}).value||'#1a56a3',
+          btnColor:  (blkEl.querySelector('.polb-cta-btc')   ||{}).value||'#ffffff',
+          title:     (blkEl.querySelector('.polb-cta-title') ||{}).value||'',
+          desc:      (blkEl.querySelector('.polb-cta-desc')  ||{}).value||'',
+          btnText:   (blkEl.querySelector('.polb-cta-bttext')||{}).value||'Contact us →',
+          btnUrl:    (blkEl.querySelector('.polb-cta-bturl') ||{}).value||'#'
+        };
       } else if (type === 'callout') {
         return { type: 'callout',
           icon:  (blkEl.querySelector('.polb-callout-icon') ||{}).value ||'⚠️',
@@ -7752,6 +7822,36 @@ function polBuildBlock(b, accent) {
       + items.map(function(t) {
           return '<span style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#374151;padding:6px 16px;border:1px solid #e5e7eb;border-radius:6px;">' + xH(t) + '</span>';
         }).join('')
+      + '</div>';
+  }
+
+  if (b.type === 'link-cards') {
+    var items = (b.items || []).filter(function(c){ return c.title || c.desc; });
+    if (!items.length) return '';
+    var lcHtml = items.map(function(c) {
+      return '<div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;display:flex;align-items:flex-start;gap:14px;">'
+        + '<span style="font-size:26px;line-height:1;flex-shrink:0;margin-top:2px;">' + xH(c.icon || '📄') + '</span>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<p style="font-family:\'Poppins\',sans-serif;font-weight:700;font-size:15px;color:#1a1a1a;margin:0 0 4px;">' + xH(c.title || '') + '</p>'
+        + '<p style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#6b7280;margin:0 0 8px;line-height:1.4;">' + xH(c.desc || '') + '</p>'
+        + (c.url ? '<a href="' + xA(c.url) + '" style="font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:600;color:' + xA(acc) + ';text-decoration:none;">' + xH(c.linkText || 'Read →') + '</a>' : '')
+        + '</div></div>';
+    }).join('');
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:0 0 16px;">' + lcHtml + '</div>';
+  }
+
+  if (b.type === 'cta-banner') {
+    var cbg   = cmsSafeHex(b.bg,         '#0d1f3c');
+    var ctc   = cmsSafeHex(b.titleColor,  '#ffffff');
+    var cdc   = cmsSafeHex(b.descColor,   '#94a3b8');
+    var cbtbg = cmsSafeHex(b.btnBg,       '#1a56a3');
+    var cbtc  = cmsSafeHex(b.btnColor,    '#ffffff');
+    return '<div style="background:' + xA(cbg) + ';border-radius:10px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;margin:0 0 16px;">'
+      + '<div style="flex:1;min-width:180px;">'
+      + (b.title ? '<p style="font-family:\'Poppins\',sans-serif;font-weight:700;font-size:16px;color:' + xA(ctc) + ';margin:0 0 5px;">' + xH(b.title) + '</p>' : '')
+      + (b.desc  ? '<p style="font-family:\'Poppins\',sans-serif;font-size:14px;color:' + xA(cdc) + ';margin:0;line-height:1.5;">' + xH(b.desc) + '</p>' : '')
+      + '</div>'
+      + (b.btnText ? '<a href="' + xA(b.btnUrl || '#') + '" style="flex-shrink:0;display:inline-block;background:' + xA(cbtbg) + ';color:' + xA(cbtc) + ';font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:600;text-decoration:none;padding:10px 24px;border-radius:8px;white-space:nowrap;">' + xH(b.btnText) + '</a>' : '')
       + '</div>';
   }
 
