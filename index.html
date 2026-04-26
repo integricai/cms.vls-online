@@ -3132,10 +3132,10 @@ function buildTeamBlockHtml(card, num) {
   }).join('');
 
   var featsHtml = (card.features || []).map(function(f) {
-    return '<div class="feature-item team-feat-item" style="gap:6px;align-items:center;">'
-      + '<div style="width:150px;flex-shrink:0;">' + cmsTextFieldHtml('Value', 'team-feat-val', f.value, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.teamFeatureValue, placeholder: 'e.g. 20+' }) + '</div>'
-      + '<div style="flex:1;">' + cmsTextFieldHtml('Label', 'team-feat-lbl', f.label, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.teamFeatureLabel, placeholder: 'e.g. YEARS EXP.' }) + '</div>'
-      + '<button class="btn-icon" style="flex-shrink:0;" onclick="this.parentNode.remove()" title="Remove">&#x2715;</button>'
+    return '<div class="feature-item team-feat-item" style="flex-direction:column;align-items:stretch;gap:8px;">'
+      + cmsTextFieldHtml('Value', 'team-feat-val', f.value, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.teamFeatureValue, placeholder: 'e.g. 20+' })
+      + cmsTextFieldHtml('Label', 'team-feat-lbl', f.label, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.teamFeatureLabel, placeholder: 'e.g. YEARS EXP.' })
+      + '<div style="display:flex;justify-content:flex-end;"><button class="btn-icon" onclick="this.closest(\'.team-feat-item\').remove()" title="Remove">&#x2715;</button></div>'
       + '</div>';
   }).join('');
 
@@ -3176,10 +3176,6 @@ function buildTeamBlockHtml(card, num) {
     +     '</div>'
     +   '</div>'
     +   '<div class="field"><label>Stat features <span class="hint">(value + label, e.g. 20+ / YEARS EXP. — leave empty to hide)</span></label>'
-    +     '<div style="display:flex;gap:4px;margin-bottom:4px;">'
-    +       '<span style="font-size:10px;font-weight:600;color:var(--muted);width:72px;flex-shrink:0;text-transform:uppercase;letter-spacing:.04em;">Value</span>'
-    +       '<span style="font-size:10px;font-weight:600;color:var(--muted);flex:1;text-transform:uppercase;letter-spacing:.04em;">Label</span>'
-    +     '</div>'
     +     '<div id="team-feats-' + id + '" style="display:flex;flex-direction:column;gap:6px;">' + featsHtml + '</div>'
     +     '<button class="btn-add-block" style="margin-top:6px" onclick="teamAddFeature(\'' + id + '\')">+ Add stat</button>'
     +   '</div>'
@@ -3241,11 +3237,11 @@ function teamAddFeature(cardId) {
   if (!c) return;
   var div = document.createElement('div');
   div.className = 'feature-item team-feat-item';
-  div.style.cssText = 'gap:6px;align-items:center;';
+  div.style.cssText = 'flex-direction:column;align-items:stretch;gap:8px;';
   div.innerHTML =
-    '<div style="width:150px;flex-shrink:0;">' + cmsTextFieldHtml('Value', 'team-feat-val', '', { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.teamFeatureValue, placeholder: 'e.g. 20+' }) + '</div>'
-    + '<div style="flex:1;">' + cmsTextFieldHtml('Label', 'team-feat-lbl', '', { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.teamFeatureLabel, placeholder: 'e.g. YEARS EXP.' }) + '</div>'
-    + '<button class="btn-icon" style="flex-shrink:0;" onclick="this.parentNode.remove()" title="Remove">&#x2715;</button>';
+    cmsTextFieldHtml('Value', 'team-feat-val', '', { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.teamFeatureValue, placeholder: 'e.g. 20+' })
+    + cmsTextFieldHtml('Label', 'team-feat-lbl', '', { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.teamFeatureLabel, placeholder: 'e.g. YEARS EXP.' })
+    + '<div style="display:flex;justify-content:flex-end;"><button class="btn-icon" onclick="this.closest(\'.team-feat-item\').remove()" title="Remove">&#x2715;</button></div>';
   c.appendChild(div);
 }
 
@@ -10131,10 +10127,10 @@ function heroAddStat(val, lbl, skipSync) {
   div.className = 'block-item';
   div.id = id;
   div.innerHTML =
-    '<div class="block-body" style="flex-direction:row;align-items:center;gap:6px;padding:8px 10px">'
-      + '<div style="flex:1;">' + cmsTextFieldHtml('Value', 'hero-stat-val', value, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.heroStatValue, placeholder: 'Value e.g. 2,400+' }) + '</div>'
-      + '<div style="flex:1.5;">' + cmsTextFieldHtml('Label', 'hero-stat-lbl', label, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.heroStatLabel, placeholder: 'Label e.g. Students enrolled' }) + '</div>'
-      + '<button class="btn-icon" title="Remove" onclick="heroRemoveStat(\'' + id + '\')" style="flex-shrink:0">&#x2715;</button>'
+    '<div class="block-body" style="flex-direction:column;align-items:stretch;gap:8px;padding:8px 10px">'
+      + cmsTextFieldHtml('Value', 'hero-stat-val', value, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.heroStatValue, placeholder: 'Value e.g. 2,400+' })
+      + cmsTextFieldHtml('Label', 'hero-stat-lbl', label, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.heroStatLabel, placeholder: 'Label e.g. Students enrolled' })
+      + '<div style="display:flex;justify-content:flex-end;"><button class="btn-icon" title="Remove" onclick="heroRemoveStat(\'' + id + '\')">&#x2715;</button></div>'
       + '</div>';
   list.appendChild(div);
   if (!skipSync) heroHandleChange();
