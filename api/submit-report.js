@@ -28,7 +28,8 @@ export default async function handler(req, res) {
   const {
     firstName = '', lastName = '', email = '', phone = '',
     qualification = '', courseName = '', issueType = '', message = '',
-    screenshotName = '', screenshotData = '', screenshotType = ''
+    screenshotName = '', screenshotData = '', screenshotType = '',
+    refNumber = ''
   } = body || {};
 
   if (!firstName.trim() || !email.trim()) {
@@ -52,12 +53,14 @@ export default async function handler(req, res) {
     <div style="background:#0d1f3c;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
       <h2 style="color:#ffffff;margin:0;font-size:18px;">🚨 New Issue Report</h2>
       <p style="color:#94a3b8;margin:4px 0 0;font-size:13px;">Submitted via VLS Online — Student Support</p>
+      ${refNumber ? `<p style="color:#fbbf24;margin:8px 0 0;font-size:14px;font-weight:700;">Reference: ${esc(refNumber)}</p>` : ''}
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:14px;">
       ${row('First Name', esc(firstName))}
       ${row('Last Name', esc(lastName))}
       ${row('Email', `<a href="mailto:${esc(email)}" style="color:#204280;text-decoration:none;">${esc(email)}</a>`)}
       ${row('Phone', esc(phone))}
+      ${refNumber ? row('Reference No.', `<strong>${esc(refNumber)}</strong>`) : ''}
       ${row('Qualification', esc(qualification))}
       ${row('Course Name', esc(courseName))}
       ${row('Issue Type', esc(issueType))}
@@ -86,6 +89,11 @@ export default async function handler(req, res) {
       ${courseName ? `<p style="font-size:13px;color:#374151;margin:0 0 3px;">Course: <strong>${esc(courseName)}</strong></p>` : ''}
       ${issueType ? `<p style="font-size:13px;color:#374151;margin:0;">Issue type: <strong>${esc(issueType)}</strong></p>` : ''}
     </div>
+    ${refNumber ? `<div style="background:#f0f4ff;border-radius:8px;padding:12px 16px;margin-bottom:16px;">
+      <p style="font-size:12px;font-weight:600;color:#204280;margin:0 0 4px;">Your Reference Number</p>
+      <p style="font-size:20px;font-weight:700;color:#0d1f3c;margin:0;letter-spacing:0.02em;">${esc(refNumber)}</p>
+      <p style="font-size:12px;color:#6b7280;margin:6px 0 0;">Keep this for your records.</p>
+    </div>` : ''}
     <p style="font-size:13px;color:#6b7280;margin:0;">If you need to follow up, please reply to this email or contact us directly.</p>
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
     <p style="color:#9ca3af;font-size:12px;margin:0;">VLS Online &mdash; Student Support</p>

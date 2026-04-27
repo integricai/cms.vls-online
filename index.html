@@ -320,6 +320,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
     <div class="nav-dd-menu" id="nav-forms-menu">
       <div class="nav-dd-item" id="nav-form" onclick="switchScreen('form')">Contact Form</div>
       <div class="nav-dd-item" id="nav-report-issue" onclick="switchScreen('report-issue')">Report an Issue</div>
+      <div class="nav-dd-item" id="nav-report-thank-you" onclick="switchScreen('report-thank-you')">Report — Thank You Page</div>
     </div>
   </div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
@@ -393,6 +394,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
         <div class="home-tile-links">
           <button class="home-tile-link" onclick="switchScreen('form')">Contact Form</button>
           <button class="home-tile-link" onclick="switchScreen('report-issue')">Report an Issue</button>
+          <button class="home-tile-link" onclick="switchScreen('report-thank-you')">Report — Thank You</button>
         </div>
       </div>
     </div>
@@ -999,7 +1001,7 @@ var _HOME_SCREENS   = ['hero', 'about-us'];
 var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
 var _SHARED_SCREENS = ['faq', 'events', 'programs', 'feature-cards', 'feature-cards-2'];
 var _COMMON_SECTION_SCREENS = ['steps-section', 'dcs', 'dcs2', 'dcs3', 'reach', 'policy'];
-var _FORM_SCREENS   = ['form', 'report-issue'];
+var _FORM_SCREENS   = ['form', 'report-issue', 'report-thank-you'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
@@ -1025,7 +1027,8 @@ var _screenFiles = {
   reach:           '/screens/reach.html',
   'contact-footer':'/screens/contact-footer.html',
   policy:          '/screens/policy.html',
-  'report-issue':  '/screens/report-issue.html',
+  'report-issue':      '/screens/report-issue.html',
+  'report-thank-you':  '/screens/report-thank-you.html',
 };
 var _loadedScreens = {};
 
@@ -1108,7 +1111,8 @@ async function switchScreen(name) {
   if (name === 'footer')  footerOnOpen();
   if (name === 'programs') programOnOpen();
   if (name === 'form')    formOnOpen();
-  if (name === 'report-issue' && !_loadedScreens._riInit) { _loadedScreens._riInit = true; riOnOpen(); }
+  if (name === 'report-issue'      && !_loadedScreens._riInit)   { _loadedScreens._riInit   = true; riOnOpen();   }
+  if (name === 'report-thank-you'  && !_loadedScreens._riTyInit) { _loadedScreens._riTyInit = true; riTyOnOpen(); }
   if (name === 'header')  headerOnOpen();
 }
 
@@ -8156,6 +8160,198 @@ function polBuildBlock(b, accent) {
   return '';
 }
 
+// ── Report an Issue — Thank You Page ────────────────────────────
+
+function riTyOnOpen() {
+  riTyAddStep({ title: 'Confirmation email sent',         desc: 'We\'ve sent a confirmation to your registered email address with a copy of your report.', badge: 'Sent now' });
+  riTyAddStep({ title: 'Our team reviews your report',    desc: 'A member of the VLS support team will review the details and begin investigating your issue.', badge: 'Within 1 working day' });
+  riTyAddStep({ title: 'We\'ll contact you with a resolution', desc: 'We\'ll respond to your registered email with a resolution, update, or follow-up questions if needed.', badge: 'Within 2–3 working days' });
+  riTyAddContact('✉ office@vls-online.com');
+  riTyAddContact('📱 +44 7446 426261');
+  riTyLoad();
+}
+
+async function riTySave() {
+  riTyStatus('Saving…', 'var(--muted)');
+  var state = collectRiTyState();
+  try {
+    var r = await fetch('/api/publish-report-ty-config', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: state })
+    });
+    var d = await r.json();
+    if (r.ok) { riTyStatus('✓ Saved', '#16a34a'); setTimeout(function(){ riTyStatus(''); }, 3000); generateReportTy(); }
+    else { riTyStatus('✗ Save failed', '#e63946'); alert('Save failed: ' + (d.error || 'Unknown error')); }
+  } catch(e) { riTyStatus('✗ Save failed', '#e63946'); }
+}
+
+async function riTyLoad() {
+  try {
+    var r = await fetch('/api/publish-report-ty-config');
+    if (!r.ok) return;
+    var d = await r.json();
+    if (d && d.config) { restoreRiTyState(d.config); generateReportTy(); }
+  } catch(_) {}
+}
+
+function riTyStatus(msg, color) {
+  var el = document.getElementById('ri-ty-status'); if (!el) return;
+  el.textContent = msg; el.style.color = color || 'var(--muted)';
+}
+
+function riTyAddStep(data) {
+  var list = document.getElementById('ri-ty-steps'); if (!list) return;
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:8px 12px;display:flex;flex-direction:column;gap:5px;">'
+    + '<input type="text" class="ri-ty-step-title" value="' + xA((data&&data.title)||'') + '" placeholder="Step title" style="font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:600;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<input type="text" class="ri-ty-step-desc" value="' + xA((data&&data.desc)||'') + '" placeholder="Step description" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<input type="text" class="ri-ty-step-badge" value="' + xA((data&&data.badge)||'') + '" placeholder="Badge text (e.g. Sent now)" style="font-family:\'Poppins\',sans-serif;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:5px;width:200px;">'
+    + '<button class="btn-sm danger" style="align-self:flex-end" onclick="this.closest(\'.block-item\').remove()">Remove</button>'
+    + '</div>';
+  list.appendChild(div);
+}
+
+function riTyAddContact(text) {
+  var list = document.getElementById('ri-ty-contacts'); if (!list) return;
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:6px 10px;display:flex;gap:8px;align-items:center;">'
+    + '<input type="text" class="ri-ty-contact-item" value="' + xA(text||'') + '" placeholder="e.g. ✉ office@vls-online.com" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button>'
+    + '</div>';
+  list.appendChild(div);
+}
+
+function riTyGet(id) { return document.getElementById(id) || {}; }
+function riTyColor(cpId, hexId, val, fb) {
+  var c = cmsSafeHex(val, fb);
+  var cp = document.getElementById(cpId); if (cp) cp.value = c;
+  var hx = document.getElementById(hexId); if (hx) hx.value = c;
+}
+
+function collectRiTyState() {
+  return {
+    heroBg:   riTyGet('ri-ty-hero-bg-hex').value || '#0d1f3c',
+    iconBg:   riTyGet('ri-ty-icon-bg-hex').value || '#1e3a5f',
+    heading:  riTyGet('ri-ty-heading').value      || 'Report Received',
+    subtitle: riTyGet('ri-ty-subtitle').value     || '',
+    refLabel: riTyGet('ri-ty-ref-label').value    || 'YOUR REFERENCE NUMBER',
+    stepsLabel:riTyGet('ri-ty-steps-label').value || 'WHAT HAPPENS NEXT',
+    fuTitle:  riTyGet('ri-ty-fu-title').value     || '',
+    fuDesc:   riTyGet('ri-ty-fu-desc').value      || '',
+    btn1Text: riTyGet('ri-ty-btn1-text').value    || '',
+    btn1Url:  riTyGet('ri-ty-btn1-url').value     || '#',
+    btn1Bg:   riTyGet('ri-ty-btn1-bg-hex').value  || '#0d1f3c',
+    btn1Tc:   riTyGet('ri-ty-btn1-tc-hex').value  || '#ffffff',
+    btn2Text: riTyGet('ri-ty-btn2-text').value    || '',
+    btn2Url:  riTyGet('ri-ty-btn2-url').value     || '#',
+    btn2Bc:   riTyGet('ri-ty-btn2-bc-hex').value  || '#204280',
+    btn2Tc:   riTyGet('ri-ty-btn2-tc-hex').value  || '#204280',
+    steps:    Array.from(document.querySelectorAll('#ri-ty-steps .block-item')).map(function(el){
+      return { title:(el.querySelector('.ri-ty-step-title')||{}).value||'', desc:(el.querySelector('.ri-ty-step-desc')||{}).value||'', badge:(el.querySelector('.ri-ty-step-badge')||{}).value||'' };
+    }),
+    contacts: Array.from(document.querySelectorAll('#ri-ty-contacts .ri-ty-contact-item')).map(function(i){ return i.value; }).filter(Boolean)
+  };
+}
+
+function restoreRiTyState(d) {
+  if (!d) return;
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
+  riTyColor('ri-ty-hero-bg-cp', 'ri-ty-hero-bg-hex', d.heroBg, '#0d1f3c');
+  riTyColor('ri-ty-icon-bg-cp', 'ri-ty-icon-bg-hex', d.iconBg, '#1e3a5f');
+  riTyColor('ri-ty-btn1-bg-cp', 'ri-ty-btn1-bg-hex', d.btn1Bg, '#0d1f3c');
+  riTyColor('ri-ty-btn1-tc-cp', 'ri-ty-btn1-tc-hex', d.btn1Tc, '#ffffff');
+  riTyColor('ri-ty-btn2-bc-cp', 'ri-ty-btn2-bc-hex', d.btn2Bc, '#204280');
+  riTyColor('ri-ty-btn2-tc-cp', 'ri-ty-btn2-tc-hex', d.btn2Tc, '#204280');
+  set('ri-ty-heading',     d.heading    || ''); set('ri-ty-subtitle',   d.subtitle   || '');
+  set('ri-ty-ref-label',   d.refLabel   || ''); set('ri-ty-steps-label', d.stepsLabel || '');
+  set('ri-ty-fu-title',    d.fuTitle    || ''); set('ri-ty-fu-desc',     d.fuDesc     || '');
+  set('ri-ty-btn1-text',   d.btn1Text   || ''); set('ri-ty-btn1-url',    d.btn1Url    || '#');
+  set('ri-ty-btn2-text',   d.btn2Text   || ''); set('ri-ty-btn2-url',    d.btn2Url    || '#');
+  var sl = document.getElementById('ri-ty-steps');    if (sl) { sl.innerHTML = ''; (d.steps    || []).forEach(function(s){ riTyAddStep(s); }); }
+  var cl = document.getElementById('ri-ty-contacts'); if (cl) { cl.innerHTML = ''; (d.contacts || []).forEach(function(t){ riTyAddContact(t); }); }
+}
+
+function generateReportTy() {
+  var d   = collectRiTyState();
+  var uid = 'rty' + Date.now().toString(36);
+  var heroBg = cmsSafeHex(d.heroBg, '#0d1f3c');
+  var iconBg = cmsSafeHex(d.iconBg, '#1e3a5f');
+  var btn1Bg = cmsSafeHex(d.btn1Bg, '#0d1f3c');
+  var btn1Tc = cmsSafeHex(d.btn1Tc, '#ffffff');
+  var btn2Bc = cmsSafeHex(d.btn2Bc, '#204280');
+  var btn2Tc = cmsSafeHex(d.btn2Tc, '#204280');
+
+  // ── Steps ──
+  var stepsHtml = (d.steps || []).map(function(s, i) {
+    return '<div style="display:flex;gap:14px;margin-bottom:20px;">'
+      + '<span style="width:32px;height:32px;min-width:32px;border-radius:50%;background:' + xA(heroBg) + ';color:#fff;font-size:13px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-top:2px;font-family:\'Poppins\',sans-serif;flex-shrink:0;">' + (i+1) + '</span>'
+      + '<div>'
+      + '<p style="font-family:\'Poppins\',sans-serif;font-weight:700;font-size:14px;color:#1a1a1a;margin:0 0 4px;">' + xH(s.title) + '</p>'
+      + '<p style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#6b7280;margin:0 0 8px;line-height:1.5;">' + xH(s.desc) + '</p>'
+      + (s.badge ? '<span style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:500;color:#1a56a3;background:#e8f0fe;border-radius:999px;padding:3px 10px;">' + xH(s.badge) + '</span>' : '')
+      + '</div></div>';
+  }).join('');
+
+  // ── Contact items ──
+  var contactItems = (d.contacts || []).map(function(c) {
+    return '<p style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#204280;margin:0 0 5px;">' + xH(c) + '</p>';
+  }).join('');
+
+  // ── Buttons ──
+  var btnsHtml = '<div style="display:flex;gap:12px;padding:0 24px 32px;flex-wrap:wrap;">';
+  if (d.btn1Text) btnsHtml += '<a href="' + xA(d.btn1Url||'#') + '" style="flex:1;min-width:160px;display:inline-flex;align-items:center;justify-content:center;font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:600;color:' + xA(btn1Tc) + ';background:' + xA(btn1Bg) + ';border:1.5px solid ' + xA(btn1Bg) + ';border-radius:8px;padding:13px 20px;text-decoration:none;">' + xH(d.btn1Text) + '</a>';
+  if (d.btn2Text) btnsHtml += '<a href="' + xA(d.btn2Url||'#') + '" style="flex:1;min-width:160px;display:inline-flex;align-items:center;justify-content:center;font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:600;color:' + xA(btn2Tc) + ';background:#fff;border:1.5px solid ' + xA(btn2Bc) + ';border-radius:8px;padding:13px 20px;text-decoration:none;">' + xH(d.btn2Text) + '</a>';
+  btnsHtml += '</div>';
+
+  var html = '<div id="' + uid + '" style="font-family:\'Poppins\',sans-serif;max-width:540px;margin:0 auto;background:#f9fafb;">'
+    // Hero
+    + '<div style="background:' + xA(heroBg) + ';padding:48px 32px 36px;text-align:center;border-radius:0 0 0 0;">'
+    + '<div style="width:72px;height:72px;border-radius:50%;background:' + xA(iconBg) + ';display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:30px;">✓</div>'
+    + '<h1 style="font-family:\'Poppins\',sans-serif;font-size:28px;font-weight:700;color:#ffffff;margin:0 0 10px;">' + xH(d.heading||'Report Received') + '</h1>'
+    + '<p style="font-family:\'Poppins\',sans-serif;font-size:15px;color:#94a3b8;margin:0;">' + xH(d.subtitle||'') + '</p>'
+    + '</div>'
+    // Reference number
+    + '<div style="margin:0;background:#fff;border-bottom:1px solid #e5e7eb;padding:20px 24px;">'
+    + '<p style="font-family:\'Poppins\',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#94a3b8;margin:0 0 6px;">' + xH(d.refLabel||'YOUR REFERENCE NUMBER') + '</p>'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">'
+    + '<span id="' + uid + '-ref" style="font-family:\'Poppins\',sans-serif;font-size:22px;font-weight:700;color:#0d1f3c;letter-spacing:0.02em;">Loading…</span>'
+    + '<button id="' + uid + '-copy" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:6px 16px;border:1.5px solid #e5e7eb;border-radius:6px;background:#fff;cursor:pointer;color:#374151;">Copy</button>'
+    + '</div></div>'
+    // What happens next
+    + '<div style="padding:28px 24px 8px;">'
+    + (d.stepsLabel ? '<p style="font-family:\'Poppins\',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#94a3b8;margin:0 0 20px;">' + xH(d.stepsLabel) + '</p>' : '')
+    + stepsHtml
+    + '</div>'
+    // Follow-up box
+    + '<div style="margin:4px 24px 20px;border:1px solid #e5e7eb;border-radius:10px;padding:18px 20px;display:flex;gap:20px;flex-wrap:wrap;background:#fff;">'
+    + '<div style="flex:1;min-width:160px;">'
+    + (d.fuTitle ? '<p style="font-family:\'Poppins\',sans-serif;font-weight:700;font-size:14px;color:#1a1a1a;margin:0 0 5px;">' + xH(d.fuTitle) + '</p>' : '')
+    + (d.fuDesc  ? '<p style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#6b7280;margin:0;line-height:1.5;">' + xH(d.fuDesc) + '</p>' : '')
+    + '</div>'
+    + (contactItems ? '<div style="flex-shrink:0;text-align:right;">' + contactItems + '</div>' : '')
+    + '</div>'
+    // Buttons
+    + btnsHtml
+    + '</div>'
+    // Script: read ?ref= from URL
+    + '<script data-cfasync="false">(function(){'
+    + '  var uid="' + uid + '";'
+    + '  var p=new URLSearchParams(window.location.search);'
+    + '  var ref=p.get("ref")||"N/A";'
+    + '  var el=document.getElementById(uid+"-ref");'
+    + '  if(el)el.textContent=ref;'
+    + '  var copyBtn=document.getElementById(uid+"-copy");'
+    + '  if(copyBtn)copyBtn.addEventListener("click",function(){'
+    + '    if(navigator.clipboard){navigator.clipboard.writeText(ref).then(function(){copyBtn.textContent="Copied!";setTimeout(function(){copyBtn.textContent="Copy";},2000);});}'
+    + '    else{var ta=document.createElement("textarea");ta.value=ref;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);copyBtn.textContent="Copied!";setTimeout(function(){copyBtn.textContent="Copy";},2000);}'
+    + '  });'
+    + '})();<\/script>';
+
+  var preview = document.getElementById('report-thank-you-preview-wrap'); if (preview) preview.innerHTML = html;
+  var code    = document.getElementById('report-thank-you-code');          if (code) code.textContent = html;
+  switchOut('report-thank-you', 'preview');
+}
+
 // ── Report an Issue Form ─────────────────────────────────────────
 
 function riOnOpen() {
@@ -8295,6 +8491,7 @@ function collectRiState() {
     contactBg:     riGet('ri-contact-bg-hex').value || '#0d1f3c',
     accent:        riGet('ri-accent-hex').value     || '#204280',
     btnText:       riGet('ri-btn-text').value       || 'Submit Report →',
+    tyUrl:         riGet('ri-ty-url').value         || '',
     steps:    Array.from(document.querySelectorAll('#ri-steps .block-item')).map(function(el){
       return { title:(el.querySelector('.ri-step-title')||{}).value||'', desc:(el.querySelector('.ri-step-desc')||{}).value||'' };
     }),
@@ -8320,6 +8517,7 @@ function restoreRiState(d) {
   set('ri-hiw-desc',      d.hiwDesc      || '');
   set('ri-contact-title', d.contactTitle || '');
   set('ri-btn-text',      d.btnText      || 'Submit Report →');
+  set('ri-ty-url',        d.tyUrl        || '');
   riColor('ri-hero-bg-cp',    'ri-hero-bg-hex',    d.heroBg,    '#0d1f3c');
   riColor('ri-sidebar-bg-cp', 'ri-sidebar-bg-hex', d.sidebarBg, '#f8fafc');
   riColor('ri-contact-bg-cp', 'ri-contact-bg-hex', d.contactBg, '#0d1f3c');
@@ -8343,6 +8541,7 @@ function generateReport() {
   var sideW  = cmsClampInt(d.sidebarW, 300, 200, 420);
   var recips   = JSON.stringify(d.recipients || ['office@vls-online.com']);
   var apiBase  = window.location.origin; // e.g. https://cms.vls-online.com
+  var tyUrl    = d.tyUrl || '';
 
   // ── Hero ──
   var heroHtml = '<div class="ri-hero" style="background:' + xA(heroBg) + ';">'
@@ -8508,17 +8707,22 @@ function generateReport() {
     + '  var msgBox=document.getElementById(uid+"-msg-box");'
     + '  var btn=document.getElementById(uid+"-btn");'
     + '  if(!fn||!em||!msg){msgBox.style.display="block";msgBox.style.background="#fef2f2";msgBox.style.color="#b91c1c";msgBox.textContent="Please fill in all required fields.";return;}'
+    + '  var now=new Date();'
+    + '  var pad=function(n){return String(n).padStart(2,"0");};'
+    + '  var ref="VLS-"+now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate())+pad(now.getHours())+pad(now.getMinutes());'
     + '  btn.disabled=true;btn.textContent="Sending…";'
     + '  msgBox.style.display="none";'
     + '  try{'
     + '    var r=await fetch("' + apiBase + '/api/submit-report",{method:"POST",headers:{"Content-Type":"application/json"},'
     + '      body:JSON.stringify({firstName:fn,lastName:ln,email:em,phone:ph,qualification:ql,courseName:cn,issueType:it,message:msg,'
-    + '        screenshotData:fileData||"",screenshotName:fileName||"",screenshotType:fileType||"",recipients:recips})});'
+    + '        screenshotData:fileData||"",screenshotName:fileName||"",screenshotType:fileType||"",recipients:recips,refNumber:ref})});'
     + '    var data=await r.json();'
     + '    if(r.ok){'
-    + '      document.getElementById(uid+"-form").style.display="none";'
-    + '      msgBox.style.display="block";msgBox.style.background="#f0fdf4";msgBox.style.color="#15803d";'
-    + '      msgBox.innerHTML="<strong>✓ Report submitted!</strong><br>Thank you, "+fn+". We\'ve received your report and will be in touch within 1 working day.";'
+    + (tyUrl
+        ? '      window.location.href="' + xA(tyUrl) + '?ref="+encodeURIComponent(ref);'
+        : '      document.getElementById(uid+"-form").style.display="none";'
+          + '      msgBox.style.display="block";msgBox.style.background="#f0fdf4";msgBox.style.color="#15803d";'
+          + '      msgBox.innerHTML="<strong>✓ Report submitted!</strong> Reference: <strong>"+ref+"</strong><br>Thank you, "+fn+". We\'ll be in touch within 1 working day.";')
     + '    }else{'
     + '      msgBox.style.display="block";msgBox.style.background="#fef2f2";msgBox.style.color="#b91c1c";'
     + '      msgBox.textContent=data.error||"Something went wrong. Please try again.";'
