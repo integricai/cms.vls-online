@@ -7297,6 +7297,7 @@ function polAddSection(data) {
     + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'callout\')">+ Callout</button>'
     + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'link-cards\')">+ Link Cards</button>'
     + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'cta-banner\')">+ CTA Banner</button>'
+    + '<button class="btn-add-block" style="flex:none;padding:6px 10px;font-size:11px" onclick="polAddBlock(\'' + sid + '\',\'icon-cards\')">+ Icon Cards</button>'
     + '</div>'
     + '</div>';
   list.appendChild(div);
@@ -7314,7 +7315,7 @@ function polAddBlock(sid, type) {
 
 function polAddBlockToEl(blocksEl, type, data) {
   var bid = 'polb-' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-  var labels = { paragraph:'Paragraph', bullets:'Bullets', table:'Table', cards:'Cards', rights:'Rights Cards', tags:'Tags', definitions:'Definitions', 'alpha-list':'Alpha List', callout:'Callout', 'link-cards':'Link Cards', 'cta-banner':'CTA Banner' };
+  var labels = { paragraph:'Paragraph', bullets:'Bullets', table:'Table', cards:'Cards', rights:'Rights Cards', tags:'Tags', definitions:'Definitions', 'alpha-list':'Alpha List', callout:'Callout', 'link-cards':'Link Cards', 'cta-banner':'CTA Banner', 'icon-cards':'Icon Cards' };
   var content = '';
 
   if (type === 'paragraph') {
@@ -7401,6 +7402,10 @@ function polAddBlockToEl(blocksEl, type, data) {
       + '<div class="field"><label>Button colour</label><div class="cms-paragraph-color-row"><input type="color" class="polb-cta-btc-cp" value="' + xA(cbtc) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer"><input type="text" class="polb-cta-btc" value="' + xA(cbtc) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v"></div></div>'
       + '</div>'
       + '<div class="field"><label>Button URL</label><input type="text" class="polb-cta-bturl" value="' + xA((data && data.btnUrl)||'#') + '" placeholder="https://" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;"></div>';
+
+  } else if (type === 'icon-cards') {
+    content = '<div class="polb-iconcards-list block-list"></div>'
+      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddIconCardItem(this.previousElementSibling)">+ Add card</button>';
   }
 
   var div = document.createElement('div'); div.className = 'block-item'; div.id = bid;
@@ -7420,6 +7425,10 @@ function polAddBlockToEl(blocksEl, type, data) {
   } else if (type === 'alpha-list') {
     var aList = div.querySelector('.polb-alpha-list');
     ((data && data.items) || ['']).forEach(function(t) { polAddAlphaItem(aList, t); });
+  } else if (type === 'icon-cards') {
+    var icList = div.querySelector('.polb-iconcards-list');
+    ((data && data.items) || []).forEach(function(it) { polAddIconCardItem(icList, it); });
+    if (!(data && data.items && data.items.length)) polAddIconCardItem(icList);
   } else if (type === 'link-cards') {
     var lcList = div.querySelector('.polb-linkcards-list');
     ((data && data.items) || []).forEach(function(it) { polAddLinkCardItem(lcList, it); });
@@ -7467,6 +7476,76 @@ function polAddRightItem(listEl, data) {
     + '</div>'
     + '<textarea class="polb-right-text" rows="2" placeholder="Description…" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;resize:vertical;">' + xH((data && data.text) || '') + '</textarea>'
     + '<button class="btn-sm danger" style="align-self:flex-end" onclick="this.closest(\'.block-item\').remove()">Remove</button></div>';
+  listEl.appendChild(div);
+}
+
+// Preset icons with suggested background colours
+var POL_ICON_PRESETS = [
+  { e:'🔑', bg:'#fef3c7', label:'Key'         },
+  { e:'⚡', bg:'#fee2e2', label:'Lightning'    },
+  { e:'⏱', bg:'#fce7f3', label:'Stopwatch'    },
+  { e:'🎨', bg:'#fce7f3', label:'Palette'      },
+  { e:'📊', bg:'#dbeafe', label:'Chart'        },
+  { e:'🔒', bg:'#e0f2fe', label:'Lock'         },
+  { e:'🛡', bg:'#d1fae5', label:'Shield'       },
+  { e:'💡', bg:'#fef9c3', label:'Lightbulb'    },
+  { e:'🌐', bg:'#dbeafe', label:'Globe'        },
+  { e:'📝', bg:'#f3e8ff', label:'Document'     },
+  { e:'🚀', bg:'#fce7f3', label:'Rocket'       },
+  { e:'✅', bg:'#d1fae5', label:'Check'        },
+  { e:'🔔', bg:'#fef3c7', label:'Bell'         },
+  { e:'🎯', bg:'#fee2e2', label:'Target'       },
+  { e:'📧', bg:'#dbeafe', label:'Email'        },
+  { e:'👤', bg:'#f3e8ff', label:'Person'       },
+  { e:'🤝', bg:'#d1fae5', label:'Handshake'    },
+  { e:'📋', bg:'#f0fdf4', label:'Clipboard'    },
+  { e:'🔍', bg:'#eff6ff', label:'Search'       },
+  { e:'⚙️', bg:'#f1f5f9', label:'Settings'     }
+];
+
+function polBuildIconPresetOptions(selectedIcon) {
+  return POL_ICON_PRESETS.map(function(p) {
+    return '<option value="' + xA(p.e) + '" data-bg="' + xA(p.bg) + '"' + (p.e === selectedIcon ? ' selected' : '') + '>' + p.e + ' ' + p.label + '</option>';
+  }).join('');
+}
+
+function polAddIconCardItem(listEl, data) {
+  var icon    = (data && data.icon)    || '🔑';
+  var iconBg  = (data && data.iconBg)  || '#fef3c7';
+  var title   = (data && data.title)   || '';
+  var desc    = (data && data.desc)    || '';
+  var div = document.createElement('div'); div.className = 'block-item';
+
+  // Find the preset's suggested bg or use stored iconBg
+  var presetBg = iconBg;
+  var matchedPreset = POL_ICON_PRESETS.find(function(p){ return p.e === icon; });
+  if (!iconBg && matchedPreset) presetBg = matchedPreset.bg;
+
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:8px 12px;display:flex;flex-direction:column;gap:6px;">'
+    + '<div style="display:flex;gap:8px;align-items:center">'
+    + '<div>'
+    + '<label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Icon</label>'
+    + '<select class="polb-ic-preset" onchange="(function(sel){var opt=sel.options[sel.selectedIndex];var bg=opt.getAttribute(\'data-bg\')||\'#f0f4f8\';var cp=sel.closest(\'.block-body\').querySelector(\'.polb-ic-bg-cp\');var hx=sel.closest(\'.block-body\').querySelector(\'.polb-ic-bg-hex\');if(cp)cp.value=bg;if(hx)hx.value=bg;sel.closest(\'.block-body\').querySelector(\'.polb-ic-custom\').value=opt.value;})(this)" style="font-size:15px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:#fff;">'
+    + '<option value="">— pick icon —</option>'
+    + polBuildIconPresetOptions(icon)
+    + '</select>'
+    + '</div>'
+    + '<div>'
+    + '<label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Custom emoji</label>'
+    + '<input type="text" class="polb-ic-custom" value="' + xA(icon) + '" placeholder="✨" style="width:60px;font-size:20px;padding:4px;border:1px solid var(--border);border-radius:6px;text-align:center;">'
+    + '</div>'
+    + '<div>'
+    + '<label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Icon bg</label>'
+    + '<div class="cms-paragraph-color-row">'
+    + '<input type="color" class="polb-ic-bg-cp" value="' + xA(presetBg) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">'
+    + '<input type="text" class="polb-ic-bg-hex" value="' + xA(presetBg) + '" style="width:80px" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v">'
+    + '</div>'
+    + '</div>'
+    + '<button class="btn-sm danger" style="align-self:flex-end;margin-left:auto" onclick="this.closest(\'.block-item\').remove()">Remove</button>'
+    + '</div>'
+    + '<input type="text" class="polb-ic-title" value="' + xA(title) + '" placeholder="Card title (bold)" style="font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:600;padding:6px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<textarea class="polb-ic-desc" rows="2" placeholder="Description text…" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;resize:vertical;">' + xH(desc) + '</textarea>'
+    + '</div>';
   listEl.appendChild(div);
 }
 
@@ -7536,7 +7615,7 @@ function collectPolicyState() {
     var bg    = (secEl.querySelector('.pols-bg')    || {}).value || '#ffffff';
     var blocks = Array.from(secEl.querySelectorAll('.pols-blocks > .block-item')).map(function(blkEl) {
       var badge = (blkEl.querySelector('.block-type-badge') || {}).textContent || '';
-      var type = { 'Paragraph':'paragraph','Bullets':'bullets','Table':'table','Cards':'cards','Rights Cards':'rights','Tags':'tags','Definitions':'definitions','Alpha List':'alpha-list','Callout':'callout','Link Cards':'link-cards','CTA Banner':'cta-banner' }[badge] || badge;
+      var type = { 'Paragraph':'paragraph','Bullets':'bullets','Table':'table','Cards':'cards','Rights Cards':'rights','Tags':'tags','Definitions':'definitions','Alpha List':'alpha-list','Callout':'callout','Link Cards':'link-cards','CTA Banner':'cta-banner','Icon Cards':'icon-cards' }[badge] || badge;
 
       if (type === 'paragraph') {
         return { type: 'paragraph', text: (blkEl.querySelector('.polb-para') || {}).value || '' };
@@ -7563,6 +7642,10 @@ function collectPolicyState() {
         })};
       } else if (type === 'alpha-list') {
         return { type: 'alpha-list', items: Array.from(blkEl.querySelectorAll('.polb-alpha-text')).map(function(i){ return i.value; }) };
+      } else if (type === 'icon-cards') {
+        return { type: 'icon-cards', items: Array.from(blkEl.querySelectorAll('.polb-iconcards-list > .block-item')).map(function(c){
+          return { icon:  (c.querySelector('.polb-ic-custom') ||{}).value||'🔑', iconBg:(c.querySelector('.polb-ic-bg-hex') ||{}).value||'#fef3c7', title: (c.querySelector('.polb-ic-title')  ||{}).value||'', desc:  (c.querySelector('.polb-ic-desc')   ||{}).value||'' };
+        })};
       } else if (type === 'link-cards') {
         return { type: 'link-cards', items: Array.from(blkEl.querySelectorAll('.polb-linkcards-list > .block-item')).map(function(c){
           return { icon: (c.querySelector('.polb-lc-icon')||{}).value||'📄', title: (c.querySelector('.polb-lc-title')||{}).value||'', desc: (c.querySelector('.polb-lc-desc')||{}).value||'', linkText: (c.querySelector('.polb-lc-linktxt')||{}).value||'Read →', url: (c.querySelector('.polb-lc-url')||{}).value||'' };
@@ -7834,6 +7917,20 @@ function polBuildBlock(b, accent) {
           return '<span style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#374151;padding:6px 16px;border:1px solid #e5e7eb;border-radius:6px;">' + xH(t) + '</span>';
         }).join('')
       + '</div>';
+  }
+
+  if (b.type === 'icon-cards') {
+    var items = (b.items || []).filter(function(c){ return c.title || c.desc; });
+    if (!items.length) return '';
+    var icHtml = items.map(function(c) {
+      var ibg = cmsSafeHex(c.iconBg, '#fef3c7');
+      return '<div style="border:1px solid #e5e7eb;border-radius:12px;padding:20px;background:#ffffff;">'
+        + '<span style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:10px;background:' + xA(ibg) + ';font-size:26px;line-height:1;margin-bottom:14px;">' + xH(c.icon || '🔑') + '</span>'
+        + '<p style="font-family:\'Poppins\',sans-serif;font-weight:700;font-size:15px;color:#1a1a1a;margin:0 0 8px;line-height:1.3;">' + xH(c.title || '') + '</p>'
+        + '<p style="font-family:\'Poppins\',sans-serif;font-size:14px;color:#6b7280;margin:0;line-height:1.6;">' + xH(c.desc || '') + '</p>'
+        + '</div>';
+    }).join('');
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin:0 0 16px;">' + icHtml + '</div>';
   }
 
   if (b.type === 'link-cards') {
