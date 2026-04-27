@@ -7337,19 +7337,19 @@ function polAddBlockToEl(blocksEl, type, data) {
       + '<div class="field"><label>Rows</label><textarea class="polb-trows" rows="4" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:6px;width:100%;resize:vertical;">' + xH(String(rows)) + '</textarea></div>';
 
   } else if (type === 'cards') {
-    var cardItems = (data && data.items) || [];
-    content = '<div class="polb-cards-list block-list"></div>'
-      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddCardItem(this.previousElementSibling)">+ Add card</button>';
+    content = polColsSelect(data && data.cols, 2)
+      + '<div class="polb-cards-list block-list"></div>'
+      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddCardItem(this.previousElementSibling.previousElementSibling)">+ Add card</button>';
 
   } else if (type === 'rights') {
-    var rightItems = (data && data.items) || [];
-    content = '<div class="polb-rights-list block-list"></div>'
-      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddRightItem(this.previousElementSibling)">+ Add card</button>';
+    content = polColsSelect(data && data.cols, 2)
+      + '<div class="polb-rights-list block-list"></div>'
+      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddRightItem(this.previousElementSibling.previousElementSibling)">+ Add card</button>';
 
   } else if (type === 'tags') {
-    var tagItems = (data && data.items) || [''];
-    content = '<div class="polb-tags-list block-list"></div>'
-      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddTagItem(this.previousElementSibling)">+ Add tag</button>';
+    content = polColsSelect(data && data.cols, 4)
+      + '<div class="polb-tags-list block-list"></div>'
+      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddTagItem(this.previousElementSibling.previousElementSibling)">+ Add tag</button>';
   } else if (type === 'definitions') {
     content = '<div class="hint" style="margin-bottom:6px"><strong>Term</strong> — Description format. Bold term shown before the dash.</div>'
       + '<div class="polb-defs-list block-list"></div>'
@@ -7372,8 +7372,9 @@ function polAddBlockToEl(blocksEl, type, data) {
       + '<div class="field"><label>Callout text</label><textarea class="polb-callout-text" rows="3" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:6px;width:100%;resize:vertical;">' + xH(ctxt) + '</textarea></div>';
 
   } else if (type === 'link-cards') {
-    content = '<div class="polb-linkcards-list block-list"></div>'
-      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddLinkCardItem(this.previousElementSibling)">+ Add card</button>';
+    content = polColsSelect(data && data.cols, 2)
+      + '<div class="polb-linkcards-list block-list"></div>'
+      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddLinkCardItem(this.previousElementSibling.previousElementSibling)">+ Add card</button>';
 
   } else if (type === 'cta-banner') {
     var cbg  = cmsSafeHex((data && data.bg),      '#0d1f3c');
@@ -7404,8 +7405,9 @@ function polAddBlockToEl(blocksEl, type, data) {
       + '<div class="field"><label>Button URL</label><input type="text" class="polb-cta-bturl" value="' + xA((data && data.btnUrl)||'#') + '" placeholder="https://" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;"></div>';
 
   } else if (type === 'icon-cards') {
-    content = '<div class="polb-iconcards-list block-list"></div>'
-      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddIconCardItem(this.previousElementSibling)">+ Add card</button>';
+    content = polColsSelect(data && data.cols, 2)
+      + '<div class="polb-iconcards-list block-list"></div>'
+      + '<button class="btn-add-block" style="margin-top:4px;font-size:11px" onclick="polAddIconCardItem(this.previousElementSibling.previousElementSibling)">+ Add card</button>';
   }
 
   var div = document.createElement('div'); div.className = 'block-item'; div.id = bid;
@@ -7477,6 +7479,30 @@ function polAddRightItem(listEl, data) {
     + '<textarea class="polb-right-text" rows="2" placeholder="Description…" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;resize:vertical;">' + xH((data && data.text) || '') + '</textarea>'
     + '<button class="btn-sm danger" style="align-self:flex-end" onclick="this.closest(\'.block-item\').remove()">Remove</button></div>';
   listEl.appendChild(div);
+}
+
+// ── Policy grid helpers ──────────────────────────────────────────
+
+function polColsSelect(currentVal, defaultCols) {
+  var val = parseInt(currentVal) || defaultCols || 2;
+  var opts = [1,2,3,4].map(function(n) {
+    return '<option value="' + n + '"' + (n === val ? ' selected' : '') + '>' + n + ' per row</option>';
+  }).join('');
+  return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+    + '<label style="font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;">Columns (desktop):</label>'
+    + '<select class="polb-cols" style="font-family:\'Poppins\',sans-serif;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:5px;background:#fff;">' + opts + '</select>'
+    + '</div>';
+}
+
+function polGridHtml(cols, gap, itemsHtml) {
+  var n   = parseInt(cols) || 2;
+  var gid = 'pg' + Math.random().toString(36).slice(2, 9);
+  var css = '<style>'
+    + '.' + gid + '{display:grid;grid-template-columns:repeat(' + n + ',1fr);gap:' + (gap || '16px') + ';margin:0 0 16px;box-sizing:border-box;}'
+    + '.' + gid + '>*{width:100%;min-width:0;box-sizing:border-box;}'
+    + '@media(max-width:600px){.' + gid + '{grid-template-columns:1fr!important;}}'
+    + '</style>';
+  return css + '<div class="' + gid + '">' + itemsHtml + '</div>';
 }
 
 // Preset icons with suggested background colours
@@ -7627,15 +7653,15 @@ function collectPolicyState() {
           rows:    (blkEl.querySelector('.polb-trows') || {}).value || ''
         };
       } else if (type === 'cards') {
-        return { type: 'cards', items: Array.from(blkEl.querySelectorAll('.polb-cards-list > .block-item')).map(function(c){
+        return { type: 'cards', cols: (blkEl.querySelector('.polb-cols')||{}).value||'2', items: Array.from(blkEl.querySelectorAll('.polb-cards-list > .block-item')).map(function(c){
           return { label: (c.querySelector('.polb-card-label')||{}).value||'', text: (c.querySelector('.polb-card-text')||{}).value||'' };
         })};
       } else if (type === 'rights') {
-        return { type: 'rights', items: Array.from(blkEl.querySelectorAll('.polb-rights-list > .block-item')).map(function(c){
+        return { type: 'rights', cols: (blkEl.querySelector('.polb-cols')||{}).value||'2', items: Array.from(blkEl.querySelectorAll('.polb-rights-list > .block-item')).map(function(c){
           return { icon: (c.querySelector('.polb-right-icon')||{}).value||'📋', title: (c.querySelector('.polb-right-title')||{}).value||'', text: (c.querySelector('.polb-right-text')||{}).value||'' };
         })};
       } else if (type === 'tags') {
-        return { type: 'tags', items: Array.from(blkEl.querySelectorAll('.polb-tag-text')).map(function(i){ return i.value; }) };
+        return { type: 'tags', cols: (blkEl.querySelector('.polb-cols')||{}).value||'4', items: Array.from(blkEl.querySelectorAll('.polb-tag-text')).map(function(i){ return i.value; }) };
       } else if (type === 'definitions') {
         return { type: 'definitions', items: Array.from(blkEl.querySelectorAll('.polb-defs-list > .block-item')).map(function(c){
           return { term: (c.querySelector('.polb-def-term')||{}).value||'', desc: (c.querySelector('.polb-def-desc')||{}).value||'' };
@@ -7643,11 +7669,11 @@ function collectPolicyState() {
       } else if (type === 'alpha-list') {
         return { type: 'alpha-list', items: Array.from(blkEl.querySelectorAll('.polb-alpha-text')).map(function(i){ return i.value; }) };
       } else if (type === 'icon-cards') {
-        return { type: 'icon-cards', items: Array.from(blkEl.querySelectorAll('.polb-iconcards-list > .block-item')).map(function(c){
+        return { type: 'icon-cards', cols: (blkEl.querySelector('.polb-cols')||{}).value||'2', items: Array.from(blkEl.querySelectorAll('.polb-iconcards-list > .block-item')).map(function(c){
           return { icon:  (c.querySelector('.polb-ic-custom') ||{}).value||'🔑', iconBg:(c.querySelector('.polb-ic-bg-hex') ||{}).value||'#fef3c7', title: (c.querySelector('.polb-ic-title')  ||{}).value||'', desc:  (c.querySelector('.polb-ic-desc')   ||{}).value||'' };
         })};
       } else if (type === 'link-cards') {
-        return { type: 'link-cards', items: Array.from(blkEl.querySelectorAll('.polb-linkcards-list > .block-item')).map(function(c){
+        return { type: 'link-cards', cols: (blkEl.querySelector('.polb-cols')||{}).value||'2', items: Array.from(blkEl.querySelectorAll('.polb-linkcards-list > .block-item')).map(function(c){
           return { icon: (c.querySelector('.polb-lc-icon')||{}).value||'📄', title: (c.querySelector('.polb-lc-title')||{}).value||'', desc: (c.querySelector('.polb-lc-desc')||{}).value||'', linkText: (c.querySelector('.polb-lc-linktxt')||{}).value||'Read →', url: (c.querySelector('.polb-lc-url')||{}).value||'' };
         })};
       } else if (type === 'cta-banner') {
@@ -7891,7 +7917,7 @@ function polBuildBlock(b, accent) {
         + '<p style="font-family:\'Poppins\',sans-serif;font-size:14px;color:#374151;line-height:1.5;margin:0;">' + xH(c.text || '') + '</p>'
         + '</div>';
     }).join('');
-    return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin:0 0 16px;">' + cardHtml + '</div>';
+    return polGridHtml(b.cols || 2, '12px', cardHtml);
   }
 
   if (b.type === 'rights') {
@@ -7906,17 +7932,16 @@ function polBuildBlock(b, accent) {
         + '<p style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#6b7280;line-height:1.5;margin:0;">' + xH(r.text || '') + '</p>'
         + '</div>';
     }).join('');
-    return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:0 0 16px;">' + rightHtml + '</div>';
+    return polGridHtml(b.cols || 2, '12px', rightHtml);
   }
 
   if (b.type === 'tags') {
     var items = (b.items || []).filter(function(t){ return t.trim(); });
     if (!items.length) return '';
-    return '<div style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;">'
-      + items.map(function(t) {
-          return '<span style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#374151;padding:6px 16px;border:1px solid #e5e7eb;border-radius:6px;">' + xH(t) + '</span>';
-        }).join('')
-      + '</div>';
+    var tagItems = items.map(function(t) {
+      return '<span style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#374151;padding:6px 16px;border:1px solid #e5e7eb;border-radius:6px;display:inline-block;">' + xH(t) + '</span>';
+    }).join('');
+    return polGridHtml(b.cols || 4, '8px', tagItems);
   }
 
   if (b.type === 'icon-cards') {
@@ -7930,7 +7955,7 @@ function polBuildBlock(b, accent) {
         + '<p style="font-family:\'Poppins\',sans-serif;font-size:14px;color:#6b7280;margin:0;line-height:1.6;">' + xH(c.desc || '') + '</p>'
         + '</div>';
     }).join('');
-    return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin:0 0 16px;">' + icHtml + '</div>';
+    return polGridHtml(b.cols || 2, '16px', icHtml);
   }
 
   if (b.type === 'link-cards') {
@@ -7945,7 +7970,7 @@ function polBuildBlock(b, accent) {
         + (c.url ? '<a href="' + xA(c.url) + '" style="font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:600;color:' + xA(acc) + ';text-decoration:none;">' + xH(c.linkText || 'Read →') + '</a>' : '')
         + '</div></div>';
     }).join('');
-    return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:0 0 16px;">' + lcHtml + '</div>';
+    return polGridHtml(b.cols || 2, '12px', lcHtml);
   }
 
   if (b.type === 'cta-banner') {
