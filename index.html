@@ -8344,7 +8344,7 @@ function generateReport() {
   var recips = JSON.stringify(d.recipients || ['office@vls-online.com']);
 
   // ── Hero ──
-  var heroHtml = '<div style="background:' + xA(heroBg) + ';padding:48px 48px 40px;">'
+  var heroHtml = '<div class="ri-hero" style="background:' + xA(heroBg) + ';">'
     + (d.heroEyebrow ? '<p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:' + xA(acc) + ';margin:0 0 10px;">' + xH(d.heroEyebrow) + '</p>' : '')
     + '<h1 style="font-family:\'Poppins\',sans-serif;font-size:36px;font-weight:700;color:#ffffff;margin:0 0 14px;">' + xH(d.heroTitle || '') + '</h1>'
     + (d.heroDesc ? '<p style="font-family:\'Poppins\',sans-serif;font-size:15px;color:#94a3b8;line-height:1.7;margin:0;max-width:600px;">' + xH(d.heroDesc) + '</p>' : '')
@@ -8378,7 +8378,7 @@ function generateReport() {
     + '</div>' : '';
 
   // ── Sidebar ──
-  var sideHtml = '<div style="width:' + sideW + 'px;flex-shrink:0;background:' + xA(sideBg) + ';border-right:1px solid #e5e7eb;padding:36px 28px;">'
+  var sideHtml = '<div class="ri-sidebar" style="background:' + xA(sideBg) + ';border-right:1px solid #e5e7eb;padding:36px 28px;">'
     + (d.hiwEyebrow ? '<p style="font-family:\'Poppins\',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#94a3b8;margin:0 0 8px;">' + xH(d.hiwEyebrow) + '</p>' : '')
     + (d.hiwHeading ? '<h2 style="font-family:\'Poppins\',sans-serif;font-size:20px;font-weight:700;color:#1a1a1a;margin:0 0 14px;line-height:1.3;">' + xH(d.hiwHeading) + '</h2>' : '')
     + (d.hiwDesc    ? '<p style="font-family:\'Poppins\',sans-serif;font-size:14px;color:#6b7280;margin:0 0 24px;line-height:1.6;">' + xH(d.hiwDesc) + '</p>' : '')
@@ -8395,7 +8395,7 @@ function generateReport() {
       return '<label id="' + uid + '-ql-' + xA(q.replace(/\s/g,'-')) + '" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;font-family:\'Poppins\',sans-serif;font-size:14px;color:#374151;flex:1;min-width:0;">'
         + '<input type="radio" name="' + uid + '-qual" value="' + xA(q) + '" style="accent-color:' + xA(acc) + ';width:16px;height:16px;"> ' + xH(q) + '</label>';
     });
-    qualRows.push('<div style="display:flex;gap:10px;margin-bottom:8px;">' + cells.join('') + '</div>');
+    qualRows.push('<div class="ri-qual-row">' + cells.join('') + '</div>');
   }
   var qualHtml = qualRows.join('');
 
@@ -8417,15 +8417,15 @@ function generateReport() {
   var inputStyle = 'width:100%;box-sizing:border-box;font-family:\'Poppins\',sans-serif;font-size:14px;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:8px;outline:none;color:#1a1a1a;background:#fff;';
 
   // ── Form HTML ──
-  var formHtml = '<div style="flex:1;min-width:0;padding:36px 40px;">'
+  var formHtml = '<div class="ri-form-inner" style="flex:1;min-width:0;padding:36px 40px;">'
     + '<form id="' + uid + '-form" onsubmit="return false;" style="max-width:100%;">'
     // Section: Your Details
     + secHeader('👤', 'Your Details')
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">'
+    + '<div class="ri-2col">'
     + '<div>' + fieldLabel('First Name', true) + '<input type="text" id="' + uid + '-fn" placeholder="e.g. Sarah" style="' + inputStyle + '" required></div>'
     + '<div>' + fieldLabel('Last Name', true) + '<input type="text" id="' + uid + '-ln" placeholder="e.g. Mitchell" style="' + inputStyle + '" required></div>'
     + '</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:32px;">'
+    + '<div class="ri-2col" style="margin-bottom:32px;">'
     + '<div>' + fieldLabel('Email Address', true) + '<input type="email" id="' + uid + '-em" placeholder="sarah@email.com" style="' + inputStyle + '" required></div>'
     + '<div>' + fieldLabel('Phone Number') + '<input type="tel" id="' + uid + '-ph" placeholder="+44 7700 000000" style="' + inputStyle + '"></div>'
     + '</div>'
@@ -8527,9 +8527,37 @@ function generateReport() {
     + '};'
     + '})();<\/script>';
 
-  var html = '<div id="' + uid + '">'
+  var responsiveCss = '<style>'
+    // Hero padding
+    + '#' + uid + ' .ri-hero{padding:48px 48px 40px;}'
+    // Body: sidebar + form side-by-side on desktop
+    + '#' + uid + ' .ri-body{display:flex;align-items:flex-start;}'
+    // Sidebar
+    + '#' + uid + ' .ri-sidebar{width:' + sideW + 'px;flex-shrink:0;}'
+    // Form inner field grids: 2 cols on desktop
+    + '#' + uid + ' .ri-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}'
+    // Qualification radio rows: 2 per row on desktop
+    + '#' + uid + ' .ri-qual-row{display:flex;gap:10px;margin-bottom:8px;}'
+    + '@media(max-width:680px){'
+    // Hero
+    + '#' + uid + ' .ri-hero{padding:28px 20px 24px;}'
+    // Stack sidebar above form
+    + '#' + uid + ' .ri-body{flex-direction:column;}'
+    + '#' + uid + ' .ri-sidebar{width:100%!important;border-right:none;border-bottom:1px solid #e5e7eb;}'
+    // Single-column form fields
+    + '#' + uid + ' .ri-2col{grid-template-columns:1fr!important;}'
+    // Single-column radio buttons
+    + '#' + uid + ' .ri-qual-row{flex-direction:column;}'
+    + '#' + uid + ' .ri-qual-row label{flex:none!important;}'
+    // Form padding
+    + '#' + uid + ' .ri-form-inner{padding:24px 20px!important;}'
+    + '}'
+    + '</style>';
+
+  var html = responsiveCss
+    + '<div id="' + uid + '">'
     + heroHtml
-    + '<div style="display:flex;align-items:flex-start;">'
+    + '<div class="ri-body">'
     + sideHtml
     + formHtml
     + '</div>'
