@@ -8,14 +8,18 @@
         </select>
         <button class="btn-sm" onclick="tabsCmpNew()">+ New</button>
         <button class="btn-sm danger" id="tabs-cmp-del" style="display:none" onclick="tabsCmpDelete()">Delete</button>
+        <button class="btn-sm" id="tabs-cmp-dup" style="display:none" onclick="tabsCmpDuplicate()">Duplicate</button>
       </div>
       <div class="field" style="margin-bottom:10px;">
         <label>Component name</label>
         <input type="text" id="tabs-cmp-name" placeholder="e.g. FA1 Tabs — Course Page">
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
         <span id="tabs-cmp-status" style="font-size:12px;"></span>
-        <button class="btn-gen" style="width:auto;padding:8px 20px;margin:0" onclick="tabsCmpSave()">Save Component</button>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+          <button class="btn-gen" style="width:auto;padding:8px 20px;margin:0" onclick="tabsCmpSave()">Save Component</button>
+          <button class="btn-gen" style="width:auto;padding:8px 20px;margin:0" onclick="generateTabs()">Generate HTML</button>
+        </div>
       </div>
     </div>
     <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
@@ -24,7 +28,6 @@
     </div>
     <div id="tabs-pill-bar" class="tab-pills"></div>
     <div id="tabs-editor-area" style="display:flex;flex-direction:column;gap:14px;"></div>
-    <button class="btn-gen" onclick="generateTabs()">Generate HTML</button>
   </div></div>
   <div class="output-panel">
     <div class="output-topbar">
