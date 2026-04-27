@@ -2,13 +2,15 @@
   <div class="form-panel"><div class="form-inner">
     <div style="background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:2px;">
       <div class="section-label" style="margin:0 0 10px">Saved Components</div>
-      <div style="display:flex;gap:6px;margin-bottom:10px;">
-        <select id="tabs-cmp-sel" onchange="tabsCmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none;background:#fff;color:var(--text);">
+      <div style="margin-bottom:10px;">
+        <select id="tabs-cmp-sel" onchange="tabsCmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;outline:none;background:#fff;color:var(--text);">
           <option value="">— select to load —</option>
         </select>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
         <button class="btn-sm" onclick="tabsCmpNew()">+ New</button>
-        <button class="btn-sm danger" id="tabs-cmp-del" style="display:none" onclick="tabsCmpDelete()">Delete</button>
         <button class="btn-sm" id="tabs-cmp-dup" style="display:none" onclick="tabsCmpDuplicate()">Duplicate</button>
+        <button class="btn-sm danger" id="tabs-cmp-del" style="display:none" onclick="tabsCmpDelete()">Delete</button>
       </div>
       <div class="field" style="margin-bottom:10px;">
         <label>Component name</label>
