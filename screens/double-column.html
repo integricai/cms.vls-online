@@ -4,20 +4,26 @@
     <!-- ── Saved components ── -->
     <div style="background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:2px;">
       <div class="section-label" style="margin:0 0 10px">Saved Components</div>
-      <div style="display:flex;gap:6px;margin-bottom:10px;">
-        <select id="dcs-cmp-sel" onchange="dcsCmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none;background:#fff;color:var(--text);">
+      <div style="margin-bottom:10px;">
+        <select id="dcs-cmp-sel" onchange="dcsCmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;outline:none;background:#fff;color:var(--text);">
           <option value="">— select to load —</option>
         </select>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
         <button class="btn-sm" onclick="dcsCmpNew()">+ New</button>
+        <button class="btn-sm" id="dcs-cmp-dup" style="display:none" onclick="dcsCmpDuplicate()">Duplicate</button>
         <button class="btn-sm danger" id="dcs-cmp-del" style="display:none" onclick="dcsCmpDelete()">Delete</button>
       </div>
       <div class="field" style="margin-bottom:10px;">
         <label>Component name</label>
         <input type="text" id="dcs-cmp-name" placeholder="e.g. About Us — Purpose &amp; Mission">
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
         <span id="dcs-cmp-status" style="font-size:12px;"></span>
-        <button class="btn-gen" style="width:auto;padding:8px 20px;margin:0" onclick="dcsCmpSave()">Save Component</button>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+          <button class="btn-gen" style="width:auto;padding:8px 20px;margin:0" onclick="dcsCmpSave()">Save Component</button>
+          <button class="btn-gen" style="width:auto;padding:8px 20px;margin:0" onclick="generateDcs()">Generate HTML</button>
+        </div>
       </div>
     </div>
 
@@ -124,8 +130,6 @@
       <div class="field"><label>Quote text</label><textarea id="dcs-quote-text" rows="3">"We are in a growth industry operating in an international environment — there is great potential for people committed to building this company with us."</textarea></div>
       <div class="field"><label>Attribution</label><input type="text" id="dcs-quote-attrib" value="— Vertex Learning Solutions leadership"></div>
     </div>
-
-    <button class="btn-gen" style="margin-top:8px" onclick="generateDcs()">Generate HTML</button>
 
   </div></div>
   <div class="output-panel">

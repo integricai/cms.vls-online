@@ -6755,6 +6755,63 @@ async function introCmpSave() {
   }
 }
 
+function cmpSetDupDeleteButtons(screen, visible) {
+  var display = visible ? '' : 'none';
+  var del = document.getElementById(screen + '-cmp-del');
+  if (del) del.style.display = display;
+  var dup = document.getElementById(screen + '-cmp-dup');
+  if (dup) dup.style.display = display;
+}
+
+function cmpDuplicateBaseName(name) {
+  return String(name || '').trim().replace(/^NEW\d*_/, '') || 'Component';
+}
+
+function cmpDuplicateName(name, components) {
+  var base = cmpDuplicateBaseName(name);
+  var used = {};
+  (components || []).forEach(function(comp) {
+    var current = String((comp && comp.name) || '').trim();
+    var match = current.match(/^NEW(\d*)_(.*)$/);
+    if (!match) return;
+    if (cmpDuplicateBaseName(match[2]) !== base) return;
+    var idx = match[1] === '' ? 0 : parseInt(match[1], 10);
+    used[idx] = true;
+  });
+  if (!used[0]) return 'NEW_' + base;
+  var n = 1;
+  while (used[n]) n += 1;
+  return 'NEW' + n + '_' + base;
+}
+
+async function cmpDuplicateComponent(opts) {
+  var slot = _cmpState[opts.stateKey];
+  if (!slot || !slot.id) return;
+  var comps = slot.components || [];
+  var comp = comps.filter(function(c) { return c.id === slot.id; })[0];
+  if (!comp) return;
+  var nameEl = document.getElementById(opts.inputId);
+  var sourceName = (nameEl && nameEl.value.trim()) || comp.name || 'Component';
+  var state = opts.collectState();
+  var nextId = opts.idPrefix + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var nextName = cmpDuplicateName(sourceName, comps);
+  var nextComps = comps.concat([{ id: nextId, name: nextName, data: JSON.parse(JSON.stringify(state)) }]);
+  cmpSetStatus(opts.uiKey, 'Duplicating…', 'var(--muted)');
+  var ok = await cmpSaveAll(opts.stateKey, nextComps);
+  if (ok) {
+    slot.components = nextComps;
+    slot.id = nextId;
+    if (nameEl) nameEl.value = nextName;
+    cmpSetDupDeleteButtons(opts.uiKey, true);
+    delete _dirtyScreens[opts.stateKey];
+    cmpPopulateSelect(opts.uiKey, nextComps, nextId);
+    cmpSetStatus(opts.uiKey, '✓ Duplicated', '#16a34a');
+    setTimeout(function(){ cmpSetStatus(opts.uiKey, ''); }, 3000);
+  } else {
+    cmpSetStatus(opts.uiKey, '✗ Duplicate failed', '#e63946');
+  }
+}
+
 function introCmpNew() {
   _cmpState.intro.id = null;
   var nameEl = document.getElementById('intro-cmp-name'); if (nameEl) nameEl.value = '';
@@ -7304,7 +7361,7 @@ async function polCmpLoad(id) {
   if (!comp) return;
   _cmpState.policy.id = comp.id;
   var nameEl = document.getElementById('pol-cmp-name'); if (nameEl) nameEl.value = comp.name || '';
-  var delBtn = document.getElementById('pol-cmp-del');  if (delBtn) delBtn.style.display = '';
+  cmpSetDupDeleteButtons('pol', true);
   restorePolicyState(comp.data || {});
   delete _dirtyScreens.policy;
   cmpSetStatus('pol', '');
@@ -7335,6 +7392,7 @@ async function polCmpSave() {
     });
     var data = await r.json();
     if (r.ok) {
+      cmpSetDupDeleteButtons('pol', true);
       delete _dirtyScreens.policy;
       cmpPopulateSelect('pol', comps, id);
       cmpSetStatus('pol', '✓ Saved', '#16a34a');
@@ -7350,10 +7408,20 @@ function polCmpNew() {
   _cmpState.policy.id = null;
   var nameEl = document.getElementById('pol-cmp-name'); if (nameEl) nameEl.value = '';
   var sel    = document.getElementById('pol-cmp-sel');  if (sel)    sel.value = '';
-  var del    = document.getElementById('pol-cmp-del');  if (del)    del.style.display = 'none';
+  cmpSetDupDeleteButtons('pol', false);
   restorePolicyState({});
   delete _dirtyScreens.policy;
   cmpSetStatus('pol', '');
+}
+
+async function polCmpDuplicate() {
+  return cmpDuplicateComponent({
+    stateKey: 'policy',
+    uiKey: 'pol',
+    inputId: 'pol-cmp-name',
+    idPrefix: 'pol',
+    collectState: collectPolicyState
+  });
 }
 
 async function polCmpDelete() {
@@ -9050,7 +9118,7 @@ async function reachCmpLoad(id) {
   _cmpState.reach.id = comp.id;
   var nameEl = document.getElementById('rch-cmp-name');
   if (nameEl) nameEl.value = comp.name || '';
-  var delBtn = document.getElementById('rch-cmp-del'); if (delBtn) delBtn.style.display = '';
+  cmpSetDupDeleteButtons('rch', true);
   restoreReachState(comp.data || {});
   delete _dirtyScreens.reach;
   cmpSetStatus('rch', '');
@@ -9082,6 +9150,7 @@ async function reachCmpSave() {
     });
     var data = await r.json();
     if (r.ok) {
+      cmpSetDupDeleteButtons('rch', true);
       delete _dirtyScreens.reach;
       cmpPopulateSelect('rch', comps, id);
       cmpSetStatus('rch', '✓ Saved', '#16a34a');
@@ -9099,10 +9168,20 @@ function reachCmpNew() {
   _cmpState.reach.id = null;
   var nameEl = document.getElementById('rch-cmp-name'); if (nameEl) nameEl.value = '';
   var sel    = document.getElementById('rch-cmp-sel');  if (sel)    sel.value = '';
-  var del    = document.getElementById('rch-cmp-del');  if (del)    del.style.display = 'none';
+  cmpSetDupDeleteButtons('rch', false);
   restoreReachState({});
   delete _dirtyScreens.reach;
   cmpSetStatus('rch', '');
+}
+
+async function reachCmpDuplicate() {
+  return cmpDuplicateComponent({
+    stateKey: 'reach',
+    uiKey: 'rch',
+    inputId: 'rch-cmp-name',
+    idPrefix: 'rch',
+    collectState: collectReachState
+  });
 }
 
 async function reachCmpDelete() {
@@ -9413,7 +9492,7 @@ async function dcs3CmpLoad(id) {
   _cmpState.dcs3.id = comp.id;
   var nameEl = document.getElementById('dcs3-cmp-name');
   if (nameEl) nameEl.value = comp.name || '';
-  document.getElementById('dcs3-cmp-del').style.display = '';
+  cmpSetDupDeleteButtons('dcs3', true);
   restoreDcs3State(comp.data || {});
   delete _dirtyScreens.dcs3;
   cmpSetStatus('dcs3', '');
@@ -9439,6 +9518,7 @@ async function dcs3CmpSave() {
   _cmpState.dcs3.components = comps;
   var ok = await cmpSaveAll('dcs3', comps);
   if (ok) {
+    cmpSetDupDeleteButtons('dcs3', true);
     delete _dirtyScreens.dcs3;
     cmpPopulateSelect('dcs3', comps, id);
     cmpSetStatus('dcs3', '✓ Saved', '#16a34a');
@@ -9452,10 +9532,20 @@ function dcs3CmpNew() {
   _cmpState.dcs3.id = null;
   var nameEl = document.getElementById('dcs3-cmp-name'); if (nameEl) nameEl.value = '';
   var sel    = document.getElementById('dcs3-cmp-sel');  if (sel)    sel.value = '';
-  var del    = document.getElementById('dcs3-cmp-del');  if (del)    del.style.display = 'none';
+  cmpSetDupDeleteButtons('dcs3', false);
   restoreDcs3State({});
   delete _dirtyScreens.dcs3;
   cmpSetStatus('dcs3', '');
+}
+
+async function dcs3CmpDuplicate() {
+  return cmpDuplicateComponent({
+    stateKey: 'dcs3',
+    uiKey: 'dcs3',
+    inputId: 'dcs3-cmp-name',
+    idPrefix: 'dcs3',
+    collectState: collectDcs3State
+  });
 }
 
 async function dcs3CmpDelete() {
@@ -9721,7 +9811,7 @@ async function dcs2CmpLoad(id) {
   _cmpState.dcs2.id = comp.id;
   var nameEl = document.getElementById('dcs2-cmp-name');
   if (nameEl) nameEl.value = comp.name || '';
-  document.getElementById('dcs2-cmp-del').style.display = '';
+  cmpSetDupDeleteButtons('dcs2', true);
   restoreDcs2State(comp.data || {});
   delete _dirtyScreens.dcs2;
   cmpSetStatus('dcs2', '');
@@ -9747,6 +9837,7 @@ async function dcs2CmpSave() {
   _cmpState.dcs2.components = comps;
   var ok = await cmpSaveAll('dcs2', comps);
   if (ok) {
+    cmpSetDupDeleteButtons('dcs2', true);
     delete _dirtyScreens.dcs2;
     cmpPopulateSelect('dcs2', comps, id);
     cmpSetStatus('dcs2', '✓ Saved', '#16a34a');
@@ -9760,10 +9851,20 @@ function dcs2CmpNew() {
   _cmpState.dcs2.id = null;
   var nameEl = document.getElementById('dcs2-cmp-name'); if (nameEl) nameEl.value = '';
   var sel    = document.getElementById('dcs2-cmp-sel');  if (sel)    sel.value = '';
-  var del    = document.getElementById('dcs2-cmp-del');  if (del)    del.style.display = 'none';
+  cmpSetDupDeleteButtons('dcs2', false);
   restoreDcs2State({});
   delete _dirtyScreens.dcs2;
   cmpSetStatus('dcs2', '');
+}
+
+async function dcs2CmpDuplicate() {
+  return cmpDuplicateComponent({
+    stateKey: 'dcs2',
+    uiKey: 'dcs2',
+    inputId: 'dcs2-cmp-name',
+    idPrefix: 'dcs2',
+    collectState: collectDcs2State
+  });
 }
 
 async function dcs2CmpDelete() {
@@ -9994,7 +10095,7 @@ async function dcsCmpLoad(id) {
   _cmpState.dcs.id = comp.id;
   var nameEl = document.getElementById('dcs-cmp-name');
   if (nameEl) nameEl.value = comp.name || '';
-  document.getElementById('dcs-cmp-del').style.display = '';
+  cmpSetDupDeleteButtons('dcs', true);
   restoreDcsState(comp.data || {});
   delete _dirtyScreens.dcs;
   cmpSetStatus('dcs', '');
@@ -10020,6 +10121,7 @@ async function dcsCmpSave() {
   _cmpState.dcs.components = comps;
   var ok = await cmpSaveAll('dcs', comps);
   if (ok) {
+    cmpSetDupDeleteButtons('dcs', true);
     delete _dirtyScreens.dcs;
     cmpPopulateSelect('dcs', comps, id);
     cmpSetStatus('dcs', '✓ Saved', '#16a34a');
@@ -10033,10 +10135,20 @@ function dcsCmpNew() {
   _cmpState.dcs.id = null;
   var nameEl = document.getElementById('dcs-cmp-name'); if (nameEl) nameEl.value = '';
   var sel    = document.getElementById('dcs-cmp-sel');  if (sel)    sel.value = '';
-  var del    = document.getElementById('dcs-cmp-del');  if (del)    del.style.display = 'none';
+  cmpSetDupDeleteButtons('dcs', false);
   restoreDcsState({});
   delete _dirtyScreens.dcs;
   cmpSetStatus('dcs', '');
+}
+
+async function dcsCmpDuplicate() {
+  return cmpDuplicateComponent({
+    stateKey: 'dcs',
+    uiKey: 'dcs',
+    inputId: 'dcs-cmp-name',
+    idPrefix: 'dcs',
+    collectState: collectDcsState
+  });
 }
 
 async function dcsCmpDelete() {

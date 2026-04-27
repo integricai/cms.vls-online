@@ -4,20 +4,26 @@
     <!-- ── Saved components ── -->
     <div style="background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:2px;">
       <div class="section-label" style="margin:0 0 10px">Saved Components</div>
-      <div style="display:flex;gap:6px;margin-bottom:10px;">
-        <select id="rch-cmp-sel" onchange="reachCmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none;background:#fff;color:var(--text);">
+      <div style="margin-bottom:10px;">
+        <select id="rch-cmp-sel" onchange="reachCmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;outline:none;background:#fff;color:var(--text);">
           <option value="">— select to load —</option>
         </select>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
         <button class="btn-sm" onclick="reachCmpNew()">+ New</button>
+        <button class="btn-sm" id="rch-cmp-dup" style="display:none" onclick="reachCmpDuplicate()">Duplicate</button>
         <button class="btn-sm danger" id="rch-cmp-del" style="display:none" onclick="reachCmpDelete()">Delete</button>
       </div>
       <div class="field" style="margin-bottom:10px;">
         <label>Component name</label>
         <input type="text" id="rch-cmp-name" placeholder="e.g. Global Reach — Homepage">
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
         <span id="rch-cmp-status" style="font-size:12px;"></span>
-        <button class="btn-gen" style="width:auto;padding:8px 20px;margin:0" onclick="reachCmpSave()">Save Component</button>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+          <button class="btn-gen" style="width:auto;padding:8px 20px;margin:0" onclick="reachCmpSave()">Save Component</button>
+          <button class="btn-gen" style="width:auto;padding:8px 20px;margin:0" onclick="generateReach()">Generate HTML</button>
+        </div>
       </div>
     </div>
 
@@ -110,8 +116,6 @@
     </div>
     <div id="rch-regions" class="block-list"></div>
     <button class="btn-add-block" style="margin-top:6px" onclick="reachAddRegion()">+ Add region</button>
-
-    <button class="btn-gen" style="margin-top:8px" onclick="generateReach()">Generate HTML</button>
 
   </div></div>
   <div class="output-panel">
