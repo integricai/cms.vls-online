@@ -319,6 +319,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
     <div class="nav-tab" id="nav-forms" onclick="toggleNavDd('forms',event)">Forms <span class="nav-dd-arrow">▾</span></div>
     <div class="nav-dd-menu" id="nav-forms-menu">
       <div class="nav-dd-item" id="nav-form" onclick="switchScreen('form')">Contact Form</div>
+      <div class="nav-dd-item" id="nav-report-issue" onclick="switchScreen('report-issue')">Report an Issue</div>
     </div>
   </div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
@@ -391,6 +392,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
         <div class="home-tile-desc">Reusable forms and capture components for course and site enquiries.</div>
         <div class="home-tile-links">
           <button class="home-tile-link" onclick="switchScreen('form')">Contact Form</button>
+          <button class="home-tile-link" onclick="switchScreen('report-issue')">Report an Issue</button>
         </div>
       </div>
     </div>
@@ -997,7 +999,7 @@ var _HOME_SCREENS   = ['hero', 'about-us'];
 var _PAGE_SCREENS   = ['intro', 'desc', 'tabs', 'team'];
 var _SHARED_SCREENS = ['faq', 'events', 'programs', 'feature-cards', 'feature-cards-2'];
 var _COMMON_SECTION_SCREENS = ['steps-section', 'dcs', 'dcs2', 'dcs3', 'reach', 'policy'];
-var _FORM_SCREENS   = ['form'];
+var _FORM_SCREENS   = ['form', 'report-issue'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
@@ -1023,6 +1025,7 @@ var _screenFiles = {
   reach:           '/screens/reach.html',
   'contact-footer':'/screens/contact-footer.html',
   policy:          '/screens/policy.html',
+  'report-issue':  '/screens/report-issue.html',
 };
 var _loadedScreens = {};
 
@@ -1105,6 +1108,7 @@ async function switchScreen(name) {
   if (name === 'footer')  footerOnOpen();
   if (name === 'programs') programOnOpen();
   if (name === 'form')    formOnOpen();
+  if (name === 'report-issue' && !_loadedScreens._riInit) { _loadedScreens._riInit = true; riOnOpen(); }
   if (name === 'header')  headerOnOpen();
 }
 
@@ -8150,6 +8154,391 @@ function polBuildBlock(b, accent) {
   }
 
   return '';
+}
+
+// ── Report an Issue Form ─────────────────────────────────────────
+
+function riOnOpen() {
+  riAddStep({ title: 'Submit your report',      desc: 'Fill in your details, select your course, and describe the issue clearly.' });
+  riAddStep({ title: 'We review your submission', desc: 'Our support team receives your report and begins investigating within 1 working day.' });
+  riAddStep({ title: 'We get back to you',       desc: 'We\'ll contact you via your registered email with a resolution or further questions.' });
+  riAddCard({ icon: '⚡', title: 'Response within 1 working day', desc: 'We aim to acknowledge all reports within 24 hours.' });
+  riAddCard({ icon: '🔒', title: 'Your data is kept private',    desc: 'All reports are handled confidentially in line with our Privacy Policy.' });
+  riAddCard({ icon: '✅', title: 'Every issue is taken seriously', desc: 'No issue is too small — we\'re here to help you succeed.' });
+  riAddContactItem('office@vls-online.com');
+  riAddContactItem('WhatsApp: +44 7446 426261');
+  riAddQual('ACCA'); riAddQual('CIMA'); riAddQual('CMA & CIA'); riAddQual('Other');
+  riAddIssue('Video / audio not loading');
+  riAddIssue('Quiz or assignment issue');
+  riAddIssue('Certificate not received');
+  riAddIssue('Account or login problem');
+  riAddIssue('Payment or billing issue');
+  riAddIssue('Technical error / bug');
+  riAddIssue('Other');
+  riLoad();
+}
+
+// ── RI save / load ───────────────────────────────────────────────
+
+async function riSave() {
+  cmsSetStatus('ri', 'Saving…', 'var(--muted)');
+  var state = collectRiState();
+  try {
+    var r = await fetch('/api/publish-report-config', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: state })
+    });
+    var d = await r.json();
+    if (r.ok) { riSetStatus('✓ Saved', '#16a34a'); setTimeout(function(){ riSetStatus(''); }, 3000); generateReport(); }
+    else { riSetStatus('✗ ' + (d.error || 'Save failed'), '#e63946'); alert('Save failed: ' + (d.error || 'Unknown error')); }
+  } catch(e) { riSetStatus('✗ Save failed', '#e63946'); }
+}
+
+async function riLoad() {
+  try {
+    var r = await fetch('/api/publish-report-config');
+    if (!r.ok) return;
+    var d = await r.json();
+    if (d && d.config) {
+      restoreRiState(d.config);
+      generateReport();
+    }
+  } catch(_) {}
+}
+
+function riSetStatus(msg, color) {
+  var el = document.getElementById('ri-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = color || 'var(--muted)';
+}
+
+// ── RI form helpers ──────────────────────────────────────────────
+
+function riAddStep(data) {
+  var list = document.getElementById('ri-steps'); if (!list) return;
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:8px 12px;display:flex;flex-direction:column;gap:5px;">'
+    + '<input type="text" class="ri-step-title" value="' + xA((data && data.title)||'') + '" placeholder="Step title" style="font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:600;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<input type="text" class="ri-step-desc" value="' + xA((data && data.desc)||'') + '" placeholder="Step description" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<button class="btn-sm danger" style="align-self:flex-end" onclick="this.closest(\'.block-item\').remove()">Remove</button>'
+    + '</div>';
+  list.appendChild(div);
+}
+
+function riAddCard(data) {
+  var list = document.getElementById('ri-cards'); if (!list) return;
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:8px 12px;display:flex;gap:8px;align-items:flex-start;">'
+    + '<input type="text" class="ri-card-icon" value="' + xA((data && data.icon)||'⚡') + '" style="width:48px;font-size:20px;padding:4px;border:1px solid var(--border);border-radius:5px;text-align:center;">'
+    + '<div style="flex:1;display:flex;flex-direction:column;gap:4px;">'
+    + '<input type="text" class="ri-card-title" value="' + xA((data && data.title)||'') + '" placeholder="Card title" style="font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:600;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<input type="text" class="ri-card-desc"  value="' + xA((data && data.desc)||'')  + '" placeholder="Card description" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '</div>'
+    + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button>'
+    + '</div>';
+  list.appendChild(div);
+}
+
+function riAddContactItem(text) {
+  var list = document.getElementById('ri-contact-items'); if (!list) return;
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:6px 10px;display:flex;gap:8px;align-items:center;">'
+    + '<input type="text" class="ri-contact-item" value="' + xA(text||'') + '" placeholder="e.g. office@vls-online.com" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button>'
+    + '</div>';
+  list.appendChild(div);
+}
+
+function riAddQual(text) {
+  var list = document.getElementById('ri-quals'); if (!list) return;
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:6px 10px;display:flex;gap:8px;align-items:center;">'
+    + '<input type="text" class="ri-qual-text" value="' + xA(text||'') + '" placeholder="e.g. ACCA" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button>'
+    + '</div>';
+  list.appendChild(div);
+}
+
+function riAddIssue(text) {
+  var list = document.getElementById('ri-issues'); if (!list) return;
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:6px 10px;display:flex;gap:8px;align-items:center;">'
+    + '<input type="text" class="ri-issue-text" value="' + xA(text||'') + '" placeholder="e.g. Video not loading" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button>'
+    + '</div>';
+  list.appendChild(div);
+}
+
+// ── RI state ─────────────────────────────────────────────────────
+
+function riGet(id) { return document.getElementById(id) || {}; }
+function riColor(cpId, hexId, val, fb) {
+  var c = cmsSafeHex(val, fb);
+  var cp = document.getElementById(cpId); if (cp) cp.value = c;
+  var hx = document.getElementById(hexId); if (hx) hx.value = c;
+}
+
+function collectRiState() {
+  return {
+    recipients:    (riGet('ri-recipients').value || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean),
+    heroBg:        riGet('ri-hero-bg-hex').value    || '#0d1f3c',
+    heroEyebrow:   riGet('ri-eyebrow').value        || '',
+    heroTitle:     riGet('ri-title').value          || '',
+    heroDesc:      riGet('ri-desc').value           || '',
+    sidebarW:      riGet('ri-sidebar-w').value      || '300',
+    sidebarBg:     riGet('ri-sidebar-bg-hex').value || '#f8fafc',
+    hiwEyebrow:    riGet('ri-hiw-eyebrow').value    || '',
+    hiwHeading:    riGet('ri-hiw-heading').value    || '',
+    hiwDesc:       riGet('ri-hiw-desc').value       || '',
+    contactTitle:  riGet('ri-contact-title').value  || '',
+    contactBg:     riGet('ri-contact-bg-hex').value || '#0d1f3c',
+    accent:        riGet('ri-accent-hex').value     || '#204280',
+    btnText:       riGet('ri-btn-text').value       || 'Submit Report →',
+    steps:    Array.from(document.querySelectorAll('#ri-steps .block-item')).map(function(el){
+      return { title:(el.querySelector('.ri-step-title')||{}).value||'', desc:(el.querySelector('.ri-step-desc')||{}).value||'' };
+    }),
+    cards:    Array.from(document.querySelectorAll('#ri-cards .block-item')).map(function(el){
+      return { icon:(el.querySelector('.ri-card-icon')||{}).value||'', title:(el.querySelector('.ri-card-title')||{}).value||'', desc:(el.querySelector('.ri-card-desc')||{}).value||'' };
+    }),
+    contactItems: Array.from(document.querySelectorAll('#ri-contact-items .ri-contact-item')).map(function(i){ return i.value; }).filter(Boolean),
+    qualifications: Array.from(document.querySelectorAll('#ri-quals .ri-qual-text')).map(function(i){ return i.value.trim(); }).filter(Boolean),
+    issueTypes:     Array.from(document.querySelectorAll('#ri-issues .ri-issue-text')).map(function(i){ return i.value.trim(); }).filter(Boolean)
+  };
+}
+
+function restoreRiState(d) {
+  if (!d) return;
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
+  if (d.recipients) set('ri-recipients', Array.isArray(d.recipients) ? d.recipients.join(', ') : d.recipients);
+  set('ri-eyebrow',       d.heroEyebrow  || '');
+  set('ri-title',         d.heroTitle    || '');
+  set('ri-desc',          d.heroDesc     || '');
+  set('ri-sidebar-w',     d.sidebarW     || '300');
+  set('ri-hiw-eyebrow',   d.hiwEyebrow   || '');
+  set('ri-hiw-heading',   d.hiwHeading   || '');
+  set('ri-hiw-desc',      d.hiwDesc      || '');
+  set('ri-contact-title', d.contactTitle || '');
+  set('ri-btn-text',      d.btnText      || 'Submit Report →');
+  riColor('ri-hero-bg-cp',    'ri-hero-bg-hex',    d.heroBg,    '#0d1f3c');
+  riColor('ri-sidebar-bg-cp', 'ri-sidebar-bg-hex', d.sidebarBg, '#f8fafc');
+  riColor('ri-contact-bg-cp', 'ri-contact-bg-hex', d.contactBg, '#0d1f3c');
+  riColor('ri-accent-cp',     'ri-accent-hex',     d.accent,    '#204280');
+  var sl = document.getElementById('ri-steps');         if (sl) { sl.innerHTML = ''; (d.steps        || []).forEach(function(s){ riAddStep(s); }); }
+  var cl = document.getElementById('ri-cards');         if (cl) { cl.innerHTML = ''; (d.cards        || []).forEach(function(c){ riAddCard(c); }); }
+  var il = document.getElementById('ri-contact-items'); if (il) { il.innerHTML = ''; (d.contactItems  || []).forEach(function(t){ riAddContactItem(t); }); }
+  var ql = document.getElementById('ri-quals');         if (ql) { ql.innerHTML = ''; (d.qualifications|| []).forEach(function(t){ riAddQual(t); }); }
+  var tl = document.getElementById('ri-issues');        if (tl) { tl.innerHTML = ''; (d.issueTypes    || []).forEach(function(t){ riAddIssue(t); }); }
+}
+
+// ── RI HTML generator ────────────────────────────────────────────
+
+function generateReport() {
+  var d      = collectRiState();
+  var uid    = 'ri' + Date.now().toString(36);
+  var heroBg = cmsSafeHex(d.heroBg,    '#0d1f3c');
+  var sideBg = cmsSafeHex(d.sidebarBg, '#f8fafc');
+  var ctcBg  = cmsSafeHex(d.contactBg, '#0d1f3c');
+  var acc    = cmsSafeHex(d.accent,    '#204280');
+  var sideW  = cmsClampInt(d.sidebarW, 300, 200, 420);
+  var recips = JSON.stringify(d.recipients || ['office@vls-online.com']);
+
+  // ── Hero ──
+  var heroHtml = '<div style="background:' + xA(heroBg) + ';padding:48px 48px 40px;">'
+    + (d.heroEyebrow ? '<p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:' + xA(acc) + ';margin:0 0 10px;">' + xH(d.heroEyebrow) + '</p>' : '')
+    + '<h1 style="font-family:\'Poppins\',sans-serif;font-size:36px;font-weight:700;color:#ffffff;margin:0 0 14px;">' + xH(d.heroTitle || '') + '</h1>'
+    + (d.heroDesc ? '<p style="font-family:\'Poppins\',sans-serif;font-size:15px;color:#94a3b8;line-height:1.7;margin:0;max-width:600px;">' + xH(d.heroDesc) + '</p>' : '')
+    + '</div>';
+
+  // ── Steps ──
+  var stepsHtml = (d.steps || []).map(function(s, i) {
+    return '<div style="display:flex;gap:14px;margin-bottom:20px;">'
+      + '<span style="width:32px;height:32px;min-width:32px;border-radius:50%;background:' + xA(heroBg) + ';color:#fff;font-size:14px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;font-family:\'Poppins\',sans-serif;">' + (i+1) + '</span>'
+      + '<div><p style="font-family:\'Poppins\',sans-serif;font-weight:600;font-size:14px;color:#1a1a1a;margin:0 0 4px;">' + xH(s.title) + '</p>'
+      + '<p style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#6b7280;margin:0;line-height:1.5;">' + xH(s.desc) + '</p></div>'
+      + '</div>';
+  }).join('');
+
+  // ── Feature cards ──
+  var cardsHtml = (d.cards || []).map(function(c) {
+    return '<div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;background:#fff;">'
+      + '<span style="font-size:22px;line-height:1;flex-shrink:0;margin-top:1px;">' + xH(c.icon || '') + '</span>'
+      + '<div><p style="font-family:\'Poppins\',sans-serif;font-weight:600;font-size:14px;color:#1a1a1a;margin:0 0 4px;">' + xH(c.title || '') + '</p>'
+      + '<p style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#6b7280;margin:0;line-height:1.4;">' + xH(c.desc || '') + '</p></div>'
+      + '</div>';
+  }).join('');
+
+  // ── Contact box ──
+  var contactItemsHtml = (d.contactItems || []).map(function(t) {
+    return '<li style="font-family:\'Poppins\',sans-serif;font-size:13px;color:#93c5fd;margin-bottom:5px;list-style:disc;margin-left:16px;">' + xH(t) + '</li>';
+  }).join('');
+  var contactBoxHtml = d.contactTitle ? '<div style="background:' + xA(ctcBg) + ';border-radius:10px;padding:18px 20px;margin-top:16px;">'
+    + '<p style="font-family:\'Poppins\',sans-serif;font-weight:700;font-size:14px;color:#ffffff;margin:0 0 8px;">' + xH(d.contactTitle) + '</p>'
+    + '<ul style="margin:0;padding:0;">' + contactItemsHtml + '</ul>'
+    + '</div>' : '';
+
+  // ── Sidebar ──
+  var sideHtml = '<div style="width:' + sideW + 'px;flex-shrink:0;background:' + xA(sideBg) + ';border-right:1px solid #e5e7eb;padding:36px 28px;">'
+    + (d.hiwEyebrow ? '<p style="font-family:\'Poppins\',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#94a3b8;margin:0 0 8px;">' + xH(d.hiwEyebrow) + '</p>' : '')
+    + (d.hiwHeading ? '<h2 style="font-family:\'Poppins\',sans-serif;font-size:20px;font-weight:700;color:#1a1a1a;margin:0 0 14px;line-height:1.3;">' + xH(d.hiwHeading) + '</h2>' : '')
+    + (d.hiwDesc    ? '<p style="font-family:\'Poppins\',sans-serif;font-size:14px;color:#6b7280;margin:0 0 24px;line-height:1.6;">' + xH(d.hiwDesc) + '</p>' : '')
+    + stepsHtml
+    + (cardsHtml ? '<div style="margin-top:24px;">' + cardsHtml + '</div>' : '')
+    + contactBoxHtml
+    + '</div>';
+
+  // ── Qualification radios ──
+  var quals = d.qualifications || [];
+  var qualRows = [];
+  for (var qi = 0; qi < quals.length; qi += 2) {
+    var cells = [quals[qi], quals[qi+1]].filter(Boolean).map(function(q) {
+      return '<label id="' + uid + '-ql-' + xA(q.replace(/\s/g,'-')) + '" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;font-family:\'Poppins\',sans-serif;font-size:14px;color:#374151;flex:1;min-width:0;">'
+        + '<input type="radio" name="' + uid + '-qual" value="' + xA(q) + '" style="accent-color:' + xA(acc) + ';width:16px;height:16px;"> ' + xH(q) + '</label>';
+    });
+    qualRows.push('<div style="display:flex;gap:10px;margin-bottom:8px;">' + cells.join('') + '</div>');
+  }
+  var qualHtml = qualRows.join('');
+
+  // ── Issue types dropdown ──
+  var issueOpts = '<option value="">Select the type of issue...</option>'
+    + (d.issueTypes || []).map(function(t){ return '<option value="' + xA(t) + '">' + xH(t) + '</option>'; }).join('');
+
+  // ── Form section header helper ──
+  function secHeader(icon, label) {
+    return '<div style="display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1.5px solid #e5e7eb;margin-bottom:20px;">'
+      + '<span style="font-size:20px;">' + icon + '</span>'
+      + '<span style="font-family:\'Poppins\',sans-serif;font-weight:600;font-size:15px;color:#1a1a1a;">' + label + '</span>'
+      + '</div>';
+  }
+  function fieldLabel(text, req) {
+    return '<label style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#6b7280;display:block;margin-bottom:6px;">'
+      + text + (req ? ' <span style="color:#e63946;">*</span>' : '') + '</label>';
+  }
+  var inputStyle = 'width:100%;box-sizing:border-box;font-family:\'Poppins\',sans-serif;font-size:14px;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:8px;outline:none;color:#1a1a1a;background:#fff;';
+
+  // ── Form HTML ──
+  var formHtml = '<div style="flex:1;min-width:0;padding:36px 40px;">'
+    + '<form id="' + uid + '-form" onsubmit="return false;" style="max-width:100%;">'
+    // Section: Your Details
+    + secHeader('👤', 'Your Details')
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">'
+    + '<div>' + fieldLabel('First Name', true) + '<input type="text" id="' + uid + '-fn" placeholder="e.g. Sarah" style="' + inputStyle + '" required></div>'
+    + '<div>' + fieldLabel('Last Name', true) + '<input type="text" id="' + uid + '-ln" placeholder="e.g. Mitchell" style="' + inputStyle + '" required></div>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:32px;">'
+    + '<div>' + fieldLabel('Email Address', true) + '<input type="email" id="' + uid + '-em" placeholder="sarah@email.com" style="' + inputStyle + '" required></div>'
+    + '<div>' + fieldLabel('Phone Number') + '<input type="tel" id="' + uid + '-ph" placeholder="+44 7700 000000" style="' + inputStyle + '"></div>'
+    + '</div>'
+    // Section: Course Details
+    + secHeader('📚', 'Course Details')
+    + '<div style="margin-bottom:14px;">' + fieldLabel('Your Qualification', true)
+    + '<div id="' + uid + '-quals">' + qualHtml + '</div>'
+    + '</div>'
+    + '<div style="margin-bottom:14px;">' + fieldLabel('Specific Course Name', true)
+    + '<input type="text" id="' + uid + '-cn" placeholder="e.g. ACCA FA1 — Recording Financial Transactions" style="' + inputStyle + '" required></div>'
+    + '<div style="margin-bottom:32px;">' + fieldLabel('Issue Type')
+    + '<select id="' + uid + '-it" style="' + inputStyle + 'cursor:pointer;">' + issueOpts + '</select></div>'
+    // Section: Describe the Issue
+    + secHeader('📝', 'Describe the Issue')
+    + '<div style="margin-bottom:14px;">' + fieldLabel('Message', true)
+    + '<textarea id="' + uid + '-msg" rows="6" placeholder="Please describe the issue in as much detail as possible. Include the specific course name, what you were doing when the problem occurred, and any error messages you saw." style="' + inputStyle + 'resize:vertical;" required></textarea></div>'
+    // File upload
+    + '<div style="margin-bottom:24px;">'
+    + fieldLabel('Attach a Screenshot (optional)')
+    + '<div id="' + uid + '-drop" style="border:2px dashed #e5e7eb;border-radius:10px;padding:28px 20px;text-align:center;cursor:pointer;background:#fafafa;">'
+    + '<span style="font-size:28px;display:block;margin-bottom:8px;">📎</span>'
+    + '<p style="font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:600;color:#374151;margin:0 0 4px;">Drag &amp; drop a file here</p>'
+    + '<p style="font-family:\'Poppins\',sans-serif;font-size:12px;color:#9ca3af;margin:0 0 12px;">PNG, JPG or PDF &middot; Max 5MB</p>'
+    + '<input type="file" id="' + uid + '-file" accept="image/png,image/jpeg,application/pdf" style="display:none;">'
+    + '<button type="button" onclick="document.getElementById(\'' + uid + '-file\').click()" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:8px 20px;border:1.5px solid #e5e7eb;border-radius:6px;background:#fff;cursor:pointer;">Browse files</button>'
+    + '<p id="' + uid + '-fname" style="font-family:\'Poppins\',sans-serif;font-size:12px;color:#374151;margin:8px 0 0;"></p>'
+    + '</div>'
+    + '</div>'
+    // Footer: privacy + submit
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-top:16px;border-top:1px solid #e5e7eb;">'
+    + '<p style="font-family:\'Poppins\',sans-serif;font-size:12px;color:#6b7280;margin:0;line-height:1.5;flex:1;">🔒 Your data is handled securely in line with our <a href="/privacy-policy" style="color:' + xA(acc) + ';">Privacy Policy</a></p>'
+    + '<button id="' + uid + '-btn" type="button" onclick="' + uid + 'Submit()" style="font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:700;color:#fff;background:' + xA(heroBg) + ';border:none;border-radius:8px;padding:14px 28px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:10px;">'
+    + xH(d.btnText || 'Submit Report →') + '</button>'
+    + '</div>'
+    + '<div id="' + uid + '-msg-box" style="margin-top:14px;padding:12px 16px;border-radius:8px;font-family:\'Poppins\',sans-serif;font-size:14px;display:none;"></div>'
+    + '</form>'
+    + '</div>';
+
+  // ── Submission script ──
+  var submitScript = '<script data-cfasync="false">(function(){'
+    + 'var uid="' + uid + '";'
+    + 'var recips=' + recips + ';'
+    // Drag & drop wiring
+    + 'var drop=document.getElementById(uid+"-drop");'
+    + 'var fileEl=document.getElementById(uid+"-file");'
+    + 'var fname=document.getElementById(uid+"-fname");'
+    + 'var fileData=null,fileName=null,fileType=null;'
+    + 'function handleFile(f){'
+    + '  if(!f)return;'
+    + '  if(f.size>5*1024*1024){alert("File too large (max 5MB)");return;}'
+    + '  fileName=f.name;fileType=f.type;'
+    + '  var rd=new FileReader();'
+    + '  rd.onload=function(e){fileData=e.target.result.split(",")[1];fname.textContent="✓ "+f.name;};'
+    + '  rd.readAsDataURL(f);'
+    + '}'
+    + 'fileEl.addEventListener("change",function(){handleFile(fileEl.files[0]);});'
+    + 'drop.addEventListener("dragover",function(e){e.preventDefault();drop.style.borderColor="' + acc + '";});'
+    + 'drop.addEventListener("dragleave",function(){drop.style.borderColor="#e5e7eb";});'
+    + 'drop.addEventListener("drop",function(e){e.preventDefault();drop.style.borderColor="#e5e7eb";handleFile(e.dataTransfer.files[0]);});'
+    // Radio highlight
+    + 'document.querySelectorAll("input[name=\'"+uid+"-qual\']").forEach(function(r){'
+    + '  r.addEventListener("change",function(){'
+    + '    document.querySelectorAll("input[name=\'"+uid+"-qual\']").forEach(function(x){'
+    + '      x.closest("label").style.borderColor=x.checked?"' + acc + '":"#e5e7eb";'
+    + '      x.closest("label").style.background=x.checked?"#e8f0fe":"#fff";'
+    + '    });'
+    + '  });'
+    + '});'
+    // Submit
+    + 'window["' + uid + 'Submit"]=async function(){'
+    + '  var fn=document.getElementById(uid+"-fn").value.trim();'
+    + '  var ln=document.getElementById(uid+"-ln").value.trim();'
+    + '  var em=document.getElementById(uid+"-em").value.trim();'
+    + '  var ph=document.getElementById(uid+"-ph").value.trim();'
+    + '  var ql=(document.querySelector("input[name=\'"+uid+"-qual\']:checked")||{}).value||"";'
+    + '  var cn=document.getElementById(uid+"-cn").value.trim();'
+    + '  var it=document.getElementById(uid+"-it").value;'
+    + '  var msg=document.getElementById(uid+"-msg").value.trim();'
+    + '  var msgBox=document.getElementById(uid+"-msg-box");'
+    + '  var btn=document.getElementById(uid+"-btn");'
+    + '  if(!fn||!em||!msg){msgBox.style.display="block";msgBox.style.background="#fef2f2";msgBox.style.color="#b91c1c";msgBox.textContent="Please fill in all required fields.";return;}'
+    + '  btn.disabled=true;btn.textContent="Sending…";'
+    + '  msgBox.style.display="none";'
+    + '  try{'
+    + '    var r=await fetch("/api/submit-report",{method:"POST",headers:{"Content-Type":"application/json"},'
+    + '      body:JSON.stringify({firstName:fn,lastName:ln,email:em,phone:ph,qualification:ql,courseName:cn,issueType:it,message:msg,'
+    + '        screenshotData:fileData||"",screenshotName:fileName||"",screenshotType:fileType||"",recipients:recips})});'
+    + '    var data=await r.json();'
+    + '    if(r.ok){'
+    + '      document.getElementById(uid+"-form").style.display="none";'
+    + '      msgBox.style.display="block";msgBox.style.background="#f0fdf4";msgBox.style.color="#15803d";'
+    + '      msgBox.innerHTML="<strong>✓ Report submitted!</strong><br>Thank you, "+fn+". We\'ve received your report and will be in touch within 1 working day.";'
+    + '    }else{'
+    + '      msgBox.style.display="block";msgBox.style.background="#fef2f2";msgBox.style.color="#b91c1c";'
+    + '      msgBox.textContent=data.error||"Something went wrong. Please try again.";'
+    + '      btn.disabled=false;btn.textContent="' + xA(d.btnText || 'Submit Report →') + '";'
+    + '    }'
+    + '  }catch(e){msgBox.style.display="block";msgBox.style.background="#fef2f2";msgBox.style.color="#b91c1c";msgBox.textContent="Network error. Please try again.";btn.disabled=false;btn.textContent="' + xA(d.btnText || 'Submit Report →') + '";}'
+    + '};'
+    + '})();<\/script>';
+
+  var html = '<div id="' + uid + '">'
+    + heroHtml
+    + '<div style="display:flex;align-items:flex-start;">'
+    + sideHtml
+    + formHtml
+    + '</div>'
+    + '</div>'
+    + submitScript;
+
+  var preview = document.getElementById('report-issue-preview-wrap'); if (preview) preview.innerHTML = html;
+  var code    = document.getElementById('report-issue-code');          if (code) code.textContent = html;
+  switchOut('report-issue', 'preview');
 }
 
 // ── Contact Footer (CF) ──────────────────────────────────────────
