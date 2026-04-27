@@ -8341,7 +8341,8 @@ function generateReport() {
   var ctcBg  = cmsSafeHex(d.contactBg, '#0d1f3c');
   var acc    = cmsSafeHex(d.accent,    '#204280');
   var sideW  = cmsClampInt(d.sidebarW, 300, 200, 420);
-  var recips = JSON.stringify(d.recipients || ['office@vls-online.com']);
+  var recips   = JSON.stringify(d.recipients || ['office@vls-online.com']);
+  var apiBase  = window.location.origin; // e.g. https://cms.vls-online.com
 
   // ── Hero ──
   var heroHtml = '<div class="ri-hero" style="background:' + xA(heroBg) + ';">'
@@ -8510,7 +8511,7 @@ function generateReport() {
     + '  btn.disabled=true;btn.textContent="Sending…";'
     + '  msgBox.style.display="none";'
     + '  try{'
-    + '    var r=await fetch("/api/submit-report",{method:"POST",headers:{"Content-Type":"application/json"},'
+    + '    var r=await fetch("' + apiBase + '/api/submit-report",{method:"POST",headers:{"Content-Type":"application/json"},'
     + '      body:JSON.stringify({firstName:fn,lastName:ln,email:em,phone:ph,qualification:ql,courseName:cn,issueType:it,message:msg,'
     + '        screenshotData:fileData||"",screenshotName:fileName||"",screenshotType:fileType||"",recipients:recips})});'
     + '    var data=await r.json();'
