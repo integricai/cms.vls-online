@@ -971,7 +971,7 @@ function cmsParagraphControlsHtml(value, defaults) {
 }
 function buildScrollHelperScript(uid) {
   return '<script data-cfasync="false">(function(){'
-    + 'window.' + uid + 'Scroll=function(sel){'
+    + 'window[' + JSON.stringify(String(uid || '') + 'Scroll') + ']=function(sel){'
     + 'if(!sel)return false;'
     + 'var el=null;'
     + 'try{el=document.querySelector(sel);}catch(e){}'
@@ -10806,8 +10806,8 @@ function generateHero2() {
       var btnStyle = c.style === 'outlined'
         ? 'background:transparent;border:1.5px solid ' + xA(c.bc||'#ffffff') + ';'
         : 'background:' + xA(c.bg||'#1e3a5f') + ';border:1.5px solid ' + xA(c.bg||'#1e3a5f') + ';';
-      var scrollAttr = c.scroll ? ' onclick="return ' + uid + 'Scroll(' + JSON.stringify(String(c.scroll)).replace(/"/g, '&quot;') + ')"' : '';
-      return '<a href="' + xA(c.url||'#') + '"' + scrollAttr + ' style="font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:600;color:' + xA(c.tc||'#ffffff') + ';text-decoration:none;padding:12px 24px;border-radius:8px;' + btnStyle + 'display:inline-block;white-space:nowrap;">' + xH(c.text||'') + '</a>';
+      var scrollAttr = c.scroll ? ' onclick="return window[' + JSON.stringify(String(uid || '') + 'Scroll').replace(/"/g, '&quot;') + '](' + JSON.stringify(String(c.scroll)).replace(/"/g, '&quot;') + ')"' : '';
+      return '<a href="' + xA(c.scroll ? '#' : (c.url||'#')) + '"' + scrollAttr + ' style="font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:600;color:' + xA(c.tc||'#ffffff') + ';text-decoration:none;padding:12px 24px;border-radius:8px;' + btnStyle + 'display:inline-block;white-space:nowrap;">' + xH(c.text||'') + '</a>';
     }).join('\n    ');
     leftParts.push('<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:36px;">\n    ' + ctaItems + '\n  </div>');
   }
@@ -10947,8 +10947,8 @@ function generateHero() {
       '<div class="' + uid + '-sl">' + xH(s.l) + '</div>' +
       '</div>';
   }).join('');
-  var b1ScrollAttr = b1s ? ' onclick="return ' + uid + 'Scroll(' + JSON.stringify(String(b1s)).replace(/"/g, '&quot;') + ')"' : '';
-  var b2ScrollAttr = b2s ? ' onclick="return ' + uid + 'Scroll(' + JSON.stringify(String(b2s)).replace(/"/g, '&quot;') + ')"' : '';
+  var b1ScrollAttr = b1s ? ' onclick="return window[' + JSON.stringify(String(uid || '') + 'Scroll').replace(/"/g, '&quot;') + '](' + JSON.stringify(String(b1s)).replace(/"/g, '&quot;') + ')"' : '';
+  var b2ScrollAttr = b2s ? ' onclick="return window[' + JSON.stringify(String(uid || '') + 'Scroll').replace(/"/g, '&quot;') + '](' + JSON.stringify(String(b2s)).replace(/"/g, '&quot;') + ')"' : '';
 
   var h2Size = Math.round(h1Size * 0.5);
 
@@ -12254,8 +12254,8 @@ function buildHeroHtml(data) {
     var label = cmsNormalizeTextData(stat.l, CMS_PARAGRAPH_DEFAULTS.heroStatLabel);
     return '<div class="' + uid + '-stat"><div class="' + uid + '-sv" style="' + cmsTextStyle(value, CMS_PARAGRAPH_DEFAULTS.heroStatValue) + '">' + xH(value.text) + '</div><div class="' + uid + '-sl" style="' + cmsTextStyle(label, CMS_PARAGRAPH_DEFAULTS.heroStatLabel) + '">' + xH(label.text) + '</div></div>';
   }).join('');
-  var b1ScrollAttr = data.b1s ? ' onclick="return ' + uid + 'Scroll(' + JSON.stringify(String(data.b1s)).replace(/"/g, '&quot;') + ')"' : '';
-  var b2ScrollAttr = data.b2s ? ' onclick="return ' + uid + 'Scroll(' + JSON.stringify(String(data.b2s)).replace(/"/g, '&quot;') + ')"' : '';
+  var b1ScrollAttr = data.b1s ? ' onclick="return window[' + JSON.stringify(String(uid || '') + 'Scroll').replace(/"/g, '&quot;') + '](' + JSON.stringify(String(data.b1s)).replace(/"/g, '&quot;') + ')"' : '';
+  var b2ScrollAttr = data.b2s ? ' onclick="return window[' + JSON.stringify(String(uid || '') + 'Scroll').replace(/"/g, '&quot;') + '](' + JSON.stringify(String(data.b2s)).replace(/"/g, '&quot;') + ')"' : '';
   var b1Text = cmsNormalizeTextData(data.b1t, CMS_PARAGRAPH_DEFAULTS.heroButton);
   var b2Text = cmsNormalizeTextData(data.b2t, CMS_PARAGRAPH_DEFAULTS.heroButtonAlt);
   var css = '<style>'
