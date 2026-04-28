@@ -4333,6 +4333,33 @@ function faqAnswerPlainText(f) {
   return parts.join(' ');
 }
 
+function faqPreviewToggle(answerId, questionId) {
+  var answer = document.getElementById(answerId);
+  var question = document.getElementById(questionId);
+  var root = question ? question.closest('[data-faq-preview-root="1"]') : null;
+  var isOpen = !!(answer && answer.style.display === 'block');
+
+  if (root) {
+    root.querySelectorAll('[data-faq-preview-answer="1"]').forEach(function(el) {
+      el.style.display = 'none';
+    });
+    root.querySelectorAll('[data-faq-preview-question="1"]').forEach(function(el) {
+      el.style.color = el.getAttribute('data-base-color') || '#1a1a1a';
+    });
+    root.querySelectorAll('[data-faq-preview-button="1"] svg').forEach(function(svg) {
+      svg.style.transform = '';
+    });
+  }
+
+  if (!isOpen) {
+    if (answer) answer.style.display = 'block';
+    if (question) question.style.color = '#534AB7';
+    var btn = question ? question.closest('[data-faq-preview-button="1"]') : null;
+    var icon = btn ? btn.querySelector('svg') : null;
+    if (icon) icon.style.transform = ' rotate(180deg)';
+  }
+}
+
 function renderFaqPreview(items) {
   var wrap = document.getElementById('faq-preview-wrap');
   if (!wrap) return;
@@ -4340,27 +4367,18 @@ function renderFaqPreview(items) {
     wrap.innerHTML = '<div style="text-align:center;padding:40px 0;font-size:13px;color:var(--muted);">Add FAQ items and click Generate to preview.</div>';
     return;
   }
-  var html = '<div style="width:100%;font-family:Poppins,sans-serif;">';
+  var html = '<div data-faq-preview-root="1" style="width:100%;font-family:Poppins,sans-serif;">';
   items.forEach(function(f, i) {
     var bid = 'fqprev' + i;
     var qid = 'fqprevq' + i;
     var qColor = cmsSafeHex(cmsNormalizeTextData(f.question, CMS_PARAGRAPH_DEFAULTS.faqQuestion).color, '#1a1a1a');
-    var activeColor = '#534AB7';
-    html += '<div style="border-bottom:1.5px solid #e5e7eb;' + (i === 0 ? 'border-top:1.5px solid #e5e7eb;' : '') + '">';
-    html += '<button style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;background:none;border:none;cursor:pointer;font-family:Poppins,sans-serif;font-size:16px;font-weight:600;color:#1a1a1a;transition:color .2s ease;"'
-          + ' onclick="(function(btn){'
-          + 'var a=document.getElementById(\'' + bid + '\');'
-          + 'var q=document.getElementById(\'' + qid + '\');'
-          + 'var svg=btn.querySelector(\'svg\');'
-          + 'var open=a.style.display===\'block\';'
-          + 'a.style.display=open?\'none\':\'block\';'
-          + 'svg.style.transform=open?\'\':\' rotate(180deg)\';'
-          + 'if(q)q.style.color=open?\'' + qColor + '\':\'' + activeColor + '\';'
-          + '})(this)">'
-          + '<span id="' + qid + '" style="text-align:left;transition:color .2s ease;' + cmsTextStyle(f.question, CMS_PARAGRAPH_DEFAULTS.faqQuestion) + '">' + xH(cmsTextContent(f.question)) + '</span>'
+    html += '<div data-faq-preview-item="1" style="border-bottom:1.5px solid #e5e7eb;' + (i === 0 ? 'border-top:1.5px solid #e5e7eb;' : '') + '">';
+    html += '<button data-faq-preview-button="1" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;background:none;border:none;cursor:pointer;font-family:Poppins,sans-serif;font-size:16px;font-weight:600;color:#1a1a1a;transition:color .2s ease;"'
+          + ' onclick="faqPreviewToggle(\'' + bid + '\',\'' + qid + '\')">'
+          + '<span id="' + qid + '" data-faq-preview-question="1" data-base-color="' + xA(qColor) + '" style="text-align:left;transition:color .2s ease;' + cmsTextStyle(f.question, CMS_PARAGRAPH_DEFAULTS.faqQuestion) + '">' + xH(cmsTextContent(f.question)) + '</span>'
           + '<svg style="width:18px;height:18px;flex-shrink:0;transition:transform .2s;" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>'
           + '</button>';
-    html += '<div id="' + bid + '" style="display:none;padding:0 0 16px;">' + faqAnswerInnerHtml(f) + '</div>';
+    html += '<div id="' + bid + '" data-faq-preview-answer="1" style="display:none;padding:0 0 16px;">' + faqAnswerInnerHtml(f) + '</div>';
     html += '</div>';
   });
   html += '</div>';
