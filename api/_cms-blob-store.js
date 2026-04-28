@@ -122,7 +122,7 @@ async function writeToGist(blobFile, doc) {
     var errText = await resp.text().catch(function() { return ''; });
     throw new Error('Gist write failed: ' + resp.status + ' ' + errText);
   }
-}
+}          
 
 // ── Unified read / write ──────────────────────────────────────────
 
