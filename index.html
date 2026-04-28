@@ -4343,16 +4343,21 @@ function renderFaqPreview(items) {
   var html = '<div style="width:100%;font-family:Poppins,sans-serif;">';
   items.forEach(function(f, i) {
     var bid = 'fqprev' + i;
+    var qid = 'fqprevq' + i;
+    var qColor = cmsSafeHex(cmsNormalizeTextData(f.question, CMS_PARAGRAPH_DEFAULTS.faqQuestion).color, '#1a1a1a');
+    var activeColor = '#534AB7';
     html += '<div style="border-bottom:1.5px solid #e5e7eb;' + (i === 0 ? 'border-top:1.5px solid #e5e7eb;' : '') + '">';
-    html += '<button style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;background:none;border:none;cursor:pointer;font-family:Poppins,sans-serif;font-size:16px;font-weight:600;color:#1a1a1a;"'
+    html += '<button style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;background:none;border:none;cursor:pointer;font-family:Poppins,sans-serif;font-size:16px;font-weight:600;color:#1a1a1a;transition:color .2s ease;"'
           + ' onclick="(function(btn){'
           + 'var a=document.getElementById(\'' + bid + '\');'
+          + 'var q=document.getElementById(\'' + qid + '\');'
           + 'var svg=btn.querySelector(\'svg\');'
           + 'var open=a.style.display===\'block\';'
           + 'a.style.display=open?\'none\':\'block\';'
           + 'svg.style.transform=open?\'\':\' rotate(180deg)\';'
+          + 'if(q)q.style.color=open?\'' + qColor + '\':\'' + activeColor + '\';'
           + '})(this)">'
-          + '<span style="text-align:left;' + cmsTextStyle(f.question, CMS_PARAGRAPH_DEFAULTS.faqQuestion) + '">' + xH(cmsTextContent(f.question)) + '</span>'
+          + '<span id="' + qid + '" style="text-align:left;transition:color .2s ease;' + cmsTextStyle(f.question, CMS_PARAGRAPH_DEFAULTS.faqQuestion) + '">' + xH(cmsTextContent(f.question)) + '</span>'
           + '<svg style="width:18px;height:18px;flex-shrink:0;transition:transform .2s;" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>'
           + '</button>';
     html += '<div id="' + bid + '" style="display:none;padding:0 0 16px;">' + faqAnswerInnerHtml(f) + '</div>';
@@ -4396,6 +4401,8 @@ function buildFaqCode(items) {
   L.push('.' + uid + '-item:first-child{border-top:1.5px solid #e5e7eb;}');
   L.push('.' + uid + '-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;background:none;border:none;cursor:pointer;font-family:Poppins,sans-serif;font-size:16px;font-weight:600;color:#1a1a1a;}');
   L.push('.' + uid + '-btn:hover{color:#534AB7;}');
+  L.push('.' + uid + '-q{transition:color .2s ease;}');
+  L.push('.' + uid + '-btn[aria-expanded="true"] .' + uid + '-q{color:#534AB7 !important;}');
   L.push('.' + uid + '-ico{width:18px;height:18px;flex-shrink:0;transition:transform .2s;stroke:#534AB7;fill:none;stroke-width:2.5;}');
   L.push('.' + uid + '-btn[aria-expanded="true"] .' + uid + '-ico{transform:rotate(180deg);}');
   L.push('.' + uid + '-ans{display:none;padding:0 0 16px;}');
@@ -4406,7 +4413,7 @@ function buildFaqCode(items) {
   items.forEach(function(f) {
     L.push('  <div class="' + uid + '-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">');
     L.push('    <button class="' + uid + '-btn" aria-expanded="false" onclick="' + uid + 'T(this)">');
-    L.push('      <span itemprop="name" style="' + cmsTextStyle(f.question, CMS_PARAGRAPH_DEFAULTS.faqQuestion) + '">' + xH(cmsTextContent(f.question)) + '</span>');
+    L.push('      <span class="' + uid + '-q" itemprop="name" style="' + cmsTextStyle(f.question, CMS_PARAGRAPH_DEFAULTS.faqQuestion) + '">' + xH(cmsTextContent(f.question)) + '</span>');
     L.push('      <svg class="' + uid + '-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>');
     L.push('    </button>');
     L.push('    <div class="' + uid + '-ans" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">');
