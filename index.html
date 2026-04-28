@@ -10652,6 +10652,7 @@ function h2AddCta(data) {
     + '</select>'
     + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button></div>'
     + '<input type="text" class="h2-cta-url" value="' + xA((data&&data.url)||'#') + '" placeholder="URL" style="font-family:\'Poppins\',sans-serif;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<div class="field" style="margin:0"><label style="font-size:10px">Scroll to class/ID <span class="hint">(overrides URL, e.g. .course-list or #courses)</span></label><input type="text" class="h2-cta-scroll" value="' + xA((data&&data.scroll)||'') + '" placeholder=".my-section or #my-section" style="font-family:\'Poppins\',sans-serif;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;"></div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">'
     + '<div class="field" style="margin:0"><label style="font-size:10px">Bg</label><div class="cms-paragraph-color-row"><input type="color" class="h2-cta-bg-cp" value="' + xA((data&&data.bg)||'#1e3a5f') + '" oninput="this.nextElementSibling.value=this.value" style="width:36px;height:30px;padding:2px;border:1px solid var(--border);border-radius:5px;cursor:pointer"><input type="text" class="h2-cta-bg" value="' + xA((data&&data.bg)||'#1e3a5f') + '" style="font-size:11px" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v"></div></div>'
     + '<div class="field" style="margin:0"><label style="font-size:10px">Text</label><div class="cms-paragraph-color-row"><input type="color" class="h2-cta-tc-cp" value="' + xA((data&&data.tc)||'#ffffff') + '" oninput="this.nextElementSibling.value=this.value" style="width:36px;height:30px;padding:2px;border:1px solid var(--border);border-radius:5px;cursor:pointer"><input type="text" class="h2-cta-tc" value="' + xA((data&&data.tc)||'#ffffff') + '" style="font-size:11px" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v"></div></div>'
@@ -10716,7 +10717,7 @@ function collectH2State() {
     body:     cmsReadParagraphField('h2-body',{ size:15, color:'#94a3b8', weight:'400', letterSpacing:0 }),
     tags:     Array.from(document.querySelectorAll('#h2-tags .h2-tag-text')).map(function(i){ return i.value; }).filter(Boolean),
     ctas:     Array.from(document.querySelectorAll('#h2-ctas .block-item')).map(function(el){
-      return { text:(el.querySelector('.h2-cta-text')||{}).value||'', url:(el.querySelector('.h2-cta-url')||{}).value||'#', style:(el.querySelector('.h2-cta-style')||{}).value||'solid', bg:(el.querySelector('.h2-cta-bg')||{}).value||'#1e3a5f', tc:(el.querySelector('.h2-cta-tc')||{}).value||'#ffffff', bc:(el.querySelector('.h2-cta-bc')||{}).value||'#ffffff' };
+      return { text:(el.querySelector('.h2-cta-text')||{}).value||'', url:(el.querySelector('.h2-cta-url')||{}).value||'#', scroll:(el.querySelector('.h2-cta-scroll')||{}).value||'', style:(el.querySelector('.h2-cta-style')||{}).value||'solid', bg:(el.querySelector('.h2-cta-bg')||{}).value||'#1e3a5f', tc:(el.querySelector('.h2-cta-tc')||{}).value||'#ffffff', bc:(el.querySelector('.h2-cta-bc')||{}).value||'#ffffff' };
     }),
     stats:    Array.from(document.querySelectorAll('#h2-stats .block-item')).map(function(el){
       return { value:(el.querySelector('.h2-stat-val')||{}).value||'', label:(el.querySelector('.h2-stat-lbl')||{}).value||'' };
@@ -10805,7 +10806,8 @@ function generateHero2() {
       var btnStyle = c.style === 'outlined'
         ? 'background:transparent;border:1.5px solid ' + xA(c.bc||'#ffffff') + ';'
         : 'background:' + xA(c.bg||'#1e3a5f') + ';border:1.5px solid ' + xA(c.bg||'#1e3a5f') + ';';
-      return '<a href="' + xA(c.url||'#') + '" style="font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:600;color:' + xA(c.tc||'#ffffff') + ';text-decoration:none;padding:12px 24px;border-radius:8px;' + btnStyle + 'display:inline-block;white-space:nowrap;">' + xH(c.text||'') + '</a>';
+      var scrollAttr = c.scroll ? ' onclick="return ' + uid + 'Scroll(' + JSON.stringify(String(c.scroll)).replace(/"/g, '&quot;') + ')"' : '';
+      return '<a href="' + xA(c.url||'#') + '"' + scrollAttr + ' style="font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:600;color:' + xA(c.tc||'#ffffff') + ';text-decoration:none;padding:12px 24px;border-radius:8px;' + btnStyle + 'display:inline-block;white-space:nowrap;">' + xH(c.text||'') + '</a>';
     }).join('\n    ');
     leftParts.push('<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:36px;">\n    ' + ctaItems + '\n  </div>');
   }
@@ -10854,7 +10856,8 @@ function generateHero2() {
     + '<div class="h2-left">' + leftParts.join('\n') + '</div>'
     + '<div class="h2-right">\n    ' + rCardsHtml + '\n  </div>'
     + '</div>'
-    + '</div>';
+    + '</div>\n'
+    + buildScrollHelperScript(uid);
 
   var preview = document.getElementById('hero2-preview-wrap'); if (preview) preview.innerHTML = html;
   var code    = document.getElementById('hero2-code');          if (code) code.textContent = html;
