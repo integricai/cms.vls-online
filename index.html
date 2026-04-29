@@ -4498,6 +4498,31 @@ function programOnOpen() {
   if (!programLoaded) loadProgramsFromGist();
 }
 
+function programTopicColorValue(topic) {
+  var firstCardColor = topic && topic.cards && topic.cards[0] ? topic.cards[0].cardBg : '';
+  return cmsSafeHex((topic && topic.topicColor) || firstCardColor, '#204280');
+}
+
+function cloneProgramTextValue(value, defaults) {
+  return cmsNormalizeTextData(value, defaults);
+}
+
+function cloneProgramParagraphValue(value, defaults) {
+  return cmsNormalizeParagraphData(value, defaults);
+}
+
+function setProgramStatus(text, color, clearMs) {
+  var status = document.getElementById('program-status');
+  if (!status) return;
+  status.textContent = text || '';
+  status.style.color = color || 'var(--muted)';
+  if (clearMs) {
+    setTimeout(function() {
+      if (status && status.textContent === text) status.textContent = '';
+    }, clearMs);
+  }
+}
+
 function loadProgramsFromGist() {
   fetch('/api/publish-programs')
     .then(function(r) { return r.json(); })
@@ -4523,9 +4548,11 @@ function loadProgramsFromGist() {
           name: s.name || '',
           expanded: false,
           topics: (s.topics || []).map(function(t) {
+            var topicColor = programTopicColorValue(t);
             return {
               id: t.id || ('pt' + (++programTopicCounter)),
               title: cmsNormalizeTextData(t.title, CMS_PARAGRAPH_DEFAULTS.programFilter),
+              topicColor: topicColor,
               expanded: false,
               cards: (t.cards || []).map(function(c) {
                 return {
@@ -4534,7 +4561,7 @@ function loadProgramsFromGist() {
                   desc:    cmsNormalizeParagraphData(c.desc, CMS_PARAGRAPH_DEFAULTS.program),
                   url:     c.url    || '',
                   cta:     cmsNormalizeTextData(c.cta, CMS_PARAGRAPH_DEFAULTS.programCta),
-                  cardBg:  c.cardBg || '#204280',
+                  cardBg:  cmsSafeHex(c.cardBg || topicColor, '#204280'),
                   badge:   c.badge  || '',
                   rating:  c.rating || '',
                   hours:   c.hours  || ''
@@ -4556,13 +4583,15 @@ function saveProgramState() {
     s.topics.forEach(function(t) {
       var titleEl = document.getElementById('pt-title-' + t.id);
       if (titleEl) t.title = cmsReadTextField(titleEl, CMS_PARAGRAPH_DEFAULTS.programFilter);
+      var colorEl = document.getElementById('pt-color-' + t.id);
+      if (colorEl) t.topicColor = cmsSafeHex(colorEl.value, programTopicColorValue(t));
       t.cards.forEach(function(c) {
         var el;
         el = document.getElementById('pc-title-'  + c.id); if (el) c.title  = cmsReadTextField(el, CMS_PARAGRAPH_DEFAULTS.programCardTitle);
         el = document.getElementById('pc-desc-'   + c.id); if (el) c.desc   = cmsReadParagraphField(el, CMS_PARAGRAPH_DEFAULTS.program);
         el = document.getElementById('pc-url-'    + c.id); if (el) c.url    = el.value;
         el = document.getElementById('pc-cta-'    + c.id); if (el) c.cta    = cmsReadTextField(el, CMS_PARAGRAPH_DEFAULTS.programCta);
-        el = document.getElementById('pc-bg-'     + c.id); if (el) c.cardBg = el.value;
+        el = document.getElementById('pc-bg-'     + c.id); if (el) c.cardBg = cmsSafeHex(el.value, t.topicColor || '#204280');
         el = document.getElementById('pc-badge-'  + c.id); if (el) c.badge  = el.value;
         el = document.getElementById('pc-rating-' + c.id); if (el) c.rating = el.value;
         el = document.getElementById('pc-hours-'  + c.id); if (el) c.hours  = el.value;
@@ -4621,7 +4650,7 @@ function addTopicToSection(sid) {
   var s = programSections.find(function(s) { return s.id === sid; });
   if (!s) return;
   var tid = 'pt' + (++programTopicCounter);
-  s.topics.push({ id: tid, title: '', expanded: true, cards: [] });
+  s.topics.push({ id: tid, title: '', topicColor: '#204280', expanded: true, cards: [] });
   renderProgramSections();
   setTimeout(function() {
     var el = document.getElementById('pt-block-' + tid);
@@ -4667,6 +4696,33 @@ function updateProgramTopicLabel(tid) {
   }
 }
 
+function updateAllTopicCardColors(sid, tid) {
+  saveProgramState();
+  var s = programSections.find(function(section) { return section.id === sid; });
+  if (!s) return;
+  var t = s.topics.find(function(topic) { return topic.id === tid; });
+  if (!t) return;
+
+  var nextColor = programTopicColorValue(t);
+  t.topicColor = nextColor;
+
+  if (!t.cards.length) {
+    setProgramStatus('Topic colour saved. Add cards to apply it.', '#534AB7', 2500);
+    return;
+  }
+
+  t.cards.forEach(function(card) {
+    card.cardBg = nextColor;
+  });
+
+  renderProgramSections();
+  setProgramStatus('Updated ' + t.cards.length + ' card' + (t.cards.length === 1 ? '' : 's') + ' in this topic.', '#534AB7', 2500);
+  setTimeout(function() {
+    var el = document.getElementById('pt-block-' + tid);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 50);
+}
+
 // ── Card CRUD ─────────────────────────────────────────────────
 
 function addCardToTopic(sid, tid) {
@@ -4676,7 +4732,7 @@ function addCardToTopic(sid, tid) {
   var t = s.topics.find(function(t) { return t.id === tid; });
   if (!t) return;
   var cid = 'pc' + (++programCardCounter);
-  t.cards.push({ id: cid, title: '', desc: '', url: '', cta: 'View Course →', cardBg: '#204280', badge: 'Full Course', rating: '', hours: '' });
+  t.cards.push({ id: cid, title: '', desc: '', url: '', cta: 'View Course →', cardBg: programTopicColorValue(t), badge: 'Full Course', rating: '', hours: '' });
   renderProgramSections();
   setTimeout(function() {
     var el = document.getElementById('pc-block-' + cid);
@@ -4767,6 +4823,7 @@ function buildProgramTopicHtml(t, tidx, topicTotal, sid) {
   var tid = t.id;
   var isExp = t.expanded;
   var cnt = t.cards.length;
+  var topicColor = programTopicColorValue(t);
   var titleDisp = t.title ? xH(t.title) : '<em style="color:var(--muted)">Untitled topic</em>';
   var topicLabel = cmsTextContent(t.title);
   titleDisp = topicLabel ? xH(topicLabel) : '<em style="color:var(--muted)">Untitled topic</em>';
@@ -4787,10 +4844,17 @@ function buildProgramTopicHtml(t, tidx, topicTotal, sid) {
     html += '<div style="margin-bottom:8px;">'
           + cmsTextFieldHtml('Topic Title', '', t.title, { id: 'pt-title-' + tid, multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.programFilter, placeholder: 'e.g. ACCA Foundation Diploma', oninput: 'updateProgramTopicLabel(\\\'' + tid + '\\\')' })
           + '</div>';
+    html += '<div style="display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:end;margin-bottom:10px;">'
+          + '<div class="field" style="margin:0"><label style="font-size:11px;">Topic card colour</label>'
+          + '<input type="color" id="pt-color-' + tid + '" value="' + xA(topicColor) + '" style="width:44px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block"></div>'
+          + '<div style="display:flex;align-items:end;gap:8px;flex-wrap:wrap;">'
+          + '<button class="btn-sm" style="background:#204280;color:#fff;" onclick="updateAllTopicCardColors(\'' + sid + '\',\'' + tid + '\')">Update All Cards</button>'
+          + '<span style="font-size:11px;color:var(--muted);line-height:1.4;">Apply this colour to every card in this topic.</span>'
+          + '</div></div>';
 
     if (t.cards.length) {
       t.cards.forEach(function(c, cidx) {
-        html += buildProgramCardHtml(c, cidx, t.cards.length, sid, tid);
+        html += buildProgramCardHtml(c, cidx, t.cards.length, sid, tid, topicColor);
       });
     } else {
       html += '<div style="text-align:center;padding:8px 0;font-size:11px;color:var(--muted);">No cards yet.</div>';
@@ -4804,7 +4868,7 @@ function buildProgramTopicHtml(t, tidx, topicTotal, sid) {
   return html;
 }
 
-function buildProgramCardHtml(c, cidx, cardTotal, sid, tid) {
+function buildProgramCardHtml(c, cidx, cardTotal, sid, tid, topicColor) {
   var cid = c.id;
   return '<div id="pc-block-' + cid + '" style="border:1px solid #e5e7eb;border-radius:5px;padding:8px 10px;margin-bottom:6px;background:#fff;">'
     + '<div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">'
@@ -4816,7 +4880,7 @@ function buildProgramCardHtml(c, cidx, cardTotal, sid, tid) {
     + '</div>'
     + '<div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:8px;margin-bottom:6px;align-items:end">'
     + '<div class="field" style="margin:0"><label style="font-size:11px;">Card colour</label>'
-    + '<input type="color" id="pc-bg-' + cid + '" value="' + xA(c.cardBg || '#204280') + '" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block"></div>'
+    + '<input type="color" id="pc-bg-' + cid + '" value="' + xA(c.cardBg || topicColor || '#204280') + '" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block"></div>'
     + '<div class="field" style="margin:0"><label style="font-size:11px;">Badge</label>'
     + '<input type="text" id="pc-badge-' + cid + '" value="' + xA(c.badge || '') + '" placeholder="e.g. Full Course" style="font-family:\'Poppins\',sans-serif;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;width:100%;"></div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
@@ -4901,22 +4965,28 @@ function performTopicCopy(fromSid, tid, toSid) {
 
   var newTopic = {
     id: 'pt' + (++programTopicCounter),
-    title: topic.title,
+    title: cloneProgramTextValue(topic.title, CMS_PARAGRAPH_DEFAULTS.programFilter),
+    topicColor: programTopicColorValue(topic),
     expanded: false,
     cards: topic.cards.map(function(c) {
-      return { id: 'pc' + (++programCardCounter), title: c.title, desc: c.desc, url: c.url, cta: c.cta };
+      return {
+        id: 'pc' + (++programCardCounter),
+        title: cloneProgramTextValue(c.title, CMS_PARAGRAPH_DEFAULTS.programCardTitle),
+        desc: cloneProgramParagraphValue(c.desc, CMS_PARAGRAPH_DEFAULTS.program),
+        url: c.url,
+        cta: cloneProgramTextValue(c.cta, CMS_PARAGRAPH_DEFAULTS.programCta),
+        cardBg: cmsSafeHex(c.cardBg || programTopicColorValue(topic), '#204280'),
+        badge: c.badge || '',
+        rating: c.rating || '',
+        hours: c.hours || ''
+      };
     })
   };
 
   toSec.topics.push(newTopic);
   renderProgramSections();
 
-  var status = document.getElementById('program-status');
-  if (status) {
-    status.textContent = 'Topic copied to \u201c' + (toSec.name || 'Untitled section') + '\u201d';
-    status.style.color = '#534AB7';
-    setTimeout(function() { if (status) status.textContent = ''; }, 3000);
-  }
+  setProgramStatus('Topic copied to \u201c' + (toSec.name || 'Untitled section') + '\u201d', '#534AB7', 3000);
 }
 
 // ── Generate per section ──────────────────────────────────────
@@ -4933,7 +5003,7 @@ function generateProgramSection(sid) {
         topicId: t.id, sectionId: s.id,
         title: c.title, desc: c.desc, url: c.url,
         cta: c.cta || cmsNormalizeTextData('View Course →', CMS_PARAGRAPH_DEFAULTS.programCta),
-        cardBg: c.cardBg || '#204280',
+        cardBg: c.cardBg || t.topicColor || '#204280',
         badge:  c.badge  || '',
         rating: c.rating || '',
         hours:  c.hours  || ''
@@ -4971,7 +5041,7 @@ function generateProgramSection(sid) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sections: programSections.map(function(s) {
       return { id: s.id, name: s.name, topics: s.topics.map(function(t) {
-        return { id: t.id, title: t.title, cards: t.cards };
+        return { id: t.id, title: t.title, topicColor: t.topicColor || '#204280', cards: t.cards };
       })};
     })})
   })
@@ -5061,7 +5131,7 @@ function buildProgramsHtml(uid, topics, allCards, sections) {
     // Card
     + '.' + uid + '-card{border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;background:#fff;transition:box-shadow .15s;}\n'
     + '.' + uid + '-card:hover{box-shadow:0 6px 24px rgba(0,0,0,.12);transform:translateY(-1px);}\n'
-    + '.' + uid + '-card-top{position:relative;height:130px;display:flex;align-items:flex-end;padding:12px 14px;}\n'
+    + '.' + uid + '-card-top{position:relative;height:80px;display:flex;align-items:flex-end;padding:12px 14px;}\n'
     + '.' + uid + '-card-badge{display:inline-block;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.22);color:#fff;font-size:11px;font-weight:600;letter-spacing:0.01em;}\n'
     + '.' + uid + '-card-body{padding:16px 18px;display:flex;flex-direction:column;flex:1;}\n'
     + '.' + uid + '-card-title{font-weight:700;font-size:15px;color:#1a1a1a;margin:0 0 8px;line-height:1.4;}\n'
