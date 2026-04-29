@@ -2344,7 +2344,7 @@ function buildBannerInjectCode(b, apiUrl) {
   lines.push('      +"<\\/div>"');
   lines.push('      +(cta.text?\'<div class="vls-bn-cta"><a href="\'+escAttr(b.ctaUrl||"#")+\'" style="display:inline-block;padding:8px 20px;background:\'+btnBg+\';border-radius:6px;text-decoration:none;white-space:nowrap;\'+textStyle(cta)+\'">\'+escHtml(cta.text)+"<\\/a><\\/div>":"")');
   lines.push('      +"<\\/div>"');
-  lines.push('      +"<button id=\\"vls-bn-' + bid + '-cls\\" class=\\"vls-bn-close\\" aria-label=\\"Close\\">&#xD7;<\\/button>"');
+  lines.push('      +"<button id=\\"vls-bn-' + bid + '-cls\\" class=\\"vls-bn-close\\" aria-label=\\"Close\\" style=\\"color:"+fg+"\\">&#xD7;<\\/button>"');
   lines.push('      +"<\\/div>";');
   lines.push('    startCountdown(b.deadline||Date.now(),fg);');
   lines.push('    var cls=document.getElementById("vls-bn-' + bid + '-cls");');
