@@ -316,6 +316,13 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
     </div>
   </div>
   <!-- Forms dropdown -->
+  <!-- Course Page dropdown -->
+  <div class="nav-dropdown" id="nav-course-dd">
+    <div class="nav-tab" id="nav-course" onclick="toggleNavDd('course',event)">Course Page <span class="nav-dd-arrow">▾</span></div>
+    <div class="nav-dd-menu" id="nav-course-menu">
+      <div class="nav-dd-item" id="nav-course-hero" onclick="switchScreen('course-hero')">Course Hero</div>
+    </div>
+  </div>
   <div class="nav-dropdown" id="nav-forms-dd">
     <div class="nav-tab" id="nav-forms" onclick="toggleNavDd('forms',event)">Forms <span class="nav-dd-arrow">▾</span></div>
     <div class="nav-dd-menu" id="nav-forms-menu">
@@ -397,6 +404,13 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <button class="home-tile-link" onclick="switchScreen('form')">Contact Form</button>
           <button class="home-tile-link" onclick="switchScreen('report-issue')">Report an Issue</button>
           <button class="home-tile-link" onclick="switchScreen('report-thank-you')">Report — Thank You</button>
+        </div>
+      </div>
+      <div class="home-tile">
+        <div class="home-tile-title">Course Page Components</div>
+        <div class="home-tile-desc">Build complete course landing pages — hero banners with Trustpilot widgets, feature lists, and enrol CTAs.</div>
+        <div class="home-tile-links">
+          <button class="home-tile-link" onclick="switchScreen('course-hero')">Course Hero</button>
         </div>
       </div>
     </div>
@@ -1004,6 +1018,7 @@ var _PAGE_SCREENS   = ['hero2', 'intro', 'desc', 'tabs', 'team'];
 var _SHARED_SCREENS = ['faq', 'events', 'programs', 'feature-cards', 'feature-cards-2'];
 var _COMMON_SECTION_SCREENS = ['steps-section', 'dcs', 'dcs2', 'dcs3', 'reach', 'policy'];
 var _FORM_SCREENS   = ['form', 'report-issue', 'report-thank-you'];
+var _COURSE_SCREENS = ['course-hero'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
@@ -1029,6 +1044,7 @@ var _screenFiles = {
   reach:           '/screens/reach.html',
   'contact-footer':'/screens/contact-footer.html',
   hero2:           '/screens/hero2.html',
+  'course-hero':   '/screens/course-hero.html',
   policy:          '/screens/policy.html',
   'report-issue':      '/screens/report-issue.html',
   'report-thank-you':  '/screens/report-thank-you.html',
@@ -1090,6 +1106,9 @@ async function switchScreen(name) {
   } else if (_FORM_SCREENS.indexOf(name) >= 0) {
     document.getElementById('nav-forms').classList.add('active');
     var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
+  } else if (_COURSE_SCREENS.indexOf(name) >= 0) {
+    document.getElementById('nav-course').classList.add('active');
+    var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
   }
 
   if (name === 'hero'         && !_loadedScreens._heroInit)  { _loadedScreens._heroInit  = true; heroOnOpen();  }
@@ -1117,6 +1136,7 @@ async function switchScreen(name) {
   if (name === 'report-issue'      && !_loadedScreens._riInit)   { _loadedScreens._riInit   = true; riOnOpen();   }
   if (name === 'report-thank-you'  && !_loadedScreens._riTyInit) { _loadedScreens._riTyInit = true; riTyOnOpen(); }
   if (name === 'hero2'             && !_loadedScreens._h2Init)   { _loadedScreens._h2Init   = true; hero2OnOpen(); h2CmpInit(); cmpAttachDirty('hero2'); }
+  if (name === 'course-hero'       && !_loadedScreens._chInit)   { _loadedScreens._chInit   = true; courseHeroOnOpen(); chCmpInit(); cmpAttachDirty('course-hero'); }
   if (name === 'header')  headerOnOpen();
 }
 
@@ -1297,7 +1317,7 @@ function generateIntro() {
 
 var descBc = 0;
 var _dirtyScreens = {};
-var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] }, dcs3: { id: null, components: [] }, reach: { id: null, components: [] }, cf: { id: null, components: [] }, policy: { id: null, components: [] }, hero2: { id: null, components: [] } };
+var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] }, dcs3: { id: null, components: [] }, reach: { id: null, components: [] }, cf: { id: null, components: [] }, policy: { id: null, components: [] }, hero2: { id: null, components: [] }, 'course-hero': { id: null, components: [] } };
 
 function toggleBlockPicker() {
   var p = document.getElementById('block-type-picker');
@@ -12857,6 +12877,311 @@ function promotionOnOpen() {
 
 function generatePromotionSection() {
   promotionPersistNow('Saving…', 'Saved!', true);
+}
+
+// ── Course Hero ─────────────────────────────────────────────────
+
+function courseHeroOnOpen() {
+  cmsInitTextField('ch-heading',  { defaults: { size:32, color:'#ffffff', weight:'700', letterSpacing:0 } });
+  cmsInitParagraphField('ch-desc',{ defaults: { size:15, color:'#94a3b8', weight:'400', letterSpacing:0 } });
+  chAddTag({ text:'ACCA',              style:'solid',    bg:'#1a56a3',              tc:'#ffffff', bc:'#1a56a3' });
+  chAddTag({ text:'Foundation Level',  style:'outlined', bg:'transparent',          tc:'#ffffff', bc:'rgba(255,255,255,0.4)' });
+  chAddTag({ text:'✓ Beginner Friendly',style:'outlined',bg:'transparent',          tc:'#ffffff', bc:'rgba(255,255,255,0.4)' });
+  chAddFeature({ icon:'🎬', text:'46 hours of syllabus topic videos' });
+  chAddFeature({ icon:'📋', text:'42 hours of kit question videos' });
+  chAddFeature({ icon:'✅', text:'Quizzes for every chapter' });
+  chAddFeature({ icon:'📝', text:'Exam-focused study notes' });
+  chAddFeature({ icon:'💬', text:'Active tutor support via WhatsApp' });
+  chAddFeature({ icon:'🔴', text:'Bonus weekly live sessions' });
+  chAddFeature({ icon:'🎯', text:'Exam-style mock exam' });
+}
+
+// ── CH component manager ─────────────────────────────────────────
+
+async function chCmpInit() {
+  var comps = await cmpFetchAll('course-hero');
+  _cmpState['course-hero'].components = comps;
+  cmpPopulateSelect('ch', comps, null);
+}
+
+async function chCmpLoad(id) {
+  if (!id) { chCmpNew(); return; }
+  var comp = (_cmpState['course-hero'].components || []).filter(function(c){ return c.id === id; })[0];
+  if (!comp) return;
+  _cmpState['course-hero'].id = comp.id;
+  var nameEl = document.getElementById('ch-cmp-name'); if (nameEl) nameEl.value = comp.name || '';
+  cmpSetDupDeleteButtons('ch', true);
+  restoreCourseHeroState(comp.data || {});
+  delete _dirtyScreens['course-hero'];
+  cmpSetStatus('ch', '');
+}
+
+async function chCmpSave() {
+  var nameEl = document.getElementById('ch-cmp-name');
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { alert('Please enter a component name.'); if (nameEl) nameEl.focus(); return; }
+  cmpSetStatus('ch', 'Saving…', 'var(--muted)');
+  var state = collectCourseHeroState();
+  var comps = _cmpState['course-hero'].components || [];
+  var id = _cmpState['course-hero'].id;
+  if (id) {
+    var found = false;
+    comps = comps.map(function(c){ if (c.id === id) { found = true; return { id:id, name:name, data:state }; } return c; });
+    if (!found) { id = 'ch-'+Date.now().toString(36); comps.push({id:id,name:name,data:state}); _cmpState['course-hero'].id = id; }
+  } else {
+    id = 'ch-'+Date.now().toString(36);
+    comps.push({id:id, name:name, data:state});
+    _cmpState['course-hero'].id = id;
+  }
+  _cmpState['course-hero'].components = comps;
+  var ok = await cmpSaveAll('course-hero', comps);
+  if (ok) {
+    delete _dirtyScreens['course-hero'];
+    cmpPopulateSelect('ch', comps, id);
+    cmpSetDupDeleteButtons('ch', true);
+    cmpSetStatus('ch', '✓ Saved', '#16a34a');
+    setTimeout(function(){ cmpSetStatus('ch',''); }, 3000);
+  } else {
+    cmpSetStatus('ch', '✗ Save failed', '#e63946');
+  }
+}
+
+function chCmpNew() {
+  _cmpState['course-hero'].id = null;
+  var nameEl = document.getElementById('ch-cmp-name'); if (nameEl) nameEl.value = '';
+  var sel    = document.getElementById('ch-cmp-sel');  if (sel)    sel.value = '';
+  cmpSetDupDeleteButtons('ch', false);
+  restoreCourseHeroState({});
+  delete _dirtyScreens['course-hero'];
+  cmpSetStatus('ch', '');
+}
+
+async function chCmpDuplicate() {
+  return cmpDuplicateComponent({
+    stateKey: 'course-hero',
+    uiKey:    'ch',
+    inputId:  'ch-cmp-name',
+    idPrefix: 'ch',
+    collectState: collectCourseHeroState
+  });
+}
+
+async function chCmpDelete() {
+  var id = _cmpState['course-hero'].id; if (!id) return;
+  var comp = (_cmpState['course-hero'].components||[]).filter(function(c){ return c.id===id; })[0];
+  if (!window.confirm('Delete "' + (comp ? comp.name : 'this component') + '"? This cannot be undone.')) return;
+  var comps = (_cmpState['course-hero'].components||[]).filter(function(c){ return c.id!==id; });
+  var ok = await cmpSaveAll('course-hero', comps);
+  if (ok) { _cmpState['course-hero'].components = comps; _cmpState['course-hero'].id = null; cmpPopulateSelect('ch', comps, null); chCmpNew(); }
+}
+
+// ── CH form helpers ──────────────────────────────────────────────
+
+function chAddTag(data) {
+  var list = document.getElementById('ch-tags'); if (!list) return;
+  var d = data || {};
+  var style = d.style || 'solid';
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:8px 12px;display:flex;flex-direction:column;gap:6px;">'
+    + '<div style="display:flex;gap:6px;align-items:center">'
+    + '<input type="text" class="ch-tag-text" value="' + xA(d.text||'') + '" placeholder="Badge text" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<select class="ch-tag-style" style="font-family:\'Poppins\',sans-serif;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<option value="solid"'    + (style==='solid'   ?' selected':'') + '>Solid</option>'
+    + '<option value="outlined"' + (style==='outlined'?' selected':'') + '>Outlined</option>'
+    + '</select>'
+    + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
+    + '<div class="field" style="margin:0"><label style="font-size:10px">Background</label><div class="cms-paragraph-color-row">'
+    + '<input type="color" class="ch-tag-bg-cp" value="' + xA(cmsSafeHex(d.bg,'#1a56a3')) + '" oninput="this.nextElementSibling.value=this.value" style="width:36px;height:30px;padding:2px;border:1px solid var(--border);border-radius:5px;cursor:pointer">'
+    + '<input type="text" class="ch-tag-bg" value="' + xA(d.bg||'#1a56a3') + '" style="font-size:11px" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v"></div></div>'
+    + '<div class="field" style="margin:0"><label style="font-size:10px">Text colour</label><div class="cms-paragraph-color-row">'
+    + '<input type="color" class="ch-tag-tc-cp" value="' + xA(cmsSafeHex(d.tc,'#ffffff')) + '" oninput="this.nextElementSibling.value=this.value" style="width:36px;height:30px;padding:2px;border:1px solid var(--border);border-radius:5px;cursor:pointer">'
+    + '<input type="text" class="ch-tag-tc" value="' + xA(d.tc||'#ffffff') + '" style="font-size:11px" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v"></div></div>'
+    + '</div>'
+    + '<div class="field" style="margin:0"><label style="font-size:10px">Border colour <span class="hint">(hex or rgba(…))</span></label>'
+    + '<input type="text" class="ch-tag-bc" value="' + xA(d.bc||'rgba(255,255,255,0.4)') + '" placeholder="e.g. #1a56a3 or rgba(255,255,255,0.4)" style="font-family:\'Poppins\',sans-serif;font-size:11px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;width:100%;"></div>'
+    + '</div>';
+  list.appendChild(div);
+}
+
+function chAddFeature(data) {
+  var list = document.getElementById('ch-features'); if (!list) return;
+  var d = data || {};
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:6px 12px;display:flex;gap:8px;align-items:center;">'
+    + '<input type="text" class="ch-feat-icon" value="' + xA(d.icon||'') + '" placeholder="🎬" style="width:44px;font-size:16px;padding:4px;border:1px solid var(--border);border-radius:5px;text-align:center;">'
+    + '<input type="text" class="ch-feat-text" value="' + xA(d.text||'') + '" placeholder="Feature description…" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button>'
+    + '</div>';
+  list.appendChild(div);
+}
+
+// ── CH state ─────────────────────────────────────────────────────
+
+function chGet(id) { return document.getElementById(id) || {}; }
+
+function collectCourseHeroState() {
+  return {
+    bg:            chGet('ch-bg-hex').value          || '#0d1f3c',
+    leftW:         chGet('ch-left-w').value          || '55',
+    padTop:        chGet('ch-pad-top').value         || '40',
+    padBot:        chGet('ch-pad-bot').value         || '40',
+    padLeft:       chGet('ch-pad-left').value        || '60',
+    padRight:      chGet('ch-pad-right').value       || '60',
+    breadcrumb:    chGet('ch-breadcrumb').value      || '',
+    heading:       cmsReadTextField('ch-heading',   { size:32, color:'#ffffff', weight:'700', letterSpacing:0 }),
+    desc:          cmsReadParagraphField('ch-desc', { size:15, color:'#94a3b8', weight:'400', letterSpacing:0 }),
+    iframe1:       chGet('ch-iframe1').value         || '',
+    iframe2:       chGet('ch-iframe2').value         || '',
+    includesLabel: chGet('ch-includes-label').value  || 'THIS COURSE INCLUDES',
+    btnText:       chGet('ch-btn-text').value        || 'Enrol Now →',
+    btnUrl:        chGet('ch-btn-url').value         || '#',
+    btnBg:         chGet('ch-btn-bg-hex').value      || '#1a56a3',
+    btnTc:         chGet('ch-btn-tc-hex').value      || '#ffffff',
+    tags: Array.from(document.querySelectorAll('#ch-tags .block-item')).map(function(el) {
+      return {
+        text:  (el.querySelector('.ch-tag-text')  || {}).value || '',
+        style: (el.querySelector('.ch-tag-style') || {}).value || 'solid',
+        bg:    (el.querySelector('.ch-tag-bg')    || {}).value || '#1a56a3',
+        tc:    (el.querySelector('.ch-tag-tc')    || {}).value || '#ffffff',
+        bc:    (el.querySelector('.ch-tag-bc')    || {}).value || 'rgba(255,255,255,0.4)'
+      };
+    }),
+    features: Array.from(document.querySelectorAll('#ch-features .block-item')).map(function(el) {
+      return {
+        icon: (el.querySelector('.ch-feat-icon') || {}).value || '',
+        text: (el.querySelector('.ch-feat-text') || {}).value || ''
+      };
+    })
+  };
+}
+
+function restoreCourseHeroState(d) {
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+  var setColor = function(cpId, hexId, val, fb) {
+    var c = cmsSafeHex(val, fb);
+    var cp = document.getElementById(cpId); if (cp) cp.value = c;
+    var hx = document.getElementById(hexId); if (hx) hx.value = c;
+  };
+  setColor('ch-bg-cp',     'ch-bg-hex',     d.bg,    '#0d1f3c');
+  setColor('ch-btn-bg-cp', 'ch-btn-bg-hex', d.btnBg, '#1a56a3');
+  setColor('ch-btn-tc-cp', 'ch-btn-tc-hex', d.btnTc, '#ffffff');
+  set('ch-left-w',         d.leftW        || '55');
+  set('ch-pad-top',        d.padTop       || '40');
+  set('ch-pad-bot',        d.padBot       || '40');
+  set('ch-pad-left',       d.padLeft      || '60');
+  set('ch-pad-right',      d.padRight     || '60');
+  set('ch-breadcrumb',     d.breadcrumb   || '');
+  cmsSetTextField('ch-heading',    d.heading, { size:32, color:'#ffffff', weight:'700', letterSpacing:0 });
+  cmsSetParagraphField('ch-desc',  d.desc,    { size:15, color:'#94a3b8', weight:'400', letterSpacing:0 });
+  set('ch-iframe1',        d.iframe1      || '');
+  set('ch-iframe2',        d.iframe2      || '');
+  set('ch-includes-label', d.includesLabel|| 'THIS COURSE INCLUDES');
+  set('ch-btn-text',       d.btnText      || 'Enrol Now →');
+  set('ch-btn-url',        d.btnUrl       || '#');
+  var tl = document.getElementById('ch-tags');     if (tl) { tl.innerHTML = ''; (d.tags     || []).forEach(function(t){ chAddTag(t);     }); }
+  var fl = document.getElementById('ch-features'); if (fl) { fl.innerHTML = ''; (d.features || []).forEach(function(f){ chAddFeature(f); }); }
+}
+
+// ── CH HTML generator ────────────────────────────────────────────
+
+function generateCourseHero() {
+  var d   = collectCourseHeroState();
+  var uid = 'ch-' + Date.now().toString(36);
+  var bg  = cmsSafeHex(d.bg, '#0d1f3c');
+  var lw  = cmsClampInt(d.leftW,   55, 35, 70);
+  var pT  = cmsClampInt(d.padTop,  40, 0, 300);
+  var pB  = cmsClampInt(d.padBot,  40, 0, 300);
+  var pL  = cmsClampInt(d.padLeft, 60, 0, 300);
+  var pR  = cmsClampInt(d.padRight,60, 0, 300);
+  var btnBg = cmsSafeHex(d.btnBg, '#1a56a3');
+  var btnTc = cmsSafeHex(d.btnTc, '#ffffff');
+
+  var hw = cmsNormalizeTextData(d.heading,   { size:32, color:'#ffffff', weight:'700', letterSpacing:0 });
+  var dw = cmsNormalizeParagraphData(d.desc, { size:15, color:'#94a3b8', weight:'400', letterSpacing:0 });
+
+  // ── Left column ──
+  var leftParts = [];
+
+  if (d.breadcrumb) {
+    leftParts.push('<p style="font-family:\'Poppins\',sans-serif;font-size:12px;color:rgba(255,255,255,0.5);margin:0 0 14px;">' + xH(d.breadcrumb) + '</p>');
+  }
+
+  var validTags = (d.tags||[]).filter(function(t){ return t.text; });
+  if (validTags.length) {
+    var tagItems = validTags.map(function(t) {
+      var isSolid = t.style !== 'outlined';
+      var tagBgStr = isSolid ? 'background:' + xA(t.bg||'#1a56a3') + ';' : 'background:transparent;';
+      var tagBc    = isSolid ? (t.bg||'#1a56a3') : (t.bc||'rgba(255,255,255,0.4)');
+      return '<span style="font-family:\'Poppins\',sans-serif;font-size:12px;font-weight:500;padding:5px 14px;border-radius:999px;' + tagBgStr + 'border:1.5px solid ' + xA(tagBc) + ';color:' + xA(t.tc||'#ffffff') + ';white-space:nowrap;display:inline-block;">' + xH(t.text) + '</span>';
+    }).join('\n    ');
+    leftParts.push('<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">\n    ' + tagItems + '\n  </div>');
+  }
+
+  if (hw.text) {
+    var headingHtml = hw.text.split('\n').map(function(l){ return xH(l); }).join('<br>');
+    leftParts.push('<h1 style="font-family:\'Poppins\',sans-serif;margin:0 0 16px;line-height:1.2;font-size:' + hw.size + 'px;font-weight:' + hw.weight + ';color:' + xA(hw.color) + ';letter-spacing:' + hw.letterSpacing + 'px;">' + headingHtml + '</h1>');
+  }
+
+  if (dw.text) {
+    leftParts.push('<p style="font-family:\'Poppins\',sans-serif;margin:0 0 20px;line-height:1.7;font-size:' + dw.size + 'px;font-weight:' + dw.weight + ';color:' + xA(dw.color) + ';">' + xH(dw.text) + '</p>');
+  }
+
+  if (d.iframe1) {
+    leftParts.push('<div style="margin-bottom:8px;">' + d.iframe1 + '</div>');
+  }
+
+  // ── Right column ──
+  var rightParts = [];
+
+  if (d.iframe2) {
+    rightParts.push('<div style="margin-bottom:16px;">' + d.iframe2 + '</div>');
+  }
+
+  var validFeats = (d.features||[]).filter(function(f){ return f.text; });
+  if (validFeats.length) {
+    var featItems = validFeats.map(function(f) {
+      return '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;">'
+        + (f.icon ? '<span style="font-size:18px;flex-shrink:0;line-height:1.4;">' + xH(f.icon) + '</span>' : '<span style="width:18px;flex-shrink:0;"></span>')
+        + '<span style="font-family:\'Poppins\',sans-serif;font-size:14px;color:#e2e8f0;line-height:1.5;">' + xH(f.text) + '</span>'
+        + '</div>';
+    }).join('\n    ');
+    rightParts.push(
+      '<div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:18px 20px;margin-bottom:16px;">'
+      + '<p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin:0 0 10px;">' + xH(d.includesLabel||'THIS COURSE INCLUDES') + '</p>'
+      + '<div>\n    ' + featItems + '\n  </div>'
+      + '</div>'
+    );
+  }
+
+  if (d.btnText) {
+    rightParts.push('<a href="' + xA(d.btnUrl||'#') + '" style="display:block;text-align:center;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:600;color:' + xA(btnTc) + ';background:' + xA(btnBg) + ';text-decoration:none;padding:14px 24px;border-radius:10px;">' + xH(d.btnText) + '</a>');
+  }
+
+  var css = '<style>'
+    + '#' + uid + '{font-family:\'Poppins\',sans-serif;box-sizing:border-box;}'
+    + '#' + uid + ' *{box-sizing:border-box;}'
+    + '#' + uid + ' .ch-body{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start;}'
+    + '#' + uid + ' .ch-left{flex:0 0 ' + lw + '%;min-width:280px;}'
+    + '#' + uid + ' .ch-right{flex:1;min-width:260px;}'
+    + '@media(max-width:768px){'
+    + '#' + uid + ' .ch-left,#' + uid + ' .ch-right{flex:none;width:100%;}'
+    + '}'
+    + '</style>';
+
+  var html = css + '\n'
+    + '<div id="' + uid + '" style="background:' + xA(bg) + ';padding:' + pT + 'px ' + pR + 'px ' + pB + 'px ' + pL + 'px;">'
+    + '\n<div class="ch-body">'
+    + '\n<div class="ch-left">\n' + leftParts.join('\n') + '\n</div>'
+    + '\n<div class="ch-right">\n' + rightParts.join('\n') + '\n</div>'
+    + '\n</div>'
+    + '\n</div>';
+
+  var preview = document.getElementById('course-hero-preview-wrap'); if (preview) preview.innerHTML = html;
+  var code    = document.getElementById('course-hero-code');          if (code) code.textContent = html;
+  switchOut('course-hero', 'preview');
+  chCmpSave();
 }
 
 </script>
