@@ -6043,8 +6043,9 @@ function buildHeaderOutputHtml(uid, cfg) {
     /* Brand bar */
     + '.'+uid+'-brand{background:'+q(cfg.brandBg)+';padding:'+padTop+'px 0 '+padBot+'px;border-bottom:1px solid #e5e7eb;position:relative;width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);}'
     + '.'+uid+'-brand-inner{max-width:'+containerW+'px;margin:0 auto;padding:0 '+padR+'px 0 '+padL+'px;display:flex;align-items:flex-end;gap:16px;}'
+    + '.'+uid+'-logo-link{flex-shrink:0;display:flex;align-items:flex-end;text-decoration:none!important;}'
     + '.'+uid+'-logo{height:'+logoHeightCss+';width:auto;display:block;}'
-    + '.'+uid+'-namewrap{display:flex;flex-direction:column;justify-content:flex-end;gap:2px;}'
+    + '.'+uid+'-namewrap{display:flex;flex-direction:column;justify-content:flex-end;gap:2px;min-width:0;}'
     + '.'+uid+'-sitename{line-height:1.2;text-align:left;}'
     + '.'+uid+'-subtitle{line-height:1.3;text-transform:uppercase;text-align:left;}'
     + '.'+uid+'-brand-spacer{flex:1;min-width:16px;}'
@@ -6096,7 +6097,8 @@ function buildHeaderOutputHtml(uid, cfg) {
     + '.'+uid+'-ni.'+uid+'-ni-open>.'+uid+'-nl{background:#cccccc!important;}'
     + '.'+uid+'-drop .'+uid+'-drop .'+uid+'-nl{padding-left:48px;}'
     + '.'+uid+'-sitename{font-size:24px;}'
-    + '.'+uid+'-brand-inner{padding:0 2px;}'
+    + '.'+uid+'-brand-inner{padding:0 12px 0 16px;gap:12px;align-items:baseline;}'
+    + '.'+uid+'-logo-link{padding-left:6px;align-items:baseline;}'
     + '.'+uid+'-logo{height:'+(isFinite(logoHeightNum)?Math.round(logoHeightNum*0.7)+'px':q(cfg.logoHeight||'42px'))+';}'
     + '.'+uid+'-ctas{display:none;}'
     + '.'+uid+'-mob-cta{display:block!important;}'
@@ -6109,7 +6111,7 @@ function buildHeaderOutputHtml(uid, cfg) {
   var markup = '<div class="'+uid+'-wrap">'
     /* Brand */
     + '<div class="'+uid+'-brand"><div class="'+uid+'-brand-inner">'
-    + (cfg.logoUrl ? '<a href="'+e(cfg.logoLink)+'" style="flex-shrink:0;"><img src="'+e(cfg.logoUrl)+'" alt="'+e(cfg.logoAlt)+'" class="'+uid+'-logo"></a>' : '')
+    + (cfg.logoUrl ? '<a href="'+e(cfg.logoLink)+'" class="'+uid+'-logo-link"><img src="'+e(cfg.logoUrl)+'" alt="'+e(cfg.logoAlt)+'" class="'+uid+'-logo"></a>' : '')
     + '<div class="'+uid+'-namewrap">'
     + '<span class="'+uid+'-sitename" style="' + cmsTextStyle(siteTitle, CMS_PARAGRAPH_DEFAULTS.headerSiteTitle) + '">'+e(siteTitle.text)+'</span>'
     + (subTitle.text ? '<span class="'+uid+'-subtitle" style="' + cmsTextStyle(subTitle, CMS_PARAGRAPH_DEFAULTS.headerSubTitle) + '">'+e(subTitle.text)+'</span>' : '')
