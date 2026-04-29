@@ -2344,9 +2344,15 @@ function buildBannerInjectCode(b, apiUrl) {
   lines.push('      +"<\\/div>"');
   lines.push('      +(cta.text?\'<div class="vls-bn-cta"><a href="\'+escAttr(b.ctaUrl||"#")+\'" style="display:inline-block;padding:8px 20px;background:\'+btnBg+\';border-radius:6px;text-decoration:none;white-space:nowrap;\'+textStyle(cta)+\'">\'+escHtml(cta.text)+"<\\/a><\\/div>":"")');
   lines.push('      +"<\\/div>"');
-  lines.push('      +"<button class=\\"vls-bn-close\\" aria-label=\\"Close\\" onclick=\\"(function(){try{sessionStorage.setItem(\'vls-bn-dismissed-' + bid + '\',\'1\');}catch(e){}document.getElementById(\'vls-bn-' + bid + '\').style.display=\'none\';})()\\">×<\\/button>"');
+  lines.push('      +"<button id=\\"vls-bn-' + bid + '-cls\\" class=\\"vls-bn-close\\" aria-label=\\"Close\\">&#xD7;<\\/button>"');
   lines.push('      +"<\\/div>";');
-  lines.push('    startCountdown(b.deadline||Date.now(),fg);
+  lines.push('    startCountdown(b.deadline||Date.now(),fg);');
+  lines.push('    var cls=document.getElementById("vls-bn-' + bid + '-cls");');
+  lines.push('    if(cls){cls.addEventListener("click",function(){');
+  lines.push('      try{sessionStorage.setItem("vls-bn-dismissed-' + bid + '","1");}catch(e){}');
+  lines.push('      var el=document.getElementById("vls-bn-' + bid + '");');
+  lines.push('      if(el)el.style.display="none";');
+  lines.push('    });}');
   lines.push('  }');
   lines.push('  function load(){');
   lines.push('    try{if(sessionStorage.getItem("vls-bn-dismissed-' + bid + '")==="1")return;}catch(e){}');
