@@ -12894,6 +12894,12 @@ function courseHeroOnOpen() {
   chAddFeature({ icon:'💬', text:'Active tutor support via WhatsApp' });
   chAddFeature({ icon:'🔴', text:'Bonus weekly live sessions' });
   chAddFeature({ icon:'🎯', text:'Exam-style mock exam' });
+  chAddLearnItem('How financial information flows through a business from source document to trial balance');
+  chAddLearnItem('How to prepare and balance ledger accounts, day books, and the trial balance');
+  chAddLearnItem('The full FA1 exam syllabus and question formats, with practice under timed conditions');
+  chAddLearnItem('The principles of double-entry bookkeeping and how to record transactions accurately');
+  chAddLearnItem('How to process sales, purchases, cash, and bank transactions in practice');
+  chAddLearnItem('Exam technique and how to answer both objective and longer-form questions confidently');
 }
 
 // ── CH component manager ─────────────────────────────────────────
@@ -13017,6 +13023,16 @@ function chAddFeature(data) {
   list.appendChild(div);
 }
 
+function chAddLearnItem(text) {
+  var list = document.getElementById('ch-learn-items'); if (!list) return;
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:6px 12px;display:flex;gap:8px;align-items:center;">'
+    + '<input type="text" class="ch-learn-text" value="' + xA(text||'') + '" placeholder="Learning outcome…" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button>'
+    + '</div>';
+  list.appendChild(div);
+}
+
 // ── CH state ─────────────────────────────────────────────────────
 
 function chGet(id) { return document.getElementById(id) || {}; }
@@ -13032,7 +13048,17 @@ function collectCourseHeroState() {
     breadcrumb:    chGet('ch-breadcrumb').value      || '',
     heading:       cmsReadTextField('ch-heading',   { size:32, color:'#ffffff', weight:'700', letterSpacing:0 }),
     desc:          cmsReadParagraphField('ch-desc', { size:15, color:'#94a3b8', weight:'400', letterSpacing:0 }),
+    if1Bg:         chGet('ch-if1-bg-hex').value      || '#0d1f3c',
     iframe1:       chGet('ch-iframe1').value         || '',
+    learnIcon:     chGet('ch-learn-icon').value      || '🎯',
+    learnTitle:    chGet('ch-learn-title').value     || "What You'll Learn",
+    learnBg:       chGet('ch-learn-bg-hex').value    || '#ffffff',
+    learnTc:       chGet('ch-learn-tc-hex').value    || '#334155',
+    learnCc:       chGet('ch-learn-cc-hex').value    || '#16a34a',
+    learnItems:    Array.from(document.querySelectorAll('#ch-learn-items .block-item')).map(function(el) {
+      return (el.querySelector('.ch-learn-text') || {}).value || '';
+    }).filter(Boolean),
+    if2Bg:         chGet('ch-if2-bg-hex').value      || '#0d1f3c',
     iframe2:       chGet('ch-iframe2').value         || '',
     includesLabel: chGet('ch-includes-label').value  || 'THIS COURSE INCLUDES',
     btnText:       chGet('ch-btn-text').value        || 'Enrol Now →',
@@ -13075,7 +13101,16 @@ function restoreCourseHeroState(d) {
   set('ch-breadcrumb',     d.breadcrumb   || '');
   cmsSetTextField('ch-heading',    d.heading, { size:32, color:'#ffffff', weight:'700', letterSpacing:0 });
   cmsSetParagraphField('ch-desc',  d.desc,    { size:15, color:'#94a3b8', weight:'400', letterSpacing:0 });
+  setColor('ch-if1-bg-cp', 'ch-if1-bg-hex', d.if1Bg, '#0d1f3c');
   set('ch-iframe1',        d.iframe1      || '');
+  set('ch-learn-icon',     d.learnIcon    || '🎯');
+  set('ch-learn-title',    d.learnTitle   || "What You'll Learn");
+  setColor('ch-learn-bg-cp', 'ch-learn-bg-hex', d.learnBg, '#ffffff');
+  setColor('ch-learn-tc-cp', 'ch-learn-tc-hex', d.learnTc, '#334155');
+  setColor('ch-learn-cc-cp', 'ch-learn-cc-hex', d.learnCc, '#16a34a');
+  var ll = document.getElementById('ch-learn-items');
+  if (ll) { ll.innerHTML = ''; (d.learnItems || []).forEach(function(t){ chAddLearnItem(t); }); }
+  setColor('ch-if2-bg-cp', 'ch-if2-bg-hex', d.if2Bg, '#0d1f3c');
   set('ch-iframe2',        d.iframe2      || '');
   set('ch-includes-label', d.includesLabel|| 'THIS COURSE INCLUDES');
   set('ch-btn-text',       d.btnText      || 'Enrol Now →');
@@ -13129,14 +13164,38 @@ function generateCourseHero() {
   }
 
   if (d.iframe1) {
-    leftParts.push('<div style="margin-bottom:8px;">' + d.iframe1 + '</div>');
+    var if1Bg = cmsSafeHex(d.if1Bg, '#0d1f3c');
+    leftParts.push('<div style="background:' + xA(if1Bg) + ';margin-bottom:8px;">' + d.iframe1 + '</div>');
+  }
+
+  var validLearnItems = (d.learnItems || []).filter(Boolean);
+  if (validLearnItems.length || d.learnTitle) {
+    var learnBg = cmsSafeHex(d.learnBg, '#ffffff');
+    var learnTc = cmsSafeHex(d.learnTc, '#334155');
+    var learnCc = cmsSafeHex(d.learnCc, '#16a34a');
+    var learnGridItems = validLearnItems.map(function(item) {
+      return '<div style="display:flex;align-items:flex-start;gap:8px;">'
+        + '<span style="color:' + xA(learnCc) + ';font-size:14px;flex-shrink:0;margin-top:2px;font-weight:700;">&#x2713;</span>'
+        + '<span style="font-family:\'Poppins\',sans-serif;font-size:13px;color:' + xA(learnTc) + ';line-height:1.5;">' + xH(item) + '</span>'
+        + '</div>';
+    }).join('\n    ');
+    leftParts.push(
+      '<div style="background:' + xA(learnBg) + ';border-radius:12px;padding:24px 28px;margin-top:16px;">'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">'
+      + (d.learnIcon ? '<span style="font-size:22px;">' + xH(d.learnIcon) + '</span>' : '')
+      + '<h2 style="font-family:\'Poppins\',sans-serif;font-size:18px;font-weight:700;color:' + xA(learnTc) + ';margin:0;">' + xH(d.learnTitle || "What You'll Learn") + '</h2>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;">\n    ' + learnGridItems + '\n  </div>'
+      + '</div>'
+    );
   }
 
   // ── Right column ──
   var rightParts = [];
 
   if (d.iframe2) {
-    rightParts.push('<div style="margin-bottom:16px;">' + d.iframe2 + '</div>');
+    var if2Bg = cmsSafeHex(d.if2Bg, '#0d1f3c');
+    rightParts.push('<div style="background:' + xA(if2Bg) + ';margin-bottom:16px;">' + d.iframe2 + '</div>');
   }
 
   var validFeats = (d.features||[]).filter(function(f){ return f.text; });
@@ -13162,6 +13221,7 @@ function generateCourseHero() {
   var css = '<style>'
     + '#' + uid + '{font-family:\'Poppins\',sans-serif;box-sizing:border-box;}'
     + '#' + uid + ' *{box-sizing:border-box;}'
+    + '#' + uid + ' iframe{display:block!important;visibility:visible!important;}'
     + '#' + uid + ' .ch-body{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start;}'
     + '#' + uid + ' .ch-left{flex:0 0 ' + lw + '%;min-width:280px;}'
     + '#' + uid + ' .ch-right{flex:1;min-width:260px;}'
