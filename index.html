@@ -4561,7 +4561,9 @@ function loadProgramsFromGist() {
             return {
               id: t.id || ('pt' + (++programTopicCounter)),
               title: cmsNormalizeTextData(t.title, CMS_PARAGRAPH_DEFAULTS.programFilter),
-              topicColor: topicColor,
+              topicColor:    topicColor,
+              badgeBg:       cmsSafeHex(t.badgeBg, '#ffffff'),
+              badgeOpacity:  (t.badgeOpacity != null ? parseFloat(t.badgeOpacity) : 0.22),
               expanded: false,
               cards: (t.cards || []).map(function(c) {
                 return {
@@ -4594,6 +4596,10 @@ function saveProgramState() {
       if (titleEl) t.title = cmsReadTextField(titleEl, CMS_PARAGRAPH_DEFAULTS.programFilter);
       var colorEl = document.getElementById('pt-color-' + t.id);
       if (colorEl) t.topicColor = cmsSafeHex(colorEl.value, programTopicColorValue(t));
+      var bbEl = document.getElementById('pt-badge-bg-' + t.id);
+      if (bbEl) t.badgeBg = cmsSafeHex(bbEl.value, '#ffffff');
+      var boEl = document.getElementById('pt-badge-op-' + t.id);
+      if (boEl) t.badgeOpacity = Math.round(parseInt(boEl.value, 10)) / 100;
       t.cards.forEach(function(c) {
         var el;
         el = document.getElementById('pc-title-'  + c.id); if (el) c.title  = cmsReadTextField(el, CMS_PARAGRAPH_DEFAULTS.programCardTitle);
@@ -4853,13 +4859,21 @@ function buildProgramTopicHtml(t, tidx, topicTotal, sid) {
     html += '<div style="margin-bottom:8px;">'
           + cmsTextFieldHtml('Topic Title', '', t.title, { id: 'pt-title-' + tid, multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.programFilter, placeholder: 'e.g. ACCA Foundation Diploma', oninput: 'updateProgramTopicLabel(\\\'' + tid + '\\\')' })
           + '</div>';
+    var badgeBgVal  = t.badgeBg      || '#ffffff';
+    var badgeOpVal  = (t.badgeOpacity != null ? t.badgeOpacity : 0.22);
     html += '<div style="display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:end;margin-bottom:10px;">'
           + '<div class="field" style="margin:0"><label style="font-size:11px;">Topic card colour</label>'
           + '<input type="color" id="pt-color-' + tid + '" value="' + xA(topicColor) + '" style="width:44px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block"></div>'
           + '<div style="display:flex;align-items:end;gap:8px;flex-wrap:wrap;">'
           + '<button class="btn-sm" style="background:#204280;color:#fff;" onclick="updateAllTopicCardColors(\'' + sid + '\',\'' + tid + '\')">Update All Cards</button>'
           + '<span style="font-size:11px;color:var(--muted);line-height:1.4;">Apply this colour to every card in this topic.</span>'
-          + '</div></div>';
+          + '</div></div>'
+          + '<div style="display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:end;margin-bottom:10px;">'
+          + '<div class="field" style="margin:0"><label style="font-size:11px;">Badge bg colour</label>'
+          + '<input type="color" id="pt-badge-bg-' + tid + '" value="' + xA(badgeBgVal) + '" style="width:44px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block"></div>'
+          + '<div class="field" style="margin:0;flex:1"><label style="font-size:11px;display:flex;justify-content:space-between;">Badge opacity <span id="pt-badge-op-lbl-' + tid + '">' + Math.round(badgeOpVal * 100) + '%</span></label>'
+          + '<input type="range" id="pt-badge-op-' + tid + '" min="0" max="100" value="' + Math.round(badgeOpVal * 100) + '" oninput="document.getElementById(\'pt-badge-op-lbl-' + tid + '\').textContent=this.value+\'%\'" style="width:100%;accent-color:#534AB7;cursor:pointer"></div>'
+          + '</div>';
 
     if (t.cards.length) {
       t.cards.forEach(function(c, cidx) {
@@ -5012,10 +5026,12 @@ function generateProgramSection(sid) {
         topicId: t.id, sectionId: s.id,
         title: c.title, desc: c.desc, url: c.url,
         cta: c.cta || cmsNormalizeTextData('View Course →', CMS_PARAGRAPH_DEFAULTS.programCta),
-        cardBg: c.cardBg || t.topicColor || '#204280',
-        badge:  c.badge  || '',
-        rating: c.rating || '',
-        hours:  c.hours  || ''
+        cardBg:       c.cardBg || t.topicColor || '#204280',
+        badge:        c.badge  || '',
+        rating:       c.rating || '',
+        hours:        c.hours  || '',
+        badgeBg:      cmsSafeHex(t.badgeBg,      '#ffffff'),
+        badgeOpacity: (t.badgeOpacity != null ? parseFloat(t.badgeOpacity) : 0.22)
       });
     });
   });
@@ -5141,7 +5157,7 @@ function buildProgramsHtml(uid, topics, allCards, sections) {
     + '.' + uid + '-card{border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;background:#fff;transition:box-shadow .15s;}\n'
     + '.' + uid + '-card:hover{box-shadow:0 6px 24px rgba(0,0,0,.12);transform:translateY(-1px);}\n'
     + '.' + uid + '-card-top{position:relative;height:80px;display:flex;align-items:flex-end;padding:12px 14px;}\n'
-    + '.' + uid + '-card-badge{display:inline-block;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.22);color:#fff;font-size:11px;font-weight:600;letter-spacing:0.01em;}\n'
+    + '.' + uid + '-card-badge{display:inline-block;padding:4px 10px;border-radius:6px;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.01em;}\n'
     + '.' + uid + '-card-body{padding:16px 18px;display:flex;flex-direction:column;flex:1;}\n'
     + '.' + uid + '-card-title{font-weight:700;font-size:15px;color:#1a1a1a;margin:0 0 8px;line-height:1.4;}\n'
     + '.' + uid + '-card-desc{font-size:13px;color:#6b7280;line-height:1.6;flex:1;margin:0 0 12px;}\n'
@@ -5211,8 +5227,10 @@ function buildProgramsHtml(uid, topics, allCards, sections) {
     + '    if(!sl.length){g.innerHTML=\'<div class="' + uid + '-empty">No courses found.</div>\';pg.innerHTML="";return;}\n'
     + '    g.innerHTML=sl.map(function(c){\n'
     + '      var bg=c.cardBg||"#204280";\n'
+    + '      function h2r(h,a){h=(h||"#ffffff").replace("#","");if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];var r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);return "rgba("+r+","+g+","+b+","+(isNaN(a)?0.22:a)+")";}  \n'
+    + '      var bbg=h2r(c.badgeBg,c.badgeOpacity);\n'
     + '      var topHtml=\'<div class="' + uid + '-card-top" style="background:\'+bg+\'">\'\n'
-    + '        +(c.badge?\'<span class="' + uid + '-card-badge">\'+esc(c.badge)+"<\\/span>":"")\n'
+    + '        +(c.badge?\'<span class="' + uid + '-card-badge" style="background:\'+bbg+\'">\'+esc(c.badge)+"<\\/span>":"")\n'
     + '        +"<\\/div>";\n'
     + '      var metaHtml="";\n'
     + '      if(c.hours||c.rating){\n'
