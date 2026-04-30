@@ -1,0 +1,143 @@
+<div id="screen-course-hero-right" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <!-- ── Component manager ── -->
+    <div style="background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:2px;">
+      <div class="section-label" style="margin:0 0 8px">Saved Components</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+        <button class="btn-gen" style="flex:1;min-width:120px;padding:9px" onclick="chrCmpSave()">💾 Save</button>
+        <button class="btn-gen" style="flex:1;min-width:120px;padding:9px;background:#16a34a" onclick="generateCourseHeroRight()">⚡ Generate HTML</button>
+        <button class="btn-sm" onclick="chrCmpNew()" style="padding:8px 12px">+ New</button>
+        <button class="btn-sm" id="chr-cmp-dup" style="display:none;padding:8px 12px" onclick="chrCmpDuplicate()">⧉ Duplicate</button>
+        <button class="btn-sm danger" id="chr-cmp-del" style="display:none;padding:8px 12px" onclick="chrCmpDelete()">Delete</button>
+      </div>
+      <select id="chr-cmp-sel" onchange="chrCmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;outline:none;background:#fff;color:var(--text);margin-bottom:8px;">
+        <option value="">— select to load —</option>
+      </select>
+      <div class="field" style="margin-bottom:6px">
+        <label>Component name</label>
+        <input type="text" id="chr-cmp-name" placeholder="e.g. ACCA FA1 — Right Panel">
+      </div>
+      <span id="chr-cmp-status" style="font-size:12px;display:block;min-height:14px;text-align:center;"></span>
+    </div>
+
+    <!-- ── Panel styling ── -->
+    <div class="section-label">Panel Styling</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Background colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="chr-bg-cp" value="#ffffff" oninput="document.getElementById('chr-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="chr-bg-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('chr-bg-cp').value=v">
+        </div>
+      </div>
+      <div class="field">
+        <label>Border colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="chr-border-cp" value="#e2e8f0" oninput="document.getElementById('chr-border-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="chr-border-hex" value="#e2e8f0" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('chr-border-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+      <div class="field"><label>Pad top</label><input type="number" id="chr-pad-top" value="24" min="0" max="200"></div>
+      <div class="field"><label>Pad bot</label><input type="number" id="chr-pad-bot" value="24" min="0" max="200"></div>
+      <div class="field"><label>Pad left</label><input type="number" id="chr-pad-left" value="24" min="0" max="200"></div>
+      <div class="field"><label>Pad right</label><input type="number" id="chr-pad-right" value="24" min="0" max="200"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field"><label>Border radius (px)</label><input type="number" id="chr-radius" value="12" min="0" max="40"></div>
+      <div class="field">
+        <label>Divider colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="chr-divider-cp" value="#f1f5f9" oninput="document.getElementById('chr-divider-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="chr-divider-hex" value="#f1f5f9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('chr-divider-cp').value=v">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Section label ── -->
+    <div class="section-label" style="margin-top:8px">Section Label</div>
+    <div class="field" style="margin-top:4px">
+      <label>Label text</label>
+      <input type="text" id="chr-label" value="THIS COURSE INCLUDES">
+    </div>
+
+    <!-- ── Icon & badge global colours ── -->
+    <div class="section-label" style="margin-top:8px">Icon &amp; Badge Colours</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="field" style="margin:0">
+        <label>Icon background</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="chr-icon-bg-cp" value="#f0f4ff" oninput="document.getElementById('chr-icon-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="chr-icon-bg-hex" value="#f0f4ff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('chr-icon-bg-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Badge background</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="chr-badge-bg-cp" value="#e2e8f0" oninput="document.getElementById('chr-badge-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="chr-badge-bg-hex" value="#e2e8f0" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('chr-badge-bg-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Badge text colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="chr-badge-tc-cp" value="#374151" oninput="document.getElementById('chr-badge-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="chr-badge-tc-hex" value="#374151" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('chr-badge-tc-cp').value=v">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Items ── -->
+    <div class="section-label" style="margin-top:8px">Course Items <span class="hint">(icon · title · description · optional badge)</span></div>
+    <div id="chr-items" class="block-list" style="margin-top:4px"></div>
+    <button class="btn-add-block" style="margin-top:4px" onclick="chrAddItem()">+ Add item</button>
+
+    <!-- ── CTA button ── -->
+    <div class="section-label" style="margin-top:16px">Enrol Button</div>
+    <div class="field">
+      <label>Button URL</label>
+      <input type="text" id="chr-cta-url" value="#" placeholder="https://...">
+    </div>
+    <div class="field">
+      <label>Button text</label>
+      <input type="text" id="chr-cta-text" value="Enrol Now →">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="field" style="margin:0">
+        <label>Button background</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="chr-cta-bg-cp" value="#0f172a" oninput="document.getElementById('chr-cta-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="chr-cta-bg-hex" value="#0f172a" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('chr-cta-bg-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Button text colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="chr-cta-tc-cp" value="#ffffff" oninput="document.getElementById('chr-cta-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="chr-cta-tc-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('chr-cta-tc-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Button radius (px)</label>
+        <input type="number" id="chr-cta-radius" value="8" min="0" max="40" style="margin-top:2px">
+      </div>
+    </div>
+
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="course-hero-right-ot-preview" onclick="switchOut('course-hero-right','preview')">Preview</div>
+      <div class="out-tab" id="course-hero-right-ot-html" onclick="switchOut('course-hero-right','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="course-hero-right-preview-wrap" class="preview-wrap" style="padding:24px;background:#f8fafc;display:flex;justify-content:center;align-items:flex-start;"></div>
+      <div id="course-hero-right-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('course-hero-right-code',this)">Copy</button>
+        <pre id="course-hero-right-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>

@@ -321,6 +321,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
     <div class="nav-tab" id="nav-course" onclick="toggleNavDd('course',event)">Course Page <span class="nav-dd-arrow">▾</span></div>
     <div class="nav-dd-menu" id="nav-course-menu">
       <div class="nav-dd-item" id="nav-course-hero" onclick="switchScreen('course-hero')">Left Hero Section</div>
+      <div class="nav-dd-item" id="nav-course-hero-right" onclick="switchScreen('course-hero-right')">Right Panel</div>
     </div>
   </div>
   <div class="nav-dropdown" id="nav-forms-dd">
@@ -411,6 +412,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
         <div class="home-tile-desc">Build complete course landing pages — left hero sections with eyebrow labels, feature pills, and learning outcome cards.</div>
         <div class="home-tile-links">
           <button class="home-tile-link" onclick="switchScreen('course-hero')">Left Hero Section</button>
+          <button class="home-tile-link" onclick="switchScreen('course-hero-right')">Right Panel</button>
         </div>
       </div>
     </div>
@@ -971,7 +973,10 @@ var CMS_PARAGRAPH_DEFAULTS = {
   cfCompany:           { size: 22, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
   cfAddress:           { size: 14, color: '#6b7280', weight: '400', letterSpacing: 0    },
   cfItemTitle:         { size: 14, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
-  cfItemValue:         { size: 13, color: '#1a56a3', weight: '400', letterSpacing: 0    }
+  cfItemValue:         { size: 13, color: '#1a56a3', weight: '400', letterSpacing: 0    },
+  chrLabel:            { size: 11, color: '#6b7280', weight: '700', letterSpacing: 0.12 },
+  chrItemTitle:        { size: 14, color: '#1a56a3', weight: '600', letterSpacing: 0    },
+  chrItemDesc:         { size: 13, color: '#6b7280', weight: '400', letterSpacing: 0    }
 };
 var CMS_TEXT_DEFAULTS = CMS_PARAGRAPH_DEFAULTS;
 function cmsParagraphText(value) {
@@ -1018,7 +1023,7 @@ var _PAGE_SCREENS   = ['hero2', 'intro', 'desc', 'tabs', 'team'];
 var _SHARED_SCREENS = ['faq', 'events', 'programs', 'feature-cards', 'feature-cards-2'];
 var _COMMON_SECTION_SCREENS = ['steps-section', 'dcs', 'dcs2', 'dcs3', 'reach', 'policy'];
 var _FORM_SCREENS   = ['form', 'report-issue', 'report-thank-you'];
-var _COURSE_SCREENS = ['course-hero'];
+var _COURSE_SCREENS = ['course-hero', 'course-hero-right'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
@@ -1044,7 +1049,8 @@ var _screenFiles = {
   reach:           '/screens/reach.html',
   'contact-footer':'/screens/contact-footer.html',
   hero2:           '/screens/hero2.html',
-  'course-hero':   '/screens/course-hero.html',
+  'course-hero':         '/screens/course-hero.html',
+  'course-hero-right':   '/screens/course-hero-right.html',
   policy:          '/screens/policy.html',
   'report-issue':      '/screens/report-issue.html',
   'report-thank-you':  '/screens/report-thank-you.html',
@@ -1137,6 +1143,7 @@ async function switchScreen(name) {
   if (name === 'report-thank-you'  && !_loadedScreens._riTyInit) { _loadedScreens._riTyInit = true; riTyOnOpen(); }
   if (name === 'hero2'             && !_loadedScreens._h2Init)   { _loadedScreens._h2Init   = true; hero2OnOpen(); h2CmpInit(); cmpAttachDirty('hero2'); }
   if (name === 'course-hero'       && !_loadedScreens._chInit)   { _loadedScreens._chInit   = true; courseHeroOnOpen(); chCmpInit(); cmpAttachDirty('course-hero'); }
+  if (name === 'course-hero-right' && !_loadedScreens._chrInit)  { _loadedScreens._chrInit  = true; chrOnOpen(); chrCmpInit(); cmpAttachDirty('course-hero-right'); }
   if (name === 'header')  headerOnOpen();
 }
 
@@ -1317,7 +1324,7 @@ function generateIntro() {
 
 var descBc = 0;
 var _dirtyScreens = {};
-var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] }, dcs3: { id: null, components: [] }, reach: { id: null, components: [] }, cf: { id: null, components: [] }, policy: { id: null, components: [] }, hero2: { id: null, components: [] }, 'course-hero': { id: null, components: [] } };
+var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] }, dcs3: { id: null, components: [] }, reach: { id: null, components: [] }, cf: { id: null, components: [] }, policy: { id: null, components: [] }, hero2: { id: null, components: [] }, 'course-hero': { id: null, components: [] }, 'course-hero-right': { id: null, components: [] } };
 
 function toggleBlockPicker() {
   var p = document.getElementById('block-type-picker');
@@ -13099,6 +13106,260 @@ function restoreCourseHeroState(d) {
   if (pl) { pl.innerHTML = ''; (d.pills || []).forEach(function(p){ chAddPill(p); }); }
   var ll = document.getElementById('ch-learn-items');
   if (ll) { ll.innerHTML = ''; (d.learnItems || []).forEach(function(item){ chAddLearnItem(item); }); }
+}
+
+// ── Course Hero Right (CHR) ──────────────────────────────────────
+
+function chrOnOpen() {
+  chrAddItem({ icon: '🎬', title: { text: 'Syllabus Topic Videos'    }, desc: { text: 'Full HD lecture videos for every FA1 topic'       }, badge: '46 hours' });
+  chrAddItem({ icon: '📋', title: { text: 'Kit Question Videos'      }, desc: { text: 'Worked solutions with exam technique guidance'     }, badge: '42 hours' });
+  chrAddItem({ icon: '✅', title: { text: 'Chapter-by-Chapter Quizzes'}, desc: { text: 'Graded quizzes with automated feedback'            }, badge: '' });
+  chrAddItem({ icon: '📝', title: { text: 'Exam-Focused Study Notes' }, desc: { text: 'Concise notes written for the FA1 exam'            }, badge: '' });
+  chrAddItem({ icon: '💬', title: { text: 'Tutor Support via WhatsApp'}, desc: { text: 'Direct access to your tutor throughout'           }, badge: '' });
+  chrAddItem({ icon: '🔴', title: { text: 'Weekly Live Sessions'     }, desc: { text: 'Bonus pre-exam sessions — recordings available'    }, badge: '' });
+  chrAddItem({ icon: '🎯', title: { text: 'Final Mock Exam'          }, desc: { text: 'Full exam-style mock with tutor feedback'          }, badge: '' });
+}
+
+// ── CHR component manager ────────────────────────────────────────
+
+async function chrCmpInit() {
+  var comps = await cmpFetchAll('course-hero-right');
+  _cmpState['course-hero-right'].components = comps;
+  cmpPopulateSelect('chr', comps, null);
+}
+
+async function chrCmpLoad(id) {
+  if (!id) { chrCmpNew(); return; }
+  var comp = (_cmpState['course-hero-right'].components || []).filter(function(c){ return c.id === id; })[0];
+  if (!comp) return;
+  _cmpState['course-hero-right'].id = comp.id;
+  var nameEl = document.getElementById('chr-cmp-name'); if (nameEl) nameEl.value = comp.name || '';
+  cmpSetDupDeleteButtons('chr', true);
+  restoreChrState(comp.data || {});
+  delete _dirtyScreens['course-hero-right'];
+  cmpSetStatus('chr', '');
+}
+
+async function chrCmpSave() {
+  var nameEl = document.getElementById('chr-cmp-name');
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { alert('Please enter a component name before saving.'); if (nameEl) nameEl.focus(); return; }
+  cmpSetStatus('chr', 'Saving…', 'var(--muted)');
+  var state = collectChrState();
+  var comps = _cmpState['course-hero-right'].components || [];
+  var id    = _cmpState['course-hero-right'].id;
+  if (id) {
+    var found = false;
+    comps = comps.map(function(c){ if (c.id === id) { found = true; return { id:id, name:name, data:state }; } return c; });
+    if (!found) { id = 'chr-' + Date.now().toString(36); comps.push({ id:id, name:name, data:state }); _cmpState['course-hero-right'].id = id; }
+  } else {
+    id = 'chr-' + Date.now().toString(36);
+    comps.push({ id:id, name:name, data:state });
+    _cmpState['course-hero-right'].id = id;
+  }
+  _cmpState['course-hero-right'].components = comps;
+  var ok = await cmpSaveAll('course-hero-right', comps);
+  if (ok) {
+    cmpSetDupDeleteButtons('chr', true);
+    delete _dirtyScreens['course-hero-right'];
+    cmpPopulateSelect('chr', comps, id);
+    cmpSetStatus('chr', '✓ Saved', '#16a34a');
+    setTimeout(function(){ cmpSetStatus('chr', ''); }, 3000);
+  } else {
+    cmpSetStatus('chr', '✗ Save failed', '#e63946');
+  }
+}
+
+function chrCmpNew() {
+  _cmpState['course-hero-right'].id = null;
+  var nameEl = document.getElementById('chr-cmp-name'); if (nameEl) nameEl.value = '';
+  var sel    = document.getElementById('chr-cmp-sel');  if (sel)    sel.value    = '';
+  cmpSetDupDeleteButtons('chr', false);
+  restoreChrState({});
+  delete _dirtyScreens['course-hero-right'];
+  cmpSetStatus('chr', '');
+}
+
+async function chrCmpDuplicate() {
+  return cmpDuplicateComponent({
+    stateKey:     'course-hero-right',
+    uiKey:        'chr',
+    inputId:      'chr-cmp-name',
+    idPrefix:     'chr',
+    collectState: collectChrState
+  });
+}
+
+async function chrCmpDelete() {
+  var id = _cmpState['course-hero-right'].id; if (!id) return;
+  var comp = (_cmpState['course-hero-right'].components || []).filter(function(c){ return c.id === id; })[0];
+  if (!window.confirm('Delete "' + (comp ? comp.name : 'this component') + '"? This cannot be undone.')) return;
+  var comps = (_cmpState['course-hero-right'].components || []).filter(function(c){ return c.id !== id; });
+  var ok = await cmpSaveAll('course-hero-right', comps);
+  if (ok) { _cmpState['course-hero-right'].components = comps; _cmpState['course-hero-right'].id = null; cmpPopulateSelect('chr', comps, null); chrCmpNew(); }
+}
+
+// ── CHR form helpers ─────────────────────────────────────────────
+
+function chrAddItem(data) {
+  var list = document.getElementById('chr-items'); if (!list) return;
+  var d   = data || {};
+  var id  = 'chri-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var title = cmsNormalizeTextData(d.title, CMS_PARAGRAPH_DEFAULTS.chrItemTitle);
+  var desc  = cmsNormalizeParagraphData(d.desc, CMS_PARAGRAPH_DEFAULTS.chrItemDesc);
+  var div = document.createElement('div'); div.className = 'block-item'; div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH((title.text || 'Item').slice(0, 48)) + '</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();this.closest(\'.block-item\').remove()" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body collapsed">'
+    + '<div class="field"><label>Icon <span class="hint">(emoji)</span></label>'
+    + '<input type="text" class="chr-item-icon" value="' + xA(d.icon || '') + '" placeholder="🎬" style="width:72px;font-size:18px;text-align:center;padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-family:\'Poppins\',sans-serif;"></div>'
+    + cmsTextFieldHtml('Title', 'chr-item-title', title, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.chrItemTitle, placeholder: 'e.g. Syllabus Topic Videos',
+        oninput: 'this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=(this.value||\'Item\').slice(0,48)' })
+    + cmsParagraphFieldHtml('Description', 'chr-item-desc', desc, { rows: 2, defaults: CMS_PARAGRAPH_DEFAULTS.chrItemDesc, placeholder: 'Short description' })
+    + '<div class="field"><label>Badge text <span class="hint">(optional, e.g. 46 hours)</span></label>'
+    + '<input type="text" class="chr-item-badge" value="' + xA(d.badge || '') + '" placeholder="e.g. 46 hours" style="font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;"></div>'
+    + '</div>';
+  list.appendChild(div);
+}
+
+// ── CHR state ────────────────────────────────────────────────────
+
+function chrGet(id) { return document.getElementById(id) || {}; }
+
+function collectChrState() {
+  return {
+    bg:         chrGet('chr-bg-hex').value          || '#ffffff',
+    border:     chrGet('chr-border-hex').value      || '#e2e8f0',
+    padTop:     chrGet('chr-pad-top').value         || '24',
+    padBot:     chrGet('chr-pad-bot').value         || '24',
+    padLeft:    chrGet('chr-pad-left').value        || '24',
+    padRight:   chrGet('chr-pad-right').value       || '24',
+    radius:     chrGet('chr-radius').value          || '12',
+    divider:    chrGet('chr-divider-hex').value     || '#f1f5f9',
+    iconBg:     chrGet('chr-icon-bg-hex').value     || '#f0f4ff',
+    badgeBg:    chrGet('chr-badge-bg-hex').value    || '#e2e8f0',
+    badgeTc:    chrGet('chr-badge-tc-hex').value    || '#374151',
+    labelText:  chrGet('chr-label').value           || 'THIS COURSE INCLUDES',
+    ctaUrl:     chrGet('chr-cta-url').value         || '#',
+    ctaText:    chrGet('chr-cta-text').value        || 'Enrol Now →',
+    ctaBg:      chrGet('chr-cta-bg-hex').value      || '#0f172a',
+    ctaTc:      chrGet('chr-cta-tc-hex').value      || '#ffffff',
+    ctaRadius:  chrGet('chr-cta-radius').value      || '8',
+    items: Array.from(document.querySelectorAll('#chr-items .block-item')).map(function(el) {
+      return {
+        icon:  (el.querySelector('.chr-item-icon')  || {}).value || '',
+        title: cmsReadTextField(el.querySelector('.chr-item-title'), CMS_PARAGRAPH_DEFAULTS.chrItemTitle),
+        desc:  cmsReadParagraphField(el.querySelector('.chr-item-desc'), CMS_PARAGRAPH_DEFAULTS.chrItemDesc),
+        badge: (el.querySelector('.chr-item-badge') || {}).value || ''
+      };
+    })
+  };
+}
+
+function chrSetColor(cpId, hexId, val, fb) {
+  var c = cmsSafeHex(val, fb);
+  var cp = document.getElementById(cpId); if (cp) cp.value = c;
+  var hx = document.getElementById(hexId); if (hx) hx.value = c;
+}
+
+function restoreChrState(d) {
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+  chrSetColor('chr-bg-cp',       'chr-bg-hex',       d.bg,       '#ffffff');
+  chrSetColor('chr-border-cp',   'chr-border-hex',   d.border,   '#e2e8f0');
+  set('chr-pad-top',    d.padTop    || '24');
+  set('chr-pad-bot',    d.padBot    || '24');
+  set('chr-pad-left',   d.padLeft   || '24');
+  set('chr-pad-right',  d.padRight  || '24');
+  set('chr-radius',     d.radius    || '12');
+  chrSetColor('chr-divider-cp',  'chr-divider-hex',  d.divider,  '#f1f5f9');
+  chrSetColor('chr-icon-bg-cp',  'chr-icon-bg-hex',  d.iconBg,   '#f0f4ff');
+  chrSetColor('chr-badge-bg-cp', 'chr-badge-bg-hex', d.badgeBg,  '#e2e8f0');
+  chrSetColor('chr-badge-tc-cp', 'chr-badge-tc-hex', d.badgeTc,  '#374151');
+  set('chr-label',      d.labelText || 'THIS COURSE INCLUDES');
+  set('chr-cta-url',    d.ctaUrl    || '#');
+  set('chr-cta-text',   d.ctaText   || 'Enrol Now →');
+  chrSetColor('chr-cta-bg-cp',   'chr-cta-bg-hex',   d.ctaBg,    '#0f172a');
+  chrSetColor('chr-cta-tc-cp',   'chr-cta-tc-hex',   d.ctaTc,    '#ffffff');
+  set('chr-cta-radius', d.ctaRadius || '8');
+  var il = document.getElementById('chr-items');
+  if (il) { il.innerHTML = ''; (d.items || []).forEach(function(item){ chrAddItem(item); }); }
+}
+
+// ── CHR HTML generator ───────────────────────────────────────────
+
+function generateCourseHeroRight() {
+  var d      = collectChrState();
+  var uid    = 'chr-' + Date.now().toString(36);
+  var bg     = cmsSafeHex(d.bg,      '#ffffff');
+  var border = cmsSafeHex(d.border,  '#e2e8f0');
+  var radius = cmsClampInt(d.radius,  12, 0, 40);
+  var pT     = cmsClampInt(d.padTop,  24, 0, 200);
+  var pB     = cmsClampInt(d.padBot,  24, 0, 200);
+  var pL     = cmsClampInt(d.padLeft, 24, 0, 200);
+  var pR     = cmsClampInt(d.padRight,24, 0, 200);
+  var divider  = cmsSafeHex(d.divider, '#f1f5f9');
+  var iconBg   = cmsSafeHex(d.iconBg,  '#f0f4ff');
+  var badgeBg  = cmsSafeHex(d.badgeBg, '#e2e8f0');
+  var badgeTc  = cmsSafeHex(d.badgeTc, '#374151');
+  var ctaBg    = cmsSafeHex(d.ctaBg,   '#0f172a');
+  var ctaTc    = cmsSafeHex(d.ctaTc,   '#ffffff');
+  var ctaR     = cmsClampInt(d.ctaRadius, 8, 0, 40);
+
+  var parts = [];
+
+  // Section label
+  if (d.labelText) {
+    parts.push('<p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6b7280;margin:0 0 16px;">' + xH(d.labelText) + '</p>');
+  }
+
+  // Items
+  var validItems = (d.items || []).filter(function(item){ return item.title && item.title.text; });
+  validItems.forEach(function(item, i) {
+    var titleD = cmsNormalizeTextData(item.title, CMS_PARAGRAPH_DEFAULTS.chrItemTitle);
+    var descD  = cmsNormalizeParagraphData(item.desc, CMS_PARAGRAPH_DEFAULTS.chrItemDesc);
+    var isLast = (i === validItems.length - 1);
+    var iconIsUrl = item.icon && (item.icon.startsWith('http') || item.icon.startsWith('/'));
+    var iconHtml = iconIsUrl
+      ? '<img src="' + xA(item.icon) + '" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:6px;display:block;">'
+      : '<span style="font-size:20px;line-height:1;">' + xH(item.icon || '') + '</span>';
+    parts.push(
+      '<div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;' + (i === 0 ? '' : 'border-top:1px solid ' + xA(divider) + ';') + '">'
+      + '<div style="width:44px;height:44px;flex-shrink:0;background:' + xA(iconBg) + ';border-radius:8px;display:flex;align-items:center;justify-content:center;">'
+      + iconHtml
+      + '</div>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<p style="font-family:\'Poppins\',sans-serif;margin:0 0 2px;' + cmsTextStyle(titleD, CMS_PARAGRAPH_DEFAULTS.chrItemTitle) + '">' + xH(titleD.text) + '</p>'
+      + (descD.text ? '<p style="font-family:\'Poppins\',sans-serif;margin:0' + (item.badge ? ' 0 6px' : '') + ';line-height:1.5;' + cmsParagraphStyle(descD, CMS_PARAGRAPH_DEFAULTS.chrItemDesc) + '">' + xH(descD.text) + '</p>' : '')
+      + (item.badge ? '<span style="display:inline-block;font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;color:' + xA(badgeTc) + ';background:' + xA(badgeBg) + ';border-radius:999px;padding:2px 10px;">' + xH(item.badge) + '</span>' : '')
+      + '</div>'
+      + '</div>'
+    );
+  });
+
+  // CTA button
+  if (d.ctaText) {
+    parts.push(
+      '<div style="margin-top:16px;">'
+      + '<a href="' + xA(d.ctaUrl || '#') + '" style="display:block;text-align:center;font-family:\'Poppins\',sans-serif;font-size:15px;font-weight:600;color:' + xA(ctaTc) + ';background:' + xA(ctaBg) + ';border-radius:' + ctaR + 'px;padding:14px 24px;text-decoration:none;">'
+      + xH(d.ctaText)
+      + '</a>'
+      + '</div>'
+    );
+  }
+
+  var css = '<style>#' + uid + '{font-family:\'Poppins\',sans-serif;box-sizing:border-box;}#' + uid + ' *{box-sizing:border-box;}</style>';
+  var html = css + '\n'
+    + '<div id="' + uid + '" style="background:' + xA(bg) + ';border:1px solid ' + xA(border) + ';border-radius:' + radius + 'px;padding:' + pT + 'px ' + pR + 'px ' + pB + 'px ' + pL + 'px;">'
+    + '\n' + parts.join('\n')
+    + '\n</div>';
+
+  var preview = document.getElementById('course-hero-right-preview-wrap'); if (preview) preview.innerHTML = html;
+  var code    = document.getElementById('course-hero-right-code');         if (code)    code.textContent  = html;
+  switchOut('course-hero-right', 'preview');
+  chrCmpSave();
 }
 
 // ── CH HTML generator ────────────────────────────────────────────
