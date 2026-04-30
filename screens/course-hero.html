@@ -1,11 +1,9 @@
 <div id="screen-course-hero" class="screen">
   <div class="form-panel"><div class="form-inner">
 
-    <!-- ── Component manager (PINNED AT TOP) ── -->
+    <!-- ── Component manager ── -->
     <div style="background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:2px;">
       <div class="section-label" style="margin:0 0 8px">Saved Components</div>
-
-      <!-- Action buttons row -->
       <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
         <button class="btn-gen" style="flex:1;min-width:120px;padding:9px" onclick="chCmpSave()">💾 Save</button>
         <button class="btn-gen" style="flex:1;min-width:120px;padding:9px;background:#16a34a" onclick="generateCourseHero()">⚡ Generate HTML</button>
@@ -13,154 +11,155 @@
         <button class="btn-sm" id="ch-cmp-dup" style="display:none;padding:8px 12px" onclick="chCmpDuplicate()">⧉ Duplicate</button>
         <button class="btn-sm danger" id="ch-cmp-del" style="display:none;padding:8px 12px" onclick="chCmpDelete()">Delete</button>
       </div>
-
-      <!-- Selector -->
       <select id="ch-cmp-sel" onchange="chCmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;outline:none;background:#fff;color:var(--text);margin-bottom:8px;">
         <option value="">— select to load —</option>
       </select>
-
       <div class="field" style="margin-bottom:6px">
         <label>Component name</label>
-        <input type="text" id="ch-cmp-name" placeholder="e.g. ACCA FA1 — Course Hero">
+        <input type="text" id="ch-cmp-name" placeholder="e.g. ACCA FA1 — Left Hero">
       </div>
       <span id="ch-cmp-status" style="font-size:12px;display:block;min-height:14px;text-align:center;"></span>
     </div>
 
     <!-- ── Background & layout ── -->
     <div class="section-label">Background &amp; layout</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field">
-        <label>Background colour</label>
-        <div class="cms-paragraph-color-row">
-          <input type="color" id="ch-bg-cp" value="#0d1f3c" oninput="document.getElementById('ch-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
-          <input type="text" id="ch-bg-hex" value="#0d1f3c" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-bg-cp').value=v">
-        </div>
-      </div>
-      <div class="field"><label>Left col width %</label>
-        <select id="ch-left-w">
-          <option value="50">50 / 50</option>
-          <option value="55" selected>55 / 45</option>
-          <option value="60">60 / 40</option>
-          <option value="65">65 / 35</option>
-        </select>
+    <div class="field">
+      <label>Background colour</label>
+      <div class="cms-paragraph-color-row">
+        <input type="color" id="ch-bg-cp" value="#0d1f3c" oninput="document.getElementById('ch-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+        <input type="text" id="ch-bg-hex" value="#0d1f3c" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-bg-cp').value=v">
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
-      <div class="field"><label>Pad top</label><input type="number" id="ch-pad-top" value="40" min="0" max="200"></div>
-      <div class="field"><label>Pad bot</label><input type="number" id="ch-pad-bot" value="40" min="0" max="200"></div>
+      <div class="field"><label>Pad top</label><input type="number" id="ch-pad-top" value="48" min="0" max="200"></div>
+      <div class="field"><label>Pad bot</label><input type="number" id="ch-pad-bot" value="56" min="0" max="200"></div>
       <div class="field"><label>Pad left</label><input type="number" id="ch-pad-left" value="60" min="0" max="200"></div>
       <div class="field"><label>Pad right</label><input type="number" id="ch-pad-right" value="60" min="0" max="200"></div>
     </div>
 
-    <!-- ── LEFT COLUMN ── -->
-    <div class="section-label">Left column</div>
-    <div class="field"><label>Breadcrumb</label><input type="text" id="ch-breadcrumb" value="Home &gt; ACCA Courses &gt; Applied Knowledge &gt; FA1" placeholder="Home > ACCA Courses > FA1"></div>
+    <!-- ── Breadcrumb ── -->
+    <div class="section-label">Left Hero Section</div>
+    <div class="field"><label>Breadcrumb</label><input type="text" id="ch-breadcrumb" value="Home › ACCA Courses › Applied Knowledge › FA1" placeholder="Home › ACCA Courses › FA1"></div>
 
-    <div class="section-label" style="font-size:10px;border:none;padding-bottom:0;margin-top:4px">Badges / tags</div>
+    <!-- ── Eyebrow labels ── -->
+    <div class="section-label" style="font-size:10px;border:none;padding-bottom:0;margin-top:4px">Eyebrow labels <span class="hint">(rendered inline: ● LABEL1 · LABEL2)</span></div>
     <div id="ch-tags" class="block-list" style="margin-top:4px"></div>
-    <button class="btn-add-block" style="margin-top:4px" onclick="chAddTag()">+ Add badge</button>
+    <button class="btn-add-block" style="margin-top:4px" onclick="chAddTag()">+ Add label</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <div class="field" style="margin:0">
+        <label>Label text colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="ch-eyebrow-tc-cp" value="#4a90d9" oninput="document.getElementById('ch-eyebrow-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="ch-eyebrow-tc-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-eyebrow-tc-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Dot colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="ch-eyebrow-dot-cp" value="#4a90d9" oninput="document.getElementById('ch-eyebrow-dot-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="ch-eyebrow-dot-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-eyebrow-dot-cp').value=v">
+        </div>
+      </div>
+    </div>
 
-    <div class="section-label" style="font-size:10px;border:none;padding-bottom:0;margin-top:8px">Heading &amp; description</div>
+    <!-- ── Heading & description ── -->
+    <div class="section-label" style="font-size:10px;border:none;padding-bottom:0;margin-top:12px">Heading &amp; description</div>
     <div class="field" style="margin-top:4px"><label>Course heading</label><textarea id="ch-heading" rows="2">ACCA FA1 — Recording Financial Transactions</textarea></div>
     <div class="field"><label>Description</label><textarea id="ch-desc" rows="3">Master the foundations of bookkeeping and pass your FA1 exam with confidence. Expert-led, exam-focused, and built for complete beginners — no prior accounting knowledge required.</textarea></div>
 
-    <div class="section-label" style="font-size:10px;border:none;padding-bottom:0;margin-top:8px">
-      Iframe / script 1 — Rating &amp; meta bar
-      <span class="hint" style="text-transform:none;letter-spacing:0;font-size:10px;display:block;margin-top:2px">Paste Trustpilot rating widget, star widget, or any embed code here</span>
-    </div>
-    <div class="field" style="margin-top:4px">
-      <label>Container background</label>
-      <div class="cms-paragraph-color-row">
-        <input type="color" id="ch-if1-bg-cp" value="#0d1f3c" oninput="document.getElementById('ch-if1-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
-        <input type="text" id="ch-if1-bg-hex" value="#0d1f3c" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-if1-bg-cp').value=v">
+    <!-- ── Feature pills ── -->
+    <div class="section-label" style="font-size:10px;border:none;padding-bottom:0;margin-top:12px">Feature pills <span class="hint">(icon · bold value · label)</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+      <div class="field" style="margin:0">
+        <label>Pill background</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="ch-pill-bg-cp" value="#0f2744" oninput="document.getElementById('ch-pill-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="ch-pill-bg-hex" value="#0f2744" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-pill-bg-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Pill border</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="ch-pill-border-cp" value="#1e3a5f" oninput="document.getElementById('ch-pill-border-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="ch-pill-border-hex" value="#1e3a5f" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-pill-border-cp').value=v">
+        </div>
       </div>
     </div>
-    <div class="field">
-      <textarea id="ch-iframe1" rows="4" placeholder="Paste &lt;iframe&gt;, &lt;script&gt;, or widget embed code here…" style="font-family:'Courier New',monospace;font-size:11px;background:#1e1e2e;color:#cdd6f4;border-radius:6px;padding:8px;resize:vertical;"></textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+      <div class="field" style="margin:0">
+        <label>Value colour <span class="hint">(bold)</span></label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="ch-pill-vc-cp" value="#ffffff" oninput="document.getElementById('ch-pill-vc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="ch-pill-vc-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-pill-vc-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Label colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="ch-pill-lc-cp" value="#94a3b8" oninput="document.getElementById('ch-pill-lc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="ch-pill-lc-hex" value="#94a3b8" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-pill-lc-cp').value=v">
+        </div>
+      </div>
     </div>
+    <div id="ch-pills" class="block-list" style="margin-top:6px"></div>
+    <button class="btn-add-block" style="margin-top:4px" onclick="chAddPill()">+ Add pill</button>
 
-    <!-- ── WHAT YOU'LL LEARN ── -->
-    <div class="section-label" style="font-size:10px;border:none;padding-bottom:0;margin-top:12px">
-      What You'll Learn
-      <span class="hint" style="text-transform:none;letter-spacing:0;font-size:10px;display:block;margin-top:2px">Card shown below the rating bar in the left column</span>
-    </div>
-    <div style="display:grid;grid-template-columns:60px 1fr;gap:8px;margin-top:4px">
-      <div class="field"><label>Icon</label><input type="text" id="ch-learn-icon" value="🎯" style="font-size:18px;text-align:center;padding:4px;"></div>
-      <div class="field"><label>Section heading</label><input type="text" id="ch-learn-title" value="What You'll Learn"></div>
+    <!-- ── What You'll Learn ── -->
+    <div class="section-label" style="margin-top:16px">What You'll Learn</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Section label text</label>
+        <input type="text" id="ch-learn-label" value="WHAT YOU'LL LEARN">
+      </div>
+      <div class="field">
+        <label>Section label colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="ch-learn-label-tc-cp" value="#4a90d9" oninput="document.getElementById('ch-learn-label-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="ch-learn-label-tc-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-learn-label-tc-cp').value=v">
+        </div>
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div class="field">
         <label>Card background</label>
         <div class="cms-paragraph-color-row">
-          <input type="color" id="ch-learn-bg-cp" value="#ffffff" oninput="document.getElementById('ch-learn-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
-          <input type="text" id="ch-learn-bg-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-learn-bg-cp').value=v">
+          <input type="color" id="ch-learn-bg-cp" value="#132343" oninput="document.getElementById('ch-learn-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="ch-learn-bg-hex" value="#132343" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-learn-bg-cp').value=v">
         </div>
       </div>
       <div class="field">
-        <label>Text colour</label>
+        <label>Card border</label>
         <div class="cms-paragraph-color-row">
-          <input type="color" id="ch-learn-tc-cp" value="#334155" oninput="document.getElementById('ch-learn-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
-          <input type="text" id="ch-learn-tc-hex" value="#334155" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-learn-tc-cp').value=v">
+          <input type="color" id="ch-learn-border-cp" value="#1e3a5f" oninput="document.getElementById('ch-learn-border-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="ch-learn-border-hex" value="#1e3a5f" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-learn-border-cp').value=v">
         </div>
       </div>
     </div>
-    <div class="field" style="margin-bottom:4px">
-      <label>Check colour</label>
-      <div class="cms-paragraph-color-row">
-        <input type="color" id="ch-learn-cc-cp" value="#16a34a" oninput="document.getElementById('ch-learn-cc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
-        <input type="text" id="ch-learn-cc-hex" value="#16a34a" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-learn-cc-cp').value=v">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Check colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="ch-learn-cc-cp" value="#4a90d9" oninput="document.getElementById('ch-learn-cc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="ch-learn-cc-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-learn-cc-cp').value=v">
+        </div>
+      </div>
+      <div class="field">
+        <label>Title colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="ch-learn-title-tc-cp" value="#ffffff" oninput="document.getElementById('ch-learn-title-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="ch-learn-title-tc-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-learn-title-tc-cp').value=v">
+        </div>
+      </div>
+      <div class="field">
+        <label>Subtitle colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="ch-learn-sub-tc-cp" value="#f97316" oninput="document.getElementById('ch-learn-sub-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="ch-learn-sub-tc-hex" value="#f97316" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-learn-sub-tc-cp').value=v">
+        </div>
       </div>
     </div>
     <div id="ch-learn-items" class="block-list" style="margin-top:4px"></div>
     <button class="btn-add-block" style="margin-top:4px" onclick="chAddLearnItem()">+ Add item</button>
-
-    <!-- ── RIGHT COLUMN ── -->
-    <div class="section-label">Right column</div>
-
-    <div class="section-label" style="font-size:10px;border:none;padding-bottom:0;margin-top:0">
-      Iframe / script 2 — Top right widget
-      <span class="hint" style="text-transform:none;letter-spacing:0;font-size:10px;display:block;margin-top:2px">Paste Trustpilot review widget or similar embed code</span>
-    </div>
-    <div class="field" style="margin-top:4px">
-      <label>Container background</label>
-      <div class="cms-paragraph-color-row">
-        <input type="color" id="ch-if2-bg-cp" value="#0d1f3c" oninput="document.getElementById('ch-if2-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
-        <input type="text" id="ch-if2-bg-hex" value="#0d1f3c" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-if2-bg-cp').value=v">
-      </div>
-    </div>
-    <div class="field">
-      <textarea id="ch-iframe2" rows="4" placeholder="Paste &lt;iframe&gt;, &lt;script&gt;, or widget embed code here…" style="font-family:'Courier New',monospace;font-size:11px;background:#1e1e2e;color:#cdd6f4;border-radius:6px;padding:8px;resize:vertical;"></textarea>
-    </div>
-
-    <div class="section-label" style="font-size:10px;border:none;padding-bottom:0;margin-top:8px">This course includes</div>
-    <div class="field" style="margin-top:4px">
-      <label>Section label</label>
-      <input type="text" id="ch-includes-label" value="THIS COURSE INCLUDES">
-    </div>
-    <div id="ch-features" class="block-list"></div>
-    <button class="btn-add-block" style="margin-top:4px" onclick="chAddFeature()">+ Add feature</button>
-
-    <div class="section-label" style="font-size:10px;border:none;padding-bottom:0;margin-top:8px">Enrol button</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
-      <div class="field"><label>Button text</label><input type="text" id="ch-btn-text" value="Enrol Now →"></div>
-      <div class="field"><label>Button URL</label><input type="text" id="ch-btn-url" value="#" placeholder="https://"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field">
-        <label>Button bg</label>
-        <div class="cms-paragraph-color-row">
-          <input type="color" id="ch-btn-bg-cp" value="#1a56a3" oninput="document.getElementById('ch-btn-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
-          <input type="text" id="ch-btn-bg-hex" value="#1a56a3" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-btn-bg-cp').value=v">
-        </div>
-      </div>
-      <div class="field">
-        <label>Button text colour</label>
-        <div class="cms-paragraph-color-row">
-          <input type="color" id="ch-btn-tc-cp" value="#ffffff" oninput="document.getElementById('ch-btn-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
-          <input type="text" id="ch-btn-tc-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ch-btn-tc-cp').value=v">
-        </div>
-      </div>
-    </div>
 
   </div></div>
 

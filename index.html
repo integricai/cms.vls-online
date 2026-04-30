@@ -320,7 +320,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
   <div class="nav-dropdown" id="nav-course-dd">
     <div class="nav-tab" id="nav-course" onclick="toggleNavDd('course',event)">Course Page <span class="nav-dd-arrow">▾</span></div>
     <div class="nav-dd-menu" id="nav-course-menu">
-      <div class="nav-dd-item" id="nav-course-hero" onclick="switchScreen('course-hero')">Course Hero</div>
+      <div class="nav-dd-item" id="nav-course-hero" onclick="switchScreen('course-hero')">Left Hero Section</div>
     </div>
   </div>
   <div class="nav-dropdown" id="nav-forms-dd">
@@ -408,9 +408,9 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       </div>
       <div class="home-tile">
         <div class="home-tile-title">Course Page Components</div>
-        <div class="home-tile-desc">Build complete course landing pages — hero banners with Trustpilot widgets, feature lists, and enrol CTAs.</div>
+        <div class="home-tile-desc">Build complete course landing pages — left hero sections with eyebrow labels, feature pills, and learning outcome cards.</div>
         <div class="home-tile-links">
-          <button class="home-tile-link" onclick="switchScreen('course-hero')">Course Hero</button>
+          <button class="home-tile-link" onclick="switchScreen('course-hero')">Left Hero Section</button>
         </div>
       </div>
     </div>
@@ -12882,24 +12882,22 @@ function generatePromotionSection() {
 // ── Course Hero ─────────────────────────────────────────────────
 
 function courseHeroOnOpen() {
-  cmsInitTextField('ch-heading',  { defaults: { size:32, color:'#ffffff', weight:'700', letterSpacing:0 } });
+  cmsInitTextField('ch-heading',  { defaults: { size:36, color:'#ffffff', weight:'700', letterSpacing:0 } });
   cmsInitParagraphField('ch-desc',{ defaults: { size:15, color:'#94a3b8', weight:'400', letterSpacing:0 } });
-  chAddTag({ text:'ACCA',              style:'solid',    bg:'#1a56a3',              tc:'#ffffff', bc:'#1a56a3' });
-  chAddTag({ text:'Foundation Level',  style:'outlined', bg:'transparent',          tc:'#ffffff', bc:'rgba(255,255,255,0.4)' });
-  chAddTag({ text:'✓ Beginner Friendly',style:'outlined',bg:'transparent',          tc:'#ffffff', bc:'rgba(255,255,255,0.4)' });
-  chAddFeature({ icon:'🎬', text:'46 hours of syllabus topic videos' });
-  chAddFeature({ icon:'📋', text:'42 hours of kit question videos' });
-  chAddFeature({ icon:'✅', text:'Quizzes for every chapter' });
-  chAddFeature({ icon:'📝', text:'Exam-focused study notes' });
-  chAddFeature({ icon:'💬', text:'Active tutor support via WhatsApp' });
-  chAddFeature({ icon:'🔴', text:'Bonus weekly live sessions' });
-  chAddFeature({ icon:'🎯', text:'Exam-style mock exam' });
-  chAddLearnItem('How financial information flows through a business from source document to trial balance');
-  chAddLearnItem('How to prepare and balance ledger accounts, day books, and the trial balance');
-  chAddLearnItem('The full FA1 exam syllabus and question formats, with practice under timed conditions');
-  chAddLearnItem('The principles of double-entry bookkeeping and how to record transactions accurately');
-  chAddLearnItem('How to process sales, purchases, cash, and bank transactions in practice');
-  chAddLearnItem('Exam technique and how to answer both objective and longer-form questions confidently');
+  chAddTag('ACCA');
+  chAddTag('Foundation Level');
+  chAddPill({ icon:'🎬', value:'46h', label:'topic videos' });
+  chAddPill({ icon:'📋', value:'42h', label:'question videos' });
+  chAddPill({ icon:'✅', value:'8',   label:'chapter quizzes' });
+  chAddPill({ icon:'💬', value:'',    label:'WhatsApp support' });
+  chAddPill({ icon:'🎯', value:'',    label:'Mock exam included' });
+  chAddPill({ icon:'🔴', value:'',    label:'Live sessions' });
+  chAddLearnItem({ title:'Double-entry bookkeeping',     subtitle:'Record transactions accurately from day one' });
+  chAddLearnItem({ title:'Financial transaction flow',   subtitle:'From source document to trial balance' });
+  chAddLearnItem({ title:'Ledger accounts & day books',  subtitle:'Prepare, post, and balance accounts' });
+  chAddLearnItem({ title:'Sales, purchases & cash',      subtitle:'Process real-world business transactions' });
+  chAddLearnItem({ title:'Full FA1 syllabus coverage',   subtitle:'Every topic, every exam objective' });
+  chAddLearnItem({ title:'Exam technique & strategy',    subtitle:'Objective and longer-form question skills' });
 }
 
 // ── CH component manager ─────────────────────────────────────────
@@ -12983,52 +12981,40 @@ async function chCmpDelete() {
 
 // ── CH form helpers ──────────────────────────────────────────────
 
-function chAddTag(data) {
+function chAddTag(text) {
   var list = document.getElementById('ch-tags'); if (!list) return;
-  var d = data || {};
-  var style = d.style || 'solid';
+  var val = typeof text === 'string' ? text : ((text && text.text) || '');
   var div = document.createElement('div'); div.className = 'block-item';
-  div.innerHTML = '<div class="block-body" style="border-top:none;padding:8px 12px;display:flex;flex-direction:column;gap:6px;">'
-    + '<div style="display:flex;gap:6px;align-items:center">'
-    + '<input type="text" class="ch-tag-text" value="' + xA(d.text||'') + '" placeholder="Badge text" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
-    + '<select class="ch-tag-style" style="font-family:\'Poppins\',sans-serif;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
-    + '<option value="solid"'    + (style==='solid'   ?' selected':'') + '>Solid</option>'
-    + '<option value="outlined"' + (style==='outlined'?' selected':'') + '>Outlined</option>'
-    + '</select>'
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:5px 10px;display:flex;gap:8px;align-items:center;">'
+    + '<input type="text" class="ch-tag-text" value="' + xA(val) + '" placeholder="e.g. ACCA" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
     + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button>'
-    + '</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
-    + '<div class="field" style="margin:0"><label style="font-size:10px">Background</label><div class="cms-paragraph-color-row">'
-    + '<input type="color" class="ch-tag-bg-cp" value="' + xA(cmsSafeHex(d.bg,'#1a56a3')) + '" oninput="this.nextElementSibling.value=this.value" style="width:36px;height:30px;padding:2px;border:1px solid var(--border);border-radius:5px;cursor:pointer">'
-    + '<input type="text" class="ch-tag-bg" value="' + xA(d.bg||'#1a56a3') + '" style="font-size:11px" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v"></div></div>'
-    + '<div class="field" style="margin:0"><label style="font-size:10px">Text colour</label><div class="cms-paragraph-color-row">'
-    + '<input type="color" class="ch-tag-tc-cp" value="' + xA(cmsSafeHex(d.tc,'#ffffff')) + '" oninput="this.nextElementSibling.value=this.value" style="width:36px;height:30px;padding:2px;border:1px solid var(--border);border-radius:5px;cursor:pointer">'
-    + '<input type="text" class="ch-tag-tc" value="' + xA(d.tc||'#ffffff') + '" style="font-size:11px" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v"></div></div>'
-    + '</div>'
-    + '<div class="field" style="margin:0"><label style="font-size:10px">Border colour <span class="hint">(hex or rgba(…))</span></label>'
-    + '<input type="text" class="ch-tag-bc" value="' + xA(d.bc||'rgba(255,255,255,0.4)') + '" placeholder="e.g. #1a56a3 or rgba(255,255,255,0.4)" style="font-family:\'Poppins\',sans-serif;font-size:11px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;width:100%;"></div>'
     + '</div>';
   list.appendChild(div);
 }
 
-function chAddFeature(data) {
-  var list = document.getElementById('ch-features'); if (!list) return;
+function chAddPill(data) {
+  var list = document.getElementById('ch-pills'); if (!list) return;
   var d = data || {};
   var div = document.createElement('div'); div.className = 'block-item';
   div.innerHTML = '<div class="block-body" style="border-top:none;padding:6px 12px;display:flex;gap:8px;align-items:center;">'
-    + '<input type="text" class="ch-feat-icon" value="' + xA(d.icon||'') + '" placeholder="🎬" style="width:44px;font-size:16px;padding:4px;border:1px solid var(--border);border-radius:5px;text-align:center;">'
-    + '<input type="text" class="ch-feat-text" value="' + xA(d.text||'') + '" placeholder="Feature description…" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<input type="text" class="ch-pill-icon" value="' + xA(d.icon||'') + '" placeholder="🎬" style="width:44px;font-size:16px;padding:4px;border:1px solid var(--border);border-radius:5px;text-align:center;" title="Icon (emoji)">'
+    + '<input type="text" class="ch-pill-value" value="' + xA(d.value||'') + '" placeholder="46h" style="width:56px;font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:600;padding:5px 8px;border:1px solid var(--border);border-radius:5px;" title="Bold value (optional)">'
+    + '<input type="text" class="ch-pill-label" value="' + xA(d.label||'') + '" placeholder="topic videos" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;" title="Label text">'
     + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button>'
     + '</div>';
   list.appendChild(div);
 }
 
-function chAddLearnItem(text) {
+function chAddLearnItem(data) {
   var list = document.getElementById('ch-learn-items'); if (!list) return;
+  var d = (typeof data === 'string') ? { title: data } : (data || {});
   var div = document.createElement('div'); div.className = 'block-item';
-  div.innerHTML = '<div class="block-body" style="border-top:none;padding:6px 12px;display:flex;gap:8px;align-items:center;">'
-    + '<input type="text" class="ch-learn-text" value="' + xA(text||'') + '" placeholder="Learning outcome…" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:6px 12px;display:flex;flex-direction:column;gap:4px;">'
+    + '<div style="display:flex;gap:8px;align-items:center">'
+    + '<input type="text" class="ch-learn-title" value="' + xA(d.title||'') + '" placeholder="e.g. Double-entry bookkeeping" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:600;padding:5px 8px;border:1px solid var(--border);border-radius:5px;">'
     + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button>'
+    + '</div>'
+    + '<input type="text" class="ch-learn-subtitle" value="' + xA(d.subtitle||'') + '" placeholder="e.g. Record transactions from day one" style="font-family:\'Poppins\',sans-serif;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:5px;">'
     + '</div>';
   list.appendChild(div);
 }
@@ -13039,47 +13025,43 @@ function chGet(id) { return document.getElementById(id) || {}; }
 
 function collectCourseHeroState() {
   return {
-    bg:            chGet('ch-bg-hex').value          || '#0d1f3c',
-    leftW:         chGet('ch-left-w').value          || '55',
-    padTop:        chGet('ch-pad-top').value         || '40',
-    padBot:        chGet('ch-pad-bot').value         || '40',
-    padLeft:       chGet('ch-pad-left').value        || '60',
-    padRight:      chGet('ch-pad-right').value       || '60',
-    breadcrumb:    chGet('ch-breadcrumb').value      || '',
-    heading:       cmsReadTextField('ch-heading',   { size:32, color:'#ffffff', weight:'700', letterSpacing:0 }),
-    desc:          cmsReadParagraphField('ch-desc', { size:15, color:'#94a3b8', weight:'400', letterSpacing:0 }),
-    if1Bg:         chGet('ch-if1-bg-hex').value      || '#0d1f3c',
-    iframe1:       chGet('ch-iframe1').value         || '',
-    learnIcon:     chGet('ch-learn-icon').value      || '🎯',
-    learnTitle:    chGet('ch-learn-title').value     || "What You'll Learn",
-    learnBg:       chGet('ch-learn-bg-hex').value    || '#ffffff',
-    learnTc:       chGet('ch-learn-tc-hex').value    || '#334155',
-    learnCc:       chGet('ch-learn-cc-hex').value    || '#16a34a',
-    learnItems:    Array.from(document.querySelectorAll('#ch-learn-items .block-item')).map(function(el) {
-      return (el.querySelector('.ch-learn-text') || {}).value || '';
+    bg:            chGet('ch-bg-hex').value             || '#0d1f3c',
+    padTop:        chGet('ch-pad-top').value            || '48',
+    padBot:        chGet('ch-pad-bot').value            || '56',
+    padLeft:       chGet('ch-pad-left').value           || '60',
+    padRight:      chGet('ch-pad-right').value          || '60',
+    breadcrumb:    chGet('ch-breadcrumb').value         || '',
+    eyebrowTc:     chGet('ch-eyebrow-tc-hex').value     || '#4a90d9',
+    eyebrowDot:    chGet('ch-eyebrow-dot-hex').value    || '#4a90d9',
+    heading:       cmsReadTextField('ch-heading',    { size:36, color:'#ffffff', weight:'700', letterSpacing:0 }),
+    desc:          cmsReadParagraphField('ch-desc',  { size:15, color:'#94a3b8', weight:'400', letterSpacing:0 }),
+    pillBg:        chGet('ch-pill-bg-hex').value        || '#0f2744',
+    pillBorder:    chGet('ch-pill-border-hex').value    || '#1e3a5f',
+    pillVc:        chGet('ch-pill-vc-hex').value        || '#ffffff',
+    pillLc:        chGet('ch-pill-lc-hex').value        || '#94a3b8',
+    learnLabel:    chGet('ch-learn-label').value        || "WHAT YOU'LL LEARN",
+    learnLabelTc:  chGet('ch-learn-label-tc-hex').value || '#4a90d9',
+    learnBg:       chGet('ch-learn-bg-hex').value       || '#132343',
+    learnBorder:   chGet('ch-learn-border-hex').value   || '#1e3a5f',
+    learnCc:       chGet('ch-learn-cc-hex').value       || '#4a90d9',
+    learnTitleTc:  chGet('ch-learn-title-tc-hex').value || '#ffffff',
+    learnSubTc:    chGet('ch-learn-sub-tc-hex').value   || '#f97316',
+    tags: Array.from(document.querySelectorAll('#ch-tags .block-item .ch-tag-text')).map(function(el){
+      return el.value || '';
     }).filter(Boolean),
-    if2Bg:         chGet('ch-if2-bg-hex').value      || '#0d1f3c',
-    iframe2:       chGet('ch-iframe2').value         || '',
-    includesLabel: chGet('ch-includes-label').value  || 'THIS COURSE INCLUDES',
-    btnText:       chGet('ch-btn-text').value        || 'Enrol Now →',
-    btnUrl:        chGet('ch-btn-url').value         || '#',
-    btnBg:         chGet('ch-btn-bg-hex').value      || '#1a56a3',
-    btnTc:         chGet('ch-btn-tc-hex').value      || '#ffffff',
-    tags: Array.from(document.querySelectorAll('#ch-tags .block-item')).map(function(el) {
+    pills: Array.from(document.querySelectorAll('#ch-pills .block-item')).map(function(el) {
       return {
-        text:  (el.querySelector('.ch-tag-text')  || {}).value || '',
-        style: (el.querySelector('.ch-tag-style') || {}).value || 'solid',
-        bg:    (el.querySelector('.ch-tag-bg')    || {}).value || '#1a56a3',
-        tc:    (el.querySelector('.ch-tag-tc')    || {}).value || '#ffffff',
-        bc:    (el.querySelector('.ch-tag-bc')    || {}).value || 'rgba(255,255,255,0.4)'
+        icon:  (el.querySelector('.ch-pill-icon')  || {}).value || '',
+        value: (el.querySelector('.ch-pill-value') || {}).value || '',
+        label: (el.querySelector('.ch-pill-label') || {}).value || ''
       };
-    }),
-    features: Array.from(document.querySelectorAll('#ch-features .block-item')).map(function(el) {
+    }).filter(function(p){ return p.label || p.value; }),
+    learnItems: Array.from(document.querySelectorAll('#ch-learn-items .block-item')).map(function(el) {
       return {
-        icon: (el.querySelector('.ch-feat-icon') || {}).value || '',
-        text: (el.querySelector('.ch-feat-text') || {}).value || ''
+        title:    (el.querySelector('.ch-learn-title')    || {}).value || '',
+        subtitle: (el.querySelector('.ch-learn-subtitle') || {}).value || ''
       };
-    })
+    }).filter(function(item){ return item.title; })
   };
 }
 
@@ -13090,33 +13072,33 @@ function restoreCourseHeroState(d) {
     var cp = document.getElementById(cpId); if (cp) cp.value = c;
     var hx = document.getElementById(hexId); if (hx) hx.value = c;
   };
-  setColor('ch-bg-cp',     'ch-bg-hex',     d.bg,    '#0d1f3c');
-  setColor('ch-btn-bg-cp', 'ch-btn-bg-hex', d.btnBg, '#1a56a3');
-  setColor('ch-btn-tc-cp', 'ch-btn-tc-hex', d.btnTc, '#ffffff');
-  set('ch-left-w',         d.leftW        || '55');
-  set('ch-pad-top',        d.padTop       || '40');
-  set('ch-pad-bot',        d.padBot       || '40');
-  set('ch-pad-left',       d.padLeft      || '60');
-  set('ch-pad-right',      d.padRight     || '60');
-  set('ch-breadcrumb',     d.breadcrumb   || '');
-  cmsSetTextField('ch-heading',    d.heading, { size:32, color:'#ffffff', weight:'700', letterSpacing:0 });
-  cmsSetParagraphField('ch-desc',  d.desc,    { size:15, color:'#94a3b8', weight:'400', letterSpacing:0 });
-  setColor('ch-if1-bg-cp', 'ch-if1-bg-hex', d.if1Bg, '#0d1f3c');
-  set('ch-iframe1',        d.iframe1      || '');
-  set('ch-learn-icon',     d.learnIcon    || '🎯');
-  set('ch-learn-title',    d.learnTitle   || "What You'll Learn");
-  setColor('ch-learn-bg-cp', 'ch-learn-bg-hex', d.learnBg, '#ffffff');
-  setColor('ch-learn-tc-cp', 'ch-learn-tc-hex', d.learnTc, '#334155');
-  setColor('ch-learn-cc-cp', 'ch-learn-cc-hex', d.learnCc, '#16a34a');
+  setColor('ch-bg-cp',            'ch-bg-hex',            d.bg,           '#0d1f3c');
+  set('ch-pad-top',               d.padTop       || '48');
+  set('ch-pad-bot',               d.padBot       || '56');
+  set('ch-pad-left',              d.padLeft      || '60');
+  set('ch-pad-right',             d.padRight     || '60');
+  set('ch-breadcrumb',            d.breadcrumb   || '');
+  setColor('ch-eyebrow-tc-cp',    'ch-eyebrow-tc-hex',    d.eyebrowTc,    '#4a90d9');
+  setColor('ch-eyebrow-dot-cp',   'ch-eyebrow-dot-hex',   d.eyebrowDot,   '#4a90d9');
+  cmsSetTextField('ch-heading',   d.heading,  { size:36, color:'#ffffff', weight:'700', letterSpacing:0 });
+  cmsSetParagraphField('ch-desc', d.desc,     { size:15, color:'#94a3b8', weight:'400', letterSpacing:0 });
+  setColor('ch-pill-bg-cp',       'ch-pill-bg-hex',       d.pillBg,       '#0f2744');
+  setColor('ch-pill-border-cp',   'ch-pill-border-hex',   d.pillBorder,   '#1e3a5f');
+  setColor('ch-pill-vc-cp',       'ch-pill-vc-hex',       d.pillVc,       '#ffffff');
+  setColor('ch-pill-lc-cp',       'ch-pill-lc-hex',       d.pillLc,       '#94a3b8');
+  set('ch-learn-label',           d.learnLabel   || "WHAT YOU'LL LEARN");
+  setColor('ch-learn-label-tc-cp','ch-learn-label-tc-hex',d.learnLabelTc, '#4a90d9');
+  setColor('ch-learn-bg-cp',      'ch-learn-bg-hex',      d.learnBg,      '#132343');
+  setColor('ch-learn-border-cp',  'ch-learn-border-hex',  d.learnBorder,  '#1e3a5f');
+  setColor('ch-learn-cc-cp',      'ch-learn-cc-hex',      d.learnCc,      '#4a90d9');
+  setColor('ch-learn-title-tc-cp','ch-learn-title-tc-hex',d.learnTitleTc, '#ffffff');
+  setColor('ch-learn-sub-tc-cp',  'ch-learn-sub-tc-hex',  d.learnSubTc,   '#f97316');
+  var tl = document.getElementById('ch-tags');
+  if (tl) { tl.innerHTML = ''; (d.tags || []).forEach(function(t){ chAddTag(t); }); }
+  var pl = document.getElementById('ch-pills');
+  if (pl) { pl.innerHTML = ''; (d.pills || []).forEach(function(p){ chAddPill(p); }); }
   var ll = document.getElementById('ch-learn-items');
-  if (ll) { ll.innerHTML = ''; (d.learnItems || []).forEach(function(t){ chAddLearnItem(t); }); }
-  setColor('ch-if2-bg-cp', 'ch-if2-bg-hex', d.if2Bg, '#0d1f3c');
-  set('ch-iframe2',        d.iframe2      || '');
-  set('ch-includes-label', d.includesLabel|| 'THIS COURSE INCLUDES');
-  set('ch-btn-text',       d.btnText      || 'Enrol Now →');
-  set('ch-btn-url',        d.btnUrl       || '#');
-  var tl = document.getElementById('ch-tags');     if (tl) { tl.innerHTML = ''; (d.tags     || []).forEach(function(t){ chAddTag(t);     }); }
-  var fl = document.getElementById('ch-features'); if (fl) { fl.innerHTML = ''; (d.features || []).forEach(function(f){ chAddFeature(f); }); }
+  if (ll) { ll.innerHTML = ''; (d.learnItems || []).forEach(function(item){ chAddLearnItem(item); }); }
 }
 
 // ── CH HTML generator ────────────────────────────────────────────
@@ -13125,117 +13107,98 @@ function generateCourseHero() {
   var d   = collectCourseHeroState();
   var uid = 'ch-' + Date.now().toString(36);
   var bg  = cmsSafeHex(d.bg, '#0d1f3c');
-  var lw  = cmsClampInt(d.leftW,   55, 35, 70);
-  var pT  = cmsClampInt(d.padTop,  40, 0, 300);
-  var pB  = cmsClampInt(d.padBot,  40, 0, 300);
+  var pT  = cmsClampInt(d.padTop,  48, 0, 300);
+  var pB  = cmsClampInt(d.padBot,  56, 0, 300);
   var pL  = cmsClampInt(d.padLeft, 60, 0, 300);
   var pR  = cmsClampInt(d.padRight,60, 0, 300);
-  var btnBg = cmsSafeHex(d.btnBg, '#1a56a3');
-  var btnTc = cmsSafeHex(d.btnTc, '#ffffff');
 
-  var hw = cmsNormalizeTextData(d.heading,   { size:32, color:'#ffffff', weight:'700', letterSpacing:0 });
-  var dw = cmsNormalizeParagraphData(d.desc, { size:15, color:'#94a3b8', weight:'400', letterSpacing:0 });
+  var hw  = cmsNormalizeTextData(d.heading,   { size:36, color:'#ffffff', weight:'700', letterSpacing:0 });
+  var dw  = cmsNormalizeParagraphData(d.desc, { size:15, color:'#94a3b8', weight:'400', letterSpacing:0 });
 
-  // ── Left column ──
-  var leftParts = [];
+  var eyebrowTc  = cmsSafeHex(d.eyebrowTc,  '#4a90d9');
+  var eyebrowDot = cmsSafeHex(d.eyebrowDot, '#4a90d9');
+  var pillBg     = cmsSafeHex(d.pillBg,     '#0f2744');
+  var pillBorder = cmsSafeHex(d.pillBorder, '#1e3a5f');
+  var pillVc     = cmsSafeHex(d.pillVc,     '#ffffff');
+  var pillLc     = cmsSafeHex(d.pillLc,     '#94a3b8');
+  var learnLabelTc  = cmsSafeHex(d.learnLabelTc,  '#4a90d9');
+  var learnBg       = cmsSafeHex(d.learnBg,       '#132343');
+  var learnBorder   = cmsSafeHex(d.learnBorder,   '#1e3a5f');
+  var learnCc       = cmsSafeHex(d.learnCc,       '#4a90d9');
+  var learnTitleTc  = cmsSafeHex(d.learnTitleTc,  '#ffffff');
+  var learnSubTc    = cmsSafeHex(d.learnSubTc,    '#f97316');
 
+  var parts = [];
+
+  // Breadcrumb
   if (d.breadcrumb) {
-    leftParts.push('<p style="font-family:\'Poppins\',sans-serif;font-size:12px;color:rgba(255,255,255,0.5);margin:0 0 14px;">' + xH(d.breadcrumb) + '</p>');
+    parts.push('<p style="font-family:\'Poppins\',sans-serif;font-size:12px;color:rgba(255,255,255,0.45);margin:0 0 16px;letter-spacing:0.01em;">' + xH(d.breadcrumb) + '</p>');
   }
 
-  var validTags = (d.tags||[]).filter(function(t){ return t.text; });
+  // Eyebrow tags
+  var validTags = (d.tags || []).filter(Boolean);
   if (validTags.length) {
-    var tagItems = validTags.map(function(t) {
-      var isSolid = t.style !== 'outlined';
-      var tagBgStr = isSolid ? 'background:' + xA(t.bg||'#1a56a3') + ';' : 'background:transparent;';
-      var tagBc    = isSolid ? (t.bg||'#1a56a3') : (t.bc||'rgba(255,255,255,0.4)');
-      return '<span style="font-family:\'Poppins\',sans-serif;font-size:12px;font-weight:500;padding:5px 14px;border-radius:999px;' + tagBgStr + 'border:1.5px solid ' + xA(tagBc) + ';color:' + xA(t.tc||'#ffffff') + ';white-space:nowrap;display:inline-block;">' + xH(t.text) + '</span>';
-    }).join('\n    ');
-    leftParts.push('<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">\n    ' + tagItems + '\n  </div>');
+    var eyebrowHtml = '<span style="color:' + xA(eyebrowDot) + ';margin-right:6px;">&#x25CF;</span>'
+      + validTags.map(function(t){ return '<span>' + xH(t) + '</span>'; }).join('<span style="margin:0 6px;opacity:0.5;"> · </span>');
+    parts.push('<p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:' + xA(eyebrowTc) + ';margin:0 0 14px;display:flex;align-items:center;flex-wrap:wrap;gap:2px;">' + eyebrowHtml + '</p>');
   }
 
+  // Heading
   if (hw.text) {
     var headingHtml = hw.text.split('\n').map(function(l){ return xH(l); }).join('<br>');
-    leftParts.push('<h1 style="font-family:\'Poppins\',sans-serif;margin:0 0 16px;line-height:1.2;font-size:' + hw.size + 'px;font-weight:' + hw.weight + ';color:' + xA(hw.color) + ';letter-spacing:' + hw.letterSpacing + 'px;">' + headingHtml + '</h1>');
+    parts.push('<h1 style="font-family:\'Poppins\',sans-serif;margin:0 0 18px;line-height:1.15;font-size:' + hw.size + 'px;font-weight:' + hw.weight + ';color:' + xA(hw.color) + ';letter-spacing:' + hw.letterSpacing + 'px;">' + headingHtml + '</h1>');
   }
 
+  // Description
   if (dw.text) {
-    leftParts.push('<p style="font-family:\'Poppins\',sans-serif;margin:0 0 20px;line-height:1.7;font-size:' + dw.size + 'px;font-weight:' + dw.weight + ';color:' + xA(dw.color) + ';">' + xH(dw.text) + '</p>');
+    parts.push('<p style="font-family:\'Poppins\',sans-serif;margin:0 0 28px;line-height:1.75;font-size:' + dw.size + 'px;font-weight:' + dw.weight + ';color:' + xA(dw.color) + ';max-width:640px;">' + xH(dw.text) + '</p>');
   }
 
-  if (d.iframe1) {
-    var if1Bg = cmsSafeHex(d.if1Bg, '#0d1f3c');
-    leftParts.push('<div style="background:' + xA(if1Bg) + ';margin-bottom:8px;">' + d.iframe1 + '</div>');
+  // Feature pills
+  var validPills = (d.pills || []).filter(function(p){ return p.label || p.value; });
+  if (validPills.length) {
+    var pillItems = validPills.map(function(p) {
+      var inner = '';
+      if (p.icon)  inner += '<span style="font-size:16px;line-height:1;">' + xH(p.icon) + '</span>';
+      if (p.value) inner += '<strong style="font-family:\'Poppins\',sans-serif;font-weight:700;color:' + xA(pillVc) + ';font-size:13px;">' + xH(p.value) + '</strong>';
+      if (p.label) inner += '<span style="font-family:\'Poppins\',sans-serif;color:' + xA(pillLc) + ';font-size:13px;">' + xH(p.label) + '</span>';
+      return '<div style="display:inline-flex;align-items:center;gap:7px;padding:8px 14px;background:' + xA(pillBg) + ';border:1px solid ' + xA(pillBorder) + ';border-radius:999px;">' + inner + '</div>';
+    }).join('\n    ');
+    parts.push('<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:36px;">\n    ' + pillItems + '\n  </div>');
   }
 
-  var validLearnItems = (d.learnItems || []).filter(Boolean);
-  if (validLearnItems.length || d.learnTitle) {
-    var learnBg = cmsSafeHex(d.learnBg, '#ffffff');
-    var learnTc = cmsSafeHex(d.learnTc, '#334155');
-    var learnCc = cmsSafeHex(d.learnCc, '#16a34a');
-    var learnGridItems = validLearnItems.map(function(item) {
-      return '<div style="display:flex;align-items:flex-start;gap:8px;">'
-        + '<span style="color:' + xA(learnCc) + ';font-size:14px;flex-shrink:0;margin-top:2px;font-weight:700;">&#x2713;</span>'
-        + '<span style="font-family:\'Poppins\',sans-serif;font-size:13px;color:' + xA(learnTc) + ';line-height:1.5;">' + xH(item) + '</span>'
+  // What You'll Learn
+  var validLearnItems = (d.learnItems || []).filter(function(item){ return item.title; });
+  if (validLearnItems.length) {
+    var learnCards = validLearnItems.map(function(item) {
+      return '<div style="display:flex;align-items:flex-start;gap:12px;background:' + xA(learnBg) + ';border:1px solid ' + xA(learnBorder) + ';border-radius:10px;padding:16px 18px;">'
+        + '<span style="color:' + xA(learnCc) + ';font-size:15px;font-weight:700;flex-shrink:0;margin-top:1px;">&#x2713;</span>'
+        + '<div>'
+        + '<p style="font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:600;color:' + xA(learnTitleTc) + ';margin:0 0 4px;line-height:1.4;">' + xH(item.title) + '</p>'
+        + (item.subtitle ? '<p style="font-family:\'Poppins\',sans-serif;font-size:13px;color:' + xA(learnSubTc) + ';margin:0;line-height:1.4;">' + xH(item.subtitle) + '</p>' : '')
+        + '</div>'
         + '</div>';
     }).join('\n    ');
-    leftParts.push(
-      '<div style="background:' + xA(learnBg) + ';border-radius:12px;padding:24px 28px;margin-top:16px;">'
-      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">'
-      + (d.learnIcon ? '<span style="font-size:22px;">' + xH(d.learnIcon) + '</span>' : '')
-      + '<h2 style="font-family:\'Poppins\',sans-serif;font-size:18px;font-weight:700;color:' + xA(learnTc) + ';margin:0;">' + xH(d.learnTitle || "What You'll Learn") + '</h2>'
-      + '</div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;">\n    ' + learnGridItems + '\n  </div>'
+    parts.push(
+      '<div>'
+      + '<p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:' + xA(learnLabelTc) + ';margin:0 0 16px;">' + xH(d.learnLabel || "WHAT YOU'LL LEARN") + '</p>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">\n    ' + learnCards + '\n  </div>'
       + '</div>'
     );
-  }
-
-  // ── Right column ──
-  var rightParts = [];
-
-  if (d.iframe2) {
-    var if2Bg = cmsSafeHex(d.if2Bg, '#0d1f3c');
-    rightParts.push('<div style="background:' + xA(if2Bg) + ';margin-bottom:16px;">' + d.iframe2 + '</div>');
-  }
-
-  var validFeats = (d.features||[]).filter(function(f){ return f.text; });
-  if (validFeats.length) {
-    var featItems = validFeats.map(function(f) {
-      return '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;">'
-        + (f.icon ? '<span style="font-size:18px;flex-shrink:0;line-height:1.4;">' + xH(f.icon) + '</span>' : '<span style="width:18px;flex-shrink:0;"></span>')
-        + '<span style="font-family:\'Poppins\',sans-serif;font-size:14px;color:#e2e8f0;line-height:1.5;">' + xH(f.text) + '</span>'
-        + '</div>';
-    }).join('\n    ');
-    rightParts.push(
-      '<div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:18px 20px;margin-bottom:16px;">'
-      + '<p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin:0 0 10px;">' + xH(d.includesLabel||'THIS COURSE INCLUDES') + '</p>'
-      + '<div>\n    ' + featItems + '\n  </div>'
-      + '</div>'
-    );
-  }
-
-  if (d.btnText) {
-    rightParts.push('<a href="' + xA(d.btnUrl||'#') + '" style="display:block;text-align:center;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:600;color:' + xA(btnTc) + ';background:' + xA(btnBg) + ';text-decoration:none;padding:14px 24px;border-radius:10px;">' + xH(d.btnText) + '</a>');
   }
 
   var css = '<style>'
     + '#' + uid + '{font-family:\'Poppins\',sans-serif;box-sizing:border-box;}'
     + '#' + uid + ' *{box-sizing:border-box;}'
     + '#' + uid + ' iframe{display:block!important;visibility:visible!important;}'
-    + '#' + uid + ' .ch-body{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start;}'
-    + '#' + uid + ' .ch-left{flex:0 0 ' + lw + '%;min-width:280px;}'
-    + '#' + uid + ' .ch-right{flex:1;min-width:260px;}'
-    + '@media(max-width:768px){'
-    + '#' + uid + ' .ch-left,#' + uid + ' .ch-right{flex:none;width:100%;}'
+    + '@media(max-width:640px){'
+    + '#' + uid + ' .ch-learn-grid{grid-template-columns:1fr!important;}'
     + '}'
     + '</style>';
 
   var html = css + '\n'
     + '<div id="' + uid + '" style="background:' + xA(bg) + ';padding:' + pT + 'px ' + pR + 'px ' + pB + 'px ' + pL + 'px;">'
-    + '\n<div class="ch-body">'
-    + '\n<div class="ch-left">\n' + leftParts.join('\n') + '\n</div>'
-    + '\n<div class="ch-right">\n' + rightParts.join('\n') + '\n</div>'
-    + '\n</div>'
+    + '\n' + parts.join('\n')
     + '\n</div>';
 
   var preview = document.getElementById('course-hero-preview-wrap'); if (preview) preview.innerHTML = html;
