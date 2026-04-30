@@ -13061,6 +13061,10 @@ function chAddLearnItem(data) {
     + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()">✕</button>'
     + '</div>'
     + '<input type="text" class="ch-learn-subtitle" value="' + xA(d.subtitle||'') + '" placeholder="e.g. Record transactions from day one" style="font-family:\'Poppins\',sans-serif;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:5px;">'
+    + '<label style="display:flex;align-items:center;gap:6px;font-family:\'Poppins\',sans-serif;font-size:12px;color:var(--muted);cursor:pointer;margin-top:2px;user-select:none;">'
+    + '<input type="checkbox" class="ch-learn-full"' + (d.fullWidth ? ' checked' : '') + ' style="width:14px;height:14px;cursor:pointer;accent-color:#204280;">'
+    + 'Full width (spans entire row)'
+    + '</label>'
     + '</div>';
   list.appendChild(div);
 }
@@ -13092,7 +13096,6 @@ function collectCourseHeroState() {
     learnCc:       chGet('ch-learn-cc-hex').value       || '#4a90d9',
     learnTitleTc:  chGet('ch-learn-title-tc-hex').value || '#ffffff',
     learnSubTc:    chGet('ch-learn-sub-tc-hex').value   || '#f97316',
-    learnCols:     parseInt(chGet('ch-learn-cols').value) || 2,
     tags: Array.from(document.querySelectorAll('#ch-tags .block-item .ch-tag-text')).map(function(el){
       return el.value || '';
     }).filter(Boolean),
@@ -13105,8 +13108,9 @@ function collectCourseHeroState() {
     }).filter(function(p){ return p.label || p.value; }),
     learnItems: Array.from(document.querySelectorAll('#ch-learn-items .block-item')).map(function(el) {
       return {
-        title:    (el.querySelector('.ch-learn-title')    || {}).value || '',
-        subtitle: (el.querySelector('.ch-learn-subtitle') || {}).value || ''
+        title:     (el.querySelector('.ch-learn-title')    || {}).value   || '',
+        subtitle:  (el.querySelector('.ch-learn-subtitle') || {}).value   || '',
+        fullWidth: !!(el.querySelector('.ch-learn-full')   || {}).checked
       };
     }).filter(function(item){ return item.title; })
   };
@@ -13140,7 +13144,6 @@ function restoreCourseHeroState(d) {
   setColor('ch-learn-cc-cp',      'ch-learn-cc-hex',      d.learnCc,      '#4a90d9');
   setColor('ch-learn-title-tc-cp','ch-learn-title-tc-hex',d.learnTitleTc, '#ffffff');
   setColor('ch-learn-sub-tc-cp',  'ch-learn-sub-tc-hex',  d.learnSubTc,   '#f97316');
-  set('ch-learn-cols', d.learnCols || '2');
   var tl = document.getElementById('ch-tags');
   if (tl) { tl.innerHTML = ''; (d.tags || []).forEach(function(t){ chAddTag(t); }); }
   var pl = document.getElementById('ch-pills');
@@ -13902,10 +13905,9 @@ function generateCourseHero() {
   // What You'll Learn
   var validLearnItems = (d.learnItems || []).filter(function(item){ return item.title; });
   if (validLearnItems.length) {
-    var learnCols = (d.learnCols === 1 || d.learnCols === '1') ? 1 : 2;
-    var learnGridCols = learnCols === 1 ? '1fr' : '1fr 1fr';
     var learnCards = validLearnItems.map(function(item) {
-      return '<div style="display:flex;align-items:flex-start;gap:12px;background:' + xA(learnBg) + ';border:1px solid ' + xA(learnBorder) + ';border-radius:10px;padding:16px 18px;">'
+      var spanStyle = item.fullWidth ? 'grid-column:1/-1;' : '';
+      return '<div style="' + spanStyle + 'display:flex;align-items:flex-start;gap:12px;background:' + xA(learnBg) + ';border:1px solid ' + xA(learnBorder) + ';border-radius:10px;padding:16px 18px;">'
         + '<span style="color:' + xA(learnCc) + ';font-size:15px;font-weight:700;flex-shrink:0;margin-top:1px;">&#x2713;</span>'
         + '<div>'
         + '<p style="font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:600;color:' + xA(learnTitleTc) + ';margin:0 0 4px;line-height:1.4;">' + xH(item.title) + '</p>'
@@ -13916,7 +13918,7 @@ function generateCourseHero() {
     parts.push(
       '<div>'
       + '<p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:' + xA(learnLabelTc) + ';margin:0 0 16px;">' + xH(d.learnLabel || "WHAT YOU'LL LEARN") + '</p>'
-      + '<div class="ch-learn-grid" style="display:grid;grid-template-columns:' + learnGridCols + ';gap:12px;">\n    ' + learnCards + '\n  </div>'
+      + '<div class="ch-learn-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">\n    ' + learnCards + '\n  </div>'
       + '</div>'
     );
   }
