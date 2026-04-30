@@ -1,0 +1,47 @@
+<div id="screen-course-tabs" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <!-- ── Component manager ── -->
+    <div style="background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:2px;">
+      <div class="section-label" style="margin:0 0 8px">Saved Components</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+        <button class="btn-gen" style="flex:1;min-width:120px;padding:9px" onclick="ctabsCmpSave()">💾 Save</button>
+        <button class="btn-gen" style="flex:1;min-width:120px;padding:9px;background:#16a34a" onclick="generateCourseTabs()">⚡ Generate HTML</button>
+        <button class="btn-sm" onclick="ctabsCmpNew()" style="padding:8px 12px">+ New</button>
+        <button class="btn-sm" id="ctabs-cmp-dup" style="display:none;padding:8px 12px" onclick="ctabsCmpDuplicate()">⧉ Duplicate</button>
+        <button class="btn-sm danger" id="ctabs-cmp-del" style="display:none;padding:8px 12px" onclick="ctabsCmpDelete()">Delete</button>
+      </div>
+      <select id="ctabs-cmp-sel" onchange="ctabsCmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;outline:none;background:#fff;color:var(--text);margin-bottom:8px;">
+        <option value="">— select to load —</option>
+      </select>
+      <div class="field" style="margin-bottom:6px">
+        <label>Component name</label>
+        <input type="text" id="ctabs-cmp-name" placeholder="e.g. ACCA FA1 — Course Tabs">
+      </div>
+      <span id="ctabs-cmp-status" style="font-size:12px;display:block;min-height:14px;text-align:center;"></span>
+    </div>
+
+    <!-- ── Tab manager ── -->
+    <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+      Tabs
+      <button class="btn-sm" onclick="ctabsAddTab()">+ Add tab</button>
+    </div>
+    <div id="ctabs-pill-bar" class="tab-pills"></div>
+    <div id="ctabs-editor-area" style="display:flex;flex-direction:column;gap:14px;"></div>
+
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="course-tabs-ot-preview" onclick="switchOut('course-tabs','preview')">Preview</div>
+      <div class="out-tab" id="course-tabs-ot-html" onclick="switchOut('course-tabs','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="course-tabs-preview-wrap" class="preview-wrap"></div>
+      <div id="course-tabs-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('course-tabs-code',this)">Copy</button>
+        <pre id="course-tabs-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>
