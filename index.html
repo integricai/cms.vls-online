@@ -8830,10 +8830,13 @@ function riColor(cpId, hexId, val, fb) {
 function collectRiState() {
   return {
     recipients:    (riGet('ri-recipients').value || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean),
-    heroBg:        riGet('ri-hero-bg-hex').value    || '#0d1f3c',
-    heroEyebrow:   riGet('ri-eyebrow').value        || '',
-    heroTitle:     riGet('ri-title').value          || '',
-    heroDesc:      riGet('ri-desc').value           || '',
+    heroBg:        riGet('ri-hero-bg-hex').value      || '#0d1f3c',
+    heroEyebrow:   riGet('ri-eyebrow').value          || '',
+    eyebrowTc:     riGet('ri-eyebrow-tc-hex').value   || '#204280',
+    heroTitle:     riGet('ri-title').value            || '',
+    titleTc:       riGet('ri-title-tc-hex').value     || '#ffffff',
+    heroDesc:      riGet('ri-desc').value             || '',
+    descTc:        riGet('ri-desc-tc-hex').value      || '#94a3b8',
     sidebarW:      riGet('ri-sidebar-w').value      || '300',
     sidebarBg:     riGet('ri-sidebar-bg-hex').value || '#f8fafc',
     hiwEyebrow:    riGet('ri-hiw-eyebrow').value    || '',
@@ -8870,8 +8873,11 @@ function restoreRiState(d) {
   set('ri-contact-title', d.contactTitle || '');
   set('ri-btn-text',      d.btnText      || 'Submit Report →');
   set('ri-ty-url',        d.tyUrl        || '');
-  riColor('ri-hero-bg-cp',    'ri-hero-bg-hex',    d.heroBg,    '#0d1f3c');
-  riColor('ri-sidebar-bg-cp', 'ri-sidebar-bg-hex', d.sidebarBg, '#f8fafc');
+  riColor('ri-hero-bg-cp',     'ri-hero-bg-hex',     d.heroBg,     '#0d1f3c');
+  riColor('ri-eyebrow-tc-cp',  'ri-eyebrow-tc-hex',  d.eyebrowTc,  '#204280');
+  riColor('ri-title-tc-cp',    'ri-title-tc-hex',    d.titleTc,    '#ffffff');
+  riColor('ri-desc-tc-cp',     'ri-desc-tc-hex',     d.descTc,     '#94a3b8');
+  riColor('ri-sidebar-bg-cp',  'ri-sidebar-bg-hex',  d.sidebarBg,  '#f8fafc');
   riColor('ri-contact-bg-cp', 'ri-contact-bg-hex', d.contactBg, '#0d1f3c');
   riColor('ri-accent-cp',     'ri-accent-hex',     d.accent,    '#204280');
   var sl = document.getElementById('ri-steps');         if (sl) { sl.innerHTML = ''; (d.steps        || []).forEach(function(s){ riAddStep(s); }); }
@@ -8886,10 +8892,13 @@ function restoreRiState(d) {
 function generateReport() {
   var d      = collectRiState();
   var uid    = 'ri' + Date.now().toString(36);
-  var heroBg = cmsSafeHex(d.heroBg,    '#0d1f3c');
-  var sideBg = cmsSafeHex(d.sidebarBg, '#f8fafc');
-  var ctcBg  = cmsSafeHex(d.contactBg, '#0d1f3c');
-  var acc    = cmsSafeHex(d.accent,    '#204280');
+  var heroBg    = cmsSafeHex(d.heroBg,    '#0d1f3c');
+  var sideBg    = cmsSafeHex(d.sidebarBg, '#f8fafc');
+  var ctcBg     = cmsSafeHex(d.contactBg, '#0d1f3c');
+  var acc       = cmsSafeHex(d.accent,    '#204280');
+  var eyebrowTc = cmsSafeHex(d.eyebrowTc, '#204280');
+  var titleTc   = cmsSafeHex(d.titleTc,   '#ffffff');
+  var descTc    = cmsSafeHex(d.descTc,    '#94a3b8');
   var sideW  = cmsClampInt(d.sidebarW, 300, 200, 420);
   var recips   = JSON.stringify(d.recipients || ['office@vls-online.com']);
   var apiBase  = window.location.origin; // e.g. https://cms.vls-online.com
@@ -8897,9 +8906,9 @@ function generateReport() {
 
   // ── Hero ──
   var heroHtml = '<div class="ri-hero" style="background:' + xA(heroBg) + ';">'
-    + (d.heroEyebrow ? '<p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:' + xA(acc) + ';margin:0 0 10px;">' + xH(d.heroEyebrow) + '</p>' : '')
-    + '<h1 style="font-family:\'Poppins\',sans-serif;font-size:36px;font-weight:700;color:#ffffff;margin:0 0 14px;">' + xH(d.heroTitle || '') + '</h1>'
-    + (d.heroDesc ? '<p style="font-family:\'Poppins\',sans-serif;font-size:15px;color:#94a3b8;line-height:1.7;margin:0;max-width:600px;">' + xH(d.heroDesc) + '</p>' : '')
+    + (d.heroEyebrow ? '<p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:' + xA(eyebrowTc) + ';margin:0 0 10px;">' + xH(d.heroEyebrow) + '</p>' : '')
+    + '<h1 style="font-family:\'Poppins\',sans-serif;font-size:36px;font-weight:700;color:' + xA(titleTc) + ';margin:0 0 14px;">' + xH(d.heroTitle || '') + '</h1>'
+    + (d.heroDesc ? '<p style="font-family:\'Poppins\',sans-serif;font-size:15px;color:' + xA(descTc) + ';line-height:1.7;margin:0;max-width:600px;">' + xH(d.heroDesc) + '</p>' : '')
     + '</div>';
 
   // ── Steps ──

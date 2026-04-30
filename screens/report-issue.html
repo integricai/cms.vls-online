@@ -28,6 +28,29 @@
         </div>
       </div>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:2px">
+      <div class="field" style="margin:0">
+        <label>Eyebrow colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="ri-eyebrow-tc-cp" value="#204280" oninput="document.getElementById('ri-eyebrow-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="ri-eyebrow-tc-hex" value="#204280" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ri-eyebrow-tc-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Title colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="ri-title-tc-cp" value="#ffffff" oninput="document.getElementById('ri-title-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="ri-title-tc-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ri-title-tc-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Description colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="ri-desc-tc-cp" value="#94a3b8" oninput="document.getElementById('ri-desc-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="ri-desc-tc-hex" value="#94a3b8" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('ri-desc-tc-cp').value=v">
+        </div>
+      </div>
+    </div>
     <div class="field"><label>Title</label><input type="text" id="ri-title" value="Report an Issue"></div>
     <div class="field"><label>Description</label><textarea id="ri-desc" rows="2">Experiencing a problem with your course or account? Let us know and we'll get it resolved as quickly as possible. A clear description helps us respond faster.</textarea></div>
 
