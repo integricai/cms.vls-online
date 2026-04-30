@@ -51,6 +51,11 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
 .btn-sm.danger:hover{background:#fef2f2;color:var(--red);border-color:#fca5a5}
 .btn-add-block{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:1.5px dashed var(--border);border-radius:8px;background:transparent;font-family:'Poppins',sans-serif;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;width:100%}
 .btn-add-block:hover{border-color:var(--purple);color:var(--purple);background:var(--purple-light)}
+.cdesc-toolbar{display:flex;align-items:center;gap:5px;padding:3px 0 5px;flex-wrap:wrap}
+.cdesc-toolbar>span{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap}
+.cdesc-color-btn{display:inline-flex;align-items:center;gap:3px;cursor:pointer;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:#fff;line-height:1}
+.cdesc-color-btn input[type=color]{width:16px;height:16px;padding:0;border:none;background:transparent;cursor:pointer}
+.cdesc-a{font-size:13px;font-weight:700;font-family:serif;text-decoration:underline;text-decoration-style:solid;text-decoration-thickness:2px;color:#204280}
 .feature-item{display:flex;gap:6px;align-items:center}
 .feature-item input{flex:1}
 .btn-icon{width:28px;height:28px;border-radius:4px;border:1px solid var(--border);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;flex-shrink:0}
@@ -322,6 +327,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
     <div class="nav-dd-menu" id="nav-course-menu">
       <div class="nav-dd-item" id="nav-course-hero" onclick="switchScreen('course-hero')">Left Hero Section</div>
       <div class="nav-dd-item" id="nav-course-hero-right" onclick="switchScreen('course-hero-right')">Right Panel</div>
+      <div class="nav-dd-item" id="nav-course-desc" onclick="switchScreen('course-desc')">Course Description</div>
     </div>
   </div>
   <div class="nav-dropdown" id="nav-forms-dd">
@@ -413,6 +419,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
         <div class="home-tile-links">
           <button class="home-tile-link" onclick="switchScreen('course-hero')">Left Hero Section</button>
           <button class="home-tile-link" onclick="switchScreen('course-hero-right')">Right Panel</button>
+          <button class="home-tile-link" onclick="switchScreen('course-desc')">Course Description</button>
         </div>
       </div>
     </div>
@@ -976,7 +983,13 @@ var CMS_PARAGRAPH_DEFAULTS = {
   cfItemValue:         { size: 13, color: '#1a56a3', weight: '400', letterSpacing: 0    },
   chrLabel:            { size: 11, color: '#6b7280', weight: '700', letterSpacing: 0.12 },
   chrItemTitle:        { size: 14, color: '#1a56a3', weight: '600', letterSpacing: 0    },
-  chrItemDesc:         { size: 13, color: '#6b7280', weight: '400', letterSpacing: 0    }
+  chrItemDesc:         { size: 13, color: '#6b7280', weight: '400', letterSpacing: 0    },
+  cdescIntroBold:      { size: 16, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
+  cdescDesc:           { size: 16, color: '#1a1a1a', weight: '400', letterSpacing: 0    },
+  cdescHeading:        { size: 18, color: '#204280', weight: '700', letterSpacing: 0    },
+  cdescItemHeading:    { size: 16, color: '#204280', weight: '700', letterSpacing: 0    },
+  cdescBullet:         { size: 15, color: '#1a1a1a', weight: '400', letterSpacing: 0    },
+  cdescNote:           { size: 13, color: '#262a32', weight: '400', letterSpacing: 0    }
 };
 var CMS_TEXT_DEFAULTS = CMS_PARAGRAPH_DEFAULTS;
 function cmsParagraphText(value) {
@@ -1023,7 +1036,7 @@ var _PAGE_SCREENS   = ['hero2', 'intro', 'desc', 'tabs', 'team'];
 var _SHARED_SCREENS = ['faq', 'events', 'programs', 'feature-cards', 'feature-cards-2'];
 var _COMMON_SECTION_SCREENS = ['steps-section', 'dcs', 'dcs2', 'dcs3', 'reach', 'policy'];
 var _FORM_SCREENS   = ['form', 'report-issue', 'report-thank-you'];
-var _COURSE_SCREENS = ['course-hero', 'course-hero-right'];
+var _COURSE_SCREENS = ['course-hero', 'course-hero-right', 'course-desc'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
@@ -1051,6 +1064,7 @@ var _screenFiles = {
   hero2:           '/screens/hero2.html',
   'course-hero':         '/screens/course-hero.html',
   'course-hero-right':   '/screens/course-hero-right.html',
+  'course-desc':         '/screens/course-desc.html',
   policy:          '/screens/policy.html',
   'report-issue':      '/screens/report-issue.html',
   'report-thank-you':  '/screens/report-thank-you.html',
@@ -1144,6 +1158,7 @@ async function switchScreen(name) {
   if (name === 'hero2'             && !_loadedScreens._h2Init)   { _loadedScreens._h2Init   = true; hero2OnOpen(); h2CmpInit(); cmpAttachDirty('hero2'); }
   if (name === 'course-hero'       && !_loadedScreens._chInit)   { _loadedScreens._chInit   = true; courseHeroOnOpen(); chCmpInit(); cmpAttachDirty('course-hero'); }
   if (name === 'course-hero-right' && !_loadedScreens._chrInit)  { _loadedScreens._chrInit  = true; chrOnOpen(); chrCmpInit(); cmpAttachDirty('course-hero-right'); }
+  if (name === 'course-desc'       && !_loadedScreens._cdInit)   { _loadedScreens._cdInit   = true; cdescOnOpen(); cdescCmpInit(); cmpAttachDirty('course-desc'); }
   if (name === 'header')  headerOnOpen();
 }
 
@@ -1324,7 +1339,7 @@ function generateIntro() {
 
 var descBc = 0;
 var _dirtyScreens = {};
-var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] }, dcs3: { id: null, components: [] }, reach: { id: null, components: [] }, cf: { id: null, components: [] }, policy: { id: null, components: [] }, hero2: { id: null, components: [] }, 'course-hero': { id: null, components: [] }, 'course-hero-right': { id: null, components: [] } };
+var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] }, dcs3: { id: null, components: [] }, reach: { id: null, components: [] }, cf: { id: null, components: [] }, policy: { id: null, components: [] }, hero2: { id: null, components: [] }, 'course-hero': { id: null, components: [] }, 'course-hero-right': { id: null, components: [] }, 'course-desc': { id: null, components: [] } };
 
 function toggleBlockPicker() {
   var p = document.getElementById('block-type-picker');
@@ -13106,6 +13121,433 @@ function restoreCourseHeroState(d) {
   if (pl) { pl.innerHTML = ''; (d.pills || []).forEach(function(p){ chAddPill(p); }); }
   var ll = document.getElementById('ch-learn-items');
   if (ll) { ll.innerHTML = ''; (d.learnItems || []).forEach(function(item){ chAddLearnItem(item); }); }
+}
+
+// ── Course Description (CDESC) ───────────────────────────────────
+
+// ── CDESC inline colour selection helpers ────────────────────────
+
+function cdescGetTa(el) {
+  // Find the textarea that is the next sibling of the nearest .cdesc-toolbar
+  var toolbar = el.closest('.cdesc-toolbar');
+  return toolbar ? toolbar.nextElementSibling : null;
+}
+
+function cdescColorSel(colorInput) {
+  var ta = cdescGetTa(colorInput);
+  if (!ta || ta.tagName !== 'TEXTAREA') return;
+  var s = ta.selectionStart, e = ta.selectionEnd;
+  if (s >= e) { alert('Select some text in the field first, then click A.'); return; }
+  var color = colorInput.value;
+  ta.value = ta.value.slice(0, s) + '<span style="color:' + color + '">' + ta.value.slice(s, e) + '</span>' + ta.value.slice(e);
+  ta.focus(); ta.setSelectionRange(s, e + 30 + color.length);
+}
+
+function cdescBoldSel(btn) {
+  var ta = cdescGetTa(btn);
+  if (!ta || ta.tagName !== 'TEXTAREA') return;
+  var s = ta.selectionStart, e = ta.selectionEnd;
+  if (s >= e) { alert('Select some text in the field first, then click B.'); return; }
+  ta.value = ta.value.slice(0, s) + '<strong>' + ta.value.slice(s, e) + '</strong>' + ta.value.slice(e);
+  ta.focus(); ta.setSelectionRange(s, e + 17);
+}
+
+function cdescClearSel(btn) {
+  var ta = cdescGetTa(btn);
+  if (!ta || ta.tagName !== 'TEXTAREA') return;
+  var s = ta.selectionStart, e = ta.selectionEnd;
+  if (s >= e) { alert('Select some text in the field first, then click clear.'); return; }
+  var cleaned = ta.value.slice(s, e).replace(/<[^>]*>/g, '');
+  ta.value = ta.value.slice(0, s) + cleaned + ta.value.slice(e);
+  ta.focus(); ta.setSelectionRange(s, s + cleaned.length);
+}
+
+// ── CDESC rich-text sanitiser (used in generator) ────────────────
+
+function cdescRichText(html) {
+  return (html || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<(?!\/?(?:span|strong|em|b|i|br)\b)[^>]+>/gi, '');
+}
+
+// ── CDESC field builder with inline colour toolbar ────────────────
+
+function cdescRtFieldHtml(labelHtml, klass, value, opts) {
+  var o  = opts || {};
+  var p  = cmsNormalizeParagraphData(value, o.defaults);
+  var rawText = p.text; // may already contain <span> / <strong> markup
+  var toolbar = '<div class="cdesc-toolbar">'
+    + '<span>Colour selection:</span>'
+    + '<label class="cdesc-color-btn" title="Apply colour to selected text"><input type="color" value="#204280" oninput="cdescColorSel(this)"><span class="cdesc-a">A</span></label>'
+    + '<button type="button" class="btn-sm" style="padding:2px 8px;font-weight:700;" onclick="cdescBoldSel(this)">B</button>'
+    + '<button type="button" class="btn-sm" style="padding:2px 8px;" onclick="cdescClearSel(this)" title="Remove tags from selection">✕ clear</button>'
+    + '</div>';
+  var attrs = 'class="' + xA(((klass || '') + ' cms-paragraph-text').trim()) + '"';
+  if (o.id)          attrs += ' id="'          + xA(o.id)          + '"';
+  if (o.placeholder) attrs += ' placeholder="' + xA(o.placeholder) + '"';
+  // rawText is NOT xH()-escaped — it may contain safe inline HTML
+  return '<div class="field"><label>' + labelHtml + '</label>'
+    + toolbar
+    + '<textarea ' + attrs + ' rows="' + (o.rows || 3) + '">' + rawText + '</textarea>'
+    + cmsTextControlsHtml(p, o.defaults)
+    + '</div>';
+}
+
+// ── CDESC block helpers ───────────────────────────────────────────
+
+function cdescToggleBlockPicker() {
+  var p = document.getElementById('cdesc-block-picker');
+  if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+
+function makeCdescBulletRow(blockId, val) {
+  var rid = 'cdbr' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  return '<div class="feature-item" id="' + rid + '" style="align-items:flex-start;">'
+    + '<div style="flex:1;">'
+    + cdescRtFieldHtml('Bullet text', 'cdesc-bullet', val, { rows: 1, defaults: CMS_PARAGRAPH_DEFAULTS.cdescBullet, placeholder: 'Bullet item' })
+    + '</div>'
+    + '<button class="btn-icon" onclick="document.getElementById(\'' + rid + '\').remove()" style="margin-top:28px;">&#x2715;</button>'
+    + '</div>';
+}
+
+function addCdescBulletRow(blockId) {
+  var container = document.getElementById(blockId + '-bullets');
+  if (!container) return;
+  var div = document.createElement('div');
+  div.innerHTML = makeCdescBulletRow(blockId, '');
+  container.appendChild(div.firstChild);
+}
+
+function makeCdescItemRow(h, p) {
+  var rid = 'cdir' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  return '<div class="block-item" id="' + rid + '" style="margin-bottom:6px;">'
+    + '<div style="padding:8px 12px 0;">'
+    + cmsTextFieldHtml('Item heading', 'cdesc-item-h', h, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.cdescItemHeading, placeholder: 'Item heading' })
+    + '</div>'
+    + '<div style="padding:0 12px 4px;">'
+    + cdescRtFieldHtml('Item paragraph', 'cdesc-item-p', p, { rows: 2, defaults: CMS_PARAGRAPH_DEFAULTS.cdescDesc, placeholder: 'Item description' })
+    + '</div>'
+    + '<div style="text-align:right;padding:0 12px 8px;"><button class="btn-sm danger" onclick="document.getElementById(\'' + rid + '\').remove()">Remove</button></div>'
+    + '</div>';
+}
+
+function addCdescItemRow(blockId) {
+  var container = document.getElementById(blockId + '-items');
+  if (!container) return;
+  var div = document.createElement('div');
+  div.innerHTML = makeCdescItemRow('', '');
+  container.appendChild(div.firstChild);
+}
+
+function addCdescBlock(type, data) {
+  var picker = document.getElementById('cdesc-block-picker');
+  if (picker) picker.style.display = 'none';
+  var id = 'cdblk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var labels = { paragraph: 'Paragraph', 'heading-paragraph': 'Heading + Paragraph', 'heading-bullets': 'Heading + Bullets', bullets: 'Bullet list', items: 'Item list', note: 'Note / callout' };
+
+  var body = '';
+  if (type === 'paragraph') {
+    body = cdescRtFieldHtml('Paragraph text', 'cdesc-p', data && data.p, { id: id + '-p', rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.cdescDesc, placeholder: 'Paragraph text' });
+  } else if (type === 'heading-paragraph') {
+    body = cmsTextFieldHtml('Heading', 'cdesc-h', data && data.h, { id: id + '-h', multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.cdescHeading, placeholder: 'Heading' })
+         + cdescRtFieldHtml('Paragraph text', 'cdesc-p', data && data.p, { id: id + '-p', rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.cdescDesc, placeholder: 'Paragraph text' });
+  } else if (type === 'heading-bullets') {
+    var bl = '';
+    if (data && data.bullets) data.bullets.forEach(function(b) { bl += makeCdescBulletRow(id, b); });
+    body = cmsTextFieldHtml('Heading', 'cdesc-h', data && data.h, { id: id + '-h', multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.cdescHeading, placeholder: 'Heading' })
+         + '<div class="field"><label>Bullet items</label><div id="' + id + '-bullets" class="block-list">' + bl + '</div>'
+         + '<button class="btn-add-block" style="margin-top:4px;" onclick="addCdescBulletRow(\'' + id + '\')">+ Add bullet</button></div>';
+  } else if (type === 'bullets') {
+    var bl = '';
+    if (data && data.bullets) data.bullets.forEach(function(b) { bl += makeCdescBulletRow(id, b); });
+    body = '<div class="field"><label>Bullet items</label><div id="' + id + '-bullets" class="block-list">' + bl + '</div>'
+         + '<button class="btn-add-block" style="margin-top:4px;" onclick="addCdescBulletRow(\'' + id + '\')">+ Add bullet</button></div>';
+  } else if (type === 'items') {
+    var il = '';
+    if (data && data.items) data.items.forEach(function(it) { il += makeCdescItemRow(it.h, it.p); });
+    body = cmsTextFieldHtml('Section heading', 'cdesc-h', data && data.h, { id: id + '-h', multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.cdescHeading, placeholder: 'Section heading' })
+         + '<div id="' + id + '-items">' + il + '</div>'
+         + '<button class="btn-add-block" style="margin-top:4px;" onclick="addCdescItemRow(\'' + id + '\')">+ Add item</button>';
+  } else if (type === 'note') {
+    body = cdescRtFieldHtml('Note text', 'cdesc-p', data && data.p, { id: id + '-p', rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.cdescNote, placeholder: 'Note text' });
+  }
+
+  var div = document.createElement('div');
+  div.className = 'block-item'; div.id = id; div.dataset.type = type;
+  div.innerHTML = '<div class="block-header" onclick="toggleBlock(\'' + id + '\')">'
+    + '<span class="block-header-label">' + (labels[type] || type) + '</span>'
+    + '<span class="block-type-badge">' + (labels[type] || type) + '</span>'
+    + '</div>'
+    + '<div class="block-body" id="' + id + '-body">' + body
+    + '<div class="block-actions">'
+    + '<button class="btn-sm" onclick="moveBlock(\'' + id + '\',-1)">&#x2191;</button>'
+    + '<button class="btn-sm" onclick="moveBlock(\'' + id + '\',1)">&#x2193;</button>'
+    + '<button class="btn-sm danger" onclick="document.getElementById(\'' + id + '\').remove()">Remove</button>'
+    + '</div></div>';
+  document.getElementById('cdesc-blocks').appendChild(div);
+}
+
+// ── CDESC init ───────────────────────────────────────────────────
+
+function cdescOnOpen() {
+  cmsInitParagraphField('cdesc-intro-bold', { defaults: CMS_PARAGRAPH_DEFAULTS.cdescIntroBold });
+  cmsInitParagraphField('cdesc-intro-p1',   { defaults: CMS_PARAGRAPH_DEFAULTS.cdescDesc });
+  cmsInitParagraphField('cdesc-intro-p2',   { defaults: CMS_PARAGRAPH_DEFAULTS.cdescDesc });
+  addCdescBlock('paragraph', { p: { text: 'Our structured approach combines <strong>46 hours of syllabus topic videos</strong> with <strong>42 hours of kit question walkthroughs</strong>, giving you both conceptual understanding and the practical exam technique you need to pass FA1 first time. Chapter quizzes, exam-style mock exams, and active WhatsApp tutor support complete the package.', size: 16, color: '#1a1a1a', weight: '400', letterSpacing: 0 } });
+}
+
+// ── CDESC component manager ──────────────────────────────────────
+
+async function cdescCmpInit() {
+  var comps = await cmpFetchAll('course-desc');
+  _cmpState['course-desc'].components = comps;
+  cmpPopulateSelect('cdesc', comps, null);
+}
+
+async function cdescCmpLoad(id) {
+  if (!id) { cdescCmpNew(); return; }
+  var comp = (_cmpState['course-desc'].components || []).filter(function(c){ return c.id === id; })[0];
+  if (!comp) return;
+  _cmpState['course-desc'].id = comp.id;
+  var nameEl = document.getElementById('cdesc-cmp-name'); if (nameEl) nameEl.value = comp.name || '';
+  cmpSetDupDeleteButtons('cdesc', true);
+  restoreCdescState(comp.data || {});
+  delete _dirtyScreens['course-desc'];
+  cmpSetStatus('cdesc', '');
+}
+
+async function cdescCmpSave() {
+  var nameEl = document.getElementById('cdesc-cmp-name');
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { alert('Please enter a component name before saving.'); if (nameEl) nameEl.focus(); return; }
+  cmpSetStatus('cdesc', 'Saving…', 'var(--muted)');
+  var state = collectCdescState();
+  var comps = _cmpState['course-desc'].components || [];
+  var id    = _cmpState['course-desc'].id;
+  if (id) {
+    var found = false;
+    comps = comps.map(function(c){ if (c.id === id) { found = true; return { id: id, name: name, data: state }; } return c; });
+    if (!found) { id = 'cd-' + Date.now().toString(36); comps.push({ id: id, name: name, data: state }); _cmpState['course-desc'].id = id; }
+  } else {
+    id = 'cd-' + Date.now().toString(36);
+    comps.push({ id: id, name: name, data: state });
+    _cmpState['course-desc'].id = id;
+  }
+  _cmpState['course-desc'].components = comps;
+  var ok = await cmpSaveAll('course-desc', comps);
+  if (ok) {
+    cmpSetDupDeleteButtons('cdesc', true);
+    delete _dirtyScreens['course-desc'];
+    cmpPopulateSelect('cdesc', comps, id);
+    cmpSetStatus('cdesc', '✓ Saved', '#16a34a');
+    setTimeout(function(){ cmpSetStatus('cdesc', ''); }, 3000);
+  } else {
+    cmpSetStatus('cdesc', '✗ Save failed', '#e63946');
+  }
+}
+
+function cdescCmpNew() {
+  _cmpState['course-desc'].id = null;
+  var nameEl = document.getElementById('cdesc-cmp-name'); if (nameEl) nameEl.value = '';
+  var sel    = document.getElementById('cdesc-cmp-sel');  if (sel)    sel.value    = '';
+  cmpSetDupDeleteButtons('cdesc', false);
+  restoreCdescState({});
+  delete _dirtyScreens['course-desc'];
+  cmpSetStatus('cdesc', '');
+}
+
+async function cdescCmpDuplicate() {
+  return cmpDuplicateComponent({
+    stateKey:     'course-desc',
+    uiKey:        'cdesc',
+    inputId:      'cdesc-cmp-name',
+    idPrefix:     'cd',
+    collectState: collectCdescState
+  });
+}
+
+async function cdescCmpDelete() {
+  var id = _cmpState['course-desc'].id; if (!id) return;
+  var comp = (_cmpState['course-desc'].components || []).filter(function(c){ return c.id === id; })[0];
+  if (!window.confirm('Delete "' + (comp ? comp.name : 'this component') + '"? This cannot be undone.')) return;
+  var comps = (_cmpState['course-desc'].components || []).filter(function(c){ return c.id !== id; });
+  var ok = await cmpSaveAll('course-desc', comps);
+  if (ok) { _cmpState['course-desc'].components = comps; _cmpState['course-desc'].id = null; cmpPopulateSelect('cdesc', comps, null); cdescCmpNew(); }
+}
+
+// ── CDESC state ──────────────────────────────────────────────────
+
+function cdescGet(id) { return document.getElementById(id) || {}; }
+
+function collectCdescState() {
+  var blocks = [];
+  document.querySelectorAll('#cdesc-blocks .block-item').forEach(function(block) {
+    var id = block.id, type = block.dataset.type, b = { type: type };
+    if (type === 'paragraph') {
+      b.p = cmsReadParagraphField(id + '-p', CMS_PARAGRAPH_DEFAULTS.cdescDesc);
+    } else if (type === 'heading-paragraph') {
+      b.h = cmsReadTextField(id + '-h', CMS_PARAGRAPH_DEFAULTS.cdescHeading);
+      b.p = cmsReadParagraphField(id + '-p', CMS_PARAGRAPH_DEFAULTS.cdescDesc);
+    } else if (type === 'heading-bullets') {
+      b.h = cmsReadTextField(id + '-h', CMS_PARAGRAPH_DEFAULTS.cdescHeading);
+      b.bullets = Array.from(block.querySelectorAll('#' + id + '-bullets .cdesc-bullet')).map(function(i){
+        return cmsReadParagraphField(i, CMS_PARAGRAPH_DEFAULTS.cdescBullet);
+      }).filter(function(bv){ return bv.text.trim(); });
+    } else if (type === 'bullets') {
+      b.bullets = Array.from(block.querySelectorAll('#' + id + '-bullets .cdesc-bullet')).map(function(i){
+        return cmsReadParagraphField(i, CMS_PARAGRAPH_DEFAULTS.cdescBullet);
+      }).filter(function(bv){ return bv.text.trim(); });
+    } else if (type === 'items') {
+      b.h = cmsReadTextField(id + '-h', CMS_PARAGRAPH_DEFAULTS.cdescHeading);
+      b.items = Array.from(block.querySelectorAll('#' + id + '-items .block-item')).map(function(item){
+        return {
+          h: cmsReadTextField(item.querySelector('.cdesc-item-h'), CMS_PARAGRAPH_DEFAULTS.cdescItemHeading),
+          p: cmsReadParagraphField(item.querySelector('.cdesc-item-p'), CMS_PARAGRAPH_DEFAULTS.cdescDesc)
+        };
+      });
+    } else if (type === 'note') {
+      b.p = cmsReadParagraphField(id + '-p', CMS_PARAGRAPH_DEFAULTS.cdescNote);
+    }
+    blocks.push(b);
+  });
+  return {
+    icon:      cdescGet('cdesc-icon').value      || '📖',
+    title:     cdescGet('cdesc-title').value     || 'About This Course',
+    titleTc:   cdescGet('cdesc-title-tc-hex').value || '#1a1a1a',
+    titleSize: cdescGet('cdesc-title-size').value   || '14',
+    introBold: cmsReadParagraphField('cdesc-intro-bold', CMS_PARAGRAPH_DEFAULTS.cdescIntroBold),
+    introP1:   cmsReadParagraphField('cdesc-intro-p1',   CMS_PARAGRAPH_DEFAULTS.cdescDesc),
+    introP2:   cmsReadParagraphField('cdesc-intro-p2',   CMS_PARAGRAPH_DEFAULTS.cdescDesc),
+    blocks:    blocks
+  };
+}
+
+function restoreCdescState(d) {
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+  var setColor = function(cpId, hexId, val, fb) {
+    var c = cmsSafeHex(val, fb);
+    var cp = document.getElementById(cpId); if (cp) cp.value = c;
+    var hx = document.getElementById(hexId); if (hx) hx.value = c;
+  };
+  set('cdesc-icon',       d.icon      || '📖');
+  set('cdesc-title',      d.title     || 'About This Course');
+  setColor('cdesc-title-tc-cp', 'cdesc-title-tc-hex', d.titleTc, '#1a1a1a');
+  set('cdesc-title-size', d.titleSize || '14');
+  cmsSetParagraphField('cdesc-intro-bold', d.introBold, CMS_PARAGRAPH_DEFAULTS.cdescIntroBold);
+  cmsSetParagraphField('cdesc-intro-p1',   d.introP1,   CMS_PARAGRAPH_DEFAULTS.cdescDesc);
+  cmsSetParagraphField('cdesc-intro-p2',   d.introP2,   CMS_PARAGRAPH_DEFAULTS.cdescDesc);
+  var container = document.getElementById('cdesc-blocks');
+  if (container) { container.innerHTML = ''; (d.blocks || []).forEach(function(b){ addCdescBlock(b.type, b); }); }
+}
+
+// ── CDESC HTML generator ─────────────────────────────────────────
+
+function generateCourseDesc() {
+  var d   = collectCdescState();
+  var uid = 'cd' + Date.now().toString(36);
+
+  var PS  = "font-family:'Poppins',sans-serif;line-height:1.7;overflow-wrap:break-word;word-break:break-word;margin:0 0 14px;";
+  var H3S = "font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;line-height:1.3;margin:1.5rem 0 0.4rem;";
+  var H4S = "font-family:'Poppins',sans-serif;font-size:16px;font-weight:700;line-height:1.5;margin:1rem 0 0.25rem;";
+  var titleSize = cmsClampInt(d.titleSize, 14, 10, 36);
+  var titleTc   = cmsSafeHex(d.titleTc, '#1a1a1a');
+
+  // Section header
+  var headerHtml = '';
+  if (d.title) {
+    headerHtml = '<p style="font-family:\'Poppins\',sans-serif;font-size:' + titleSize + 'px;font-weight:700;color:' + xA(titleTc) + ';margin:0 0 14px;display:flex;align-items:center;gap:8px;">'
+      + (d.icon ? '<span style="font-size:' + (titleSize + 4) + 'px;line-height:1;">' + xH(d.icon) + '</span>' : '')
+      + xH(d.title)
+      + '</p>';
+  }
+
+  // Always-visible intro
+  var above = '';
+  var bold = cmsNormalizeParagraphData(d.introBold, CMS_PARAGRAPH_DEFAULTS.cdescIntroBold);
+  if (bold.text.trim()) above += '<p style="' + PS + cmsTextStyle(bold, CMS_PARAGRAPH_DEFAULTS.cdescIntroBold) + '">' + cdescRichText(bold.text) + '</p>\n';
+  var p1 = cmsNormalizeParagraphData(d.introP1, CMS_PARAGRAPH_DEFAULTS.cdescDesc);
+  if (p1.text.trim()) above += '<p style="' + PS + cmsParagraphStyle(p1, CMS_PARAGRAPH_DEFAULTS.cdescDesc) + '">' + cdescRichText(p1.text) + '</p>\n';
+  var p2 = cmsNormalizeParagraphData(d.introP2, CMS_PARAGRAPH_DEFAULTS.cdescDesc);
+  if (p2.text.trim()) above += '<p style="' + PS + cmsParagraphStyle(p2, CMS_PARAGRAPH_DEFAULTS.cdescDesc) + '">' + cdescRichText(p2.text) + '</p>\n';
+
+  // Expandable blocks
+  var inner = '';
+  (d.blocks || []).forEach(function(block) {
+    var type = block.type;
+    if (type === 'paragraph' && block.p) {
+      var p = cmsNormalizeParagraphData(block.p, CMS_PARAGRAPH_DEFAULTS.cdescDesc);
+      if (p.text.trim()) inner += '<p style="' + PS + cmsParagraphStyle(p, CMS_PARAGRAPH_DEFAULTS.cdescDesc) + '">' + cdescRichText(p.text) + '</p>\n';
+    } else if (type === 'heading-paragraph') {
+      var h  = cmsNormalizeTextData(block.h, CMS_PARAGRAPH_DEFAULTS.cdescHeading);
+      var hp = cmsNormalizeParagraphData(block.p, CMS_PARAGRAPH_DEFAULTS.cdescDesc);
+      if (h.text.trim())  inner += '<h3 style="' + H3S + cmsTextStyle(h, CMS_PARAGRAPH_DEFAULTS.cdescHeading) + '">' + xH(h.text) + '</h3>\n';
+      if (hp.text.trim()) inner += '<p style="' + PS + cmsParagraphStyle(hp, CMS_PARAGRAPH_DEFAULTS.cdescDesc) + '">' + cdescRichText(hp.text) + '</p>\n';
+    } else if (type === 'heading-bullets' || type === 'bullets') {
+      if (type === 'heading-bullets' && block.h) {
+        var h = cmsNormalizeTextData(block.h, CMS_PARAGRAPH_DEFAULTS.cdescHeading);
+        if (h.text.trim()) inner += '<h3 style="' + H3S + cmsTextStyle(h, CMS_PARAGRAPH_DEFAULTS.cdescHeading) + '">' + xH(h.text) + '</h3>\n';
+      }
+      inner += '<ul style="padding-left:0;margin:0 0 1rem;list-style:none;">\n';
+      (block.bullets || []).forEach(function(bv) {
+        var bd = cmsNormalizeParagraphData(bv, CMS_PARAGRAPH_DEFAULTS.cdescBullet);
+        if (bd.text.trim()) inner += '  <li style="font-family:\'Poppins\',sans-serif;line-height:1.7;margin-bottom:0.4rem;' + cmsParagraphStyle(bd, CMS_PARAGRAPH_DEFAULTS.cdescBullet) + '">&bull; ' + cdescRichText(bd.text) + '</li>\n';
+      });
+      inner += '</ul>\n';
+    } else if (type === 'items') {
+      if (block.h) {
+        var h = cmsNormalizeTextData(block.h, CMS_PARAGRAPH_DEFAULTS.cdescHeading);
+        if (h.text.trim()) inner += '<h3 style="' + H3S + cmsTextStyle(h, CMS_PARAGRAPH_DEFAULTS.cdescHeading) + '">' + xH(h.text) + '</h3>\n';
+      }
+      inner += '<div style="margin:0 0 1rem;">\n';
+      (block.items || []).forEach(function(item) {
+        var ih = cmsNormalizeTextData(item.h, CMS_PARAGRAPH_DEFAULTS.cdescItemHeading);
+        var ip = cmsNormalizeParagraphData(item.p, CMS_PARAGRAPH_DEFAULTS.cdescDesc);
+        if (ih.text.trim()) inner += '  <h4 style="' + H4S + cmsTextStyle(ih, CMS_PARAGRAPH_DEFAULTS.cdescItemHeading) + '">' + xH(ih.text) + '</h4>\n';
+        if (ip.text.trim()) inner += '  <p style="font-family:\'Poppins\',sans-serif;line-height:1.7;margin:0 0 8px;' + cmsParagraphStyle(ip, CMS_PARAGRAPH_DEFAULTS.cdescDesc) + '">' + cdescRichText(ip.text) + '</p>\n';
+      });
+      inner += '</div>\n';
+    } else if (type === 'note' && block.p) {
+      var np = cmsNormalizeParagraphData(block.p, CMS_PARAGRAPH_DEFAULTS.cdescNote);
+      if (np.text.trim()) inner += '<p style="font-family:\'Poppins\',sans-serif;line-height:1.6;border-left:3px solid #ddd;padding-left:12px;margin:0 0 1rem;' + cmsParagraphStyle(np, CMS_PARAGRAPH_DEFAULTS.cdescNote) + '">' + cdescRichText(np.text) + '</p>\n';
+    }
+  });
+
+  // Read more toggle — identical pattern to generateDesc()
+  var btnStyle  = "display:inline-flex;align-items:center;gap:6px;margin-top:4px;font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;color:#0057b8;background:none;border:none;cursor:pointer;padding:0;";
+  var svgArrow  = '<svg id="' + uid + 'Arr" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style="transition:transform 0.3s ease;"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><\/svg>';
+  var closingTag = '<' + '/script>';
+  var openTag    = '<script type="text/javascript">';
+  var toggleFn   = 'function ' + uid + 'T(){'
+    + 'var e=document.getElementById("' + uid + 'M");'
+    + 'var a=document.getElementById("' + uid + 'Arr");'
+    + 'var b=document.getElementById("' + uid + 'B");'
+    + 'var o=e.style.maxHeight!=="0px"&&e.style.maxHeight!=="";'
+    + 'if(o){e.style.maxHeight="0px";a.style.transform="rotate(0deg)";b.childNodes[0].textContent="Read more";}'
+    + 'else{e.style.maxHeight="2000px";a.style.transform="rotate(180deg)";b.childNodes[0].textContent="Read less";}'
+    + '}';
+
+  var html = '<div style="font-family:\'Poppins\',sans-serif;font-size:16px;color:#1a1a1a;line-height:1.7;overflow-wrap:break-word;word-break:break-word;max-width:100%;">\n\n'
+    + headerHtml
+    + above
+    + '\n<button id="' + uid + 'B" onclick="' + uid + 'T()" style="' + btnStyle + '">\nRead more\n' + svgArrow + '\n</button>\n\n'
+    + '<div id="' + uid + 'M" style="overflow:hidden;max-height:0;transition:max-height 0.45s ease;">\n'
+    + '<div style="padding-top:1rem;">\n'
+    + inner
+    + '</div>\n</div>\n\n</div>\n\n'
+    + openTag + '\n' + toggleFn + '\n' + closingTag;
+
+  var codeEl = document.getElementById('course-desc-code');
+  if (codeEl) codeEl.textContent = html;
+
+  var previewDiv = document.getElementById('course-desc-preview-wrap');
+  if (previewDiv) {
+    previewDiv.innerHTML = html.replace(new RegExp('<script[\\s\\S]*?<\\/scr' + 'ipt>', 'gi'), '');
+    var sc = document.createElement('script');
+    sc.textContent = toggleFn;
+    previewDiv.appendChild(sc);
+  }
+  switchOut('course-desc', 'preview');
 }
 
 // ── Course Hero Right (CHR) ──────────────────────────────────────
