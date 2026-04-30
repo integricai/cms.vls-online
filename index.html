@@ -13943,7 +13943,7 @@ function ctabsInit(defaultTabs) {
 function ctabsAddTab() {
   ctabsSaveActiveLabel();
   ctabsSaveActiveBlocks();
-  ctabsTabs.push({ id: ctabsMakeId(), label: 'New Tab', blocks: [] });
+  ctabsTabs.push({ id: ctabsMakeId(), icon: '', label: 'New Tab', blocks: [] });
   ctabsActiveTab = ctabsTabs.length - 1;
   ctabsRender();
   cmpMarkDirty('course-tabs');
@@ -13989,10 +13989,12 @@ function ctabsSwitchTo(i) {
 }
 
 function ctabsSaveActiveLabel() {
-  var inp = document.getElementById('ctabs-active-label');
-  if (inp && ctabsTabs[ctabsActiveTab]) {
-    ctabsTabs[ctabsActiveTab].label = inp.value || '';
-  }
+  var tab = ctabsTabs[ctabsActiveTab];
+  if (!tab) return;
+  var iconEl  = document.getElementById('ctabs-active-icon');
+  var labelEl = document.getElementById('ctabs-active-label');
+  if (iconEl)  tab.icon  = iconEl.value  || '';
+  if (labelEl) tab.label = labelEl.value || '';
 }
 
 function ctabsSaveActiveBlocks() {
@@ -14002,7 +14004,11 @@ function ctabsSaveActiveBlocks() {
     var el = document.getElementById('ctblk-' + blk.id);
     if (!el) return;
     blk.data = blk.data || {};
-    if (blk.type === 'paragraph') {
+    if (blk.type === 'panel-intro') {
+      blk.data.eyebrow = (el.querySelector('.ctblk-eyebrow') || {}).value || '';
+      blk.data.heading = (el.querySelector('.ctblk-htext')   || {}).value || '';
+      blk.data.desc    = (el.querySelector('.ctblk-dtext')   || {}).value || '';
+    } else if (blk.type === 'paragraph') {
       blk.data.para = cmsReadParagraphField(el.querySelector('.ctblk-para'), CMS_PARAGRAPH_DEFAULTS.ctabsPara);
     } else if (blk.type === 'heading-para') {
       blk.data.heading = cmsReadTextField(el.querySelector('.ctblk-heading'), CMS_PARAGRAPH_DEFAULTS.ctabsHeading);
@@ -14015,13 +14021,16 @@ function ctabsSaveActiveBlocks() {
         if (item.text.trim()) blk.data.items.push(item);
       });
     } else if (blk.type === 'assurance') {
-      blk.data.heading = cmsReadTextField(el.querySelector('.ctblk-heading'), CMS_PARAGRAPH_DEFAULTS.ctabsHeading);
-      blk.data.para    = cmsReadParagraphField(el.querySelector('.ctblk-para'), CMS_PARAGRAPH_DEFAULTS.ctabsPara);
+      blk.data.icon    = (el.querySelector('.ctblk-icon')    || {}).value || '';
+      blk.data.eyebrow = (el.querySelector('.ctblk-eyebrow') || {}).value || '';
+      blk.data.heading = (el.querySelector('.ctblk-htext')   || {}).value || '';
+      blk.data.desc    = (el.querySelector('.ctblk-dtext')   || {}).value || '';
     } else if (blk.type === 'inc-cards') {
       blk.data.cards = [];
       el.querySelectorAll('.ctblk-inc-card').forEach(function(card) {
         blk.data.cards.push({
-          icon:  (card.querySelector('.ctblk-icon') || {}).value || '',
+          icon:  (card.querySelector('.ctblk-icon')  || {}).value || '',
+          badge: (card.querySelector('.ctblk-badge') || {}).value || '',
           title: cmsReadTextField(card.querySelector('.ctblk-card-title'), CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle),
           desc:  cmsReadParagraphField(card.querySelector('.ctblk-card-desc'), CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc)
         });
@@ -14030,24 +14039,30 @@ function ctabsSaveActiveBlocks() {
       blk.data.steps = [];
       el.querySelectorAll('.ctblk-step').forEach(function(step) {
         blk.data.steps.push({
+          icon:  (step.querySelector('.ctblk-icon') || {}).value || '',
           title: cmsReadTextField(step.querySelector('.ctblk-step-title'), CMS_PARAGRAPH_DEFAULTS.ctabsStepTitle),
-          desc:  cmsReadParagraphField(step.querySelector('.ctblk-step-desc'), CMS_PARAGRAPH_DEFAULTS.ctabsStepDesc)
+          desc:  cmsReadParagraphField(step.querySelector('.ctblk-step-desc'), CMS_PARAGRAPH_DEFAULTS.ctabsStepDesc),
+          cta:   (step.querySelector('.ctblk-cta') || {}).value || '',
+          url:   (step.querySelector('.ctblk-url') || {}).value || ''
         });
       });
     } else if (blk.type === 'support-cards') {
       blk.data.cards = [];
       el.querySelectorAll('.ctblk-support-card').forEach(function(card) {
         blk.data.cards.push({
-          icon:  (card.querySelector('.ctblk-icon') || {}).value || '',
-          title: cmsReadTextField(card.querySelector('.ctblk-card-title'), CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle),
-          desc:  cmsReadParagraphField(card.querySelector('.ctblk-card-desc'), CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc),
-          url:   (card.querySelector('.ctblk-url') || {}).value || ''
+          icon:     (card.querySelector('.ctblk-icon')      || {}).value || '',
+          subtitle: (card.querySelector('.ctblk-subtitle')  || {}).value || '',
+          title:    cmsReadTextField(card.querySelector('.ctblk-card-title'), CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle),
+          desc:     cmsReadParagraphField(card.querySelector('.ctblk-card-desc'), CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc),
+          cta:      (card.querySelector('.ctblk-cta') || {}).value || '',
+          url:      (card.querySelector('.ctblk-url') || {}).value || ''
         });
       });
     } else if (blk.type === 'more-cards') {
       blk.data.cards = [];
       el.querySelectorAll('.ctblk-more-card').forEach(function(card) {
         blk.data.cards.push({
+          icon:  (card.querySelector('.ctblk-icon') || {}).value || '',
           title: cmsReadTextField(card.querySelector('.ctblk-card-title'), CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle),
           desc:  cmsReadParagraphField(card.querySelector('.ctblk-card-desc'), CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc),
           cta:   (card.querySelector('.ctblk-cta') || {}).value || '',
@@ -14055,11 +14070,12 @@ function ctabsSaveActiveBlocks() {
         });
       });
     } else if (blk.type === 'banner') {
-      blk.data.bg    = (el.querySelector('.ctblk-bg') || {}).value || '#204280';
-      blk.data.title = cmsReadTextField(el.querySelector('.ctblk-heading'), CMS_PARAGRAPH_DEFAULTS.ctabsBannerTitle);
-      blk.data.desc  = cmsReadParagraphField(el.querySelector('.ctblk-para'), CMS_PARAGRAPH_DEFAULTS.ctabsBannerDesc);
-      blk.data.cta   = (el.querySelector('.ctblk-cta') || {}).value || '';
-      blk.data.url   = (el.querySelector('.ctblk-url') || {}).value || '';
+      blk.data.bg      = (el.querySelector('.ctblk-bg')      || {}).value || '#1e3a6e';
+      blk.data.eyebrow = (el.querySelector('.ctblk-eyebrow') || {}).value || '';
+      blk.data.title   = (el.querySelector('.ctblk-htext')   || {}).value || '';
+      blk.data.desc    = (el.querySelector('.ctblk-dtext')   || {}).value || '';
+      blk.data.cta     = (el.querySelector('.ctblk-cta') || {}).value || '';
+      blk.data.url     = (el.querySelector('.ctblk-url') || {}).value || '';
     }
   });
 }
@@ -14076,7 +14092,7 @@ function ctabsRenderPills() {
   ctabsTabs.forEach(function(tab, i) {
     var pill = document.createElement('div');
     pill.className = 'tab-pill' + (i === ctabsActiveTab ? ' active' : '');
-    var label = tab.label || ('Tab ' + (i + 1));
+    var label = (tab.icon ? tab.icon + ' ' : '') + (tab.label || ('Tab ' + (i + 1)));
     var inner = '<span onclick="ctabsSwitchTo(' + i + ')">' + xH(label) + '</span>';
     if (ctabsTabs.length > 1) {
       inner += '<button class="tab-pill-del" onclick="ctabsRemoveTab(' + i + ')" title="Remove tab">&#x2715;</button>';
@@ -14087,6 +14103,7 @@ function ctabsRenderPills() {
 }
 
 var CTAB_BLK_LABELS = {
+  'panel-intro':   'Panel intro (header card)',
   'paragraph':     'Paragraph',
   'heading-para':  'Heading + Paragraph',
   'bullets':       'Bullet list',
@@ -14105,10 +14122,15 @@ function ctabsRenderEditor() {
   if (!tab) { area.innerHTML = ''; return; }
 
   area.innerHTML =
-    '<div class="field"><label>Tab label</label>'
+    '<div style="display:flex;gap:8px;align-items:flex-end;">'
+    + '<div class="field" style="width:72px;flex-shrink:0;margin-bottom:14px;"><label>Icon</label>'
+    + '<input type="text" id="ctabs-active-icon" value="' + xA(tab.icon || '') + '" placeholder="📦" style="font-size:20px;text-align:center;padding:6px;">'
+    + '</div>'
+    + '<div class="field" style="flex:1;margin-bottom:14px;"><label>Tab label</label>'
     + '<input type="text" id="ctabs-active-label" value="' + xA(tab.label || '') + '" oninput="ctabsSaveActiveLabel();ctabsRenderPills();" style="font-family:\'Poppins\',sans-serif;font-size:13px;">'
     + '</div>'
-    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:-6px;">'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:-8px;">'
     + '<button class="btn-sm" onclick="ctabsMoveTab(' + ctabsActiveTab + ',-1)"' + (ctabsActiveTab === 0 ? ' disabled style="opacity:.35;cursor:default;"' : '') + '>Move Left</button>'
     + '<button class="btn-sm" onclick="ctabsMoveTab(' + ctabsActiveTab + ',1)"' + (ctabsActiveTab === ctabsTabs.length - 1 ? ' disabled style="opacity:.35;cursor:default;"' : '') + '>Move Right</button>'
     + '</div>'
@@ -14117,6 +14139,7 @@ function ctabsRenderEditor() {
     + '<div style="display:flex;gap:8px;margin-top:4px;">'
     + '<select id="ctabs-blk-type" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);">'
     + '<option value="">— choose content type —</option>'
+    + '<option value="panel-intro">Panel intro (header card)</option>'
     + '<option value="paragraph">Paragraph</option>'
     + '<option value="heading-para">Heading + Paragraph</option>'
     + '<option value="bullets">Bullet list</option>'
@@ -14169,7 +14192,12 @@ function ctabsRenderBlock(blk, pf) {
   pf = pf || {};
   var bodyHtml = '';
 
-  if (blk.type === 'paragraph') {
+  if (blk.type === 'panel-intro') {
+    bodyHtml =
+      '<div class="field"><label>Eyebrow text <span class="hint">(small uppercase)</span></label><input type="text" class="ctblk-eyebrow" value="' + xA(pf.eyebrow || '') + '" placeholder="e.g. COURSE PACKAGE"></div>'
+      + '<div class="field"><label>Heading</label><input type="text" class="ctblk-htext" value="' + xA(pf.heading || '') + '" placeholder="Panel heading" style="font-family:\'Poppins\',sans-serif;font-size:13px;"></div>'
+      + '<div class="field"><label>Description</label><textarea class="ctblk-dtext" rows="2" style="font-family:\'Poppins\',sans-serif;font-size:13px;resize:vertical;">' + xH(pf.desc || '') + '</textarea></div>';
+  } else if (blk.type === 'paragraph') {
     bodyHtml = cmsParagraphFieldHtml('Paragraph', 'ctblk-para', pf.para, { rows: 4, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsPara });
   } else if (blk.type === 'heading-para') {
     bodyHtml = cmsTextFieldHtml('Heading', 'ctblk-heading', pf.heading, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsHeading, placeholder: 'Heading' })
@@ -14182,8 +14210,11 @@ function ctabsRenderBlock(blk, pf) {
              + '<button class="btn-add-block" style="margin-top:6px;" onclick="ctabsAddBulletItem(\'' + bListId + '\')">+ Add item</button>'
              + '</div>';
   } else if (blk.type === 'assurance') {
-    bodyHtml = cmsTextFieldHtml('Heading', 'ctblk-heading', pf.heading, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsHeading, placeholder: 'e.g. Our guarantee' })
-             + cmsParagraphFieldHtml('Paragraph', 'ctblk-para', pf.para, { rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsPara });
+    bodyHtml =
+      '<div class="field"><label>Icon (emoji)</label><input type="text" class="ctblk-icon" value="' + xA(pf.icon || '🛡️') + '" style="font-size:18px;text-align:center;width:60px;"></div>'
+      + '<div class="field"><label>Eyebrow text</label><input type="text" class="ctblk-eyebrow" value="' + xA(pf.eyebrow || '') + '" placeholder="e.g. VERTEX ASSURANCE"></div>'
+      + '<div class="field"><label>Heading</label><input type="text" class="ctblk-htext" value="' + xA(pf.heading || '') + '" placeholder="Assurance heading" style="font-family:\'Poppins\',sans-serif;font-size:13px;"></div>'
+      + '<div class="field"><label>Description</label><textarea class="ctblk-dtext" rows="3" style="font-family:\'Poppins\',sans-serif;font-size:13px;resize:vertical;">' + xH(pf.desc || '') + '</textarea></div>';
   } else if (blk.type === 'inc-cards') {
     var icListId = 'cticlist-' + blk.id;
     bodyHtml = '<div id="' + icListId + '" class="block-list"></div>'
@@ -14201,13 +14232,15 @@ function ctabsRenderBlock(blk, pf) {
     bodyHtml = '<div id="' + mcListId + '" class="block-list"></div>'
              + '<button class="btn-add-block" style="margin-top:6px;" onclick="ctabsAddMoreCard(\'' + mcListId + '\')">+ Add card</button>';
   } else if (blk.type === 'banner') {
-    bodyHtml = '<div class="field"><label>Background colour</label>'
-             + '<input type="color" class="ctblk-bg" value="' + xA(pf.bg || '#204280') + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">'
-             + '</div>'
-             + cmsTextFieldHtml('Banner title', 'ctblk-heading', pf.title, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsBannerTitle, placeholder: 'Banner title' })
-             + cmsParagraphFieldHtml('Description', 'ctblk-para', pf.desc, { rows: 2, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsBannerDesc })
-             + '<div class="field"><label>Button text</label><input type="text" class="ctblk-cta" value="' + xA(pf.cta || 'Learn more') + '"></div>'
-             + '<div class="field"><label>Button URL</label><input type="text" class="ctblk-url" value="' + xA(pf.url || '#') + '"></div>';
+    bodyHtml =
+      '<div class="field"><label>Background colour</label>'
+      + '<input type="color" class="ctblk-bg" value="' + xA(pf.bg || '#1e3a6e') + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">'
+      + '</div>'
+      + '<div class="field"><label>Eyebrow text</label><input type="text" class="ctblk-eyebrow" value="' + xA(pf.eyebrow || '') + '" placeholder="e.g. BEST VALUE OPTION"></div>'
+      + '<div class="field"><label>Heading</label><input type="text" class="ctblk-htext" value="' + xA(pf.title || '') + '" placeholder="Banner heading" style="font-family:\'Poppins\',sans-serif;font-size:13px;"></div>'
+      + '<div class="field"><label>Description</label><textarea class="ctblk-dtext" rows="2" style="font-family:\'Poppins\',sans-serif;font-size:13px;resize:vertical;">' + xH(pf.desc || '') + '</textarea></div>'
+      + '<div class="field"><label>Button text</label><input type="text" class="ctblk-cta" value="' + xA(pf.cta || 'Learn more →') + '"></div>'
+      + '<div class="field"><label>Button URL</label><input type="text" class="ctblk-url" value="' + xA(pf.url || '#') + '"></div>';
   }
 
   var div = document.createElement('div');
@@ -14266,7 +14299,10 @@ function ctabsAddIncCard(listId, data, skipDirty) {
   div.id = 'ctic-' + id;
   div.innerHTML =
     '<span class="more-card-label">Card</span>'
-    + '<div class="field"><label>Icon (emoji)</label><input type="text" class="ctblk-icon" value="' + xA(d.icon || '✅') + '" style="font-size:18px;text-align:center;width:60px;"></div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<div class="field" style="width:70px;flex-shrink:0;"><label>Icon</label><input type="text" class="ctblk-icon" value="' + xA(d.icon || '✅') + '" style="font-size:18px;text-align:center;"></div>'
+    + '<div class="field" style="flex:1;"><label>Badge <span class="hint">(e.g. 46 hours)</span></label><input type="text" class="ctblk-badge" value="' + xA(d.badge || '') + '" placeholder="optional"></div>'
+    + '</div>'
     + cmsTextFieldHtml('Title', 'ctblk-card-title', d.title, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle, placeholder: 'Card title' })
     + cmsParagraphFieldHtml('Description', 'ctblk-card-desc', d.desc, { rows: 2, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc })
     + '<div class="block-actions"><button class="btn-sm danger" onclick="ctabsRemoveSubItem(\'ctic-' + id + '\')">Remove</button></div>';
@@ -14284,8 +14320,13 @@ function ctabsAddStep(listId, data, skipDirty) {
   div.id = 'cts-' + id;
   div.innerHTML =
     '<span class="more-card-label">Step</span>'
+    + '<div class="field"><label>Icon (emoji)</label><input type="text" class="ctblk-icon" value="' + xA(d.icon || '⚡') + '" style="font-size:18px;text-align:center;width:60px;"></div>'
     + cmsTextFieldHtml('Step title', 'ctblk-step-title', d.title, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsStepTitle, placeholder: 'Step title' })
     + cmsParagraphFieldHtml('Step description', 'ctblk-step-desc', d.desc, { rows: 2, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsStepDesc })
+    + '<div style="display:flex;gap:8px;">'
+    + '<div class="field" style="flex:1;"><label>CTA text <span class="hint">(optional)</span></label><input type="text" class="ctblk-cta" value="' + xA(d.cta || '') + '" placeholder="e.g. Log in →"></div>'
+    + '<div class="field" style="flex:1;"><label>CTA URL</label><input type="text" class="ctblk-url" value="' + xA(d.url || '#') + '"></div>'
+    + '</div>'
     + '<div class="block-actions"><button class="btn-sm danger" onclick="ctabsRemoveSubItem(\'cts-' + id + '\')">Remove</button></div>';
   list.appendChild(div);
   if (!skipDirty) cmpMarkDirty('course-tabs');
@@ -14301,10 +14342,16 @@ function ctabsAddSupportCard(listId, data, skipDirty) {
   div.id = 'ctsc-' + id;
   div.innerHTML =
     '<span class="more-card-label">Card</span>'
-    + '<div class="field"><label>Icon (emoji)</label><input type="text" class="ctblk-icon" value="' + xA(d.icon || '🎓') + '" style="font-size:18px;text-align:center;width:60px;"></div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<div class="field" style="width:70px;flex-shrink:0;"><label>Icon</label><input type="text" class="ctblk-icon" value="' + xA(d.icon || '🎓') + '" style="font-size:18px;text-align:center;"></div>'
+    + '<div class="field" style="flex:1;"><label>Subtitle <span class="hint">(italic)</span></label><input type="text" class="ctblk-subtitle" value="' + xA(d.subtitle || '') + '" placeholder="e.g. Direct · Fast · Responsive"></div>'
+    + '</div>'
     + cmsTextFieldHtml('Title', 'ctblk-card-title', d.title, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle, placeholder: 'Card title' })
     + cmsParagraphFieldHtml('Description', 'ctblk-card-desc', d.desc, { rows: 2, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc })
-    + '<div class="field"><label>Link URL <span class="hint">(optional)</span></label><input type="text" class="ctblk-url" value="' + xA(d.url || '') + '" placeholder="#"></div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<div class="field" style="flex:1;"><label>CTA button text</label><input type="text" class="ctblk-cta" value="' + xA(d.cta || '') + '" placeholder="Join →"></div>'
+    + '<div class="field" style="flex:1;"><label>CTA URL</label><input type="text" class="ctblk-url" value="' + xA(d.url || '#') + '"></div>'
+    + '</div>'
     + '<div class="block-actions"><button class="btn-sm danger" onclick="ctabsRemoveSubItem(\'ctsc-' + id + '\')">Remove</button></div>';
   list.appendChild(div);
   if (!skipDirty) cmpMarkDirty('course-tabs');
@@ -14320,10 +14367,13 @@ function ctabsAddMoreCard(listId, data, skipDirty) {
   div.id = 'ctmc-' + id;
   div.innerHTML =
     '<span class="more-card-label">Card</span>'
+    + '<div class="field"><label>Icon (emoji)</label><input type="text" class="ctblk-icon" value="' + xA(d.icon || '⭐') + '" style="font-size:18px;text-align:center;width:60px;"></div>'
     + cmsTextFieldHtml('Heading', 'ctblk-card-title', d.title, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle, placeholder: 'Card heading' })
     + cmsParagraphFieldHtml('Description', 'ctblk-card-desc', d.desc, { rows: 2, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc })
-    + '<div class="field"><label>Button label</label><input type="text" class="ctblk-cta" value="' + xA(d.cta || '') + '" placeholder="Learn more"></div>'
-    + '<div class="field"><label>Button URL</label><input type="text" class="ctblk-url" value="' + xA(d.url || '#') + '"></div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<div class="field" style="flex:1;"><label>Button text</label><input type="text" class="ctblk-cta" value="' + xA(d.cta || '') + '" placeholder="Learn more →"></div>'
+    + '<div class="field" style="flex:1;"><label>Button URL</label><input type="text" class="ctblk-url" value="' + xA(d.url || '#') + '"></div>'
+    + '</div>'
     + '<div class="block-actions"><button class="btn-sm danger" onclick="ctabsRemoveSubItem(\'ctmc-' + id + '\')">Remove</button></div>';
   list.appendChild(div);
   if (!skipDirty) cmpMarkDirty('course-tabs');
@@ -14332,61 +14382,84 @@ function ctabsAddMoreCard(listId, data, skipDirty) {
 function ctabsOnOpen() {
   ctabsInit([
     {
-      id: ctabsMakeId(), label: 'About Course Package',
+      id: ctabsMakeId(), icon: '📦', label: 'About Course Package',
       blocks: [
+        { id: ctabsMakeId(), type: 'panel-intro', prefill: {
+          eyebrow: "What's included",
+          heading: 'Everything you need to pass',
+          desc:    'Your course package gives you complete access to all the resources, support, and tools you need to study effectively and pass your exam.'
+        }},
         { id: ctabsMakeId(), type: 'inc-cards', prefill: { cards: [
-          { icon: '🎬', title: 'Lecture videos', desc: 'Complete syllabus coverage with professional HD lecture videos you can watch at your own pace.' },
-          { icon: '📝', title: 'Practice question videos', desc: 'Extensive worked examples walking through past exam questions step by step.' },
-          { icon: '📚', title: 'Complete study notes', desc: 'Comprehensive, printable study notes structured exactly to the syllabus.' },
-          { icon: '📱', title: 'Customized study plan', desc: 'Personalized study plan with mobile app to track your daily progress.' },
-          { icon: '✅', title: 'Chapter quizzes', desc: 'Chapter-by-chapter quizzes to test your understanding before moving on.' },
-          { icon: '💬', title: 'Tutor support', desc: 'Active tutor support over WhatsApp groups — ask questions and get answers fast.' },
-          { icon: '🎯', title: 'Live sessions', desc: 'Pre-exam live online session for additional practice (recordings available).' },
-          { icon: '📊', title: 'Mock exam', desc: 'Final mock exam with detailed feedback to prepare you for the real thing.' }
+          { icon: '🎬', badge: '46 hours', title: 'Lecture videos', desc: 'Complete syllabus coverage with professional HD lecture videos you can watch at your own pace.' },
+          { icon: '📝', badge: '', title: 'Practice question videos', desc: 'Extensive worked examples walking through past exam questions step by step.' },
+          { icon: '📚', badge: '', title: 'Complete study notes', desc: 'Comprehensive, printable study notes structured exactly to the syllabus.' },
+          { icon: '📱', badge: '', title: 'Customized study plan', desc: 'Personalized study plan with mobile app to track your daily progress.' },
+          { icon: '✅', badge: '', title: 'Chapter quizzes', desc: 'Chapter-by-chapter quizzes to test your understanding before moving on.' },
+          { icon: '💬', badge: '', title: 'Tutor support', desc: 'Active tutor support over WhatsApp groups — ask questions and get answers fast.' },
+          { icon: '🎯', badge: '', title: 'Live sessions', desc: 'Pre-exam live online session for additional practice (recordings available).' },
+          { icon: '📊', badge: '', title: 'Mock exam', desc: 'Final mock exam with detailed feedback to prepare you for the real thing.' }
         ]}},
         { id: ctabsMakeId(), type: 'assurance', prefill: {
+          icon:    '🛡️',
+          eyebrow: 'Our promise',
           heading: 'Vertex assurance',
-          para: 'Once you join the Vertex family of thousands of ACCA students and alumni from around the world, we assure you that you will have a capable and committed team standing behind you, making it possible for you to complete the ACCA qualification in minimum time and at minimum cost.'
+          desc:    'Once you join the Vertex family of thousands of ACCA students and alumni from around the world, we assure you that you will have a capable and committed team standing behind you, making it possible for you to complete the ACCA qualification in minimum time and at minimum cost.'
         }}
       ]
     },
     {
-      id: ctabsMakeId(), label: 'After Enrolment',
+      id: ctabsMakeId(), icon: '🎓', label: 'After Enrolment',
       blocks: [
+        { id: ctabsMakeId(), type: 'panel-intro', prefill: {
+          eyebrow: 'Getting started',
+          heading: 'What happens after you enrol',
+          desc:    'Follow these steps to get the most out of your course from day one.'
+        }},
         { id: ctabsMakeId(), type: 'steps', prefill: { steps: [
-          { title: 'Access course resources', desc: 'Once you enroll and pay, the system automatically grants you access to all course materials. Log in and go to My Courses in the top menu.' },
-          { title: 'Join the WhatsApp group', desc: 'After enrolling, send an email to office@vls-online.com to join the study group. Include your WhatsApp number with country code and course name.' },
-          { title: 'Prepare your study plan', desc: 'Use the software link in the Resources section to create your personalized study plan. Follow it consistently and engage actively in the WhatsApp group.' },
-          { title: 'Attend live sessions', desc: 'Join weekly and pre-exam live online sessions. Sessions are recorded for students who cannot attend due to time zone differences.' },
-          { title: 'Get tutor support', desc: 'Our experienced tutors are always available. Book one-on-one meetings for career guidance, exam strategy, or any aspect of your studies.' }
+          { icon: '🔓', title: 'Access course resources', desc: 'Once you enroll and pay, the system automatically grants you access to all course materials. Log in and go to My Courses in the top menu.', cta: '', url: '' },
+          { icon: '💬', title: 'Join the WhatsApp group', desc: 'After enrolling, send an email to office@vls-online.com to join the study group. Include your WhatsApp number with country code and course name.', cta: '', url: '' },
+          { icon: '📅', title: 'Prepare your study plan', desc: 'Use the software link in the Resources section to create your personalized study plan. Follow it consistently and engage actively in the WhatsApp group.', cta: '', url: '' },
+          { icon: '🎥', title: 'Attend live sessions', desc: 'Join weekly and pre-exam live online sessions. Sessions are recorded for students who cannot attend due to time zone differences.', cta: '', url: '' },
+          { icon: '🤝', title: 'Get tutor support', desc: 'Our experienced tutors are always available. Book one-on-one meetings for career guidance, exam strategy, or any aspect of your studies.', cta: 'Book a session', url: '/bookmeeting/' }
         ]}}
       ]
     },
     {
-      id: ctabsMakeId(), label: 'Additional Support',
+      id: ctabsMakeId(), icon: '💬', label: 'Additional Support',
       blocks: [
+        { id: ctabsMakeId(), type: 'panel-intro', prefill: {
+          eyebrow: 'Support options',
+          heading: "We're with you every step of the way",
+          desc:    'Our support system is designed to keep you on track and motivated throughout your studies.'
+        }},
         { id: ctabsMakeId(), type: 'support-cards', prefill: { cards: [
-          { icon: '📅', title: 'Live online sessions', desc: 'Weekly and pre-exam live sessions for answering queries and extra practice. All sessions are recorded.', url: '' },
-          { icon: '🤝', title: 'Tutor support', desc: 'One-on-one meetings available for career counselling, exam booking, and study guidance.', url: '' },
-          { icon: '💬', title: 'WhatsApp community', desc: 'Join an active community of students worldwide for peer support and study motivation.', url: '' },
-          { icon: '📋', title: 'Study planning', desc: 'Receive a customized study plan tailored to your exam date and available study hours.', url: '' }
+          { icon: '📅', subtitle: 'Live online sessions', title: 'Live online sessions', desc: 'Weekly and pre-exam live sessions for answering queries and extra practice. All sessions are recorded.', cta: '', url: '' },
+          { icon: '🤝', subtitle: 'One-on-one tutor support', title: 'Tutor support', desc: 'One-on-one meetings available for career counselling, exam booking, and study guidance.', cta: '', url: '' },
+          { icon: '💬', subtitle: 'Student community', title: 'WhatsApp community', desc: 'Join an active community of students worldwide for peer support and study motivation.', cta: '', url: '' },
+          { icon: '📋', subtitle: 'Tailored to your exam date', title: 'Study planning', desc: 'Receive a customized study plan tailored to your exam date and available study hours.', cta: '', url: '' }
         ]}}
       ]
     },
     {
-      id: ctabsMakeId(), label: 'More',
+      id: ctabsMakeId(), icon: '✨', label: 'More',
       blocks: [
+        { id: ctabsMakeId(), type: 'panel-intro', prefill: {
+          eyebrow: 'Explore more',
+          heading: "There's more to discover",
+          desc:    'Find out what other students think, speak to an advisor, or explore our full access plan.'
+        }},
         { id: ctabsMakeId(), type: 'more-cards', prefill: { cards: [
-          { title: 'Testimonials', desc: 'Our students have always shown outstanding results in ACCA final exams. See reviews.', cta: 'View testimonials', url: '/testimonials/' },
-          { title: 'Book a meeting', desc: 'Book a free online meeting to get more information about the ACCA qualification and Vertex courses.', cta: 'Book now', url: '/bookmeeting/' },
-          { title: 'Annual plan', desc: 'Annual access is the best option for exam preparation, providing access to all ACCA courses in one plan.', cta: 'View plan', url: '/fullaccess/' }
+          { icon: '⭐', title: 'Testimonials', desc: 'Our students have always shown outstanding results in ACCA final exams. See reviews.', cta: 'View testimonials', url: '/testimonials/' },
+          { icon: '📞', title: 'Book a meeting', desc: 'Book a free online meeting to get more information about the ACCA qualification and Vertex courses.', cta: 'Book now', url: '/bookmeeting/' },
+          { icon: '📋', title: 'Annual plan', desc: 'Annual access is the best option for exam preparation, providing access to all ACCA courses in one plan.', cta: 'View plan', url: '/fullaccess/' }
         ]}},
         { id: ctabsMakeId(), type: 'banner', prefill: {
-          bg:    '#204280',
-          title: 'Ready to start your ACCA journey?',
-          desc:  'Join thousands of students who have achieved exam success with VLS Online. Enrol today and get instant access.',
-          cta:   'Enrol now',
-          url:   '#'
+          bg:     '#204280',
+          eyebrow: 'Start today',
+          title:  'Ready to start your ACCA journey?',
+          desc:   'Join thousands of students who have achieved exam success with VLS Online. Enrol today and get instant access.',
+          cta:    'Enrol now',
+          url:    '#'
         }}
       ]
     }
@@ -14405,6 +14478,7 @@ function restoreCtabsState(data) {
   ctabsInit(tabs.map(function(tab) {
     return {
       id:     tab.id || ctabsMakeId(),
+      icon:   tab.icon || '',
       label:  tab.label || '',
       blocks: (tab.blocks || []).map(function(blk) {
         return { id: blk.id || ctabsMakeId(), type: blk.type, data: blk.data || blk.prefill };
@@ -14430,11 +14504,11 @@ function generateCourseTabs() {
 
   var css = '<style>'
     + '.' + uid + '-nav{display:flex;gap:0;border-bottom:2px solid #e5e7eb;margin-bottom:1.5rem;overflow-x:auto;-webkit-overflow-scrolling:touch;}'
-    + '.' + uid + '-btn{background:none;border:none;border-bottom:3px solid transparent;padding:12px 20px;font-family:\'Poppins\',sans-serif;font-size:15px;font-weight:600;color:#6b7280;cursor:pointer;white-space:nowrap;margin-bottom:-2px;transition:color .15s,border-color .15s;}'
+    + '.' + uid + '-btn{background:none;border:none;border-bottom:3px solid transparent;padding:12px 20px;font-family:\'Poppins\',sans-serif;font-size:15px;font-weight:600;color:#6b7280;cursor:pointer;white-space:nowrap;margin-bottom:-2px;transition:color .15s,border-color .15s;display:flex;align-items:center;gap:6px;}'
     + '.' + uid + '-btn:hover{color:#204280;}'
     + '.' + uid + '-active{border-bottom-color:#204280!important;color:#204280!important;}'
-    + '.' + uid + '-grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:1.25rem;}'
-    + '.' + uid + '-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:1.25rem;}'
+    + '.' + uid + '-grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:1.5rem;}'
+    + '.' + uid + '-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:1.5rem;}'
     + '@media(max-width:640px){'
     + '.' + uid + '-btn{font-size:13px;padding:10px 12px;}'
     + '.' + uid + '-grid2,.' + uid + '-grid3{grid-template-columns:1fr!important;}'
@@ -14449,7 +14523,8 @@ function generateCourseTabs() {
     var pid = uid + '-' + i;
     var label = tab.label || ('Tab ' + (i + 1));
     var activeClass = i === 0 ? ' ' + uid + '-active' : '';
-    out += '  <button data-vctbtn="1" class="' + uid + '-btn' + activeClass + '" onclick="' + makeClick(pid) + '">' + xH(label) + '</button>\n';
+    var iconSpan = tab.icon ? '<span style="font-size:16px;line-height:1;">' + xH(tab.icon) + '</span>' : '';
+    out += '  <button data-vctbtn="1" class="' + uid + '-btn' + activeClass + '" onclick="' + makeClick(pid) + '">' + iconSpan + xH(label) + '</button>\n';
   });
   out += '</div>\n\n';
 
@@ -14460,7 +14535,15 @@ function generateCourseTabs() {
     tab.blocks.forEach(function(blk) {
       var d = blk.data || blk.prefill || {};
 
-      if (blk.type === 'paragraph') {
+      if (blk.type === 'panel-intro') {
+        var eyebrow = (d.eyebrow || '').toUpperCase();
+        out += '  <div style="background:#0f1e3c;border-radius:12px;padding:28px 32px;margin-bottom:1.5rem;">\n';
+        if (eyebrow) out += '    <p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;color:#7c9fc0;letter-spacing:.1em;text-transform:uppercase;margin:0 0 8px;">' + xH(eyebrow) + '</p>\n';
+        if (d.heading) out += '    <h2 style="font-family:\'Poppins\',sans-serif;font-size:22px;font-weight:700;color:#ffffff;margin:0 0 10px;line-height:1.3;">' + xH(d.heading) + '</h2>\n';
+        if (d.desc) out += '    <p style="font-family:\'Poppins\',sans-serif;font-size:14px;color:#c7d2fe;margin:0;line-height:1.6;">' + xH(d.desc) + '</p>\n';
+        out += '  </div>\n';
+
+      } else if (blk.type === 'paragraph') {
         var para = cmsNormalizeParagraphData(d.para, CMS_PARAGRAPH_DEFAULTS.ctabsPara);
         if (para.text) out += '  <p style="font-family:\'Poppins\',sans-serif;line-height:1.6;margin-bottom:1.25rem;' + cmsParagraphStyle(para, CMS_PARAGRAPH_DEFAULTS.ctabsPara) + '">' + xH(para.text) + '</p>\n';
 
@@ -14485,12 +14568,14 @@ function generateCourseTabs() {
         out += '    </ul>\n  </div>\n';
 
       } else if (blk.type === 'assurance') {
-        var ah = cmsNormalizeTextData(d.heading, CMS_PARAGRAPH_DEFAULTS.ctabsHeading);
-        var ap = cmsNormalizeParagraphData(d.para, CMS_PARAGRAPH_DEFAULTS.ctabsPara);
-        out += '  <div style="background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid #204280;border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:1.25rem;">\n';
-        if (ah.text) out += '    <h3 style="font-family:\'Poppins\',sans-serif;margin:0 0 6px;' + cmsTextStyle(ah, CMS_PARAGRAPH_DEFAULTS.ctabsHeading) + '">' + xH(ah.text) + '</h3>\n';
-        if (ap.text) out += '    <p style="font-family:\'Poppins\',sans-serif;margin:0;line-height:1.6;' + cmsParagraphStyle(ap, CMS_PARAGRAPH_DEFAULTS.ctabsPara) + '">' + xH(ap.text) + '</p>\n';
-        out += '  </div>\n';
+        var aEyebrow = (d.eyebrow || '').toUpperCase();
+        out += '  <div style="background:#0f1e3c;border-radius:12px;padding:24px 28px;margin-bottom:1.5rem;display:flex;gap:20px;align-items:flex-start;">\n';
+        if (d.icon) out += '    <div style="background:#1e3a6e;border-radius:10px;width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">' + xH(d.icon) + '</div>\n';
+        out += '    <div>\n';
+        if (aEyebrow) out += '      <p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;color:#7c9fc0;letter-spacing:.1em;text-transform:uppercase;margin:0 0 6px;">' + xH(aEyebrow) + '</p>\n';
+        if (d.heading) out += '      <h3 style="font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:#ffffff;margin:0 0 8px;">' + xH(d.heading) + '</h3>\n';
+        if (d.desc) out += '      <p style="font-family:\'Poppins\',sans-serif;font-size:14px;color:#c7d2fe;margin:0;line-height:1.6;">' + xH(d.desc) + '</p>\n';
+        out += '    </div>\n  </div>\n';
 
       } else if (blk.type === 'inc-cards') {
         var cards = d.cards || [];
@@ -14499,10 +14584,13 @@ function generateCourseTabs() {
           cards.forEach(function(card) {
             var ct = cmsNormalizeTextData(card.title, CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle);
             var cd = cmsNormalizeParagraphData(card.desc, CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc);
-            out += '    <div style="display:flex;gap:10px;align-items:flex-start;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;">\n';
-            out += '      <span style="font-size:22px;flex-shrink:0;line-height:1.2;">' + xH(card.icon || '') + '</span>\n';
-            out += '      <div>\n';
-            if (ct.text) out += '        <p style="font-family:\'Poppins\',sans-serif;margin:0 0 3px;' + cmsTextStyle(ct, CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle) + '">' + xH(ct.text) + '</p>\n';
+            out += '    <div style="display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;">\n';
+            out += '      <div style="background:#f0f4ff;border-radius:8px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">' + xH(card.icon || '') + '</div>\n';
+            out += '      <div style="flex:1;">\n';
+            out += '        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px;">\n';
+            if (ct.text) out += '          <p style="font-family:\'Poppins\',sans-serif;margin:0;' + cmsTextStyle(ct, CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle) + '">' + xH(ct.text) + '</p>\n';
+            if (card.badge) out += '          <span style="background:#e0e7ff;color:#3730a3;font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;">' + xH(card.badge) + '</span>\n';
+            out += '        </div>\n';
             if (cd.text) out += '        <p style="font-family:\'Poppins\',sans-serif;margin:0;line-height:1.5;' + cmsParagraphStyle(cd, CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc) + '">' + xH(cd.text) + '</p>\n';
             out += '      </div>\n    </div>\n';
           });
@@ -14512,19 +14600,20 @@ function generateCourseTabs() {
       } else if (blk.type === 'steps') {
         var steps = d.steps || [];
         if (steps.length) {
-          out += '  <div style="display:flex;flex-direction:column;margin-bottom:1.25rem;">\n';
+          out += '  <div style="display:flex;flex-direction:column;margin-bottom:1.5rem;">\n';
           steps.forEach(function(step, si) {
             var st = cmsNormalizeTextData(step.title, CMS_PARAGRAPH_DEFAULTS.ctabsStepTitle);
             var sd = cmsNormalizeParagraphData(step.desc, CMS_PARAGRAPH_DEFAULTS.ctabsStepDesc);
             var isLast = si === steps.length - 1;
-            out += '    <div style="display:flex;gap:14px;align-items:flex-start;">\n';
-            out += '      <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:34px;">\n';
-            out += '        <div style="width:34px;height:34px;border-radius:50%;background:#204280;color:#fff;display:flex;align-items:center;justify-content:center;font-family:\'Poppins\',sans-serif;font-weight:700;font-size:14px;flex-shrink:0;">' + (si + 1) + '</div>\n';
-            if (!isLast) out += '        <div style="width:2px;flex:1;background:#dde4f0;margin:4px 0;min-height:16px;"></div>\n';
+            out += '    <div style="display:flex;gap:16px;align-items:flex-start;">\n';
+            out += '      <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:44px;">\n';
+            out += '        <div style="width:44px;height:44px;border-radius:50%;background:#0f1e3c;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">' + xH(step.icon || String(si + 1)) + '</div>\n';
+            if (!isLast) out += '        <div style="width:2px;flex:1;background:#dde4f0;margin:4px 0;min-height:20px;"></div>\n';
             out += '      </div>\n';
-            out += '      <div style="padding-bottom:' + (isLast ? '0' : '18') + 'px;">\n';
-            if (st.text) out += '        <p style="font-family:\'Poppins\',sans-serif;margin:4px 0 4px;' + cmsTextStyle(st, CMS_PARAGRAPH_DEFAULTS.ctabsStepTitle) + '">' + xH(st.text) + '</p>\n';
-            if (sd.text) out += '        <p style="font-family:\'Poppins\',sans-serif;margin:0;line-height:1.6;' + cmsParagraphStyle(sd, CMS_PARAGRAPH_DEFAULTS.ctabsStepDesc) + '">' + xH(sd.text) + '</p>\n';
+            out += '      <div style="padding-bottom:' + (isLast ? '0' : '22') + 'px;padding-top:8px;">\n';
+            if (st.text) out += '        <p style="font-family:\'Poppins\',sans-serif;margin:0 0 5px;' + cmsTextStyle(st, CMS_PARAGRAPH_DEFAULTS.ctabsStepTitle) + '">' + xH(st.text) + '</p>\n';
+            if (sd.text) out += '        <p style="font-family:\'Poppins\',sans-serif;margin:0 0 8px;line-height:1.6;' + cmsParagraphStyle(sd, CMS_PARAGRAPH_DEFAULTS.ctabsStepDesc) + '">' + xH(sd.text) + '</p>\n';
+            if (step.cta) out += '        <a href="' + xA(step.url || '#') + '" style="display:inline-block;padding:6px 16px;border:1.5px solid #204280;color:#204280;font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:600;border-radius:20px;text-decoration:none;">' + xH(step.cta) + '</a>\n';
             out += '      </div>\n    </div>\n';
           });
           out += '  </div>\n';
@@ -14537,16 +14626,13 @@ function generateCourseTabs() {
           scards.forEach(function(card) {
             var ct = cmsNormalizeTextData(card.title, CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle);
             var cd = cmsNormalizeParagraphData(card.desc, CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc);
-            var inner = '    <div style="background:#f0f4ff;border-radius:10px;padding:18px 16px;">\n'
-              + '      <div style="font-size:26px;margin-bottom:8px;line-height:1;">' + xH(card.icon || '') + '</div>\n'
-              + (ct.text ? '      <p style="font-family:\'Poppins\',sans-serif;margin:0 0 5px;' + cmsTextStyle(ct, CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle) + '">' + xH(ct.text) + '</p>\n' : '')
-              + (cd.text ? '      <p style="font-family:\'Poppins\',sans-serif;margin:0;line-height:1.5;' + cmsParagraphStyle(cd, CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc) + '">' + xH(cd.text) + '</p>\n' : '')
-              + '    </div>\n';
-            if (card.url) {
-              out += '  <a href="' + xA(card.url) + '" style="text-decoration:none;display:block;">\n' + inner + '  </a>\n';
-            } else {
-              out += inner;
-            }
+            out += '    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;display:flex;flex-direction:column;">\n';
+            out += '      <div style="width:44px;height:44px;background:#f0f4ff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px;">' + xH(card.icon || '') + '</div>\n';
+            if (card.subtitle) out += '      <p style="font-family:\'Poppins\',sans-serif;font-size:12px;font-style:italic;color:#6b7280;margin:0 0 4px;">' + xH(card.subtitle) + '</p>\n';
+            if (ct.text) out += '      <p style="font-family:\'Poppins\',sans-serif;margin:0 0 6px;' + cmsTextStyle(ct, CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle) + '">' + xH(ct.text) + '</p>\n';
+            if (cd.text) out += '      <p style="font-family:\'Poppins\',sans-serif;margin:0 0 14px;line-height:1.5;flex:1;' + cmsParagraphStyle(cd, CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc) + '">' + xH(cd.text) + '</p>\n';
+            if (card.cta) out += '      <a href="' + xA(card.url || '#') + '" style="display:block;text-align:center;background:#0f1e3c;color:#fff;font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:600;padding:10px 16px;border-radius:8px;text-decoration:none;margin-top:auto;">' + xH(card.cta) + '</a>\n';
+            out += '    </div>\n';
           });
           out += '  </div>\n';
         }
@@ -14558,10 +14644,11 @@ function generateCourseTabs() {
           mcards.forEach(function(card) {
             var ct = cmsNormalizeTextData(card.title, CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle);
             var cd = cmsNormalizeParagraphData(card.desc, CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc);
-            out += '    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px 16px;display:flex;flex-direction:column;gap:10px;text-align:center;">\n';
-            if (ct.text) out += '      <p style="font-family:\'Poppins\',sans-serif;margin:0;' + cmsTextStyle(ct, CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle) + '">' + xH(ct.text) + '</p>\n';
-            if (cd.text) out += '      <p style="font-family:\'Poppins\',sans-serif;margin:0;line-height:1.5;flex:1;' + cmsParagraphStyle(cd, CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc) + '">' + xH(cd.text) + '</p>\n';
-            if (card.cta) out += '      <a href="' + xA(card.url || '#') + '" style="display:inline-block;padding:8px 18px;background:#204280;color:#fff;font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:600;border-radius:6px;text-decoration:none;align-self:center;">' + xH(card.cta) + '</a>\n';
+            out += '    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;">\n';
+            out += '      <div style="width:52px;height:52px;background:#f0f4ff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:14px;">' + xH(card.icon || '') + '</div>\n';
+            if (ct.text) out += '      <p style="font-family:\'Poppins\',sans-serif;margin:0 0 8px;' + cmsTextStyle(ct, CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle) + '">' + xH(ct.text) + '</p>\n';
+            if (cd.text) out += '      <p style="font-family:\'Poppins\',sans-serif;margin:0 0 16px;line-height:1.5;flex:1;' + cmsParagraphStyle(cd, CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc) + '">' + xH(cd.text) + '</p>\n';
+            if (card.cta) out += '      <a href="' + xA(card.url || '#') + '" style="display:block;width:100%;box-sizing:border-box;text-align:center;background:#0f1e3c;color:#fff;font-family:\'Poppins\',sans-serif;font-size:13px;font-weight:600;padding:11px 16px;border-radius:8px;text-decoration:none;margin-top:auto;">' + xH(card.cta) + '</a>\n';
             out += '    </div>\n';
           });
           out += '  </div>\n';
@@ -14569,12 +14656,14 @@ function generateCourseTabs() {
 
       } else if (blk.type === 'banner') {
         var bg  = cmsSafeHex(d.bg, '#204280');
-        var bt  = cmsNormalizeTextData(d.title, CMS_PARAGRAPH_DEFAULTS.ctabsBannerTitle);
-        var bd  = cmsNormalizeParagraphData(d.desc, CMS_PARAGRAPH_DEFAULTS.ctabsBannerDesc);
-        out += '  <div style="background:' + bg + ';border-radius:12px;padding:32px 24px;text-align:center;margin-bottom:1.25rem;">\n';
-        if (bt.text) out += '    <h3 style="font-family:\'Poppins\',sans-serif;margin:0 0 10px;' + cmsTextStyle(bt, CMS_PARAGRAPH_DEFAULTS.ctabsBannerTitle) + '">' + xH(bt.text) + '</h3>\n';
-        if (bd.text) out += '    <p style="font-family:\'Poppins\',sans-serif;margin:0 0 18px;line-height:1.6;' + cmsParagraphStyle(bd, CMS_PARAGRAPH_DEFAULTS.ctabsBannerDesc) + '">' + xH(bd.text) + '</p>\n';
-        if (d.cta)   out += '    <a href="' + xA(d.url || '#') + '" style="display:inline-block;padding:12px 28px;background:#fff;color:' + bg + ';font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:600;border-radius:8px;text-decoration:none;">' + xH(d.cta) + '</a>\n';
+        var bEyebrow = (d.eyebrow || '').toUpperCase();
+        out += '  <div style="background:' + bg + ';border-radius:12px;padding:28px 32px;display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:1.5rem;flex-wrap:wrap;">\n';
+        out += '    <div style="flex:1;min-width:200px;">\n';
+        if (bEyebrow) out += '      <p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;color:rgba(255,255,255,0.6);letter-spacing:.1em;text-transform:uppercase;margin:0 0 6px;">' + xH(bEyebrow) + '</p>\n';
+        if (d.title)  out += '      <h3 style="font-family:\'Poppins\',sans-serif;font-size:20px;font-weight:700;color:#ffffff;margin:0 0 8px;line-height:1.3;">' + xH(d.title) + '</h3>\n';
+        if (d.desc)   out += '      <p style="font-family:\'Poppins\',sans-serif;font-size:14px;color:rgba(255,255,255,0.8);margin:0;line-height:1.6;">' + xH(d.desc) + '</p>\n';
+        out += '    </div>\n';
+        if (d.cta) out += '    <div style="flex-shrink:0;"><a href="' + xA(d.url || '#') + '" style="display:inline-block;padding:12px 28px;border:2px solid rgba(255,255,255,0.8);color:#ffffff;font-family:\'Poppins\',sans-serif;font-size:14px;font-weight:600;border-radius:8px;text-decoration:none;white-space:nowrap;">' + xH(d.cta) + '</a></div>\n';
         out += '  </div>\n';
       }
     });
