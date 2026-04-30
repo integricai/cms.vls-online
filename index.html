@@ -9833,7 +9833,7 @@ function dcs3AddTag(data) {
   if (!list) return;
   var id   = 'dcs3t-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   var icon = (data && data.icon) || '📌';
-  var txt  = cmsNormalizeTextData(data && data.text != null ? { text: String(data.text || '') } : null, CMS_PARAGRAPH_DEFAULTS.dcs3TagText);
+  var txt  = cmsNormalizeTextData(data && data.text, CMS_PARAGRAPH_DEFAULTS.dcs3TagText);
   var div  = document.createElement('div');
   div.className = 'block-item'; div.id = id;
   div.innerHTML =
