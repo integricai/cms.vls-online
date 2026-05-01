@@ -304,6 +304,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-faq" onclick="switchScreen('faq')">FAQ</div>
       <div class="nav-dd-item" id="nav-events" onclick="switchScreen('events')">Events</div>
       <div class="nav-dd-item" id="nav-programs" onclick="switchScreen('programs')">Program Cards</div>
+      <div class="nav-dd-item" id="nav-program-cards-v2" onclick="switchScreen('program-cards-v2')">Program Cards V2</div>
       <div class="nav-dd-item" id="nav-feature-cards" onclick="switchScreen('feature-cards')">Feature Cards</div>
       <div class="nav-dd-item" id="nav-feature-cards-2" onclick="switchScreen('feature-cards-2')">Feature Card 2</div>
     </div>
@@ -399,6 +400,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <button class="home-tile-link" onclick="switchScreen('faq')">FAQ</button>
           <button class="home-tile-link" onclick="switchScreen('events')">Events</button>
           <button class="home-tile-link" onclick="switchScreen('programs')">Program Cards</button>
+          <button class="home-tile-link" onclick="switchScreen('program-cards-v2')">Program Cards V2</button>
           <button class="home-tile-link" onclick="switchScreen('feature-cards')">Feature Cards</button>
           <button class="home-tile-link" onclick="switchScreen('feature-cards-2')">Feature Card 2</button>
         </div>
@@ -915,6 +917,12 @@ var CMS_PARAGRAPH_DEFAULTS = {
   programFilter:       { size: 13, color: '#262a32', weight: '500', letterSpacing: 0 },
   programCardTitle:    { size: 15, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
   programCta:          { size: 13, color: '#ffffff', weight: '700', letterSpacing: 0 },
+  pcv2Eyebrow:         { size: 12, color: '#155e9f', weight: '700', letterSpacing: 0.08 },
+  pcv2Title:           { size: 18, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
+  pcv2Desc:            { size: 14, color: '#3f3f46', weight: '400', letterSpacing: 0 },
+  pcv2Meta:            { size: 12, color: '#52525b', weight: '400', letterSpacing: 0 },
+  pcv2Chip:            { size: 11, color: '#3f3f46', weight: '600', letterSpacing: 0 },
+  pcv2Cta:             { size: 13, color: '#ffffff', weight: '700', letterSpacing: 0 },
   formTitle:           { size: 20, color: '#262a32', weight: '700', letterSpacing: 0 },
   formButton:          { size: 15, color: '#ffffff', weight: '700', letterSpacing: 0 },
   formThank:           { size: 15, color: '#4b5563', weight: '400', letterSpacing: 0 },
@@ -1075,7 +1083,7 @@ function doCopy(id, btn) {
 var _GLOBAL_SCREENS = ['header', 'footer', 'banner', 'promotion-section', 'contact-footer'];
 var _HOME_SCREENS   = ['hero', 'about-us'];
 var _PAGE_SCREENS   = ['hero2', 'intro', 'desc', 'tabs', 'team'];
-var _SHARED_SCREENS = ['faq', 'events', 'programs', 'feature-cards', 'feature-cards-2'];
+var _SHARED_SCREENS = ['faq', 'events', 'programs', 'program-cards-v2', 'feature-cards', 'feature-cards-2'];
 var _COMMON_SECTION_SCREENS = ['steps-section', 'dcs', 'dcs2', 'dcs3', 'reach', 'policy'];
 var _FORM_SCREENS   = ['form', 'report-issue', 'report-thank-you'];
 var _COURSE_SCREENS       = ['course-hero', 'course-hero-right', 'course-desc', 'course-tabs'];
@@ -1097,6 +1105,7 @@ var _screenFiles = {
   footer:   '/screens/footer.html',
   faq:      '/screens/faq.html',
   programs: '/screens/programs.html',
+  'program-cards-v2': '/screens/program-cards-v2.html',
   header:   '/screens/header.html',
   form:     '/screens/form.html',
   dcs:      '/screens/double-column.html',
@@ -1203,6 +1212,7 @@ async function switchScreen(name) {
   if (name === 'promotion-section') promotionOnOpen();
   if (name === 'footer')  footerOnOpen();
   if (name === 'programs') programOnOpen();
+  if (name === 'program-cards-v2' && !_loadedScreens._pcv2Init) { _loadedScreens._pcv2Init = true; pcv2OnOpen(); }
   if (name === 'form')    formOnOpen();
   if (name === 'report-issue'      && !_loadedScreens._riInit)   { _loadedScreens._riInit   = true; riOnOpen();   }
   if (name === 'report-thank-you'  && !_loadedScreens._riTyInit) { _loadedScreens._riTyInit = true; riTyOnOpen(); }
@@ -5384,6 +5394,404 @@ function switchProgOut(mode) {
   document.getElementById('prog-out-code').style.display    = mode === 'code'    ? '' : 'none';
   document.getElementById('prog-ot-preview').classList.toggle('active', mode === 'preview');
   document.getElementById('prog-ot-code').classList.toggle('active', mode === 'code');
+}
+
+// ── Program Cards V2 persisted collections ───────────────────
+
+var pcv2Store = { collections: [], activeId: '', counter: 0, cardCounter: 0, loaded: false, bound: false };
+
+function pcv2DefaultCard(i) {
+  return {
+    id: 'pcv2c' + (++pcv2Store.cardCounter),
+    imageUrl: '',
+    imageAlt: i === 2 ? 'ACCA Urdu Hindi course' : 'ACCA Dip-IFR course',
+    accent: i === 2 ? '#11856b' : '#1f73b7',
+    ctaBg: i === 2 ? '#11856b' : '#0d1f3c',
+    tagBg: i === 2 ? '#dff7ec' : '#e4f2ff',
+    cardBg: '#ffffff',
+    eyebrow: cmsNormalizeTextData(i === 2 ? 'ACCA · URDU / HINDI' : 'ACCA · SPECIALIST', CMS_PARAGRAPH_DEFAULTS.pcv2Eyebrow),
+    title: cmsNormalizeTextData(i === 2 ? 'ACCA Courses in Urdu (Hindi) - OnlineACCA' : 'ACCA Diploma in IFRS (Dip-IFR)', CMS_PARAGRAPH_DEFAULTS.pcv2Title),
+    desc: cmsNormalizeParagraphData(i === 2 ? 'Complete syllabus lectures, extensive practice kit, past exam questions and solution videos, exam-focused short notes, automated quizzes, a final mock exam, and WhatsApp group support to access your tutor whenever you need.' : 'An advanced course on International Financial Reporting Standards - designed to increase your IFRS knowledge to expert level. Equally beneficial for working accountants and those preparing for the ACCA Dip-IFR / ACCA Cert-IFR exams.', CMS_PARAGRAPH_DEFAULTS.pcv2Desc),
+    chips: i === 2 ? 'Full syllabus videos\nPractice kit\nMock exam\nWhatsApp support' : 'Recorded lectures\nStudy notes\nQuizzes',
+    meta: cmsNormalizeTextData(i === 2 ? 'Urdu / Hindi medium  •  All ACCA papers' : 'Recorded course  •  Self-paced  •  All levels', CMS_PARAGRAPH_DEFAULTS.pcv2Meta),
+    cta: cmsNormalizeTextData('Learn More →', CMS_PARAGRAPH_DEFAULTS.pcv2Cta),
+    url: '#'
+  };
+}
+
+function pcv2DefaultCollection() {
+  var id = 'pcv2' + (++pcv2Store.counter);
+  return {
+    id: id,
+    name: 'Program Cards V2 ' + pcv2Store.counter,
+    bg: '#ffffff',
+    maxWidth: 930,
+    gap: 16,
+    cards: [pcv2DefaultCard(1), pcv2DefaultCard(2)]
+  };
+}
+
+function pcv2Current() {
+  return pcv2Store.collections.find(function(c) { return c.id === pcv2Store.activeId; }) || null;
+}
+
+function pcv2NormalizeCard(card) {
+  card = card || {};
+  var id = card.id || ('pcv2c' + (++pcv2Store.cardCounter));
+  var n = parseInt(String(id).replace('pcv2c', ''), 10);
+  if (n > pcv2Store.cardCounter) pcv2Store.cardCounter = n;
+  return {
+    id: id,
+    imageUrl: card.imageUrl || '',
+    imageAlt: card.imageAlt || '',
+    accent: cmsSafeHex(card.accent, '#1f73b7'),
+    ctaBg: cmsSafeHex(card.ctaBg, '#0d1f3c'),
+    tagBg: cmsSafeHex(card.tagBg, '#e4f2ff'),
+    cardBg: cmsSafeHex(card.cardBg, '#ffffff'),
+    eyebrow: cmsNormalizeTextData(card.eyebrow, CMS_PARAGRAPH_DEFAULTS.pcv2Eyebrow),
+    title: cmsNormalizeTextData(card.title, CMS_PARAGRAPH_DEFAULTS.pcv2Title),
+    desc: cmsNormalizeParagraphData(card.desc, CMS_PARAGRAPH_DEFAULTS.pcv2Desc),
+    chips: card.chips || '',
+    meta: cmsNormalizeTextData(card.meta, CMS_PARAGRAPH_DEFAULTS.pcv2Meta),
+    cta: cmsNormalizeTextData(card.cta, CMS_PARAGRAPH_DEFAULTS.pcv2Cta),
+    url: card.url || '#'
+  };
+}
+
+function pcv2NormalizeCollection(col) {
+  col = col || {};
+  var id = col.id || ('pcv2' + (++pcv2Store.counter));
+  return {
+    id: id,
+    name: col.name || '',
+    bg: cmsSafeHex(col.bg, '#ffffff'),
+    maxWidth: cmsClampInt(col.maxWidth, 930, 520, 1400),
+    gap: cmsClampInt(col.gap, 16, 0, 60),
+    cards: (col.cards && col.cards.length ? col.cards : [pcv2DefaultCard(1)]).map(pcv2NormalizeCard)
+  };
+}
+
+function pcv2ReadFormData() {
+  return {
+    name: (document.getElementById('pcv2-name') || {}).value || '',
+    bg: (document.getElementById('pcv2-bg-hex') || {}).value || '#ffffff',
+    maxWidth: cmsClampInt((document.getElementById('pcv2-max-width') || {}).value, 930, 520, 1400),
+    gap: cmsClampInt((document.getElementById('pcv2-gap') || {}).value, 16, 0, 60),
+    cards: Array.prototype.slice.call(document.querySelectorAll('#pcv2-cards .block-item')).map(function(item) {
+      var id = item.getAttribute('data-card-id') || '';
+      return pcv2NormalizeCard({
+        id: id,
+        imageUrl: (item.querySelector('.pcv2-image-url') || {}).value || '',
+        imageAlt: (item.querySelector('.pcv2-image-alt') || {}).value || '',
+        accent: (item.querySelector('.pcv2-accent-hex') || {}).value || '#1f73b7',
+        ctaBg: (item.querySelector('.pcv2-cta-bg-hex') || {}).value || '#0d1f3c',
+        tagBg: (item.querySelector('.pcv2-tag-bg-hex') || {}).value || '#e4f2ff',
+        cardBg: (item.querySelector('.pcv2-card-bg-hex') || {}).value || '#ffffff',
+        eyebrow: cmsReadTextField(item.querySelector('.pcv2-eyebrow'), CMS_PARAGRAPH_DEFAULTS.pcv2Eyebrow),
+        title: cmsReadTextField(item.querySelector('.pcv2-title'), CMS_PARAGRAPH_DEFAULTS.pcv2Title),
+        desc: cmsReadParagraphField(item.querySelector('.pcv2-desc'), CMS_PARAGRAPH_DEFAULTS.pcv2Desc),
+        chips: (item.querySelector('.pcv2-chips') || {}).value || '',
+        meta: cmsReadTextField(item.querySelector('.pcv2-meta'), CMS_PARAGRAPH_DEFAULTS.pcv2Meta),
+        cta: cmsReadTextField(item.querySelector('.pcv2-cta'), CMS_PARAGRAPH_DEFAULTS.pcv2Cta),
+        url: (item.querySelector('.pcv2-url') || {}).value || '#'
+      });
+    })
+  };
+}
+
+function pcv2FillForm(col) {
+  document.getElementById('pcv2-name').value = col.name || '';
+  document.getElementById('pcv2-max-width').value = col.maxWidth || 930;
+  document.getElementById('pcv2-gap').value = col.gap || 16;
+  document.getElementById('pcv2-bg-cp').value = col.bg || '#ffffff';
+  document.getElementById('pcv2-bg-hex').value = col.bg || '#ffffff';
+  document.getElementById('pcv2-cards').innerHTML = '';
+  (col.cards || []).forEach(function(card) { pcv2AddCard(card, true, true); });
+}
+
+function pcv2SyncCurrent() {
+  var col = pcv2Current();
+  if (!col) return null;
+  var data = pcv2ReadFormData();
+  col.name = data.name;
+  col.bg = cmsSafeHex(data.bg, '#ffffff');
+  col.maxWidth = data.maxWidth;
+  col.gap = data.gap;
+  col.cards = data.cards;
+  return col;
+}
+
+function pcv2ColorFieldHtml(label, cls, value) {
+  var safe = cmsSafeHex(value, '#204280');
+  return '<div class="field" style="margin:0"><label style="font-size:11px;">' + label + '</label><div class="cms-paragraph-color-row">'
+    + '<input type="color" class="' + cls + '-cp" value="' + xA(safe) + '" oninput="this.nextElementSibling.value=this.value">'
+    + '<input type="text" class="' + cls + '-hex" value="' + xA(safe) + '" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value))this.previousElementSibling.value=this.value">'
+    + '</div></div>';
+}
+
+function pcv2ChipsHtml(chips, uid, chipStyle) {
+  return String(chips || '').split(/\n+/).map(function(chip) { return chip.trim(); }).filter(Boolean).map(function(chip) {
+    return '<span class="' + uid + '-chip" style="' + chipStyle + '">' + xH(chip) + '</span>';
+  }).join('');
+}
+
+function buildPcv2Html(col) {
+  var uid = 'pcv2-' + Date.now().toString(36);
+  var maxWidth = cmsClampInt(col.maxWidth, 930, 520, 1400);
+  var gap = cmsClampInt(col.gap, 16, 0, 60);
+  var cards = (col.cards || []).map(function(card) {
+    var accent = cmsSafeHex(card.accent, '#1f73b7');
+    var ctaBg = cmsSafeHex(card.ctaBg, '#0d1f3c');
+    var tagBg = cmsSafeHex(card.tagBg, '#e4f2ff');
+    var cardBg = cmsSafeHex(card.cardBg, '#ffffff');
+    var eyebrow = cmsNormalizeTextData(card.eyebrow, CMS_PARAGRAPH_DEFAULTS.pcv2Eyebrow);
+    var title = cmsNormalizeTextData(card.title, CMS_PARAGRAPH_DEFAULTS.pcv2Title);
+    var desc = cmsNormalizeParagraphData(card.desc, CMS_PARAGRAPH_DEFAULTS.pcv2Desc);
+    var meta = cmsNormalizeTextData(card.meta, CMS_PARAGRAPH_DEFAULTS.pcv2Meta);
+    var cta = cmsNormalizeTextData(card.cta, CMS_PARAGRAPH_DEFAULTS.pcv2Cta);
+    var chipBase = cmsNormalizeTextData('', CMS_PARAGRAPH_DEFAULTS.pcv2Chip);
+    chipBase.color = cmsSafeHex(chipBase.color, '#3f3f46');
+    var chipStyle = cmsTextStyle(chipBase, CMS_PARAGRAPH_DEFAULTS.pcv2Chip);
+    var media = card.imageUrl
+      ? '<img src="' + xA(card.imageUrl) + '" alt="' + xA(card.imageAlt || title.text || '') + '">'
+      : '<span>' + xH(card.imageAlt || title.text || 'Program image') + '</span>';
+    return '<article class="' + uid + '-card" style="background:' + cardBg + ';border-left-color:' + accent + ';">'
+      + '<div class="' + uid + '-media" style="background:linear-gradient(110deg,' + accent + '22,#e8eef6 70%);">' + media + '</div>'
+      + '<div class="' + uid + '-body">'
+      + (eyebrow.text ? '<div class="' + uid + '-eyebrow" style="' + cmsTextStyle(eyebrow, CMS_PARAGRAPH_DEFAULTS.pcv2Eyebrow) + ';background:' + tagBg + ';color:' + accent + ';">' + xH(eyebrow.text) + '</div>' : '')
+      + (title.text ? '<h3 style="' + cmsTextStyle(title, CMS_PARAGRAPH_DEFAULTS.pcv2Title) + '">' + xH(title.text) + '</h3>' : '')
+      + (desc.text ? '<p style="' + cmsParagraphStyle(desc, CMS_PARAGRAPH_DEFAULTS.pcv2Desc) + '">' + xH(desc.text) + '</p>' : '')
+      + '<div class="' + uid + '-chips">' + pcv2ChipsHtml(card.chips, uid, chipStyle) + '</div>'
+      + '<div class="' + uid + '-bottom">'
+      + (meta.text ? '<span class="' + uid + '-meta" style="' + cmsTextStyle(meta, CMS_PARAGRAPH_DEFAULTS.pcv2Meta) + '">' + xH(meta.text) + '</span>' : '<span></span>')
+      + '<a class="' + uid + '-cta" href="' + xA(card.url || '#') + '" style="' + cmsTextStyle(cta, CMS_PARAGRAPH_DEFAULTS.pcv2Cta) + ';background:' + ctaBg + ';">' + xH(cta.text || 'Learn More →') + '</a>'
+      + '</div></div></article>';
+  }).join('');
+  var css = '<style>'
+    + '.' + uid + '{font-family:\'Poppins\',sans-serif;background:' + cmsSafeHex(col.bg, '#ffffff') + ';padding:0;box-sizing:border-box;}'
+    + '.' + uid + ' *{box-sizing:border-box;}'
+    + '.' + uid + '-wrap{max-width:' + maxWidth + 'px;margin:0 auto;display:flex;flex-direction:column;gap:' + gap + 'px;}'
+    + '.' + uid + '-card{display:grid;grid-template-columns:34% minmax(0,1fr);min-height:232px;border:1px solid #dfe4ea;border-left-width:6px;border-radius:10px;overflow:hidden;}'
+    + '.' + uid + '-media{min-height:232px;display:flex;align-items:flex-start;justify-content:flex-start;overflow:hidden;}'
+    + '.' + uid + '-media img{width:100%;height:100%;object-fit:cover;display:block;}'
+    + '.' + uid + '-media span{padding:0 8px;font-size:18px;color:#1a1a1a;}'
+    + '.' + uid + '-body{padding:22px 24px 20px;display:flex;flex-direction:column;min-width:0;}'
+    + '.' + uid + '-eyebrow{display:inline-flex;align-self:flex-start;border-radius:999px;padding:4px 12px;text-transform:uppercase;line-height:1.1;margin:0 0 8px;}'
+    + '.' + uid + ' h3{margin:0 0 8px;line-height:1.25;}'
+    + '.' + uid + ' p{margin:0 0 14px;line-height:1.55;}'
+    + '.' + uid + '-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;}'
+    + '.' + uid + '-chip{display:inline-flex;align-items:center;border:1px solid #d8d8d1;background:#f7f5ef;border-radius:999px;padding:4px 11px;line-height:1.1;}'
+    + '.' + uid + '-bottom{border-top:1px solid #e5e7eb;margin-top:auto;padding-top:14px;display:flex;align-items:center;justify-content:space-between;gap:16px;}'
+    + '.' + uid + '-meta{line-height:1.4;}'
+    + '.' + uid + '-cta{border-radius:8px;padding:10px 18px;text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;min-width:128px;}'
+    + '@media(max-width:760px){.' + uid + '-card{grid-template-columns:1fr;}.' + uid + '-media{min-height:180px;}.' + uid + '-body{padding:18px;}.' + uid + '-bottom{align-items:flex-start;flex-direction:column;}.' + uid + '-cta{width:100%;}}'
+    + '</style>';
+  return '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">\n'
+    + css + '\n<section class="' + uid + '"><div class="' + uid + '-wrap">' + cards + '</div></section>';
+}
+
+function pcv2RenderCurrent(showPreview) {
+  var col = pcv2Current();
+  if (!col) {
+    cmsRenderScreenEmpty('program-cards-v2', 'Create a program card collection to preview it here.', showPreview);
+    return;
+  }
+  cmsRenderScreenHtml('program-cards-v2', buildPcv2Html(col), showPreview);
+}
+
+function pcv2RenderList() {
+  cmsRenderSectionList('pcv2-collection-list', pcv2Store.collections, pcv2Store.activeId, 'pcv2SelectCollection', 'pcv2DeleteCollection', function(col) {
+    return (col.cards || []).length + ' card' + ((col.cards || []).length === 1 ? '' : 's');
+  }, 'No collections yet. Click + New to get started.');
+}
+
+function pcv2PersistNow(savingText, savedText, showPreview) {
+  pcv2SyncCurrent();
+  pcv2RenderList();
+  pcv2RenderCurrent(showPreview);
+  return cmsSaveSections('/api/publish-program-cards-v2', pcv2Store.collections, 'pcv2-status', savingText || 'Saving...', savedText || 'Saved!')
+    .then(function(ok) {
+      if (ok) cmsMarkScreenSaved('program-cards-v2');
+      return ok;
+    });
+}
+
+function pcv2HandleChange() {
+  if (!pcv2Current()) return;
+  pcv2SyncCurrent();
+  pcv2RenderList();
+  pcv2RenderCurrent();
+  cmsMarkScreenDirty('program-cards-v2');
+}
+
+function pcv2BindInputs() {
+  if (pcv2Store.bound) return;
+  var screen = document.getElementById('screen-program-cards-v2');
+  var panel = screen && screen.querySelector('.form-panel');
+  if (!panel) return;
+  panel.addEventListener('input', function() { pcv2HandleChange(); });
+  panel.addEventListener('change', function() { pcv2HandleChange(); });
+  pcv2Store.bound = true;
+}
+
+function pcv2CreateCollection(skipDirty) {
+  pcv2SyncCurrent();
+  var col = pcv2DefaultCollection();
+  pcv2Store.collections.push(col);
+  pcv2Store.activeId = col.id;
+  pcv2FillForm(col);
+  pcv2RenderList();
+  pcv2RenderCurrent();
+  if (!skipDirty) cmsMarkScreenDirty('program-cards-v2');
+}
+
+function pcv2DuplicateCollection() {
+  var current = pcv2Current();
+  if (!current) return;
+  pcv2SyncCurrent();
+  var copy = JSON.parse(JSON.stringify(current));
+  copy.id = 'pcv2' + (++pcv2Store.counter);
+  copy.name = 'Copy of ' + (current.name || 'Program Cards V2');
+  copy.cards = (copy.cards || []).map(function(card) {
+    card.id = 'pcv2c' + (++pcv2Store.cardCounter);
+    return card;
+  });
+  pcv2Store.collections.push(copy);
+  pcv2Store.activeId = copy.id;
+  pcv2FillForm(copy);
+  pcv2RenderList();
+  pcv2RenderCurrent();
+  cmsMarkScreenDirty('program-cards-v2');
+}
+
+function pcv2SelectCollection(id) {
+  if (pcv2Store.activeId === id) return;
+  if (!cmsConfirmTrackedNavigation('program-cards-v2', 'You have unsaved changes in Program Cards V2. Switch collections without saving?')) return;
+  pcv2SyncCurrent();
+  pcv2Store.activeId = id;
+  pcv2FillForm(pcv2Current());
+  pcv2RenderList();
+  pcv2RenderCurrent();
+}
+
+function pcv2DeleteCollection(id) {
+  if (!confirm('Delete this program card collection?')) return;
+  pcv2SyncCurrent();
+  pcv2Store.collections = pcv2Store.collections.filter(function(col) { return col.id !== id; });
+  if (!pcv2Store.collections.length) {
+    pcv2CreateCollection(true);
+  } else {
+    pcv2Store.activeId = pcv2Store.collections[0].id;
+    pcv2FillForm(pcv2Current());
+    pcv2RenderList();
+    pcv2RenderCurrent();
+  }
+  cmsMarkScreenDirty('program-cards-v2');
+}
+
+function pcv2RemoveCard(id) {
+  var el = document.getElementById('pcv2-card-' + id);
+  if (el) el.remove();
+  pcv2HandleChange();
+}
+
+function pcv2AddCard(data, startCollapsed, skipSync) {
+  if (!pcv2Current()) pcv2CreateCollection(true);
+  var list = document.getElementById('pcv2-cards');
+  var card = pcv2NormalizeCard(data || pcv2DefaultCard(3));
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = 'pcv2-card-' + card.id;
+  div.setAttribute('data-card-id', card.id);
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH(cmsTextContent(card.title) || 'Program card') + '</span>'
+    + '<span class="block-type-badge">Card</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();pcv2RemoveCard(\'' + card.id + '\')" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
+    + '<div class="section-label" style="font-size:10px;border:none;margin:0 0 6px;padding:0">Left image box</div>'
+    + '<div class="field"><label>Image URL <span class="hint">(paste or upload below)</span></label><input type="url" class="pcv2-image-url" value="' + xA(card.imageUrl || '') + '" placeholder="https://..."></div>'
+    + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input type="file" accept="image/*" onchange="pcv2UploadImage(\'' + card.id + '\',this)" style="font-family:\'Poppins\',sans-serif;font-size:12px;flex:1"><span id="pcv2-upload-' + card.id + '" style="font-size:12px;color:var(--muted);white-space:nowrap"></span></div>'
+    + '<div class="field"><label>Image alt text</label><input type="text" class="pcv2-image-alt" value="' + xA(card.imageAlt || '') + '"></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    + pcv2ColorFieldHtml('Box accent', 'pcv2-accent', card.accent)
+    + pcv2ColorFieldHtml('CTA colour', 'pcv2-cta-bg', card.ctaBg)
+    + pcv2ColorFieldHtml('Tag background', 'pcv2-tag-bg', card.tagBg)
+    + pcv2ColorFieldHtml('Card background', 'pcv2-card-bg', card.cardBg)
+    + '</div>'
+    + cmsTextFieldHtml('Eyebrow / badge text', 'pcv2-eyebrow', card.eyebrow, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.pcv2Eyebrow, placeholder: 'ACCA · SPECIALIST' })
+    + cmsTextFieldHtml('Title', 'pcv2-title', card.title, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.pcv2Title, placeholder: 'Program title', oninput: 'this.closest(\\\'.block-item\\\').querySelector(\\\'.block-header-label\\\').textContent=this.value||\\\'Program card\\\'' })
+    + cmsParagraphFieldHtml('Description', 'pcv2-desc', card.desc, { rows: 4, defaults: CMS_PARAGRAPH_DEFAULTS.pcv2Desc, placeholder: 'Program description' })
+    + '<div class="field"><label>Feature chips <span class="hint">one per line</span></label><textarea class="pcv2-chips" rows="4">' + xH(card.chips || '') + '</textarea></div>'
+    + cmsTextFieldHtml('Meta line', 'pcv2-meta', card.meta, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.pcv2Meta, placeholder: 'Recorded course • Self-paced • All levels' })
+    + '<div class="field"><label>CTA URL</label><input type="url" class="pcv2-url" value="' + xA(card.url || '#') + '" placeholder="https://..."></div>'
+    + cmsTextFieldHtml('CTA text', 'pcv2-cta', card.cta, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.pcv2Cta, placeholder: 'Learn More →' })
+    + '</div>';
+  list.appendChild(div);
+  if (!skipSync) pcv2HandleChange();
+}
+
+async function pcv2UploadImage(cardId, inputEl) {
+  var file = inputEl.files && inputEl.files[0];
+  if (!file) return;
+  var statusEl = document.getElementById('pcv2-upload-' + cardId);
+  if (file.size > 4 * 1024 * 1024) {
+    if (statusEl) { statusEl.textContent = 'Max 4 MB'; statusEl.style.color = 'var(--red)'; }
+    return;
+  }
+  if (statusEl) { statusEl.textContent = 'Uploading...'; statusEl.style.color = 'var(--muted)'; }
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      var resp = await fetch('/api/upload-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, contentType: file.type, data: String(e.target.result).split(',')[1] })
+      });
+      var result = await resp.json();
+      if (!result.url) throw new Error(result.error || 'Upload failed');
+      var cardEl = document.getElementById('pcv2-card-' + cardId);
+      var urlEl = cardEl && cardEl.querySelector('.pcv2-image-url');
+      if (urlEl) urlEl.value = result.url;
+      if (statusEl) { statusEl.textContent = 'Uploaded'; statusEl.style.color = '#16a34a'; }
+      pcv2HandleChange();
+    } catch (err) {
+      if (statusEl) { statusEl.textContent = 'Upload failed'; statusEl.style.color = 'var(--red)'; }
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function pcv2OnOpen() {
+  pcv2BindInputs();
+  if (pcv2Store.loaded) {
+    if (!pcv2Store.collections.length) pcv2CreateCollection(true);
+    if (!pcv2Store.activeId && pcv2Store.collections.length) pcv2SelectCollection(pcv2Store.collections[0].id);
+    return;
+  }
+  fetch('/api/publish-program-cards-v2')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var saved = data.collections || data.sections || [];
+      pcv2Store.counter = cmsMaxSectionCounter(saved, 'pcv2');
+      pcv2Store.collections = saved.map(pcv2NormalizeCollection);
+      pcv2Store.loaded = true;
+      if (!pcv2Store.collections.length) pcv2CreateCollection(true);
+      pcv2Store.activeId = pcv2Store.collections[0].id;
+      pcv2FillForm(pcv2Current());
+      pcv2RenderList();
+      pcv2RenderCurrent();
+    })
+    .catch(function() {
+      pcv2Store.loaded = true;
+      cmsSetStatus('pcv2-status', 'Could not load saved collections.', 'red');
+      if (!pcv2Store.collections.length) pcv2CreateCollection(true);
+    });
+}
+
+function generatePcv2() {
+  pcv2PersistNow('Saving...', 'Saved!', true);
 }
 
 // ── SCREEN: FORM ───────────────────────────────────────────────
@@ -11214,7 +11622,7 @@ function cmsSetStatus(id, text, color, clearMs) {
   }
 }
 
-var CMS_TRACKED_SCREENS = ['feature-cards', 'feature-cards-2', 'steps-section', 'about-us', 'hero', 'promotion-section', 'article-groups'];
+var CMS_TRACKED_SCREENS = ['feature-cards', 'feature-cards-2', 'steps-section', 'about-us', 'hero', 'promotion-section', 'article-groups', 'program-cards-v2'];
 var cmsDirtyState = {};
 
 function cmsCurrentScreenName() {
@@ -11228,6 +11636,7 @@ function cmsDirtyStatusId(screenName) {
     'feature-cards-2': 'fc2-status',
     'steps-section': 'ss-status',
     'article-groups': 'ag-status',
+    'program-cards-v2': 'pcv2-status',
     'about-us': 'au-status',
     'hero': 'hero-status',
     'promotion-section': 'promotion-status'
@@ -11274,6 +11683,7 @@ function cmsSyncTrackedScreen(screenName) {
   if (screenName === 'feature-cards-2') return fc2SyncCurrent();
   if (screenName === 'steps-section') return stepsSectionSyncCurrent();
   if (screenName === 'article-groups') return articleGroupsSyncCurrent();
+  if (screenName === 'program-cards-v2') return pcv2SyncCurrent();
   if (screenName === 'about-us') return aboutUsSyncCurrent();
   if (screenName === 'hero') return heroSyncCurrent();
   if (screenName === 'promotion-section') return promotionSyncCurrent();

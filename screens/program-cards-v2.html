@@ -1,0 +1,54 @@
+<div id="screen-program-cards-v2" class="screen">
+  <div class="form-panel"><div class="form-inner">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <button class="btn-gen" onclick="generatePcv2()" style="flex:1;margin:0;padding:10px">Generate &amp; Save</button>
+      <button class="btn-add-block" onclick="pcv2CreateCollection()" style="width:auto;margin:0;padding:9px 12px">+ New</button>
+      <button class="btn-add-block" onclick="pcv2DuplicateCollection()" style="width:auto;margin:0;padding:9px 12px">Duplicate</button>
+    </div>
+
+    <div class="section-label" style="margin:0 0 10px;">Program Cards V2</div>
+    <div id="pcv2-collection-list" class="block-list"></div>
+    <div id="pcv2-status" style="font-size:12px;min-height:18px;"></div>
+
+    <div class="section-label">Collection Setup</div>
+    <div class="field">
+      <label>Collection name <span class="hint">(for CMS identification)</span></label>
+      <input type="text" id="pcv2-name" value="Program Cards V2">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Section max width (px)</label>
+        <input type="number" id="pcv2-max-width" value="930" min="520" max="1400">
+      </div>
+      <div class="field">
+        <label>Card gap (px)</label>
+        <input type="number" id="pcv2-gap" value="16" min="0" max="60">
+      </div>
+    </div>
+    <div class="field">
+      <label>Background colour</label>
+      <div class="cms-paragraph-color-row">
+        <input type="color" id="pcv2-bg-cp" value="#ffffff" oninput="document.getElementById('pcv2-bg-hex').value=this.value">
+        <input type="text" id="pcv2-bg-hex" value="#ffffff" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value))document.getElementById('pcv2-bg-cp').value=this.value">
+      </div>
+    </div>
+
+    <div class="section-label">Program Cards</div>
+    <div id="pcv2-cards" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="pcv2AddCard()">+ Add program card</button>
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="program-cards-v2-ot-preview" onclick="switchOut('program-cards-v2','preview')">Preview</div>
+      <div class="out-tab" id="program-cards-v2-ot-html" onclick="switchOut('program-cards-v2','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="program-cards-v2-preview-wrap" class="preview-wrap"></div>
+      <div id="program-cards-v2-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('program-cards-v2-code',this)">Copy</button>
+        <pre id="program-cards-v2-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>
