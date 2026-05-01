@@ -1,0 +1,198 @@
+<div id="screen-page-hero-v2" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <!-- ── Component manager ── -->
+    <div style="background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:2px;">
+      <div class="section-label" style="margin:0 0 8px">Saved Components</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+        <button class="btn-gen" style="flex:1;min-width:120px;padding:9px" onclick="phv2CmpSave()">💾 Save</button>
+        <button class="btn-gen" style="flex:1;min-width:120px;padding:9px;background:#16a34a" onclick="generateHeroV2()">⚡ Generate HTML</button>
+        <button class="btn-sm" onclick="phv2CmpNew()" style="padding:8px 12px">+ New</button>
+        <button class="btn-sm" id="phv2-cmp-dup" style="display:none;padding:8px 12px" onclick="phv2CmpDuplicate()">⧉ Duplicate</button>
+        <button class="btn-sm danger" id="phv2-cmp-del" style="display:none;padding:8px 12px" onclick="phv2CmpDelete()">Delete</button>
+      </div>
+      <select id="phv2-cmp-sel" onchange="phv2CmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;outline:none;background:#fff;color:var(--text);margin-bottom:8px;">
+        <option value="">— select to load —</option>
+      </select>
+      <div class="field" style="margin-bottom:6px">
+        <label>Component name</label>
+        <input type="text" id="phv2-cmp-name" placeholder="e.g. ACCA PM Articles Hero">
+      </div>
+      <span id="phv2-cmp-status" style="font-size:12px;display:block;min-height:14px;text-align:center;"></span>
+    </div>
+
+    <!-- ── Background & Layout ── -->
+    <div class="section-label">Background &amp; Layout</div>
+    <div class="field">
+      <label>Background colour</label>
+      <div class="cms-paragraph-color-row">
+        <input type="color" id="phv2-bg-cp" value="#0d1f3c" oninput="document.getElementById('phv2-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+        <input type="text" id="phv2-bg-hex" value="#0d1f3c" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phv2-bg-cp').value=v">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+      <div class="field"><label>Pad top</label><input type="number" id="phv2-pad-top" value="48" min="0" max="200"></div>
+      <div class="field"><label>Pad bot</label><input type="number" id="phv2-pad-bot" value="48" min="0" max="200"></div>
+      <div class="field"><label>Pad left</label><input type="number" id="phv2-pad-left" value="60" min="0" max="200"></div>
+      <div class="field"><label>Pad right</label><input type="number" id="phv2-pad-right" value="60" min="0" max="200"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Left column width</label>
+        <select id="phv2-split" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;outline:none;background:#fff;color:var(--text);">
+          <option value="50">50% / 50%</option>
+          <option value="55">55% / 45%</option>
+          <option value="60" selected>60% / 40%</option>
+          <option value="65">65% / 35%</option>
+          <option value="70">70% / 30%</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Column gap (px)</label>
+        <input type="number" id="phv2-col-gap" value="48" min="0" max="120">
+      </div>
+    </div>
+
+    <!-- ── Left panel: Breadcrumb ── -->
+    <div class="section-label">Breadcrumb</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Breadcrumb text</label>
+        <input type="text" id="phv2-breadcrumb" value="Home › Resources › Technical Articles" placeholder="Home › Section › Page">
+      </div>
+      <div class="field">
+        <label>Breadcrumb colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phv2-breadcrumb-tc-cp" value="#94a3b8" oninput="document.getElementById('phv2-breadcrumb-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phv2-breadcrumb-tc-hex" value="#94a3b8" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phv2-breadcrumb-tc-cp').value=v">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Left panel: Eyebrow ── -->
+    <div class="section-label">Eyebrow Labels <span class="hint">(rendered: ● LABEL1 · LABEL2)</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="field" style="margin:0">
+        <label>Label colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phv2-eyebrow-tc-cp" value="#4a90d9" oninput="document.getElementById('phv2-eyebrow-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phv2-eyebrow-tc-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phv2-eyebrow-tc-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Dot colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phv2-eyebrow-dot-cp" value="#4a90d9" oninput="document.getElementById('phv2-eyebrow-dot-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phv2-eyebrow-dot-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phv2-eyebrow-dot-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div id="phv2-eyebrow-labels" class="block-list" style="margin-top:4px"></div>
+    <button class="btn-add-block" style="margin-top:4px" onclick="phv2AddEyebrowLabel()">+ Add label</button>
+
+    <!-- ── Left panel: Heading ── -->
+    <div class="section-label">Heading</div>
+    <div id="phv2-heading-field"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+      <div class="field">
+        <label>Accent phrase <span class="hint">(highlighted colour)</span></label>
+        <input type="text" id="phv2-heading-accent" placeholder="e.g. Performance Management">
+      </div>
+      <div class="field">
+        <label>Accent colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phv2-heading-accent-cp" value="#4a90d9" oninput="document.getElementById('phv2-heading-accent-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phv2-heading-accent-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phv2-heading-accent-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div class="field" style="margin-top:2px">
+      <label>Post-accent text <span class="hint">(continues after accent in main colour)</span></label>
+      <input type="text" id="phv2-heading-post" placeholder="e.g. Technical Articles">
+    </div>
+
+    <!-- ── Left panel: Description ── -->
+    <div class="section-label">Description</div>
+    <div id="phv2-desc-field"></div>
+
+    <!-- ── Left panel: Trust strip ── -->
+    <div class="section-label">Trust Strip <span class="hint">(● item · item · item)</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="field" style="margin:0">
+        <label>Text colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phv2-trust-tc-cp" value="#94a3b8" oninput="document.getElementById('phv2-trust-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phv2-trust-tc-hex" value="#94a3b8" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phv2-trust-tc-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Dot colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phv2-trust-dot-cp" value="#4a90d9" oninput="document.getElementById('phv2-trust-dot-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phv2-trust-dot-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phv2-trust-dot-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div id="phv2-trust-items" class="block-list" style="margin-top:4px"></div>
+    <button class="btn-add-block" style="margin-top:4px" onclick="phv2AddTrustItem()">+ Add item</button>
+
+    <!-- ── Right panel: Card styling ── -->
+    <div class="section-label">Right Panel — Card Styling</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field" style="margin:0">
+        <label>Card background</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phv2-card-bg-cp" value="#0f2744" oninput="document.getElementById('phv2-card-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phv2-card-bg-hex" value="#0f2744" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phv2-card-bg-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Card border</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phv2-card-border-cp" value="#1e3a5f" oninput="document.getElementById('phv2-card-border-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phv2-card-border-hex" value="#1e3a5f" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phv2-card-border-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px">
+      <div class="field" style="margin:0">
+        <label>Border radius (px)</label>
+        <input type="number" id="phv2-card-radius" value="10" min="0" max="30">
+      </div>
+      <div class="field" style="margin:0">
+        <label>Value / title colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phv2-card-vc-cp" value="#ffffff" oninput="document.getElementById('phv2-card-vc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phv2-card-vc-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phv2-card-vc-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Label / body colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phv2-card-lc-cp" value="#94a3b8" oninput="document.getElementById('phv2-card-lc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phv2-card-lc-hex" value="#94a3b8" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phv2-card-lc-cp').value=v">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right panel: Cards ── -->
+    <div class="section-label" style="margin-top:10px">Right Panel — Cards <span class="hint">(stat = large number; info = title + subtitle; tags = title + tag list)</span></div>
+    <div id="phv2-cards" class="block-list" style="margin-top:4px"></div>
+    <button class="btn-add-block" style="margin-top:4px" onclick="phv2AddCard()">+ Add card</button>
+
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="page-hero-v2-ot-preview" onclick="switchOut('page-hero-v2','preview')">Preview</div>
+      <div class="out-tab" id="page-hero-v2-ot-html" onclick="switchOut('page-hero-v2','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="page-hero-v2-preview-wrap" class="preview-wrap" style="padding:0"></div>
+      <div id="page-hero-v2-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('page-hero-v2-code',this)">Copy</button>
+        <pre id="page-hero-v2-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>
