@@ -1,0 +1,256 @@
+<div id="screen-page-left-hero" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <!-- ── Component manager ── -->
+    <div style="background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:2px;">
+      <div class="section-label" style="margin:0 0 8px">Saved Components</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+        <button class="btn-gen" style="flex:1;min-width:120px;padding:9px" onclick="plhCmpSave()">💾 Save</button>
+        <button class="btn-gen" style="flex:1;min-width:120px;padding:9px;background:#16a34a" onclick="generateLeftHero()">⚡ Generate HTML</button>
+        <button class="btn-sm" onclick="plhCmpNew()" style="padding:8px 12px">+ New</button>
+        <button class="btn-sm" id="plh-cmp-dup" style="display:none;padding:8px 12px" onclick="plhCmpDuplicate()">⧉ Duplicate</button>
+        <button class="btn-sm danger" id="plh-cmp-del" style="display:none;padding:8px 12px" onclick="plhCmpDelete()">Delete</button>
+      </div>
+      <select id="plh-cmp-sel" onchange="plhCmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;outline:none;background:#fff;color:var(--text);margin-bottom:8px;">
+        <option value="">— select to load —</option>
+      </select>
+      <div class="field" style="margin-bottom:6px">
+        <label>Component name</label>
+        <input type="text" id="plh-cmp-name" placeholder="e.g. ACCA Foundation Diploma Hero">
+      </div>
+      <span id="plh-cmp-status" style="font-size:12px;display:block;min-height:14px;text-align:center;"></span>
+    </div>
+
+    <!-- ── Background & Layout ── -->
+    <div class="section-label">Background &amp; Layout <span class="hint">(designed for ~60% column width)</span></div>
+    <div class="field">
+      <label>Background colour</label>
+      <div class="cms-paragraph-color-row">
+        <input type="color" id="plh-bg-cp" value="#0d1f3c" oninput="document.getElementById('plh-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+        <input type="text" id="plh-bg-hex" value="#0d1f3c" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-bg-cp').value=v">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+      <div class="field"><label>Pad top</label><input type="number" id="plh-pad-top" value="48" min="0" max="200"></div>
+      <div class="field"><label>Pad bot</label><input type="number" id="plh-pad-bot" value="56" min="0" max="200"></div>
+      <div class="field"><label>Pad left</label><input type="number" id="plh-pad-left" value="60" min="0" max="200"></div>
+      <div class="field"><label>Pad right</label><input type="number" id="plh-pad-right" value="40" min="0" max="200"></div>
+    </div>
+
+    <!-- ── Breadcrumb ── -->
+    <div class="section-label">Breadcrumb</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Breadcrumb text</label>
+        <input type="text" id="plh-breadcrumb" value="Home › ACCA › Foundation Diploma" placeholder="Home › ACCA › Course Name">
+      </div>
+      <div class="field">
+        <label>Breadcrumb colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-breadcrumb-tc-cp" value="#94a3b8" oninput="document.getElementById('plh-breadcrumb-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-breadcrumb-tc-hex" value="#94a3b8" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-breadcrumb-tc-cp').value=v">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Eyebrow labels ── -->
+    <div class="section-label">Eyebrow Labels <span class="hint">(rendered: ● LABEL1 · LABEL2)</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="field" style="margin:0">
+        <label>Label colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-eyebrow-tc-cp" value="#4a90d9" oninput="document.getElementById('plh-eyebrow-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-eyebrow-tc-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-eyebrow-tc-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Dot colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-eyebrow-dot-cp" value="#4a90d9" oninput="document.getElementById('plh-eyebrow-dot-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-eyebrow-dot-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-eyebrow-dot-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div id="plh-eyebrow-labels" class="block-list" style="margin-top:4px"></div>
+    <button class="btn-add-block" style="margin-top:4px" onclick="plhAddEyebrowLabel()">+ Add label</button>
+
+    <!-- ── Heading ── -->
+    <div class="section-label">Heading</div>
+    <div id="plh-heading-field"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+      <div class="field">
+        <label>Accent phrase <span class="hint">(appended in highlight colour)</span></label>
+        <input type="text" id="plh-heading-accent" placeholder="e.g. pathway into ACCA.">
+      </div>
+      <div class="field">
+        <label>Accent colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-heading-accent-cp" value="#4a90d9" oninput="document.getElementById('plh-heading-accent-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-heading-accent-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-heading-accent-cp').value=v">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Description paragraphs ── -->
+    <div class="section-label">Description Paragraphs</div>
+    <div style="display:grid;grid-template-columns:80px 1fr;gap:8px;align-items:center;margin-bottom:8px">
+      <div class="field" style="margin:0">
+        <label>Font size</label>
+        <input type="number" id="plh-desc-size" value="15" min="11" max="24">
+      </div>
+      <div class="field" style="margin:0">
+        <label>Colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-desc-tc-cp" value="#cbd5e1" oninput="document.getElementById('plh-desc-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-desc-tc-hex" value="#cbd5e1" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-desc-tc-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div id="plh-descs" class="block-list" style="margin-top:4px"></div>
+    <button class="btn-add-block" style="margin-top:4px" onclick="plhAddDesc()">+ Add paragraph</button>
+
+    <!-- ── Pathway flow pills ── -->
+    <div class="section-label">Pathway Flow Pills <span class="hint">(pill → pill → pill)</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
+      <div class="field" style="margin:0">
+        <label>Pill background</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-pill-bg-cp" value="#132343" oninput="document.getElementById('plh-pill-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-pill-bg-hex" value="#132343" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-pill-bg-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Pill border</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-pill-border-cp" value="#1e3a5f" oninput="document.getElementById('plh-pill-border-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-pill-border-hex" value="#1e3a5f" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-pill-border-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
+      <div class="field" style="margin:0">
+        <label>Pill text colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-pill-tc-cp" value="#ffffff" oninput="document.getElementById('plh-pill-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-pill-tc-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-pill-tc-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Arrow colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-arrow-cp" value="#4a90d9" oninput="document.getElementById('plh-arrow-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-arrow-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-arrow-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div id="plh-pathway-items" class="block-list" style="margin-top:4px"></div>
+    <button class="btn-add-block" style="margin-top:4px" onclick="plhAddPathwayItem()">+ Add step</button>
+
+    <!-- ── CTA Buttons ── -->
+    <div class="section-label">CTA Buttons</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field"><label>Primary button text</label><input type="text" id="plh-primary-cta" value="View Courses →"></div>
+      <div class="field"><label>Primary button URL</label><input type="text" id="plh-primary-cta-url" placeholder="/courses/" value=""></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field" style="margin:0">
+        <label>Primary background</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-primary-bg-cp" value="#204280" oninput="document.getElementById('plh-primary-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-primary-bg-hex" value="#204280" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-primary-bg-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Primary text colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-primary-tc-cp" value="#ffffff" oninput="document.getElementById('plh-primary-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-primary-tc-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-primary-tc-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+      <div class="field"><label>Secondary button text</label><input type="text" id="plh-secondary-cta" value="Book a free meeting"></div>
+      <div class="field"><label>Secondary button URL</label><input type="text" id="plh-secondary-cta-url" placeholder="/book-meeting/" value=""></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field" style="margin:0">
+        <label>Secondary border</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-secondary-border-cp" value="#4a5568" oninput="document.getElementById('plh-secondary-border-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-secondary-border-hex" value="#4a5568" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-secondary-border-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Secondary text colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-secondary-tc-cp" value="#ffffff" oninput="document.getElementById('plh-secondary-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-secondary-tc-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-secondary-tc-cp').value=v">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Stats bar ── -->
+    <div class="section-label">Stats Bar</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="field" style="margin:0">
+        <label>Value colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-stats-vc-cp" value="#ffffff" oninput="document.getElementById('plh-stats-vc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-stats-vc-hex" value="#ffffff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-stats-vc-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Label colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-stats-lc-cp" value="#94a3b8" oninput="document.getElementById('plh-stats-lc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-stats-lc-hex" value="#94a3b8" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-stats-lc-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Divider colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-stats-div-cp" value="#1e3a5f" oninput="document.getElementById('plh-stats-div-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-stats-div-hex" value="#1e3a5f" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-stats-div-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div id="plh-stats-items" class="block-list" style="margin-top:4px"></div>
+    <button class="btn-add-block" style="margin-top:4px" onclick="plhAddStatItem()">+ Add stat</button>
+
+    <!-- ── Trust strip ── -->
+    <div class="section-label">Trust Strip <span class="hint">(icon · text · icon · text)</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="field" style="margin:0">
+        <label>Text colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-trust-tc-cp" value="#94a3b8" oninput="document.getElementById('plh-trust-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-trust-tc-hex" value="#94a3b8" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-trust-tc-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Separator colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="plh-trust-sep-cp" value="#4a90d9" oninput="document.getElementById('plh-trust-sep-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="plh-trust-sep-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('plh-trust-sep-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div id="plh-trust-items" class="block-list" style="margin-top:4px"></div>
+    <button class="btn-add-block" style="margin-top:4px" onclick="plhAddTrustItem()">+ Add item</button>
+
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="page-left-hero-ot-preview" onclick="switchOut('page-left-hero','preview')">Preview</div>
+      <div class="out-tab" id="page-left-hero-ot-html" onclick="switchOut('page-left-hero','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="page-left-hero-preview-wrap" class="preview-wrap" style="padding:0"></div>
+      <div id="page-left-hero-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('page-left-hero-code',this)">Copy</button>
+        <pre id="page-left-hero-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>
