@@ -307,6 +307,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-program-cards-v2" onclick="switchScreen('program-cards-v2')">Program Cards V2</div>
       <div class="nav-dd-item" id="nav-feature-cards" onclick="switchScreen('feature-cards')">Feature Cards</div>
       <div class="nav-dd-item" id="nav-feature-cards-2" onclick="switchScreen('feature-cards-2')">Feature Card 2</div>
+      <div class="nav-dd-item" id="nav-feature-cards-3" onclick="switchScreen('feature-cards-3')">Feature Card 3</div>
     </div>
   </div>
   <!-- Common Sections dropdown -->
@@ -403,6 +404,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <button class="home-tile-link" onclick="switchScreen('program-cards-v2')">Program Cards V2</button>
           <button class="home-tile-link" onclick="switchScreen('feature-cards')">Feature Cards</button>
           <button class="home-tile-link" onclick="switchScreen('feature-cards-2')">Feature Card 2</button>
+          <button class="home-tile-link" onclick="switchScreen('feature-cards-3')">Feature Card 3</button>
         </div>
       </div>
       <div class="home-tile">
@@ -1039,7 +1041,9 @@ var CMS_PARAGRAPH_DEFAULTS = {
   phbBadgeMain:        { size: 42, color: '#ffffff', weight: '700', letterSpacing: 0    },
   plhHeading:          { size: 40, color: '#ffffff', weight: '700', letterSpacing: 0    },
   phv2Heading:         { size: 38, color: '#ffffff', weight: '700', letterSpacing: 0    },
-  phv2Desc:            { size: 15, color: '#cbd5e1', weight: '400', letterSpacing: 0    }
+  phv2Desc:            { size: 15, color: '#cbd5e1', weight: '400', letterSpacing: 0    },
+  fc3Heading:          { size: 32, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
+  fc3Desc:             { size: 16, color: '#4a5568', weight: '400', letterSpacing: 0    }
 };
 var CMS_TEXT_DEFAULTS = CMS_PARAGRAPH_DEFAULTS;
 function cmsParagraphText(value) {
@@ -1083,7 +1087,7 @@ function doCopy(id, btn) {
 var _GLOBAL_SCREENS = ['header', 'footer', 'banner', 'promotion-section', 'contact-footer'];
 var _HOME_SCREENS   = ['hero', 'about-us'];
 var _PAGE_SCREENS   = ['hero2', 'intro', 'desc', 'tabs', 'team'];
-var _SHARED_SCREENS = ['faq', 'events', 'programs', 'program-cards-v2', 'feature-cards', 'feature-cards-2'];
+var _SHARED_SCREENS = ['faq', 'events', 'programs', 'program-cards-v2', 'feature-cards', 'feature-cards-2', 'feature-cards-3'];
 var _COMMON_SECTION_SCREENS = ['steps-section', 'dcs', 'dcs2', 'dcs3', 'reach', 'policy'];
 var _FORM_SCREENS   = ['form', 'report-issue', 'report-thank-you'];
 var _COURSE_SCREENS       = ['course-hero', 'course-hero-right', 'course-desc', 'course-tabs'];
@@ -1094,6 +1098,7 @@ var _screenFiles = {
   'about-us':    '/screens/about-us.html',
   'feature-cards':   '/screens/feature-cards.html',
   'feature-cards-2': '/screens/feature-cards-2.html',
+  'feature-cards-3': '/screens/feature-cards-3.html',
   'steps-section': '/screens/steps-section.html',
   'promotion-section': '/screens/promotion-section.html',
   intro:    '/screens/intro.html',
@@ -1195,6 +1200,7 @@ async function switchScreen(name) {
   if (name === 'about-us'     && !_loadedScreens._aboutInit) { _loadedScreens._aboutInit = true; aboutUsOnOpen(); }
   if (name === 'feature-cards'   && !_loadedScreens._fcInit)   { _loadedScreens._fcInit   = true; featureCardsOnOpen(); }
   if (name === 'feature-cards-2' && !_loadedScreens._fc2Init)  { _loadedScreens._fc2Init  = true; fc2OnOpen(); }
+  if (name === 'feature-cards-3' && !_loadedScreens._fc3Init)  { _loadedScreens._fc3Init  = true; fc3OnOpen(); }
   if (name === 'steps-section' && !_loadedScreens._stepsInit) { _loadedScreens._stepsInit = true; stepsSectionOnOpen(); }
   if (name === 'intro' && !_loadedScreens._introInit) { _loadedScreens._introInit = true; introOnOpen(); introCmpInit(); cmpAttachDirty('intro'); }
   if (name === 'desc'  && !_loadedScreens._descInit)  { _loadedScreens._descInit  = true; descOnOpen();  descCmpInit();  cmpAttachDirty('desc');  }
@@ -7366,6 +7372,390 @@ function generateFeatureCards2() {
   fc2PersistNow('Saving…', 'Saved!', true);
 }
 
+// ── Feature Cards 3 ───────────────────────────────────────────
+
+var fc3Store = { sections: [], activeId: '', counter: 0, loaded: false, bound: false, timer: null };
+
+function fc3DefaultSection() {
+  var id = 'fc3s' + (++fc3Store.counter);
+  return {
+    id: id,
+    name: 'Feature Card 3 Section ' + fc3Store.counter,
+    bg: '#f8faff',
+    padTop: 60, padBottom: 60, padLeft: 80, padRight: 80,
+    cols: 3, gap: 24,
+    eyebrow: '', eyebrowColor: '#4a90d9',
+    headingText: '', headingColor: '#1a1a1a',
+    descText: '', descColor: '#4a5568',
+    cards: [
+      { headerBg: '#1a5c9e', number: '01', title: 'Applied Knowledge', subtitle: '3 Exams',
+        tags: [{ code: 'BT', name: 'Business and Technology' }, { code: 'MA', name: 'Management Accounting' }, { code: 'FA', name: 'Financial Accounting' }] },
+      { headerBg: '#16a34a', number: '02', title: 'Applied Skills', subtitle: '6 Exams',
+        tags: [{ code: 'LW', name: 'Corporate and Business Law' }, { code: 'PM', name: 'Performance Management' }, { code: 'TX', name: 'Taxation' }, { code: 'FR', name: 'Financial Reporting' }, { code: 'AA', name: 'Audit and Assurance' }, { code: 'FM', name: 'Financial Management' }] },
+      { headerBg: '#7c3aed', number: '03', title: 'Strategic Professional', subtitle: '4 Exams',
+        tags: [{ code: 'SBL', name: 'Strategic Business Leader' }, { code: 'SBR', name: 'Strategic Business Reporting' }, { code: 'AFM', name: 'Advanced Financial Management' }, { code: 'APM', name: 'Advanced Performance Management' }] }
+    ]
+  };
+}
+
+function fc3CurrentSection() {
+  return fc3Store.sections.find(function(sec) { return sec.id === fc3Store.activeId; }) || null;
+}
+
+function fc3ReadFormData() {
+  return {
+    name: (document.getElementById('fc3-name') || {}).value || '',
+    bg: cmsSafeHex((document.getElementById('fc3-bg-text') || {}).value, '#f8faff'),
+    padTop: cmsClampInt((document.getElementById('fc3-pad-top') || {}).value, 60, 0, 200),
+    padBottom: cmsClampInt((document.getElementById('fc3-pad-bot') || {}).value, 60, 0, 200),
+    padLeft: cmsClampInt((document.getElementById('fc3-pad-left') || {}).value, 80, 0, 200),
+    padRight: cmsClampInt((document.getElementById('fc3-pad-right') || {}).value, 80, 0, 200),
+    cols: cmsClampInt((document.getElementById('fc3-cols') || {}).value, 3, 2, 4),
+    gap: cmsClampInt((document.getElementById('fc3-gap') || {}).value, 24, 0, 80),
+    eyebrow: ((document.getElementById('fc3-eyebrow') || {}).value || '').trim(),
+    eyebrowColor: cmsSafeHex((document.getElementById('fc3-eyebrow-hex') || {}).value, '#4a90d9'),
+    headingText: ((document.getElementById('fc3-heading') || {}).value || '').trim(),
+    headingColor: cmsSafeHex((document.getElementById('fc3-heading-hex') || {}).value, '#1a1a1a'),
+    descText: ((document.getElementById('fc3-desc') || {}).value || '').trim(),
+    descColor: cmsSafeHex((document.getElementById('fc3-desc-hex') || {}).value, '#4a5568'),
+    cards: Array.prototype.slice.call(document.querySelectorAll('#fc3-cards > .block-item')).map(function(item) {
+      return {
+        headerBg: cmsSafeHex((item.querySelector('.fc3-hbg-hex') || {}).value, '#204280'),
+        number: ((item.querySelector('.fc3-num') || {}).value || '').trim(),
+        title: ((item.querySelector('.fc3-title') || {}).value || '').trim(),
+        subtitle: ((item.querySelector('.fc3-sub') || {}).value || '').trim(),
+        tags: Array.prototype.slice.call(item.querySelectorAll('.fc3-tag-row')).map(function(row) {
+          return {
+            code: ((row.querySelector('.fc3-tag-code') || {}).value || '').trim(),
+            name: ((row.querySelector('.fc3-tag-name') || {}).value || '').trim()
+          };
+        }).filter(function(t) { return t.code || t.name; })
+      };
+    }).filter(function(card) { return card.title; })
+  };
+}
+
+function fc3FillForm(sec) {
+  document.getElementById('fc3-name').value = sec.name || '';
+  document.getElementById('fc3-bg-picker').value = cmsSafeHex(sec.bg, '#f8faff');
+  document.getElementById('fc3-bg-text').value = cmsSafeHex(sec.bg, '#f8faff');
+  document.getElementById('fc3-pad-top').value = cmsClampInt(sec.padTop, 60, 0, 200);
+  document.getElementById('fc3-pad-bot').value = cmsClampInt(sec.padBottom, 60, 0, 200);
+  document.getElementById('fc3-pad-left').value = cmsClampInt(sec.padLeft, 80, 0, 200);
+  document.getElementById('fc3-pad-right').value = cmsClampInt(sec.padRight, 80, 0, 200);
+  document.getElementById('fc3-cols').value = String(cmsClampInt(sec.cols, 3, 2, 4));
+  document.getElementById('fc3-gap').value = cmsClampInt(sec.gap, 24, 0, 80);
+  document.getElementById('fc3-eyebrow').value = sec.eyebrow || '';
+  document.getElementById('fc3-eyebrow-cp').value = cmsSafeHex(sec.eyebrowColor, '#4a90d9');
+  document.getElementById('fc3-eyebrow-hex').value = cmsSafeHex(sec.eyebrowColor, '#4a90d9');
+  document.getElementById('fc3-heading').value = sec.headingText || '';
+  document.getElementById('fc3-heading-cp').value = cmsSafeHex(sec.headingColor, '#1a1a1a');
+  document.getElementById('fc3-heading-hex').value = cmsSafeHex(sec.headingColor, '#1a1a1a');
+  document.getElementById('fc3-desc').value = sec.descText || '';
+  document.getElementById('fc3-desc-cp').value = cmsSafeHex(sec.descColor, '#4a5568');
+  document.getElementById('fc3-desc-hex').value = cmsSafeHex(sec.descColor, '#4a5568');
+  document.getElementById('fc3-cards').innerHTML = '';
+  (sec.cards || []).forEach(function(card) { fc3AddCard(card, true, true); });
+}
+
+function fc3SyncCurrent() {
+  var sec = fc3CurrentSection();
+  if (!sec) return null;
+  var data = fc3ReadFormData();
+  Object.assign(sec, data);
+  return sec;
+}
+
+function fc3HexRgb(hex) {
+  var h = (hex || '#204280').replace('#', '');
+  if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  var r = parseInt(h.slice(0,2), 16), g = parseInt(h.slice(2,4), 16), b = parseInt(h.slice(4,6), 16);
+  return (isNaN(r) || isNaN(g) || isNaN(b)) ? '32,66,128' : r + ',' + g + ',' + b;
+}
+
+function buildFeatureCards3Html(data) {
+  var uid = 'fc3' + Date.now().toString(36);
+  var bg = cmsSafeHex(data.bg, '#f8faff');
+  var padTop = cmsClampInt(data.padTop, 60, 0, 200);
+  var padBottom = cmsClampInt(data.padBottom, 60, 0, 200);
+  var padLeft = cmsClampInt(data.padLeft, 80, 0, 200);
+  var padRight = cmsClampInt(data.padRight, 80, 0, 200);
+  var cols = cmsClampInt(data.cols, 3, 2, 4);
+  var gap = cmsClampInt(data.gap, 24, 0, 80);
+  var eyebrow = (data.eyebrow || '').trim();
+  var eyebrowColor = cmsSafeHex(data.eyebrowColor, '#4a90d9');
+  var headingText = (data.headingText || '').trim();
+  var headingColor = cmsSafeHex(data.headingColor, '#1a1a1a');
+  var descText = (data.descText || '').trim();
+  var descColor = cmsSafeHex(data.descColor, '#4a5568');
+  var cards = (data.cards || []).filter(function(c) { return c.title; });
+
+  var css = '<style>'
+    + '#' + uid + '{font-family:\'Poppins\',sans-serif;background:' + xA(bg) + ';padding:' + padTop + 'px ' + padRight + 'px ' + padBottom + 'px ' + padLeft + 'px;box-sizing:border-box;}'
+    + '#' + uid + '-hdr{text-align:center;margin-bottom:40px;}'
+    + '#' + uid + '-eyebrow{font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:' + xA(eyebrowColor) + ';margin-bottom:10px;}'
+    + '#' + uid + '-h2{font-size:32px;font-weight:700;color:' + xA(headingColor) + ';margin:0 0 14px;line-height:1.2;}'
+    + '#' + uid + '-desc{font-size:16px;color:' + xA(descColor) + ';margin:0 auto;max-width:720px;line-height:1.7;}'
+    + '#' + uid + '-grid{display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:' + gap + 'px;}'
+    + '.' + uid + '-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);display:flex;flex-direction:column;}'
+    + '.' + uid + '-hdr{padding:24px 20px;}'
+    + '.' + uid + '-badge{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.2);font-size:14px;font-weight:700;color:#fff;margin-bottom:12px;}'
+    + '.' + uid + '-ctitle{font-size:20px;font-weight:700;color:#fff;margin:0 0 6px;line-height:1.2;}'
+    + '.' + uid + '-csub{font-size:13px;color:rgba(255,255,255,0.8);margin:0;}'
+    + '.' + uid + '-body{padding:16px 20px;flex:1;display:flex;flex-direction:column;gap:8px;}'
+    + '.' + uid + '-tag{display:flex;align-items:center;gap:10px;padding:9px 12px;background:#f8f9fa;border-radius:8px;}'
+    + '.' + uid + '-code{font-size:11px;font-weight:700;letter-spacing:0.06em;padding:3px 8px;border-radius:4px;white-space:nowrap;flex-shrink:0;}'
+    + '.' + uid + '-tname{font-size:13px;color:#374151;line-height:1.4;}'
+    + '@media(max-width:900px){#' + uid + '-grid{grid-template-columns:repeat(' + Math.min(cols,2) + ',1fr);}}'
+    + '@media(max-width:600px){#' + uid + '-grid{grid-template-columns:1fr;}}'
+    + '</style>';
+
+  var headerHtml = '';
+  if (eyebrow || headingText || descText) {
+    headerHtml = '<div id="' + uid + '-hdr">'
+      + (eyebrow ? '<div id="' + uid + '-eyebrow">' + xH(eyebrow) + '</div>' : '')
+      + (headingText ? '<h2 id="' + uid + '-h2">' + xH(headingText) + '</h2>' : '')
+      + (descText ? '<p id="' + uid + '-desc">' + xH(descText) + '</p>' : '')
+      + '</div>\n';
+  }
+
+  var cardsHtml = cards.map(function(card) {
+    var hbg = cmsSafeHex(card.headerBg, '#204280');
+    var rgb = fc3HexRgb(hbg);
+    var tags = (card.tags || []).filter(function(t) { return t.code || t.name; });
+    var tagsHtml = tags.map(function(t) {
+      return '<div class="' + uid + '-tag">'
+        + (t.code ? '<span class="' + uid + '-code" style="background:rgba(' + rgb + ',0.12);color:' + xA(hbg) + ';">' + xH(t.code) + '</span>' : '')
+        + (t.name ? '<span class="' + uid + '-tname">' + xH(t.name) + '</span>' : '')
+        + '</div>';
+    }).join('\n');
+    return '<div class="' + uid + '-card">'
+      + '<div class="' + uid + '-hdr" style="background:' + xA(hbg) + ';">'
+      + (card.number ? '<div class="' + uid + '-badge">' + xH(card.number) + '</div>' : '')
+      + '<div class="' + uid + '-ctitle">' + xH(card.title) + '</div>'
+      + (card.subtitle ? '<div class="' + uid + '-csub">' + xH(card.subtitle) + '</div>' : '')
+      + '</div>'
+      + (tags.length ? '<div class="' + uid + '-body">' + tagsHtml + '</div>' : '')
+      + '</div>';
+  }).join('\n');
+
+  return '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
+    + css
+    + '\n<div id="' + uid + '">' + headerHtml + '<div id="' + uid + '-grid">\n' + cardsHtml + '\n</div></div>';
+}
+
+function fc3RenderCurrent(showPreview) {
+  var sec = fc3CurrentSection();
+  if (!sec) {
+    cmsRenderScreenEmpty('feature-cards-3', 'Create a feature card 3 section to preview it here.', showPreview);
+    return;
+  }
+  cmsRenderScreenHtml('feature-cards-3', buildFeatureCards3Html(sec), showPreview);
+}
+
+function fc3RenderSectionList() {
+  cmsRenderSectionList('fc3-section-list', fc3Store.sections, fc3Store.activeId, 'fc3SelectSection', 'fc3DeleteSection', function(sec) {
+    return (sec.cards || []).length + ' card' + ((sec.cards || []).length === 1 ? '' : 's') + ' · ' + cmsClampInt(sec.cols, 3, 2, 4) + ' col';
+  }, 'No saved sections yet. Click + New Section to get started.');
+}
+
+function fc3PersistNow(savingText, savedText, showPreview) {
+  clearTimeout(fc3Store.timer);
+  fc3SyncCurrent();
+  fc3RenderSectionList();
+  fc3RenderCurrent(showPreview);
+  return cmsSaveSections('/api/publish-feature-cards-3', fc3Store.sections, 'fc3-status', savingText || 'Saving…', savedText || 'Saved!')
+    .then(function(ok) {
+      if (ok) cmsMarkScreenSaved('feature-cards-3');
+      return ok;
+    });
+}
+
+function fc3HandleChange() {
+  if (!fc3CurrentSection()) return;
+  fc3SyncCurrent();
+  fc3RenderSectionList();
+  fc3RenderCurrent();
+  cmsMarkScreenDirty('feature-cards-3');
+}
+
+function fc3BindInputs() {
+  if (fc3Store.bound) return;
+  var screen = document.getElementById('screen-feature-cards-3');
+  var panel = screen && screen.querySelector('.form-panel');
+  if (!panel) return;
+  panel.addEventListener('input', function() { fc3HandleChange(); });
+  panel.addEventListener('change', function() { fc3HandleChange(); });
+  fc3Store.bound = true;
+}
+
+function fc3SelectSection(id) {
+  if (fc3Store.activeId === id) return;
+  if (!cmsConfirmTrackedNavigation('feature-cards-3', 'You have unsaved changes in Feature Card 3. Switch sections without saving?')) return;
+  fc3SyncCurrent();
+  fc3Store.activeId = id;
+  var sec = fc3CurrentSection();
+  if (!sec) return;
+  fc3FillForm(sec);
+  fc3RenderSectionList();
+  fc3RenderCurrent();
+}
+
+function fc3CreateSection(skipPersist) {
+  fc3SyncCurrent();
+  var sec = fc3DefaultSection();
+  fc3Store.sections.push(sec);
+  fc3Store.activeId = sec.id;
+  fc3FillForm(sec);
+  fc3RenderSectionList();
+  fc3RenderCurrent();
+  if (!skipPersist) cmsMarkScreenDirty('feature-cards-3');
+}
+
+function fc3DeleteSection(id) {
+  if (!confirm('Delete this feature card 3 section?')) return;
+  fc3SyncCurrent();
+  fc3Store.sections = fc3Store.sections.filter(function(sec) { return sec.id !== id; });
+  if (!fc3Store.sections.length) {
+    fc3CreateSection(true);
+  } else {
+    fc3Store.activeId = fc3Store.sections[0].id;
+    fc3FillForm(fc3CurrentSection());
+    fc3RenderSectionList();
+    fc3RenderCurrent();
+  }
+  cmsMarkScreenDirty('feature-cards-3');
+}
+
+function fc3OnOpen() {
+  fc3BindInputs();
+  if (fc3Store.loaded) {
+    if (!fc3Store.sections.length) fc3CreateSection(true);
+    if (!fc3Store.activeId && fc3Store.sections.length) fc3SelectSection(fc3Store.sections[0].id);
+    return;
+  }
+  fetch('/api/publish-feature-cards-3')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var saved = data.sections || [];
+      fc3Store.counter = cmsMaxSectionCounter(saved, 'fc3s');
+      fc3Store.sections = saved.map(function(sec) {
+        return {
+          id: sec.id || ('fc3s' + (++fc3Store.counter)),
+          name: sec.name || '',
+          bg: cmsSafeHex(sec.bg, '#f8faff'),
+          padTop: cmsClampInt(sec.padTop, 60, 0, 200),
+          padBottom: cmsClampInt(sec.padBottom, 60, 0, 200),
+          padLeft: cmsClampInt(sec.padLeft, 80, 0, 200),
+          padRight: cmsClampInt(sec.padRight, 80, 0, 200),
+          cols: cmsClampInt(sec.cols, 3, 2, 4),
+          gap: cmsClampInt(sec.gap, 24, 0, 80),
+          eyebrow: sec.eyebrow || '',
+          eyebrowColor: cmsSafeHex(sec.eyebrowColor, '#4a90d9'),
+          headingText: sec.headingText || '',
+          headingColor: cmsSafeHex(sec.headingColor, '#1a1a1a'),
+          descText: sec.descText || '',
+          descColor: cmsSafeHex(sec.descColor, '#4a5568'),
+          cards: (sec.cards || []).map(function(card) {
+            return {
+              headerBg: cmsSafeHex(card.headerBg, '#204280'),
+              number: card.number || '',
+              title: card.title || '',
+              subtitle: card.subtitle || '',
+              tags: (card.tags || []).map(function(t) {
+                return { code: t.code || '', name: t.name || '' };
+              })
+            };
+          })
+        };
+      });
+      fc3Store.loaded = true;
+      if (!fc3Store.sections.length) fc3CreateSection(true);
+      fc3Store.activeId = fc3Store.sections[0].id;
+      fc3FillForm(fc3CurrentSection());
+      fc3RenderSectionList();
+      fc3RenderCurrent();
+    })
+    .catch(function() {
+      fc3Store.loaded = true;
+      cmsSetStatus('fc3-status', 'Could not load saved sections.', 'red');
+      if (!fc3Store.sections.length) fc3CreateSection(true);
+    });
+}
+
+function fc3RemoveCard(id) {
+  var item = document.getElementById(id);
+  if (item) item.remove();
+  fc3HandleChange();
+}
+
+function fc3RemoveTag(btn) {
+  btn.closest('.fc3-tag-row').remove();
+  fc3HandleChange();
+}
+
+function fc3AddTag(cardId) {
+  var card = document.getElementById(cardId);
+  if (!card) return;
+  var list = card.querySelector('.fc3-tags-list');
+  var row = document.createElement('div');
+  row.className = 'fc3-tag-row block-item';
+  row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 10px;';
+  row.innerHTML = '<input type="text" class="fc3-tag-code" placeholder="BT" style="width:60px;font-family:\'Poppins\',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;outline:none;">'
+    + '<input type="text" class="fc3-tag-name" placeholder="e.g. Business and Technology" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;outline:none;">'
+    + '<button class="btn-sm danger" onclick="fc3RemoveTag(this)" style="padding:5px 8px;flex-shrink:0;">×</button>';
+  list.appendChild(row);
+  fc3HandleChange();
+}
+
+function fc3AddCard(data, startCollapsed, skipSync) {
+  if (!fc3CurrentSection()) fc3CreateSection(true);
+  var list = document.getElementById('fc3-cards');
+  var id = 'fc3c-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var hbg = cmsSafeHex(data && data.headerBg, '#204280');
+  var num = (data && data.number) || '';
+  var title = (data && data.title) || '';
+  var sub = (data && data.subtitle) || '';
+  var tags = (data && data.tags) || [];
+  var label = title || 'New Card';
+
+  var tagsHtml = tags.map(function(t) {
+    return '<div class="fc3-tag-row block-item" style="display:flex;align-items:center;gap:8px;padding:7px 10px;">'
+      + '<input type="text" class="fc3-tag-code" placeholder="BT" value="' + xA(t.code || '') + '" style="width:60px;font-family:\'Poppins\',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;outline:none;">'
+      + '<input type="text" class="fc3-tag-name" placeholder="e.g. Business and Technology" value="' + xA(t.name || '') + '" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;outline:none;">'
+      + '<button class="btn-sm danger" onclick="fc3RemoveTag(this)" style="padding:5px 8px;flex-shrink:0;">×</button>'
+      + '</div>';
+  }).join('');
+
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+      + '<span class="block-header-label">' + xH(label) + '</span>'
+      + '<span class="block-type-badge">Card</span>'
+      + '<button class="btn-sm danger" onclick="event.stopPropagation();fc3RemoveCard(\'' + id + '\')" style="margin-left:auto">Remove</button>'
+      + '</div>'
+      + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
+      + '<div class="field"><label>Header background colour</label>'
+      + '<div style="display:flex;gap:8px;align-items:center">'
+      + '<input type="color" class="fc3-hbg-cp" value="' + xA(hbg) + '" oninput="this.nextElementSibling.value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">'
+      + '<input type="text" class="fc3-hbg-hex" value="' + xA(hbg) + '" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))this.previousElementSibling.value=v">'
+      + '</div></div>'
+      + '<div style="display:grid;grid-template-columns:80px 1fr 1fr;gap:8px">'
+      + '<div class="field" style="margin:0"><label>Number</label><input type="text" class="fc3-num" value="' + xA(num) + '" placeholder="01"></div>'
+      + '<div class="field" style="margin:0"><label>Title</label><input type="text" class="fc3-title" value="' + xA(title) + '" placeholder="e.g. Applied Knowledge" oninput="this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=this.value||\'New Card\'"></div>'
+      + '<div class="field" style="margin:0"><label>Subtitle</label><input type="text" class="fc3-sub" value="' + xA(sub) + '" placeholder="e.g. 3 Exams"></div>'
+      + '</div>'
+      + '<div style="margin-top:10px"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:6px;">Tags <span style="font-weight:400;text-transform:none;letter-spacing:0;">(code badge + full name)</span></div>'
+      + '<div class="fc3-tags-list block-list">' + tagsHtml + '</div>'
+      + '<button class="btn-add-block" style="margin-top:4px" onclick="fc3AddTag(\'' + id + '\')">+ Add tag</button>'
+      + '</div>'
+      + '</div>';
+  list.appendChild(div);
+  if (!skipSync) fc3HandleChange();
+}
+
 // ── Page Component Manager (shared) ───────────────────────────
 
 function cmpAttachDirty(screen) {
@@ -11622,7 +12012,7 @@ function cmsSetStatus(id, text, color, clearMs) {
   }
 }
 
-var CMS_TRACKED_SCREENS = ['feature-cards', 'feature-cards-2', 'steps-section', 'about-us', 'hero', 'promotion-section', 'article-groups', 'program-cards-v2'];
+var CMS_TRACKED_SCREENS = ['feature-cards', 'feature-cards-2', 'feature-cards-3', 'steps-section', 'about-us', 'hero', 'promotion-section', 'article-groups', 'program-cards-v2'];
 var cmsDirtyState = {};
 
 function cmsCurrentScreenName() {
@@ -11634,6 +12024,7 @@ function cmsDirtyStatusId(screenName) {
   return {
     'feature-cards': 'fc-status',
     'feature-cards-2': 'fc2-status',
+    'feature-cards-3': 'fc3-status',
     'steps-section': 'ss-status',
     'article-groups': 'ag-status',
     'program-cards-v2': 'pcv2-status',
@@ -11681,6 +12072,7 @@ function cmsAcknowledgeTrackedNavigation(screenName) {
 function cmsSyncTrackedScreen(screenName) {
   if (screenName === 'feature-cards') return featureCardsSyncCurrent();
   if (screenName === 'feature-cards-2') return fc2SyncCurrent();
+  if (screenName === 'feature-cards-3') return fc3SyncCurrent();
   if (screenName === 'steps-section') return stepsSectionSyncCurrent();
   if (screenName === 'article-groups') return articleGroupsSyncCurrent();
   if (screenName === 'program-cards-v2') return pcv2SyncCurrent();

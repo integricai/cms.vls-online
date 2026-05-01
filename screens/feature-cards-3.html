@@ -1,0 +1,110 @@
+<div id="screen-feature-cards-3" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="section-label" style="margin:0;">Feature Card 3 Sections</div>
+      <button class="btn-add-block" onclick="fc3CreateSection()" style="margin:0;">+ New Section</button>
+    </div>
+    <div id="fc3-section-list" class="block-list"></div>
+    <div id="fc3-status" style="font-size:12px;min-height:18px;"></div>
+
+    <div class="section-label">Section Setup</div>
+    <div class="field">
+      <label>Section name <span class="hint">(for CMS identification)</span></label>
+      <input type="text" id="fc3-name" value="Feature Card 3 Section 1">
+    </div>
+
+    <div class="field">
+      <label>Section background</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="color" id="fc3-bg-picker" value="#f8faff" oninput="document.getElementById('fc3-bg-text').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+        <input type="text" id="fc3-bg-text" value="#f8faff" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('fc3-bg-picker').value=v" style="font-family:'Poppins',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;flex:1;outline:none">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field"><label>Padding top (px)</label><input type="number" id="fc3-pad-top" value="60" min="0" max="200"></div>
+      <div class="field"><label>Padding bottom (px)</label><input type="number" id="fc3-pad-bot" value="60" min="0" max="200"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field"><label>Padding left (px)</label><input type="number" id="fc3-pad-left" value="80" min="0" max="200"></div>
+      <div class="field"><label>Padding right (px)</label><input type="number" id="fc3-pad-right" value="80" min="0" max="200"></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Columns</label>
+        <select id="fc3-cols">
+          <option value="2">2 columns</option>
+          <option value="3" selected>3 columns</option>
+          <option value="4">4 columns</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Card gap (px)</label>
+        <input type="number" id="fc3-gap" value="24" min="0" max="80">
+      </div>
+    </div>
+
+    <div class="section-label">Section Header</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Eyebrow text</label>
+        <input type="text" id="fc3-eyebrow" placeholder="e.g. QUALIFICATION STRUCTURE">
+      </div>
+      <div class="field">
+        <label>Eyebrow colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="fc3-eyebrow-cp" value="#4a90d9" oninput="document.getElementById('fc3-eyebrow-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="fc3-eyebrow-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('fc3-eyebrow-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Heading text</label>
+        <input type="text" id="fc3-heading" placeholder="e.g. ACCA Qualification Structure">
+      </div>
+      <div class="field">
+        <label>Heading colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="fc3-heading-cp" value="#1a1a1a" oninput="document.getElementById('fc3-heading-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="fc3-heading-hex" value="#1a1a1a" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('fc3-heading-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Description</label>
+        <textarea id="fc3-desc" rows="3" placeholder="Optional description below heading"></textarea>
+      </div>
+      <div class="field">
+        <label>Description colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="fc3-desc-cp" value="#4a5568" oninput="document.getElementById('fc3-desc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="fc3-desc-hex" value="#4a5568" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('fc3-desc-cp').value=v">
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Cards <span class="hint">(header = number badge + title + subtitle; body = tag rows)</span></div>
+    <div id="fc3-cards" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="fc3AddCard()">+ Add card</button>
+
+    <button class="btn-gen" onclick="fc3PersistNow('Saving…','Saved!',true)">Generate &amp; Save</button>
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="feature-cards-3-ot-preview" onclick="switchOut('feature-cards-3','preview')">Preview</div>
+      <div class="out-tab" id="feature-cards-3-ot-html" onclick="switchOut('feature-cards-3','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="feature-cards-3-preview-wrap" class="preview-wrap"></div>
+      <div id="feature-cards-3-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('feature-cards-3-code',this)">Copy</button>
+        <pre id="feature-cards-3-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>
