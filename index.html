@@ -346,6 +346,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-page-hero-banner" onclick="switchScreen('page-hero-banner')">Hero Banner</div>
       <div class="nav-dd-item" id="nav-page-left-hero" onclick="switchScreen('page-left-hero')">Left Hero Section</div>
       <div class="nav-dd-item" id="nav-page-hero-v2" onclick="switchScreen('page-hero-v2')">Hero Banner V2</div>
+      <div class="nav-dd-item" id="nav-article-groups" onclick="switchScreen('article-groups')">Article Groups</div>
     </div>
   </div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
@@ -430,6 +431,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <button class="home-tile-link" onclick="switchScreen('page-hero-banner')">Hero Banner</button>
           <button class="home-tile-link" onclick="switchScreen('page-left-hero')">Left Hero Section</button>
           <button class="home-tile-link" onclick="switchScreen('page-hero-v2')">Hero Banner V2</button>
+          <button class="home-tile-link" onclick="switchScreen('article-groups')">Article Groups</button>
         </div>
       </div>
       <div class="home-tile">
@@ -939,6 +941,10 @@ var CMS_PARAGRAPH_DEFAULTS = {
   stepsTitle:          { size: 26, color: '#1a1a1a', weight: '500', letterSpacing: 0 },
   stepsCard:           { size: 13, color: '#30343b', weight: '400', letterSpacing: 0 },
   stepsCardTitle:      { size: 14, color: '#202124', weight: '500', letterSpacing: 0 },
+  articleGroupTitle:   { size: 18, color: '#0d1f3c', weight: '700', letterSpacing: 0 },
+  articleGroupBody:    { size: 13, color: '#6b7280', weight: '400', letterSpacing: 0 },
+  articleGroupRowTitle:{ size: 14, color: '#0d1f3c', weight: '700', letterSpacing: 0 },
+  articleGroupNotice:  { size: 13, color: '#7a8596', weight: '400', letterSpacing: 0 },
   aboutParagraph:      { size: 14, color: '#2f343b', weight: '400', letterSpacing: 0 },
   aboutEyebrow:        { size: 11, color: '#204280', weight: '500', letterSpacing: 0.12 },
   aboutTitle:          { size: 26, color: '#202124', weight: '500', letterSpacing: 0 },
@@ -1073,7 +1079,7 @@ var _SHARED_SCREENS = ['faq', 'events', 'programs', 'feature-cards', 'feature-ca
 var _COMMON_SECTION_SCREENS = ['steps-section', 'dcs', 'dcs2', 'dcs3', 'reach', 'policy'];
 var _FORM_SCREENS   = ['form', 'report-issue', 'report-thank-you'];
 var _COURSE_SCREENS       = ['course-hero', 'course-hero-right', 'course-desc', 'course-tabs'];
-var _PAGE_BUILDER_SCREENS = ['page-hero-banner', 'page-left-hero', 'page-hero-v2'];
+var _PAGE_BUILDER_SCREENS = ['page-hero-banner', 'page-left-hero', 'page-hero-v2', 'article-groups'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
@@ -1109,6 +1115,7 @@ var _screenFiles = {
   'page-hero-banner':  '/screens/page-hero-banner.html',
   'page-left-hero':    '/screens/page-left-hero.html',
   'page-hero-v2':      '/screens/page-hero-v2.html',
+  'article-groups':    '/screens/article-groups.html',
 };
 var _loadedScreens = {};
 
@@ -1207,6 +1214,7 @@ async function switchScreen(name) {
   if (name === 'page-hero-banner'  && !_loadedScreens._phbInit)  { _loadedScreens._phbInit  = true; phbOnOpen(); phbCmpInit(); cmpAttachDirty('page-hero-banner'); }
   if (name === 'page-left-hero'    && !_loadedScreens._plhInit)  { _loadedScreens._plhInit  = true; plhOnOpen(); plhCmpInit(); cmpAttachDirty('page-left-hero'); }
   if (name === 'page-hero-v2'      && !_loadedScreens._phv2Init) { _loadedScreens._phv2Init = true; phv2OnOpen(); phv2CmpInit(); cmpAttachDirty('page-hero-v2'); }
+  if (name === 'article-groups'    && !_loadedScreens._agInit)   { _loadedScreens._agInit   = true; articleGroupsOnOpen(); }
   if (name === 'header')  headerOnOpen();
 }
 
@@ -11206,7 +11214,7 @@ function cmsSetStatus(id, text, color, clearMs) {
   }
 }
 
-var CMS_TRACKED_SCREENS = ['feature-cards', 'feature-cards-2', 'steps-section', 'about-us', 'hero', 'promotion-section'];
+var CMS_TRACKED_SCREENS = ['feature-cards', 'feature-cards-2', 'steps-section', 'about-us', 'hero', 'promotion-section', 'article-groups'];
 var cmsDirtyState = {};
 
 function cmsCurrentScreenName() {
@@ -11219,6 +11227,7 @@ function cmsDirtyStatusId(screenName) {
     'feature-cards': 'fc-status',
     'feature-cards-2': 'fc2-status',
     'steps-section': 'ss-status',
+    'article-groups': 'ag-status',
     'about-us': 'au-status',
     'hero': 'hero-status',
     'promotion-section': 'promotion-status'
@@ -11264,6 +11273,7 @@ function cmsSyncTrackedScreen(screenName) {
   if (screenName === 'feature-cards') return featureCardsSyncCurrent();
   if (screenName === 'feature-cards-2') return fc2SyncCurrent();
   if (screenName === 'steps-section') return stepsSectionSyncCurrent();
+  if (screenName === 'article-groups') return articleGroupsSyncCurrent();
   if (screenName === 'about-us') return aboutUsSyncCurrent();
   if (screenName === 'hero') return heroSyncCurrent();
   if (screenName === 'promotion-section') return promotionSyncCurrent();
@@ -11961,6 +11971,438 @@ function stepsSectionAddCard(data, startCollapsed, skipSync) {
 
 function generateStepsSection() {
   stepsSectionPersistNow('Saving…', 'Saved!', true);
+}
+
+// ── Article Groups persisted sections ────────────────────────
+
+var articleGroupsStore = { sections: [], activeId: '', counter: 0, loaded: false, bound: false, timer: null };
+
+function articleGroupsDefaultGroups() {
+  return [
+    { title: 'Pricing', short: 'Pricing', color: '#1f6fbf', articles: [
+      ['1', 'Pricing 1: Theoretical aspects', 'Deals with the theoretical aspects of pricing strategy and price elasticity.', 'https://www.accaglobal.com/uk/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/pricing-1.html'],
+      ['2', 'Pricing 2: Practical aspects', 'Practical pricing approaches including market-based and cost-plus pricing.', 'https://www.accaglobal.com/middle-east/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/pricing-2.html']
+    ]},
+    { title: 'Performance measurement', short: 'Performance', color: '#138a72', articles: [
+      ['BS', 'Balanced scorecard', 'How the balanced scorecard achieves sustained financial success and long-term shareholder value.', 'https://www.accaglobal.com/lk/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/balanced-scorecard.html'],
+      ['PE', 'Tackling performance evaluation questions', 'Advice on successfully tackling performance evaluation as a regularly examined requirement.', 'https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/performance-measurement.html'],
+      ['BB', 'Building blocks of performance management', 'Reviews the Building Block model and applies it to an exam-based scenario.', 'https://www.accaglobal.com/uk/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/buildblocks.html'],
+      ['DC', 'Decentralisation and performance measurement', 'Focuses on a classic performance question combining financial and non-financial analysis.', 'https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/performance-measurement.html']
+    ]},
+    { title: 'Costing techniques', short: 'Costing', color: '#6047d7', articles: [
+      ['RC', 'Relevant costs', 'Any cost relevant to a decision - definition, types, and exam application.', 'https://www.accaglobal.com/ca/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/relevant-costs.html'],
+      ['ABC', 'Activity-based costing', 'How ABC investigates what causes costs and uses that information for costing purposes.', 'https://www.accaglobal.com/in/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/ABC.html'],
+      ['TC', 'Target costing and lifecycle costing', 'Explanation of target and lifecycle costing with examples of when to use each technique.', 'https://www.accaglobal.com/pk/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/target-lifestyle.html'],
+      ['TP', 'Transfer pricing', 'Why transfer pricing matters, general principles, and approach to exam questions.', 'https://www.accaglobal.com/uk/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/transfer-pricing.html'],
+      ['EMA', 'Environmental management accounting', 'Issues businesses face in managing environmental costs and methods for accounting for them.', 'https://www.accaglobal.com/us/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/Env-MA.html'],
+      ['TA1', 'Throughput accounting - Part 1', 'Basic principles of the theory of constraints and throughput accounting.', 'https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/throughput-constraints1.html'],
+      ['TA2', 'Throughput accounting - Part 2', 'The five focusing steps of the theory of constraints with practical examples.', 'https://www.accaglobal.com/gb/en/student/acca-qual-student-journey/qual-resource/acca-qualification/f5/technical-articles/throughput-constraints2.html']
+    ]},
+    { title: 'Budgeting', short: 'Budgeting', color: '#d89a1d', articles: [
+      ['1', 'All about budgeting - Part 1', 'Flexible, activity-based, rolling, zero-based, and beyond budgeting approaches.', 'https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/budgeting1.html'],
+      ['2', 'All about budgeting - Part 2', 'Continuation of budgeting approaches with worked examples.', 'https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/budgeting2.html'],
+      ['3', 'All about budgeting - Part 3', 'Further coverage of budgeting methods and exam technique.', 'https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/budgeting3.html'],
+      ['4', 'All about budgeting - Part 4', 'Advanced budgeting topics including beyond budgeting and rolling forecasts.', 'https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/budgeting4.html'],
+      ['5', 'All about budgeting - Part 5', 'Final part covering the practical application of budgeting in organisations.', 'https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/budgeting5.html'],
+      ['IZ', 'Incremental vs ZBB in the public sector', 'Critical evaluation of incremental budgeting vs zero-based budgeting approaches.', 'https://www.accaglobal.com/ca/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/comparing-budgeting-techniques.html']
+    ]},
+    { title: 'Decision-making techniques', short: 'Decision-making', color: '#0d1f3c', articles: [
+      ['CVP', 'Cost-volume-profit analysis', 'How CVP analysis helps a business find its break-even point and model profitability.', 'https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/CVP-analysis.htm.html'],
+      ['LP', 'Linear programming', 'A simple worked example illustrating the linear programming decision-making technique.', 'https://www.accaglobal.com/middle-east/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/linear-programming.html'],
+      ['DT', 'Decision trees', 'Step-by-step approach to decision trees with a simple example to guide you through.', 'https://www.accaglobal.com/uk/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/decision-trees.htm.html']
+    ]},
+    { title: 'Big data & information systems', short: 'Big Data', color: '#c46b2b', articles: [
+      ['BD1', 'Big data 1: What is big data?', 'Introduction to big data as part of the Performance Management syllabus.', 'https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/what-is-big-data.html'],
+      ['BD2', 'Big data 2: How companies use big data', 'Real-life examples of big data use for performance management and measurement.', 'https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/how-companies-use-big-data.html'],
+      ['IS', 'Information systems', 'A topic needed for all sections of the PM exam and regularly overlooked by students.', 'https://www.accaglobal.com/pk/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/info-systems.html']
+    ]},
+    { title: 'Risk & uncertainty', short: 'Risk', color: '#b33a5b', articles: [
+      ['RU', 'The risks of uncertainty', 'Risk, probability and potential outcomes - decision-making under uncertainty.', 'https://www.accaglobal.com/gb/en/student/acca-qual-student-journey/qual-resource/acca-qualification/f5/technical-articles/the-risks-of-uncertainty.html'],
+      ['LE', 'The learning rate and learning effect', 'History of the learning curve effect and how future exam questions may test it.', 'https://www.accaglobal.com/ubcs/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles/the-learning-rate-and-learning-effect.html']
+    ]}
+  ].map(function(group) {
+    return {
+      title: group.title,
+      short: group.short,
+      color: group.color,
+      articles: group.articles.map(function(a) { return { code: a[0], title: a[1], desc: a[2], url: a[3] }; })
+    };
+  });
+}
+
+function articleGroupsDefaultSection() {
+  var id = 'ags' + (++articleGroupsStore.counter);
+  return {
+    id: id,
+    name: 'PM Article Groups ' + articleGroupsStore.counter,
+    paperCode: 'PM',
+    paperTitle: 'Performance Management',
+    theme: '#0d1f3c',
+    hubUrl: 'https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles.html',
+    headingStyle: cmsNormalizeTextData('Pricing', CMS_PARAGRAPH_DEFAULTS.articleGroupTitle),
+    bodyStyle: cmsNormalizeParagraphData('Article descriptions use this formatting.', CMS_PARAGRAPH_DEFAULTS.articleGroupBody),
+    rowTitleStyle: cmsNormalizeTextData('Pricing 1: Theoretical aspects', CMS_PARAGRAPH_DEFAULTS.articleGroupRowTitle),
+    notice: cmsNormalizeParagraphData('All article content is copyright of the original publisher, ACCA UK. Links open directly on the ACCA global website. VLS provides these links to help students access official ACCA academic resources.', CMS_PARAGRAPH_DEFAULTS.articleGroupNotice),
+    groups: articleGroupsDefaultGroups()
+  };
+}
+
+function articleGroupsCurrent() {
+  return articleGroupsStore.sections.find(function(sec) { return sec.id === articleGroupsStore.activeId; }) || null;
+}
+
+function articleGroupsEncodeArticles(articles) {
+  return (articles || []).map(function(a) {
+    return [a.code || '', a.title || '', a.desc || '', a.url || ''].join(' | ');
+  }).join('\n');
+}
+
+function articleGroupsParseArticles(text) {
+  return String(text || '').split(/\n+/).map(function(line) {
+    var parts = line.split('|').map(function(part) { return part.trim(); });
+    return { code: parts[0] || '', title: parts[1] || '', desc: parts[2] || '', url: parts.slice(3).join('|').trim() };
+  }).filter(function(a) { return a.title || a.url; });
+}
+
+function articleGroupsReadFormData() {
+  return {
+    name: (document.getElementById('ag-name') || {}).value || '',
+    paperCode: (document.getElementById('ag-paper-code') || {}).value || 'PM',
+    paperTitle: (document.getElementById('ag-paper-title') || {}).value || 'Performance Management',
+    theme: (document.getElementById('ag-theme-hex') || {}).value || '#0d1f3c',
+    hubUrl: (document.getElementById('ag-hub-url') || {}).value || '',
+    headingStyle: cmsReadTextField('ag-heading-style', CMS_PARAGRAPH_DEFAULTS.articleGroupTitle),
+    bodyStyle: cmsReadParagraphField('ag-body-style', CMS_PARAGRAPH_DEFAULTS.articleGroupBody),
+    rowTitleStyle: cmsReadTextField('ag-row-title-style', CMS_PARAGRAPH_DEFAULTS.articleGroupRowTitle),
+    notice: cmsReadParagraphField('ag-notice', CMS_PARAGRAPH_DEFAULTS.articleGroupNotice),
+    groups: Array.prototype.slice.call(document.querySelectorAll('#ag-groups .block-item')).map(function(item) {
+      return {
+        title: (item.querySelector('.ag-group-title') || {}).value || '',
+        short: (item.querySelector('.ag-group-short') || {}).value || '',
+        color: (item.querySelector('.ag-group-color-hex') || {}).value || '#204280',
+        articles: articleGroupsParseArticles((item.querySelector('.ag-group-articles') || {}).value || '')
+      };
+    }).filter(function(group) { return group.title || group.articles.length; })
+  };
+}
+
+function articleGroupsNormalizeSection(sec) {
+  sec = sec || {};
+  return {
+    id: sec.id || ('ags' + (++articleGroupsStore.counter)),
+    name: sec.name || '',
+    paperCode: sec.paperCode || 'PM',
+    paperTitle: sec.paperTitle || 'Performance Management',
+    theme: cmsSafeHex(sec.theme, '#0d1f3c'),
+    hubUrl: sec.hubUrl || 'https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles.html',
+    headingStyle: cmsNormalizeTextData(sec.headingStyle, CMS_PARAGRAPH_DEFAULTS.articleGroupTitle),
+    bodyStyle: cmsNormalizeParagraphData(sec.bodyStyle, CMS_PARAGRAPH_DEFAULTS.articleGroupBody),
+    rowTitleStyle: cmsNormalizeTextData(sec.rowTitleStyle, CMS_PARAGRAPH_DEFAULTS.articleGroupRowTitle),
+    notice: cmsNormalizeParagraphData(sec.notice, CMS_PARAGRAPH_DEFAULTS.articleGroupNotice),
+    groups: (sec.groups && sec.groups.length ? sec.groups : articleGroupsDefaultGroups()).map(function(group) {
+      return {
+        title: group.title || '',
+        short: group.short || group.title || '',
+        color: cmsSafeHex(group.color, '#204280'),
+        articles: (group.articles || []).map(function(a) {
+          return { code: a.code || '', title: a.title || '', desc: a.desc || '', url: a.url || '' };
+        })
+      };
+    })
+  };
+}
+
+function articleGroupsFillForm(sec) {
+  document.getElementById('ag-name').value = sec.name || '';
+  document.getElementById('ag-paper-code').value = sec.paperCode || 'PM';
+  document.getElementById('ag-paper-title').value = sec.paperTitle || '';
+  document.getElementById('ag-hub-url').value = sec.hubUrl || '';
+  document.getElementById('ag-theme-cp').value = sec.theme || '#0d1f3c';
+  document.getElementById('ag-theme-hex').value = sec.theme || '#0d1f3c';
+  cmsSetTextField('ag-heading-style', sec.headingStyle, CMS_PARAGRAPH_DEFAULTS.articleGroupTitle);
+  cmsSetParagraphField('ag-body-style', sec.bodyStyle, CMS_PARAGRAPH_DEFAULTS.articleGroupBody);
+  cmsSetTextField('ag-row-title-style', sec.rowTitleStyle, CMS_PARAGRAPH_DEFAULTS.articleGroupRowTitle);
+  cmsSetParagraphField('ag-notice', sec.notice, CMS_PARAGRAPH_DEFAULTS.articleGroupNotice);
+  document.getElementById('ag-groups').innerHTML = '';
+  (sec.groups || []).forEach(function(group) { articleGroupsAddGroup(group, true, true); });
+}
+
+function articleGroupsSyncCurrent() {
+  var sec = articleGroupsCurrent();
+  if (!sec) return null;
+  var data = articleGroupsReadFormData();
+  sec.name = data.name;
+  sec.paperCode = data.paperCode;
+  sec.paperTitle = data.paperTitle;
+  sec.theme = cmsSafeHex(data.theme, '#0d1f3c');
+  sec.hubUrl = data.hubUrl;
+  sec.headingStyle = data.headingStyle;
+  sec.bodyStyle = data.bodyStyle;
+  sec.rowTitleStyle = data.rowTitleStyle;
+  sec.notice = data.notice;
+  sec.groups = data.groups;
+  return sec;
+}
+
+function buildArticleGroupsHtml(data) {
+  var uid = 'ag' + Date.now().toString(36);
+  var theme = cmsSafeHex(data.theme, '#0d1f3c');
+  var headingStyle = cmsTextStyle(data.headingStyle, CMS_PARAGRAPH_DEFAULTS.articleGroupTitle);
+  var bodyStyle = cmsParagraphStyle(data.bodyStyle, CMS_PARAGRAPH_DEFAULTS.articleGroupBody);
+  var rowTitleStyle = cmsTextStyle(data.rowTitleStyle, CMS_PARAGRAPH_DEFAULTS.articleGroupRowTitle);
+  var noticeStyle = cmsParagraphStyle(data.notice, CMS_PARAGRAPH_DEFAULTS.articleGroupNotice);
+  var total = (data.groups || []).reduce(function(sum, group) { return sum + ((group.articles || []).length); }, 0);
+  var tabs = '<button type="button" class="' + uid + '-pill is-active" data-topic="all">All topics</button>' + (data.groups || []).map(function(group) {
+    return '<button type="button" class="' + uid + '-pill" data-topic="' + xA(group.title) + '">' + xH(group.short || group.title) + '</button>';
+  }).join('');
+  var nav = '<aside class="' + uid + '-side"><div class="' + uid + '-current"><span>Currently viewing</span><strong>' + xH(data.paperCode || 'PM') + ' Articles</strong></div><div class="' + uid + '-side-title">Topic areas</div>'
+    + '<button type="button" class="' + uid + '-side-link is-active" data-topic="all"><span>All articles</span><b>' + total + '</b></button>'
+    + (data.groups || []).map(function(group) { return '<button type="button" class="' + uid + '-side-link" data-topic="' + xA(group.title) + '"><span>' + xH(group.title) + '</span><b>' + ((group.articles || []).length) + '</b></button>'; }).join('')
+    + '</aside>';
+  var groupsHtml = (data.groups || []).map(function(group) {
+    var color = cmsSafeHex(group.color, theme);
+    var articles = (group.articles || []).map(function(a) {
+      var href = a.url || '#';
+      return '<a class="' + uid + '-row" href="' + xA(href) + '" target="_blank" rel="noopener">'
+        + '<span class="' + uid + '-badge" style="background:' + color + '18;color:' + color + ';">' + xH(a.code || '') + '</span>'
+        + '<strong style="' + rowTitleStyle + '">' + xH(a.title || '') + '</strong>'
+        + '<span style="' + bodyStyle + '">' + xH(a.desc || '') + '</span>'
+        + '<em aria-hidden="true">&#8599;</em>'
+        + '</a>';
+    }).join('');
+    return '<section class="' + uid + '-group" data-topic="' + xA(group.title) + '">'
+      + '<header><span style="background:' + color + ';"></span><h2 style="' + headingStyle + '">' + xH(group.title || '') + '</h2><small>' + ((group.articles || []).length) + ' articles</small></header>'
+      + '<div class="' + uid + '-rows">' + articles + '</div>'
+      + '</section>';
+  }).join('');
+  var noticeText = cmsParagraphText(data.notice || '');
+  var css = '<style>'
+    + '.' + uid + '{font-family:\'Poppins\',sans-serif;background:#f4f7fb;color:#0d1f3c;padding:0 0 34px;}'
+    + '.' + uid + ' *{box-sizing:border-box;}'
+    + '.' + uid + '-bar{position:sticky;top:0;z-index:3;background:#fff;border-bottom:1px solid #e6ebf2;padding:12px 30px;display:flex;align-items:center;gap:12px;overflow:auto;}'
+    + '.' + uid + '-bar-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#9aa3b2;white-space:nowrap;}'
+    + '.' + uid + '-pill{border:1px solid #d8e0ea;background:#fff;border-radius:999px;padding:7px 16px;font:600 12px Poppins,sans-serif;color:#334155;white-space:nowrap;cursor:pointer;}'
+    + '.' + uid + '-pill.is-active{background:' + theme + ';border-color:' + theme + ';color:#fff;}'
+    + '.' + uid + '-count{margin-left:auto;font-size:12px;color:#9aa3b2;white-space:nowrap;}'
+    + '.' + uid + '-layout{max-width:1160px;margin:0 auto;padding:28px 30px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:24px;}'
+    + '.' + uid + '-side{align-self:start;position:sticky;top:74px;background:#fff;border:1px solid #e1e8f1;border-radius:12px;overflow:hidden;}'
+    + '.' + uid + '-current{background:' + theme + ';padding:18px;color:#fff;}'
+    + '.' + uid + '-current span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#63b3ed;font-weight:700;margin-bottom:5px;}'
+    + '.' + uid + '-current strong{font-size:16px;}'
+    + '.' + uid + '-side-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#9aa3b2;font-weight:700;padding:14px 18px 8px;}'
+    + '.' + uid + '-side-link{width:100%;border:0;border-top:1px solid #edf1f6;background:#fff;padding:10px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;font:500 12px Poppins,sans-serif;color:#5c6573;text-align:left;cursor:pointer;}'
+    + '.' + uid + '-side-link.is-active{background:#e8f3fc;color:#1f6fbf;border-left:3px solid #1f6fbf;}'
+    + '.' + uid + '-side-link b{background:#eef2f7;border-radius:999px;padding:2px 7px;font-size:11px;color:#6b7280;}'
+    + '.' + uid + '-main{display:flex;flex-direction:column;gap:14px;}'
+    + '.' + uid + '-group{background:#fff;border:1px solid #e1e8f1;border-radius:12px;overflow:hidden;}'
+    + '.' + uid + '-group[hidden]{display:none;}'
+    + '.' + uid + '-group header{background:#f7f9fc;padding:16px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #edf1f6;}'
+    + '.' + uid + '-group header span{width:5px;height:24px;border-radius:8px;flex-shrink:0;}'
+    + '.' + uid + '-group h2{margin:0;line-height:1.25;flex:1;}'
+    + '.' + uid + '-group small{font-size:12px;color:#8b95a5;}'
+    + '.' + uid + '-row{display:grid;grid-template-columns:42px minmax(160px,260px) minmax(220px,1fr) 24px;gap:12px;align-items:center;text-decoration:none;padding:14px 24px;border-top:1px solid #edf1f6;}'
+    + '.' + uid + '-row:first-child{border-top:0;}'
+    + '.' + uid + '-row strong{line-height:1.35;}'
+    + '.' + uid + '-row span:nth-child(3){line-height:1.45;}'
+    + '.' + uid + '-badge{width:30px;height:30px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}'
+    + '.' + uid + '-row em{font-style:normal;color:#1f6fbf;font-size:14px;text-align:right;}'
+    + '.' + uid + '-notice{background:#fff;border:1px solid #e1e8f1;border-radius:12px;padding:16px 22px;display:flex;gap:12px;align-items:flex-start;}'
+    + '.' + uid + '-notice p{margin:0;line-height:1.6;}'
+    + '.' + uid + '-notice a{color:#1f6fbf;text-decoration:none;}'
+    + '@media(max-width:860px){.' + uid + '-layout{grid-template-columns:1fr;padding:20px 16px;}.' + uid + '-side{position:static;}.' + uid + '-row{grid-template-columns:38px 1fr 24px;}.' + uid + '-row span:nth-child(3){grid-column:2/4;}.' + uid + '-bar{padding:10px 16px;}}'
+    + '</style>';
+  var script = '<script>(function(){var root=document.currentScript.previousElementSibling;while(root&&!(root.classList&&root.classList.contains("' + uid + '")))root=root.previousElementSibling;if(!root)return;function setTopic(topic){root.querySelectorAll("[data-topic]").forEach(function(el){if(el.classList&&(el.classList.contains("' + uid + '-pill")||el.classList.contains("' + uid + '-side-link")))el.classList.toggle("is-active",el.getAttribute("data-topic")===topic);});root.querySelectorAll(".' + uid + '-group").forEach(function(g){g.hidden=topic!=="all"&&g.getAttribute("data-topic")!==topic;});}root.addEventListener("click",function(e){var b=e.target.closest("button[data-topic]");if(b)setTopic(b.getAttribute("data-topic"));});})();<\/script>';
+  var body = '<section class="' + uid + '">'
+    + '<div class="' + uid + '-bar"><span class="' + uid + '-bar-label">Filter by topic</span>' + tabs + '<span class="' + uid + '-count">' + total + ' articles</span></div>'
+    + '<div class="' + uid + '-layout">' + nav + '<main class="' + uid + '-main">' + groupsHtml
+    + '<div class="' + uid + '-notice"><span>&copy;</span><p style="' + noticeStyle + '">' + xH(noticeText) + ' <a href="' + xA(data.hubUrl || '#') + '" target="_blank" rel="noopener">&larr; Back to all technical articles</a></p></div>'
+    + '</main></div></section>';
+  return '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">\n' + css + '\n' + body + '\n' + script;
+}
+
+function articleGroupsRenderCurrent(showPreview) {
+  var sec = articleGroupsCurrent();
+  if (!sec) {
+    cmsRenderScreenEmpty('article-groups', 'Create an article groups section to preview it here.', showPreview);
+    return;
+  }
+  cmsRenderScreenHtml('article-groups', buildArticleGroupsHtml(sec), showPreview);
+  articleGroupsWirePreview();
+}
+
+function articleGroupsWirePreview() {
+  var preview = document.getElementById('article-groups-preview-wrap');
+  var root = preview && preview.querySelector('section[class^="ag"]');
+  if (!root) return;
+  var cls = Array.prototype.slice.call(root.classList).filter(function(name) { return /^ag/.test(name); })[0];
+  if (!cls) return;
+  root.addEventListener('click', function(e) {
+    var btn = e.target.closest('button[data-topic]');
+    if (!btn || !root.contains(btn)) return;
+    var topic = btn.getAttribute('data-topic');
+    root.querySelectorAll('button[data-topic]').forEach(function(el) { el.classList.toggle('is-active', el.getAttribute('data-topic') === topic); });
+    root.querySelectorAll('.' + cls + '-group').forEach(function(group) { group.hidden = topic !== 'all' && group.getAttribute('data-topic') !== topic; });
+  });
+}
+
+function articleGroupsRenderList() {
+  cmsRenderSectionList('ag-section-list', articleGroupsStore.sections, articleGroupsStore.activeId, 'articleGroupsSelectSection', 'articleGroupsDeleteSection', function(sec) {
+    var total = (sec.groups || []).reduce(function(sum, group) { return sum + ((group.articles || []).length); }, 0);
+    return (sec.paperCode || 'PM') + ' - ' + (sec.groups || []).length + ' groups - ' + total + ' articles';
+  }, 'No saved article groups yet. Click + New to get started.');
+}
+
+function articleGroupsPersistNow(savingText, savedText, showPreview) {
+  clearTimeout(articleGroupsStore.timer);
+  articleGroupsSyncCurrent();
+  articleGroupsRenderList();
+  articleGroupsRenderCurrent(showPreview);
+  return cmsSaveSections('/api/publish-article-groups', articleGroupsStore.sections, 'ag-status', savingText || 'Saving...', savedText || 'Saved!')
+    .then(function(ok) {
+      if (ok) cmsMarkScreenSaved('article-groups');
+      return ok;
+    });
+}
+
+function articleGroupsHandleChange() {
+  if (!articleGroupsCurrent()) return;
+  articleGroupsSyncCurrent();
+  articleGroupsRenderList();
+  articleGroupsRenderCurrent();
+  cmsMarkScreenDirty('article-groups');
+}
+
+function articleGroupsBindInputs() {
+  if (articleGroupsStore.bound) return;
+  var screen = document.getElementById('screen-article-groups');
+  var panel = screen && screen.querySelector('.form-panel');
+  if (!panel) return;
+  panel.addEventListener('input', function() { articleGroupsHandleChange(); });
+  panel.addEventListener('change', function() { articleGroupsHandleChange(); });
+  articleGroupsStore.bound = true;
+}
+
+function articleGroupsSelectSection(id) {
+  if (articleGroupsStore.activeId === id) return;
+  if (!cmsConfirmTrackedNavigation('article-groups', 'You have unsaved changes in Article Groups. Switch sections without saving?')) return;
+  articleGroupsSyncCurrent();
+  articleGroupsStore.activeId = id;
+  var sec = articleGroupsCurrent();
+  if (!sec) return;
+  articleGroupsFillForm(sec);
+  articleGroupsRenderList();
+  articleGroupsRenderCurrent();
+}
+
+function articleGroupsCreateSection(skipPersist) {
+  articleGroupsSyncCurrent();
+  var sec = articleGroupsDefaultSection();
+  articleGroupsStore.sections.push(sec);
+  articleGroupsStore.activeId = sec.id;
+  articleGroupsFillForm(sec);
+  articleGroupsRenderList();
+  articleGroupsRenderCurrent();
+  if (!skipPersist) cmsMarkScreenDirty('article-groups');
+}
+
+function articleGroupsDuplicateSection() {
+  var current = articleGroupsCurrent();
+  if (!current) return;
+  articleGroupsSyncCurrent();
+  var copy = JSON.parse(JSON.stringify(current));
+  copy.id = 'ags' + (++articleGroupsStore.counter);
+  copy.name = 'Copy of ' + (current.name || 'Article Groups');
+  articleGroupsStore.sections.push(copy);
+  articleGroupsStore.activeId = copy.id;
+  articleGroupsFillForm(copy);
+  articleGroupsRenderList();
+  articleGroupsRenderCurrent();
+  cmsMarkScreenDirty('article-groups');
+}
+
+function articleGroupsDeleteSection(id) {
+  if (!confirm('Delete this article groups section?')) return;
+  articleGroupsSyncCurrent();
+  articleGroupsStore.sections = articleGroupsStore.sections.filter(function(sec) { return sec.id !== id; });
+  if (!articleGroupsStore.sections.length) {
+    articleGroupsCreateSection(true);
+  } else {
+    articleGroupsStore.activeId = articleGroupsStore.sections[0].id;
+    articleGroupsFillForm(articleGroupsCurrent());
+    articleGroupsRenderList();
+    articleGroupsRenderCurrent();
+  }
+  cmsMarkScreenDirty('article-groups');
+}
+
+function articleGroupsOnOpen() {
+  articleGroupsBindInputs();
+  cmsInitTextField('ag-heading-style', { defaults: CMS_PARAGRAPH_DEFAULTS.articleGroupTitle });
+  cmsInitParagraphField('ag-body-style', { defaults: CMS_PARAGRAPH_DEFAULTS.articleGroupBody });
+  cmsInitTextField('ag-row-title-style', { defaults: CMS_PARAGRAPH_DEFAULTS.articleGroupRowTitle });
+  cmsInitParagraphField('ag-notice', { defaults: CMS_PARAGRAPH_DEFAULTS.articleGroupNotice });
+  if (articleGroupsStore.loaded) {
+    if (!articleGroupsStore.sections.length) articleGroupsCreateSection(true);
+    if (!articleGroupsStore.activeId && articleGroupsStore.sections.length) articleGroupsSelectSection(articleGroupsStore.sections[0].id);
+    return;
+  }
+  fetch('/api/publish-article-groups')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var saved = data.sections || [];
+      articleGroupsStore.counter = cmsMaxSectionCounter(saved, 'ags');
+      articleGroupsStore.sections = saved.map(articleGroupsNormalizeSection);
+      articleGroupsStore.loaded = true;
+      if (!articleGroupsStore.sections.length) articleGroupsCreateSection(true);
+      articleGroupsStore.activeId = articleGroupsStore.sections[0].id;
+      articleGroupsFillForm(articleGroupsCurrent());
+      articleGroupsRenderList();
+      articleGroupsRenderCurrent();
+    })
+    .catch(function() {
+      articleGroupsStore.loaded = true;
+      cmsSetStatus('ag-status', 'Could not load saved article groups.', 'red');
+      if (!articleGroupsStore.sections.length) articleGroupsCreateSection(true);
+    });
+}
+
+function articleGroupsRemoveGroup(id) {
+  var group = document.getElementById(id);
+  if (group) group.remove();
+  articleGroupsHandleChange();
+}
+
+function articleGroupsAddGroup(data, startCollapsed, skipSync) {
+  if (!articleGroupsCurrent()) articleGroupsCreateSection(true);
+  var list = document.getElementById('ag-groups');
+  var id = 'agg-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var group = data || { title: 'New group', short: 'Topic', color: '#204280', articles: [] };
+  var div = document.createElement('div');
+  div.className = 'block-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+      + '<span class="block-header-label">' + xH(group.title || 'New group') + '</span>'
+      + '<span class="block-type-badge">' + ((group.articles || []).length) + ' articles</span>'
+      + '<button class="btn-sm danger" onclick="event.stopPropagation();articleGroupsRemoveGroup(\'' + id + '\')" style="margin-left:auto">Remove</button>'
+      + '</div>'
+      + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+      + '<div class="field"><label>Group title</label><input type="text" class="ag-group-title" value="' + xA(group.title || '') + '" oninput="this.closest(\'.block-item\').querySelector(\'.block-header-label\').textContent=this.value||\'New group\'"></div>'
+      + '<div class="field"><label>Filter label</label><input type="text" class="ag-group-short" value="' + xA(group.short || '') + '"></div>'
+      + '</div>'
+      + '<div class="field"><label>Group colour</label><div class="cms-paragraph-color-row">'
+      + '<input type="color" class="ag-group-color-cp" value="' + xA(cmsSafeHex(group.color, '#204280')) + '" oninput="this.nextElementSibling.value=this.value">'
+      + '<input type="text" class="ag-group-color-hex" value="' + xA(cmsSafeHex(group.color, '#204280')) + '" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value))this.previousElementSibling.value=this.value">'
+      + '</div></div>'
+      + '<div class="field"><label>Articles <span class="hint">code | title | one-line description | URL</span></label><textarea class="ag-group-articles" rows="8">' + xH(articleGroupsEncodeArticles(group.articles || [])) + '</textarea></div>'
+      + '</div>';
+  list.appendChild(div);
+  if (!skipSync) articleGroupsHandleChange();
+}
+
+function generateArticleGroups() {
+  articleGroupsPersistNow('Saving...', 'Saved!', true);
 }
 
 // ── About Us persisted sections ──────────────────────────────

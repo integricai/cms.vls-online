@@ -1,0 +1,77 @@
+<div id="screen-article-groups" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <button class="btn-gen" onclick="generateArticleGroups()" style="flex:1;margin:0;padding:10px">Generate &amp; Save</button>
+      <button class="btn-add-block" onclick="articleGroupsCreateSection()" style="width:auto;margin:0;padding:9px 12px">+ New</button>
+      <button class="btn-add-block" onclick="articleGroupsDuplicateSection()" style="width:auto;margin:0;padding:9px 12px">Duplicate</button>
+    </div>
+
+    <div class="section-label" style="margin:0 0 10px;">Article Groups</div>
+    <div id="ag-section-list" class="block-list"></div>
+    <div id="ag-status" style="font-size:12px;min-height:18px;"></div>
+
+    <div class="section-label">Section Setup</div>
+    <div class="field">
+      <label>Section name <span class="hint">(for CMS identification)</span></label>
+      <input type="text" id="ag-name" value="PM Article Groups">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Paper code</label>
+        <input type="text" id="ag-paper-code" value="PM">
+      </div>
+      <div class="field">
+        <label>Paper title</label>
+        <input type="text" id="ag-paper-title" value="Performance Management">
+      </div>
+    </div>
+    <div class="field">
+      <label>Hub URL</label>
+      <input type="url" id="ag-hub-url" value="https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f5/technical-articles.html">
+    </div>
+    <div class="field">
+      <label>Theme colour</label>
+      <div class="cms-paragraph-color-row">
+        <input type="color" id="ag-theme-cp" value="#0d1f3c" oninput="document.getElementById('ag-theme-hex').value=this.value">
+        <input type="text" id="ag-theme-hex" value="#0d1f3c" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value))document.getElementById('ag-theme-cp').value=this.value">
+      </div>
+    </div>
+
+    <div class="section-label">Text Formatting</div>
+    <div class="field">
+      <label>Heading sample</label>
+      <input type="text" id="ag-heading-style" value="Pricing">
+    </div>
+    <div class="field">
+      <label>Description sample</label>
+      <textarea id="ag-body-style" rows="2">Article descriptions use this formatting.</textarea>
+    </div>
+    <div class="field">
+      <label>Article title sample</label>
+      <input type="text" id="ag-row-title-style" value="Pricing 1: Theoretical aspects">
+    </div>
+    <div class="field">
+      <label>Copyright notice</label>
+      <textarea id="ag-notice" rows="3">All article content is copyright of the original publisher, ACCA UK. Links open directly on the ACCA global website. VLS provides these links to help students access official ACCA academic resources.</textarea>
+    </div>
+
+    <div class="section-label">Groups</div>
+    <div id="ag-groups" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="articleGroupsAddGroup()">+ Add group</button>
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="article-groups-ot-preview" onclick="switchOut('article-groups','preview')">Preview</div>
+      <div class="out-tab" id="article-groups-ot-html" onclick="switchOut('article-groups','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="article-groups-preview-wrap" class="preview-wrap"></div>
+      <div id="article-groups-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('article-groups-code',this)">Copy</button>
+        <pre id="article-groups-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>
