@@ -4379,7 +4379,7 @@ function buildFaqAnswerHtml(id, type, f) {
     html += cmsTextFieldHtml('Heading', 'faq-h-input', f && f.heading, { id: 'faq-h-' + id, multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.faqHeading, placeholder: 'Answer heading' });
   }
   if (type === 'paragraph' || type === 'heading-para') {
-    html += cmsParagraphFieldHtml('Paragraph', '', f && f.para, { id: 'faq-p-' + id, rows: 3, placeholder: 'Enter answer text...', defaults: CMS_PARAGRAPH_DEFAULTS.faq });
+    html += cmsParagraphFieldHtml('Paragraph <span class="hint">(HTML supported — e.g. &lt;strong&gt;, &lt;a&gt;, &lt;br&gt;)</span>', '', f && f.para, { id: 'faq-p-' + id, rows: 4, placeholder: 'Enter plain text or HTML...', defaults: CMS_PARAGRAPH_DEFAULTS.faq });
   }
   if (type === 'bullets' || type === 'heading-bullets') {
     var items = (f && f.items && f.items.length) ? f.items : [cmsNormalizeTextData('', CMS_PARAGRAPH_DEFAULTS.faqBullet)];
@@ -4434,7 +4434,7 @@ function faqAnswerInnerHtml(f) {
   var para = cmsNormalizeParagraphData(f.para, CMS_PARAGRAPH_DEFAULTS.faq);
   var heading = cmsNormalizeTextData(f.heading, CMS_PARAGRAPH_DEFAULTS.faqHeading);
   if (heading.text) h += '<h3 style="' + HS + cmsTextStyle(heading, CMS_PARAGRAPH_DEFAULTS.faqHeading) + '">' + e(heading.text) + '</h3>';
-  if (para.text) h += '<p style="' + cmsParagraphStyle(para, CMS_PARAGRAPH_DEFAULTS.faq) + 'line-height:1.7;margin:0 0 8px;text-align:left;">' + e(para.text) + '</p>';
+  if (para.text) h += '<p style="' + cmsParagraphStyle(para, CMS_PARAGRAPH_DEFAULTS.faq) + 'line-height:1.7;margin:0 0 8px;text-align:left;">' + para.text + '</p>';
   if (f.items && f.items.length) {
     h += '<ul style="' + ULS + '">';
     f.items.forEach(function(item) {
@@ -4449,7 +4449,7 @@ function faqAnswerInnerHtml(f) {
 function faqAnswerPlainText(f) {
   var parts = [];
   if (cmsTextContent(f.heading)) parts.push(cmsTextContent(f.heading));
-  if (cmsParagraphText(f.para)) parts.push(cmsParagraphText(f.para));
+  if (cmsParagraphText(f.para)) parts.push(cmsParagraphText(f.para).replace(/<[^>]*>/g, ''));
   if (f.items && f.items.length) parts.push(f.items.map(cmsTextContent).join('. '));
   return parts.join(' ');
 }
