@@ -339,6 +339,13 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-report-thank-you" onclick="switchScreen('report-thank-you')">Report — Thank You Page</div>
     </div>
   </div>
+  <!-- Page Builder dropdown -->
+  <div class="nav-dropdown" id="nav-page-builder-dd">
+    <div class="nav-tab" id="nav-page-builder" onclick="toggleNavDd('page-builder',event)">Page Builder <span class="nav-dd-arrow">▾</span></div>
+    <div class="nav-dd-menu" id="nav-page-builder-menu">
+      <div class="nav-dd-item" id="nav-page-hero-banner" onclick="switchScreen('page-hero-banner')">Hero Banner</div>
+    </div>
+  </div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
 </div>
 
@@ -412,6 +419,13 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <button class="home-tile-link" onclick="switchScreen('form')">Contact Form</button>
           <button class="home-tile-link" onclick="switchScreen('report-issue')">Report an Issue</button>
           <button class="home-tile-link" onclick="switchScreen('report-thank-you')">Report — Thank You</button>
+        </div>
+      </div>
+      <div class="home-tile">
+        <div class="home-tile-title">Page Builder</div>
+        <div class="home-tile-desc">Reusable page components for use anywhere on the website — hero banners, promotional strips, and more.</div>
+        <div class="home-tile-links">
+          <button class="home-tile-link" onclick="switchScreen('page-hero-banner')">Hero Banner</button>
         </div>
       </div>
       <div class="home-tile">
@@ -1002,7 +1016,9 @@ var CMS_PARAGRAPH_DEFAULTS = {
   ctabsStepDesc:       { size: 14, color: '#374151', weight: '400', letterSpacing: 0    },
   ctabsBannerTitle:    { size: 20, color: '#ffffff', weight: '700', letterSpacing: 0    },
   ctabsBannerDesc:     { size: 14, color: '#e0e7ff', weight: '400', letterSpacing: 0    },
-  ctabsBannerCta:      { size: 14, color: '#3730a3', weight: '600', letterSpacing: 0    }
+  ctabsBannerCta:      { size: 14, color: '#3730a3', weight: '600', letterSpacing: 0    },
+  phbHeading:          { size: 36, color: '#ffffff', weight: '700', letterSpacing: 0    },
+  phbBadgeMain:        { size: 42, color: '#ffffff', weight: '700', letterSpacing: 0    }
 };
 var CMS_TEXT_DEFAULTS = CMS_PARAGRAPH_DEFAULTS;
 function cmsParagraphText(value) {
@@ -1049,7 +1065,8 @@ var _PAGE_SCREENS   = ['hero2', 'intro', 'desc', 'tabs', 'team'];
 var _SHARED_SCREENS = ['faq', 'events', 'programs', 'feature-cards', 'feature-cards-2'];
 var _COMMON_SECTION_SCREENS = ['steps-section', 'dcs', 'dcs2', 'dcs3', 'reach', 'policy'];
 var _FORM_SCREENS   = ['form', 'report-issue', 'report-thank-you'];
-var _COURSE_SCREENS = ['course-hero', 'course-hero-right', 'course-desc', 'course-tabs'];
+var _COURSE_SCREENS       = ['course-hero', 'course-hero-right', 'course-desc', 'course-tabs'];
+var _PAGE_BUILDER_SCREENS = ['page-hero-banner'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
@@ -1082,6 +1099,7 @@ var _screenFiles = {
   policy:          '/screens/policy.html',
   'report-issue':      '/screens/report-issue.html',
   'report-thank-you':  '/screens/report-thank-you.html',
+  'page-hero-banner':  '/screens/page-hero-banner.html',
 };
 var _loadedScreens = {};
 
@@ -1143,6 +1161,9 @@ async function switchScreen(name) {
   } else if (_COURSE_SCREENS.indexOf(name) >= 0) {
     document.getElementById('nav-course').classList.add('active');
     var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
+  } else if (_PAGE_BUILDER_SCREENS.indexOf(name) >= 0) {
+    document.getElementById('nav-page-builder').classList.add('active');
+    var item = document.getElementById('nav-' + name); if (item) item.classList.add('active');
   }
 
   if (name === 'hero'         && !_loadedScreens._heroInit)  { _loadedScreens._heroInit  = true; heroOnOpen();  }
@@ -1174,6 +1195,7 @@ async function switchScreen(name) {
   if (name === 'course-hero-right' && !_loadedScreens._chrInit)  { _loadedScreens._chrInit  = true; chrOnOpen(); chrCmpInit(); cmpAttachDirty('course-hero-right'); }
   if (name === 'course-desc'       && !_loadedScreens._cdInit)   { _loadedScreens._cdInit   = true; cdescOnOpen(); cdescCmpInit(); cmpAttachDirty('course-desc'); }
   if (name === 'course-tabs'       && !_loadedScreens._ctabsInit){ _loadedScreens._ctabsInit = true; ctabsOnOpen(); ctabsCmpInit(); cmpAttachDirty('course-tabs'); }
+  if (name === 'page-hero-banner'  && !_loadedScreens._phbInit)  { _loadedScreens._phbInit  = true; phbOnOpen(); phbCmpInit(); cmpAttachDirty('page-hero-banner'); }
   if (name === 'header')  headerOnOpen();
 }
 
@@ -1354,7 +1376,7 @@ function generateIntro() {
 
 var descBc = 0;
 var _dirtyScreens = {};
-var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] }, dcs3: { id: null, components: [] }, reach: { id: null, components: [] }, cf: { id: null, components: [] }, policy: { id: null, components: [] }, hero2: { id: null, components: [] }, 'course-hero': { id: null, components: [] }, 'course-hero-right': { id: null, components: [] }, 'course-desc': { id: null, components: [] }, 'course-tabs': { id: null, components: [] } };
+var _cmpState = { intro: { id: null, components: [] }, desc: { id: null, components: [] }, tabs: { id: null, components: [] }, dcs: { id: null, components: [] }, dcs2: { id: null, components: [] }, dcs3: { id: null, components: [] }, reach: { id: null, components: [] }, cf: { id: null, components: [] }, policy: { id: null, components: [] }, hero2: { id: null, components: [] }, 'course-hero': { id: null, components: [] }, 'course-hero-right': { id: null, components: [] }, 'course-desc': { id: null, components: [] }, 'course-tabs': { id: null, components: [] }, 'page-hero-banner': { id: null, components: [] } };
 
 function toggleBlockPicker() {
   var p = document.getElementById('block-type-picker');
@@ -14804,6 +14826,298 @@ async function ctabsCmpDelete() {
   var comps = (_cmpState['course-tabs'].components || []).filter(function(c){ return c.id !== id; });
   var ok = await cmpSaveAll('course-tabs', comps);
   if (ok) { _cmpState['course-tabs'].components = comps; _cmpState['course-tabs'].id = null; cmpPopulateSelect('ctabs', comps, null); ctabsCmpNew(); }
+}
+
+// ── Page Hero Banner ───────────────────────────────────────────
+
+function phbOnOpen() {
+  var hf = document.getElementById('phb-heading-field');
+  if (hf && !hf.dataset.init) {
+    hf.dataset.init = '1';
+    hf.innerHTML = cmsTextFieldHtml('Heading', 'phb-heading-txt', null, { id: 'phb-heading', multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.phbHeading, placeholder: 'e.g. Official ACCA Study Materials' });
+  }
+  var bmf = document.getElementById('phb-badge-main-field');
+  if (bmf && !bmf.dataset.init) {
+    bmf.dataset.init = '1';
+    bmf.innerHTML = cmsTextFieldHtml('Main value', 'phb-badge-main-txt', null, { id: 'phb-badge-main', multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.phbBadgeMain, placeholder: 'e.g. 20% OFF' });
+  }
+  var list = document.getElementById('phb-bullets');
+  if (list && !list.children.length) {
+    phbAddBullet('Study Texts & Practise & Revision Kits');
+    phbAddBullet('ACCA Approved Content');
+    phbAddBullet('Latest Syllabus');
+  }
+}
+
+function phbAddBullet(text) {
+  var list = document.getElementById('phb-bullets'); if (!list) return;
+  var div = document.createElement('div'); div.className = 'block-item';
+  div.innerHTML = '<div class="block-body" style="border-top:none;padding:6px 12px;display:flex;gap:8px;align-items:center;">'
+    + '<input type="text" class="phb-bullet-text" value="' + xA(text || '') + '" placeholder="Bullet text" style="flex:1;font-family:\'Poppins\',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;outline:none;">'
+    + '<button class="btn-sm danger" onclick="this.closest(\'.block-item\').remove()" style="padding:4px 8px;flex-shrink:0;">✕</button>'
+    + '</div>';
+  list.appendChild(div);
+}
+
+function collectPhbState() {
+  function v(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+  function chk(id) { var el = document.getElementById(id); return el ? el.checked : false; }
+  return {
+    bg:             v('phb-bg-hex')              || '#0d1f3c',
+    radius:         parseInt(v('phb-radius'),10) || 0,
+    padTop:         parseInt(v('phb-pad-top'),10)   || 40,
+    padBot:         parseInt(v('phb-pad-bot'),10)   || 40,
+    padLeft:        parseInt(v('phb-pad-left'),10)  || 60,
+    padRight:       parseInt(v('phb-pad-right'),10) || 60,
+    eyebrow:        v('phb-eyebrow'),
+    eyebrowTc:      v('phb-eyebrow-tc-hex') || '#4a90d9',
+    showDot:        chk('phb-show-dot'),
+    dotColor:       v('phb-dot-hex') || '#4a90d9',
+    heading:        cmsReadTextField('phb-heading'),
+    bulletTc:       v('phb-bullet-tc-hex') || '#94a3b8',
+    sepColor:       v('phb-sep-hex') || '#4a90d9',
+    bullets:        Array.from(document.querySelectorAll('#phb-bullets .phb-bullet-text')).map(function(el){ return el.value; }).filter(Boolean),
+    showBadge:      chk('phb-show-badge'),
+    badgeBg:        v('phb-badge-bg-hex') || '#1a3a6e',
+    badgeRadius:    parseInt(v('phb-badge-radius'),10) || 12,
+    badgeEyebrow:   v('phb-badge-eyebrow'),
+    badgeEyebrowTc: v('phb-badge-eyebrow-tc-hex') || '#94a3b8',
+    badgeMain:      cmsReadTextField('phb-badge-main'),
+    badgeSub:       v('phb-badge-sub'),
+    badgeSubTc:     v('phb-badge-sub-tc-hex') || '#94a3b8'
+  };
+}
+
+function restorePhbState(d) {
+  if (!d) return;
+  function sv(id, val) { var el = document.getElementById(id); if (el) el.value = val; }
+  function sc(id, val) { var el = document.getElementById(id); if (el) el.checked = !!val; }
+  function sync(cpId, hexId, val) { sv(hexId, val); sv(cpId, val); }
+  sync('phb-bg-cp',             'phb-bg-hex',             d.bg             || '#0d1f3c');
+  sv('phb-radius',   d.radius   != null ? d.radius   : 0);
+  sv('phb-pad-top',  d.padTop   != null ? d.padTop   : 40);
+  sv('phb-pad-bot',  d.padBot   != null ? d.padBot   : 40);
+  sv('phb-pad-left', d.padLeft  != null ? d.padLeft  : 60);
+  sv('phb-pad-right',d.padRight != null ? d.padRight : 60);
+  sv('phb-eyebrow',  d.eyebrow  || '');
+  sync('phb-eyebrow-tc-cp',     'phb-eyebrow-tc-hex',     d.eyebrowTc      || '#4a90d9');
+  sc('phb-show-dot',  d.showDot !== false);
+  sync('phb-dot-cp',            'phb-dot-hex',            d.dotColor       || '#4a90d9');
+  cmsSetTextField('phb-heading', d.heading, CMS_PARAGRAPH_DEFAULTS.phbHeading);
+  sync('phb-bullet-tc-cp',      'phb-bullet-tc-hex',      d.bulletTc       || '#94a3b8');
+  sync('phb-sep-cp',            'phb-sep-hex',            d.sepColor       || '#4a90d9');
+  var list = document.getElementById('phb-bullets');
+  if (list) {
+    list.innerHTML = '';
+    (d.bullets || []).forEach(function(b){ phbAddBullet(b); });
+  }
+  sc('phb-show-badge', d.showBadge !== false);
+  sync('phb-badge-bg-cp',       'phb-badge-bg-hex',       d.badgeBg        || '#1a3a6e');
+  sv('phb-badge-radius', d.badgeRadius != null ? d.badgeRadius : 12);
+  sv('phb-badge-eyebrow', d.badgeEyebrow || '');
+  sync('phb-badge-eyebrow-tc-cp','phb-badge-eyebrow-tc-hex', d.badgeEyebrowTc || '#94a3b8');
+  cmsSetTextField('phb-badge-main', d.badgeMain, CMS_PARAGRAPH_DEFAULTS.phbBadgeMain);
+  sv('phb-badge-sub', d.badgeSub || '');
+  sync('phb-badge-sub-tc-cp',   'phb-badge-sub-tc-hex',   d.badgeSubTc     || '#94a3b8');
+}
+
+function generateHeroBanner() {
+  var d   = collectPhbState();
+  var uid = 'phb' + Date.now().toString(36);
+
+  var bg         = cmsSafeHex(d.bg,             '#0d1f3c');
+  var eyebrowTc  = cmsSafeHex(d.eyebrowTc,      '#4a90d9');
+  var dotColor   = cmsSafeHex(d.dotColor,        '#4a90d9');
+  var bulletTc   = cmsSafeHex(d.bulletTc,        '#94a3b8');
+  var sepColor   = cmsSafeHex(d.sepColor,        '#4a90d9');
+  var badgeBg    = cmsSafeHex(d.badgeBg,         '#1a3a6e');
+  var badgeEyebrowTc = cmsSafeHex(d.badgeEyebrowTc, '#94a3b8');
+  var badgeSubTc = cmsSafeHex(d.badgeSubTc,      '#94a3b8');
+
+  var radius  = cmsClampInt(d.radius,      0,  0, 40);
+  var padTop  = cmsClampInt(d.padTop,     40,  0, 200);
+  var padBot  = cmsClampInt(d.padBot,     40,  0, 200);
+  var padLeft = cmsClampInt(d.padLeft,    60,  0, 200);
+  var padRight= cmsClampInt(d.padRight,   60,  0, 200);
+  var bRadius = cmsClampInt(d.badgeRadius,12,  0, 40);
+
+  var headingStyle = cmsTextStyle(d.heading, CMS_PARAGRAPH_DEFAULTS.phbHeading);
+  var headingText  = cmsTextContent(d.heading);
+  var badgeMainStyle = cmsTextStyle(d.badgeMain, CMS_PARAGRAPH_DEFAULTS.phbBadgeMain);
+  var badgeMainText  = cmsTextContent(d.badgeMain);
+
+  var css = '<style>'
+    + '#' + uid + '{font-family:\'Poppins\',sans-serif;box-sizing:border-box;}'
+    + '#' + uid + ' *{box-sizing:border-box;}'
+    + '@media(max-width:767px){'
+    + '#' + uid + '{padding-left:20px!important;padding-right:20px!important;padding-top:32px!important;padding-bottom:32px!important;flex-direction:column!important;}'
+    + '#' + uid + ' .phb-left{min-width:0!important;}'
+    + '#' + uid + ' .phb-badge{width:100%!important;}'
+    + '}'
+    + '</style>\n';
+
+  var out = css;
+  out += '<div id="' + uid + '" style="background:' + bg + ';border-radius:' + radius + 'px;padding:' + padTop + 'px ' + padRight + 'px ' + padBot + 'px ' + padLeft + 'px;display:flex;align-items:center;justify-content:space-between;gap:40px;flex-wrap:wrap;">\n';
+
+  // Left content
+  out += '  <div class="phb-left" style="flex:1;min-width:280px;">\n';
+
+  // Eyebrow
+  if (d.eyebrow) {
+    var dotHtml = d.showDot ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + dotColor + ';margin-right:8px;vertical-align:middle;flex-shrink:0;"></span>' : '';
+    out += '    <div style="display:flex;align-items:center;margin-bottom:14px;">'
+         + dotHtml
+         + '<span style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;color:' + eyebrowTc + ';letter-spacing:.12em;text-transform:uppercase;">' + xH(d.eyebrow) + '</span>'
+         + '</div>\n';
+  }
+
+  // Heading
+  if (headingText) {
+    out += '    <h1 style="' + headingStyle + 'margin:0 0 20px;line-height:1.15;">' + xH(headingText) + '</h1>\n';
+  }
+
+  // Bullets
+  var validBullets = (d.bullets || []).filter(Boolean);
+  if (validBullets.length) {
+    out += '    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 0;">\n';
+    validBullets.forEach(function(b, i) {
+      if (i > 0) {
+        out += '      <span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:' + sepColor + ';margin:0 10px;vertical-align:middle;flex-shrink:0;"></span>\n';
+      }
+      out += '      <span style="font-family:\'Poppins\',sans-serif;font-size:13px;color:' + bulletTc + ';font-weight:500;">' + xH(b) + '</span>\n';
+    });
+    out += '    </div>\n';
+  }
+
+  out += '  </div>\n';
+
+  // Right badge card
+  if (d.showBadge) {
+    out += '  <div class="phb-badge" style="background:' + badgeBg + ';border-radius:' + bRadius + 'px;padding:24px 28px;text-align:center;flex-shrink:0;min-width:180px;">\n';
+    if (d.badgeEyebrow) {
+      out += '    <p style="font-family:\'Poppins\',sans-serif;font-size:10px;font-weight:600;color:' + badgeEyebrowTc + ';letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px;">' + xH(d.badgeEyebrow) + '</p>\n';
+    }
+    if (badgeMainText) {
+      out += '    <p style="' + badgeMainStyle + 'margin:0 0 8px;line-height:1.1;">' + xH(badgeMainText) + '</p>\n';
+    }
+    if (d.badgeSub) {
+      out += '    <p style="font-family:\'Poppins\',sans-serif;font-size:12px;color:' + badgeSubTc + ';margin:0;">' + xH(d.badgeSub) + '</p>\n';
+    }
+    out += '  </div>\n';
+  }
+
+  out += '</div>';
+
+  var preview = document.getElementById('page-hero-banner-preview-wrap'); if (preview) preview.innerHTML = out;
+  var code    = document.getElementById('page-hero-banner-code');         if (code)    code.textContent  = out;
+  switchOut('page-hero-banner', 'preview');
+}
+
+// ── Page Hero Banner component manager ────────────────────────
+
+async function phbCmpInit() {
+  var comps = await cmpFetchAll('page-hero-banner');
+  _cmpState['page-hero-banner'].components = comps;
+  cmpPopulateSelect('phb', comps, null);
+}
+
+async function phbCmpLoad(id) {
+  if (!id) { phbCmpNew(); return; }
+  var comp = (_cmpState['page-hero-banner'].components || []).filter(function(c){ return c.id === id; })[0];
+  if (!comp) return;
+  _cmpState['page-hero-banner'].id = comp.id;
+  var nameEl = document.getElementById('phb-cmp-name'); if (nameEl) nameEl.value = comp.name || '';
+  document.getElementById('phb-cmp-dup').style.display = '';
+  document.getElementById('phb-cmp-del').style.display = '';
+  restorePhbState(comp.data || {});
+  delete _dirtyScreens['page-hero-banner'];
+  cmpSetStatus('phb', '');
+}
+
+async function phbCmpSave() {
+  var nameEl = document.getElementById('phb-cmp-name');
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { alert('Please enter a component name before saving.'); if (nameEl) nameEl.focus(); return; }
+  cmpSetStatus('phb', 'Saving…', 'var(--muted)');
+  var state = collectPhbState();
+  var comps = _cmpState['page-hero-banner'].components || [];
+  var id    = _cmpState['page-hero-banner'].id;
+  if (id) {
+    var found = false;
+    comps = comps.map(function(c){ if (c.id === id){ found = true; return { id: id, name: name, data: state }; } return c; });
+    if (!found) { id = 'phb-' + Date.now().toString(36); comps.push({ id: id, name: name, data: state }); _cmpState['page-hero-banner'].id = id; }
+  } else {
+    id = 'phb-' + Date.now().toString(36); comps.push({ id: id, name: name, data: state }); _cmpState['page-hero-banner'].id = id;
+  }
+  _cmpState['page-hero-banner'].components = comps;
+  var ok = await cmpSaveAll('page-hero-banner', comps);
+  if (ok) {
+    document.getElementById('phb-cmp-dup').style.display = '';
+    document.getElementById('phb-cmp-del').style.display = '';
+    delete _dirtyScreens['page-hero-banner'];
+    cmpPopulateSelect('phb', comps, id);
+    cmpSetStatus('phb', '✓ Saved', '#16a34a');
+    setTimeout(function(){ cmpSetStatus('phb', ''); }, 3000);
+  } else {
+    cmpSetStatus('phb', '✗ Save failed', '#e63946');
+  }
+}
+
+function phbCmpNew() {
+  _cmpState['page-hero-banner'].id = null;
+  var nameEl = document.getElementById('phb-cmp-name'); if (nameEl) nameEl.value = '';
+  var sel = document.getElementById('phb-cmp-sel'); if (sel) sel.value = '';
+  document.getElementById('phb-cmp-dup').style.display = 'none';
+  document.getElementById('phb-cmp-del').style.display = 'none';
+  restorePhbState({
+    bg: '#0d1f3c', radius: 0, padTop: 40, padBot: 40, padLeft: 60, padRight: 60,
+    eyebrow: 'ACCA OFFICIAL STUDY MATERIALS', eyebrowTc: '#4a90d9', showDot: true, dotColor: '#4a90d9',
+    heading: null, bulletTc: '#94a3b8', sepColor: '#4a90d9',
+    bullets: ['Study Texts & Practise & Revision Kits', 'ACCA Approved Content', 'Latest Syllabus'],
+    showBadge: true, badgeBg: '#1a3a6e', badgeRadius: 12,
+    badgeEyebrow: 'EXCLUSIVE STUDENT DISCOUNT', badgeEyebrowTc: '#94a3b8',
+    badgeMain: null, badgeSub: 'Available to VLS students only', badgeSubTc: '#94a3b8'
+  });
+  delete _dirtyScreens['page-hero-banner'];
+  cmpSetStatus('phb', '');
+}
+
+async function phbCmpDuplicate() {
+  var id = _cmpState['page-hero-banner'].id; if (!id) return;
+  var comps = _cmpState['page-hero-banner'].components || [];
+  var comp  = comps.filter(function(c){ return c.id === id; })[0]; if (!comp) return;
+  var nameEl = document.getElementById('phb-cmp-name');
+  var sourceName = (nameEl && nameEl.value.trim()) || comp.name || 'Hero Banner';
+  var state = collectPhbState();
+  var nextId   = 'phb-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var base     = String(sourceName).trim().replace(/^NEW\d*_/, '') || 'Hero Banner';
+  var used     = {};
+  comps.forEach(function(c) { var m = String((c && c.name) || '').trim().match(/^NEW(\d*)_(.*)$/); if (m && m[2] === base) used[m[1] === '' ? 0 : parseInt(m[1], 10)] = true; });
+  var n = 0; while (used[n]) n++;
+  var nextName = (n === 0 ? 'NEW_' : 'NEW' + n + '_') + base;
+  var nextComps = comps.concat([{ id: nextId, name: nextName, data: JSON.parse(JSON.stringify(state)) }]);
+  cmpSetStatus('phb', 'Duplicating…', 'var(--muted)');
+  var ok = await cmpSaveAll('page-hero-banner', nextComps);
+  if (ok) {
+    _cmpState['page-hero-banner'].components = nextComps;
+    _cmpState['page-hero-banner'].id = nextId;
+    if (nameEl) nameEl.value = nextName;
+    delete _dirtyScreens['page-hero-banner'];
+    cmpPopulateSelect('phb', nextComps, nextId);
+    cmpSetStatus('phb', '✓ Duplicated', '#16a34a');
+    setTimeout(function(){ cmpSetStatus('phb', ''); }, 3000);
+  } else {
+    cmpSetStatus('phb', '✗ Duplicate failed', '#e63946');
+  }
+}
+
+async function phbCmpDelete() {
+  var id = _cmpState['page-hero-banner'].id; if (!id) return;
+  var comp = (_cmpState['page-hero-banner'].components || []).filter(function(c){ return c.id === id; })[0];
+  if (!window.confirm('Delete "' + (comp ? comp.name : 'this component') + '"?')) return;
+  var comps = (_cmpState['page-hero-banner'].components || []).filter(function(c){ return c.id !== id; });
+  var ok = await cmpSaveAll('page-hero-banner', comps);
+  if (ok) { _cmpState['page-hero-banner'].components = comps; _cmpState['page-hero-banner'].id = null; cmpPopulateSelect('phb', comps, null); phbCmpNew(); }
 }
 
 </script>

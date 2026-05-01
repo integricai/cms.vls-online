@@ -1,0 +1,160 @@
+<div id="screen-page-hero-banner" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <!-- ── Component manager ── -->
+    <div style="background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:2px;">
+      <div class="section-label" style="margin:0 0 8px">Saved Components</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+        <button class="btn-gen" style="flex:1;min-width:120px;padding:9px" onclick="phbCmpSave()">💾 Save</button>
+        <button class="btn-gen" style="flex:1;min-width:120px;padding:9px;background:#16a34a" onclick="generateHeroBanner()">⚡ Generate HTML</button>
+        <button class="btn-sm" onclick="phbCmpNew()" style="padding:8px 12px">+ New</button>
+        <button class="btn-sm" id="phb-cmp-dup" style="display:none;padding:8px 12px" onclick="phbCmpDuplicate()">⧉ Duplicate</button>
+        <button class="btn-sm danger" id="phb-cmp-del" style="display:none;padding:8px 12px" onclick="phbCmpDelete()">Delete</button>
+      </div>
+      <select id="phb-cmp-sel" onchange="phbCmpLoad(this.value)" style="font-family:'Poppins',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;width:100%;outline:none;background:#fff;color:var(--text);margin-bottom:8px;">
+        <option value="">— select to load —</option>
+      </select>
+      <div class="field" style="margin-bottom:6px">
+        <label>Component name</label>
+        <input type="text" id="phb-cmp-name" placeholder="e.g. BPP Books Banner">
+      </div>
+      <span id="phb-cmp-status" style="font-size:12px;display:block;min-height:14px;text-align:center;"></span>
+    </div>
+
+    <!-- ── Background & Layout ── -->
+    <div class="section-label">Background &amp; Layout</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Background colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phb-bg-cp" value="#0d1f3c" oninput="document.getElementById('phb-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phb-bg-hex" value="#0d1f3c" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phb-bg-cp').value=v">
+        </div>
+      </div>
+      <div class="field">
+        <label>Border radius (px)</label>
+        <input type="number" id="phb-radius" value="0" min="0" max="40">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+      <div class="field"><label>Pad top</label><input type="number" id="phb-pad-top" value="40" min="0" max="200"></div>
+      <div class="field"><label>Pad bot</label><input type="number" id="phb-pad-bot" value="40" min="0" max="200"></div>
+      <div class="field"><label>Pad left</label><input type="number" id="phb-pad-left" value="60" min="0" max="200"></div>
+      <div class="field"><label>Pad right</label><input type="number" id="phb-pad-right" value="60" min="0" max="200"></div>
+    </div>
+
+    <!-- ── Eyebrow ── -->
+    <div class="section-label">Eyebrow</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Eyebrow text</label>
+        <input type="text" id="phb-eyebrow" value="ACCA OFFICIAL STUDY MATERIALS">
+      </div>
+      <div class="field">
+        <label>Eyebrow colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phb-eyebrow-tc-cp" value="#4a90d9" oninput="document.getElementById('phb-eyebrow-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phb-eyebrow-tc-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phb-eyebrow-tc-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;margin-bottom:10px;">
+      <label style="display:flex;align-items:center;gap:6px;font-family:'Poppins',sans-serif;font-size:13px;cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" id="phb-show-dot" checked style="width:14px;height:14px;cursor:pointer;accent-color:#204280;">
+        Show dot
+      </label>
+      <div class="cms-paragraph-color-row">
+        <input type="color" id="phb-dot-cp" value="#4a90d9" oninput="document.getElementById('phb-dot-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+        <input type="text" id="phb-dot-hex" value="#4a90d9" placeholder="Dot colour" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phb-dot-cp').value=v">
+      </div>
+    </div>
+
+    <!-- ── Heading (CMS text field injected by JS) ── -->
+    <div class="section-label">Heading</div>
+    <div id="phb-heading-field"></div>
+
+    <!-- ── Feature Bullets ── -->
+    <div class="section-label">Feature Bullets <span class="hint">(inline row below heading)</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="field" style="margin:0">
+        <label>Text colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phb-bullet-tc-cp" value="#94a3b8" oninput="document.getElementById('phb-bullet-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phb-bullet-tc-hex" value="#94a3b8" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phb-bullet-tc-cp').value=v">
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Separator dot colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phb-sep-cp" value="#4a90d9" oninput="document.getElementById('phb-sep-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phb-sep-hex" value="#4a90d9" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phb-sep-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <div id="phb-bullets" class="block-list" style="margin-top:4px"></div>
+    <button class="btn-add-block" style="margin-top:4px" onclick="phbAddBullet()">+ Add bullet</button>
+
+    <!-- ── Right Badge Card ── -->
+    <div class="section-label">Right Badge Card <span class="hint">(optional)</span></div>
+    <label style="display:flex;align-items:center;gap:6px;font-family:'Poppins',sans-serif;font-size:13px;cursor:pointer;margin-bottom:10px;user-select:none;">
+      <input type="checkbox" id="phb-show-badge" checked style="width:14px;height:14px;cursor:pointer;accent-color:#204280;">
+      Show badge card
+    </label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Card background</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phb-badge-bg-cp" value="#1a3a6e" oninput="document.getElementById('phb-badge-bg-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phb-badge-bg-hex" value="#1a3a6e" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phb-badge-bg-cp').value=v">
+        </div>
+      </div>
+      <div class="field">
+        <label>Card border radius (px)</label>
+        <input type="number" id="phb-badge-radius" value="12" min="0" max="40">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Badge eyebrow text</label>
+        <input type="text" id="phb-badge-eyebrow" value="EXCLUSIVE STUDENT DISCOUNT">
+      </div>
+      <div class="field">
+        <label>Badge eyebrow colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phb-badge-eyebrow-tc-cp" value="#94a3b8" oninput="document.getElementById('phb-badge-eyebrow-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phb-badge-eyebrow-tc-hex" value="#94a3b8" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phb-badge-eyebrow-tc-cp').value=v">
+        </div>
+      </div>
+    </div>
+    <!-- Badge main value (CMS text field injected by JS) -->
+    <div id="phb-badge-main-field"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label>Badge subtitle</label>
+        <input type="text" id="phb-badge-sub" value="Available to VLS students only">
+      </div>
+      <div class="field">
+        <label>Badge subtitle colour</label>
+        <div class="cms-paragraph-color-row">
+          <input type="color" id="phb-badge-sub-tc-cp" value="#94a3b8" oninput="document.getElementById('phb-badge-sub-tc-hex').value=this.value" style="width:40px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0">
+          <input type="text" id="phb-badge-sub-tc-hex" value="#94a3b8" oninput="var v=this.value;if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('phb-badge-sub-tc-cp').value=v">
+        </div>
+      </div>
+    </div>
+
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="page-hero-banner-ot-preview" onclick="switchOut('page-hero-banner','preview')">Preview</div>
+      <div class="out-tab" id="page-hero-banner-ot-html" onclick="switchOut('page-hero-banner','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="page-hero-banner-preview-wrap" class="preview-wrap" style="padding:0"></div>
+      <div id="page-hero-banner-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('page-hero-banner-code',this)">Copy</button>
+        <pre id="page-hero-banner-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>
