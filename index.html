@@ -15345,6 +15345,7 @@ function ctabsSaveActiveBlocks() {
         });
       });
     } else if (blk.type === 'support-cards') {
+      blk.data.cols = parseInt((el.querySelector('.ctblk-cols') || {}).value || '2', 10) || 2;
       blk.data.cards = [];
       el.querySelectorAll('.ctblk-support-card').forEach(function(card) {
         blk.data.cards.push({
@@ -15523,7 +15524,10 @@ function ctabsRenderBlock(blk, pf) {
              + '<button class="btn-add-block" style="margin-top:6px;" onclick="ctabsAddStep(\'' + sListId + '\')">+ Add step</button>';
   } else if (blk.type === 'support-cards') {
     var scListId = 'ctsclist-' + blk.id;
-    bodyHtml = '<div id="' + scListId + '" class="block-list"></div>'
+    bodyHtml = '<div class="field"><label>Columns per row</label>'
+             + '<select class="ctblk-cols"><option value="2"' + (pf.cols == 1 ? '' : ' selected') + '>2 columns</option><option value="1"' + (pf.cols == 1 ? ' selected' : '') + '>1 column</option></select>'
+             + '</div>'
+             + '<div id="' + scListId + '" class="block-list"></div>'
              + '<button class="btn-add-block" style="margin-top:6px;" onclick="ctabsAddSupportCard(\'' + scListId + '\')">+ Add card</button>';
   } else if (blk.type === 'more-cards') {
     var mcListId = 'ctmclist-' + blk.id;
@@ -15806,6 +15810,7 @@ function generateCourseTabs() {
     + '.' + uid + '-btn{background:none;border:none;border-bottom:3px solid transparent;padding:12px 20px;font-family:\'Poppins\',sans-serif;font-size:15px;font-weight:600;color:#6b7280;cursor:pointer;white-space:nowrap;margin-bottom:-2px;transition:color .15s,border-color .15s;display:flex;align-items:center;gap:6px;}'
     + '.' + uid + '-btn:hover{color:#204280;}'
     + '.' + uid + '-active{border-bottom-color:#204280!important;color:#204280!important;background:rgba(32,66,128,0.04);}'
+    + '.' + uid + '-grid1{display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:1.5rem;}'
     + '.' + uid + '-grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:1.5rem;}'
     + '.' + uid + '-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:1.5rem;}'
     + '.' + uid + '-panel{padding:28px 32px;}'
@@ -15928,7 +15933,8 @@ function generateCourseTabs() {
       } else if (blk.type === 'support-cards') {
         var scards = d.cards || [];
         if (scards.length) {
-          out += '  <div class="' + uid + '-grid2">\n';
+          var scols = d.cols === 1 ? 'grid1' : 'grid2';
+          out += '  <div class="' + uid + '-' + scols + '">\n';
           scards.forEach(function(card) {
             var ct = cmsNormalizeTextData(card.title, CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle);
             var cd = cmsNormalizeParagraphData(card.desc, CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc);
