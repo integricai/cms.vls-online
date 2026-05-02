@@ -24,31 +24,22 @@
       <input type="text" id="lgs-eyebrow" placeholder="e.g. GETTING STARTED">
     </div>
     <div class="field">
-      <label>Eyebrow colour</label>
-      <input type="color" id="lgs-eyebrow-color" value="#204280" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">
-    </div>
-    <div class="field">
       <label>Heading</label>
       <input type="text" id="lgs-heading" placeholder="e.g. ACCA Entry Requirements">
     </div>
     <div class="field">
-      <label>Heading colour</label>
-      <input type="color" id="lgs-heading-color" value="#1a1a1a" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">
-    </div>
-    <div class="field">
-      <label>Description</label>
+      <label>Description <span class="hint">(HTML allowed)</span></label>
       <textarea id="lgs-desc" rows="3" placeholder="Intro description text…"></textarea>
-    </div>
-    <div class="field">
-      <label>Description colour</label>
-      <input type="color" id="lgs-desc-color" value="#374151" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">
     </div>
 
     <div class="section-label">Cards</div>
     <div id="lgs-cards" class="block-list"></div>
     <button class="btn-add-block" style="margin-top:6px" onclick="lgsAddCard()">+ Add card</button>
 
-    <button class="btn-gen" onclick="lgsGenerate()">Generate &amp; Save</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
+      <button class="btn-gen" style="flex:1;min-width:120px;padding:9px" onclick="lgsSave()">&#x1F4BE; Save</button>
+      <button class="btn-gen" style="flex:1;min-width:120px;padding:9px;background:#16a34a" onclick="lgsGenerate()">&#x26A1; Generate HTML</button>
+    </div>
   </div></div>
 
   <div class="output-panel">

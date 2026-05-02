@@ -24,31 +24,22 @@
       <input type="text" id="rps-eyebrow" placeholder="e.g. HOW LONG DOES ACCA TAKE?">
     </div>
     <div class="field">
-      <label>Eyebrow colour</label>
-      <input type="color" id="rps-eyebrow-color" value="#3b82f6" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">
-    </div>
-    <div class="field">
       <label>Heading <span class="hint">(optional)</span></label>
       <input type="text" id="rps-heading" placeholder="Optional section heading">
     </div>
     <div class="field">
-      <label>Heading colour</label>
-      <input type="color" id="rps-heading-color" value="#ffffff" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">
-    </div>
-    <div class="field">
-      <label>Description <span class="hint">(optional)</span></label>
+      <label>Description <span class="hint">(optional — HTML allowed)</span></label>
       <textarea id="rps-desc" rows="2" placeholder="Optional intro text…"></textarea>
-    </div>
-    <div class="field">
-      <label>Description colour</label>
-      <input type="color" id="rps-desc-color" value="#94a3b8" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">
     </div>
 
     <div class="section-label">Cards</div>
     <div id="rps-cards" class="block-list"></div>
     <button class="btn-add-block" style="margin-top:6px" onclick="rpsAddCard()">+ Add card</button>
 
-    <button class="btn-gen" onclick="rpsGenerate()">Generate &amp; Save</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
+      <button class="btn-gen" style="flex:1;min-width:120px;padding:9px" onclick="rpsSave()">&#x1F4BE; Save</button>
+      <button class="btn-gen" style="flex:1;min-width:120px;padding:9px;background:#16a34a" onclick="rpsGenerate()">&#x26A1; Generate HTML</button>
+    </div>
   </div></div>
 
   <div class="output-panel">

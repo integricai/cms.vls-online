@@ -1047,7 +1047,17 @@ var CMS_PARAGRAPH_DEFAULTS = {
   phv2Heading:         { size: 38, color: '#ffffff', weight: '700', letterSpacing: 0    },
   phv2Desc:            { size: 15, color: '#cbd5e1', weight: '400', letterSpacing: 0    },
   fc3Heading:          { size: 32, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
-  fc3Desc:             { size: 16, color: '#4a5568', weight: '400', letterSpacing: 0    }
+  fc3Desc:             { size: 16, color: '#4a5568', weight: '400', letterSpacing: 0    },
+  lgsEyebrow:          { size: 11, color: '#204280', weight: '600', letterSpacing: 0.1  },
+  lgsHeading:          { size: 28, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
+  lgsDesc:             { size: 15, color: '#374151', weight: '400', letterSpacing: 0    },
+  lgsCardTitle:        { size: 15, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
+  lgsCardDesc:         { size: 14, color: '#374151', weight: '400', letterSpacing: 0    },
+  rpsEyebrow:          { size: 11, color: '#3b82f6', weight: '600', letterSpacing: 0.1  },
+  rpsHeading:          { size: 26, color: '#ffffff', weight: '700', letterSpacing: 0    },
+  rpsDesc:             { size: 15, color: '#94a3b8', weight: '400', letterSpacing: 0    },
+  rpsCardTitle:        { size: 16, color: '#ffffff', weight: '700', letterSpacing: 0    },
+  rpsCardDesc:         { size: 14, color: '#94a3b8', weight: '400', letterSpacing: 0    }
 };
 var CMS_TEXT_DEFAULTS = CMS_PARAGRAPH_DEFAULTS;
 function cmsParagraphText(value) {
@@ -12507,15 +12517,12 @@ function lgsDefaultSection() {
     id: id,
     name: 'Left Generic Section ' + lgsStore.counter,
     bg: '#ffffff',
-    eyebrow: 'GETTING STARTED',
-    eyebrowColor: '#204280',
-    heading: 'Section Heading',
-    headingColor: '#1a1a1a',
-    desc: 'Add your intro description here.',
-    descColor: '#374151',
+    eyebrow: cmsNormalizeTextData('GETTING STARTED', CMS_PARAGRAPH_DEFAULTS.lgsEyebrow),
+    heading:  cmsNormalizeTextData('Section Heading', CMS_PARAGRAPH_DEFAULTS.lgsHeading),
+    desc:     cmsNormalizeTextData('Add your intro description here.', CMS_PARAGRAPH_DEFAULTS.lgsDesc),
     cards: [
-      { cardBg: '#f8f9fa', cardBorder: '#e5e7eb', iconBg: '#e8edf5', icon: '✓', iconColor: '#204280', title: 'First requirement', desc: '— supporting description text.', titleColor: '#1a1a1a', descColor: '#374151' },
-      { cardBg: '#f8f9fa', cardBorder: '#e5e7eb', iconBg: '#e8edf5', icon: '✓', iconColor: '#204280', title: 'Second requirement', desc: '— supporting description text.', titleColor: '#1a1a1a', descColor: '#374151' }
+      { cardBg: '#f8f9fa', cardBorder: '#e5e7eb', iconBg: '#e8edf5', icon: '✓', iconColor: '#204280', title: cmsNormalizeTextData('First requirement', CMS_PARAGRAPH_DEFAULTS.lgsCardTitle), desc: cmsNormalizeTextData('— supporting description text.', CMS_PARAGRAPH_DEFAULTS.lgsCardDesc) },
+      { cardBg: '#f8f9fa', cardBorder: '#e5e7eb', iconBg: '#e8edf5', icon: '✓', iconColor: '#204280', title: cmsNormalizeTextData('Second requirement', CMS_PARAGRAPH_DEFAULTS.lgsCardTitle), desc: cmsNormalizeTextData('— supporting description text.', CMS_PARAGRAPH_DEFAULTS.lgsCardDesc) }
     ]
   };
 }
@@ -12526,14 +12533,11 @@ function lgsCurrentSection() {
 
 function lgsReadFormData() {
   return {
-    name:         (document.getElementById('lgs-name') || {}).value || '',
-    bg:           (document.getElementById('lgs-bg') || {}).value || '#ffffff',
-    eyebrow:      (document.getElementById('lgs-eyebrow') || {}).value || '',
-    eyebrowColor: (document.getElementById('lgs-eyebrow-color') || {}).value || '#204280',
-    heading:      (document.getElementById('lgs-heading') || {}).value || '',
-    headingColor: (document.getElementById('lgs-heading-color') || {}).value || '#1a1a1a',
-    desc:         (document.getElementById('lgs-desc') || {}).value || '',
-    descColor:    (document.getElementById('lgs-desc-color') || {}).value || '#374151',
+    name:    (document.getElementById('lgs-name') || {}).value || '',
+    bg:      (document.getElementById('lgs-bg') || {}).value || '#ffffff',
+    eyebrow: cmsReadTextField('lgs-eyebrow', CMS_PARAGRAPH_DEFAULTS.lgsEyebrow),
+    heading: cmsReadTextField('lgs-heading', CMS_PARAGRAPH_DEFAULTS.lgsHeading),
+    desc:    cmsReadTextField('lgs-desc', CMS_PARAGRAPH_DEFAULTS.lgsDesc),
     cards: Array.prototype.slice.call(document.querySelectorAll('#lgs-cards .lgs-card-item')).map(function(item) {
       return {
         cardBg:     (item.querySelector('.lgs-card-bg')     || {}).value || '#f8f9fa',
@@ -12541,25 +12545,20 @@ function lgsReadFormData() {
         iconBg:     (item.querySelector('.lgs-icon-bg')     || {}).value || '#e8edf5',
         icon:       (item.querySelector('.lgs-icon')        || {}).value || '✓',
         iconColor:  (item.querySelector('.lgs-icon-color')  || {}).value || '#204280',
-        title:      (item.querySelector('.lgs-card-title')  || {}).value || '',
-        titleColor: (item.querySelector('.lgs-title-color') || {}).value || '#1a1a1a',
-        desc:       (item.querySelector('.lgs-card-desc')   || {}).value || '',
-        descColor:  (item.querySelector('.lgs-desc-color')  || {}).value || '#374151'
+        title:      cmsReadTextField(item.querySelector('.lgs-card-title'), CMS_PARAGRAPH_DEFAULTS.lgsCardTitle),
+        desc:       cmsReadTextField(item.querySelector('.lgs-card-desc'),  CMS_PARAGRAPH_DEFAULTS.lgsCardDesc)
       };
     })
   };
 }
 
 function lgsFillForm(sec) {
-  document.getElementById('lgs-name').value          = sec.name || '';
-  document.getElementById('lgs-bg').value            = sec.bg || '#ffffff';
-  document.getElementById('lgs-eyebrow').value       = sec.eyebrow || '';
-  document.getElementById('lgs-eyebrow-color').value = sec.eyebrowColor || '#204280';
-  document.getElementById('lgs-heading').value       = sec.heading || '';
-  document.getElementById('lgs-heading-color').value = sec.headingColor || '#1a1a1a';
-  document.getElementById('lgs-desc').value          = sec.desc || '';
-  document.getElementById('lgs-desc-color').value    = sec.descColor || '#374151';
-  document.getElementById('lgs-cards').innerHTML     = '';
+  document.getElementById('lgs-name').value = sec.name || '';
+  document.getElementById('lgs-bg').value   = sec.bg || '#ffffff';
+  cmsSetTextField('lgs-eyebrow', sec.eyebrow, CMS_PARAGRAPH_DEFAULTS.lgsEyebrow);
+  cmsSetTextField('lgs-heading',  sec.heading,  CMS_PARAGRAPH_DEFAULTS.lgsHeading);
+  cmsSetTextField('lgs-desc',     sec.desc,     CMS_PARAGRAPH_DEFAULTS.lgsDesc);
+  document.getElementById('lgs-cards').innerHTML = '';
   (sec.cards || []).forEach(function(c) { lgsAddCard(c, true, true); });
 }
 
@@ -12568,35 +12567,32 @@ function lgsSyncCurrent() {
   if (!sec) return null;
   var d = lgsReadFormData();
   sec.name = d.name; sec.bg = d.bg;
-  sec.eyebrow = d.eyebrow; sec.eyebrowColor = d.eyebrowColor;
-  sec.heading = d.heading; sec.headingColor = d.headingColor;
-  sec.desc = d.desc; sec.descColor = d.descColor;
+  sec.eyebrow = d.eyebrow; sec.heading = d.heading; sec.desc = d.desc;
   sec.cards = d.cards;
   return sec;
 }
 
 function buildLgsHtml(data) {
-  var uid          = 'lgs' + Date.now().toString(36);
-  var bg           = cmsSafeHex(data.bg, '#ffffff');
-  var eyebrowColor = cmsSafeHex(data.eyebrowColor, '#204280');
-  var headingColor = cmsSafeHex(data.headingColor, '#1a1a1a');
-  var descColor    = cmsSafeHex(data.descColor, '#374151');
+  var uid     = 'lgs' + Date.now().toString(36);
+  var bg      = cmsSafeHex(data.bg, '#ffffff');
+  var eyebrow = cmsNormalizeTextData(data.eyebrow, CMS_PARAGRAPH_DEFAULTS.lgsEyebrow);
+  var heading = cmsNormalizeTextData(data.heading,  CMS_PARAGRAPH_DEFAULTS.lgsHeading);
+  var desc    = cmsNormalizeTextData(data.desc,     CMS_PARAGRAPH_DEFAULTS.lgsDesc);
 
   var cardsHtml = (data.cards || []).map(function(card) {
-    var cardBg     = cmsSafeHex(card.cardBg,     '#f8f9fa');
-    var cardBorder = cmsSafeHex(card.cardBorder,  '#e5e7eb');
-    var iconBg     = cmsSafeHex(card.iconBg,      '#e8edf5');
-    var iconColor  = cmsSafeHex(card.iconColor,   '#204280');
-    var titleColor = cmsSafeHex(card.titleColor,  '#1a1a1a');
-    var dColor     = cmsSafeHex(card.descColor,   '#374151');
-    var title      = (card.title || '').trim();
-    var desc       = (card.desc  || '').trim();
-    var contentHtml = title
-      ? ('<strong style="color:' + titleColor + ';">' + xH(title) + '</strong>' + (desc ? ' ' + desc : ''))
-      : desc;
+    var cardBg     = cmsSafeHex(card.cardBg,    '#f8f9fa');
+    var cardBorder = cmsSafeHex(card.cardBorder, '#e5e7eb');
+    var iconBg     = cmsSafeHex(card.iconBg,     '#e8edf5');
+    var iconColor  = cmsSafeHex(card.iconColor,  '#204280');
+    var cardTitle  = cmsNormalizeTextData(card.title, CMS_PARAGRAPH_DEFAULTS.lgsCardTitle);
+    var cardDesc   = cmsNormalizeTextData(card.desc,  CMS_PARAGRAPH_DEFAULTS.lgsCardDesc);
+    var descText   = cardDesc.text.trim();
+    var contentHtml = cardTitle.text.trim()
+      ? ('<strong style="font-family:\'Poppins\',sans-serif;' + cmsTextStyle(cardTitle, CMS_PARAGRAPH_DEFAULTS.lgsCardTitle) + '">' + xH(cardTitle.text) + '</strong>' + (descText ? ' ' + descText : ''))
+      : descText;
     return '    <div style="background:' + cardBg + ';border:1px solid ' + cardBorder + ';border-radius:10px;padding:14px 16px;display:flex;gap:14px;align-items:flex-start;">\n'
          + '      <div style="width:30px;height:30px;min-width:30px;background:' + iconBg + ';border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:' + iconColor + ';margin-top:1px;">' + xH(card.icon || '✓') + '</div>\n'
-         + '      <p style="margin:0;font-family:\'Poppins\',sans-serif;font-size:15px;line-height:1.55;color:' + dColor + ';">' + contentHtml + '</p>\n'
+         + '      <p style="margin:0;font-family:\'Poppins\',sans-serif;font-size:' + cardDesc.size + 'px;line-height:1.55;color:' + cardDesc.color + ';">' + contentHtml + '</p>\n'
          + '    </div>';
   }).join('\n');
 
@@ -12604,9 +12600,9 @@ function buildLgsHtml(data) {
           + '.' + uid + '-cards{display:flex;flex-direction:column;gap:10px;}</style>\n';
 
   var html = '<div class="' + uid + '">\n';
-  if (data.eyebrow) html += '  <p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:' + eyebrowColor + ';margin:0 0 10px;">' + xH(data.eyebrow) + '</p>\n';
-  if (data.heading) html += '  <h2 style="font-family:\'Poppins\',sans-serif;font-size:28px;font-weight:700;color:' + headingColor + ';margin:0 0 16px;line-height:1.2;">' + xH(data.heading) + '</h2>\n';
-  if (data.desc)    html += '  <p style="font-family:\'Poppins\',sans-serif;font-size:15px;color:' + descColor + ';margin:0 0 24px;line-height:1.6;">' + xH(data.desc) + '</p>\n';
+  if (eyebrow.text) html += '  <p style="font-family:\'Poppins\',sans-serif;text-transform:uppercase;margin:0 0 10px;' + cmsTextStyle(eyebrow, CMS_PARAGRAPH_DEFAULTS.lgsEyebrow) + '">' + xH(eyebrow.text) + '</p>\n';
+  if (heading.text) html += '  <h2 style="font-family:\'Poppins\',sans-serif;margin:0 0 16px;line-height:1.2;' + cmsTextStyle(heading, CMS_PARAGRAPH_DEFAULTS.lgsHeading) + '">' + xH(heading.text) + '</h2>\n';
+  if (desc.text)    html += '  <div style="font-family:\'Poppins\',sans-serif;margin:0 0 24px;line-height:1.6;' + cmsTextStyle(desc, CMS_PARAGRAPH_DEFAULTS.lgsDesc) + '">' + desc.text + '</div>\n';
   if (cardsHtml)    html += '  <div class="' + uid + '-cards">\n' + cardsHtml + '\n  </div>\n';
   html += '</div>';
 
@@ -12691,6 +12687,9 @@ function lgsDeleteSection(id) {
 
 function lgsOnOpen() {
   lgsBindInputs();
+  cmsInitTextField('lgs-eyebrow', { defaults: CMS_PARAGRAPH_DEFAULTS.lgsEyebrow });
+  cmsInitTextField('lgs-heading',  { defaults: CMS_PARAGRAPH_DEFAULTS.lgsHeading });
+  cmsInitTextField('lgs-desc',     { defaults: CMS_PARAGRAPH_DEFAULTS.lgsDesc });
   if (lgsStore.loaded) {
     if (!lgsStore.sections.length) lgsCreateSection(true);
     if (!lgsStore.activeId && lgsStore.sections.length) lgsSelectSection(lgsStore.sections[0].id);
@@ -12702,27 +12701,27 @@ function lgsOnOpen() {
       var saved = data.sections || [];
       lgsStore.counter = cmsMaxSectionCounter(saved, 'lgs');
       lgsStore.sections = saved.map(function(s) {
+        var eyebrowVal = typeof s.eyebrow === 'string' ? { text: s.eyebrow, color: s.eyebrowColor } : s.eyebrow;
+        var headingVal = typeof s.heading === 'string' ? { text: s.heading, color: s.headingColor } : s.heading;
+        var descVal    = typeof s.desc    === 'string' ? { text: s.desc,    color: s.descColor    } : s.desc;
         return {
-          id:           s.id || ('lgs' + (++lgsStore.counter)),
-          name:         s.name         || '',
-          bg:           s.bg           || '#ffffff',
-          eyebrow:      s.eyebrow      || '',
-          eyebrowColor: s.eyebrowColor || '#204280',
-          heading:      s.heading      || '',
-          headingColor: s.headingColor || '#1a1a1a',
-          desc:         s.desc         || '',
-          descColor:    s.descColor    || '#374151',
+          id:      s.id || ('lgs' + (++lgsStore.counter)),
+          name:    s.name || '',
+          bg:      s.bg   || '#ffffff',
+          eyebrow: cmsNormalizeTextData(eyebrowVal, CMS_PARAGRAPH_DEFAULTS.lgsEyebrow),
+          heading: cmsNormalizeTextData(headingVal,  CMS_PARAGRAPH_DEFAULTS.lgsHeading),
+          desc:    cmsNormalizeTextData(descVal,     CMS_PARAGRAPH_DEFAULTS.lgsDesc),
           cards: (s.cards || []).map(function(c) {
+            var titleVal = typeof c.title === 'string' ? { text: c.title, color: c.titleColor } : c.title;
+            var descVal2 = typeof c.desc  === 'string' ? { text: c.desc,  color: c.descColor  } : c.desc;
             return {
               cardBg:     c.cardBg     || '#f8f9fa',
               cardBorder: c.cardBorder || '#e5e7eb',
               iconBg:     c.iconBg     || '#e8edf5',
               icon:       c.icon       || '✓',
               iconColor:  c.iconColor  || '#204280',
-              title:      c.title      || '',
-              titleColor: c.titleColor || '#1a1a1a',
-              desc:       c.desc       || '',
-              descColor:  c.descColor  || '#374151'
+              title:      cmsNormalizeTextData(titleVal, CMS_PARAGRAPH_DEFAULTS.lgsCardTitle),
+              desc:       cmsNormalizeTextData(descVal2, CMS_PARAGRAPH_DEFAULTS.lgsCardDesc)
             };
           })
         };
@@ -12756,14 +12755,14 @@ function lgsAddCard(data, startCollapsed, skipSync) {
   var cardBorder = d.cardBorder || '#e5e7eb';
   var iconBg     = d.iconBg     || '#e8edf5';
   var iconColor  = d.iconColor  || '#204280';
-  var titleColor = d.titleColor || '#1a1a1a';
-  var descColor  = d.descColor  || '#374151';
+  var cardTitle  = cmsNormalizeTextData(d.title, CMS_PARAGRAPH_DEFAULTS.lgsCardTitle);
+  var cardDesc   = cmsNormalizeTextData(d.desc,  CMS_PARAGRAPH_DEFAULTS.lgsCardDesc);
   var div = document.createElement('div');
   div.className = 'block-item lgs-card-item';
   div.id = id;
   div.innerHTML =
     '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
-    + '<span class="block-header-label">' + xH(d.title || 'New Card') + '</span>'
+    + '<span class="block-header-label">' + xH(cardTitle.text || 'New Card') + '</span>'
     + '<span class="block-type-badge">Card</span>'
     + '<button class="btn-sm danger" onclick="event.stopPropagation();lgsRemoveCard(\'' + id + '\')" style="margin-left:auto">Remove</button>'
     + '</div>'
@@ -12777,15 +12776,15 @@ function lgsAddCard(data, startCollapsed, skipSync) {
     + '<div class="field"><label>Icon background</label><input type="color" class="lgs-icon-bg" value="' + xA(iconBg) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
     + '<div class="field"><label>Icon colour</label><input type="color" class="lgs-icon-color" value="' + xA(iconColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
     + '</div>'
-    + '<div class="field"><label>Title <span class="hint">(always bold)</span></label>'
-    + '<input type="text" class="lgs-card-title" value="' + xA(d.title || '') + '" placeholder="Bold title text" oninput="this.closest(\'.lgs-card-item\').querySelector(\'.block-header-label\').textContent=this.value||\'New Card\'"></div>'
-    + '<div class="field"><label>Title colour</label><input type="color" class="lgs-title-color" value="' + xA(titleColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
-    + '<div class="field"><label>Description <span class="hint">(HTML allowed — appears after title)</span></label>'
-    + '<textarea class="lgs-card-desc" rows="3" style="font-family:monospace;font-size:12px;resize:vertical;" placeholder="e.g. — including <strong>English</strong> and Mathematics">' + xH(d.desc || '') + '</textarea></div>'
-    + '<div class="field"><label>Description colour</label><input type="color" class="lgs-desc-color" value="' + xA(descColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + cmsTextFieldHtml('Title <span class="hint">(bold)</span>', 'lgs-card-title', cardTitle, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.lgsCardTitle, placeholder: 'Bold title text', oninput: 'this.closest(\\\'.lgs-card-item\\\').querySelector(\\\'.block-header-label\\\').textContent=this.value||\\\'New Card\\\'' })
+    + cmsParagraphFieldHtml('Description <span class="hint">(HTML allowed)</span>', 'lgs-card-desc', cardDesc, { rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.lgsCardDesc, placeholder: 'e.g. — including <strong>English</strong> and maths' })
     + '</div>';
   list.appendChild(div);
   if (!skipSync) lgsHandleChange();
+}
+
+function lgsSave() {
+  lgsPersistNow('Saving…', 'Saved!', false);
 }
 
 function lgsGenerate() {
@@ -12802,26 +12801,23 @@ function rpsDefaultSection() {
     id: id,
     name: 'Right Pane Section ' + rpsStore.counter,
     bg: '#0f1e3c',
-    eyebrow: 'HOW LONG DOES ACCA TAKE?',
-    eyebrowColor: '#3b82f6',
-    heading: '',
-    headingColor: '#ffffff',
-    desc: '',
-    descColor: '#94a3b8',
+    eyebrow: cmsNormalizeTextData('HOW LONG DOES ACCA TAKE?', CMS_PARAGRAPH_DEFAULTS.rpsEyebrow),
+    heading:  cmsNormalizeTextData('', CMS_PARAGRAPH_DEFAULTS.rpsHeading),
+    desc:     cmsNormalizeTextData('', CMS_PARAGRAPH_DEFAULTS.rpsDesc),
     cards: [
       {
         cardBg: '#1a2d4a', cardBorder: '#1e3a5f',
         icon: '', iconBg: '#1e3a5f', iconColor: '#f59e0b',
-        title: 'Completion time varies by student', titleColor: '#ffffff',
-        desc: 'Depends on prior qualifications, exemptions, study pace, and work commitments.', descColor: '#94a3b8',
+        title: cmsNormalizeTextData('Completion time varies by student', CMS_PARAGRAPH_DEFAULTS.rpsCardTitle),
+        desc: cmsNormalizeTextData('Depends on prior qualifications, exemptions, study pace, and work commitments.', CMS_PARAGRAPH_DEFAULTS.rpsCardDesc),
         statValue: '2–4', statLabel: 'Years to complete for most students',
         statBg: '#1e3a5f', statValueColor: '#ffffff', statLabelColor: '#94a3b8'
       },
       {
         cardBg: '#1a2d4a', cardBorder: '#1e3a5f',
         icon: '⚡', iconBg: '#1e3a5f', iconColor: '#f59e0b',
-        title: 'Exemptions available', titleColor: '#ffffff',
-        desc: 'Students with relevant degrees or prior accounting qualifications may receive exemptions.', descColor: '#94a3b8',
+        title: cmsNormalizeTextData('Exemptions available', CMS_PARAGRAPH_DEFAULTS.rpsCardTitle),
+        desc: cmsNormalizeTextData('Students with relevant degrees or prior accounting qualifications may receive exemptions.', CMS_PARAGRAPH_DEFAULTS.rpsCardDesc),
         statValue: '', statLabel: '',
         statBg: '#1e3a5f', statValueColor: '#ffffff', statLabelColor: '#94a3b8'
       }
@@ -12835,45 +12831,37 @@ function rpsCurrentSection() {
 
 function rpsReadFormData() {
   return {
-    name:         (document.getElementById('rps-name') || {}).value || '',
-    bg:           (document.getElementById('rps-bg') || {}).value || '#0f1e3c',
-    eyebrow:      (document.getElementById('rps-eyebrow') || {}).value || '',
-    eyebrowColor: (document.getElementById('rps-eyebrow-color') || {}).value || '#3b82f6',
-    heading:      (document.getElementById('rps-heading') || {}).value || '',
-    headingColor: (document.getElementById('rps-heading-color') || {}).value || '#ffffff',
-    desc:         (document.getElementById('rps-desc') || {}).value || '',
-    descColor:    (document.getElementById('rps-desc-color') || {}).value || '#94a3b8',
+    name:    (document.getElementById('rps-name') || {}).value || '',
+    bg:      (document.getElementById('rps-bg') || {}).value || '#0f1e3c',
+    eyebrow: cmsReadTextField('rps-eyebrow', CMS_PARAGRAPH_DEFAULTS.rpsEyebrow),
+    heading: cmsReadTextField('rps-heading',  CMS_PARAGRAPH_DEFAULTS.rpsHeading),
+    desc:    cmsReadTextField('rps-desc',     CMS_PARAGRAPH_DEFAULTS.rpsDesc),
     cards: Array.prototype.slice.call(document.querySelectorAll('#rps-cards .rps-card-item')).map(function(item) {
       return {
-        cardBg:        (item.querySelector('.rps-card-bg')        || {}).value || '#1a2d4a',
-        cardBorder:    (item.querySelector('.rps-card-border')    || {}).value || '#1e3a5f',
-        icon:          (item.querySelector('.rps-icon')           || {}).value || '',
-        iconBg:        (item.querySelector('.rps-icon-bg')        || {}).value || '#1e3a5f',
-        iconColor:     (item.querySelector('.rps-icon-color')     || {}).value || '#f59e0b',
-        title:         (item.querySelector('.rps-card-title')     || {}).value || '',
-        titleColor:    (item.querySelector('.rps-title-color')    || {}).value || '#ffffff',
-        desc:          (item.querySelector('.rps-card-desc')      || {}).value || '',
-        descColor:     (item.querySelector('.rps-desc-color')     || {}).value || '#94a3b8',
-        statValue:     (item.querySelector('.rps-stat-value')     || {}).value || '',
-        statLabel:     (item.querySelector('.rps-stat-label')     || {}).value || '',
-        statBg:        (item.querySelector('.rps-stat-bg')        || {}).value || '#1e3a5f',
-        statValueColor:(item.querySelector('.rps-stat-val-color') || {}).value || '#ffffff',
-        statLabelColor:(item.querySelector('.rps-stat-lbl-color') || {}).value || '#94a3b8'
+        cardBg:         (item.querySelector('.rps-card-bg')        || {}).value || '#1a2d4a',
+        cardBorder:     (item.querySelector('.rps-card-border')    || {}).value || '#1e3a5f',
+        icon:           (item.querySelector('.rps-icon')           || {}).value || '',
+        iconBg:         (item.querySelector('.rps-icon-bg')        || {}).value || '#1e3a5f',
+        iconColor:      (item.querySelector('.rps-icon-color')     || {}).value || '#f59e0b',
+        title:          cmsReadTextField(item.querySelector('.rps-card-title'), CMS_PARAGRAPH_DEFAULTS.rpsCardTitle),
+        desc:           cmsReadTextField(item.querySelector('.rps-card-desc'),  CMS_PARAGRAPH_DEFAULTS.rpsCardDesc),
+        statValue:      (item.querySelector('.rps-stat-value')     || {}).value || '',
+        statLabel:      (item.querySelector('.rps-stat-label')     || {}).value || '',
+        statBg:         (item.querySelector('.rps-stat-bg')        || {}).value || '#1e3a5f',
+        statValueColor: (item.querySelector('.rps-stat-val-color') || {}).value || '#ffffff',
+        statLabelColor: (item.querySelector('.rps-stat-lbl-color') || {}).value || '#94a3b8'
       };
     })
   };
 }
 
 function rpsFillForm(sec) {
-  document.getElementById('rps-name').value          = sec.name || '';
-  document.getElementById('rps-bg').value            = sec.bg || '#0f1e3c';
-  document.getElementById('rps-eyebrow').value       = sec.eyebrow || '';
-  document.getElementById('rps-eyebrow-color').value = sec.eyebrowColor || '#3b82f6';
-  document.getElementById('rps-heading').value       = sec.heading || '';
-  document.getElementById('rps-heading-color').value = sec.headingColor || '#ffffff';
-  document.getElementById('rps-desc').value          = sec.desc || '';
-  document.getElementById('rps-desc-color').value    = sec.descColor || '#94a3b8';
-  document.getElementById('rps-cards').innerHTML     = '';
+  document.getElementById('rps-name').value = sec.name || '';
+  document.getElementById('rps-bg').value   = sec.bg || '#0f1e3c';
+  cmsSetTextField('rps-eyebrow', sec.eyebrow, CMS_PARAGRAPH_DEFAULTS.rpsEyebrow);
+  cmsSetTextField('rps-heading',  sec.heading,  CMS_PARAGRAPH_DEFAULTS.rpsHeading);
+  cmsSetTextField('rps-desc',     sec.desc,     CMS_PARAGRAPH_DEFAULTS.rpsDesc);
+  document.getElementById('rps-cards').innerHTML = '';
   (sec.cards || []).forEach(function(c) { rpsAddCard(c, true, true); });
 }
 
@@ -12882,47 +12870,44 @@ function rpsSyncCurrent() {
   if (!sec) return null;
   var d = rpsReadFormData();
   sec.name = d.name; sec.bg = d.bg;
-  sec.eyebrow = d.eyebrow; sec.eyebrowColor = d.eyebrowColor;
-  sec.heading = d.heading; sec.headingColor = d.headingColor;
-  sec.desc = d.desc; sec.descColor = d.descColor;
+  sec.eyebrow = d.eyebrow; sec.heading = d.heading; sec.desc = d.desc;
   sec.cards = d.cards;
   return sec;
 }
 
 function buildRpsHtml(data) {
-  var uid          = 'rps' + Date.now().toString(36);
-  var bg           = cmsSafeHex(data.bg,           '#0f1e3c');
-  var eyebrowColor = cmsSafeHex(data.eyebrowColor, '#3b82f6');
-  var headingColor = cmsSafeHex(data.headingColor, '#ffffff');
-  var descColor    = cmsSafeHex(data.descColor,    '#94a3b8');
+  var uid     = 'rps' + Date.now().toString(36);
+  var bg      = cmsSafeHex(data.bg, '#0f1e3c');
+  var eyebrow = cmsNormalizeTextData(data.eyebrow, CMS_PARAGRAPH_DEFAULTS.rpsEyebrow);
+  var heading = cmsNormalizeTextData(data.heading,  CMS_PARAGRAPH_DEFAULTS.rpsHeading);
+  var desc    = cmsNormalizeTextData(data.desc,     CMS_PARAGRAPH_DEFAULTS.rpsDesc);
 
   var cardsHtml = (data.cards || []).map(function(card) {
-    var cardBg         = cmsSafeHex(card.cardBg,         '#1a2d4a');
-    var cardBorder     = cmsSafeHex(card.cardBorder,      '#1e3a5f');
-    var iconBg         = cmsSafeHex(card.iconBg,          '#1e3a5f');
-    var iconColor      = cmsSafeHex(card.iconColor,       '#f59e0b');
-    var titleColor     = cmsSafeHex(card.titleColor,      '#ffffff');
-    var dColor         = cmsSafeHex(card.descColor,       '#94a3b8');
-    var statBg         = cmsSafeHex(card.statBg,          '#1e3a5f');
-    var statValColor   = cmsSafeHex(card.statValueColor,  '#ffffff');
-    var statLblColor   = cmsSafeHex(card.statLabelColor,  '#94a3b8');
-    var hasIcon        = (card.icon || '').trim();
-    var hasStatValue   = (card.statValue || '').trim();
-    var title          = (card.title || '').trim();
-    var desc           = (card.desc  || '').trim();
+    var cardBg       = cmsSafeHex(card.cardBg,        '#1a2d4a');
+    var cardBorder   = cmsSafeHex(card.cardBorder,    '#1e3a5f');
+    var iconBg       = cmsSafeHex(card.iconBg,        '#1e3a5f');
+    var iconColor    = cmsSafeHex(card.iconColor,     '#f59e0b');
+    var statBg       = cmsSafeHex(card.statBg,        '#1e3a5f');
+    var statValColor = cmsSafeHex(card.statValueColor,'#ffffff');
+    var statLblColor = cmsSafeHex(card.statLabelColor,'#94a3b8');
+    var cardTitle    = cmsNormalizeTextData(card.title, CMS_PARAGRAPH_DEFAULTS.rpsCardTitle);
+    var cardDesc     = cmsNormalizeTextData(card.desc,  CMS_PARAGRAPH_DEFAULTS.rpsCardDesc);
+    var hasIcon      = (card.icon || '').trim();
+    var hasStatValue = (card.statValue || '').trim();
+    var descText     = cardDesc.text.trim();
 
     var out = '    <div style="background:' + cardBg + ';border:1px solid ' + cardBorder + ';border-radius:12px;padding:20px;">\n';
 
     if (hasIcon) {
       out += '      <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;">\n';
       out += '        <div style="width:36px;height:36px;min-width:36px;background:' + iconBg + ';border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;color:' + iconColor + ';">' + xH(hasIcon) + '</div>\n';
-      if (title) out += '        <h3 style="margin:0;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:' + titleColor + ';line-height:1.3;">' + xH(title) + '</h3>\n';
+      if (cardTitle.text) out += '        <h3 style="margin:0;font-family:\'Poppins\',sans-serif;line-height:1.3;' + cmsTextStyle(cardTitle, CMS_PARAGRAPH_DEFAULTS.rpsCardTitle) + '">' + xH(cardTitle.text) + '</h3>\n';
       out += '      </div>\n';
-    } else if (title) {
-      out += '      <h3 style="margin:0 0 10px;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:' + titleColor + ';line-height:1.3;">' + xH(title) + '</h3>\n';
+    } else if (cardTitle.text) {
+      out += '      <h3 style="margin:0 0 10px;font-family:\'Poppins\',sans-serif;line-height:1.3;' + cmsTextStyle(cardTitle, CMS_PARAGRAPH_DEFAULTS.rpsCardTitle) + '">' + xH(cardTitle.text) + '</h3>\n';
     }
 
-    if (desc) out += '      <p style="margin:0' + (hasStatValue ? ' 0 16px' : '') + ';font-family:\'Poppins\',sans-serif;font-size:14px;color:' + dColor + ';line-height:1.6;">' + desc + '</p>\n';
+    if (descText) out += '      <div style="margin:0' + (hasStatValue ? ' 0 16px' : '') + ';font-family:\'Poppins\',sans-serif;line-height:1.6;' + cmsTextStyle(cardDesc, CMS_PARAGRAPH_DEFAULTS.rpsCardDesc) + '">' + descText + '</div>\n';
 
     if (hasStatValue) {
       out += '      <div style="background:' + statBg + ';border-radius:8px;padding:12px 16px;display:flex;gap:14px;align-items:center;">\n';
@@ -12939,9 +12924,9 @@ function buildRpsHtml(data) {
           + '.' + uid + '-cards{display:flex;flex-direction:column;gap:12px;}</style>\n';
 
   var html = '<div class="' + uid + '">\n';
-  if (data.eyebrow) html += '  <div style="display:block;font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:' + eyebrowColor + ';margin:0 0 16px 0;padding:20px 0 0 20px;">' + xH(data.eyebrow) + '</div>\n';
-  if (data.heading) html += '  <div style="display:block;font-family:\'Poppins\',sans-serif;font-size:26px;font-weight:700;color:' + headingColor + ';margin:0 0 12px 0;padding:0 0 0 20px;line-height:1.2;">' + xH(data.heading) + '</div>\n';
-  if (data.desc)    html += '  <div style="display:block;font-family:\'Poppins\',sans-serif;font-size:15px;color:' + descColor + ';margin:0 0 20px 0;padding:0 0 0 20px;line-height:1.6;">' + xH(data.desc) + '</div>\n';
+  if (eyebrow.text) html += '  <div style="display:block;font-family:\'Poppins\',sans-serif;text-transform:uppercase;margin:0 0 16px 0;padding:20px 0 0 20px;' + cmsTextStyle(eyebrow, CMS_PARAGRAPH_DEFAULTS.rpsEyebrow) + '">' + xH(eyebrow.text) + '</div>\n';
+  if (heading.text) html += '  <div style="display:block;font-family:\'Poppins\',sans-serif;margin:0 0 12px 0;padding:0 0 0 20px;line-height:1.2;' + cmsTextStyle(heading, CMS_PARAGRAPH_DEFAULTS.rpsHeading) + '">' + xH(heading.text) + '</div>\n';
+  if (desc.text)    html += '  <div style="display:block;font-family:\'Poppins\',sans-serif;margin:0 0 20px 0;padding:0 0 0 20px;line-height:1.6;' + cmsTextStyle(desc, CMS_PARAGRAPH_DEFAULTS.rpsDesc) + '">' + desc.text + '</div>\n';
   if (cardsHtml)    html += '  <div class="' + uid + '-cards">\n' + cardsHtml + '\n  </div>\n';
   html += '</div>';
 
@@ -13026,6 +13011,9 @@ function rpsDeleteSection(id) {
 
 function rpsOnOpen() {
   rpsBindInputs();
+  cmsInitTextField('rps-eyebrow', { defaults: CMS_PARAGRAPH_DEFAULTS.rpsEyebrow });
+  cmsInitTextField('rps-heading',  { defaults: CMS_PARAGRAPH_DEFAULTS.rpsHeading });
+  cmsInitTextField('rps-desc',     { defaults: CMS_PARAGRAPH_DEFAULTS.rpsDesc });
   if (rpsStore.loaded) {
     if (!rpsStore.sections.length) rpsCreateSection(true);
     if (!rpsStore.activeId && rpsStore.sections.length) rpsSelectSection(rpsStore.sections[0].id);
@@ -13037,32 +13025,32 @@ function rpsOnOpen() {
       var saved = data.sections || [];
       rpsStore.counter = cmsMaxSectionCounter(saved, 'rps');
       rpsStore.sections = saved.map(function(s) {
+        var eyebrowVal = typeof s.eyebrow === 'string' ? { text: s.eyebrow, color: s.eyebrowColor } : s.eyebrow;
+        var headingVal = typeof s.heading === 'string' ? { text: s.heading, color: s.headingColor } : s.heading;
+        var descVal    = typeof s.desc    === 'string' ? { text: s.desc,    color: s.descColor    } : s.desc;
         return {
-          id:           s.id || ('rps' + (++rpsStore.counter)),
-          name:         s.name         || '',
-          bg:           s.bg           || '#0f1e3c',
-          eyebrow:      s.eyebrow      || '',
-          eyebrowColor: s.eyebrowColor || '#3b82f6',
-          heading:      s.heading      || '',
-          headingColor: s.headingColor || '#ffffff',
-          desc:         s.desc         || '',
-          descColor:    s.descColor    || '#94a3b8',
+          id:      s.id || ('rps' + (++rpsStore.counter)),
+          name:    s.name || '',
+          bg:      s.bg   || '#0f1e3c',
+          eyebrow: cmsNormalizeTextData(eyebrowVal, CMS_PARAGRAPH_DEFAULTS.rpsEyebrow),
+          heading: cmsNormalizeTextData(headingVal,  CMS_PARAGRAPH_DEFAULTS.rpsHeading),
+          desc:    cmsNormalizeTextData(descVal,     CMS_PARAGRAPH_DEFAULTS.rpsDesc),
           cards: (s.cards || []).map(function(c) {
+            var titleVal = typeof c.title === 'string' ? { text: c.title, color: c.titleColor } : c.title;
+            var descVal2 = typeof c.desc  === 'string' ? { text: c.desc,  color: c.descColor  } : c.desc;
             return {
-              cardBg:         c.cardBg         || '#1a2d4a',
-              cardBorder:     c.cardBorder      || '#1e3a5f',
-              icon:           c.icon            || '',
-              iconBg:         c.iconBg          || '#1e3a5f',
-              iconColor:      c.iconColor       || '#f59e0b',
-              title:          c.title           || '',
-              titleColor:     c.titleColor      || '#ffffff',
-              desc:           c.desc            || '',
-              descColor:      c.descColor       || '#94a3b8',
-              statValue:      c.statValue       || '',
-              statLabel:      c.statLabel       || '',
-              statBg:         c.statBg          || '#1e3a5f',
-              statValueColor: c.statValueColor  || '#ffffff',
-              statLabelColor: c.statLabelColor  || '#94a3b8'
+              cardBg:         c.cardBg        || '#1a2d4a',
+              cardBorder:     c.cardBorder    || '#1e3a5f',
+              icon:           c.icon          || '',
+              iconBg:         c.iconBg        || '#1e3a5f',
+              iconColor:      c.iconColor     || '#f59e0b',
+              title:          cmsNormalizeTextData(titleVal, CMS_PARAGRAPH_DEFAULTS.rpsCardTitle),
+              desc:           cmsNormalizeTextData(descVal2, CMS_PARAGRAPH_DEFAULTS.rpsCardDesc),
+              statValue:      c.statValue     || '',
+              statLabel:      c.statLabel     || '',
+              statBg:         c.statBg        || '#1e3a5f',
+              statValueColor: c.statValueColor|| '#ffffff',
+              statLabelColor: c.statLabelColor|| '#94a3b8'
             };
           })
         };
@@ -13092,50 +13080,40 @@ function rpsAddCard(data, startCollapsed, skipSync) {
   var list = document.getElementById('rps-cards');
   var id   = 'rpsc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   var d    = data || {};
-  var cardBg         = d.cardBg         || '#1a2d4a';
-  var cardBorder     = d.cardBorder      || '#1e3a5f';
-  var iconBg         = d.iconBg          || '#1e3a5f';
-  var iconColor      = d.iconColor       || '#f59e0b';
-  var titleColor     = d.titleColor      || '#ffffff';
-  var descColor      = d.descColor       || '#94a3b8';
-  var statBg         = d.statBg          || '#1e3a5f';
-  var statValueColor = d.statValueColor  || '#ffffff';
-  var statLabelColor = d.statLabelColor  || '#94a3b8';
+  var cardBg         = d.cardBg        || '#1a2d4a';
+  var cardBorder     = d.cardBorder    || '#1e3a5f';
+  var iconBg         = d.iconBg        || '#1e3a5f';
+  var iconColor      = d.iconColor     || '#f59e0b';
+  var statBg         = d.statBg        || '#1e3a5f';
+  var statValueColor = d.statValueColor|| '#ffffff';
+  var statLabelColor = d.statLabelColor|| '#94a3b8';
+  var cardTitle = cmsNormalizeTextData(d.title, CMS_PARAGRAPH_DEFAULTS.rpsCardTitle);
+  var cardDesc  = cmsNormalizeTextData(d.desc,  CMS_PARAGRAPH_DEFAULTS.rpsCardDesc);
   var div = document.createElement('div');
   div.className = 'block-item rps-card-item';
   div.id = id;
   div.innerHTML =
     '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
-    + '<span class="block-header-label">' + xH(d.title || 'New Card') + '</span>'
+    + '<span class="block-header-label">' + xH(cardTitle.text || 'New Card') + '</span>'
     + '<span class="block-type-badge">Card</span>'
     + '<button class="btn-sm danger" onclick="event.stopPropagation();rpsRemoveCard(\'' + id + '\')" style="margin-left:auto">Remove</button>'
     + '</div>'
     + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
 
-    // Card colours
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
     + '<div class="field"><label>Card background</label><input type="color" class="rps-card-bg" value="' + xA(cardBg) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
     + '<div class="field"><label>Card border</label><input type="color" class="rps-card-border" value="' + xA(cardBorder) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
     + '</div>'
 
-    // Icon
     + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'
     + '<div class="field"><label>Icon <span class="hint">(optional)</span></label><input type="text" class="rps-icon" value="' + xA(d.icon || '') + '" style="font-size:18px;text-align:center;" maxlength="4" placeholder="e.g. ⚡"></div>'
     + '<div class="field"><label>Icon background</label><input type="color" class="rps-icon-bg" value="' + xA(iconBg) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
     + '<div class="field"><label>Icon colour</label><input type="color" class="rps-icon-color" value="' + xA(iconColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
     + '</div>'
 
-    // Title
-    + '<div class="field"><label>Title <span class="hint">(bold)</span></label>'
-    + '<input type="text" class="rps-card-title" value="' + xA(d.title || '') + '" placeholder="Card title" oninput="this.closest(\'.rps-card-item\').querySelector(\'.block-header-label\').textContent=this.value||\'New Card\'"></div>'
-    + '<div class="field"><label>Title colour</label><input type="color" class="rps-title-color" value="' + xA(titleColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + cmsTextFieldHtml('Title <span class="hint">(bold)</span>', 'rps-card-title', cardTitle, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.rpsCardTitle, placeholder: 'Card title', oninput: 'this.closest(\\\'.rps-card-item\\\').querySelector(\\\'.block-header-label\\\').textContent=this.value||\\\'New Card\\\'' })
+    + cmsParagraphFieldHtml('Description <span class="hint">(HTML allowed)</span>', 'rps-card-desc', cardDesc, { rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.rpsCardDesc, placeholder: 'Description text or HTML…' })
 
-    // Description
-    + '<div class="field"><label>Description <span class="hint">(HTML allowed)</span></label>'
-    + '<textarea class="rps-card-desc" rows="3" style="font-family:monospace;font-size:12px;resize:vertical;" placeholder="Description text or HTML…">' + xH(d.desc || '') + '</textarea></div>'
-    + '<div class="field"><label>Description colour</label><input type="color" class="rps-desc-color" value="' + xA(descColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
-
-    // Stat block
     + '<div class="section-label" style="margin:10px 0 6px;font-size:11px;">Stat block <span class="hint">(optional — leave value empty to hide)</span></div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
     + '<div class="field"><label>Stat value</label><input type="text" class="rps-stat-value" value="' + xA(d.statValue || '') + '" placeholder="e.g. 2–4"></div>'
@@ -13150,6 +13128,10 @@ function rpsAddCard(data, startCollapsed, skipSync) {
     + '</div>';
   list.appendChild(div);
   if (!skipSync) rpsHandleChange();
+}
+
+function rpsSave() {
+  rpsPersistNow('Saving…', 'Saved!', false);
 }
 
 function rpsGenerate() {
