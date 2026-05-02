@@ -1053,11 +1053,13 @@ var CMS_PARAGRAPH_DEFAULTS = {
   lgsDesc:             { size: 15, color: '#374151', weight: '400', letterSpacing: 0    },
   lgsCardTitle:        { size: 15, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
   lgsCardDesc:         { size: 14, color: '#374151', weight: '400', letterSpacing: 0    },
+  lgsCardCta:          { size: 13, color: '#204280', weight: '700', letterSpacing: 0    },
   rpsEyebrow:          { size: 11, color: '#3b82f6', weight: '600', letterSpacing: 0.1  },
   rpsHeading:          { size: 26, color: '#ffffff', weight: '700', letterSpacing: 0    },
   rpsDesc:             { size: 15, color: '#94a3b8', weight: '400', letterSpacing: 0    },
   rpsCardTitle:        { size: 16, color: '#ffffff', weight: '700', letterSpacing: 0    },
-  rpsCardDesc:         { size: 14, color: '#94a3b8', weight: '400', letterSpacing: 0    }
+  rpsCardDesc:         { size: 14, color: '#94a3b8', weight: '400', letterSpacing: 0    },
+  rpsCardCta:          { size: 13, color: '#3b82f6', weight: '700', letterSpacing: 0    }
 };
 var CMS_TEXT_DEFAULTS = CMS_PARAGRAPH_DEFAULTS;
 function cmsParagraphText(value) {
@@ -12521,8 +12523,8 @@ function lgsDefaultSection() {
     heading:  cmsNormalizeTextData('Section Heading', CMS_PARAGRAPH_DEFAULTS.lgsHeading),
     desc:     cmsNormalizeTextData('Add your intro description here.', CMS_PARAGRAPH_DEFAULTS.lgsDesc),
     cards: [
-      { cardBg: '#f8f9fa', cardBorder: '#e5e7eb', iconBg: '#e8edf5', icon: '✓', iconColor: '#204280', title: cmsNormalizeTextData('First requirement', CMS_PARAGRAPH_DEFAULTS.lgsCardTitle), desc: cmsNormalizeTextData('— supporting description text.', CMS_PARAGRAPH_DEFAULTS.lgsCardDesc) },
-      { cardBg: '#f8f9fa', cardBorder: '#e5e7eb', iconBg: '#e8edf5', icon: '✓', iconColor: '#204280', title: cmsNormalizeTextData('Second requirement', CMS_PARAGRAPH_DEFAULTS.lgsCardTitle), desc: cmsNormalizeTextData('— supporting description text.', CMS_PARAGRAPH_DEFAULTS.lgsCardDesc) }
+      { type: 'card', cardBg: '#f8f9fa', cardBorder: '#e5e7eb', iconBg: '#e8edf5', icon: '✓', iconColor: '#204280', title: cmsNormalizeTextData('First requirement', CMS_PARAGRAPH_DEFAULTS.lgsCardTitle), desc: cmsNormalizeTextData('— supporting description text.', CMS_PARAGRAPH_DEFAULTS.lgsCardDesc) },
+      { type: 'card', cardBg: '#f8f9fa', cardBorder: '#e5e7eb', iconBg: '#e8edf5', icon: '✓', iconColor: '#204280', title: cmsNormalizeTextData('Second requirement', CMS_PARAGRAPH_DEFAULTS.lgsCardTitle), desc: cmsNormalizeTextData('— supporting description text.', CMS_PARAGRAPH_DEFAULTS.lgsCardDesc) }
     ]
   };
 }
@@ -12539,7 +12541,32 @@ function lgsReadFormData() {
     heading: cmsReadTextField('lgs-heading', CMS_PARAGRAPH_DEFAULTS.lgsHeading),
     desc:    cmsReadTextField('lgs-desc', CMS_PARAGRAPH_DEFAULTS.lgsDesc),
     cards: Array.prototype.slice.call(document.querySelectorAll('#lgs-cards .lgs-card-item')).map(function(item) {
+      var type = item.dataset.blockType || 'card';
+      if (type === 'card-image') {
+        return {
+          type: 'card-image',
+          cardBg:     (item.querySelector('.lgs-card-bg')     || {}).value || '#f8f9fa',
+          cardBorder: (item.querySelector('.lgs-card-border') || {}).value || '#e5e7eb',
+          imageUrl:   (item.querySelector('.lgs-img-url')     || {}).value || '',
+          imageAlt:   (item.querySelector('.lgs-img-alt')     || {}).value || '',
+          title:      cmsReadTextField(item.querySelector('.lgs-card-title'), CMS_PARAGRAPH_DEFAULTS.lgsCardTitle),
+          desc:       cmsReadTextField(item.querySelector('.lgs-card-desc'),  CMS_PARAGRAPH_DEFAULTS.lgsCardDesc),
+          ctaText:    cmsReadTextField(item.querySelector('.lgs-cta-text'),   CMS_PARAGRAPH_DEFAULTS.lgsCardCta),
+          ctaUrl:     (item.querySelector('.lgs-cta-url')     || {}).value || '',
+          ctaBg:      (item.querySelector('.lgs-cta-bg')      || {}).value || '#204280',
+          ctaColor:   (item.querySelector('.lgs-cta-color')   || {}).value || '#ffffff'
+        };
+      } else if (type === 'image') {
+        return {
+          type: 'image',
+          imageUrl:      (item.querySelector('.lgs-img-url')      || {}).value || '',
+          imageAlt:      (item.querySelector('.lgs-img-alt')      || {}).value || '',
+          borderRadius:  (item.querySelector('.lgs-img-radius')   || {}).value || '8',
+          maxWidth:      (item.querySelector('.lgs-img-maxwidth') || {}).value || ''
+        };
+      }
       return {
+        type: 'card',
         cardBg:     (item.querySelector('.lgs-card-bg')     || {}).value || '#f8f9fa',
         cardBorder: (item.querySelector('.lgs-card-border') || {}).value || '#e5e7eb',
         iconBg:     (item.querySelector('.lgs-icon-bg')     || {}).value || '#e8edf5',
@@ -12559,7 +12586,12 @@ function lgsFillForm(sec) {
   cmsSetTextField('lgs-heading',  sec.heading,  CMS_PARAGRAPH_DEFAULTS.lgsHeading);
   cmsSetTextField('lgs-desc',     sec.desc,     CMS_PARAGRAPH_DEFAULTS.lgsDesc);
   document.getElementById('lgs-cards').innerHTML = '';
-  (sec.cards || []).forEach(function(c) { lgsAddCard(c, true, true); });
+  (sec.cards || []).forEach(function(c) {
+    var t = c.type || 'card';
+    if (t === 'card-image') lgsAddCardImage(c, true, true);
+    else if (t === 'image') lgsAddImageBlock(c, true, true);
+    else lgsAddCard(c, true, true);
+  });
 }
 
 function lgsSyncCurrent() {
@@ -12580,20 +12612,44 @@ function buildLgsHtml(data) {
   var desc    = cmsNormalizeTextData(data.desc,     CMS_PARAGRAPH_DEFAULTS.lgsDesc);
 
   var cardsHtml = (data.cards || []).map(function(card) {
+    var type = card.type || 'card';
+
+    if (type === 'image') {
+      var radius = parseInt(card.borderRadius, 10) || 8;
+      var mw = (card.maxWidth || '').trim();
+      var imgStyle = 'display:block;width:100%;height:auto;border-radius:' + radius + 'px;' + (mw ? 'max-width:' + mw + ';' : '');
+      return '    <img src="' + xA(card.imageUrl || '') + '" alt="' + xA(card.imageAlt || '') + '" style="' + imgStyle + '">';
+    }
+
     var cardBg     = cmsSafeHex(card.cardBg,    '#f8f9fa');
     var cardBorder = cmsSafeHex(card.cardBorder, '#e5e7eb');
-    var iconBg     = cmsSafeHex(card.iconBg,     '#e8edf5');
-    var iconColor  = cmsSafeHex(card.iconColor,  '#204280');
     var cardTitle  = cmsNormalizeTextData(card.title, CMS_PARAGRAPH_DEFAULTS.lgsCardTitle);
     var cardDesc   = cmsNormalizeTextData(card.desc,  CMS_PARAGRAPH_DEFAULTS.lgsCardDesc);
     var descText   = cardDesc.text.trim();
-    var contentHtml = cardTitle.text.trim()
-      ? ('<strong style="font-family:\'Poppins\',sans-serif;' + cmsTextStyle(cardTitle, CMS_PARAGRAPH_DEFAULTS.lgsCardTitle) + '">' + xH(cardTitle.text) + '</strong>' + (descText ? ' ' + descText : ''))
-      : descText;
-    return '    <div style="background:' + cardBg + ';border:1px solid ' + cardBorder + ';border-radius:10px;padding:14px 16px;display:flex;gap:14px;align-items:flex-start;">\n'
-         + '      <div style="width:30px;height:30px;min-width:30px;background:' + iconBg + ';border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:' + iconColor + ';margin-top:1px;">' + xH(card.icon || '✓') + '</div>\n'
-         + '      <p style="margin:0;font-family:\'Poppins\',sans-serif;font-size:' + cardDesc.size + 'px;line-height:1.55;color:' + cardDesc.color + ';">' + contentHtml + '</p>\n'
-         + '    </div>';
+
+    if (type === 'card-image') {
+      var ctaText = cmsNormalizeTextData(card.ctaText, CMS_PARAGRAPH_DEFAULTS.lgsCardCta);
+      var ctaBg   = cmsSafeHex(card.ctaBg,   '#204280');
+      var ctaColor= cmsSafeHex(card.ctaColor, '#ffffff');
+      var body = '';
+      if (cardTitle.text) body += '<div style="font-family:\'Poppins\',sans-serif;margin:0 0 8px;' + cmsTextStyle(cardTitle, CMS_PARAGRAPH_DEFAULTS.lgsCardTitle) + '">' + xH(cardTitle.text) + '</div>';
+      if (descText) body += '<div style="font-family:\'Poppins\',sans-serif;margin:0' + (ctaText.text ? ' 0 12px' : '') + ';line-height:1.6;' + cmsTextStyle(cardDesc, CMS_PARAGRAPH_DEFAULTS.lgsCardDesc) + '">' + descText + '</div>';
+      if (ctaText.text) body += '<a href="' + xA(card.ctaUrl || '#') + '" style="display:inline-block;font-family:\'Poppins\',sans-serif;padding:8px 18px;background:' + ctaBg + ';border-radius:6px;text-decoration:none;' + cmsTextStyle(ctaText, CMS_PARAGRAPH_DEFAULTS.lgsCardCta) + 'color:' + ctaColor + ';">' + xH(ctaText.text) + '</a>';
+      return '    <div style="background:' + cardBg + ';border:1px solid ' + cardBorder + ';border-radius:10px;overflow:hidden;">\n'
+           + (card.imageUrl ? '      <img src="' + xA(card.imageUrl) + '" alt="' + xA(card.imageAlt || '') + '" style="width:100%;height:auto;display:block;">\n' : '')
+           + '      <div style="padding:16px;">' + body + '</div>\n'
+           + '    </div>';
+    }
+
+    var iconBg    = cmsSafeHex(card.iconBg,    '#e8edf5');
+    var iconColor = cmsSafeHex(card.iconColor,  '#204280');
+    var out = '    <div style="background:' + cardBg + ';border:1px solid ' + cardBorder + ';border-radius:10px;padding:14px 16px;display:flex;gap:14px;align-items:flex-start;">\n'
+            + '      <div style="width:30px;height:30px;min-width:30px;background:' + iconBg + ';border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:' + iconColor + ';margin-top:1px;">' + xH(card.icon || '✓') + '</div>\n'
+            + '      <div style="flex:1;min-width:0;">\n';
+    if (cardTitle.text) out += '        <div style="font-family:\'Poppins\',sans-serif;' + cmsTextStyle(cardTitle, CMS_PARAGRAPH_DEFAULTS.lgsCardTitle) + '">' + xH(cardTitle.text) + '</div>\n';
+    if (descText) out += '        <div style="font-family:\'Poppins\',sans-serif;' + cmsTextStyle(cardDesc, CMS_PARAGRAPH_DEFAULTS.lgsCardDesc) + ';line-height:1.55;' + (cardTitle.text ? 'margin-top:4px;' : '') + '">' + descText + '</div>\n';
+    out += '      </div>\n    </div>';
+    return out;
   }).join('\n');
 
   var css = '<style>.' + uid + '{font-family:\'Poppins\',sans-serif;background:' + bg + ';box-sizing:border-box;}'
@@ -12712,16 +12768,29 @@ function lgsOnOpen() {
           heading: cmsNormalizeTextData(headingVal,  CMS_PARAGRAPH_DEFAULTS.lgsHeading),
           desc:    cmsNormalizeTextData(descVal,     CMS_PARAGRAPH_DEFAULTS.lgsDesc),
           cards: (s.cards || []).map(function(c) {
+            var t = c.type || 'card';
             var titleVal = typeof c.title === 'string' ? { text: c.title, color: c.titleColor } : c.title;
             var descVal2 = typeof c.desc  === 'string' ? { text: c.desc,  color: c.descColor  } : c.desc;
+            if (t === 'card-image') {
+              return {
+                type: 'card-image',
+                cardBg: c.cardBg || '#f8f9fa', cardBorder: c.cardBorder || '#e5e7eb',
+                imageUrl: c.imageUrl || '', imageAlt: c.imageAlt || '',
+                title:    cmsNormalizeTextData(titleVal, CMS_PARAGRAPH_DEFAULTS.lgsCardTitle),
+                desc:     cmsNormalizeTextData(descVal2, CMS_PARAGRAPH_DEFAULTS.lgsCardDesc),
+                ctaText:  cmsNormalizeTextData(c.ctaText, CMS_PARAGRAPH_DEFAULTS.lgsCardCta),
+                ctaUrl:   c.ctaUrl || '', ctaBg: c.ctaBg || '#204280', ctaColor: c.ctaColor || '#ffffff'
+              };
+            }
+            if (t === 'image') {
+              return { type: 'image', imageUrl: c.imageUrl || '', imageAlt: c.imageAlt || '', borderRadius: c.borderRadius || '8', maxWidth: c.maxWidth || '' };
+            }
             return {
-              cardBg:     c.cardBg     || '#f8f9fa',
-              cardBorder: c.cardBorder || '#e5e7eb',
-              iconBg:     c.iconBg     || '#e8edf5',
-              icon:       c.icon       || '✓',
-              iconColor:  c.iconColor  || '#204280',
-              title:      cmsNormalizeTextData(titleVal, CMS_PARAGRAPH_DEFAULTS.lgsCardTitle),
-              desc:       cmsNormalizeTextData(descVal2, CMS_PARAGRAPH_DEFAULTS.lgsCardDesc)
+              type: 'card',
+              cardBg: c.cardBg || '#f8f9fa', cardBorder: c.cardBorder || '#e5e7eb',
+              iconBg: c.iconBg || '#e8edf5', icon: c.icon || '✓', iconColor: c.iconColor || '#204280',
+              title:  cmsNormalizeTextData(titleVal, CMS_PARAGRAPH_DEFAULTS.lgsCardTitle),
+              desc:   cmsNormalizeTextData(descVal2, CMS_PARAGRAPH_DEFAULTS.lgsCardDesc)
             };
           })
         };
@@ -12746,19 +12815,27 @@ function lgsRemoveCard(id) {
   lgsHandleChange();
 }
 
+function lgsAddBlock() {
+  var type = (document.getElementById('lgs-block-type-select') || {}).value || 'card';
+  if (type === 'card-image') lgsAddCardImage(null);
+  else if (type === 'image') lgsAddImageBlock(null);
+  else lgsAddCard(null);
+}
+
 function lgsAddCard(data, startCollapsed, skipSync) {
   if (!lgsCurrentSection()) lgsCreateSection(true);
   var list = document.getElementById('lgs-cards');
   var id   = 'lgsc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   var d    = data || {};
-  var cardBg     = d.cardBg     || '#f8f9fa';
-  var cardBorder = d.cardBorder || '#e5e7eb';
-  var iconBg     = d.iconBg     || '#e8edf5';
-  var iconColor  = d.iconColor  || '#204280';
-  var cardTitle  = cmsNormalizeTextData(d.title, CMS_PARAGRAPH_DEFAULTS.lgsCardTitle);
-  var cardDesc   = cmsNormalizeTextData(d.desc,  CMS_PARAGRAPH_DEFAULTS.lgsCardDesc);
+  var cardBg    = d.cardBg    || '#f8f9fa';
+  var cardBorder= d.cardBorder|| '#e5e7eb';
+  var iconBg    = d.iconBg    || '#e8edf5';
+  var iconColor = d.iconColor || '#204280';
+  var cardTitle = cmsNormalizeTextData(d.title, CMS_PARAGRAPH_DEFAULTS.lgsCardTitle);
+  var cardDesc  = cmsNormalizeTextData(d.desc,  CMS_PARAGRAPH_DEFAULTS.lgsCardDesc);
   var div = document.createElement('div');
   div.className = 'block-item lgs-card-item';
+  div.dataset.blockType = 'card';
   div.id = id;
   div.innerHTML =
     '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
@@ -12778,6 +12855,76 @@ function lgsAddCard(data, startCollapsed, skipSync) {
     + '</div>'
     + cmsTextFieldHtml('Title <span class="hint">(bold)</span>', 'lgs-card-title', cardTitle, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.lgsCardTitle, placeholder: 'Bold title text', oninput: 'this.closest(\\\'.lgs-card-item\\\').querySelector(\\\'.block-header-label\\\').textContent=this.value||\\\'New Card\\\'' })
     + cmsParagraphFieldHtml('Description <span class="hint">(HTML allowed)</span>', 'lgs-card-desc', cardDesc, { rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.lgsCardDesc, placeholder: 'e.g. — including <strong>English</strong> and maths' })
+    + '</div>';
+  list.appendChild(div);
+  if (!skipSync) lgsHandleChange();
+}
+
+function lgsAddCardImage(data, startCollapsed, skipSync) {
+  if (!lgsCurrentSection()) lgsCreateSection(true);
+  var list = document.getElementById('lgs-cards');
+  var id   = 'lgsc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var d    = data || {};
+  var cardBg    = d.cardBg    || '#f8f9fa';
+  var cardBorder= d.cardBorder|| '#e5e7eb';
+  var ctaBg     = d.ctaBg     || '#204280';
+  var ctaColor  = d.ctaColor  || '#ffffff';
+  var cardTitle = cmsNormalizeTextData(d.title,   CMS_PARAGRAPH_DEFAULTS.lgsCardTitle);
+  var cardDesc  = cmsNormalizeTextData(d.desc,    CMS_PARAGRAPH_DEFAULTS.lgsCardDesc);
+  var ctaText   = cmsNormalizeTextData(d.ctaText, CMS_PARAGRAPH_DEFAULTS.lgsCardCta);
+  var div = document.createElement('div');
+  div.className = 'block-item lgs-card-item';
+  div.dataset.blockType = 'card-image';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH(cardTitle.text || 'Card with Image') + '</span>'
+    + '<span class="block-type-badge">Card + Image</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();lgsRemoveCard(\'' + id + '\')" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    + '<div class="field"><label>Card background</label><input type="color" class="lgs-card-bg" value="' + xA(cardBg) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '<div class="field"><label>Card border</label><input type="color" class="lgs-card-border" value="' + xA(cardBorder) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '</div>'
+    + '<div class="field"><label>Image URL</label><input type="text" class="lgs-img-url" value="' + xA(d.imageUrl || '') + '" placeholder="https://…/image.jpg"></div>'
+    + '<div class="field"><label>Image alt text <span class="hint">(optional)</span></label><input type="text" class="lgs-img-alt" value="' + xA(d.imageAlt || '') + '" placeholder="Descriptive alt text"></div>'
+    + cmsTextFieldHtml('Title <span class="hint">(bold)</span>', 'lgs-card-title', cardTitle, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.lgsCardTitle, placeholder: 'Card title', oninput: 'this.closest(\\\'.lgs-card-item\\\').querySelector(\\\'.block-header-label\\\').textContent=this.value||\\\'Card with Image\\\'' })
+    + cmsParagraphFieldHtml('Description <span class="hint">(HTML allowed)</span>', 'lgs-card-desc', cardDesc, { rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.lgsCardDesc, placeholder: 'Card description…' })
+    + '<div class="section-label" style="margin:10px 0 6px;font-size:11px;">CTA <span class="hint">(optional — hide by leaving text empty)</span></div>'
+    + cmsTextFieldHtml('CTA text', 'lgs-cta-text', ctaText, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.lgsCardCta, placeholder: 'e.g. Learn more →' })
+    + '<div class="field"><label>CTA URL</label><input type="text" class="lgs-cta-url" value="' + xA(d.ctaUrl || '') + '" placeholder="https://"></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    + '<div class="field"><label>CTA background</label><input type="color" class="lgs-cta-bg" value="' + xA(ctaBg) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '<div class="field"><label>CTA text colour</label><input type="color" class="lgs-cta-color" value="' + xA(ctaColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '</div>'
+    + '</div>';
+  list.appendChild(div);
+  if (!skipSync) lgsHandleChange();
+}
+
+function lgsAddImageBlock(data, startCollapsed, skipSync) {
+  if (!lgsCurrentSection()) lgsCreateSection(true);
+  var list = document.getElementById('lgs-cards');
+  var id   = 'lgsc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var d    = data || {};
+  var div = document.createElement('div');
+  div.className = 'block-item lgs-card-item';
+  div.dataset.blockType = 'image';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">Image</span>'
+    + '<span class="block-type-badge">Image</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();lgsRemoveCard(\'' + id + '\')" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
+    + '<div class="field"><label>Image URL</label><input type="text" class="lgs-img-url" value="' + xA(d.imageUrl || '') + '" placeholder="https://…/image.jpg"></div>'
+    + '<div class="field"><label>Alt text <span class="hint">(optional)</span></label><input type="text" class="lgs-img-alt" value="' + xA(d.imageAlt || '') + '" placeholder="Descriptive alt text"></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    + '<div class="field"><label>Border radius (px)</label><input type="number" class="lgs-img-radius" value="' + xA(d.borderRadius || '8') + '" min="0" max="50" style="width:80px;"></div>'
+    + '<div class="field"><label>Max width <span class="hint">(e.g. 400px or leave blank)</span></label><input type="text" class="lgs-img-maxwidth" value="' + xA(d.maxWidth || '') + '" placeholder="e.g. 400px" style="width:120px;"></div>'
+    + '</div>'
     + '</div>';
   list.appendChild(div);
   if (!skipSync) lgsHandleChange();
@@ -12810,7 +12957,7 @@ function rpsDefaultSection() {
         icon: '', iconBg: '#1e3a5f', iconColor: '#f59e0b',
         title: cmsNormalizeTextData('Completion time varies by student', CMS_PARAGRAPH_DEFAULTS.rpsCardTitle),
         desc: cmsNormalizeTextData('Depends on prior qualifications, exemptions, study pace, and work commitments.', CMS_PARAGRAPH_DEFAULTS.rpsCardDesc),
-        statValue: '2–4', statLabel: 'Years to complete for most students',
+        statValue: '2–4', statLabel: 'Years to complete for most students', type: 'card',
         statBg: '#1e3a5f', statValueColor: '#ffffff', statLabelColor: '#94a3b8'
       },
       {
@@ -12818,7 +12965,7 @@ function rpsDefaultSection() {
         icon: '⚡', iconBg: '#1e3a5f', iconColor: '#f59e0b',
         title: cmsNormalizeTextData('Exemptions available', CMS_PARAGRAPH_DEFAULTS.rpsCardTitle),
         desc: cmsNormalizeTextData('Students with relevant degrees or prior accounting qualifications may receive exemptions.', CMS_PARAGRAPH_DEFAULTS.rpsCardDesc),
-        statValue: '', statLabel: '',
+        statValue: '', statLabel: '', type: 'card',
         statBg: '#1e3a5f', statValueColor: '#ffffff', statLabelColor: '#94a3b8'
       }
     ]
@@ -12837,7 +12984,33 @@ function rpsReadFormData() {
     heading: cmsReadTextField('rps-heading',  CMS_PARAGRAPH_DEFAULTS.rpsHeading),
     desc:    cmsReadTextField('rps-desc',     CMS_PARAGRAPH_DEFAULTS.rpsDesc),
     cards: Array.prototype.slice.call(document.querySelectorAll('#rps-cards .rps-card-item')).map(function(item) {
+      var type = item.dataset.blockType || 'card';
+      if (type === 'card-image') {
+        return {
+          type: 'card-image',
+          cardBg:    (item.querySelector('.rps-card-bg')    || {}).value || '#1a2d4a',
+          cardBorder:(item.querySelector('.rps-card-border')|| {}).value || '#1e3a5f',
+          imageUrl:  (item.querySelector('.rps-img-url')    || {}).value || '',
+          imageAlt:  (item.querySelector('.rps-img-alt')    || {}).value || '',
+          title:     cmsReadTextField(item.querySelector('.rps-card-title'), CMS_PARAGRAPH_DEFAULTS.rpsCardTitle),
+          desc:      cmsReadTextField(item.querySelector('.rps-card-desc'),  CMS_PARAGRAPH_DEFAULTS.rpsCardDesc),
+          ctaText:   cmsReadTextField(item.querySelector('.rps-cta-text'),   CMS_PARAGRAPH_DEFAULTS.rpsCardCta),
+          ctaUrl:    (item.querySelector('.rps-cta-url')    || {}).value || '',
+          ctaBg:     (item.querySelector('.rps-cta-bg')     || {}).value || '#3b82f6',
+          ctaColor:  (item.querySelector('.rps-cta-color')  || {}).value || '#ffffff'
+        };
+      }
+      if (type === 'image') {
+        return {
+          type: 'image',
+          imageUrl:     (item.querySelector('.rps-img-url')      || {}).value || '',
+          imageAlt:     (item.querySelector('.rps-img-alt')      || {}).value || '',
+          borderRadius: (item.querySelector('.rps-img-radius')   || {}).value || '8',
+          maxWidth:     (item.querySelector('.rps-img-maxwidth') || {}).value || ''
+        };
+      }
       return {
+        type: 'card',
         cardBg:         (item.querySelector('.rps-card-bg')        || {}).value || '#1a2d4a',
         cardBorder:     (item.querySelector('.rps-card-border')    || {}).value || '#1e3a5f',
         icon:           (item.querySelector('.rps-icon')           || {}).value || '',
@@ -12862,7 +13035,12 @@ function rpsFillForm(sec) {
   cmsSetTextField('rps-heading',  sec.heading,  CMS_PARAGRAPH_DEFAULTS.rpsHeading);
   cmsSetTextField('rps-desc',     sec.desc,     CMS_PARAGRAPH_DEFAULTS.rpsDesc);
   document.getElementById('rps-cards').innerHTML = '';
-  (sec.cards || []).forEach(function(c) { rpsAddCard(c, true, true); });
+  (sec.cards || []).forEach(function(c) {
+    var t = c.type || 'card';
+    if (t === 'card-image') rpsAddCardImage(c, true, true);
+    else if (t === 'image') rpsAddImageBlock(c, true, true);
+    else rpsAddCard(c, true, true);
+  });
 }
 
 function rpsSyncCurrent() {
@@ -12883,18 +13061,42 @@ function buildRpsHtml(data) {
   var desc    = cmsNormalizeTextData(data.desc,     CMS_PARAGRAPH_DEFAULTS.rpsDesc);
 
   var cardsHtml = (data.cards || []).map(function(card) {
-    var cardBg       = cmsSafeHex(card.cardBg,        '#1a2d4a');
-    var cardBorder   = cmsSafeHex(card.cardBorder,    '#1e3a5f');
+    var type = card.type || 'card';
+
+    if (type === 'image') {
+      var radius = parseInt(card.borderRadius, 10) || 8;
+      var mw = (card.maxWidth || '').trim();
+      var imgStyle = 'display:block;width:100%;height:auto;border-radius:' + radius + 'px;' + (mw ? 'max-width:' + mw + ';' : '');
+      return '    <img src="' + xA(card.imageUrl || '') + '" alt="' + xA(card.imageAlt || '') + '" style="' + imgStyle + '">';
+    }
+
+    var cardBg     = cmsSafeHex(card.cardBg,    '#1a2d4a');
+    var cardBorder = cmsSafeHex(card.cardBorder, '#1e3a5f');
+    var cardTitle  = cmsNormalizeTextData(card.title, CMS_PARAGRAPH_DEFAULTS.rpsCardTitle);
+    var cardDesc   = cmsNormalizeTextData(card.desc,  CMS_PARAGRAPH_DEFAULTS.rpsCardDesc);
+    var descText   = cardDesc.text.trim();
+
+    if (type === 'card-image') {
+      var ctaText   = cmsNormalizeTextData(card.ctaText, CMS_PARAGRAPH_DEFAULTS.rpsCardCta);
+      var ctaBg     = cmsSafeHex(card.ctaBg,   '#3b82f6');
+      var ctaColor  = cmsSafeHex(card.ctaColor, '#ffffff');
+      var body = '';
+      if (cardTitle.text) body += '<div style="font-family:\'Poppins\',sans-serif;margin:0 0 8px;' + cmsTextStyle(cardTitle, CMS_PARAGRAPH_DEFAULTS.rpsCardTitle) + '">' + xH(cardTitle.text) + '</div>';
+      if (descText) body += '<div style="font-family:\'Poppins\',sans-serif;margin:0' + (ctaText.text ? ' 0 12px' : '') + ';line-height:1.6;' + cmsTextStyle(cardDesc, CMS_PARAGRAPH_DEFAULTS.rpsCardDesc) + '">' + descText + '</div>';
+      if (ctaText.text) body += '<a href="' + xA(card.ctaUrl || '#') + '" style="display:inline-block;font-family:\'Poppins\',sans-serif;padding:8px 18px;background:' + ctaBg + ';border-radius:6px;text-decoration:none;' + cmsTextStyle(ctaText, CMS_PARAGRAPH_DEFAULTS.rpsCardCta) + 'color:' + ctaColor + ';">' + xH(ctaText.text) + '</a>';
+      return '    <div style="background:' + cardBg + ';border:1px solid ' + cardBorder + ';border-radius:12px;overflow:hidden;">\n'
+           + (card.imageUrl ? '      <img src="' + xA(card.imageUrl) + '" alt="' + xA(card.imageAlt || '') + '" style="width:100%;height:auto;display:block;">\n' : '')
+           + '      <div style="padding:20px;">' + body + '</div>\n'
+           + '    </div>';
+    }
+
     var iconBg       = cmsSafeHex(card.iconBg,        '#1e3a5f');
     var iconColor    = cmsSafeHex(card.iconColor,     '#f59e0b');
     var statBg       = cmsSafeHex(card.statBg,        '#1e3a5f');
     var statValColor = cmsSafeHex(card.statValueColor,'#ffffff');
     var statLblColor = cmsSafeHex(card.statLabelColor,'#94a3b8');
-    var cardTitle    = cmsNormalizeTextData(card.title, CMS_PARAGRAPH_DEFAULTS.rpsCardTitle);
-    var cardDesc     = cmsNormalizeTextData(card.desc,  CMS_PARAGRAPH_DEFAULTS.rpsCardDesc);
     var hasIcon      = (card.icon || '').trim();
     var hasStatValue = (card.statValue || '').trim();
-    var descText     = cardDesc.text.trim();
 
     var out = '    <div style="background:' + cardBg + ';border:1px solid ' + cardBorder + ';border-radius:12px;padding:20px;">\n';
 
@@ -13036,21 +13238,31 @@ function rpsOnOpen() {
           heading: cmsNormalizeTextData(headingVal,  CMS_PARAGRAPH_DEFAULTS.rpsHeading),
           desc:    cmsNormalizeTextData(descVal,     CMS_PARAGRAPH_DEFAULTS.rpsDesc),
           cards: (s.cards || []).map(function(c) {
+            var t = c.type || 'card';
             var titleVal = typeof c.title === 'string' ? { text: c.title, color: c.titleColor } : c.title;
             var descVal2 = typeof c.desc  === 'string' ? { text: c.desc,  color: c.descColor  } : c.desc;
+            if (t === 'card-image') {
+              return {
+                type: 'card-image',
+                cardBg: c.cardBg || '#1a2d4a', cardBorder: c.cardBorder || '#1e3a5f',
+                imageUrl: c.imageUrl || '', imageAlt: c.imageAlt || '',
+                title:   cmsNormalizeTextData(titleVal, CMS_PARAGRAPH_DEFAULTS.rpsCardTitle),
+                desc:    cmsNormalizeTextData(descVal2, CMS_PARAGRAPH_DEFAULTS.rpsCardDesc),
+                ctaText: cmsNormalizeTextData(c.ctaText, CMS_PARAGRAPH_DEFAULTS.rpsCardCta),
+                ctaUrl: c.ctaUrl || '', ctaBg: c.ctaBg || '#3b82f6', ctaColor: c.ctaColor || '#ffffff'
+              };
+            }
+            if (t === 'image') {
+              return { type: 'image', imageUrl: c.imageUrl || '', imageAlt: c.imageAlt || '', borderRadius: c.borderRadius || '8', maxWidth: c.maxWidth || '' };
+            }
             return {
-              cardBg:         c.cardBg        || '#1a2d4a',
-              cardBorder:     c.cardBorder    || '#1e3a5f',
-              icon:           c.icon          || '',
-              iconBg:         c.iconBg        || '#1e3a5f',
-              iconColor:      c.iconColor     || '#f59e0b',
+              type: 'card',
+              cardBg: c.cardBg || '#1a2d4a', cardBorder: c.cardBorder || '#1e3a5f',
+              icon: c.icon || '', iconBg: c.iconBg || '#1e3a5f', iconColor: c.iconColor || '#f59e0b',
               title:          cmsNormalizeTextData(titleVal, CMS_PARAGRAPH_DEFAULTS.rpsCardTitle),
               desc:           cmsNormalizeTextData(descVal2, CMS_PARAGRAPH_DEFAULTS.rpsCardDesc),
-              statValue:      c.statValue     || '',
-              statLabel:      c.statLabel     || '',
-              statBg:         c.statBg        || '#1e3a5f',
-              statValueColor: c.statValueColor|| '#ffffff',
-              statLabelColor: c.statLabelColor|| '#94a3b8'
+              statValue: c.statValue || '', statLabel: c.statLabel || '',
+              statBg: c.statBg || '#1e3a5f', statValueColor: c.statValueColor || '#ffffff', statLabelColor: c.statLabelColor || '#94a3b8'
             };
           })
         };
@@ -13075,6 +13287,13 @@ function rpsRemoveCard(id) {
   rpsHandleChange();
 }
 
+function rpsAddBlock() {
+  var type = (document.getElementById('rps-block-type-select') || {}).value || 'card';
+  if (type === 'card-image') rpsAddCardImage(null);
+  else if (type === 'image') rpsAddImageBlock(null);
+  else rpsAddCard(null);
+}
+
 function rpsAddCard(data, startCollapsed, skipSync) {
   if (!rpsCurrentSection()) rpsCreateSection(true);
   var list = document.getElementById('rps-cards');
@@ -13091,6 +13310,7 @@ function rpsAddCard(data, startCollapsed, skipSync) {
   var cardDesc  = cmsNormalizeTextData(d.desc,  CMS_PARAGRAPH_DEFAULTS.rpsCardDesc);
   var div = document.createElement('div');
   div.className = 'block-item rps-card-item';
+  div.dataset.blockType = 'card';
   div.id = id;
   div.innerHTML =
     '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
@@ -13099,21 +13319,17 @@ function rpsAddCard(data, startCollapsed, skipSync) {
     + '<button class="btn-sm danger" onclick="event.stopPropagation();rpsRemoveCard(\'' + id + '\')" style="margin-left:auto">Remove</button>'
     + '</div>'
     + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
-
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
     + '<div class="field"><label>Card background</label><input type="color" class="rps-card-bg" value="' + xA(cardBg) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
     + '<div class="field"><label>Card border</label><input type="color" class="rps-card-border" value="' + xA(cardBorder) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
     + '</div>'
-
     + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'
     + '<div class="field"><label>Icon <span class="hint">(optional)</span></label><input type="text" class="rps-icon" value="' + xA(d.icon || '') + '" style="font-size:18px;text-align:center;" maxlength="4" placeholder="e.g. ⚡"></div>'
     + '<div class="field"><label>Icon background</label><input type="color" class="rps-icon-bg" value="' + xA(iconBg) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
     + '<div class="field"><label>Icon colour</label><input type="color" class="rps-icon-color" value="' + xA(iconColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
     + '</div>'
-
     + cmsTextFieldHtml('Title <span class="hint">(bold)</span>', 'rps-card-title', cardTitle, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.rpsCardTitle, placeholder: 'Card title', oninput: 'this.closest(\\\'.rps-card-item\\\').querySelector(\\\'.block-header-label\\\').textContent=this.value||\\\'New Card\\\'' })
     + cmsParagraphFieldHtml('Description <span class="hint">(HTML allowed)</span>', 'rps-card-desc', cardDesc, { rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.rpsCardDesc, placeholder: 'Description text or HTML…' })
-
     + '<div class="section-label" style="margin:10px 0 6px;font-size:11px;">Stat block <span class="hint">(optional — leave value empty to hide)</span></div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
     + '<div class="field"><label>Stat value</label><input type="text" class="rps-stat-value" value="' + xA(d.statValue || '') + '" placeholder="e.g. 2–4"></div>'
@@ -13124,7 +13340,76 @@ function rpsAddCard(data, startCollapsed, skipSync) {
     + '<div class="field"><label>Value colour</label><input type="color" class="rps-stat-val-color" value="' + xA(statValueColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
     + '<div class="field"><label>Label colour</label><input type="color" class="rps-stat-lbl-color" value="' + xA(statLabelColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
     + '</div>'
+    + '</div>';
+  list.appendChild(div);
+  if (!skipSync) rpsHandleChange();
+}
 
+function rpsAddCardImage(data, startCollapsed, skipSync) {
+  if (!rpsCurrentSection()) rpsCreateSection(true);
+  var list = document.getElementById('rps-cards');
+  var id   = 'rpsc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var d    = data || {};
+  var cardBg    = d.cardBg    || '#1a2d4a';
+  var cardBorder= d.cardBorder|| '#1e3a5f';
+  var ctaBg     = d.ctaBg     || '#3b82f6';
+  var ctaColor  = d.ctaColor  || '#ffffff';
+  var cardTitle = cmsNormalizeTextData(d.title,   CMS_PARAGRAPH_DEFAULTS.rpsCardTitle);
+  var cardDesc  = cmsNormalizeTextData(d.desc,    CMS_PARAGRAPH_DEFAULTS.rpsCardDesc);
+  var ctaText   = cmsNormalizeTextData(d.ctaText, CMS_PARAGRAPH_DEFAULTS.rpsCardCta);
+  var div = document.createElement('div');
+  div.className = 'block-item rps-card-item';
+  div.dataset.blockType = 'card-image';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH(cardTitle.text || 'Card with Image') + '</span>'
+    + '<span class="block-type-badge">Card + Image</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();rpsRemoveCard(\'' + id + '\')" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    + '<div class="field"><label>Card background</label><input type="color" class="rps-card-bg" value="' + xA(cardBg) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '<div class="field"><label>Card border</label><input type="color" class="rps-card-border" value="' + xA(cardBorder) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '</div>'
+    + '<div class="field"><label>Image URL</label><input type="text" class="rps-img-url" value="' + xA(d.imageUrl || '') + '" placeholder="https://…/image.jpg"></div>'
+    + '<div class="field"><label>Image alt text <span class="hint">(optional)</span></label><input type="text" class="rps-img-alt" value="' + xA(d.imageAlt || '') + '" placeholder="Descriptive alt text"></div>'
+    + cmsTextFieldHtml('Title <span class="hint">(bold)</span>', 'rps-card-title', cardTitle, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.rpsCardTitle, placeholder: 'Card title', oninput: 'this.closest(\\\'.rps-card-item\\\').querySelector(\\\'.block-header-label\\\').textContent=this.value||\\\'Card with Image\\\'' })
+    + cmsParagraphFieldHtml('Description <span class="hint">(HTML allowed)</span>', 'rps-card-desc', cardDesc, { rows: 3, defaults: CMS_PARAGRAPH_DEFAULTS.rpsCardDesc, placeholder: 'Card description…' })
+    + '<div class="section-label" style="margin:10px 0 6px;font-size:11px;">CTA <span class="hint">(optional — hide by leaving text empty)</span></div>'
+    + cmsTextFieldHtml('CTA text', 'rps-cta-text', ctaText, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.rpsCardCta, placeholder: 'e.g. Learn more →' })
+    + '<div class="field"><label>CTA URL</label><input type="text" class="rps-cta-url" value="' + xA(d.ctaUrl || '') + '" placeholder="https://"></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    + '<div class="field"><label>CTA background</label><input type="color" class="rps-cta-bg" value="' + xA(ctaBg) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '<div class="field"><label>CTA text colour</label><input type="color" class="rps-cta-color" value="' + xA(ctaColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '</div>'
+    + '</div>';
+  list.appendChild(div);
+  if (!skipSync) rpsHandleChange();
+}
+
+function rpsAddImageBlock(data, startCollapsed, skipSync) {
+  if (!rpsCurrentSection()) rpsCreateSection(true);
+  var list = document.getElementById('rps-cards');
+  var id   = 'rpsc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var d    = data || {};
+  var div = document.createElement('div');
+  div.className = 'block-item rps-card-item';
+  div.dataset.blockType = 'image';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">Image</span>'
+    + '<span class="block-type-badge">Image</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();rpsRemoveCard(\'' + id + '\')" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
+    + '<div class="field"><label>Image URL</label><input type="text" class="rps-img-url" value="' + xA(d.imageUrl || '') + '" placeholder="https://…/image.jpg"></div>'
+    + '<div class="field"><label>Alt text <span class="hint">(optional)</span></label><input type="text" class="rps-img-alt" value="' + xA(d.imageAlt || '') + '" placeholder="Descriptive alt text"></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    + '<div class="field"><label>Border radius (px)</label><input type="number" class="rps-img-radius" value="' + xA(d.borderRadius || '8') + '" min="0" max="50" style="width:80px;"></div>'
+    + '<div class="field"><label>Max width <span class="hint">(e.g. 400px)</span></label><input type="text" class="rps-img-maxwidth" value="' + xA(d.maxWidth || '') + '" placeholder="leave blank for full" style="width:120px;"></div>'
+    + '</div>'
     + '</div>';
   list.appendChild(div);
   if (!skipSync) rpsHandleChange();

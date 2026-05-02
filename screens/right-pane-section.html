@@ -32,9 +32,16 @@
       <textarea id="rps-desc" rows="2" placeholder="Optional intro text…"></textarea>
     </div>
 
-    <div class="section-label">Cards</div>
+    <div class="section-label">Blocks</div>
     <div id="rps-cards" class="block-list"></div>
-    <button class="btn-add-block" style="margin-top:6px" onclick="rpsAddCard()">+ Add card</button>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+      <select id="rps-block-type-select" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--input-bg,#fff);color:var(--fg);">
+        <option value="card">Card (icon + title + description)</option>
+        <option value="card-image">Card with Image</option>
+        <option value="image">Image</option>
+      </select>
+      <button class="btn-add-block" onclick="rpsAddBlock()" style="white-space:nowrap;margin:0;">+ Add</button>
+    </div>
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
       <button class="btn-gen" style="flex:1;min-width:120px;padding:9px" onclick="rpsSave()">&#x1F4BE; Save</button>
