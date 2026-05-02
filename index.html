@@ -349,6 +349,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-page-left-hero" onclick="switchScreen('page-left-hero')">Left Hero Section</div>
       <div class="nav-dd-item" id="nav-page-hero-v2" onclick="switchScreen('page-hero-v2')">Hero Banner V2</div>
       <div class="nav-dd-item" id="nav-article-groups" onclick="switchScreen('article-groups')">Article Groups</div>
+      <div class="nav-dd-item" id="nav-left-generic-section" onclick="switchScreen('left-generic-section')">Left Generic Section</div>
     </div>
   </div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
@@ -436,6 +437,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <button class="home-tile-link" onclick="switchScreen('page-left-hero')">Left Hero Section</button>
           <button class="home-tile-link" onclick="switchScreen('page-hero-v2')">Hero Banner V2</button>
           <button class="home-tile-link" onclick="switchScreen('article-groups')">Article Groups</button>
+          <button class="home-tile-link" onclick="switchScreen('left-generic-section')">Left Generic Section</button>
         </div>
       </div>
       <div class="home-tile">
@@ -1091,7 +1093,7 @@ var _SHARED_SCREENS = ['faq', 'events', 'programs', 'program-cards-v2', 'feature
 var _COMMON_SECTION_SCREENS = ['steps-section', 'dcs', 'dcs2', 'dcs3', 'reach', 'policy'];
 var _FORM_SCREENS   = ['form', 'report-issue', 'report-thank-you'];
 var _COURSE_SCREENS       = ['course-hero', 'course-hero-right', 'course-desc', 'course-tabs'];
-var _PAGE_BUILDER_SCREENS = ['page-hero-banner', 'page-left-hero', 'page-hero-v2', 'article-groups'];
+var _PAGE_BUILDER_SCREENS = ['page-hero-banner', 'page-left-hero', 'page-hero-v2', 'article-groups', 'left-generic-section'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
@@ -1129,7 +1131,8 @@ var _screenFiles = {
   'page-hero-banner':  '/screens/page-hero-banner.html',
   'page-left-hero':    '/screens/page-left-hero.html',
   'page-hero-v2':      '/screens/page-hero-v2.html',
-  'article-groups':    '/screens/article-groups.html',
+  'article-groups':         '/screens/article-groups.html',
+  'left-generic-section':   '/screens/left-generic-section.html',
 };
 var _loadedScreens = {};
 
@@ -1231,6 +1234,7 @@ async function switchScreen(name) {
   if (name === 'page-left-hero'    && !_loadedScreens._plhInit)  { _loadedScreens._plhInit  = true; plhOnOpen(); plhCmpInit(); cmpAttachDirty('page-left-hero'); }
   if (name === 'page-hero-v2'      && !_loadedScreens._phv2Init) { _loadedScreens._phv2Init = true; phv2OnOpen(); phv2CmpInit(); cmpAttachDirty('page-hero-v2'); }
   if (name === 'article-groups'    && !_loadedScreens._agInit)   { _loadedScreens._agInit   = true; articleGroupsOnOpen(); }
+  if (name === 'left-generic-section' && !_loadedScreens._lgsInit) { _loadedScreens._lgsInit = true; lgsOnOpen(); }
   if (name === 'header')  headerOnOpen();
 }
 
@@ -12012,7 +12016,7 @@ function cmsSetStatus(id, text, color, clearMs) {
   }
 }
 
-var CMS_TRACKED_SCREENS = ['feature-cards', 'feature-cards-2', 'feature-cards-3', 'steps-section', 'about-us', 'hero', 'promotion-section', 'article-groups', 'program-cards-v2'];
+var CMS_TRACKED_SCREENS = ['feature-cards', 'feature-cards-2', 'feature-cards-3', 'steps-section', 'about-us', 'hero', 'promotion-section', 'article-groups', 'program-cards-v2', 'left-generic-section'];
 var cmsDirtyState = {};
 
 function cmsCurrentScreenName() {
@@ -12030,7 +12034,8 @@ function cmsDirtyStatusId(screenName) {
     'program-cards-v2': 'pcv2-status',
     'about-us': 'au-status',
     'hero': 'hero-status',
-    'promotion-section': 'promotion-status'
+    'promotion-section': 'promotion-status',
+    'left-generic-section': 'lgs-status'
   }[screenName] || '';
 }
 
@@ -12485,6 +12490,301 @@ function featureCardsAddCard(data, startCollapsed, skipSync) {
 
 function generateFeatureCards() {
   featureCardsPersistNow('Saving…', 'Saved!', true);
+}
+
+// ── Left Generic Section ────────────────────────────────────────
+
+var lgsStore = { sections: [], activeId: '', counter: 0, loaded: false, bound: false };
+
+function lgsDefaultSection() {
+  var id = 'lgs' + (++lgsStore.counter);
+  return {
+    id: id,
+    name: 'Left Generic Section ' + lgsStore.counter,
+    bg: '#ffffff',
+    eyebrow: 'GETTING STARTED',
+    eyebrowColor: '#204280',
+    heading: 'Section Heading',
+    headingColor: '#1a1a1a',
+    desc: 'Add your intro description here.',
+    descColor: '#374151',
+    cards: [
+      { cardBg: '#f8f9fa', cardBorder: '#e5e7eb', iconBg: '#e8edf5', icon: '✓', iconColor: '#204280', title: 'First requirement', desc: '— supporting description text.', titleColor: '#1a1a1a', descColor: '#374151' },
+      { cardBg: '#f8f9fa', cardBorder: '#e5e7eb', iconBg: '#e8edf5', icon: '✓', iconColor: '#204280', title: 'Second requirement', desc: '— supporting description text.', titleColor: '#1a1a1a', descColor: '#374151' }
+    ]
+  };
+}
+
+function lgsCurrentSection() {
+  return lgsStore.sections.find(function(s) { return s.id === lgsStore.activeId; }) || null;
+}
+
+function lgsReadFormData() {
+  return {
+    name:         (document.getElementById('lgs-name') || {}).value || '',
+    bg:           (document.getElementById('lgs-bg') || {}).value || '#ffffff',
+    eyebrow:      (document.getElementById('lgs-eyebrow') || {}).value || '',
+    eyebrowColor: (document.getElementById('lgs-eyebrow-color') || {}).value || '#204280',
+    heading:      (document.getElementById('lgs-heading') || {}).value || '',
+    headingColor: (document.getElementById('lgs-heading-color') || {}).value || '#1a1a1a',
+    desc:         (document.getElementById('lgs-desc') || {}).value || '',
+    descColor:    (document.getElementById('lgs-desc-color') || {}).value || '#374151',
+    cards: Array.prototype.slice.call(document.querySelectorAll('#lgs-cards .lgs-card-item')).map(function(item) {
+      return {
+        cardBg:     (item.querySelector('.lgs-card-bg')     || {}).value || '#f8f9fa',
+        cardBorder: (item.querySelector('.lgs-card-border') || {}).value || '#e5e7eb',
+        iconBg:     (item.querySelector('.lgs-icon-bg')     || {}).value || '#e8edf5',
+        icon:       (item.querySelector('.lgs-icon')        || {}).value || '✓',
+        iconColor:  (item.querySelector('.lgs-icon-color')  || {}).value || '#204280',
+        title:      (item.querySelector('.lgs-card-title')  || {}).value || '',
+        titleColor: (item.querySelector('.lgs-title-color') || {}).value || '#1a1a1a',
+        desc:       (item.querySelector('.lgs-card-desc')   || {}).value || '',
+        descColor:  (item.querySelector('.lgs-desc-color')  || {}).value || '#374151'
+      };
+    })
+  };
+}
+
+function lgsFillForm(sec) {
+  document.getElementById('lgs-name').value          = sec.name || '';
+  document.getElementById('lgs-bg').value            = sec.bg || '#ffffff';
+  document.getElementById('lgs-eyebrow').value       = sec.eyebrow || '';
+  document.getElementById('lgs-eyebrow-color').value = sec.eyebrowColor || '#204280';
+  document.getElementById('lgs-heading').value       = sec.heading || '';
+  document.getElementById('lgs-heading-color').value = sec.headingColor || '#1a1a1a';
+  document.getElementById('lgs-desc').value          = sec.desc || '';
+  document.getElementById('lgs-desc-color').value    = sec.descColor || '#374151';
+  document.getElementById('lgs-cards').innerHTML     = '';
+  (sec.cards || []).forEach(function(c) { lgsAddCard(c, true, true); });
+}
+
+function lgsSyncCurrent() {
+  var sec = lgsCurrentSection();
+  if (!sec) return null;
+  var d = lgsReadFormData();
+  sec.name = d.name; sec.bg = d.bg;
+  sec.eyebrow = d.eyebrow; sec.eyebrowColor = d.eyebrowColor;
+  sec.heading = d.heading; sec.headingColor = d.headingColor;
+  sec.desc = d.desc; sec.descColor = d.descColor;
+  sec.cards = d.cards;
+  return sec;
+}
+
+function buildLgsHtml(data) {
+  var uid          = 'lgs' + Date.now().toString(36);
+  var bg           = cmsSafeHex(data.bg, '#ffffff');
+  var eyebrowColor = cmsSafeHex(data.eyebrowColor, '#204280');
+  var headingColor = cmsSafeHex(data.headingColor, '#1a1a1a');
+  var descColor    = cmsSafeHex(data.descColor, '#374151');
+
+  var cardsHtml = (data.cards || []).map(function(card) {
+    var cardBg     = cmsSafeHex(card.cardBg,     '#f8f9fa');
+    var cardBorder = cmsSafeHex(card.cardBorder,  '#e5e7eb');
+    var iconBg     = cmsSafeHex(card.iconBg,      '#e8edf5');
+    var iconColor  = cmsSafeHex(card.iconColor,   '#204280');
+    var titleColor = cmsSafeHex(card.titleColor,  '#1a1a1a');
+    var dColor     = cmsSafeHex(card.descColor,   '#374151');
+    var title      = (card.title || '').trim();
+    var desc       = (card.desc  || '').trim();
+    var contentHtml = title
+      ? ('<strong style="color:' + titleColor + ';">' + xH(title) + '</strong>' + (desc ? ' ' + desc : ''))
+      : desc;
+    return '    <div style="background:' + cardBg + ';border:1px solid ' + cardBorder + ';border-radius:10px;padding:14px 16px;display:flex;gap:14px;align-items:flex-start;">\n'
+         + '      <div style="width:30px;height:30px;min-width:30px;background:' + iconBg + ';border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:' + iconColor + ';margin-top:1px;">' + xH(card.icon || '✓') + '</div>\n'
+         + '      <p style="margin:0;font-family:\'Poppins\',sans-serif;font-size:15px;line-height:1.55;color:' + dColor + ';">' + contentHtml + '</p>\n'
+         + '    </div>';
+  }).join('\n');
+
+  var css = '<style>.' + uid + '{font-family:\'Poppins\',sans-serif;background:' + bg + ';box-sizing:border-box;}'
+          + '.' + uid + '-cards{display:flex;flex-direction:column;gap:10px;}</style>\n';
+
+  var html = '<div class="' + uid + '">\n';
+  if (data.eyebrow) html += '  <p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:' + eyebrowColor + ';margin:0 0 10px;">' + xH(data.eyebrow) + '</p>\n';
+  if (data.heading) html += '  <h2 style="font-family:\'Poppins\',sans-serif;font-size:28px;font-weight:700;color:' + headingColor + ';margin:0 0 16px;line-height:1.2;">' + xH(data.heading) + '</h2>\n';
+  if (data.desc)    html += '  <p style="font-family:\'Poppins\',sans-serif;font-size:15px;color:' + descColor + ';margin:0 0 24px;line-height:1.6;">' + xH(data.desc) + '</p>\n';
+  if (cardsHtml)    html += '  <div class="' + uid + '-cards">\n' + cardsHtml + '\n  </div>\n';
+  html += '</div>';
+
+  return '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n' + css + html;
+}
+
+function lgsRenderCurrent(showPreview) {
+  var sec = lgsCurrentSection();
+  if (!sec) { cmsRenderScreenEmpty('left-generic-section', 'Create a section to preview it here.', showPreview); return; }
+  cmsRenderScreenHtml('left-generic-section', buildLgsHtml(sec), showPreview);
+}
+
+function lgsRenderSectionList() {
+  cmsRenderSectionList('lgs-section-list', lgsStore.sections, lgsStore.activeId, 'lgsSelectSection', 'lgsDeleteSection', function(sec) {
+    return (sec.cards || []).length + ' card' + ((sec.cards || []).length === 1 ? '' : 's');
+  }, 'No saved sections yet. Click + New Section to get started.');
+}
+
+function lgsPersistNow(savingText, savedText, showPreview) {
+  lgsSyncCurrent();
+  lgsRenderSectionList();
+  lgsRenderCurrent(showPreview);
+  return cmsSaveSections('/api/publish-left-generic-section', lgsStore.sections, 'lgs-status', savingText || 'Saving…', savedText || 'Saved!')
+    .then(function(ok) { if (ok) cmsMarkScreenSaved('left-generic-section'); return ok; });
+}
+
+function lgsHandleChange() {
+  if (!lgsCurrentSection()) return;
+  lgsSyncCurrent();
+  lgsRenderSectionList();
+  lgsRenderCurrent();
+  cmsMarkScreenDirty('left-generic-section');
+}
+
+function lgsBindInputs() {
+  if (lgsStore.bound) return;
+  var screen = document.getElementById('screen-left-generic-section');
+  var panel = screen && screen.querySelector('.form-panel');
+  if (!panel) return;
+  panel.addEventListener('input',  function() { lgsHandleChange(); });
+  panel.addEventListener('change', function() { lgsHandleChange(); });
+  lgsStore.bound = true;
+}
+
+function lgsSelectSection(id) {
+  if (lgsStore.activeId === id) return;
+  if (!cmsConfirmTrackedNavigation('left-generic-section', 'You have unsaved changes. Switch sections without saving?')) return;
+  lgsSyncCurrent();
+  lgsStore.activeId = id;
+  var sec = lgsCurrentSection();
+  if (!sec) return;
+  lgsFillForm(sec);
+  lgsRenderSectionList();
+  lgsRenderCurrent();
+}
+
+function lgsCreateSection(skipPersist) {
+  lgsSyncCurrent();
+  var sec = lgsDefaultSection();
+  lgsStore.sections.push(sec);
+  lgsStore.activeId = sec.id;
+  lgsFillForm(sec);
+  lgsRenderSectionList();
+  lgsRenderCurrent();
+  if (!skipPersist) cmsMarkScreenDirty('left-generic-section');
+}
+
+function lgsDeleteSection(id) {
+  if (!confirm('Delete this section?')) return;
+  lgsSyncCurrent();
+  lgsStore.sections = lgsStore.sections.filter(function(s) { return s.id !== id; });
+  if (!lgsStore.sections.length) {
+    lgsCreateSection(true);
+  } else {
+    lgsStore.activeId = lgsStore.sections[0].id;
+    lgsFillForm(lgsCurrentSection());
+    lgsRenderSectionList();
+    lgsRenderCurrent();
+  }
+  cmsMarkScreenDirty('left-generic-section');
+}
+
+function lgsOnOpen() {
+  lgsBindInputs();
+  if (lgsStore.loaded) {
+    if (!lgsStore.sections.length) lgsCreateSection(true);
+    if (!lgsStore.activeId && lgsStore.sections.length) lgsSelectSection(lgsStore.sections[0].id);
+    return;
+  }
+  fetch('/api/publish-left-generic-section')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var saved = data.sections || [];
+      lgsStore.counter = cmsMaxSectionCounter(saved, 'lgs');
+      lgsStore.sections = saved.map(function(s) {
+        return {
+          id:           s.id || ('lgs' + (++lgsStore.counter)),
+          name:         s.name         || '',
+          bg:           s.bg           || '#ffffff',
+          eyebrow:      s.eyebrow      || '',
+          eyebrowColor: s.eyebrowColor || '#204280',
+          heading:      s.heading      || '',
+          headingColor: s.headingColor || '#1a1a1a',
+          desc:         s.desc         || '',
+          descColor:    s.descColor    || '#374151',
+          cards: (s.cards || []).map(function(c) {
+            return {
+              cardBg:     c.cardBg     || '#f8f9fa',
+              cardBorder: c.cardBorder || '#e5e7eb',
+              iconBg:     c.iconBg     || '#e8edf5',
+              icon:       c.icon       || '✓',
+              iconColor:  c.iconColor  || '#204280',
+              title:      c.title      || '',
+              titleColor: c.titleColor || '#1a1a1a',
+              desc:       c.desc       || '',
+              descColor:  c.descColor  || '#374151'
+            };
+          })
+        };
+      });
+      lgsStore.loaded = true;
+      if (!lgsStore.sections.length) lgsCreateSection(true);
+      lgsStore.activeId = lgsStore.sections[0].id;
+      lgsFillForm(lgsCurrentSection());
+      lgsRenderSectionList();
+      lgsRenderCurrent();
+    })
+    .catch(function() {
+      lgsStore.loaded = true;
+      cmsSetStatus('lgs-status', 'Could not load saved sections.', 'red');
+      if (!lgsStore.sections.length) lgsCreateSection(true);
+    });
+}
+
+function lgsRemoveCard(id) {
+  var el = document.getElementById(id);
+  if (el) el.remove();
+  lgsHandleChange();
+}
+
+function lgsAddCard(data, startCollapsed, skipSync) {
+  if (!lgsCurrentSection()) lgsCreateSection(true);
+  var list = document.getElementById('lgs-cards');
+  var id   = 'lgsc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var d    = data || {};
+  var cardBg     = d.cardBg     || '#f8f9fa';
+  var cardBorder = d.cardBorder || '#e5e7eb';
+  var iconBg     = d.iconBg     || '#e8edf5';
+  var iconColor  = d.iconColor  || '#204280';
+  var titleColor = d.titleColor || '#1a1a1a';
+  var descColor  = d.descColor  || '#374151';
+  var div = document.createElement('div');
+  div.className = 'block-item lgs-card-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH(d.title || 'New Card') + '</span>'
+    + '<span class="block-type-badge">Card</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();lgsRemoveCard(\'' + id + '\')" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    + '<div class="field"><label>Card background</label><input type="color" class="lgs-card-bg" value="' + xA(cardBg) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '<div class="field"><label>Card border</label><input type="color" class="lgs-card-border" value="' + xA(cardBorder) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'
+    + '<div class="field"><label>Icon</label><input type="text" class="lgs-icon" value="' + xA(d.icon || '✓') + '" style="font-size:18px;text-align:center;" maxlength="4"></div>'
+    + '<div class="field"><label>Icon background</label><input type="color" class="lgs-icon-bg" value="' + xA(iconBg) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '<div class="field"><label>Icon colour</label><input type="color" class="lgs-icon-color" value="' + xA(iconColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '</div>'
+    + '<div class="field"><label>Title <span class="hint">(always bold)</span></label>'
+    + '<input type="text" class="lgs-card-title" value="' + xA(d.title || '') + '" placeholder="Bold title text" oninput="this.closest(\'.lgs-card-item\').querySelector(\'.block-header-label\').textContent=this.value||\'New Card\'"></div>'
+    + '<div class="field"><label>Title colour</label><input type="color" class="lgs-title-color" value="' + xA(titleColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '<div class="field"><label>Description <span class="hint">(HTML allowed — appears after title)</span></label>'
+    + '<textarea class="lgs-card-desc" rows="3" style="font-family:monospace;font-size:12px;resize:vertical;" placeholder="e.g. — including <strong>English</strong> and Mathematics">' + xH(d.desc || '') + '</textarea></div>'
+    + '<div class="field"><label>Description colour</label><input type="color" class="lgs-desc-color" value="' + xA(descColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '</div>';
+  list.appendChild(div);
+  if (!skipSync) lgsHandleChange();
+}
+
+function lgsGenerate() {
+  lgsPersistNow('Saving…', 'Saved!', true);
 }
 
 // ── Steps persisted sections ─────────────────────────────────

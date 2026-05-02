@@ -1,0 +1,7 @@
+import { createCmsValueHandler } from './_cms-blob-store.js';
+
+export default createCmsValueHandler({
+  blobFile: 'vls-left-generic-section.json',
+  key: 'sections',
+  emptyValue: []
+});

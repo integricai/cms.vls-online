@@ -1,0 +1,67 @@
+<div id="screen-left-generic-section" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="section-label" style="margin:0;">Sections</div>
+      <button class="btn-add-block" onclick="lgsCreateSection()" style="margin:0;">+ New Section</button>
+    </div>
+    <div id="lgs-section-list" class="block-list"></div>
+    <div id="lgs-status" style="font-size:12px;min-height:18px;"></div>
+
+    <div class="section-label">Section Setup</div>
+    <div class="field">
+      <label>Section name <span class="hint">(for CMS identification)</span></label>
+      <input type="text" id="lgs-name" value="Left Generic Section 1">
+    </div>
+    <div class="field">
+      <label>Section background colour</label>
+      <input type="color" id="lgs-bg" value="#ffffff" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">
+    </div>
+
+    <div class="section-label">Header</div>
+    <div class="field">
+      <label>Eyebrow text <span class="hint">(small uppercase)</span></label>
+      <input type="text" id="lgs-eyebrow" placeholder="e.g. GETTING STARTED">
+    </div>
+    <div class="field">
+      <label>Eyebrow colour</label>
+      <input type="color" id="lgs-eyebrow-color" value="#204280" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">
+    </div>
+    <div class="field">
+      <label>Heading</label>
+      <input type="text" id="lgs-heading" placeholder="e.g. ACCA Entry Requirements">
+    </div>
+    <div class="field">
+      <label>Heading colour</label>
+      <input type="color" id="lgs-heading-color" value="#1a1a1a" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="lgs-desc" rows="3" placeholder="Intro description text…"></textarea>
+    </div>
+    <div class="field">
+      <label>Description colour</label>
+      <input type="color" id="lgs-desc-color" value="#374151" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">
+    </div>
+
+    <div class="section-label">Cards</div>
+    <div id="lgs-cards" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="lgsAddCard()">+ Add card</button>
+
+    <button class="btn-gen" onclick="lgsGenerate()">Generate &amp; Save</button>
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="left-generic-section-ot-preview" onclick="switchOut('left-generic-section','preview')">Preview</div>
+      <div class="out-tab" id="left-generic-section-ot-html" onclick="switchOut('left-generic-section','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="left-generic-section-preview-wrap" class="preview-wrap"></div>
+      <div id="left-generic-section-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('left-generic-section-code',this)">Copy</button>
+        <pre id="left-generic-section-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>
