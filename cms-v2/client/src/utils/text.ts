@@ -1,0 +1,95 @@
+import type { TextData, TextValue } from '../types/cms';
+
+export const DEFAULTS = {
+  heroEyebrow:    { size: 13,  color: '#204280', weight: '600', letterSpacing: 0.1 },
+  heroH1:         { size: 44,  color: '#1a1a1a', weight: '700', letterSpacing: 0   },
+  heroH1Highlight:{ size: 44,  color: '#204280', weight: '700', letterSpacing: 0   },
+  heroH2:         { size: 20,  color: '#374151', weight: '400', letterSpacing: 0   },
+  hero:           { size: 16,  color: '#374151', weight: '400', letterSpacing: 0   },
+  heroButton:     { size: 14,  color: '#ffffff', weight: '600', letterSpacing: 0   },
+  heroButtonAlt:  { size: 14,  color: '#1a1a1a', weight: '500', letterSpacing: 0   },
+  heroTag:        { size: 13,  color: '#374151', weight: '500', letterSpacing: 0   },
+  heroStatValue:  { size: 26,  color: '#1a1a1a', weight: '700', letterSpacing: 0   },
+  heroStatLabel:  { size: 13,  color: '#6b7280', weight: '400', letterSpacing: 0   },
+  // About Us
+  aboutEyebrow:   { size: 11, color: '#204280', weight: '500', letterSpacing: 0.12 },
+  aboutTitle:     { size: 26, color: '#202124', weight: '500', letterSpacing: 0    },
+  aboutParagraph: { size: 14, color: '#2f343b', weight: '400', letterSpacing: 0    },
+  aboutCta:       { size: 14, color: '#204280', weight: '700', letterSpacing: 0    },
+  aboutCardTitle: { size: 14, color: '#222222', weight: '700', letterSpacing: 0    },
+  aboutCard:      { size: 13, color: '#2f343b', weight: '400', letterSpacing: 0    },
+  // Promotion Section
+  promoTitle:    { size: 22, color: '#164b8a', weight: '500', letterSpacing: 0 },
+  promoSubtitle: { size: 14, color: '#1f6ab4', weight: '400', letterSpacing: 0 },
+  promoCta:      { size: 14, color: '#ffffff', weight: '700', letterSpacing: 0 },
+  // Banner
+  bannerTitle:    { size: 15, color: '#ffffff', weight: '500', letterSpacing: 0 },
+  bannerSubtitle: { size: 12, color: '#ffffff', weight: '400', letterSpacing: 0 },
+  bannerCta:      { size: 13, color: '#ffffff', weight: '500', letterSpacing: 0 },
+  // Footer
+  footerTitle:         { size: 13, color: '#ffffff',  weight: '700', letterSpacing: 0.07 },
+  footerLink:          { size: 13, color: '#d6dbea',  weight: '400', letterSpacing: 0    },
+  footerContactTitle:  { size: 13, color: '#ffffff',  weight: '700', letterSpacing: 0.07 },
+  footerCopyright:     { size: 12, color: '#b5bfd6',  weight: '400', letterSpacing: 0    },
+  footerCopyrightLink: { size: 12, color: '#cbd5e1',  weight: '400', letterSpacing: 0    },
+  // Header
+  headerSiteTitle: { size: 22, color: '#204280', weight: '700', letterSpacing: 0    },
+  headerSubTitle:  { size: 12, color: '#204280', weight: '500', letterSpacing: 0.04 },
+  headerCta:       { size: 14, color: '#ffffff', weight: '500', letterSpacing: 0    },
+  headerMenu:      { size: 16, color: '#204280', weight: '500', letterSpacing: 0    },
+  // Contact Footer
+  cfLabel:     { size: 11, color: '#1a56a3', weight: '600', letterSpacing: 0.12 },
+  cfCompany:   { size: 22, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
+  cfAddress:   { size: 14, color: '#6b7280', weight: '400', letterSpacing: 0    },
+  cfItemTitle: { size: 14, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
+  cfItemValue: { size: 13, color: '#1a56a3', weight: '400', letterSpacing: 0    },
+  // Course Hero Left
+  chHeading:   { size: 36, color: '#ffffff', weight: '700', letterSpacing: 0 },
+  chDesc:      { size: 15, color: '#94a3b8', weight: '400', letterSpacing: 0 },
+  // Course Hero Right
+  chrItemTitle: { size: 14, color: '#1a56a3', weight: '600', letterSpacing: 0 },
+  chrItemDesc:  { size: 13, color: '#6b7280', weight: '400', letterSpacing: 0 },
+  // Course Description
+  cdescIntroBold:   { size: 16, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
+  cdescDesc:        { size: 16, color: '#1a1a1a', weight: '400', letterSpacing: 0 },
+  cdescHeading:     { size: 18, color: '#204280', weight: '700', letterSpacing: 0 },
+  cdescItemHeading: { size: 16, color: '#204280', weight: '700', letterSpacing: 0 },
+  cdescBullet:      { size: 15, color: '#1a1a1a', weight: '400', letterSpacing: 0 },
+  cdescNote:        { size: 13, color: '#262a32', weight: '400', letterSpacing: 0 },
+  // Course Tabs
+  ctabsHeading:   { size: 16, color: '#204280', weight: '700', letterSpacing: 0 },
+  ctabsPara:      { size: 15, color: '#374151', weight: '400', letterSpacing: 0 },
+  ctabsBullet:    { size: 15, color: '#374151', weight: '400', letterSpacing: 0 },
+  ctabsCardTitle: { size: 14, color: '#1a1a1a', weight: '600', letterSpacing: 0 },
+  ctabsCardDesc:  { size: 13, color: '#6b7280', weight: '400', letterSpacing: 0 },
+  ctabsStepTitle: { size: 15, color: '#204280', weight: '600', letterSpacing: 0 },
+  ctabsStepDesc:  { size: 14, color: '#374151', weight: '400', letterSpacing: 0 },
+  // Hero Section V2
+  h2Eyebrow:   { size: 11, color: '#4a90d9', weight: '600', letterSpacing: 0.12 },
+  h2Heading:   { size: 44, color: '#ffffff', weight: '700', letterSpacing: 0    },
+  h2Highlight: { size: 44, color: '#4a90d9', weight: '700', letterSpacing: 0    },
+  h2Body:      { size: 15, color: '#94a3b8', weight: '400', letterSpacing: 0    },
+} as const;
+
+export type DefaultKey = keyof typeof DEFAULTS;
+
+export function normalize(value: TextValue | undefined, key: DefaultKey): TextData {
+  const d = DEFAULTS[key];
+  if (!value) return { text: '', ...d };
+  if (typeof value === 'string') return { text: value, ...d };
+  return {
+    text: value.text ?? '',
+    size: value.size ?? d.size,
+    color: value.color ?? d.color,
+    weight: value.weight ?? d.weight,
+    letterSpacing: value.letterSpacing ?? d.letterSpacing,
+  };
+}
+
+export function textStyle(td: TextData): string {
+  return `font-size:${td.size}px;font-weight:${td.weight};color:${td.color};letter-spacing:${td.letterSpacing}em;`;
+}
+
+export function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}

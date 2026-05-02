@@ -1,0 +1,70 @@
+// ── Auth ──────────────────────────────────────────────────────────
+
+export interface JwtPayload {
+  userId: number;
+  email: string;
+  role: 'admin' | 'editor' | 'viewer';
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  token: string;
+  user: PublicUser;
+}
+
+export interface PasswordResetRequest {
+  email: string;
+}
+
+export interface PasswordResetConfirm {
+  token: string;
+  newPassword: string;
+}
+
+// ── Users ─────────────────────────────────────────────────────────
+
+export interface User {
+  id: number;
+  email: string;
+  passwordHash: string;
+  role: 'admin' | 'editor' | 'viewer';
+  resetToken: string | null;
+  resetTokenExpiresAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type PublicUser = Pick<User, 'id' | 'email' | 'role' | 'createdAt'>;
+
+// ── Snippets ──────────────────────────────────────────────────────
+
+export interface Snippet {
+  id: number;
+  key: string;
+  title: string;
+  html: string;
+  meta: Record<string, unknown>;
+  createdBy: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type SnippetInput = Pick<Snippet, 'key' | 'title' | 'html' | 'meta'>;
+
+// ── API responses ─────────────────────────────────────────────────
+
+export interface ApiSuccess<T = unknown> {
+  ok: true;
+  data: T;
+}
+
+export interface ApiError {
+  ok: false;
+  error: string;
+}
+
+export type ApiResponse<T = unknown> = ApiSuccess<T> | ApiError;
