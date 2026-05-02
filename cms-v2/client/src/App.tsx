@@ -14,6 +14,11 @@ import CourseHeroRight from './screens/CourseHeroRight';
 import CourseDesc from './screens/CourseDesc';
 import CourseTabs from './screens/CourseTabs';
 import HeroSectionV2 from './screens/HeroSectionV2';
+import ProgramCards from './screens/ProgramCards';
+import ProgramCardsV2 from './screens/ProgramCardsV2';
+import FeatureCards from './screens/FeatureCards';
+import FeatureCardsV2 from './screens/FeatureCardsV2';
+import FeatureCardsV3 from './screens/FeatureCardsV3';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   return getToken() ? <>{children}</> : <Navigate to="/login" replace />;
@@ -44,6 +49,11 @@ export default function App() {
           <Route path="/course-desc"       element={<CourseDesc />} />
           <Route path="/course-tabs"       element={<CourseTabs />} />
           <Route path="/hero-section-v2"   element={<HeroSectionV2 />} />
+          <Route path="/program-cards"    element={<ProgramCards />} />
+          <Route path="/program-cards-v2" element={<ProgramCardsV2 />} />
+          <Route path="/feature-cards"    element={<FeatureCards />} />
+          <Route path="/feature-cards-v2" element={<FeatureCardsV2 />} />
+          <Route path="/feature-cards-v3" element={<FeatureCardsV3 />} />
         </Route>
       </Routes>
     </BrowserRouter>

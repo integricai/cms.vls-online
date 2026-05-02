@@ -64,6 +64,29 @@ export const DEFAULTS = {
   ctabsCardDesc:  { size: 13, color: '#6b7280', weight: '400', letterSpacing: 0 },
   ctabsStepTitle: { size: 15, color: '#204280', weight: '600', letterSpacing: 0 },
   ctabsStepDesc:  { size: 14, color: '#374151', weight: '400', letterSpacing: 0 },
+  // Feature Cards
+  featureSection:      { size: 15, color: '#374151', weight: '400', letterSpacing: 0 },
+  featureEyebrow:      { size: 11, color: '#204280', weight: '500', letterSpacing: 0.1 },
+  featureTitle:        { size: 32, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
+  featureCardEyebrow:  { size: 12, color: '#ffffff', weight: '500', letterSpacing: 0.04 },
+  featureCardTitle:    { size: 16, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
+  featureCardSubtitle: { size: 13, color: '#6b7280', weight: '400', letterSpacing: 0 },
+  featureCardCta:      { size: 13, color: '#204280', weight: '700', letterSpacing: 0 },
+  // Feature Card v2
+  fc2Title:            { size: 18, color: '#204280', weight: '500', letterSpacing: 0.06 },
+  fc2Desc:             { size: 14, color: '#4a5568', weight: '400', letterSpacing: 0 },
+  fc2Cta:              { size: 12, color: '#204280', weight: '700', letterSpacing: 0.1 },
+  // Program Cards V2
+  pcv2Eyebrow:         { size: 12, color: '#155e9f', weight: '700', letterSpacing: 0.08 },
+  pcv2Title:           { size: 18, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
+  pcv2Desc:            { size: 14, color: '#3f3f46', weight: '400', letterSpacing: 0 },
+  pcv2Meta:            { size: 12, color: '#52525b', weight: '400', letterSpacing: 0 },
+  pcv2Chip:            { size: 11, color: '#3f3f46', weight: '600', letterSpacing: 0 },
+  pcv2Cta:             { size: 13, color: '#ffffff', weight: '700', letterSpacing: 0 },
+  // Program Cards
+  programCardTitle:    { size: 15, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
+  programDesc:         { size: 13, color: '#4b5563', weight: '400', letterSpacing: 0 },
+  programCta:          { size: 13, color: '#ffffff', weight: '700', letterSpacing: 0 },
   // Hero Section V2
   h2Eyebrow:   { size: 11, color: '#4a90d9', weight: '600', letterSpacing: 0.12 },
   h2Heading:   { size: 44, color: '#ffffff', weight: '700', letterSpacing: 0    },

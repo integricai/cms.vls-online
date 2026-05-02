@@ -283,6 +283,38 @@ export interface CourseTabsState { tabs: CourseTab[]; }
 export interface CourseTabsComponent { id: string; name: string; data: CourseTabsState; }
 export interface CourseTabsContent { components: CourseTabsComponent[]; }
 
+// ── Feature Cards ─────────────────────────────────────────────────────────────
+export interface FcCard { color: string; eyebrow: TextValue; title: TextValue; subtitle: TextValue; ctaText: TextValue; ctaUrl: string; }
+export interface FcState { padLeft: number; padRight: number; eyebrow: TextValue; title: TextValue; desc: TextValue; cards: FcCard[]; }
+export interface FcComponent { id: string; name: string; data: FcState; }
+export interface FcContent { components: FcComponent[]; }
+
+// ── Feature Card v2 ───────────────────────────────────────────────────────────
+export interface Fc2Card { lineColor: string; title: TextValue; desc: TextValue; ctaText: TextValue; ctaUrl: string; }
+export interface Fc2State { bg: string; sepColor: string; padTop: number; padBottom: number; padLeft: number; padRight: number; cols: number; cards: Fc2Card[]; }
+export interface Fc2Component { id: string; name: string; data: Fc2State; }
+export interface Fc2Content { components: Fc2Component[]; }
+
+// ── Feature Card v3 ───────────────────────────────────────────────────────────
+export interface Fc3Tag { code: string; name: string; }
+export interface Fc3Card { headerBg: string; number: string; title: string; subtitle: string; tags: Fc3Tag[]; }
+export interface Fc3State { bg: string; padTop: number; padBottom: number; padLeft: number; padRight: number; cols: number; gap: number; eyebrow: string; eyebrowColor: string; headingText: string; headingColor: string; descText: string; descColor: string; cards: Fc3Card[]; }
+export interface Fc3Component { id: string; name: string; data: Fc3State; }
+export interface Fc3Content { components: Fc3Component[]; }
+
+// ── Program Cards V2 ──────────────────────────────────────────────────────────
+export interface Pcv2Card { id: string; imageUrl: string; imageAlt: string; accent: string; ctaBg: string; tagBg: string; cardBg: string; eyebrow: TextValue; title: TextValue; desc: TextValue; chips: string; meta: TextValue; cta: TextValue; url: string; }
+export interface Pcv2State { bg: string; maxWidth: number; gap: number; cards: Pcv2Card[]; }
+export interface Pcv2Component { id: string; name: string; data: Pcv2State; }
+export interface Pcv2Content { components: Pcv2Component[]; }
+
+// ── Program Cards ─────────────────────────────────────────────────────────────
+export interface ProgramCard { id: string; title: TextValue; desc: TextValue; url: string; cta: TextValue; cardBg: string; badge: string; rating: string; hours: string; }
+export interface ProgramTopic { id: string; title: TextValue; topicColor: string; badgeBg: string; badgeOpacity: number; cards: ProgramCard[]; }
+export interface ProgramsState { topics: ProgramTopic[]; }
+export interface ProgramsComponent { id: string; name: string; data: ProgramsState; }
+export interface ProgramsContent { components: ProgramsComponent[]; }
+
 // Hero Section V2
 export interface HeroV2Cta { text: string; url: string; scroll: string; style: 'solid' | 'outlined'; bg: string; tc: string; bc: string; }
 export interface HeroV2Stat { value: string; label: string; }

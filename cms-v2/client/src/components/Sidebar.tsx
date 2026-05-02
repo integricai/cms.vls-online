@@ -34,6 +34,16 @@ const NAV: NavEntry[] = [
       { to: '/hero-section-v2',  label: 'Hero Section V2' },
     ],
   },
+  {
+    group: 'Cards',
+    children: [
+      { to: '/program-cards',    label: 'Program Cards' },
+      { to: '/program-cards-v2', label: 'Program Cards v2' },
+      { to: '/feature-cards',    label: 'Feature Cards' },
+      { to: '/feature-cards-v2', label: 'Feature Card v2' },
+      { to: '/feature-cards-v3', label: 'Feature Card v3' },
+    ],
+  },
 ];
 
 interface Props {
@@ -42,7 +52,7 @@ interface Props {
 }
 
 export default function Sidebar({ isOpen, onClose }: Props) {
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ 'Global': true, 'Home Page': true, 'Course Page': true });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ 'Global': true, 'Home Page': true, 'Course Page': true, 'Cards': true });
 
   function toggleGroup(name: string) {
     setOpenGroups(prev => ({ ...prev, [name]: !prev[name] }));
