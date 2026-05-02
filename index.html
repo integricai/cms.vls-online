@@ -15345,17 +15345,20 @@ function ctabsSaveActiveBlocks() {
         });
       });
     } else if (blk.type === 'support-cards') {
-      blk.data.cols = parseInt((el.querySelector('.ctblk-cols') || {}).value || '2', 10) || 2;
-      blk.data.cards = [];
-      el.querySelectorAll('.ctblk-support-card').forEach(function(card) {
-        blk.data.cards.push({
-          icon:     (card.querySelector('.ctblk-icon')      || {}).value || '',
-          subtitle: (card.querySelector('.ctblk-subtitle')  || {}).value || '',
-          title:    cmsReadTextField(card.querySelector('.ctblk-card-title'), CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle),
-          desc:     cmsReadParagraphField(card.querySelector('.ctblk-card-desc'), CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc),
-          cta:      (card.querySelector('.ctblk-cta') || {}).value || '',
-          url:      (card.querySelector('.ctblk-url') || {}).value || ''
+      blk.data.rows = [];
+      el.querySelectorAll('.ctblk-support-row').forEach(function(row) {
+        var rowData = { cols: parseInt((row.querySelector('.ctblk-row-cols') || {}).value || '2', 10) || 2, cards: [] };
+        row.querySelectorAll('.ctblk-support-card').forEach(function(card) {
+          rowData.cards.push({
+            icon:     (card.querySelector('.ctblk-icon')      || {}).value || '',
+            subtitle: (card.querySelector('.ctblk-subtitle')  || {}).value || '',
+            title:    cmsReadTextField(card.querySelector('.ctblk-card-title'), CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle),
+            desc:     cmsReadParagraphField(card.querySelector('.ctblk-card-desc'), CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc),
+            cta:      (card.querySelector('.ctblk-cta') || {}).value || '',
+            url:      (card.querySelector('.ctblk-url') || {}).value || ''
+          });
         });
+        blk.data.rows.push(rowData);
       });
     } else if (blk.type === 'more-cards') {
       blk.data.cards = [];
@@ -15524,11 +15527,8 @@ function ctabsRenderBlock(blk, pf) {
              + '<button class="btn-add-block" style="margin-top:6px;" onclick="ctabsAddStep(\'' + sListId + '\')">+ Add step</button>';
   } else if (blk.type === 'support-cards') {
     var scListId = 'ctsclist-' + blk.id;
-    bodyHtml = '<div class="field"><label>Columns per row</label>'
-             + '<select class="ctblk-cols"><option value="2"' + (pf.cols == 1 ? '' : ' selected') + '>2 columns</option><option value="1"' + (pf.cols == 1 ? ' selected' : '') + '>1 column</option></select>'
-             + '</div>'
-             + '<div id="' + scListId + '" class="block-list"></div>'
-             + '<button class="btn-add-block" style="margin-top:6px;" onclick="ctabsAddSupportCard(\'' + scListId + '\')">+ Add card</button>';
+    bodyHtml = '<div id="' + scListId + '" class="block-list" style="gap:10px;"></div>'
+             + '<button class="btn-add-block" style="margin-top:6px;" onclick="ctabsAddSupportRow(\'' + scListId + '\')">+ Add row</button>';
   } else if (blk.type === 'more-cards') {
     var mcListId = 'ctmclist-' + blk.id;
     bodyHtml = '<div id="' + mcListId + '" class="block-list"></div>'
@@ -15566,8 +15566,16 @@ function ctabsRenderBlock(blk, pf) {
   if (blk.type === 'steps' && pf.steps) {
     pf.steps.forEach(function(s) { ctabsAddStep('ctslist-' + blk.id, s, true); });
   }
-  if (blk.type === 'support-cards' && pf.cards) {
-    pf.cards.forEach(function(c) { ctabsAddSupportCard('ctsclist-' + blk.id, c, true); });
+  if (blk.type === 'support-cards') {
+    var _scRows = pf.rows;
+    if (!_scRows && pf.cards && pf.cards.length) {
+      _scRows = [];
+      for (var _sci = 0; _sci < pf.cards.length; _sci += 2) {
+        var _rc = pf.cards.slice(_sci, _sci + 2);
+        _scRows.push({ cols: _rc.length, cards: _rc });
+      }
+    }
+    if (_scRows) _scRows.forEach(function(row) { ctabsAddSupportRow('ctsclist-' + blk.id, row, true); });
   }
   if (blk.type === 'more-cards' && pf.cards) {
     pf.cards.forEach(function(c) { ctabsAddMoreCard('ctmclist-' + blk.id, c, true); });
@@ -15659,6 +15667,94 @@ function ctabsAddSupportCard(listId, data, skipDirty) {
   if (!skipDirty) cmpMarkDirty('course-tabs');
 }
 
+function ctabsAddSupportRow(listId, data, skipDirty) {
+  var list = document.getElementById(listId);
+  if (!list) return;
+  var d = data || {};
+  var id = ctabsMakeId();
+  var cols = d.cols || 2;
+  var cardsId = 'ctsrc-' + id;
+  var div = document.createElement('div');
+  div.className = 'ctblk-support-row';
+  div.id = 'ctsr-' + id;
+  div.style.cssText = 'border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--bg-2,#f9fafb);';
+  div.innerHTML =
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+    + '<span style="font-size:12px;font-weight:600;color:var(--muted);">Cards in this row:</span>'
+    + '<select class="ctblk-row-cols" style="font-size:12px;padding:3px 8px;border:1px solid var(--border);border-radius:4px;" onchange="ctabsUpdateRowCols(\'' + id + '\')">'
+    + '<option value="2"' + (cols == 2 ? ' selected' : '') + '>2</option>'
+    + '<option value="1"' + (cols == 1 ? ' selected' : '') + '>1</option>'
+    + '</select>'
+    + '<button class="btn-sm danger" style="margin-left:auto;" onclick="ctabsRemoveSubItem(\'ctsr-' + id + '\')">Remove row</button>'
+    + '</div>'
+    + '<div id="' + cardsId + '" style="display:grid;gap:8px;"></div>'
+    + '<button class="btn-add-block" id="ctsrab-' + id + '" style="margin-top:6px;display:none;" onclick="ctabsAddSupportCardToRow(\'' + id + '\')">+ Add card</button>';
+  list.appendChild(div);
+  if (d.cards && d.cards.length) {
+    d.cards.forEach(function(c) { ctabsAddSupportCardToRow(id, c, true); });
+  } else if (!skipDirty) {
+    ctabsAddSupportCardToRow(id, {}, true);
+  }
+  ctabsUpdateRowCols(id, true);
+  if (!skipDirty) cmpMarkDirty('course-tabs');
+}
+
+function ctabsAddSupportCardToRow(rowId, data, skipDirty) {
+  var rowEl = document.getElementById('ctsr-' + rowId);
+  if (!rowEl) return;
+  var colsEl = rowEl.querySelector('.ctblk-row-cols');
+  var cols = colsEl ? parseInt(colsEl.value, 10) : 2;
+  var container = document.getElementById('ctsrc-' + rowId);
+  if (!container) return;
+  if (container.querySelectorAll('.ctblk-support-card').length >= cols) return;
+  var d = data || {};
+  var id = ctabsMakeId();
+  var div = document.createElement('div');
+  div.className = 'more-card ctblk-support-card';
+  div.id = 'ctsc-' + id;
+  div.innerHTML =
+    '<span class="more-card-label">Card</span>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<div class="field" style="width:70px;flex-shrink:0;"><label>Icon</label><input type="text" class="ctblk-icon" value="' + xA(d.icon || '🎓') + '" style="font-size:18px;text-align:center;"></div>'
+    + '<div class="field" style="flex:1;"><label>Subtitle <span class="hint">(italic)</span></label><input type="text" class="ctblk-subtitle" value="' + xA(d.subtitle || '') + '" placeholder="e.g. Direct · Fast · Responsive"></div>'
+    + '</div>'
+    + cmsTextFieldHtml('Title', 'ctblk-card-title', d.title, { multiline: false, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle, placeholder: 'Card title' })
+    + cmsParagraphFieldHtml('Description', 'ctblk-card-desc', d.desc, { rows: 2, defaults: CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc })
+    + '<div style="display:flex;gap:8px;">'
+    + '<div class="field" style="flex:1;"><label>CTA button text</label><input type="text" class="ctblk-cta" value="' + xA(d.cta || '') + '" placeholder="Join →"></div>'
+    + '<div class="field" style="flex:1;"><label>CTA URL</label><input type="text" class="ctblk-url" value="' + xA(d.url || '#') + '"></div>'
+    + '</div>'
+    + '<div class="block-actions"><button class="btn-sm danger" onclick="ctabsRemoveSubItemAndUpdateRow(\'ctsc-' + id + '\',\'' + rowId + '\')">Remove</button></div>';
+  container.appendChild(div);
+  ctabsUpdateRowCols(rowId, true);
+  if (!skipDirty) cmpMarkDirty('course-tabs');
+}
+
+function ctabsRemoveSubItemAndUpdateRow(cardId, rowId) {
+  var el = document.getElementById(cardId);
+  if (el) el.remove();
+  ctabsUpdateRowCols(rowId, true);
+  cmpMarkDirty('course-tabs');
+}
+
+function ctabsUpdateRowCols(rowId, skipDirty) {
+  var rowEl = document.getElementById('ctsr-' + rowId);
+  if (!rowEl) return;
+  var colsEl = rowEl.querySelector('.ctblk-row-cols');
+  var cols = colsEl ? parseInt(colsEl.value, 10) : 2;
+  var container = document.getElementById('ctsrc-' + rowId);
+  var addBtn = document.getElementById('ctsrab-' + rowId);
+  if (!container) return;
+  container.style.gridTemplateColumns = cols === 1 ? '1fr' : '1fr 1fr';
+  var cards = container.querySelectorAll('.ctblk-support-card');
+  if (cols === 1 && cards.length > 1) {
+    for (var i = 1; i < cards.length; i++) cards[i].remove();
+  }
+  var cardCount = container.querySelectorAll('.ctblk-support-card').length;
+  if (addBtn) addBtn.style.display = cardCount < cols ? '' : 'none';
+  if (!skipDirty) cmpMarkDirty('course-tabs');
+}
+
 function ctabsAddMoreCard(listId, data, skipDirty) {
   var list = document.getElementById(listId);
   if (!list) return;
@@ -15734,11 +15830,15 @@ function ctabsOnOpen() {
           heading: "We're with you every step of the way",
           desc:    'Our support system is designed to keep you on track and motivated throughout your studies.'
         }},
-        { id: ctabsMakeId(), type: 'support-cards', prefill: { cards: [
-          { icon: '📅', subtitle: 'Live online sessions', title: 'Live online sessions', desc: 'Weekly and pre-exam live sessions for answering queries and extra practice. All sessions are recorded.', cta: '', url: '' },
-          { icon: '🤝', subtitle: 'One-on-one tutor support', title: 'Tutor support', desc: 'One-on-one meetings available for career counselling, exam booking, and study guidance.', cta: '', url: '' },
-          { icon: '💬', subtitle: 'Student community', title: 'WhatsApp community', desc: 'Join an active community of students worldwide for peer support and study motivation.', cta: '', url: '' },
-          { icon: '📋', subtitle: 'Tailored to your exam date', title: 'Study planning', desc: 'Receive a customized study plan tailored to your exam date and available study hours.', cta: '', url: '' }
+        { id: ctabsMakeId(), type: 'support-cards', prefill: { rows: [
+          { cols: 2, cards: [
+            { icon: '📅', subtitle: 'Live online sessions', title: 'Live online sessions', desc: 'Weekly and pre-exam live sessions for answering queries and extra practice. All sessions are recorded.', cta: '', url: '' },
+            { icon: '🤝', subtitle: 'One-on-one tutor support', title: 'Tutor support', desc: 'One-on-one meetings available for career counselling, exam booking, and study guidance.', cta: '', url: '' }
+          ]},
+          { cols: 2, cards: [
+            { icon: '💬', subtitle: 'Student community', title: 'WhatsApp community', desc: 'Join an active community of students worldwide for peer support and study motivation.', cta: '', url: '' },
+            { icon: '📋', subtitle: 'Tailored to your exam date', title: 'Study planning', desc: 'Receive a customized study plan tailored to your exam date and available study hours.', cta: '', url: '' }
+          ]}
         ]}}
       ]
     },
@@ -15931,11 +16031,19 @@ function generateCourseTabs() {
         }
 
       } else if (blk.type === 'support-cards') {
-        var scards = d.cards || [];
-        if (scards.length) {
-          var scols = d.cols === 1 ? 'grid1' : 'grid2';
-          out += '  <div class="' + uid + '-' + scols + '">\n';
-          scards.forEach(function(card) {
+        var srows = d.rows || [];
+        if (!srows.length && d.cards && d.cards.length) {
+          for (var _sri = 0; _sri < d.cards.length; _sri += 2) {
+            var _rc2 = d.cards.slice(_sri, _sri + 2);
+            srows.push({ cols: _rc2.length, cards: _rc2 });
+          }
+        }
+        srows.forEach(function(row) {
+          var rowCards = row.cards || [];
+          if (!rowCards.length) return;
+          var sgrid = row.cols === 1 ? 'grid1' : 'grid2';
+          out += '  <div class="' + uid + '-' + sgrid + '">\n';
+          rowCards.forEach(function(card) {
             var ct = cmsNormalizeTextData(card.title, CMS_PARAGRAPH_DEFAULTS.ctabsCardTitle);
             var cd = cmsNormalizeParagraphData(card.desc, CMS_PARAGRAPH_DEFAULTS.ctabsCardDesc);
             out += '    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;display:flex;flex-direction:column;">\n';
@@ -15947,7 +16055,7 @@ function generateCourseTabs() {
             out += '    </div>\n';
           });
           out += '  </div>\n';
-        }
+        });
 
       } else if (blk.type === 'more-cards') {
         var mcards = d.cards || [];
