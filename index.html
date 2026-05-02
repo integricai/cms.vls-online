@@ -12939,9 +12939,9 @@ function buildRpsHtml(data) {
           + '.' + uid + '-cards{display:flex;flex-direction:column;gap:12px;}</style>\n';
 
   var html = '<div class="' + uid + '">\n';
-  if (data.eyebrow) html += '  <div style="display:block;font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:' + eyebrowColor + ';margin:0 0 16px 0;padding:0;">' + xH(data.eyebrow) + '</div>\n';
-  if (data.heading) html += '  <div style="display:block;font-family:\'Poppins\',sans-serif;font-size:26px;font-weight:700;color:' + headingColor + ';margin:0 0 12px 0;padding:0;line-height:1.2;">' + xH(data.heading) + '</div>\n';
-  if (data.desc)    html += '  <div style="display:block;font-family:\'Poppins\',sans-serif;font-size:15px;color:' + descColor + ';margin:0 0 20px 0;padding:0;line-height:1.6;">' + xH(data.desc) + '</div>\n';
+  if (data.eyebrow) html += '  <div style="display:block;font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:' + eyebrowColor + ';margin:0 0 16px 0;padding:20px 0 0 20px;">' + xH(data.eyebrow) + '</div>\n';
+  if (data.heading) html += '  <div style="display:block;font-family:\'Poppins\',sans-serif;font-size:26px;font-weight:700;color:' + headingColor + ';margin:0 0 12px 0;padding:0 0 0 20px;line-height:1.2;">' + xH(data.heading) + '</div>\n';
+  if (data.desc)    html += '  <div style="display:block;font-family:\'Poppins\',sans-serif;font-size:15px;color:' + descColor + ';margin:0 0 20px 0;padding:0 0 0 20px;line-height:1.6;">' + xH(data.desc) + '</div>\n';
   if (cardsHtml)    html += '  <div class="' + uid + '-cards">\n' + cardsHtml + '\n  </div>\n';
   html += '</div>';
 
