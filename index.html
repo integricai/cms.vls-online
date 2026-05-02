@@ -350,6 +350,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
       <div class="nav-dd-item" id="nav-page-hero-v2" onclick="switchScreen('page-hero-v2')">Hero Banner V2</div>
       <div class="nav-dd-item" id="nav-article-groups" onclick="switchScreen('article-groups')">Article Groups</div>
       <div class="nav-dd-item" id="nav-left-generic-section" onclick="switchScreen('left-generic-section')">Left Generic Section</div>
+      <div class="nav-dd-item" id="nav-right-pane-section" onclick="switchScreen('right-pane-section')">Right Pane Section</div>
     </div>
   </div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;padding:0 8px" onclick="globalSignOut()">Sign out</div>
@@ -438,6 +439,7 @@ body{font-family:'Poppins',sans-serif;font-size:14px;background:#f4f6f9;color:#1
           <button class="home-tile-link" onclick="switchScreen('page-hero-v2')">Hero Banner V2</button>
           <button class="home-tile-link" onclick="switchScreen('article-groups')">Article Groups</button>
           <button class="home-tile-link" onclick="switchScreen('left-generic-section')">Left Generic Section</button>
+          <button class="home-tile-link" onclick="switchScreen('right-pane-section')">Right Pane Section</button>
         </div>
       </div>
       <div class="home-tile">
@@ -1093,7 +1095,7 @@ var _SHARED_SCREENS = ['faq', 'events', 'programs', 'program-cards-v2', 'feature
 var _COMMON_SECTION_SCREENS = ['steps-section', 'dcs', 'dcs2', 'dcs3', 'reach', 'policy'];
 var _FORM_SCREENS   = ['form', 'report-issue', 'report-thank-you'];
 var _COURSE_SCREENS       = ['course-hero', 'course-hero-right', 'course-desc', 'course-tabs'];
-var _PAGE_BUILDER_SCREENS = ['page-hero-banner', 'page-left-hero', 'page-hero-v2', 'article-groups', 'left-generic-section'];
+var _PAGE_BUILDER_SCREENS = ['page-hero-banner', 'page-left-hero', 'page-hero-v2', 'article-groups', 'left-generic-section', 'right-pane-section'];
 
 var _screenFiles = {
   hero:          '/screens/homepage-hero.html',
@@ -1133,6 +1135,7 @@ var _screenFiles = {
   'page-hero-v2':      '/screens/page-hero-v2.html',
   'article-groups':         '/screens/article-groups.html',
   'left-generic-section':   '/screens/left-generic-section.html',
+  'right-pane-section':     '/screens/right-pane-section.html',
 };
 var _loadedScreens = {};
 
@@ -1235,6 +1238,7 @@ async function switchScreen(name) {
   if (name === 'page-hero-v2'      && !_loadedScreens._phv2Init) { _loadedScreens._phv2Init = true; phv2OnOpen(); phv2CmpInit(); cmpAttachDirty('page-hero-v2'); }
   if (name === 'article-groups'    && !_loadedScreens._agInit)   { _loadedScreens._agInit   = true; articleGroupsOnOpen(); }
   if (name === 'left-generic-section' && !_loadedScreens._lgsInit) { _loadedScreens._lgsInit = true; lgsOnOpen(); }
+  if (name === 'right-pane-section'   && !_loadedScreens._rpsInit) { _loadedScreens._rpsInit = true; rpsOnOpen(); }
   if (name === 'header')  headerOnOpen();
 }
 
@@ -12016,7 +12020,7 @@ function cmsSetStatus(id, text, color, clearMs) {
   }
 }
 
-var CMS_TRACKED_SCREENS = ['feature-cards', 'feature-cards-2', 'feature-cards-3', 'steps-section', 'about-us', 'hero', 'promotion-section', 'article-groups', 'program-cards-v2', 'left-generic-section'];
+var CMS_TRACKED_SCREENS = ['feature-cards', 'feature-cards-2', 'feature-cards-3', 'steps-section', 'about-us', 'hero', 'promotion-section', 'article-groups', 'program-cards-v2', 'left-generic-section', 'right-pane-section'];
 var cmsDirtyState = {};
 
 function cmsCurrentScreenName() {
@@ -12035,7 +12039,8 @@ function cmsDirtyStatusId(screenName) {
     'about-us': 'au-status',
     'hero': 'hero-status',
     'promotion-section': 'promotion-status',
-    'left-generic-section': 'lgs-status'
+    'left-generic-section': 'lgs-status',
+    'right-pane-section':   'rps-status'
   }[screenName] || '';
 }
 
@@ -12785,6 +12790,370 @@ function lgsAddCard(data, startCollapsed, skipSync) {
 
 function lgsGenerate() {
   lgsPersistNow('Saving…', 'Saved!', true);
+}
+
+// ── Right Pane Section ──────────────────────────────────────────
+
+var rpsStore = { sections: [], activeId: '', counter: 0, loaded: false, bound: false };
+
+function rpsDefaultSection() {
+  var id = 'rps' + (++rpsStore.counter);
+  return {
+    id: id,
+    name: 'Right Pane Section ' + rpsStore.counter,
+    bg: '#0f1e3c',
+    eyebrow: 'HOW LONG DOES ACCA TAKE?',
+    eyebrowColor: '#3b82f6',
+    heading: '',
+    headingColor: '#ffffff',
+    desc: '',
+    descColor: '#94a3b8',
+    cards: [
+      {
+        cardBg: '#1a2d4a', cardBorder: '#1e3a5f',
+        icon: '', iconBg: '#1e3a5f', iconColor: '#f59e0b',
+        title: 'Completion time varies by student', titleColor: '#ffffff',
+        desc: 'Depends on prior qualifications, exemptions, study pace, and work commitments.', descColor: '#94a3b8',
+        statValue: '2–4', statLabel: 'Years to complete for most students',
+        statBg: '#1e3a5f', statValueColor: '#ffffff', statLabelColor: '#94a3b8'
+      },
+      {
+        cardBg: '#1a2d4a', cardBorder: '#1e3a5f',
+        icon: '⚡', iconBg: '#1e3a5f', iconColor: '#f59e0b',
+        title: 'Exemptions available', titleColor: '#ffffff',
+        desc: 'Students with relevant degrees or prior accounting qualifications may receive exemptions.', descColor: '#94a3b8',
+        statValue: '', statLabel: '',
+        statBg: '#1e3a5f', statValueColor: '#ffffff', statLabelColor: '#94a3b8'
+      }
+    ]
+  };
+}
+
+function rpsCurrentSection() {
+  return rpsStore.sections.find(function(s) { return s.id === rpsStore.activeId; }) || null;
+}
+
+function rpsReadFormData() {
+  return {
+    name:         (document.getElementById('rps-name') || {}).value || '',
+    bg:           (document.getElementById('rps-bg') || {}).value || '#0f1e3c',
+    eyebrow:      (document.getElementById('rps-eyebrow') || {}).value || '',
+    eyebrowColor: (document.getElementById('rps-eyebrow-color') || {}).value || '#3b82f6',
+    heading:      (document.getElementById('rps-heading') || {}).value || '',
+    headingColor: (document.getElementById('rps-heading-color') || {}).value || '#ffffff',
+    desc:         (document.getElementById('rps-desc') || {}).value || '',
+    descColor:    (document.getElementById('rps-desc-color') || {}).value || '#94a3b8',
+    cards: Array.prototype.slice.call(document.querySelectorAll('#rps-cards .rps-card-item')).map(function(item) {
+      return {
+        cardBg:        (item.querySelector('.rps-card-bg')        || {}).value || '#1a2d4a',
+        cardBorder:    (item.querySelector('.rps-card-border')    || {}).value || '#1e3a5f',
+        icon:          (item.querySelector('.rps-icon')           || {}).value || '',
+        iconBg:        (item.querySelector('.rps-icon-bg')        || {}).value || '#1e3a5f',
+        iconColor:     (item.querySelector('.rps-icon-color')     || {}).value || '#f59e0b',
+        title:         (item.querySelector('.rps-card-title')     || {}).value || '',
+        titleColor:    (item.querySelector('.rps-title-color')    || {}).value || '#ffffff',
+        desc:          (item.querySelector('.rps-card-desc')      || {}).value || '',
+        descColor:     (item.querySelector('.rps-desc-color')     || {}).value || '#94a3b8',
+        statValue:     (item.querySelector('.rps-stat-value')     || {}).value || '',
+        statLabel:     (item.querySelector('.rps-stat-label')     || {}).value || '',
+        statBg:        (item.querySelector('.rps-stat-bg')        || {}).value || '#1e3a5f',
+        statValueColor:(item.querySelector('.rps-stat-val-color') || {}).value || '#ffffff',
+        statLabelColor:(item.querySelector('.rps-stat-lbl-color') || {}).value || '#94a3b8'
+      };
+    })
+  };
+}
+
+function rpsFillForm(sec) {
+  document.getElementById('rps-name').value          = sec.name || '';
+  document.getElementById('rps-bg').value            = sec.bg || '#0f1e3c';
+  document.getElementById('rps-eyebrow').value       = sec.eyebrow || '';
+  document.getElementById('rps-eyebrow-color').value = sec.eyebrowColor || '#3b82f6';
+  document.getElementById('rps-heading').value       = sec.heading || '';
+  document.getElementById('rps-heading-color').value = sec.headingColor || '#ffffff';
+  document.getElementById('rps-desc').value          = sec.desc || '';
+  document.getElementById('rps-desc-color').value    = sec.descColor || '#94a3b8';
+  document.getElementById('rps-cards').innerHTML     = '';
+  (sec.cards || []).forEach(function(c) { rpsAddCard(c, true, true); });
+}
+
+function rpsSyncCurrent() {
+  var sec = rpsCurrentSection();
+  if (!sec) return null;
+  var d = rpsReadFormData();
+  sec.name = d.name; sec.bg = d.bg;
+  sec.eyebrow = d.eyebrow; sec.eyebrowColor = d.eyebrowColor;
+  sec.heading = d.heading; sec.headingColor = d.headingColor;
+  sec.desc = d.desc; sec.descColor = d.descColor;
+  sec.cards = d.cards;
+  return sec;
+}
+
+function buildRpsHtml(data) {
+  var uid          = 'rps' + Date.now().toString(36);
+  var bg           = cmsSafeHex(data.bg,           '#0f1e3c');
+  var eyebrowColor = cmsSafeHex(data.eyebrowColor, '#3b82f6');
+  var headingColor = cmsSafeHex(data.headingColor, '#ffffff');
+  var descColor    = cmsSafeHex(data.descColor,    '#94a3b8');
+
+  var cardsHtml = (data.cards || []).map(function(card) {
+    var cardBg         = cmsSafeHex(card.cardBg,         '#1a2d4a');
+    var cardBorder     = cmsSafeHex(card.cardBorder,      '#1e3a5f');
+    var iconBg         = cmsSafeHex(card.iconBg,          '#1e3a5f');
+    var iconColor      = cmsSafeHex(card.iconColor,       '#f59e0b');
+    var titleColor     = cmsSafeHex(card.titleColor,      '#ffffff');
+    var dColor         = cmsSafeHex(card.descColor,       '#94a3b8');
+    var statBg         = cmsSafeHex(card.statBg,          '#1e3a5f');
+    var statValColor   = cmsSafeHex(card.statValueColor,  '#ffffff');
+    var statLblColor   = cmsSafeHex(card.statLabelColor,  '#94a3b8');
+    var hasIcon        = (card.icon || '').trim();
+    var hasStatValue   = (card.statValue || '').trim();
+    var title          = (card.title || '').trim();
+    var desc           = (card.desc  || '').trim();
+
+    var out = '    <div style="background:' + cardBg + ';border:1px solid ' + cardBorder + ';border-radius:12px;padding:20px;">\n';
+
+    if (hasIcon) {
+      out += '      <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;">\n';
+      out += '        <div style="width:36px;height:36px;min-width:36px;background:' + iconBg + ';border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;color:' + iconColor + ';">' + xH(hasIcon) + '</div>\n';
+      if (title) out += '        <h3 style="margin:0;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:' + titleColor + ';line-height:1.3;">' + xH(title) + '</h3>\n';
+      out += '      </div>\n';
+    } else if (title) {
+      out += '      <h3 style="margin:0 0 10px;font-family:\'Poppins\',sans-serif;font-size:16px;font-weight:700;color:' + titleColor + ';line-height:1.3;">' + xH(title) + '</h3>\n';
+    }
+
+    if (desc) out += '      <p style="margin:0' + (hasStatValue ? ' 0 16px' : '') + ';font-family:\'Poppins\',sans-serif;font-size:14px;color:' + dColor + ';line-height:1.6;">' + desc + '</p>\n';
+
+    if (hasStatValue) {
+      out += '      <div style="background:' + statBg + ';border-radius:8px;padding:12px 16px;display:flex;gap:14px;align-items:center;">\n';
+      out += '        <span style="font-family:\'Poppins\',sans-serif;font-size:28px;font-weight:800;color:' + statValColor + ';letter-spacing:-0.02em;white-space:nowrap;">' + xH(hasStatValue) + '</span>\n';
+      if (card.statLabel) out += '        <span style="font-family:\'Poppins\',sans-serif;font-size:13px;color:' + statLblColor + ';line-height:1.4;">' + xH(card.statLabel) + '</span>\n';
+      out += '      </div>\n';
+    }
+
+    out += '    </div>';
+    return out;
+  }).join('\n');
+
+  var css = '<style>.' + uid + '{font-family:\'Poppins\',sans-serif;background:' + bg + ';box-sizing:border-box;}'
+          + '.' + uid + '-cards{display:flex;flex-direction:column;gap:12px;}</style>\n';
+
+  var html = '<div class="' + uid + '">\n';
+  if (data.eyebrow) html += '  <p style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:' + eyebrowColor + ';margin:0 0 16px;">' + xH(data.eyebrow) + '</p>\n';
+  if (data.heading) html += '  <h2 style="font-family:\'Poppins\',sans-serif;font-size:26px;font-weight:700;color:' + headingColor + ';margin:0 0 12px;line-height:1.2;">' + xH(data.heading) + '</h2>\n';
+  if (data.desc)    html += '  <p style="font-family:\'Poppins\',sans-serif;font-size:15px;color:' + descColor + ';margin:0 0 20px;line-height:1.6;">' + xH(data.desc) + '</p>\n';
+  if (cardsHtml)    html += '  <div class="' + uid + '-cards">\n' + cardsHtml + '\n  </div>\n';
+  html += '</div>';
+
+  return '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">\n' + css + html;
+}
+
+function rpsRenderCurrent(showPreview) {
+  var sec = rpsCurrentSection();
+  if (!sec) { cmsRenderScreenEmpty('right-pane-section', 'Create a section to preview it here.', showPreview); return; }
+  cmsRenderScreenHtml('right-pane-section', buildRpsHtml(sec), showPreview);
+}
+
+function rpsRenderSectionList() {
+  cmsRenderSectionList('rps-section-list', rpsStore.sections, rpsStore.activeId, 'rpsSelectSection', 'rpsDeleteSection', function(sec) {
+    return (sec.cards || []).length + ' card' + ((sec.cards || []).length === 1 ? '' : 's');
+  }, 'No saved sections yet. Click + New Section to get started.');
+}
+
+function rpsPersistNow(savingText, savedText, showPreview) {
+  rpsSyncCurrent();
+  rpsRenderSectionList();
+  rpsRenderCurrent(showPreview);
+  return cmsSaveSections('/api/publish-right-pane-section', rpsStore.sections, 'rps-status', savingText || 'Saving…', savedText || 'Saved!')
+    .then(function(ok) { if (ok) cmsMarkScreenSaved('right-pane-section'); return ok; });
+}
+
+function rpsHandleChange() {
+  if (!rpsCurrentSection()) return;
+  rpsSyncCurrent();
+  rpsRenderSectionList();
+  rpsRenderCurrent();
+  cmsMarkScreenDirty('right-pane-section');
+}
+
+function rpsBindInputs() {
+  if (rpsStore.bound) return;
+  var screen = document.getElementById('screen-right-pane-section');
+  var panel = screen && screen.querySelector('.form-panel');
+  if (!panel) return;
+  panel.addEventListener('input',  function() { rpsHandleChange(); });
+  panel.addEventListener('change', function() { rpsHandleChange(); });
+  rpsStore.bound = true;
+}
+
+function rpsSelectSection(id) {
+  if (rpsStore.activeId === id) return;
+  if (!cmsConfirmTrackedNavigation('right-pane-section', 'You have unsaved changes. Switch sections without saving?')) return;
+  rpsSyncCurrent();
+  rpsStore.activeId = id;
+  var sec = rpsCurrentSection();
+  if (!sec) return;
+  rpsFillForm(sec);
+  rpsRenderSectionList();
+  rpsRenderCurrent();
+}
+
+function rpsCreateSection(skipPersist) {
+  rpsSyncCurrent();
+  var sec = rpsDefaultSection();
+  rpsStore.sections.push(sec);
+  rpsStore.activeId = sec.id;
+  rpsFillForm(sec);
+  rpsRenderSectionList();
+  rpsRenderCurrent();
+  if (!skipPersist) cmsMarkScreenDirty('right-pane-section');
+}
+
+function rpsDeleteSection(id) {
+  if (!confirm('Delete this section?')) return;
+  rpsSyncCurrent();
+  rpsStore.sections = rpsStore.sections.filter(function(s) { return s.id !== id; });
+  if (!rpsStore.sections.length) {
+    rpsCreateSection(true);
+  } else {
+    rpsStore.activeId = rpsStore.sections[0].id;
+    rpsFillForm(rpsCurrentSection());
+    rpsRenderSectionList();
+    rpsRenderCurrent();
+  }
+  cmsMarkScreenDirty('right-pane-section');
+}
+
+function rpsOnOpen() {
+  rpsBindInputs();
+  if (rpsStore.loaded) {
+    if (!rpsStore.sections.length) rpsCreateSection(true);
+    if (!rpsStore.activeId && rpsStore.sections.length) rpsSelectSection(rpsStore.sections[0].id);
+    return;
+  }
+  fetch('/api/publish-right-pane-section')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var saved = data.sections || [];
+      rpsStore.counter = cmsMaxSectionCounter(saved, 'rps');
+      rpsStore.sections = saved.map(function(s) {
+        return {
+          id:           s.id || ('rps' + (++rpsStore.counter)),
+          name:         s.name         || '',
+          bg:           s.bg           || '#0f1e3c',
+          eyebrow:      s.eyebrow      || '',
+          eyebrowColor: s.eyebrowColor || '#3b82f6',
+          heading:      s.heading      || '',
+          headingColor: s.headingColor || '#ffffff',
+          desc:         s.desc         || '',
+          descColor:    s.descColor    || '#94a3b8',
+          cards: (s.cards || []).map(function(c) {
+            return {
+              cardBg:         c.cardBg         || '#1a2d4a',
+              cardBorder:     c.cardBorder      || '#1e3a5f',
+              icon:           c.icon            || '',
+              iconBg:         c.iconBg          || '#1e3a5f',
+              iconColor:      c.iconColor       || '#f59e0b',
+              title:          c.title           || '',
+              titleColor:     c.titleColor      || '#ffffff',
+              desc:           c.desc            || '',
+              descColor:      c.descColor       || '#94a3b8',
+              statValue:      c.statValue       || '',
+              statLabel:      c.statLabel       || '',
+              statBg:         c.statBg          || '#1e3a5f',
+              statValueColor: c.statValueColor  || '#ffffff',
+              statLabelColor: c.statLabelColor  || '#94a3b8'
+            };
+          })
+        };
+      });
+      rpsStore.loaded = true;
+      if (!rpsStore.sections.length) rpsCreateSection(true);
+      rpsStore.activeId = rpsStore.sections[0].id;
+      rpsFillForm(rpsCurrentSection());
+      rpsRenderSectionList();
+      rpsRenderCurrent();
+    })
+    .catch(function() {
+      rpsStore.loaded = true;
+      cmsSetStatus('rps-status', 'Could not load saved sections.', 'red');
+      if (!rpsStore.sections.length) rpsCreateSection(true);
+    });
+}
+
+function rpsRemoveCard(id) {
+  var el = document.getElementById(id);
+  if (el) el.remove();
+  rpsHandleChange();
+}
+
+function rpsAddCard(data, startCollapsed, skipSync) {
+  if (!rpsCurrentSection()) rpsCreateSection(true);
+  var list = document.getElementById('rps-cards');
+  var id   = 'rpsc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var d    = data || {};
+  var cardBg         = d.cardBg         || '#1a2d4a';
+  var cardBorder     = d.cardBorder      || '#1e3a5f';
+  var iconBg         = d.iconBg          || '#1e3a5f';
+  var iconColor      = d.iconColor       || '#f59e0b';
+  var titleColor     = d.titleColor      || '#ffffff';
+  var descColor      = d.descColor       || '#94a3b8';
+  var statBg         = d.statBg          || '#1e3a5f';
+  var statValueColor = d.statValueColor  || '#ffffff';
+  var statLabelColor = d.statLabelColor  || '#94a3b8';
+  var div = document.createElement('div');
+  div.className = 'block-item rps-card-item';
+  div.id = id;
+  div.innerHTML =
+    '<div class="block-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">'
+    + '<span class="block-header-label">' + xH(d.title || 'New Card') + '</span>'
+    + '<span class="block-type-badge">Card</span>'
+    + '<button class="btn-sm danger" onclick="event.stopPropagation();rpsRemoveCard(\'' + id + '\')" style="margin-left:auto">Remove</button>'
+    + '</div>'
+    + '<div class="block-body' + (startCollapsed ? ' collapsed' : '') + '">'
+
+    // Card colours
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    + '<div class="field"><label>Card background</label><input type="color" class="rps-card-bg" value="' + xA(cardBg) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '<div class="field"><label>Card border</label><input type="color" class="rps-card-border" value="' + xA(cardBorder) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '</div>'
+
+    // Icon
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'
+    + '<div class="field"><label>Icon <span class="hint">(optional)</span></label><input type="text" class="rps-icon" value="' + xA(d.icon || '') + '" style="font-size:18px;text-align:center;" maxlength="4" placeholder="e.g. ⚡"></div>'
+    + '<div class="field"><label>Icon background</label><input type="color" class="rps-icon-bg" value="' + xA(iconBg) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '<div class="field"><label>Icon colour</label><input type="color" class="rps-icon-color" value="' + xA(iconColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '</div>'
+
+    // Title
+    + '<div class="field"><label>Title <span class="hint">(bold)</span></label>'
+    + '<input type="text" class="rps-card-title" value="' + xA(d.title || '') + '" placeholder="Card title" oninput="this.closest(\'.rps-card-item\').querySelector(\'.block-header-label\').textContent=this.value||\'New Card\'"></div>'
+    + '<div class="field"><label>Title colour</label><input type="color" class="rps-title-color" value="' + xA(titleColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+
+    // Description
+    + '<div class="field"><label>Description <span class="hint">(HTML allowed)</span></label>'
+    + '<textarea class="rps-card-desc" rows="3" style="font-family:monospace;font-size:12px;resize:vertical;" placeholder="Description text or HTML…">' + xH(d.desc || '') + '</textarea></div>'
+    + '<div class="field"><label>Description colour</label><input type="color" class="rps-desc-color" value="' + xA(descColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+
+    // Stat block
+    + '<div class="section-label" style="margin:10px 0 6px;font-size:11px;">Stat block <span class="hint">(optional — leave value empty to hide)</span></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    + '<div class="field"><label>Stat value</label><input type="text" class="rps-stat-value" value="' + xA(d.statValue || '') + '" placeholder="e.g. 2–4"></div>'
+    + '<div class="field"><label>Stat label</label><input type="text" class="rps-stat-label" value="' + xA(d.statLabel || '') + '" placeholder="e.g. Years to complete"></div>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'
+    + '<div class="field"><label>Stat background</label><input type="color" class="rps-stat-bg" value="' + xA(statBg) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '<div class="field"><label>Value colour</label><input type="color" class="rps-stat-val-color" value="' + xA(statValueColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '<div class="field"><label>Label colour</label><input type="color" class="rps-stat-lbl-color" value="' + xA(statLabelColor) + '" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;"></div>'
+    + '</div>'
+
+    + '</div>';
+  list.appendChild(div);
+  if (!skipSync) rpsHandleChange();
+}
+
+function rpsGenerate() {
+  rpsPersistNow('Saving…', 'Saved!', true);
 }
 
 // ── Steps persisted sections ─────────────────────────────────

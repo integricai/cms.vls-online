@@ -1,0 +1,67 @@
+<div id="screen-right-pane-section" class="screen">
+  <div class="form-panel"><div class="form-inner">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="section-label" style="margin:0;">Sections</div>
+      <button class="btn-add-block" onclick="rpsCreateSection()" style="margin:0;">+ New Section</button>
+    </div>
+    <div id="rps-section-list" class="block-list"></div>
+    <div id="rps-status" style="font-size:12px;min-height:18px;"></div>
+
+    <div class="section-label">Section Setup</div>
+    <div class="field">
+      <label>Section name <span class="hint">(for CMS identification)</span></label>
+      <input type="text" id="rps-name" value="Right Pane Section 1">
+    </div>
+    <div class="field">
+      <label>Section background colour</label>
+      <input type="color" id="rps-bg" value="#0f1e3c" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">
+    </div>
+
+    <div class="section-label">Header</div>
+    <div class="field">
+      <label>Eyebrow text <span class="hint">(small uppercase)</span></label>
+      <input type="text" id="rps-eyebrow" placeholder="e.g. HOW LONG DOES ACCA TAKE?">
+    </div>
+    <div class="field">
+      <label>Eyebrow colour</label>
+      <input type="color" id="rps-eyebrow-color" value="#3b82f6" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">
+    </div>
+    <div class="field">
+      <label>Heading <span class="hint">(optional)</span></label>
+      <input type="text" id="rps-heading" placeholder="Optional section heading">
+    </div>
+    <div class="field">
+      <label>Heading colour</label>
+      <input type="color" id="rps-heading-color" value="#ffffff" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">
+    </div>
+    <div class="field">
+      <label>Description <span class="hint">(optional)</span></label>
+      <textarea id="rps-desc" rows="2" placeholder="Optional intro text…"></textarea>
+    </div>
+    <div class="field">
+      <label>Description colour</label>
+      <input type="color" id="rps-desc-color" value="#94a3b8" style="width:56px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;display:block;margin-top:4px;">
+    </div>
+
+    <div class="section-label">Cards</div>
+    <div id="rps-cards" class="block-list"></div>
+    <button class="btn-add-block" style="margin-top:6px" onclick="rpsAddCard()">+ Add card</button>
+
+    <button class="btn-gen" onclick="rpsGenerate()">Generate &amp; Save</button>
+  </div></div>
+
+  <div class="output-panel">
+    <div class="output-topbar">
+      <div class="out-tab active" id="right-pane-section-ot-preview" onclick="switchOut('right-pane-section','preview')">Preview</div>
+      <div class="out-tab" id="right-pane-section-ot-html" onclick="switchOut('right-pane-section','html')">HTML</div>
+    </div>
+    <div class="output-body">
+      <div id="right-pane-section-preview-wrap" class="preview-wrap"></div>
+      <div id="right-pane-section-html-wrap" class="code-wrap">
+        <button class="btn-copy" onclick="doCopy('right-pane-section-code',this)">Copy</button>
+        <pre id="right-pane-section-code" class="code-box"></pre>
+      </div>
+    </div>
+  </div>
+</div>
