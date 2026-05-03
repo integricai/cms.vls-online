@@ -4,12 +4,23 @@
     {
       "src": "cms-v2/src/server.ts",
       "use": "@vercel/node"
+    },
+    {
+      "src": "cms-v2/client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "../dist-client"
+      }
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/api/(.*)",
       "dest": "cms-v2/src/server.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
     }
   ]
 }
