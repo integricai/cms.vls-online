@@ -13,7 +13,7 @@
   ],
   "functions": {
     "cms-v2/src/server.ts": {
-      "runtime": "nodejs20.x"
+      "runtime": "nodejs@20.x"
     }
   }
 }
