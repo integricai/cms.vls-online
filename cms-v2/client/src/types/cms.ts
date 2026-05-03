@@ -378,6 +378,90 @@ export interface ProgramsState { topics: ProgramTopic[]; }
 export interface ProgramsComponent { id: string; name: string; data: ProgramsState; }
 export interface ProgramsContent { components: ProgramsComponent[]; }
 
+// ── Full Screen Sections ──────────────────────────────────────────────────────
+
+// Two Column v1 (DCS) — left text + right icon cards
+export interface DcsCard { icon: string; iconBg: string; title: TextValue; desc: TextValue; }
+export interface DcsState {
+  padTop: number; padBot: number; padLeft: number; padRight: number;
+  leftWidth: number; leftBg: string; rightBg: string; cardBg: string;
+  leftLabel: TextValue; leftTitle: TextValue; leftParas: TextValue[];
+  rightLabel: TextValue; cards: DcsCard[];
+}
+export interface DcsComponent { id: string; name: string; data: DcsState; }
+
+// Two Column v2 (DCS2) — left text+bullets + right stats+quote
+export interface DcsStat { value: TextValue; label: TextValue; }
+export interface Dcs2State {
+  padTop: number; padBot: number; padLeft: number; padRight: number;
+  leftWidth: number; leftBg: string; rightBg: string;
+  leftLabel: TextValue; leftTitle: TextValue; leftParas: TextValue[];
+  bulletColor: string; leftBullets: TextValue[];
+  rightLabel: TextValue; statBg: string; statBorder: string; statsPerRow: number;
+  stats: DcsStat[];
+  quoteShow: boolean; quoteBg: string; quoteText: TextValue; quoteAttrib: TextValue;
+}
+export interface Dcs2Component { id: string; name: string; data: Dcs2State; }
+
+// Two Column v3 (DCS3) — left text+features + right text+tags+CTA
+export interface Dcs3Feature { title: TextValue; desc: TextValue; }
+export interface Dcs3Tag { icon: string; text: TextValue; }
+export interface Dcs3State {
+  padTop: number; padBot: number; leftPadH: number; rightPadH: number;
+  leftWidth: number; leftBg: string; rightBg: string;
+  checkColor: string; featBg: string; featCols: number; tagBg: string;
+  ctaUrl: string; ctaColor: string; ctaBorder: string; ctaFill: string;
+  leftLabel: TextValue; leftTitle: TextValue; leftPara: TextValue;
+  rightLabel: TextValue; rightTitle: TextValue; rightPara: TextValue;
+  ctaText: TextValue; features: Dcs3Feature[]; tags: Dcs3Tag[];
+}
+export interface Dcs3Component { id: string; name: string; data: Dcs3State; }
+
+// Global Reach — left text+stats + right image+regions
+export interface ReachStat { value: TextValue; label: TextValue; }
+export interface ReachRegion { flag: string; code: string; name: TextValue; sub: TextValue; }
+export interface ReachState {
+  padTop: number; padBot: number; padLeft: number; padRight: number;
+  bg: string; leftWidth: number; statBg: string;
+  imgHeight: number; imgBg: string; imgUrl: string; imgAlt: string; imgPlaceholder: string;
+  regionBg: string; label: TextValue; title: TextValue; para: TextValue;
+  stats: ReachStat[]; regions: ReachRegion[];
+}
+export interface ReachComponent { id: string; name: string; data: ReachState; }
+
+// ── Page Hero Banner (PHB) ────────────────────────────────────────────────────
+export interface PhbState {
+  bg: string; radius: number;
+  padTop: number; padBot: number; padLeft: number; padRight: number;
+  eyebrow: string; eyebrowTc: string;
+  showDot: boolean; dotColor: string;
+  heading: TextValue;
+  bulletTc: string; sepColor: string;
+  bullets: string[];
+  showBadge: boolean; badgeBg: string; badgeRadius: number;
+  badgeEyebrow: string; badgeEyebrowTc: string;
+  badgeMain: TextValue;
+  badgeSub: string; badgeSubTc: string;
+}
+export interface PhbComponent { id: string; name: string; data: PhbState; }
+
+// ── Page Hero Banner V2 (PHV2) ────────────────────────────────────────────────
+export interface Phv2TrustItem { icon: string; text: string; }
+export interface Phv2Card { type: 'stat' | 'info' | 'tags'; full: boolean; value: string; label: string; }
+export interface Phv2State {
+  bg: string;
+  padTop: number; padBot: number; padLeft: number; padRight: number;
+  split: number; colGap: number;
+  breadcrumb: string; breadcrumbTc: string;
+  eyebrowTc: string; eyebrowDot: string; eyebrowLabels: string[];
+  heading: TextValue; headingAccent: string; headingAccentColor: string; headingPost: string;
+  desc: TextValue;
+  trustTc: string; trustDot: string; trustItems: Phv2TrustItem[];
+  cardBg: string; cardBorder: string; cardRadius: number; cardVc: string; cardLc: string;
+  cards: Phv2Card[];
+}
+export interface Phv2Component { id: string; name: string; data: Phv2State; }
+
 // Hero Section V2
 export interface HeroV2Cta { text: string; url: string; scroll: string; style: 'solid' | 'outlined'; bg: string; tc: string; bc: string; }
 export interface HeroV2Stat { value: string; label: string; }

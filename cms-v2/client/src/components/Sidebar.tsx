@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { clearToken, getCurrentUser } from '../api/client';
 
-type NavItem  = { to: string; label: string };
-type NavGroup = { group: string; children: NavItem[] };
-type NavEntry = NavGroup | NavItem;
+type NavItem      = { to: string; label: string };
+type NavSubGroup  = { sub: string; children: NavItem[] };
+type NavGroupChild = NavItem | NavSubGroup;
+type NavGroup     = { group: string; children: NavGroupChild[] };
+type NavEntry     = NavGroup | NavItem;
 
 const NAV: NavEntry[] = [
   {
@@ -43,6 +45,26 @@ const NAV: NavEntry[] = [
     ],
   },
   {
+    group: 'Page Builder',
+    children: [
+      {
+        sub: 'Full Screen Sections',
+        children: [
+          { to: '/full-screen/dcs',            label: 'Two Column v1' },
+          { to: '/full-screen/dcs2',           label: 'Two Column v2' },
+          { to: '/full-screen/dcs3',           label: 'Two Column v3' },
+          { to: '/full-screen/reach',          label: 'Global Reach' },
+          { to: '/full-screen/hero-banner',    label: 'Hero Banner' },
+          { to: '/full-screen/hero-banner-v2', label: 'Hero Banner v2' },
+        ],
+      },
+      {
+        sub: 'Split Screen Sections',
+        children: [],
+      },
+    ],
+  },
+  {
     group: 'Cards',
     children: [
       { to: '/program-cards',    label: 'Program Cards' },
@@ -67,6 +89,55 @@ export default function Sidebar({ isOpen, onClose }: Props) {
 
   function toggleGroup(name: string) {
     setOpenGroup(prev => prev === name ? null : name);
+  }
+
+  function renderGroupChildren(children: NavGroupChild[]) {
+    return children.map((child, j) => {
+      if ('sub' in child) {
+        return (
+          <div key={j}>
+            <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              {child.sub}
+            </div>
+            {child.children.length > 0 && (
+              <div className="ml-3 mb-1 space-y-0.5 border-l border-slate-700 pl-2">
+                {child.children.map(item => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className={({ isActive }) =>
+                      `flex items-center rounded-lg px-3 py-2 text-sm font-medium transition ${
+                        isActive
+                          ? 'bg-brand text-white'
+                          : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      }`
+                    }
+                  >
+                    {item.label}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      return (
+        <NavLink
+          key={child.to}
+          to={child.to}
+          className={({ isActive }) =>
+            `flex items-center rounded-lg px-3 py-2 text-sm font-medium transition ${
+              isActive
+                ? 'bg-brand text-white'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`
+          }
+        >
+          {child.label}
+        </NavLink>
+      );
+    });
   }
 
   return (
@@ -114,25 +185,11 @@ export default function Sidebar({ isOpen, onClose }: Props) {
 
                 <div
                   className={`overflow-hidden transition-[max-height] duration-200 ease-in-out ${
-                    expanded ? 'max-h-96' : 'max-h-0'
+                    expanded ? 'max-h-[480px]' : 'max-h-0'
                   }`}
                 >
                   <div className="ml-3 mt-0.5 mb-1 space-y-0.5 border-l border-slate-700 pl-2">
-                    {entry.children.map(item => (
-                      <NavLink
-                        key={item.to}
-                        to={item.to}
-                        className={({ isActive }) =>
-                          `flex items-center rounded-lg px-3 py-2 text-sm font-medium transition ${
-                            isActive
-                              ? 'bg-brand text-white'
-                              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                          }`
-                        }
-                      >
-                        {item.label}
-                      </NavLink>
-                    ))}
+                    {renderGroupChildren(entry.children)}
                   </div>
                 </div>
               </div>

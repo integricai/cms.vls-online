@@ -24,6 +24,8 @@ import LegalPage from './screens/LegalPage';
 import Team from './screens/Team';
 import UserManagement from './screens/UserManagement';
 import Events from './screens/Events';
+import FullScreenSections from './screens/FullScreenSections';
+import SplitScreenSections from './screens/SplitScreenSections';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   return getToken() ? <>{children}</> : <Navigate to="/login" replace />;
@@ -66,7 +68,9 @@ export default function App() {
           <Route path="/step-cards"       element={<StepCards />} />
           <Route path="/legal-page"       element={<LegalPage />} />
           <Route path="/team"             element={<Team />} />
-          <Route path="/events"           element={<Events />} />
+          <Route path="/events"                element={<Events />} />
+          <Route path="/full-screen/:type"     element={<FullScreenSections />} />
+          <Route path="/split-screen-sections" element={<SplitScreenSections />} />
           <Route path="/settings/users"   element={<RequireAdmin><UserManagement /></RequireAdmin>} />
         </Route>
       </Routes>
