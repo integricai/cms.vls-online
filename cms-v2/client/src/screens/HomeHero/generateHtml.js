@@ -1,4 +1,35 @@
 import { normalize, textStyle, escapeHtml } from '../../utils/text';
+function scrollHref(value) {
+    const raw = String(value || '').trim();
+    if (!raw)
+        return '#';
+    if (raw.startsWith('#'))
+        return raw;
+    const clean = raw.replace(/^[#.]/, '').trim();
+    return clean ? `#${clean}` : '#';
+}
+function scrollAttrs(uid, value) {
+    const raw = String(value || '').trim();
+    if (!raw)
+        return '';
+    const fn = `${uid}Scroll`;
+    return ` data-scroll-selector="${escapeHtml(raw)}" data-scroll-href="${escapeHtml(scrollHref(raw))}" onclick="return window[${JSON.stringify(fn).replace(/"/g, '&quot;')}](${JSON.stringify(raw).replace(/"/g, '&quot;')})"`;
+}
+function buildScrollScript(uid) {
+    return `<script data-cfasync="false">(function(){`
+        + `window[${JSON.stringify(uid + 'Scroll')}]=function(sel){`
+        + `if(!sel)return false;var el=null;`
+        + `try{el=document.querySelector(sel);}catch(e){}`
+        + `var clean=String(sel).replace(/^[#.]/,'').trim();`
+        + `if(!el&&clean){el=document.getElementById(clean)`
+        + `||document.querySelector('[data-scroll-target="'+clean+'"]')`
+        + `||document.querySelector('[data-vls-anchor="'+clean+'"]')`
+        + `||document.querySelector('[name="'+clean+'"]');`
+        + `if(!el){try{el=document.querySelector('.'+clean);}catch(e){}}}`
+        + `if(el&&el.scrollIntoView){el.scrollIntoView({behavior:'smooth',block:'start'});}`
+        + `return false;`
+        + `};})();<\/script>`;
+}
 export function generateHeroHtml(sec) {
     const uid = 'h' + Date.now().toString(36);
     const h1Size = Math.min(80, Math.max(24, sec.h1Size ?? 44));
@@ -27,8 +58,10 @@ export function generateHeroHtml(sec) {
     const pB = sec.padBot ?? 48;
     const pL = sec.padLeft ?? 0;
     const pR = sec.padRight ?? 0;
-    const b1Href = sec.b1s ? '#' : (sec.b1u || '#');
-    const b2Href = sec.b2s ? '#' : (sec.b2u || '#');
+    const b1Href = sec.b1s ? scrollHref(sec.b1s) : (sec.b1u || '#');
+    const b2Href = sec.b2s ? scrollHref(sec.b2s) : (sec.b2u || '#');
+    const b1ScrollAttrs = scrollAttrs(uid, sec.b1s);
+    const b2ScrollAttrs = scrollAttrs(uid, sec.b2s);
     const css = `<style>
 .${uid}{font-family:'Poppins',sans-serif;max-width:${sec.maxW || '560px'};padding:${pT}px ${pR}px ${pB}px ${pL}px;box-sizing:border-box;background-color:${sec.bg || '#ffffff'};}
 .${uid}-ey{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#204280;margin-bottom:14px;}
@@ -55,10 +88,10 @@ export function generateHeroHtml(sec) {
         + (desc.text ? `<p class="${uid}-desc" style="${textStyle(desc)}">${desc.text}</p>` : '')
         + (tagsHtml ? `<div class="${uid}-tags">${tagsHtml}</div>` : '')
         + ((b1Text.text || b2Text.text) ? `<div class="${uid}-btns">`
-            + (b1Text.text ? `<a href="${b1Href}" class="${uid}-b1" style="${textStyle(b1Text)}">${escapeHtml(b1Text.text)}</a>` : '')
-            + (b2Text.text ? `<a href="${b2Href}" class="${uid}-b2" style="${textStyle(b2Text)}">${escapeHtml(b2Text.text)}</a>` : '')
+            + (b1Text.text ? `<a href="${escapeHtml(b1Href)}" class="${uid}-b1"${b1ScrollAttrs} style="${textStyle(b1Text)}">${escapeHtml(b1Text.text)}</a>` : '')
+            + (b2Text.text ? `<a href="${escapeHtml(b2Href)}" class="${uid}-b2"${b2ScrollAttrs} style="${textStyle(b2Text)}">${escapeHtml(b2Text.text)}</a>` : '')
             + `</div>` : '')
         + (statsHtml ? `<div class="${uid}-div"></div><div class="${uid}-stats">${statsHtml}</div>` : '')
         + `</div>`;
-    return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n${css}\n${body}`;
+    return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">\n${css}\n${body}\n${buildScrollScript(uid)}`;
 }
