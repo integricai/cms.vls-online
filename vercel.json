@@ -10,10 +10,5 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ],
-  "functions": {
-    "cms-v2/src/server.ts": {
-      "runtime": "nodejs@20.x"
-    }
-  }
+  ]
 }
