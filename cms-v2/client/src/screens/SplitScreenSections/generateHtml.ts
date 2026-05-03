@@ -28,7 +28,8 @@ function cardHtml(card: SplitSectionCard, mode: 'left' | 'right') {
   if (type === 'image') {
     const radius = clampInt(card.borderRadius, 8, 0, 60);
     const maxWidth = (card.maxWidth || '').trim();
-    return `    <img src="${attr(card.imageUrl || '')}" alt="${attr(card.imageAlt || '')}" style="display:block;width:100%;height:auto;border-radius:${radius}px;${maxWidth ? `max-width:${attr(maxWidth)};` : ''}">`;
+    const spanStyle = mode === 'left' ? `grid-column:span ${card.halfWidth ? 1 : 2};` : '';
+    return `    <img src="${attr(card.imageUrl || '')}" alt="${attr(card.imageAlt || '')}" style="${spanStyle}display:block;width:100%;height:auto;border-radius:${radius}px;${maxWidth ? `max-width:${attr(maxWidth)};` : ''}">`;
   }
 
   const cardBg = safeHex(card.cardBg, defaults.bg);
@@ -43,7 +44,8 @@ function cardHtml(card: SplitSectionCard, mode: 'left' | 'right') {
     if (title.text) body += `<div style="font-family:'Poppins',sans-serif;margin:0 0 8px;${textStyle(title)}">${escapeHtml(title.text)}</div>`;
     if (descText) body += `<div style="font-family:'Poppins',sans-serif;margin:0${cta.text ? ' 0 12px' : ''};line-height:1.6;${textStyle(desc)}">${descText}</div>`;
     if (cta.text) body += `<a href="${attr(card.ctaUrl || '#')}" style="display:inline-block;font-family:'Poppins',sans-serif;padding:8px 18px;background:${safeHex(card.ctaBg, defaults.ctaBg)};border-radius:6px;text-decoration:none;${textStyle(cta)}color:${safeHex(card.ctaColor, '#ffffff')};">${escapeHtml(cta.text)}</a>`;
-    return `    <div style="background:${cardBg};border:1px solid ${cardBorder};border-radius:${mode === 'left' ? 10 : 12}px;overflow:hidden;">
+    const spanStyle = mode === 'left' ? `grid-column:span ${card.halfWidth ? 1 : 2};` : '';
+    return `    <div style="${spanStyle}background:${cardBg};border:1px solid ${cardBorder};border-radius:${mode === 'left' ? 10 : 12}px;overflow:hidden;">
 ${card.imageUrl ? `      <img src="${attr(card.imageUrl)}" alt="${attr(card.imageAlt || '')}" style="width:100%;height:auto;display:block;">\n` : ''}      <div style="padding:${mode === 'left' ? 16 : 20}px;">${body}</div>
     </div>`;
   }
@@ -68,7 +70,8 @@ ${card.statLabel ? `        <span style="font-family:'Poppins',sans-serif;font-s
     return out + '    </div>';
   }
 
-  return `    <div style="background:${cardBg};border:1px solid ${cardBorder};border-radius:10px;padding:14px 16px;display:flex;gap:14px;align-items:flex-start;">
+  const spanStyle = `grid-column:span ${card.halfWidth ? 1 : 2};`;
+  return `    <div style="${spanStyle}background:${cardBg};border:1px solid ${cardBorder};border-radius:10px;padding:14px 16px;display:flex;gap:14px;align-items:flex-start;">
       <div style="width:30px;height:30px;min-width:30px;background:${safeHex(card.iconBg, defaults.iconBg)};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:${safeHex(card.iconColor, defaults.iconColor)};margin-top:1px;">${escapeHtml(card.icon || '+')}</div>
       <div style="flex:1;min-width:0;">
 ${title.text ? `        <div style="font-family:'Poppins',sans-serif;${textStyle(title)}">${escapeHtml(title.text)}</div>\n` : ''}${descText ? `        <div style="font-family:'Poppins',sans-serif;${textStyle(desc)};line-height:1.55;${title.text ? 'margin-top:4px;' : ''}">${descText}</div>\n` : ''}      </div>
@@ -84,7 +87,7 @@ export function generatePanelHtml(section: SplitContentSection, mode: 'left' | '
   const cards = (section.cards || []).map(card => cardHtml(card, mode)).join('\n');
 
   return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>.${uid}{font-family:'Poppins',sans-serif;background:${bg};box-sizing:border-box;}.${uid}-cards{display:flex;flex-direction:column;gap:${mode === 'left' ? 10 : 12}px;}</style>
+<style>.${uid}{font-family:'Poppins',sans-serif;background:${bg};box-sizing:border-box;}${mode === 'left' ? `.${uid}-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;}@media(max-width:600px){.${uid}-cards>*{grid-column:span 2!important;}}` : `.${uid}-cards{display:flex;flex-direction:column;gap:12px;}`}</style>
 <div class="${uid}">
 ${eyebrow.text ? `  <div style="font-family:'Poppins',sans-serif;text-transform:uppercase;margin:0 0 ${mode === 'left' ? 10 : 16}px;${mode === 'right' ? 'padding:20px 0 0 20px;' : ''}${textStyle(eyebrow)}">${escapeHtml(eyebrow.text)}</div>\n` : ''}${heading.text ? `  <h2 style="font-family:'Poppins',sans-serif;margin:0 0 16px;${mode === 'right' ? 'padding:0 0 0 20px;' : ''}line-height:1.2;${textStyle(heading)}">${escapeHtml(heading.text)}</h2>\n` : ''}${desc.text ? `  <div style="font-family:'Poppins',sans-serif;margin:0 0 24px;${mode === 'right' ? 'padding:0 0 0 20px;' : ''}line-height:1.6;${textStyle(desc)}">${desc.text}</div>\n` : ''}${cards ? `  <div class="${uid}-cards"${mode === 'right' ? ' style="padding:0 20px 20px;"' : ''}>\n${cards}\n  </div>\n` : ''}</div>`;
 }

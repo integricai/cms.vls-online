@@ -330,6 +330,14 @@ function CardEditor({ card, mode, onChange, onRemove }: { card: SplitSectionCard
         </select>
         <button className="btn-danger shrink-0" onClick={onRemove}>Remove</button>
       </div>
+      {mode === 'left' && (
+        <Field label="Row width">
+          <select className="input" value={card.halfWidth ? 'half' : 'full'} onChange={e => onChange({ halfWidth: e.target.value === 'half' })}>
+            <option value="full">Full width (1 per row)</option>
+            <option value="half">Half width (2 per row)</option>
+          </select>
+        </Field>
+      )}
       {card.type === 'image' ? (
         <>
           <Field label="Image URL"><input className="input" value={card.imageUrl || ''} onChange={e => onChange({ imageUrl: e.target.value })} /></Field>

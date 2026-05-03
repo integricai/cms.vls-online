@@ -278,6 +278,7 @@ export interface SplitSectionCard {
   imageAlt?: string;
   borderRadius?: string;
   maxWidth?: string;
+  halfWidth?: boolean;
   title?: TextValue;
   desc?: TextValue;
   ctaText?: TextValue;
