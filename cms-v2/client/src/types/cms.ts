@@ -296,6 +296,8 @@ export interface SplitContentSection {
   id: string;
   name: string;
   bg: string;
+  imageBoxWidth: number;
+  imageBoxHeight: number;
   eyebrow: TextValue;
   heading: TextValue;
   desc: TextValue;

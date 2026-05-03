@@ -19,17 +19,23 @@ function tv(value: TextValue | undefined, key: DefaultKey) {
   return normalize(value, key);
 }
 
-function cardHtml(card: SplitSectionCard, mode: 'left' | 'right') {
+function cardHtml(card: SplitSectionCard, mode: 'left' | 'right', imageBoxWidth: number, imageBoxHeight: number) {
   const defaults = mode === 'left'
     ? { bg: '#f8f9fa', border: '#e5e7eb', iconBg: '#e8edf5', iconColor: '#204280', ctaBg: '#204280', title: 'lgsCardTitle' as const, desc: 'lgsCardDesc' as const, cta: 'lgsCardCta' as const }
     : { bg: '#1a2d4a', border: '#1e3a5f', iconBg: '#1e3a5f', iconColor: '#f59e0b', ctaBg: '#3b82f6', title: 'rpsCardTitle' as const, desc: 'rpsCardDesc' as const, cta: 'rpsCardCta' as const };
   const type = card.type || 'card';
+  const imgW = clampInt(imageBoxWidth, 100, 10, 100);
+  const imgH = clampInt(imageBoxHeight, 180, 40, 800);
+  const imageBoxStyle = `width:${imgW}%;height:${imgH}px;max-width:100%;overflow:hidden;`;
+  const imageStyle = 'width:100%;height:100%;object-fit:cover;display:block;';
 
   if (type === 'image') {
     const radius = clampInt(card.borderRadius, 8, 0, 60);
     const maxWidth = (card.maxWidth || '').trim();
     const spanStyle = mode === 'left' ? `grid-column:span ${card.halfWidth ? 1 : 2};` : '';
-    return `    <img src="${attr(card.imageUrl || '')}" alt="${attr(card.imageAlt || '')}" style="${spanStyle}display:block;width:100%;height:auto;border-radius:${radius}px;${maxWidth ? `max-width:${attr(maxWidth)};` : ''}">`;
+    return `    <div style="${spanStyle}${imageBoxStyle}border-radius:${radius}px;${maxWidth ? `max-width:${attr(maxWidth)};` : ''}">
+      <img src="${attr(card.imageUrl || '')}" alt="${attr(card.imageAlt || '')}" style="${imageStyle}">
+    </div>`;
   }
 
   const cardBg = safeHex(card.cardBg, defaults.bg);
@@ -46,7 +52,7 @@ function cardHtml(card: SplitSectionCard, mode: 'left' | 'right') {
     if (cta.text) body += `<a href="${attr(card.ctaUrl || '#')}" style="display:inline-block;font-family:'Poppins',sans-serif;padding:8px 18px;background:${safeHex(card.ctaBg, defaults.ctaBg)};border-radius:6px;text-decoration:none;${textStyle(cta)}color:${safeHex(card.ctaColor, '#ffffff')};">${escapeHtml(cta.text)}</a>`;
     const spanStyle = mode === 'left' ? `grid-column:span ${card.halfWidth ? 1 : 2};` : '';
     return `    <div style="${spanStyle}background:${cardBg};border:1px solid ${cardBorder};border-radius:${mode === 'left' ? 10 : 12}px;overflow:hidden;">
-${card.imageUrl ? `      <img src="${attr(card.imageUrl)}" alt="${attr(card.imageAlt || '')}" style="width:100%;height:auto;display:block;">\n` : ''}      <div style="padding:${mode === 'left' ? 16 : 20}px;">${body}</div>
+${card.imageUrl ? `      <div style="${imageBoxStyle}"><img src="${attr(card.imageUrl)}" alt="${attr(card.imageAlt || '')}" style="${imageStyle}"></div>\n` : ''}      <div style="padding:${mode === 'left' ? 16 : 20}px;">${body}</div>
     </div>`;
   }
 
@@ -84,7 +90,9 @@ export function generatePanelHtml(section: SplitContentSection, mode: 'left' | '
   const heading = tv(section.heading, mode === 'left' ? 'lgsHeading' : 'rpsHeading');
   const desc = tv(section.desc, mode === 'left' ? 'lgsDesc' : 'rpsDesc');
   const uid = `${mode === 'left' ? 'lgs' : 'rps'}${Date.now().toString(36)}`;
-  const cards = (section.cards || []).map(card => cardHtml(card, mode)).join('\n');
+  const imageBoxWidth = clampInt(section.imageBoxWidth, 100, 10, 100);
+  const imageBoxHeight = clampInt(section.imageBoxHeight, 180, 40, 800);
+  const cards = (section.cards || []).map(card => cardHtml(card, mode, imageBoxWidth, imageBoxHeight)).join('\n');
 
   return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>.${uid}{font-family:'Poppins',sans-serif;background:${bg};box-sizing:border-box;}${mode === 'left' ? `.${uid}-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;}@media(max-width:600px){.${uid}-cards>*{grid-column:span 2!important;}}` : `.${uid}-cards{display:flex;flex-direction:column;gap:12px;}`}</style>

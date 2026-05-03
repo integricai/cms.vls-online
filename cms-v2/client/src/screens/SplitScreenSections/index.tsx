@@ -400,7 +400,13 @@ function PanelEditor({ type }: { type: Extract<SplitType, 'left-generic' | 'righ
   useEffect(() => {
     api.get<any>(`/content/${config.key}`)
       .then(row => {
-        const next = ((row?.data?.sections || []) as SplitContentSection[]).map(s => ({ ...blank, ...s, cards: (s.cards || []).map(card => ({ ...card, type: card.type || 'card' })) }));
+        const next = ((row?.data?.sections || []) as SplitContentSection[]).map(s => ({
+          ...blank,
+          ...s,
+          imageBoxWidth: Number(s.imageBoxWidth ?? blank.imageBoxWidth ?? 100),
+          imageBoxHeight: Number(s.imageBoxHeight ?? blank.imageBoxHeight ?? 180),
+          cards: (s.cards || []).map(card => ({ ...card, type: card.type || 'card' })),
+        }));
         setItems(next);
         if (next[0]) {
           setActiveId(next[0].id);
@@ -482,6 +488,10 @@ function PanelEditor({ type }: { type: Extract<SplitType, 'left-generic' | 'righ
         <div className="px-5 py-4">
           <p className="section-label mt-0">Section</p>
           <ColorInput label="Background" value={state.bg} onChange={bg => patch({ bg })} />
+          <div className="grid grid-cols-2 gap-2">
+            <NumberInput label="Image width (%)" value={state.imageBoxWidth ?? 100} min={10} max={100} onChange={imageBoxWidth => patch({ imageBoxWidth })} />
+            <NumberInput label="Image height (px)" value={state.imageBoxHeight ?? 180} min={40} max={800} onChange={imageBoxHeight => patch({ imageBoxHeight })} />
+          </div>
           <RichTextField label="Eyebrow" value={normalize(state.eyebrow, mode === 'left' ? 'lgsEyebrow' : 'rpsEyebrow')} defaultKey={mode === 'left' ? 'lgsEyebrow' : 'rpsEyebrow'} onChange={(eyebrow: TextData) => patch({ eyebrow })} />
           <RichTextField label="Heading" value={normalize(state.heading, mode === 'left' ? 'lgsHeading' : 'rpsHeading')} defaultKey={mode === 'left' ? 'lgsHeading' : 'rpsHeading'} onChange={(heading: TextData) => patch({ heading })} />
           <RichTextField label="Description" multiline value={normalize(state.desc, mode === 'left' ? 'lgsDesc' : 'rpsDesc')} defaultKey={mode === 'left' ? 'lgsDesc' : 'rpsDesc'} onChange={(desc: TextData) => patch({ desc })} />
