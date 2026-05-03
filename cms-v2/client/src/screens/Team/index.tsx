@@ -5,6 +5,7 @@ import { normalize } from '../../utils/text';
 import { generateTeamHtml } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 function getStr(v: unknown): string {
   if (!v) return '';
@@ -133,7 +134,7 @@ export default function TeamScreen() {
           <button onClick={save} disabled={saving} className="btn-primary flex-1 justify-center">
             {saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save'}
           </button>
-          <button onClick={() => { setPreviewHtml(generateTeamHtml(cards)); setActiveTab('preview'); }}
+          <button onClick={() => { setPreviewHtml(wrapGeneratedHtml('Team', generateTeamHtml(cards))); setActiveTab('preview'); }}
             className="btn-success flex-1 justify-center">⚡ Generate HTML</button>
         </div>
 

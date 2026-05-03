@@ -6,6 +6,7 @@ import { generateAboutUsHtml } from './generateHtml';
 import { ICON_OPTIONS } from './icons';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 let counter = 0;
 function td(v, key) {
     return normalize(v, key);
@@ -72,7 +73,7 @@ export default function AboutUs() {
     }, []);
     useEffect(() => {
         if (sec)
-            setPreviewHtml(generateAboutUsHtml(sec));
+            setPreviewHtml(wrapGeneratedHtml('About Us', generateAboutUsHtml(sec)));
     }, [sec]);
     const updateSec = useCallback((patch) => {
         setSections(prev => prev.map(s => s.id === activeId ? { ...s, ...patch } : s));
@@ -107,7 +108,7 @@ export default function AboutUs() {
         return _jsx("div", { className: "flex h-full items-center justify-center text-sm text-slate-400", children: "Loading\u2026" });
     }
     return (_jsxs("div", { className: "flex h-full", children: [_jsxs("div", { className: "w-[420px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white", children: [_jsxs("div", { className: "sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4", children: [_jsx("h1", { className: "text-base font-bold text-slate-900", children: "About Us" }), _jsx("p", { className: "text-xs text-slate-400 mt-0.5", children: "Two-column about section with feature cards" })] }), _jsxs("div", { className: "border-b border-slate-100 bg-white px-5 py-3 flex gap-2", children: [_jsx("button", { onClick: save, disabled: saving, className: "btn-primary flex-1 justify-center", children: saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save' }), _jsx("button", { onClick: () => { if (sec) {
-                                    setPreviewHtml(generateAboutUsHtml(sec));
+                                    setPreviewHtml(wrapGeneratedHtml('About Us', generateAboutUsHtml(sec)));
                                     setActiveTab('preview');
                                 } }, className: "btn-success flex-1 justify-center", children: "\u26A1 Generate HTML" })] }), _jsxs("div", { className: "px-5 py-4", children: [_jsx(SectionList, { sections: sections, activeId: activeId, onSelect: setActiveId, onCreate: createSection, onDelete: deleteSection }), sec && _jsx(AboutUsForm, { section: sec, onChange: updateSec })] })] }), _jsxs("div", { className: "flex flex-1 flex-col overflow-hidden", children: [_jsx("div", { className: "flex border-b border-slate-200 bg-white px-4", children: ['preview', 'html'].map(tab => (_jsx("button", { onClick: () => setActiveTab(tab), className: `px-4 py-3 text-sm font-medium capitalize transition border-b-2 -mb-px ${activeTab === tab ? 'border-brand text-brand' : 'border-transparent text-slate-400 hover:text-slate-700'}`, children: tab === 'html' ? 'HTML' : 'Preview' }, tab))) }), activeTab === 'preview' ? (_jsx("iframe", { srcDoc: previewHtml
                             ? `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#f8f9fc">${previewHtml}</body></html>`

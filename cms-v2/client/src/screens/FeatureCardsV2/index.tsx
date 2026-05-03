@@ -5,6 +5,7 @@ import { normalize } from '../../utils/text';
 import { generateFeatureCardsV2Html } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 function makeCard(): Fc2Card {
   return { lineColor: '#204280', title: normalize('', 'fc2Title'), desc: normalize('', 'fc2Desc'), ctaText: normalize('', 'fc2Cta'), ctaUrl: '#' };
@@ -110,7 +111,7 @@ export default function FeatureCardsV2Screen() {
           <button onClick={save} disabled={saving} className="btn-primary flex-1 justify-center">
             {saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save'}
           </button>
-          <button onClick={() => { setPreviewHtml(generateFeatureCardsV2Html(state)); setActiveTab('preview'); }}
+          <button onClick={() => { setPreviewHtml(wrapGeneratedHtml('Feature Cards V2', generateFeatureCardsV2Html(state))); setActiveTab('preview'); }}
             className="btn-success flex-1 justify-center">⚡ Generate HTML</button>
         </div>
 

@@ -5,6 +5,7 @@ import { normalize } from '../../utils/text';
 import { generateProgramCardsHtml } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 let _cardCounter = 0;
 function makeCard(): ProgramCard {
@@ -222,7 +223,7 @@ export default function ProgramCardsScreen() {
   function generate() {
     if (!activeId && !name) { alert('Save the component first.'); return; }
     const id = activeId || 'preview';
-    const html = generateProgramCardsHtml(id, name || 'Preview', state);
+    const html = wrapGeneratedHtml('Program Cards', generateProgramCardsHtml(id, name || 'Preview', state));
     setPreviewHtml(html); setActiveTab('preview');
   }
 

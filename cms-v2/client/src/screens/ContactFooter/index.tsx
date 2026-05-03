@@ -5,6 +5,7 @@ import { normalize } from '../../utils/text';
 import { generateCfHtml } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 function makeDefault(): CfState {
   return {
@@ -183,7 +184,7 @@ export default function ContactFooter() {
           <button onClick={save} disabled={saving} className="btn-primary flex-1 justify-center">
             {saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save Component'}
           </button>
-          <button onClick={() => { setPreviewHtml(generateCfHtml(state)); setActiveTab('preview'); }}
+          <button onClick={() => { setPreviewHtml(wrapGeneratedHtml('Contact Footer', generateCfHtml(state))); setActiveTab('preview'); }}
             className="btn-success flex-1 justify-center">
             ⚡ Generate HTML
           </button>

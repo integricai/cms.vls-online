@@ -9,6 +9,7 @@ import { normalize } from '../../utils/text';
 import { generateCourseTabsHtml } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 function makeDefault(): CourseTabsState {
   return { tabs: [] };
@@ -431,7 +432,7 @@ export default function CourseTabsScreen() {
           <button onClick={save} disabled={saving} className="btn-primary flex-1 justify-center">
             {saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save'}
           </button>
-          <button onClick={() => { setPreviewHtml(generateCourseTabsHtml(state)); setActiveTab('preview'); }}
+          <button onClick={() => { setPreviewHtml(wrapGeneratedHtml('Course Tabs', generateCourseTabsHtml(state))); setActiveTab('preview'); }}
             className="btn-success flex-1 justify-center">⚡ Generate HTML</button>
         </div>
 

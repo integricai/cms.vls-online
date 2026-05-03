@@ -6,6 +6,7 @@ import { generateAboutUsHtml } from './generateHtml';
 import { ICON_OPTIONS } from './icons';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 let counter = 0;
 
@@ -111,7 +112,7 @@ export default function AboutUs() {
   }, []);
 
   useEffect(() => {
-    if (sec) setPreviewHtml(generateAboutUsHtml(sec));
+    if (sec) setPreviewHtml(wrapGeneratedHtml('About Us', generateAboutUsHtml(sec)));
   }, [sec]);
 
   const updateSec = useCallback((patch: Partial<AboutUsSection>) => {
@@ -162,7 +163,7 @@ export default function AboutUs() {
           <button onClick={save} disabled={saving} className="btn-primary flex-1 justify-center">
             {saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save'}
           </button>
-          <button onClick={() => { if (sec) { setPreviewHtml(generateAboutUsHtml(sec)); setActiveTab('preview'); } }}
+          <button onClick={() => { if (sec) { setPreviewHtml(wrapGeneratedHtml('About Us', generateAboutUsHtml(sec))); setActiveTab('preview'); } }}
             className="btn-success flex-1 justify-center">
             ⚡ Generate HTML
           </button>

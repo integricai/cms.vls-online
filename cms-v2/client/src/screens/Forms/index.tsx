@@ -5,6 +5,7 @@ import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
 import { normalize } from '../../utils/text';
 import { generateContactFormHtml, generateReportIssueHtml, generateReportTyHtml } from './generateHtml';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 type FormType = 'contact' | 'report-issue' | 'report-issue-ty';
 type Tab = 'preview' | 'html';
@@ -244,7 +245,7 @@ export default function Forms() {
       : type === 'report-issue'
         ? generateReportIssueHtml(state)
         : generateReportTyHtml(state);
-    setHtml(next);
+    setHtml(wrapGeneratedHtml(config?.title || 'Forms', next));
     setTab('preview');
   }
 

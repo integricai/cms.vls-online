@@ -1,3 +1,4 @@
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import Field from '../../components/Field';
@@ -127,7 +128,7 @@ export default function Events() {
     setSelectedId(null);
     setDraft(event);
     setMode('preview');
-    setHtml(renderEventCardHtml(event));
+    setHtml(wrapGeneratedHtml('Events', renderEventCardHtml(event)));
   }
 
   async function saveEvent() {
@@ -146,7 +147,7 @@ export default function Events() {
       setEvents(next);
       setSelectedId(draft.id);
       setSaved(true);
-      setHtml(renderEventCardHtml(draft));
+      setHtml(wrapGeneratedHtml('Events', renderEventCardHtml(draft)));
     } finally {
       setSaving(false);
     }
@@ -252,7 +253,7 @@ export default function Events() {
             <span className="ml-auto text-xs text-slate-400">{events.length} events</span>
           </div>
           <div className="mt-3 flex gap-2">
-            <button className="btn-ghost text-xs" onClick={() => { setHtml(buildEventsListEmbedCode(publicEventsUrl())); setMode('html'); }}>List Embed</button>
+            <button className="btn-ghost text-xs" onClick={() => { setHtml(wrapGeneratedHtml('Events', buildEventsListEmbedCode(publicEventsUrl()))); setMode('html'); }}>List Embed</button>
             <button className="btn-primary text-xs" onClick={() => startNew()}>+ New Event</button>
           </div>
         </div>
@@ -308,7 +309,7 @@ export default function Events() {
         {draft && (
           <div className="sticky bottom-0 flex gap-2 border-t border-slate-100 bg-white px-5 py-3">
             {selectedId && <button className="btn-danger" onClick={deleteEvent}>Delete</button>}
-            {selectedId && <button className="btn-ghost text-xs" onClick={() => { setHtml(buildEventEmbedCode(draft.id, publicEventsUrl())); setMode('html'); }}>Get Code</button>}
+            {selectedId && <button className="btn-ghost text-xs" onClick={() => { setHtml(wrapGeneratedHtml('Events', buildEventEmbedCode(draft.id, publicEventsUrl()))); setMode('html'); }}>Get Code</button>}
             <button className="btn-primary ml-auto" disabled={saving} onClick={saveEvent}>{saving ? 'Saving...' : saved ? 'Saved' : selectedId ? 'Save Changes' : 'Create Event'}</button>
           </div>
         )}

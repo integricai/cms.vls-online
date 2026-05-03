@@ -5,6 +5,7 @@ import { normalize } from '../../utils/text';
 import { generateBannerHtml } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 let idCounter = 0;
 function newBanner() {
     idCounter++;
@@ -59,7 +60,7 @@ export default function BannerScreen() {
     useEffect(() => {
         if (active) {
             const totalMs = ((active.days || 0) * 86400 + (active.hours || 0) * 3600 + (active.mins || 0) * 60 + (active.secs || 0)) * 1000;
-            setPreviewHtml(generateBannerHtml(active, Date.now() + totalMs));
+            setPreviewHtml(wrapGeneratedHtml('Banner', generateBannerHtml(active, Date.now() + totalMs)));
         }
     }, [active]);
     const updateActive = useCallback((patch) => {
@@ -91,7 +92,7 @@ export default function BannerScreen() {
             setSaved(true);
             if (active) {
                 const totalMs = ((active.days || 0) * 86400 + (active.hours || 0) * 3600 + (active.mins || 0) * 60 + (active.secs || 0)) * 1000;
-                setPreviewHtml(generateBannerHtml(active, Date.now() + totalMs));
+                setPreviewHtml(wrapGeneratedHtml('Banner', generateBannerHtml(active, Date.now() + totalMs)));
             }
         }
         finally {

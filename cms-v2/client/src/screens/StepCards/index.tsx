@@ -5,6 +5,7 @@ import { normalize } from '../../utils/text';
 import { generateStepCardsHtml } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 function makeCard(): StepCard {
   return { title: normalize('', 'stepsCardTitle'), desc: normalize('', 'stepsCard') };
@@ -97,7 +98,7 @@ export default function StepCardsScreen() {
           <button onClick={save} disabled={saving} className="btn-primary flex-1 justify-center">
             {saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save'}
           </button>
-          <button onClick={() => { setPreviewHtml(generateStepCardsHtml(state)); setActiveTab('preview'); }}
+          <button onClick={() => { setPreviewHtml(wrapGeneratedHtml('Step Cards', generateStepCardsHtml(state))); setActiveTab('preview'); }}
             className="btn-success flex-1 justify-center">⚡ Generate HTML</button>
         </div>
 

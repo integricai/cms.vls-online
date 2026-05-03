@@ -5,6 +5,7 @@ import { normalize } from '../../utils/text';
 import { generateProgramCardsHtml } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 let _cardCounter = 0;
 function makeCard() {
     return { id: `pc-${Date.now().toString(36)}-${++_cardCounter}`, title: normalize('', 'programCardTitle'), desc: normalize('', 'programDesc'), url: '#', cta: normalize('View Course →', 'programCta'), cardBg: '#204280', badge: '', rating: '', hours: '' };
@@ -179,7 +180,7 @@ export default function ProgramCardsScreen() {
             return;
         }
         const id = activeId || 'preview';
-        const html = generateProgramCardsHtml(id, name || 'Preview', state);
+        const html = wrapGeneratedHtml('Program Cards', generateProgramCardsHtml(id, name || 'Preview', state));
         setPreviewHtml(html);
         setActiveTab('preview');
     }

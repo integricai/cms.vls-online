@@ -5,6 +5,7 @@ import { normalize } from '../../utils/text';
 import { generateProgramCardsV2Html } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 function makeCard(): Pcv2Card {
   return { id: `pcv2c-${Date.now().toString(36)}`, imageUrl: '', imageAlt: '', accent: '#1f73b7', ctaBg: '#0d1f3c', tagBg: '#e4f2ff', cardBg: '#ffffff', eyebrow: normalize('', 'pcv2Eyebrow'), title: normalize('', 'pcv2Title'), desc: normalize('', 'pcv2Desc'), chips: '', meta: normalize('', 'pcv2Meta'), cta: normalize('Learn More →', 'pcv2Cta'), url: '#' };
@@ -110,7 +111,7 @@ export default function ProgramCardsV2Screen() {
           <button onClick={save} disabled={saving} className="btn-primary flex-1 justify-center">
             {saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save'}
           </button>
-          <button onClick={() => { setPreviewHtml(generateProgramCardsV2Html(state)); setActiveTab('preview'); }}
+          <button onClick={() => { setPreviewHtml(wrapGeneratedHtml('Program Cards V2', generateProgramCardsV2Html(state))); setActiveTab('preview'); }}
             className="btn-success flex-1 justify-center">⚡ Generate HTML</button>
         </div>
 

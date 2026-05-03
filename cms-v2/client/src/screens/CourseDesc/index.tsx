@@ -5,6 +5,7 @@ import { normalize } from '../../utils/text';
 import { generateCourseDescHtml } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 function makeDefault(): CourseDescState {
   return {
@@ -172,7 +173,7 @@ export default function CourseDescScreen() {
   }
 
   function generate() {
-    const html = generateCourseDescHtml(state);
+    const html = wrapGeneratedHtml('Course Description', generateCourseDescHtml(state));
     setPreviewHtml(html);
     setActiveTab('preview');
   }

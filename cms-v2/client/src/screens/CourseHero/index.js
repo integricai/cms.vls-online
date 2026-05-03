@@ -5,6 +5,7 @@ import { normalize } from '../../utils/text';
 import { generateCourseHeroHtml } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 function makeDefault() {
     return {
         bg: '#0d1f3c',
@@ -107,7 +108,7 @@ export default function CourseHeroScreen() {
         setComponents(comps);
         newComponent();
     }
-    function generate() { setPreviewHtml(generateCourseHeroHtml(state)); setActiveTab('preview'); }
+    function generate() { setPreviewHtml(wrapGeneratedHtml('Left Hero', generateCourseHeroHtml(state))); setActiveTab('preview'); }
     if (loading)
         return _jsx("div", { className: "flex h-full items-center justify-center text-sm text-slate-400", children: "Loading\u2026" });
     function asTV(v, key) { return normalize(v, key); }

@@ -5,6 +5,7 @@ import { normalize } from '../../utils/text';
 import { generateCourseDescHtml } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 function makeDefault() {
     return {
         icon: '📖', title: 'About This Course', titleTc: '#1a1a1a', titleSize: 14,
@@ -120,7 +121,7 @@ export default function CourseDescScreen() {
         newComponent();
     }
     function generate() {
-        const html = generateCourseDescHtml(state);
+        const html = wrapGeneratedHtml('Course Description', generateCourseDescHtml(state));
         setPreviewHtml(html);
         setActiveTab('preview');
     }

@@ -6,6 +6,7 @@ import { generateHeroHtml } from './generateHtml';
 import Field from '../../components/Field';
 import ColorPicker from '../../components/ColorPicker';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 const MAX_W_OPTIONS = ['480px', '560px', '640px', '720px', '100%'];
 
@@ -127,7 +128,7 @@ export default function HomeHero() {
 
   // Regenerate preview when active section changes
   useEffect(() => {
-    if (sec) setPreviewHtml(generateHeroHtml(sec));
+    if (sec) setPreviewHtml(wrapGeneratedHtml('Home Hero', generateHeroHtml(sec)));
   }, [sec]);
 
   const updateSec = useCallback((patch: Partial<HeroSection>) => {
@@ -163,7 +164,7 @@ export default function HomeHero() {
 
   function generateAndPreview() {
     if (sec) {
-      setPreviewHtml(generateHeroHtml(sec));
+      setPreviewHtml(wrapGeneratedHtml('Home Hero', generateHeroHtml(sec)));
       setActiveTab('preview');
     }
   }

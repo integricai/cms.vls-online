@@ -5,6 +5,7 @@ import { normalize } from '../../utils/text';
 import { generatePromoSectionHtml } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 let counter = 0;
 
@@ -97,7 +98,7 @@ export default function PromotionSection() {
   }, []);
 
   useEffect(() => {
-    if (sec) setPreviewHtml(generatePromoSectionHtml(sec));
+    if (sec) setPreviewHtml(wrapGeneratedHtml('Promotion Section', generatePromoSectionHtml(sec)));
   }, [sec]);
 
   const updateSec = useCallback((patch: Partial<PromoSection>) => {
@@ -147,7 +148,7 @@ export default function PromotionSection() {
           <button onClick={save} disabled={saving} className="btn-primary flex-1 justify-center">
             {saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save'}
           </button>
-          <button onClick={() => { if (sec) { setPreviewHtml(generatePromoSectionHtml(sec)); setActiveTab('preview'); } }}
+          <button onClick={() => { if (sec) { setPreviewHtml(wrapGeneratedHtml('Promotion Section', generatePromoSectionHtml(sec))); setActiveTab('preview'); } }}
             className="btn-success flex-1 justify-center">
             ⚡ Generate HTML
           </button>

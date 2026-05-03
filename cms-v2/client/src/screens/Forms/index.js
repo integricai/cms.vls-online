@@ -6,6 +6,7 @@ import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
 import { normalize } from '../../utils/text';
 import { generateContactFormHtml, generateReportIssueHtml, generateReportTyHtml } from './generateHtml';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 const CONFIG = {
     contact: { title: 'Contact Form', key: 'vls-form-config' },
     'report-issue': { title: 'Report an Issue', key: 'vls-report-config' },
@@ -124,7 +125,7 @@ export default function Forms() {
             : type === 'report-issue'
                 ? generateReportIssueHtml(state)
                 : generateReportTyHtml(state);
-        setHtml(next);
+        setHtml(wrapGeneratedHtml(config?.title || 'Forms', next));
         setTab('preview');
     }
     if (loading)

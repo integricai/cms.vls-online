@@ -5,6 +5,7 @@ import RichTextField from '../../components/RichTextField';
 import type { FaqAnswerType, FaqItem, FaqSection, TextData, TextValue } from '../../types/cms';
 import { normalize } from '../../utils/text';
 import { generateFaqHtml } from './generateHtml';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 type Tab = 'preview' | 'html';
 
@@ -256,7 +257,7 @@ export default function FAQ() {
             </div>
             <div className="flex gap-2">
               <button onClick={save} disabled={saving} className="btn-primary flex-1 justify-center">{saving ? 'Saving...' : saved ? 'Saved' : 'Save All'}</button>
-              <button onClick={() => { setHtml(generateFaqHtml(active?.items || [])); setTab('preview'); }} disabled={!active} className="btn-success flex-1 justify-center">Generate HTML</button>
+              <button onClick={() => { setHtml(wrapGeneratedHtml('FAQ', generateFaqHtml(active?.items || []))); setTab('preview'); }} disabled={!active} className="btn-success flex-1 justify-center">Generate HTML</button>
             </div>
           </div>
         </div>

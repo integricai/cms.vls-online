@@ -3,6 +3,7 @@ import { api } from '../../api/client';
 import type { Fc3State, Fc3Component, Fc3Content, Fc3Card, Fc3Tag } from '../../types/cms';
 import { generateFeatureCardsV3Html } from './generateHtml';
 import Field from '../../components/Field';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 function makeTag(): Fc3Tag { return { code: '', name: '' }; }
 function makeCard(): Fc3Card { return { headerBg: '#204280', number: '01', title: '', subtitle: '', tags: [] }; }
@@ -109,7 +110,7 @@ export default function FeatureCardsV3Screen() {
           <button onClick={save} disabled={saving} className="btn-primary flex-1 justify-center">
             {saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save'}
           </button>
-          <button onClick={() => { setPreviewHtml(generateFeatureCardsV3Html(state)); setActiveTab('preview'); }}
+          <button onClick={() => { setPreviewHtml(wrapGeneratedHtml('Feature Cards V3', generateFeatureCardsV3Html(state))); setActiveTab('preview'); }}
             className="btn-success flex-1 justify-center">⚡ Generate HTML</button>
         </div>
 

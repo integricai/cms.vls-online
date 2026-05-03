@@ -17,6 +17,7 @@ import {
 } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 function tv<K extends Parameters<typeof normalize>[1]>(v: TextValue, k: K) { return normalize(v as any, k); }
 function hex(v: string, fb = '#ffffff') { return /^#[0-9a-fA-F]{6}$/.test(v) ? v : fb; }
@@ -260,7 +261,7 @@ function DcsTab({ onHtml }: { onHtml: (html: string) => void }) {
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
         onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
-        onSave={save} onGenerate={() => onHtml(generateDcsHtml(state))} />
+        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Two Column v1', generateDcsHtml(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
         <PaddingRow value={state} onChange={upd} />
@@ -360,7 +361,7 @@ function Dcs2Tab({ onHtml }: { onHtml: (html: string) => void }) {
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
         onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
-        onSave={save} onGenerate={() => onHtml(generateDcs2Html(state))} />
+        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Two Column v2', generateDcs2Html(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
         <PaddingRow value={state} onChange={upd} />
@@ -480,7 +481,7 @@ function Dcs3Tab({ onHtml }: { onHtml: (html: string) => void }) {
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
         onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
-        onSave={save} onGenerate={() => onHtml(generateDcs3Html(state))} />
+        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Two Column v3', generateDcs3Html(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
         <div className="grid grid-cols-2 gap-2">
@@ -593,7 +594,7 @@ function ReachTab({ onHtml }: { onHtml: (html: string) => void }) {
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
         onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
-        onSave={save} onGenerate={() => onHtml(generateReachHtml(state))} />
+        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Global Reach', generateReachHtml(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
         <PaddingRow value={state} onChange={upd} />
@@ -698,7 +699,7 @@ function PhbTab({ onHtml }: { onHtml: (html: string) => void }) {
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
         onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
-        onSave={save} onGenerate={() => onHtml(generatePhbHtml(state))} />
+        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Hero Banner', generatePhbHtml(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
         <PaddingRow value={state} onChange={upd} />
@@ -809,7 +810,7 @@ function Phv2Tab({ onHtml }: { onHtml: (html: string) => void }) {
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
         onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
-        onSave={save} onGenerate={() => onHtml(generatePhv2Html(state))} />
+        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Hero Banner V2', generatePhv2Html(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
         <PaddingRow value={state} onChange={upd} />

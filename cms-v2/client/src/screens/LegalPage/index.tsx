@@ -3,6 +3,7 @@ import { api } from '../../api/client';
 import type { LegalPageState, LegalPageComponent, PolicySection, PolicyBlock, PolicyBlockType } from '../../types/cms';
 import { generateLegalPageHtml } from './generateHtml';
 import Field from '../../components/Field';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 const BLOCK_TYPES: { value: PolicyBlockType; label: string }[] = [
   { value: 'paragraph',  label: 'Paragraph' },
@@ -377,7 +378,7 @@ export default function LegalPageScreen() {
           <button onClick={save} disabled={saving} className="btn-primary flex-1 justify-center">
             {saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save'}
           </button>
-          <button onClick={() => { setPreviewHtml(generateLegalPageHtml(state)); setActiveTab('preview'); }}
+          <button onClick={() => { setPreviewHtml(wrapGeneratedHtml('Legal Page', generateLegalPageHtml(state))); setActiveTab('preview'); }}
             className="btn-success flex-1 justify-center">⚡ Generate HTML</button>
         </div>
 

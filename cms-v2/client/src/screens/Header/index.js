@@ -5,6 +5,7 @@ import { normalize } from '../../utils/text';
 import { generateHeaderHtml } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 let ctaCounter = 0;
 let menuCounter = 0;
 function makeDefault() {
@@ -107,7 +108,7 @@ export default function HeaderScreen() {
         }
     }
     function generate() {
-        setPreviewHtml(generateHeaderHtml(cfg));
+        setPreviewHtml(wrapGeneratedHtml('Header', generateHeaderHtml(cfg)));
         setActiveTab('preview');
     }
     if (loading) {

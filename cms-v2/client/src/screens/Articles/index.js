@@ -6,6 +6,7 @@ import RichTextField from '../../components/RichTextField';
 import { normalize } from '../../utils/text';
 import { defaultArticleSection } from './defaults';
 import { generateArticlesHtml } from './generateHtml';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 function articlesToText(group) {
     return (group.articles || []).map(article => [article.code || '', article.title || '', article.desc || '', article.url || ''].join(' | ')).join('\n');
 }
@@ -59,7 +60,7 @@ export default function Articles() {
             if (loaded[0]) {
                 setActiveId(loaded[0].id);
                 setDraft(loaded[0]);
-                setHtml(generateArticlesHtml(loaded[0]));
+                setHtml(wrapGeneratedHtml('Articles', generateArticlesHtml(loaded[0])));
             }
         })
             .finally(() => setLoading(false));
@@ -74,14 +75,14 @@ export default function Articles() {
             return;
         setActiveId(section.id);
         setDraft(section);
-        setHtml(generateArticlesHtml(section));
+        setHtml(wrapGeneratedHtml('Articles', generateArticlesHtml(section)));
         setSaved(false);
     }
     function createSection() {
         const section = defaultArticleSection();
         setActiveId(section.id);
         setDraft(section);
-        setHtml(generateArticlesHtml(section));
+        setHtml(wrapGeneratedHtml('Articles', generateArticlesHtml(section)));
         setSaved(false);
     }
     function duplicateSection() {
@@ -92,7 +93,7 @@ export default function Articles() {
         section.name = `Copy of ${draft.name || 'Articles'}`;
         setActiveId(section.id);
         setDraft(section);
-        setHtml(generateArticlesHtml(section));
+        setHtml(wrapGeneratedHtml('Articles', generateArticlesHtml(section)));
         setSaved(false);
     }
     async function save() {
@@ -106,7 +107,7 @@ export default function Articles() {
             await api.put('/content/vls-article-groups', { sections: next });
             setSections(next);
             setActiveId(draft.id);
-            setHtml(generateArticlesHtml(draft));
+            setHtml(wrapGeneratedHtml('Articles', generateArticlesHtml(draft)));
             setTab('preview');
             setSaved(true);
         }
@@ -122,7 +123,7 @@ export default function Articles() {
         setSections(next);
         setActiveId(next[0]?.id ?? null);
         setDraft(next[0] ?? null);
-        setHtml(next[0] ? generateArticlesHtml(next[0]) : '');
+        setHtml(next[0] ? wrapGeneratedHtml('Articles', generateArticlesHtml(next[0])) : '');
     }
     function updateGroup(index, group) {
         if (!draft)
@@ -142,7 +143,7 @@ export default function Articles() {
     function generate() {
         if (!draft)
             return;
-        setHtml(generateArticlesHtml(draft));
+        setHtml(wrapGeneratedHtml('Articles', generateArticlesHtml(draft)));
         setTab('preview');
     }
     if (loading)

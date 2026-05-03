@@ -5,6 +5,7 @@ import { normalize } from '../../utils/text';
 import { generateFooterHtml } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 let linkCounter = 0;
 let socialCounter = 0;
@@ -177,7 +178,7 @@ export default function FooterScreen() {
 
   function generate() {
     if (!data) return;
-    setPreviewHtml(generateFooterHtml(data));
+    setPreviewHtml(wrapGeneratedHtml('Footer', generateFooterHtml(data)));
     setActiveTab('preview');
   }
 

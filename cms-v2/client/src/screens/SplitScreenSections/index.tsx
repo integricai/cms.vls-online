@@ -16,6 +16,7 @@ import type {
 import { normalize } from '../../utils/text';
 import { makeLeftGeneric, makeLeftHero, makeRightPane } from './defaults';
 import { generateLeftHeroHtml, generatePanelHtml } from './generateHtml';
+import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 type SplitType = 'left-hero' | 'left-generic' | 'right-pane';
 type Tab = 'preview' | 'html';
@@ -260,7 +261,7 @@ function HeroEditor() {
   return (
     <div className="flex h-full">
       <div className="w-[500px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
-        <SavedSelector title="Left Hero Section" items={items} activeId={activeId} name={name} saving={saving} saved={saved} onSelect={load} onNew={newItem} onDuplicate={duplicate} onDelete={del} onName={setName} onSave={save} onGenerate={() => { setHtml(generateLeftHeroHtml(state)); setTab('preview'); }} />
+        <SavedSelector title="Left Hero Section" items={items} activeId={activeId} name={name} saving={saving} saved={saved} onSelect={load} onNew={newItem} onDuplicate={duplicate} onDelete={del} onName={setName} onSave={save} onGenerate={() => { setHtml(wrapGeneratedHtml('Left Hero', generateLeftHeroHtml(state))); setTab('preview'); }} />
         <div className="px-5 py-4">
           <p className="section-label mt-0">Layout</p>
           <ColorInput label="Background" value={state.bg} onChange={bg => patch({ bg })} />
@@ -469,7 +470,7 @@ function PanelEditor({ type }: { type: Extract<SplitType, 'left-generic' | 'righ
   return (
     <div className="flex h-full">
       <div className="w-[500px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
-        <SavedSelector title={config.title} items={items} activeId={activeId} name={name} saving={saving} saved={saved} onSelect={load} onNew={newItem} onDuplicate={duplicate} onDelete={del} onName={setName} onSave={save} onGenerate={() => { setHtml(generatePanelHtml(state, mode)); setTab('preview'); }} />
+        <SavedSelector title={config.title} items={items} activeId={activeId} name={name} saving={saving} saved={saved} onSelect={load} onNew={newItem} onDuplicate={duplicate} onDelete={del} onName={setName} onSave={save} onGenerate={() => { setHtml(wrapGeneratedHtml(config.title, generatePanelHtml(state, mode))); setTab('preview'); }} />
         <div className="px-5 py-4">
           <p className="section-label mt-0">Section</p>
           <ColorInput label="Background" value={state.bg} onChange={bg => patch({ bg })} />
