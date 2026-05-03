@@ -47,9 +47,10 @@ function cardHtml(card, mode, imageBoxWidth, imageBoxHeight) {
             body += `<a href="${attr(card.ctaUrl || '#')}" style="display:inline-block;font-family:'Poppins',sans-serif;padding:8px 18px;background:${safeHex(card.ctaBg, defaults.ctaBg)};border-radius:6px;text-decoration:none;${textStyle(cta)}color:${safeHex(card.ctaColor, '#ffffff')};">${escapeHtml(cta.text)}</a>`;
         const spanStyle = mode === 'left' ? `grid-column:span ${card.halfWidth ? 1 : 2};` : '';
         const frameW = mode === 'left' ? Math.min(imgW, 45) : Math.min(imgW, 42);
+        const pad = mode === 'left' ? 16 : 20;
         const frameStyle = `width:${frameW}%;height:${imgH}px;min-width:140px;max-width:320px;border:1px solid ${cardBorder};border-radius:${mode === 'left' ? 8 : 10}px;overflow:hidden;background:${safeHex(card.cardBorder, defaults.border)};flex-shrink:0;`;
-        return `    <div style="${spanStyle}background:${cardBg};border:1px solid ${cardBorder};border-radius:${mode === 'left' ? 10 : 12}px;overflow:hidden;display:flex;align-items:stretch;gap:0;">
-${card.imageUrl ? `      <div style="${frameStyle}"><img src="${attr(card.imageUrl)}" alt="${attr(card.imageAlt || '')}" style="${imageStyle}"></div>\n` : ''}      <div style="padding:${mode === 'left' ? 16 : 20}px;flex:1;min-width:0;">${body}</div>
+        return `    <div style="${spanStyle}background:${cardBg};border:1px solid ${cardBorder};border-radius:${mode === 'left' ? 10 : 12}px;overflow:hidden;display:flex;align-items:flex-start;gap:0;padding:${pad}px;">
+${card.imageUrl ? `      <div style="${frameStyle}"><img src="${attr(card.imageUrl)}" alt="${attr(card.imageAlt || '')}" style="${imageStyle}"></div>\n` : ''}      <div style="padding:0 0 0 ${card.imageUrl ? pad : 0}px;flex:1;min-width:0;">${body}</div>
     </div>`;
     }
     if (mode === 'right') {
