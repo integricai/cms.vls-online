@@ -2,6 +2,8 @@ import { escapeHtml, normalize, textStyle } from '../../utils/text';
 
 type AnyConfig = Record<string, any>;
 
+const API_BASE = 'https://api.cms.vls-online.com';
+
 function attr(value: string) {
   return escapeHtml(value).replace(/"/g, '&quot;');
 }
@@ -17,12 +19,14 @@ export function generateContactFormHtml(config: AnyConfig) {
   const thankTitle = normalize(config.thankTitle, 'formThankTitle');
   const thankDesc = normalize(config.thankDesc, 'formThank');
   const enquiryOptions = config.enquiryOptions || [];
-  const apiUrl = 'https://api.cms.vls-online.com/api/submit-form';
+  const recipients: string[] = Array.isArray(config.recipients) ? config.recipients : [];
 
   const optionHtml = enquiryOptions
     .filter((option: any) => String(option.label || '').trim())
     .map((option: any) => `<option value="${attr(option.label)}">${escapeHtml(option.label)}</option>`)
     .join('\n');
+
+  const submitLabel = escapeHtml(submit.text) || 'Submit';
 
   return `<style>
 .${uid}{font-family:Poppins,sans-serif;max-width:560px;width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px;box-shadow:0 8px 30px rgba(15,23,42,.08);}
@@ -33,30 +37,71 @@ export function generateContactFormHtml(config: AnyConfig) {
 .${uid}-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .${uid}-field{margin-bottom:14px;}
 .${uid}-btn{width:100%;border:0;border-radius:8px;background:#204280;padding:12px 18px;cursor:pointer;font-family:Poppins,sans-serif;${textStyle(submit)}}
+.${uid}-btn:disabled{opacity:.6;cursor:not-allowed;}
+.${uid}-err{display:none;margin-top:12px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:13px;color:#b91c1c;font-family:Poppins,sans-serif;}
 .${uid}-thanks{display:none;text-align:center;padding:24px 10px;}
 @media(max-width:640px){.${uid}-grid{grid-template-columns:1fr;}}
 </style>
-<form class="${uid}" action="${attr(apiUrl)}" method="post">
-  <div class="${uid}-form">
+<div class="${uid}">
+  <div id="${uid}-form">
     <h2 style="font-family:Poppins,sans-serif;margin:0 0 18px;${textStyle(title)}">${escapeHtml(title.text)}</h2>
     <div class="${uid}-grid">
-      <div class="${uid}-field"><label>First name</label><input name="firstName" required></div>
-      <div class="${uid}-field"><label>Last name</label><input name="lastName" required></div>
+      <div class="${uid}-field"><label>First name *</label><input id="${uid}-fn" placeholder="First name" required></div>
+      <div class="${uid}-field"><label>Last name</label><input id="${uid}-ln" placeholder="Last name"></div>
     </div>
-    <div class="${uid}-field"><label>Email</label><input type="email" name="email" required></div>
+    <div class="${uid}-field"><label>Email *</label><input id="${uid}-em" type="email" placeholder="Email address" required></div>
     <div class="${uid}-grid">
-      <div class="${uid}-field"><label>Country code</label><input name="countryCode" placeholder="+44"></div>
-      <div class="${uid}-field"><label>Phone</label><input name="phone"></div>
+      <div class="${uid}-field"><label>Country code</label><input id="${uid}-pc" placeholder="+44" style="max-width:100px;"></div>
+      <div class="${uid}-field"><label>Phone</label><input id="${uid}-ph" placeholder="Phone number"></div>
     </div>
-    <div class="${uid}-field"><label>Enquiry</label><select name="enquiryType" required><option value="">Select...</option>${optionHtml}</select></div>
-    <div class="${uid}-field"><label>Message</label><textarea name="message" rows="4"></textarea></div>
-    <button class="${uid}-btn" type="submit">${escapeHtml(submit.text)}</button>
+    <div class="${uid}-field"><label>Enquiry</label><select id="${uid}-eq"><option value="">Select...</option>${optionHtml}</select></div>
+    <div class="${uid}-field"><label>Message</label><textarea id="${uid}-cm" rows="4" placeholder="Your message…"></textarea></div>
+    <button class="${uid}-btn" id="${uid}-btn" type="button" onclick="${uid}sub()">${submitLabel}</button>
+    <div class="${uid}-err" id="${uid}-err"></div>
   </div>
-  <div class="${uid}-thanks">
+  <div class="${uid}-thanks" id="${uid}-thanks">
     <h3 style="font-family:Poppins,sans-serif;margin:0 0 8px;${textStyle(thankTitle)}">${escapeHtml(thankTitle.text)}</h3>
     <p style="font-family:Poppins,sans-serif;margin:0;line-height:1.6;${textStyle(thankDesc)}">${thankDesc.text}</p>
   </div>
-</form>`;
+</div>
+<script data-cfasync="false">
+(function(){
+  var RCP=${JSON.stringify(recipients)};
+  window['${uid}sub']=async function(){
+    var fn=document.getElementById('${uid}-fn').value.trim();
+    var ln=document.getElementById('${uid}-ln').value.trim();
+    var em=document.getElementById('${uid}-em').value.trim();
+    var pc=document.getElementById('${uid}-pc').value.trim();
+    var ph=document.getElementById('${uid}-ph').value.trim();
+    var eq=document.getElementById('${uid}-eq').value;
+    var cm=document.getElementById('${uid}-cm').value.trim();
+    var btn=document.getElementById('${uid}-btn');
+    var err=document.getElementById('${uid}-err');
+    err.style.display='none';
+    if(!fn){err.textContent='Please enter your first name.';err.style.display='block';return;}
+    if(!em||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(em)){err.textContent='Please enter a valid email address.';err.style.display='block';return;}
+    var orig=btn.textContent;
+    btn.disabled=true;btn.textContent='Sending…';
+    try{
+      var r=await fetch('${API_BASE}/api/submit-form',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({firstName:fn,lastName:ln,email:em,phoneCode:pc,phoneNumber:ph,enquiry:eq,comments:cm,recipients:RCP})});
+      var data=await r.json();
+      if(r.ok&&data.ok){
+        document.getElementById('${uid}-form').style.display='none';
+        document.getElementById('${uid}-thanks').style.display='block';
+      } else {
+        err.textContent=data.error||'Something went wrong. Please try again.';
+        err.style.display='block';
+        btn.disabled=false;btn.textContent=orig;
+      }
+    }catch(e){
+      err.textContent='Unable to send. Please check your connection and try again.';
+      err.style.display='block';
+      btn.disabled=false;btn.textContent=orig;
+    }
+  };
+})();
+</script>`;
 }
 
 export function generateReportIssueHtml(config: AnyConfig) {
@@ -67,6 +112,8 @@ export function generateReportIssueHtml(config: AnyConfig) {
   const steps = config.steps || [];
   const cards = config.cards || [];
   const contacts = config.contactItems || [];
+  const recipients: string[] = Array.isArray(config.recipients) ? config.recipients : [];
+  const tyUrl = config.tyUrl || '';
 
   return `<style>
 .${uid}{font-family:Poppins,sans-serif;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;}
@@ -80,6 +127,9 @@ export function generateReportIssueHtml(config: AnyConfig) {
 .${uid} input:focus,.${uid} select:focus,.${uid} textarea:focus{border-color:${accent};box-shadow:0 0 0 3px rgba(32,66,128,.14);}
 .${uid}-field{margin-bottom:14px;}
 .${uid}-btn{width:100%;border:0;border-radius:8px;background:${accent};color:#fff;padding:12px 18px;font-family:Poppins,sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+.${uid}-btn:disabled{opacity:.6;cursor:not-allowed;}
+.${uid}-err{display:none;margin-top:12px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:13px;color:#b91c1c;font-family:Poppins,sans-serif;}
+.${uid}-ok{display:none;padding:32px 24px;text-align:center;}
 @media(max-width:800px){.${uid}-wrap{flex-direction:column;}.${uid}-side{width:100%;}}
 </style>
 <section class="${uid}">
@@ -97,18 +147,70 @@ export function generateReportIssueHtml(config: AnyConfig) {
       ${cards.map((card: any) => `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-top:10px;"><div style="font-size:18px;">${escapeHtml(card.icon || '')}</div><strong style="font-size:13px;color:#172033;">${escapeHtml(card.title || '')}</strong><p style="font-size:12px;color:#64748b;line-height:1.5;margin:4px 0 0;">${escapeHtml(card.desc || '')}</p></div>`).join('')}
       <div style="background:${safeHex(config.contactBg, '#0d1f3c')};border-radius:10px;padding:16px;margin-top:18px;color:#fff;"><strong>${escapeHtml(config.contactTitle || '')}</strong>${contacts.map((item: string) => `<p style="margin:8px 0 0;font-size:13px;">${escapeHtml(item)}</p>`).join('')}</div>
     </aside>
-    <form class="${uid}-main" action="https://api.cms.vls-online.com/api/submit-report" method="post">
-      <input type="hidden" name="thankYouUrl" value="${attr(config.tyUrl || '')}">
-      <div class="${uid}-field"><label>Name</label><input name="name" required></div>
-      <div class="${uid}-field"><label>Email</label><input name="email" type="email" required></div>
-      <div class="${uid}-field"><label>Qualification</label><select name="qualification">${quals.map((q: string) => `<option>${escapeHtml(q)}</option>`).join('')}</select></div>
-      <div class="${uid}-field"><label>Issue type</label><select name="issueType">${issueTypes.map((issue: string) => `<option>${escapeHtml(issue)}</option>`).join('')}</select></div>
-      <div class="${uid}-field"><label>Course / paper</label><input name="course"></div>
-      <div class="${uid}-field"><label>Describe the issue</label><textarea name="message" rows="6" required></textarea></div>
-      <button class="${uid}-btn" type="submit">${escapeHtml(config.btnText || 'Submit Report')}</button>
-    </form>
+    <div class="${uid}-main">
+      <div id="${uid}-form">
+        <div class="${uid}-field"><label>First name *</label><input id="${uid}-fn" placeholder="First name" required></div>
+        <div class="${uid}-field"><label>Last name</label><input id="${uid}-ln" placeholder="Last name"></div>
+        <div class="${uid}-field"><label>Email *</label><input id="${uid}-em" type="email" placeholder="Email address" required></div>
+        <div class="${uid}-field"><label>Phone</label><input id="${uid}-ph" placeholder="Phone number"></div>
+        <div class="${uid}-field"><label>Qualification</label><select id="${uid}-ql">${quals.map((q: string) => `<option>${escapeHtml(q)}</option>`).join('')}</select></div>
+        <div class="${uid}-field"><label>Issue type</label><select id="${uid}-it">${issueTypes.map((issue: string) => `<option>${escapeHtml(issue)}</option>`).join('')}</select></div>
+        <div class="${uid}-field"><label>Course / paper</label><input id="${uid}-cn" placeholder="e.g. PM, FA1"></div>
+        <div class="${uid}-field"><label>Describe the issue *</label><textarea id="${uid}-msg" rows="6" placeholder="Please describe the issue in detail…" required></textarea></div>
+        <button class="${uid}-btn" id="${uid}-btn" type="button" onclick="${uid}submit()">${escapeHtml(config.btnText || 'Submit Report')}</button>
+        <div class="${uid}-err" id="${uid}-err"></div>
+      </div>
+      <div class="${uid}-ok" id="${uid}-ok">
+        <div style="font-size:40px;margin-bottom:12px;">✓</div>
+        <h3 style="font-family:Poppins,sans-serif;font-size:20px;font-weight:700;color:#172033;margin:0 0 8px;">Report submitted</h3>
+        <p style="font-family:Poppins,sans-serif;font-size:14px;color:#64748b;margin:0;line-height:1.6;">Thank you. We have received your report and will be in touch shortly.</p>
+      </div>
+    </div>
   </div>
-</section>`;
+</section>
+<script data-cfasync="false">
+(function(){
+  var RCP=${JSON.stringify(recipients)};
+  var TY_URL=${JSON.stringify(tyUrl)};
+  window['${uid}submit']=async function(){
+    var fn=document.getElementById('${uid}-fn').value.trim();
+    var ln=document.getElementById('${uid}-ln').value.trim();
+    var em=document.getElementById('${uid}-em').value.trim();
+    var ph=document.getElementById('${uid}-ph').value.trim();
+    var ql=document.getElementById('${uid}-ql').value;
+    var it=document.getElementById('${uid}-it').value;
+    var cn=document.getElementById('${uid}-cn').value.trim();
+    var msg=document.getElementById('${uid}-msg').value.trim();
+    var btn=document.getElementById('${uid}-btn');
+    var err=document.getElementById('${uid}-err');
+    err.style.display='none';
+    if(!fn){err.textContent='Please enter your first name.';err.style.display='block';return;}
+    if(!em||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(em)){err.textContent='Please enter a valid email address.';err.style.display='block';return;}
+    if(!msg){err.textContent='Please describe the issue.';err.style.display='block';return;}
+    var now=new Date();var pad=function(n){return String(n).padStart(2,'0');};
+    var ref='VLS-'+now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate())+pad(now.getHours())+pad(now.getMinutes());
+    var orig=btn.textContent;
+    btn.disabled=true;btn.textContent='Sending…';
+    try{
+      var r=await fetch('${API_BASE}/api/submit-report',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({firstName:fn,lastName:ln,email:em,phone:ph,qualification:ql,issueType:it,courseName:cn,message:msg,recipients:RCP,refNumber:ref})});
+      var data=await r.json();
+      if(r.ok&&data.ok){
+        if(TY_URL){window.location.href=TY_URL+'?ref='+encodeURIComponent(ref);}
+        else{document.getElementById('${uid}-form').style.display='none';document.getElementById('${uid}-ok').style.display='block';}
+      } else {
+        err.textContent=data.error||'Something went wrong. Please try again.';
+        err.style.display='block';
+        btn.disabled=false;btn.textContent=orig;
+      }
+    }catch(e){
+      err.textContent='Unable to send. Please check your connection and try again.';
+      err.style.display='block';
+      btn.disabled=false;btn.textContent=orig;
+    }
+  };
+})();
+</script>`;
 }
 
 export function generateReportTyHtml(config: AnyConfig) {
