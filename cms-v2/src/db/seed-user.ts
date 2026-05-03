@@ -12,25 +12,26 @@ const rl = readline.createInterface({ input: process.stdin, output: process.stdo
 const ask = (q: string): Promise<string> => new Promise(res => rl.question(q, res));
 
 async function main() {
-  const email    = await ask('Email:    ');
+  const username = await ask('Username: ');
   const password = await ask('Password: ');
   const role     = (await ask('Role (admin/editor/viewer) [admin]: ')).trim() || 'admin';
 
-  if (!email || !password) { console.error('Email and password are required'); process.exit(1); }
+  if (!username || !password) { console.error('Username and password are required'); process.exit(1); }
   if (!['admin', 'editor', 'viewer'].includes(role)) { console.error('Invalid role'); process.exit(1); }
 
   const hash = await bcrypt.hash(password, 12);
+  const cleanUsername = username.trim();
 
   await sql`
-    INSERT INTO users (email, password_hash, role)
-    VALUES (${email.trim()}, ${hash}, ${role as 'admin' | 'editor' | 'viewer'})
-    ON CONFLICT (email) DO UPDATE
+    INSERT INTO users (email, username, password_hash, role)
+    VALUES (${cleanUsername}, ${cleanUsername}, ${hash}, ${role as 'admin' | 'editor' | 'viewer'})
+    ON CONFLICT (username) DO UPDATE
       SET password_hash = EXCLUDED.password_hash,
           role          = EXCLUDED.role,
           updated_at    = NOW()
   `;
 
-  console.log(`\n✓ User "${email.trim()}" saved with role "${role}".`);
+  console.log(`\n✓ User "${cleanUsername}" saved with role "${role}".`);
   rl.close();
 }
 

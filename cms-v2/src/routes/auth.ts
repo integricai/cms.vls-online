@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import {
   findUserByEmail,
+  findUserByLogin,
   findUserByResetToken,
   saveResetToken,
   toPublicUser,
@@ -17,15 +18,20 @@ const router = Router();
 // POST /auth/login
 router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password } = req.body as LoginRequest;
+    const { email, username, password } = req.body as LoginRequest;
+    const login = (username ?? email ?? '').trim();
 
-    if (!email || !password) {
-      return res.status(400).json({ ok: false, error: 'email and password are required' });
+    if (!login || !password) {
+      return res.status(400).json({ ok: false, error: 'username and password are required' });
     }
 
-    const user = await findUserByEmail(email);
+    const user = await findUserByLogin(login);
     if (!user) {
       return res.status(401).json({ ok: false, error: 'Invalid credentials' });
+    }
+
+    if (user.isBlocked) {
+      return res.status(403).json({ ok: false, error: 'This user has been blocked' });
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
@@ -35,7 +41,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
 
     const secret = process.env.JWT_SECRET!;
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user.id, email: user.email, username: user.username, role: user.role },
       secret,
       { expiresIn: '8h' },
     );

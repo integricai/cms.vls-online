@@ -1,0 +1,14 @@
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS username TEXT,
+  ADD COLUMN IF NOT EXISTS first_name TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS last_name TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN NOT NULL DEFAULT FALSE;
+
+UPDATE users
+SET username = COALESCE(NULLIF(username, ''), email)
+WHERE username IS NULL OR username = '';
+
+ALTER TABLE users
+  ALTER COLUMN username SET NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_username_key ON users (username);

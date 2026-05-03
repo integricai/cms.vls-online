@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { clearToken } from '../api/client';
+import { clearToken, getCurrentUser } from '../api/client';
 
 type NavItem  = { to: string; label: string };
 type NavGroup = { group: string; children: NavItem[] };
@@ -61,6 +61,8 @@ interface Props {
 
 export default function Sidebar({ isOpen, onClose }: Props) {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ 'Global': true, 'Home Page': true, 'Course Page': true, 'Page Templates': true, 'Cards': true });
+  const currentUser = getCurrentUser();
+  const canManageUsers = currentUser?.role === 'admin';
 
   function toggleGroup(name: string) {
     setOpenGroups(prev => ({ ...prev, [name]: !prev[name] }));
@@ -154,6 +156,22 @@ export default function Sidebar({ isOpen, onClose }: Props) {
 
       {/* ── Sign out ── */}
       <div className="border-t border-slate-700 px-2 py-3 min-w-[224px]">
+        {canManageUsers && (
+          <NavLink
+            to="/settings/users"
+            title="Settings"
+            className={({ isActive }) =>
+              `mb-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                isActive ? 'bg-brand text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`
+            }
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.53 1.53 0 01-2.29.95c-1.37-.83-2.94.74-2.11 2.11.47.78.05 1.8-.95 2.04-1.56.38-1.56 2.6 0 2.98 1 .24 1.42 1.26.95 2.04-.83 1.37.74 2.94 2.11 2.11.78-.47 1.8-.05 2.04.95.38 1.56 2.6 1.56 2.98 0 .24-1 1.26-1.42 2.04-.95 1.37.83 2.94-.74 2.11-2.11-.47-.78-.05-1.8.95-2.04 1.56-.38 1.56-2.6 0-2.98-1-.24-1.42-1.26-.95-2.04.83-1.37-.74-2.94-2.11-2.11-.78.47-1.8.05-2.04-.95zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+            </svg>
+            Settings
+          </NavLink>
+        )}
         <button
           onClick={() => { clearToken(); window.location.href = '/login'; }}
           className="w-full rounded-lg px-3 py-2 text-left text-sm text-slate-400 transition hover:bg-slate-800 hover:text-white"

@@ -29,7 +29,21 @@ async function runMigration(file: string): Promise<void> {
     .filter(s => s.replace(/--[^\n]*/g, '').trim().length > 0);
 
   for (const statement of statements) {
-    await sql(statement);
+    try {
+      await sql(statement);
+    } catch (err) {
+      if (
+        typeof err === 'object'
+        && err !== null
+        && 'code' in err
+        && (err as { code?: string }).code === '42710'
+        && statement.toUpperCase().startsWith('CREATE TYPE USER_ROLE AS ENUM')
+      ) {
+        console.log('Skipping existing user_role enum.');
+        continue;
+      }
+      throw err;
+    }
   }
   console.log(`Done: ${file}`);
 }

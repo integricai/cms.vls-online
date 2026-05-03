@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, setToken } from '../api/client';
-import type { User } from '../types/cms';
+import { api, setCurrentUser, setToken, type CurrentUser } from '../api/client';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,8 +14,9 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      const data = await api.post<{ token: string; user: User }>('/auth/login', { email, password });
+      const data = await api.post<{ token: string; user: CurrentUser }>('/auth/login', { username, password });
       setToken(data.token);
+      setCurrentUser(data.user);
       navigate('/home-hero');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -33,11 +33,11 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="field-label">Email</label>
+            <label className="field-label">Username or email</label>
             <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
               className="input"
               required
               autoFocus

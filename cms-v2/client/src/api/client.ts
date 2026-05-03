@@ -1,5 +1,18 @@
 const BASE = '/api';
 
+export type AccessLevel = 'admin' | 'editor' | 'viewer';
+
+export interface CurrentUser {
+  id: number;
+  email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  role: AccessLevel;
+  isBlocked: boolean;
+  createdAt: string;
+}
+
 export function getToken(): string | null {
   return localStorage.getItem('cms_token');
 }
@@ -8,8 +21,23 @@ export function setToken(token: string): void {
   localStorage.setItem('cms_token', token);
 }
 
+export function getCurrentUser(): CurrentUser | null {
+  const raw = localStorage.getItem('cms_user');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as CurrentUser;
+  } catch {
+    return null;
+  }
+}
+
+export function setCurrentUser(user: CurrentUser): void {
+  localStorage.setItem('cms_user', JSON.stringify(user));
+}
+
 export function clearToken(): void {
   localStorage.removeItem('cms_token');
+  localStorage.removeItem('cms_user');
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -44,4 +72,6 @@ export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body: unknown) => request<T>('POST', path, body),
   put: <T>(path: string, body: unknown) => request<T>('PUT', path, body),
+  patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
+  delete: <T>(path: string) => request<T>('DELETE', path),
 };

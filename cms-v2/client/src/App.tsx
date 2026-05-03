@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { getToken } from './api/client';
+import { getCurrentUser, getToken } from './api/client';
 import Layout from './components/Layout';
 import Login from './screens/Login';
 import HomeHero from './screens/HomeHero';
@@ -22,9 +22,14 @@ import FeatureCardsV3 from './screens/FeatureCardsV3';
 import StepCards from './screens/StepCards';
 import LegalPage from './screens/LegalPage';
 import Team from './screens/Team';
+import UserManagement from './screens/UserManagement';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   return getToken() ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
+function RequireAdmin({ children }: { children: React.ReactNode }) {
+  return getCurrentUser()?.role === 'admin' ? <>{children}</> : <Navigate to="/home-hero" replace />;
 }
 
 export default function App() {
@@ -60,6 +65,7 @@ export default function App() {
           <Route path="/step-cards"       element={<StepCards />} />
           <Route path="/legal-page"       element={<LegalPage />} />
           <Route path="/team"             element={<Team />} />
+          <Route path="/settings/users"   element={<RequireAdmin><UserManagement /></RequireAdmin>} />
         </Route>
       </Routes>
     </BrowserRouter>

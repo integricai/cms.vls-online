@@ -3,11 +3,13 @@
 export interface JwtPayload {
   userId: number;
   email: string;
+  username: string;
   role: 'admin' | 'editor' | 'viewer';
 }
 
 export interface LoginRequest {
-  email: string;
+  email?: string;
+  username?: string;
   password: string;
 }
 
@@ -30,15 +32,21 @@ export interface PasswordResetConfirm {
 export interface User {
   id: number;
   email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
   passwordHash: string;
   role: 'admin' | 'editor' | 'viewer';
+  isBlocked: boolean;
   resetToken: string | null;
   resetTokenExpiresAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export type PublicUser = Pick<User, 'id' | 'email' | 'role' | 'createdAt'>;
+export type PublicUser = Pick<User, 'id' | 'email' | 'username' | 'firstName' | 'lastName' | 'role' | 'isBlocked' | 'createdAt'>;
+
+export type AccessLevel = 'admin' | 'editor' | 'viewer';
 
 // ── Snippets ──────────────────────────────────────────────────────
 

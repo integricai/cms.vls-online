@@ -6,6 +6,7 @@ import cors from 'cors';
 import authRouter from './routes/auth';
 import snippetsRouter from './routes/snippets';
 import contentRouter from './routes/content';
+import usersRouter from './routes/users';
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
@@ -28,6 +29,7 @@ app.get('/health', (_req, res) => {
 app.use('/auth', authRouter);
 app.use('/snippets', snippetsRouter);
 app.use('/content', contentRouter);
+app.use('/users', usersRouter);
 
 // ── 404 catch-all ─────────────────────────────────────────────────
 
