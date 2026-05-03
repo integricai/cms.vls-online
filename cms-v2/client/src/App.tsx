@@ -19,6 +19,7 @@ import ProgramCardsV2 from './screens/ProgramCardsV2';
 import FeatureCards from './screens/FeatureCards';
 import FeatureCardsV2 from './screens/FeatureCardsV2';
 import FeatureCardsV3 from './screens/FeatureCardsV3';
+import StepCards from './screens/StepCards';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   return getToken() ? <>{children}</> : <Navigate to="/login" replace />;
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="/feature-cards"    element={<FeatureCards />} />
           <Route path="/feature-cards-v2" element={<FeatureCardsV2 />} />
           <Route path="/feature-cards-v3" element={<FeatureCardsV3 />} />
+          <Route path="/step-cards"       element={<StepCards />} />
         </Route>
       </Routes>
     </BrowserRouter>

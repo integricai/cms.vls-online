@@ -42,6 +42,7 @@ const NAV: NavEntry[] = [
       { to: '/feature-cards',    label: 'Feature Cards' },
       { to: '/feature-cards-v2', label: 'Feature Card v2' },
       { to: '/feature-cards-v3', label: 'Feature Card v3' },
+      { to: '/step-cards',       label: 'Step Cards' },
     ],
   },
 ];

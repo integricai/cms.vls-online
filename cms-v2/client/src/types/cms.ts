@@ -308,6 +308,12 @@ export interface Pcv2State { bg: string; maxWidth: number; gap: number; cards: P
 export interface Pcv2Component { id: string; name: string; data: Pcv2State; }
 export interface Pcv2Content { components: Pcv2Component[]; }
 
+// ── Step Cards ────────────────────────────────────────────────────────────────
+export interface StepCard { title: TextValue; desc: TextValue; }
+export interface StepsState { bg: string; padLeft: number; padRight: number; cols: number; eyebrow: TextValue; title: TextValue; desc: TextValue; cards: StepCard[]; }
+export interface StepsComponent { id: string; name: string; data: StepsState; }
+export interface StepsContent { components: StepsComponent[]; }
+
 // ── Program Cards ─────────────────────────────────────────────────────────────
 export interface ProgramCard { id: string; title: TextValue; desc: TextValue; url: string; cta: TextValue; cardBg: string; badge: string; rating: string; hours: string; }
 export interface ProgramTopic { id: string; title: TextValue; topicColor: string; badgeBg: string; badgeOpacity: number; cards: ProgramCard[]; }
