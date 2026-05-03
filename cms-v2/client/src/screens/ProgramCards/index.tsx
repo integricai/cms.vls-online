@@ -112,10 +112,27 @@ export default function ProgramCardsScreen() {
   function addTopic()              { const t = makeTopic(); upd({ topics: [...state.topics, t] }); setExpandedTopics(prev => new Set([...prev, t.id])); }
   function removeTopic(ti: number) { upd({ topics: state.topics.filter((_, idx) => idx !== ti) }); }
   function toggleTopic(id: string) { setExpandedTopics(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }); }
+  function moveTopic(ti: number, dir: -1 | 1) {
+    const nextIndex = ti + dir;
+    if (nextIndex < 0 || nextIndex >= state.topics.length) return;
+    const topics = [...state.topics];
+    [topics[ti], topics[nextIndex]] = [topics[nextIndex], topics[ti]];
+    upd({ topics });
+  }
 
   function updateCard(ti: number, ci: number, patch: Partial<ProgramCard>) { const topics = [...state.topics]; const cards = [...topics[ti].cards]; cards[ci] = { ...cards[ci], ...patch }; topics[ti] = { ...topics[ti], cards }; upd({ topics }); }
   function addCard(ti: number) { const topics = [...state.topics]; topics[ti] = { ...topics[ti], cards: [...topics[ti].cards, makeCard()] }; upd({ topics }); }
   function removeCard(ti: number, ci: number) { const topics = [...state.topics]; topics[ti] = { ...topics[ti], cards: topics[ti].cards.filter((_, idx) => idx !== ci) }; upd({ topics }); }
+  function moveCard(ti: number, ci: number, dir: -1 | 1) {
+    const topic = state.topics[ti];
+    const nextIndex = ci + dir;
+    if (!topic || nextIndex < 0 || nextIndex >= topic.cards.length) return;
+    const topics = [...state.topics];
+    const cards = [...topic.cards];
+    [cards[ci], cards[nextIndex]] = [cards[nextIndex], cards[ci]];
+    topics[ti] = { ...topic, cards };
+    upd({ topics });
+  }
 
   async function copyTopicToComponent(ti: number, targetCompId: string) {
     const targetComp = components.find(c => c.id === targetCompId);
@@ -220,6 +237,22 @@ export default function ProgramCardsScreen() {
                       </div>
                     )}
 
+                    <button
+                      onClick={e => { e.stopPropagation(); moveTopic(ti, -1); }}
+                      disabled={ti === 0}
+                      title="Move topic up"
+                      className="btn-ghost text-xs px-2 py-1 shrink-0"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      onClick={e => { e.stopPropagation(); moveTopic(ti, 1); }}
+                      disabled={ti === state.topics.length - 1}
+                      title="Move topic down"
+                      className="btn-ghost text-xs px-2 py-1 shrink-0"
+                    >
+                      ▼
+                    </button>
                     <button onClick={e => { e.stopPropagation(); removeTopic(ti); }} className="btn-danger text-xs px-2 shrink-0">✕</button>
                     <span className="text-slate-400 text-xs cursor-pointer shrink-0" onClick={() => toggleTopic(topic.id)}>{isOpen ? '▲' : '▼'}</span>
                   </div>
@@ -241,7 +274,25 @@ export default function ProgramCardsScreen() {
                       <div className="space-y-2">
                         {topic.cards.map((card, ci) => (
                           <div key={card.id || ci} className="relative rounded border border-slate-100 bg-white p-3">
-                            <button onClick={() => removeCard(ti, ci)} className="btn-danger absolute right-2 top-2 text-xs px-2">✕</button>
+                            <div className="absolute right-2 top-2 flex gap-1">
+                              <button
+                                onClick={() => moveCard(ti, ci, -1)}
+                                disabled={ci === 0}
+                                title="Move card up"
+                                className="btn-ghost text-xs px-2 py-1"
+                              >
+                                ▲
+                              </button>
+                              <button
+                                onClick={() => moveCard(ti, ci, 1)}
+                                disabled={ci === topic.cards.length - 1}
+                                title="Move card down"
+                                className="btn-ghost text-xs px-2 py-1"
+                              >
+                                ▼
+                              </button>
+                              <button onClick={() => removeCard(ti, ci)} className="btn-danger text-xs px-2">✕</button>
+                            </div>
                             <RichTextField label="Card title" value={asTV(card.title, 'programCardTitle')} defaultKey="programCardTitle"
                               onChange={v => updateCard(ti, ci, { title: v })} />
                             <RichTextField label="Description" value={asTV(card.desc, 'programDesc')} defaultKey="programDesc"
