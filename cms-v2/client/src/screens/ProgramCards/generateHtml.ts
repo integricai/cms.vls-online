@@ -23,6 +23,7 @@ export function generateProgramCardsHtml(componentId: string, componentName: str
       hours:        c.hours  || '',
       badgeBg:      safeHex(t.badgeBg, '#ffffff'),
       badgeOpacity: t.badgeOpacity != null ? t.badgeOpacity : 0.22,
+      badgeStyle:   normalize(t.badgeTextStyle, 'programBadge'),
     })),
   );
   const sectionsForHtml = [{ id: componentId, name: componentName, topics }];
@@ -129,7 +130,7 @@ export function generateProgramCardsHtml(componentId: string, componentName: str
     + `  function esca(s){return String(s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;");}\n`
     + `  function ptxt(p){return typeof p==="string"?(p||""):((p&&p.text)||"");}\n`
     + `  function normWeight(w){w=String(w==null?"":w).toLowerCase();if(w==="700"||w==="bold")return "700";if(w==="500"||w==="medium")return "500";return "400";}\n`
-    + `  function tstyle(t,sz,cl,wt){if(typeof t==="object"&&t){sz=t.size||sz;cl=(/^#[0-9a-fA-F]{6}$/.test(t.color||""))?t.color:cl;wt=normWeight(t.weight)||wt;}return "font-size:"+sz+"px;font-weight:"+wt+";color:"+cl+";";}\n`
+    + `  function tstyle(t,sz,cl,wt){var ls=0;if(typeof t==="object"&&t){sz=t.size||sz;cl=(/^#[0-9a-fA-F]{6}$/.test(t.color||""))?t.color:cl;wt=normWeight(t.weight)||wt;ls=t.letterSpacing||0;}return "font-size:"+sz+"px;font-weight:"+wt+";color:"+cl+";letter-spacing:"+ls+"em;";}\n`
     + `  function pstyle(p){var sz=13,cl="#6b7280",wt="400";if(p&&typeof p==="object"){sz=p.size||sz;cl=(/^#[0-9a-fA-F]{6}$/.test(p.color||""))?p.color:cl;wt=normWeight(p.weight)||wt;}return "font-size:"+sz+"px;font-weight:"+wt+";color:"+cl+";";}\n`
     + `  function getTopicsBySec(sid){\n`
     + `    if(sid==="all")return null;\n`
@@ -158,7 +159,7 @@ export function generateProgramCardsHtml(componentId: string, componentName: str
     + `      function h2r(h,a){h=(h||"#ffffff").replace("#","");if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];var r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);return "rgba("+r+","+g+","+b+","+(isNaN(a)?0.22:a)+")";}\n`
     + `      var bbg=h2r(c.badgeBg,c.badgeOpacity);\n`
     + `      var topHtml='<div class="${uid}-card-top" style="background:'+bg+'">'\n`
-    + `        +(c.badge?'<span class="${uid}-card-badge" style="background:'+bbg+'">'+esc(c.badge)+"<\\/span>":"")\n`
+    + `        +(c.badge?'<span class="${uid}-card-badge" style="background:'+bbg+';'+tstyle(c.badgeStyle,11,"#ffffff","600")+'">'+esc(c.badge)+"<\\/span>":"")\n`
     + `        +"<\\/div>";\n`
     + `      var metaHtml="";\n`
     + `      if(c.hours||c.rating){\n`

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../../api/client';
-import type { ProgramsState, ProgramsComponent, ProgramsContent, ProgramTopic, ProgramCard, TextValue } from '../../types/cms';
+import type { ProgramsState, ProgramsComponent, ProgramsContent, ProgramTopic, ProgramCard, TextData, TextValue } from '../../types/cms';
 import { normalize } from '../../utils/text';
 import { generateProgramCardsHtml } from './generateHtml';
 import Field from '../../components/Field';
@@ -11,7 +11,7 @@ function makeCard(): ProgramCard {
   return { id: `pc-${Date.now().toString(36)}-${++_cardCounter}`, title: normalize('', 'programCardTitle'), desc: normalize('', 'programDesc'), url: '#', cta: normalize('View Course →', 'programCta'), cardBg: '#204280', badge: '', rating: '', hours: '' };
 }
 function makeTopic(): ProgramTopic {
-  return { id: `pt-${Date.now().toString(36)}`, title: normalize('New Topic', 'programCardTitle'), topicColor: '#204280', badgeBg: '#ffffff', badgeOpacity: 0.22, cards: [] };
+  return { id: `pt-${Date.now().toString(36)}`, title: normalize('New Topic', 'programCardTitle'), topicColor: '#204280', badgeBg: '#ffffff', badgeOpacity: 0.22, badgeTextStyle: normalize('', 'programBadge'), cards: [] };
 }
 function cloneTopic(topic: ProgramTopic): ProgramTopic {
   return {
@@ -33,6 +33,72 @@ function ColorRow({ label, value, onChange }: { label: string; value: string; on
           onChange={e => { if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) onChange(e.target.value); }} />
       </div>
     </Field>
+  );
+}
+
+function FontFormatter({ label, value, onChange }: { label: string; value: TextValue | undefined; onChange: (v: TextData) => void }) {
+  const td = normalize(value, 'programBadge');
+  function patch(partial: Partial<TextData>) {
+    onChange({ ...td, ...partial });
+  }
+  return (
+    <div className="mb-3">
+      <label className="field-label">{label}</label>
+      <div className="flex flex-wrap gap-1.5 rounded-lg border border-slate-100 bg-slate-50 p-1.5">
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-slate-400">Size</span>
+          <input
+            type="number"
+            value={td.size}
+            min={8}
+            max={40}
+            onChange={e => patch({ size: Number(e.target.value) })}
+            className="w-14 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs outline-none focus:border-brand"
+          />
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-slate-400">Color</span>
+          <input
+            type="color"
+            value={/^#[0-9a-fA-F]{6}$/.test(td.color) ? td.color : '#ffffff'}
+            onChange={e => patch({ color: e.target.value })}
+            className="h-6 w-8 cursor-pointer rounded border border-slate-200 p-0"
+          />
+          <input
+            type="text"
+            value={td.color}
+            maxLength={7}
+            onChange={e => patch({ color: e.target.value })}
+            className="w-20 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs outline-none focus:border-brand"
+          />
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-slate-400">Weight</span>
+          <select
+            value={td.weight}
+            onChange={e => patch({ weight: e.target.value })}
+            className="rounded border border-slate-200 bg-white px-1 py-0.5 text-xs outline-none focus:border-brand"
+          >
+            <option value="400">Regular</option>
+            <option value="500">Medium</option>
+            <option value="600">Semi-bold</option>
+            <option value="700">Bold</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-slate-400">Spacing</span>
+          <input
+            type="number"
+            value={td.letterSpacing}
+            min={0}
+            max={0.5}
+            step={0.01}
+            onChange={e => patch({ letterSpacing: Number(e.target.value) })}
+            className="w-16 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs outline-none focus:border-brand"
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -269,6 +335,7 @@ export default function ProgramCardsScreen() {
                             onChange={e => updateTopic(ti, { badgeOpacity: parseFloat(e.target.value) })} />
                         </Field>
                       </div>
+                      <FontFormatter label="Badge formatter" value={topic.badgeTextStyle} onChange={v => updateTopic(ti, { badgeTextStyle: v })} />
 
                       <p className="text-xs font-semibold text-slate-500 mt-2">Cards</p>
                       <div className="space-y-2">

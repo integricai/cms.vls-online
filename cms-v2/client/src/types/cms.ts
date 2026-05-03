@@ -91,6 +91,59 @@ export interface VlsEvent {
 
 export interface EventsContent { events: VlsEvent[]; }
 
+// ── FAQ ──────────────────────────────────────────────────────────────────────
+
+export type FaqAnswerType = 'paragraph' | 'heading-para' | 'bullets' | 'heading-bullets';
+
+export interface FaqItem {
+  id: string;
+  type: FaqAnswerType;
+  question: TextValue;
+  heading: TextValue;
+  para: TextValue;
+  items: TextValue[];
+}
+
+export interface FaqSection {
+  id: string;
+  name: string;
+  items: FaqItem[];
+}
+
+export interface FaqContent { sections: FaqSection[]; }
+
+// ── Articles ─────────────────────────────────────────────────────────────────
+
+export interface ArticleItem {
+  code: string;
+  title: string;
+  desc: string;
+  url: string;
+}
+
+export interface ArticleGroup {
+  title: string;
+  short: string;
+  color: string;
+  articles: ArticleItem[];
+}
+
+export interface ArticleSection {
+  id: string;
+  name: string;
+  paperCode: string;
+  paperTitle: string;
+  theme: string;
+  hubUrl: string;
+  headingStyle: TextValue;
+  bodyStyle: TextValue;
+  rowTitleStyle: TextValue;
+  notice: TextValue;
+  groups: ArticleGroup[];
+}
+
+export interface ArticleGroupsContent { sections: ArticleSection[]; }
+
 // ── Promotion Section ─────────────────────────────────────────────────────────
 
 export interface PromoSection {
@@ -211,6 +264,89 @@ export interface CfState {
 
 export interface CfComponent { id: string; name: string; data: CfState; }
 export interface CfContent { components: CfComponent[]; }
+
+// ── Split Screen Sections ────────────────────────────────────────────────────
+
+export interface SplitSectionCard {
+  type: 'card' | 'card-image' | 'image';
+  cardBg?: string;
+  cardBorder?: string;
+  icon?: string;
+  iconBg?: string;
+  iconColor?: string;
+  imageUrl?: string;
+  imageAlt?: string;
+  borderRadius?: string;
+  maxWidth?: string;
+  title?: TextValue;
+  desc?: TextValue;
+  ctaText?: TextValue;
+  ctaUrl?: string;
+  ctaBg?: string;
+  ctaColor?: string;
+  statValue?: string;
+  statLabel?: string;
+  statBg?: string;
+  statValueColor?: string;
+  statLabelColor?: string;
+}
+
+export interface SplitContentSection {
+  id: string;
+  name: string;
+  bg: string;
+  eyebrow: TextValue;
+  heading: TextValue;
+  desc: TextValue;
+  cards: SplitSectionCard[];
+}
+
+export interface LeftHeroPathwayItem { icon: string; text: string; }
+export interface LeftHeroStatItem { value: string; label1: string; label2: string; }
+export interface LeftHeroTrustItem { icon: string; text: string; }
+
+export interface PageLeftHeroState {
+  bg: string;
+  padTop: number;
+  padBot: number;
+  padLeft: number;
+  padRight: number;
+  breadcrumb: string;
+  breadcrumbTc: string;
+  eyebrowTc: string;
+  eyebrowDotColor: string;
+  eyebrowLabels: string[];
+  heading: TextValue;
+  headingAccent: string;
+  headingAccentColor: string;
+  descSize: number;
+  descTc: string;
+  descs: string[];
+  pillBg: string;
+  pillBorder: string;
+  pillTc: string;
+  arrowColor: string;
+  pathwayItems: LeftHeroPathwayItem[];
+  primaryCta: string;
+  primaryCtaUrl: string;
+  primaryBg: string;
+  primaryTc: string;
+  secondaryCta: string;
+  secondaryCtaUrl: string;
+  secondaryBorder: string;
+  secondaryTc: string;
+  statsVc: string;
+  statsLc: string;
+  statsDiv: string;
+  statsItems: LeftHeroStatItem[];
+  trustTc: string;
+  trustSep: string;
+  trustItems: LeftHeroTrustItem[];
+}
+
+export interface PageLeftHeroComponent { id: string; name: string; data: PageLeftHeroState; }
+export interface SplitSectionsContent { sections: SplitContentSection[]; }
+export interface PageLeftHeroContent { components: PageLeftHeroComponent[]; }
 
 // ── Course Hero Left ──────────────────────────────────────────────────────────
 
@@ -373,7 +509,7 @@ export interface StepsContent { components: StepsComponent[]; }
 
 // ── Program Cards ─────────────────────────────────────────────────────────────
 export interface ProgramCard { id: string; title: TextValue; desc: TextValue; url: string; cta: TextValue; cardBg: string; badge: string; rating: string; hours: string; }
-export interface ProgramTopic { id: string; title: TextValue; topicColor: string; badgeBg: string; badgeOpacity: number; cards: ProgramCard[]; }
+export interface ProgramTopic { id: string; title: TextValue; topicColor: string; badgeBg: string; badgeOpacity: number; badgeTextStyle?: TextValue; cards: ProgramCard[]; }
 export interface ProgramsState { topics: ProgramTopic[]; }
 export interface ProgramsComponent { id: string; name: string; data: ProgramsState; }
 export interface ProgramsContent { components: ProgramsComponent[]; }

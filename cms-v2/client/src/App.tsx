@@ -23,7 +23,9 @@ import StepCards from './screens/StepCards';
 import LegalPage from './screens/LegalPage';
 import Team from './screens/Team';
 import UserManagement from './screens/UserManagement';
+import FAQ from './screens/FAQ';
 import Events from './screens/Events';
+import Articles from './screens/Articles';
 import FullScreenSections from './screens/FullScreenSections';
 import SplitScreenSections from './screens/SplitScreenSections';
 
@@ -68,9 +70,12 @@ export default function App() {
           <Route path="/step-cards"       element={<StepCards />} />
           <Route path="/legal-page"       element={<LegalPage />} />
           <Route path="/team"             element={<Team />} />
+          <Route path="/faq"                   element={<FAQ />} />
           <Route path="/events"                element={<Events />} />
+          <Route path="/articles"              element={<Articles />} />
           <Route path="/full-screen/:type"     element={<FullScreenSections />} />
-          <Route path="/split-screen-sections" element={<SplitScreenSections />} />
+          <Route path="/split-screen/:type"    element={<SplitScreenSections />} />
+          <Route path="/split-screen-sections" element={<Navigate to="/split-screen/left-hero" replace />} />
           <Route path="/settings/users"   element={<RequireAdmin><UserManagement /></RequireAdmin>} />
         </Route>
       </Routes>

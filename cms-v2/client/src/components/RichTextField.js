@@ -1,0 +1,15 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { normalize } from '../utils/text';
+const FONT_WEIGHTS = [
+    { value: '400', label: 'Regular' },
+    { value: '500', label: 'Medium' },
+    { value: '600', label: 'Semi-bold' },
+    { value: '700', label: 'Bold' },
+];
+export default function RichTextField({ label, hint, value, defaultKey, onChange, multiline, placeholder }) {
+    const td = normalize(value, defaultKey);
+    function patch(partial) {
+        onChange({ ...td, ...partial });
+    }
+    return (_jsxs("div", { className: "mb-3", children: [_jsxs("label", { className: "field-label", children: [label, hint && _jsx("span", { className: "field-hint", children: hint })] }), multiline ? (_jsx("textarea", { rows: 3, value: td.text, placeholder: placeholder, onChange: e => patch({ text: e.target.value }), className: "input resize-y" })) : (_jsx("input", { type: "text", value: td.text, placeholder: placeholder, onChange: e => patch({ text: e.target.value }), className: "input" })), multiline && (_jsx("p", { className: "text-[10px] text-slate-400 mt-0.5 ml-0.5", children: "HTML allowed \u2014 e.g. <strong>, <br>, <p>" })), _jsxs("div", { className: "mt-1.5 flex flex-wrap gap-1.5 rounded-lg border border-slate-100 bg-slate-50 p-1.5", children: [_jsxs("div", { className: "flex items-center gap-1", children: [_jsx("span", { className: "text-[10px] text-slate-400", children: "Size" }), _jsx("input", { type: "number", value: td.size, min: 8, max: 120, onChange: e => patch({ size: Number(e.target.value) }), className: "w-14 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs outline-none focus:border-brand" })] }), _jsxs("div", { className: "flex items-center gap-1", children: [_jsx("span", { className: "text-[10px] text-slate-400", children: "Color" }), _jsx("input", { type: "color", value: /^#[0-9a-fA-F]{6}$/.test(td.color) ? td.color : '#000000', onChange: e => patch({ color: e.target.value }), className: "h-6 w-8 cursor-pointer rounded border border-slate-200 p-0" }), _jsx("input", { type: "text", value: td.color, maxLength: 7, onChange: e => patch({ color: e.target.value }), className: "w-20 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs outline-none focus:border-brand" })] }), _jsxs("div", { className: "flex items-center gap-1", children: [_jsx("span", { className: "text-[10px] text-slate-400", children: "Weight" }), _jsx("select", { value: td.weight, onChange: e => patch({ weight: e.target.value }), className: "rounded border border-slate-200 bg-white px-1 py-0.5 text-xs outline-none focus:border-brand", children: FONT_WEIGHTS.map(w => (_jsx("option", { value: w.value, children: w.label }, w.value))) })] }), _jsxs("div", { className: "flex items-center gap-1", children: [_jsx("span", { className: "text-[10px] text-slate-400", children: "Spacing" }), _jsx("input", { type: "number", value: td.letterSpacing, min: -0.1, max: 1, step: 0.01, onChange: e => patch({ letterSpacing: Number(e.target.value) }), className: "w-16 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs outline-none focus:border-brand" })] })] })] }));
+}

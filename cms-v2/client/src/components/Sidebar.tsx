@@ -40,8 +40,15 @@ const NAV: NavEntry[] = [
     group: 'Page Templates',
     children: [
       { to: '/events',     label: 'Events' },
+      { to: '/articles',   label: 'Articles' },
       { to: '/legal-page', label: 'Legal Page' },
       { to: '/team',       label: 'Team' },
+    ],
+  },
+  {
+    group: 'Site wide Sections',
+    children: [
+      { to: '/faq', label: 'FAQ' },
     ],
   },
   {
@@ -60,7 +67,11 @@ const NAV: NavEntry[] = [
       },
       {
         sub: 'Split Screen Sections',
-        children: [],
+        children: [
+          { to: '/split-screen/left-hero',    label: 'Left Hero Section' },
+          { to: '/split-screen/left-generic', label: 'Left Generic Section' },
+          { to: '/split-screen/right-pane',   label: 'Right Pane Section' },
+        ],
       },
     ],
   },

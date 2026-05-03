@@ -98,6 +98,16 @@ export const DEFAULTS = {
   eventBullet:        { size: 14, color: '#262a32', weight: '400', letterSpacing: 0 },
   eventMeta:          { size: 13, color: '#262a32', weight: '400', letterSpacing: 0 },
   eventCta:           { size: 13, color: '#ffffff', weight: '500', letterSpacing: 0 },
+  // FAQ
+  faq:                 { size: 15, color: '#262a32', weight: '400', letterSpacing: 0 },
+  faqQuestion:         { size: 16, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
+  faqHeading:          { size: 16, color: '#204280', weight: '700', letterSpacing: 0 },
+  faqBullet:           { size: 15, color: '#262a32', weight: '400', letterSpacing: 0 },
+  // Article Groups
+  articleGroupTitle:    { size: 18, color: '#0d1f3c', weight: '700', letterSpacing: 0 },
+  articleGroupBody:     { size: 13, color: '#5c6573', weight: '400', letterSpacing: 0 },
+  articleGroupRowTitle: { size: 13, color: '#0d1f3c', weight: '700', letterSpacing: 0 },
+  articleGroupNotice:   { size: 12, color: '#5c6573', weight: '400', letterSpacing: 0 },
   // Full Screen Sections — DCS (Two Column v1)
   dcsLabel:      { size: 14, color: '#4a90d9', weight: '500', letterSpacing: 0.12 },
   dcsTitle:      { size: 36, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
@@ -143,6 +153,7 @@ export const DEFAULTS = {
   programCardTitle:    { size: 15, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
   programDesc:         { size: 13, color: '#4b5563', weight: '400', letterSpacing: 0 },
   programCta:          { size: 13, color: '#ffffff', weight: '700', letterSpacing: 0 },
+  programBadge:        { size: 11, color: '#ffffff', weight: '600', letterSpacing: 0.01 },
   // Page Hero Banner
   phbHeading:    { size: 36, color: '#ffffff', weight: '700', letterSpacing: 0 },
   phbBadgeMain:  { size: 42, color: '#ffffff', weight: '700', letterSpacing: 0 },
@@ -154,6 +165,20 @@ export const DEFAULTS = {
   h2Heading:   { size: 44, color: '#ffffff', weight: '700', letterSpacing: 0    },
   h2Highlight: { size: 44, color: '#4a90d9', weight: '700', letterSpacing: 0    },
   h2Body:      { size: 15, color: '#94a3b8', weight: '400', letterSpacing: 0    },
+  // Split Screen Sections
+  lgsEyebrow:   { size: 11, color: '#204280', weight: '600', letterSpacing: 0.12 },
+  lgsHeading:   { size: 28, color: '#0f172a', weight: '700', letterSpacing: 0 },
+  lgsDesc:      { size: 15, color: '#475569', weight: '400', letterSpacing: 0 },
+  lgsCardTitle: { size: 15, color: '#0f172a', weight: '700', letterSpacing: 0 },
+  lgsCardDesc:  { size: 13, color: '#475569', weight: '400', letterSpacing: 0 },
+  lgsCardCta:   { size: 13, color: '#ffffff', weight: '700', letterSpacing: 0 },
+  rpsEyebrow:   { size: 11, color: '#72cdf4', weight: '600', letterSpacing: 0.12 },
+  rpsHeading:   { size: 28, color: '#ffffff', weight: '700', letterSpacing: 0 },
+  rpsDesc:      { size: 15, color: '#cbd5e1', weight: '400', letterSpacing: 0 },
+  rpsCardTitle: { size: 16, color: '#ffffff', weight: '700', letterSpacing: 0 },
+  rpsCardDesc:  { size: 13, color: '#cbd5e1', weight: '400', letterSpacing: 0 },
+  rpsCardCta:   { size: 13, color: '#ffffff', weight: '700', letterSpacing: 0 },
+  plhHeading:   { size: 38, color: '#ffffff', weight: '700', letterSpacing: 0 },
 } as const;
 
 export type DefaultKey = keyof typeof DEFAULTS;

@@ -1,0 +1,116 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useEffect, useState, useCallback } from 'react';
+import { api } from '../../api/client';
+import { normalize } from '../../utils/text';
+import { generateFeatureCardsHtml } from './generateHtml';
+import Field from '../../components/Field';
+import RichTextField from '../../components/RichTextField';
+function makeCard() {
+    return { color: '#204280', eyebrow: normalize('', 'featureCardEyebrow'), title: normalize('', 'featureCardTitle'), subtitle: normalize('', 'featureCardSubtitle'), ctaText: normalize('', 'featureCardCta'), ctaUrl: '' };
+}
+function makeDefault() {
+    return { padLeft: 0, padRight: 0, eyebrow: normalize('', 'featureEyebrow'), title: normalize('', 'featureTitle'), desc: normalize('', 'featureSection'), cards: [] };
+}
+function asTV(v, key) { return normalize(v, key); }
+function ColorRow({ label, value, onChange }) {
+    return (_jsx(Field, { label: label, children: _jsxs("div", { className: "flex gap-2 items-center", children: [_jsx("input", { type: "color", value: /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#000000', onChange: e => onChange(e.target.value), className: "w-10 h-9 p-0.5 border border-slate-300 rounded cursor-pointer shrink-0" }), _jsx("input", { type: "text", value: value, className: "input", onChange: e => { if (/^#[0-9a-fA-F]{6}$/.test(e.target.value))
+                        onChange(e.target.value); } })] }) }));
+}
+export default function FeatureCardsScreen() {
+    const [components, setComponents] = useState([]);
+    const [activeId, setActiveId] = useState(null);
+    const [name, setName] = useState('');
+    const [state, setState] = useState(makeDefault());
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+    const [activeTab, setActiveTab] = useState('preview');
+    const [previewHtml, setPreviewHtml] = useState('');
+    useEffect(() => {
+        api.get('/content/vls-feature-cards')
+            .then(row => {
+            const raw = row?.data;
+            let comps = [];
+            if (raw?.components) {
+                comps = raw.components;
+            }
+            else if (raw?.sections) {
+                comps = raw.sections.map((s, i) => ({
+                    id: s.id || `fc-${i}`,
+                    name: s.name || `Section ${i + 1}`,
+                    data: { padLeft: s.padLeft ?? 0, padRight: s.padRight ?? 0, eyebrow: s.eyebrow, title: s.title, desc: s.desc, cards: s.cards || [] },
+                }));
+            }
+            setComponents(comps);
+            if (comps.length > 0) {
+                setActiveId(comps[0].id);
+                setName(comps[0].name);
+                setState(comps[0].data || makeDefault());
+            }
+        })
+            .catch(() => { })
+            .finally(() => setLoading(false));
+    }, []);
+    const upd = useCallback((patch) => { setState(prev => ({ ...prev, ...patch })); setSaved(false); }, []);
+    function loadComponent(id) {
+        if (!id) {
+            newComponent();
+            return;
+        }
+        const c = components.find(c => c.id === id);
+        if (!c)
+            return;
+        setActiveId(c.id);
+        setName(c.name);
+        setState(c.data || makeDefault());
+        setSaved(false);
+    }
+    function newComponent() { setActiveId(null); setName(''); setState(makeDefault()); setSaved(false); }
+    async function save() {
+        if (!name.trim()) {
+            alert('Enter a component name first.');
+            return;
+        }
+        setSaving(true);
+        try {
+            let id = activeId;
+            let comps = [...components];
+            if (id) {
+                comps = comps.map(c => c.id === id ? { id, name, data: state } : c);
+                if (!comps.find(c => c.id === id)) {
+                    id = `fc-${Date.now().toString(36)}`;
+                    comps.push({ id, name, data: state });
+                }
+            }
+            else {
+                id = `fc-${Date.now().toString(36)}`;
+                comps.push({ id, name, data: state });
+            }
+            await api.put('/content/vls-feature-cards', { components: comps });
+            setComponents(comps);
+            setActiveId(id);
+            setSaved(true);
+        }
+        finally {
+            setSaving(false);
+        }
+    }
+    async function deleteComponent() {
+        if (!activeId)
+            return;
+        if (!window.confirm('Delete this component?'))
+            return;
+        const comps = components.filter(c => c.id !== activeId);
+        await api.put('/content/vls-feature-cards', { components: comps });
+        setComponents(comps);
+        newComponent();
+    }
+    function updateCard(i, patch) { const a = [...state.cards]; a[i] = { ...a[i], ...patch }; upd({ cards: a }); }
+    function addCard() { upd({ cards: [...state.cards, makeCard()] }); }
+    function removeCard(i) { upd({ cards: state.cards.filter((_, idx) => idx !== i) }); }
+    if (loading)
+        return _jsx("div", { className: "flex h-full items-center justify-center text-sm text-slate-400", children: "Loading\u2026" });
+    return (_jsxs("div", { className: "flex h-full", children: [_jsxs("div", { className: "w-[480px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white", children: [_jsxs("div", { className: "sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4", children: [_jsx("h1", { className: "text-base font-bold text-slate-900", children: "Feature Cards" }), _jsx("p", { className: "text-xs text-slate-400 mt-0.5", children: "3-column card grid with coloured top section" })] }), _jsxs("div", { className: "border-b border-slate-100 bg-white px-5 py-3 flex gap-2", children: [_jsx("button", { onClick: save, disabled: saving, className: "btn-primary flex-1 justify-center", children: saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save' }), _jsx("button", { onClick: () => { setPreviewHtml(generateFeatureCardsHtml(state)); setActiveTab('preview'); }, className: "btn-success flex-1 justify-center", children: "\u26A1 Generate HTML" })] }), _jsxs("div", { className: "px-5 py-4", children: [_jsxs("div", { className: "rounded-lg border border-slate-200 bg-slate-50 p-3 mb-4", children: [_jsx("p", { className: "section-label mt-0", children: "Saved Components" }), _jsxs("div", { className: "flex gap-2 mb-3", children: [_jsxs("select", { className: "input flex-1", value: activeId || '', onChange: e => loadComponent(e.target.value), children: [_jsx("option", { value: "", children: "\u2014 select to load \u2014" }), components.map(c => _jsx("option", { value: c.id, children: c.name }, c.id))] }), _jsx("button", { onClick: newComponent, className: "btn-ghost text-xs px-3", children: "+ New" }), activeId && _jsx("button", { onClick: deleteComponent, className: "btn-danger text-xs px-3", children: "Delete" })] }), _jsx(Field, { label: "Component name", children: _jsx("input", { className: "input", value: name, placeholder: "e.g. Home Feature Cards", onChange: e => setName(e.target.value) }) })] }), _jsx("p", { className: "section-label", children: "Layout" }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(Field, { label: "Padding left (px)", children: _jsx("input", { type: "number", className: "input", min: 0, max: 200, value: state.padLeft, onChange: e => upd({ padLeft: Number(e.target.value) }) }) }), _jsx(Field, { label: "Padding right (px)", children: _jsx("input", { type: "number", className: "input", min: 0, max: 200, value: state.padRight, onChange: e => upd({ padRight: Number(e.target.value) }) }) })] }), _jsx("p", { className: "section-label", children: "Section Header" }), _jsx(RichTextField, { label: "Eyebrow", value: asTV(state.eyebrow, 'featureEyebrow'), defaultKey: "featureEyebrow", onChange: v => upd({ eyebrow: v }) }), _jsx(RichTextField, { label: "Title", value: asTV(state.title, 'featureTitle'), defaultKey: "featureTitle", onChange: v => upd({ title: v }) }), _jsx(RichTextField, { label: "Description", value: asTV(state.desc, 'featureSection'), defaultKey: "featureSection", onChange: v => upd({ desc: v }), multiline: true }), _jsx("p", { className: "section-label", children: "Cards" }), _jsx("div", { className: "space-y-2 mb-2", children: state.cards.map((card, i) => (_jsxs("div", { className: "relative rounded border border-slate-200 bg-slate-50 p-3", children: [_jsx("button", { onClick: () => removeCard(i), className: "btn-danger absolute right-2 top-2", children: "\u2715" }), _jsx(ColorRow, { label: "Top colour", value: card.color, onChange: v => updateCard(i, { color: v }) }), _jsx(RichTextField, { label: "Eyebrow badge", value: asTV(card.eyebrow, 'featureCardEyebrow'), defaultKey: "featureCardEyebrow", onChange: v => updateCard(i, { eyebrow: v }) }), _jsx(RichTextField, { label: "Card title", value: asTV(card.title, 'featureCardTitle'), defaultKey: "featureCardTitle", onChange: v => updateCard(i, { title: v }) }), _jsx(RichTextField, { label: "Subtitle", value: asTV(card.subtitle, 'featureCardSubtitle'), defaultKey: "featureCardSubtitle", onChange: v => updateCard(i, { subtitle: v }) }), _jsx(RichTextField, { label: "CTA text", value: asTV(card.ctaText, 'featureCardCta'), defaultKey: "featureCardCta", onChange: v => updateCard(i, { ctaText: v }) }), _jsx(Field, { label: "CTA URL", children: _jsx("input", { className: "input", value: card.ctaUrl, placeholder: "https://\u2026", onChange: e => updateCard(i, { ctaUrl: e.target.value }) }) })] }, i))) }), _jsx("button", { onClick: addCard, className: "btn-ghost text-xs w-full mb-4", children: "+ Add card" })] })] }), _jsxs("div", { className: "flex flex-1 flex-col overflow-hidden", children: [_jsx("div", { className: "flex border-b border-slate-200 bg-white px-4", children: ['preview', 'html'].map(tab => (_jsx("button", { onClick: () => setActiveTab(tab), className: `px-4 py-3 text-sm font-medium transition border-b-2 -mb-px ${activeTab === tab ? 'border-brand text-brand' : 'border-transparent text-slate-400 hover:text-slate-700'}`, children: tab === 'html' ? 'HTML' : 'Preview' }, tab))) }), activeTab === 'preview' ? (_jsx("iframe", { srcDoc: previewHtml
+                            ? `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0">${previewHtml}</body></html>`
+                            : '<p style="font-family:sans-serif;color:#94a3b8;padding:24px">Click ⚡ Generate HTML to preview.</p>', className: "flex-1 w-full border-0 bg-slate-50", sandbox: "allow-same-origin allow-scripts" })) : (_jsxs("div", { className: "relative flex-1 overflow-auto bg-slate-900 p-4", children: [_jsx("button", { onClick: () => navigator.clipboard.writeText(previewHtml), className: "absolute right-4 top-4 rounded bg-slate-700 px-3 py-1 text-xs text-slate-300 hover:bg-slate-600", children: "Copy" }), _jsx("pre", { className: "text-xs text-slate-300 whitespace-pre-wrap font-mono leading-relaxed", children: previewHtml || '// Click ⚡ Generate HTML first' })] }))] })] }));
+}
