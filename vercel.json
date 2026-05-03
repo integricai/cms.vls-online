@@ -4,12 +4,19 @@
     {
       "src": "cms-v2/src/server.ts",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/submit-form.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/submit-report.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "cms-v2/src/server.ts"
-    }
+    { "src": "/api/submit-form",   "dest": "api/submit-form.js"   },
+    { "src": "/api/submit-report", "dest": "api/submit-report.js" },
+    { "src": "/(.*)",              "dest": "cms-v2/src/server.ts" }
   ]
 }
