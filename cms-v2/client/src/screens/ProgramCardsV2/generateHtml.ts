@@ -39,7 +39,7 @@ export function generateProgramCardsV2Html(data: Pcv2State): string {
       + `<div class="${uid}-body">`
       + (eyebrow.text ? `<div class="${uid}-eyebrow" style="${textStyle(eyebrow)};background:${tagBg};color:${accent};">${escapeHtml(eyebrow.text)}</div>` : '')
       + (title.text ? `<h3 style="${textStyle(title)}">${escapeHtml(title.text)}</h3>` : '')
-      + (desc.text ? `<p style="${textStyle(desc)}">${escapeHtml(desc.text)}</p>` : '')
+      + (desc.text ? `<div class="${uid}-desc" style="${textStyle(desc)}">${desc.text}</div>` : '')
       + `<div class="${uid}-chips">${chipsHtml(card.chips, uid, chipStyle)}</div>`
       + `<div class="${uid}-bottom">`
       + (meta.text ? `<span class="${uid}-meta" style="${textStyle(meta)}">${escapeHtml(meta.text)}</span>` : '<span></span>')
@@ -58,7 +58,11 @@ export function generateProgramCardsV2Html(data: Pcv2State): string {
     + `.${uid}-body{padding:22px 24px 20px;display:flex;flex-direction:column;min-width:0;}`
     + `.${uid}-eyebrow{display:inline-flex;align-self:flex-start;border-radius:999px;padding:4px 12px;text-transform:uppercase;line-height:1.1;margin:0 0 8px;}`
     + `.${uid} h3{margin:0 0 8px;line-height:1.25;}`
-    + `.${uid} p{margin:0 0 14px;line-height:1.55;}`
+    + `.${uid}-desc{margin:0 0 14px;line-height:1.55;}`
+    + `.${uid}-desc p{margin:0 0 8px;line-height:inherit;}`
+    + `.${uid}-desc p:last-child{margin-bottom:0;}`
+    + `.${uid}-desc ul,.${uid}-desc ol{margin:6px 0 0;padding-left:20px;}`
+    + `.${uid}-desc li{margin:0 0 4px;}`
     + `.${uid}-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;}`
     + `.${uid}-chip{display:inline-flex;align-items:center;border:1px solid #d8d8d1;background:#f7f5ef;border-radius:999px;padding:4px 11px;line-height:1.1;}`
     + `.${uid}-bottom{border-top:1px solid #e5e7eb;margin-top:auto;padding-top:14px;display:flex;align-items:center;justify-content:space-between;gap:16px;}`
