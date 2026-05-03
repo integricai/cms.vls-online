@@ -23,6 +23,7 @@ import StepCards from './screens/StepCards';
 import LegalPage from './screens/LegalPage';
 import Team from './screens/Team';
 import UserManagement from './screens/UserManagement';
+import Forms from './screens/Forms';
 import FAQ from './screens/FAQ';
 import Events from './screens/Events';
 import Articles from './screens/Articles';
@@ -71,6 +72,7 @@ export default function App() {
           <Route path="/legal-page"       element={<LegalPage />} />
           <Route path="/team"             element={<Team />} />
           <Route path="/faq"                   element={<FAQ />} />
+          <Route path="/forms/:type"           element={<Forms />} />
           <Route path="/events"                element={<Events />} />
           <Route path="/articles"              element={<Articles />} />
           <Route path="/full-screen/:type"     element={<FullScreenSections />} />

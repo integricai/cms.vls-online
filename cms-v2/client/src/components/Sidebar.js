@@ -46,6 +46,14 @@ const NAV = [
         ],
     },
     {
+        group: 'Forms',
+        children: [
+            { to: '/forms/contact', label: 'Contact Form' },
+            { to: '/forms/report-issue', label: 'Report an Issue' },
+            { to: '/forms/report-issue-ty', label: 'Report an Issue - TY' },
+        ],
+    },
+    {
         group: 'Page Builder',
         children: [
             {

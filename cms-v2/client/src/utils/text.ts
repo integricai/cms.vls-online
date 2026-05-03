@@ -43,6 +43,11 @@ export const DEFAULTS = {
   cfAddress:   { size: 14, color: '#6b7280', weight: '400', letterSpacing: 0    },
   cfItemTitle: { size: 14, color: '#1a1a1a', weight: '700', letterSpacing: 0    },
   cfItemValue: { size: 13, color: '#1a56a3', weight: '400', letterSpacing: 0    },
+  // Forms
+  formTitle:      { size: 20, color: '#262a32', weight: '700', letterSpacing: 0 },
+  formButton:     { size: 15, color: '#ffffff', weight: '700', letterSpacing: 0 },
+  formThankTitle: { size: 20, color: '#262a32', weight: '700', letterSpacing: 0 },
+  formThank:      { size: 15, color: '#4b5563', weight: '400', letterSpacing: 0 },
   // Course Hero Left
   chHeading:   { size: 36, color: '#ffffff', weight: '700', letterSpacing: 0 },
   chDesc:      { size: 15, color: '#94a3b8', weight: '400', letterSpacing: 0 },
