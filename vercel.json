@@ -1,14 +1,15 @@
 {
-  "buildCommand": "cd cms-v2/client && npm install && npm run build",
-  "outputDirectory": "cms-v2/client/dist",
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/api/(.*)",
-      "destination": "cms-v2/src/server.ts"
-    },
+      "src": "cms-v2/src/server.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "cms-v2/src/server.ts"
     }
   ]
 }
