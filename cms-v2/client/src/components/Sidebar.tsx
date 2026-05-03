@@ -60,12 +60,12 @@ interface Props {
 }
 
 export default function Sidebar({ isOpen, onClose }: Props) {
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ 'Global': true, 'Home Page': true, 'Course Page': true, 'Page Templates': true, 'Cards': true });
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
   const currentUser = getCurrentUser();
   const canManageUsers = currentUser?.role === 'admin';
 
   function toggleGroup(name: string) {
-    setOpenGroups(prev => ({ ...prev, [name]: !prev[name] }));
+    setOpenGroup(prev => prev === name ? null : name);
   }
 
   return (
@@ -92,7 +92,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
       <nav className="flex-1 overflow-y-auto py-2 px-2 min-w-[224px]">
         {NAV.map((entry, i) => {
           if ('group' in entry) {
-            const expanded = openGroups[entry.group] ?? true;
+            const expanded = openGroup === entry.group;
             return (
               <div key={i}>
                 <button
