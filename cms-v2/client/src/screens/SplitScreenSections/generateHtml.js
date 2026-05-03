@@ -56,14 +56,15 @@ ${card.imageUrl ? `      <div class="split-card-img-frame" style="${frameStyle}"
     if (mode === 'right') {
         const hasIcon = (card.icon || '').trim();
         const hasStat = (card.statValue || '').trim();
-        let out = `    <div style="background:${cardBg};border:1px solid ${cardBorder};border-radius:12px;padding:20px;">\n`;
+        const titleOnly = !descText && !hasStat;
+        let out = `    <div style="background:${cardBg};border:1px solid ${cardBorder};border-radius:12px;padding:${titleOnly ? '14px 20px' : '20px'};">\n`;
         if (hasIcon) {
-            out += `      <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;">
+            out += `      <div style="display:flex;gap:12px;align-items:center;${titleOnly ? '' : 'margin-bottom:10px;'}">
         <div style="width:36px;height:36px;min-width:36px;background:${safeHex(card.iconBg, defaults.iconBg)};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;color:${safeHex(card.iconColor, defaults.iconColor)};">${escapeHtml(hasIcon)}</div>
 ${title.text ? `        <h3 style="margin:0;font-family:'Poppins',sans-serif;line-height:1.3;${textStyle(title)}">${escapeHtml(title.text)}</h3>\n` : ''}      </div>\n`;
         }
         else if (title.text) {
-            out += `      <h3 style="margin:0 0 10px;font-family:'Poppins',sans-serif;line-height:1.3;${textStyle(title)}">${escapeHtml(title.text)}</h3>\n`;
+            out += `      <h3 style="margin:0${titleOnly ? '' : ' 0 10px'};font-family:'Poppins',sans-serif;line-height:1.3;${textStyle(title)}">${escapeHtml(title.text)}</h3>\n`;
         }
         if (descText)
             out += `      <div style="margin:0${hasStat ? ' 0 16px' : ''};font-family:'Poppins',sans-serif;line-height:1.6;${textStyle(desc)}">${descText}</div>\n`;
@@ -75,7 +76,8 @@ ${card.statLabel ? `        <span style="font-family:'Poppins',sans-serif;font-s
         return out + '    </div>';
     }
     const spanStyle = `grid-column:span ${card.halfWidth ? 1 : 2};`;
-    return `    <div style="${spanStyle}background:${cardBg};border:1px solid ${cardBorder};border-radius:10px;padding:14px 16px;display:flex;gap:14px;align-items:flex-start;">
+    const titleOnly = !descText;
+    return `    <div style="${spanStyle}background:${cardBg};border:1px solid ${cardBorder};border-radius:10px;padding:${titleOnly ? '11px 16px' : '14px 16px'};display:flex;gap:14px;align-items:${titleOnly ? 'center' : 'flex-start'};">
       <div style="width:30px;height:30px;min-width:30px;background:${safeHex(card.iconBg, defaults.iconBg)};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:${safeHex(card.iconColor, defaults.iconColor)};margin-top:1px;">${escapeHtml(card.icon || '+')}</div>
       <div style="flex:1;min-width:0;">
 ${title.text ? `        <div style="font-family:'Poppins',sans-serif;${textStyle(title)}">${escapeHtml(title.text)}</div>\n` : ''}${descText ? `        <div style="font-family:'Poppins',sans-serif;${textStyle(desc)};line-height:1.55;${title.text ? 'margin-top:4px;' : ''}">${descText}</div>\n` : ''}      </div>
