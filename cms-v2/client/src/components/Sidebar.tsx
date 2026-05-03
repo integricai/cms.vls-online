@@ -35,6 +35,13 @@ const NAV: NavEntry[] = [
     ],
   },
   {
+    group: 'Page Templates',
+    children: [
+      { to: '/legal-page', label: 'Legal Page' },
+      { to: '/team',       label: 'Team' },
+    ],
+  },
+  {
     group: 'Cards',
     children: [
       { to: '/program-cards',    label: 'Program Cards' },
@@ -53,7 +60,7 @@ interface Props {
 }
 
 export default function Sidebar({ isOpen, onClose }: Props) {
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ 'Global': true, 'Home Page': true, 'Course Page': true, 'Cards': true });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ 'Global': true, 'Home Page': true, 'Course Page': true, 'Page Templates': true, 'Cards': true });
 
   function toggleGroup(name: string) {
     setOpenGroups(prev => ({ ...prev, [name]: !prev[name] }));

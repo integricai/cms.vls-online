@@ -83,6 +83,14 @@ export const DEFAULTS = {
   pcv2Meta:            { size: 12, color: '#52525b', weight: '400', letterSpacing: 0 },
   pcv2Chip:            { size: 11, color: '#3f3f46', weight: '600', letterSpacing: 0 },
   pcv2Cta:             { size: 13, color: '#ffffff', weight: '700', letterSpacing: 0 },
+  // Team
+  teamEyebrow:        { size: 12, color: '#534AB7', weight: '500', letterSpacing: 0.08 },
+  teamName:           { size: 28, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
+  teamDesignation:    { size: 16, color: '#4b5563', weight: '500', letterSpacing: 0 },
+  teamFeatureValue:   { size: 18, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
+  teamFeatureLabel:   { size: 10, color: '#6b7280', weight: '500', letterSpacing: 0.08 },
+  teamTag:            { size: 12, color: '#374151', weight: '500', letterSpacing: 0 },
+  team:               { size: 14, color: '#262a32', weight: '400', letterSpacing: 0 },
   // Step Cards
   stepsEyebrow:        { size: 12, color: '#204280', weight: '500', letterSpacing: 0.14 },
   stepsTitle:          { size: 26, color: '#1a1a1a', weight: '500', letterSpacing: 0 },

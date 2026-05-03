@@ -308,6 +308,40 @@ export interface Pcv2State { bg: string; maxWidth: number; gap: number; cards: P
 export interface Pcv2Component { id: string; name: string; data: Pcv2State; }
 export interface Pcv2Content { components: Pcv2Component[]; }
 
+// ── Legal Page ────────────────────────────────────────────────────
+export type PolicyBlockType = 'paragraph' | 'bullets' | 'table' | 'cards' | 'rights' | 'tags' | 'definitions' | 'alpha-list' | 'icon-cards' | 'link-cards' | 'cta-banner' | 'callout';
+export interface PolicyBlock {
+  type: PolicyBlockType;
+  text?: string;
+  items?: any[];
+  cols?: number | string;
+  headers?: string;
+  rows?: string;
+  icon?: string;
+  bg?: string;
+  color?: string;
+  titleColor?: string;
+  descColor?: string;
+  btnBg?: string;
+  btnColor?: string;
+  title?: string;
+  desc?: string;
+  btnText?: string;
+  btnUrl?: string;
+  url?: string;
+  linkText?: string;
+  iconBg?: string;
+}
+export interface PolicySection { id: string; title: string; bg: string; blocks: PolicyBlock[]; }
+export interface LegalPageState { hdrBg: string; eyebrow: string; title: string; navWidth: number | string; navBg: string; accent: string; meta: string[]; sections: PolicySection[]; }
+export interface LegalPageComponent { id: string; name: string; data: LegalPageState; }
+export interface LegalPageContent { components: LegalPageComponent[]; }
+
+// ── Team ──────────────────────────────────────────────────────────
+export interface TeamFeature { value: string; label: string; }
+export interface TeamCard { id: string; eyebrow: TextValue; name: TextValue; designation: TextValue; imgUrl: string; features: TeamFeature[]; paras: string[]; tags: string[]; }
+export interface TeamContent { cards: TeamCard[]; }
+
 // ── Step Cards ────────────────────────────────────────────────────────────────
 export interface StepCard { title: TextValue; desc: TextValue; }
 export interface StepsState { bg: string; padLeft: number; padRight: number; cols: number; eyebrow: TextValue; title: TextValue; desc: TextValue; cards: StepCard[]; }
