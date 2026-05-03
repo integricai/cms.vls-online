@@ -16,6 +16,7 @@ export function generateFooterHtml(data: FooterData): string {
   const BG = '#0f2155';
 
   const css = `.${P}-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:40px;padding-bottom:32px;}`
+    + `.block.footer-style.parrot.zenstyle.bg-layer.padding-top-50.padding-bottom-50.center-center.footer-block{display:none!important;}`
     + `.${P}-col{}`
     + `.${P}-hdr{margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;cursor:default;}`
     + `.${P}-arrow{display:none;font-size:18px;color:rgba(255,255,255,.7);line-height:1;}`
