@@ -9,7 +9,7 @@
       "src": "cms-v2/client/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "../dist-client"
+        "distDir": "dist"
       }
     }
   ],
@@ -19,8 +19,12 @@
       "dest": "cms-v2/src/server.ts"
     },
     {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/$1"
+      "dest": "/index.html"
     }
   ]
 }

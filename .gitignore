@@ -3,3 +3,7 @@
 .env.*.local
 .vercel
 node_modules
+
+cms-v2/dist-client
+cms-v2/dist
+cms-v2/client/dist
