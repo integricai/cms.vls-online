@@ -12,7 +12,7 @@ export function generateContactFormHtml(config) {
     const thankTitle = normalize(config.thankTitle, 'formThankTitle');
     const thankDesc = normalize(config.thankDesc, 'formThank');
     const enquiryOptions = config.enquiryOptions || [];
-    const apiUrl = '/api/submit-form';
+    const apiUrl = 'https://api.cms.vls-online.com/api/submit-form';
     const optionHtml = enquiryOptions
         .filter((option) => String(option.label || '').trim())
         .map((option) => `<option value="${attr(option.label)}">${escapeHtml(option.label)}</option>`)
@@ -88,7 +88,7 @@ export function generateReportIssueHtml(config) {
       ${cards.map((card) => `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-top:10px;"><div style="font-size:18px;">${escapeHtml(card.icon || '')}</div><strong style="font-size:13px;color:#172033;">${escapeHtml(card.title || '')}</strong><p style="font-size:12px;color:#64748b;line-height:1.5;margin:4px 0 0;">${escapeHtml(card.desc || '')}</p></div>`).join('')}
       <div style="background:${safeHex(config.contactBg, '#0d1f3c')};border-radius:10px;padding:16px;margin-top:18px;color:#fff;"><strong>${escapeHtml(config.contactTitle || '')}</strong>${contacts.map((item) => `<p style="margin:8px 0 0;font-size:13px;">${escapeHtml(item)}</p>`).join('')}</div>
     </aside>
-    <form class="${uid}-main" action="/api/submit-report" method="post">
+    <form class="${uid}-main" action="https://api.cms.vls-online.com/api/submit-report" method="post">
       <input type="hidden" name="thankYouUrl" value="${attr(config.tyUrl || '')}">
       <div class="${uid}-field"><label>Name</label><input name="name" required></div>
       <div class="${uid}-field"><label>Email</label><input name="email" type="email" required></div>
