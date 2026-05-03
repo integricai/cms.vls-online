@@ -27,11 +27,11 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true, data: { status: 'ok', ts: new Date().toISOString() } });
 });
 
-app.use('/auth', authRouter);
-app.use('/snippets', snippetsRouter);
-app.use('/content', contentRouter);
-app.use('/users', usersRouter);
-app.use('/public', publicRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/snippets', snippetsRouter);
+app.use('/api/content', contentRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/public', publicRouter);
 
 // ── 404 catch-all ─────────────────────────────────────────────────
 
