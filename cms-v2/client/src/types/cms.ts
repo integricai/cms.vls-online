@@ -68,6 +68,29 @@ export interface User {
   role: 'admin' | 'editor' | 'viewer';
 }
 
+// ── Events ───────────────────────────────────────────────────────────────────
+
+export type EventDescriptionBlock =
+  | { type: 'heading-para'; heading: TextValue; para: TextValue }
+  | { type: 'paragraph'; para: TextValue }
+  | { type: 'list'; items: TextValue[] };
+
+export interface VlsEvent {
+  id: string;
+  name: TextValue;
+  startsAt: string;
+  endsAt: string;
+  timezone: string;
+  description: EventDescriptionBlock[];
+  venue: TextValue;
+  hosts: TextValue;
+  ctaText: TextValue;
+  ctaUrl: string;
+  createdAt: string;
+}
+
+export interface EventsContent { events: VlsEvent[]; }
+
 // ── Promotion Section ─────────────────────────────────────────────────────────
 
 export interface PromoSection {

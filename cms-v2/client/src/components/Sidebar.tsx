@@ -37,6 +37,7 @@ const NAV: NavEntry[] = [
   {
     group: 'Page Templates',
     children: [
+      { to: '/events',     label: 'Events' },
       { to: '/legal-page', label: 'Legal Page' },
       { to: '/team',       label: 'Team' },
     ],

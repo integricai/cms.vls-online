@@ -91,6 +91,13 @@ export const DEFAULTS = {
   teamFeatureLabel:   { size: 10, color: '#6b7280', weight: '500', letterSpacing: 0.08 },
   teamTag:            { size: 12, color: '#374151', weight: '500', letterSpacing: 0 },
   team:               { size: 14, color: '#262a32', weight: '400', letterSpacing: 0 },
+  // Events
+  eventName:          { size: 18, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
+  eventHeading:       { size: 15, color: '#204280', weight: '700', letterSpacing: 0 },
+  event:              { size: 14, color: '#262a32', weight: '400', letterSpacing: 0 },
+  eventBullet:        { size: 14, color: '#262a32', weight: '400', letterSpacing: 0 },
+  eventMeta:          { size: 13, color: '#262a32', weight: '400', letterSpacing: 0 },
+  eventCta:           { size: 13, color: '#ffffff', weight: '500', letterSpacing: 0 },
   // Step Cards
   stepsEyebrow:        { size: 12, color: '#204280', weight: '500', letterSpacing: 0.14 },
   stepsTitle:          { size: 26, color: '#1a1a1a', weight: '500', letterSpacing: 0 },

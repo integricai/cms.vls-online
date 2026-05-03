@@ -7,6 +7,7 @@ import authRouter from './routes/auth';
 import snippetsRouter from './routes/snippets';
 import contentRouter from './routes/content';
 import usersRouter from './routes/users';
+import publicRouter from './routes/public';
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
@@ -30,6 +31,7 @@ app.use('/auth', authRouter);
 app.use('/snippets', snippetsRouter);
 app.use('/content', contentRouter);
 app.use('/users', usersRouter);
+app.use('/public', publicRouter);
 
 // ── 404 catch-all ─────────────────────────────────────────────────
 
