@@ -49,7 +49,7 @@ function cardHtml(card: SplitSectionCard, mode: 'left' | 'right', imageBoxWidth:
     let body = '';
     if (title.text) body += `<div style="font-family:'Poppins',sans-serif;margin:0 0 8px;${textStyle(title)}">${escapeHtml(title.text)}</div>`;
     if (descText) body += `<div style="font-family:'Poppins',sans-serif;margin:0${cta.text ? ' 0 12px' : ''};line-height:1.6;${textStyle(desc)}">${descText}</div>`;
-    if (cta.text) body += `<a href="${attr(card.ctaUrl || '#')}" style="display:inline-block;font-family:'Poppins',sans-serif;padding:8px 18px;background:${safeHex(card.ctaBg, defaults.ctaBg)};border-radius:6px;text-decoration:none;${textStyle(cta)}color:${safeHex(card.ctaColor, '#ffffff')};">${escapeHtml(cta.text)}</a>`;
+    if (cta.text) body += `<div style="display:flex;justify-content:flex-end;"><a href="${attr(card.ctaUrl || '#')}" style="display:inline-block;font-family:'Poppins',sans-serif;padding:8px 18px;background:${safeHex(card.ctaBg, defaults.ctaBg)};border-radius:6px;text-decoration:none;${textStyle(cta)}color:${safeHex(card.ctaColor, '#ffffff')};">${escapeHtml(cta.text)}</a></div>`;
     const spanStyle = mode === 'left' ? `grid-column:span ${card.halfWidth ? 1 : 2};` : '';
     const frameW = mode === 'left' ? Math.min(imgW, 45) : Math.min(imgW, 42);
     const pad = mode === 'left' ? 16 : 20;
