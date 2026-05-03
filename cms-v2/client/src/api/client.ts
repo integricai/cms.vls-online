@@ -23,6 +23,12 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
+  if (res.status === 401) {
+    localStorage.removeItem('cms_token');
+    window.location.href = '/login';
+    throw new Error('Session expired — please log in again');
+  }
+
   let json: { ok?: boolean; error?: string; data?: T } | null = null;
   try {
     json = await res.json();

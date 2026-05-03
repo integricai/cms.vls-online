@@ -41,6 +41,7 @@ function makeCard(): TeamCard {
 export default function TeamScreen() {
   const [cards, setCards]         = useState<TeamCard[]>([]);
   const [loading, setLoading]     = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [saving, setSaving]       = useState(false);
   const [saved, setSaved]         = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'html'>('preview');
@@ -48,14 +49,15 @@ export default function TeamScreen() {
   const [expanded, setExpanded]   = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    api.get<{ data: { cards?: any[] } }>('/content/vls-team')
+    api.get<any>('/content/vls-team')
       .then(row => {
         const raw = row?.data as any;
-        const loaded = (raw?.cards || []).map(normalizeCard);
+        const rawCards: any[] = raw?.cards || [];
+        const loaded = rawCards.map(normalizeCard);
         setCards(loaded);
         if (loaded.length > 0) setExpanded(new Set([loaded[0].id]));
       })
-      .catch(() => {})
+      .catch(e => setLoadError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
   }, []);
 
@@ -108,6 +110,15 @@ export default function TeamScreen() {
   }
 
   if (loading) return <div className="flex h-full items-center justify-center text-sm text-slate-400">Loading…</div>;
+  if (loadError) return (
+    <div className="flex h-full items-center justify-center p-8">
+      <div className="rounded-lg border border-red-200 bg-red-50 p-6 max-w-md text-center">
+        <p className="text-sm font-semibold text-red-700 mb-1">Failed to load team data</p>
+        <p className="text-xs text-red-500 font-mono break-all">{loadError}</p>
+        <button onClick={() => window.location.reload()} className="mt-4 btn-primary text-xs">Reload page</button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex h-full">
@@ -145,8 +156,16 @@ export default function TeamScreen() {
                 {isOpen && (
                   <div className="p-3 space-y-1">
                     <Field label="Photo URL">
-                      <input className="input" value={card.imgUrl} placeholder="https://…"
-                        onChange={e => updateCard(i, { imgUrl: e.target.value })} />
+                      {card.imgUrl.startsWith('data:') ? (
+                        <div className="flex items-center gap-2">
+                          <img src={card.imgUrl} alt="preview" className="h-10 w-10 rounded-full object-cover border border-slate-200 shrink-0" />
+                          <span className="text-xs text-slate-500 flex-1">Embedded base64 photo</span>
+                          <button onClick={() => updateCard(i, { imgUrl: '' })} className="btn-danger text-xs px-2">Remove</button>
+                        </div>
+                      ) : (
+                        <input className="input" value={card.imgUrl} placeholder="https://…"
+                          onChange={e => updateCard(i, { imgUrl: e.target.value })} />
+                      )}
                     </Field>
                     <RichTextField label="Eyebrow" value={normalize(card.eyebrow as any, 'teamEyebrow')} defaultKey="teamEyebrow"
                       onChange={v => updateCard(i, { eyebrow: v })} />

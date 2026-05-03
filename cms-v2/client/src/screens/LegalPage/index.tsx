@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../../api/client';
-import type { LegalPageState, LegalPageComponent, LegalPageContent, PolicySection, PolicyBlock, PolicyBlockType } from '../../types/cms';
+import type { LegalPageState, LegalPageComponent, PolicySection, PolicyBlock, PolicyBlockType } from '../../types/cms';
 import { generateLegalPageHtml } from './generateHtml';
 import Field from '../../components/Field';
 
@@ -252,6 +252,7 @@ export default function LegalPageScreen() {
   const [name, setName]             = useState('');
   const [state, setState]           = useState<LegalPageState>(makeDefault());
   const [loading, setLoading]       = useState(true);
+  const [loadError, setLoadError]   = useState('');
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
   const [activeTab, setActiveTab]   = useState<'preview' | 'html'>('preview');
@@ -259,14 +260,22 @@ export default function LegalPageScreen() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    api.get<{ data: LegalPageContent }>('/content/vls-policy-components')
+    api.get<any>('/content/vls-policy-components')
       .then(row => {
         const raw = row?.data as any;
-        const comps: LegalPageComponent[] = raw?.components || [];
+        const comps: LegalPageComponent[] = (raw?.components || []).map((c: any) => ({
+          ...c,
+          data: c.data ? {
+            ...c.data,
+            sections: (c.data.sections || []).map((s: any, si: number) =>
+              s.id ? s : { ...s, id: `sec-${c.id || si}-${si}` }
+            ),
+          } : makeDefault(),
+        }));
         setComponents(comps);
         if (comps.length > 0) { setActiveId(comps[0].id); setName(comps[0].name); setState(comps[0].data || makeDefault()); }
       })
-      .catch(() => {})
+      .catch(e => setLoadError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
   }, []);
 
@@ -276,7 +285,13 @@ export default function LegalPageScreen() {
     if (!id) { newComponent(); return; }
     const c = components.find(c => c.id === id);
     if (!c) return;
-    setActiveId(c.id); setName(c.name); setState(c.data || makeDefault()); setSaved(false);
+    const data = c.data ? {
+      ...c.data,
+      sections: (c.data.sections || []).map((s: any, si: number) =>
+        s.id ? s : { ...s, id: `sec-${c.id}-${si}` }
+      ),
+    } : makeDefault();
+    setActiveId(c.id); setName(c.name); setState(data); setSaved(false);
   }
   function newComponent() { setActiveId(null); setName(''); setState(makeDefault()); setSaved(false); }
 
@@ -339,6 +354,15 @@ export default function LegalPageScreen() {
   };
 
   if (loading) return <div className="flex h-full items-center justify-center text-sm text-slate-400">Loading…</div>;
+  if (loadError) return (
+    <div className="flex h-full items-center justify-center p-8">
+      <div className="rounded-lg border border-red-200 bg-red-50 p-6 max-w-md text-center">
+        <p className="text-sm font-semibold text-red-700 mb-1">Failed to load content</p>
+        <p className="text-xs text-red-500 font-mono break-all">{loadError}</p>
+        <button onClick={() => window.location.reload()} className="mt-4 btn-primary text-xs">Reload page</button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex h-full">
