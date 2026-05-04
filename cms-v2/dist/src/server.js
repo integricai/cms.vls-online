@@ -24,11 +24,11 @@ app.use(express_1.default.json());
 app.get('/health', (_req, res) => {
     res.json({ ok: true, data: { status: 'ok', ts: new Date().toISOString() } });
 });
-app.use('/auth', auth_1.default);
-app.use('/snippets', snippets_1.default);
-app.use('/content', content_1.default);
-app.use('/users', users_1.default);
-app.use('/public', public_1.default);
+app.use('/api/auth', auth_1.default);
+app.use('/api/snippets', snippets_1.default);
+app.use('/api/content', content_1.default);
+app.use('/api/users', users_1.default);
+app.use('/api/public', public_1.default);
 // ── 404 catch-all ─────────────────────────────────────────────────
 app.use((_req, res) => {
     res.status(404).json({ ok: false, error: 'Not found' });

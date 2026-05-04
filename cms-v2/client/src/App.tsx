@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { getCurrentUser, getToken } from './api/client';
 import Layout from './components/Layout';
 import Login from './screens/Login';
+import ResetPassword from './screens/ResetPassword';
 import HomeHero from './screens/HomeHero';
 import AboutUs from './screens/AboutUs';
 import Header from './screens/Header';
@@ -43,6 +44,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           element={
             <RequireAuth>

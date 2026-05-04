@@ -1,14 +1,11 @@
 import { escapeHtml, normalize, textStyle } from '../../utils/text';
-
 const API_BASE = 'https://api.cms.vls-online.com';
-
 function attr(value) {
     return escapeHtml(value).replace(/"/g, '&quot;');
 }
 function safeHex(value, fallback) {
     return /^#[0-9a-fA-F]{6}$/.test(value || '') ? value : fallback;
 }
-
 export function generateContactFormHtml(config) {
     const uid = `vlsf${Math.random().toString(36).slice(2, 7)}`;
     const title = normalize(config.formTitle, 'formTitle');
@@ -97,7 +94,6 @@ export function generateContactFormHtml(config) {
 })();
 </script>`;
 }
-
 export function generateReportIssueHtml(config) {
     const uid = `vlsri${Math.random().toString(36).slice(2, 7)}`;
     const accent = safeHex(config.accent, '#204280');
@@ -205,7 +201,6 @@ export function generateReportIssueHtml(config) {
 })();
 </script>`;
 }
-
 export function generateReportTyHtml(config) {
     const uid = `rty${Math.random().toString(36).slice(2, 7)}`;
     const heroBg = safeHex(config.heroBg, '#0d1f3c');

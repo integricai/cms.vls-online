@@ -24,7 +24,10 @@ export interface PasswordResetRequest {
 
 export interface PasswordResetConfirm {
   token: string;
+  username: string;
   newPassword: string;
+  captchaToken: string;
+  captchaAnswer: string;
 }
 
 // ── Users ─────────────────────────────────────────────────────────
