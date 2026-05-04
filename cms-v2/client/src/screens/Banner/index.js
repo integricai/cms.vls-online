@@ -34,8 +34,9 @@ function BannerForm({ banner: b, onChange }) {
 function durationMs(banner) {
     return ((banner.days || 0) * 86400 + (banner.hours || 0) * 3600 + (banner.mins || 0) * 60 + (banner.secs || 0)) * 1000;
 }
-function withPublishDeadline(banner) {
-    return { ...banner, deadline: Date.now() + durationMs(banner) };
+function withoutPublishDeadline(banner) {
+    const { deadline: _deadline, ...next } = banner;
+    return next;
 }
 function buildBannerInjectCode(banner) {
     const bid = banner.id;
@@ -60,10 +61,11 @@ function buildBannerInjectCode(banner) {
     s.textContent="#"+ROOT_ID+"{position:sticky;top:0;width:100%;z-index:9999;box-sizing:border-box;}#"+ROOT_ID+" *{box-sizing:border-box;}#"+ROOT_ID+" .vls-unit{display:flex;flex-direction:column;align-items:center;gap:2px;}#"+ROOT_ID+" .vls-num{font-size:20px;font-weight:700;line-height:1;font-family:Poppins,sans-serif;}#"+ROOT_ID+" .vls-lbl{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;opacity:0.75;font-family:Poppins,sans-serif;}#"+ROOT_ID+" .vls-sep{font-size:24px;font-weight:700;line-height:1;padding:0 4px;margin-top:-4px;opacity:0.6;}#"+ROOT_ID+" .vls-close{position:absolute;top:50%;right:12px;transform:translateY(-50%);background:none;border:none;cursor:pointer;opacity:.65;font-size:20px;line-height:1;padding:4px 6px;color:inherit;font-family:sans-serif;}@media(max-width:600px){#"+ROOT_ID+" .vls-bn-wrap{flex-direction:column!important;padding-top:12px!important;padding-bottom:12px!important;}#"+ROOT_ID+" .vls-bn-text{width:100%!important;flex:none!important;}#"+ROOT_ID+" .vls-bn-right{width:100%!important;align-items:center!important;margin-top:10px!important;}#"+ROOT_ID+" .vls-bn-cta{display:none!important;}}";
     document.head.appendChild(s);
   }
-  function tick(deadline){
+  function tick(duration){
     if(timer)clearInterval(timer);
+    var endsAt=Date.now()+Math.max(0,duration||0);
     function run(){
-      var r=Math.max(0,(deadline||Date.now())-Date.now());
+      var r=Math.max(0,endsAt-Date.now());
       var d=document.getElementById("vls-"+BID+"-d");if(!d)return;
       document.getElementById("vls-"+BID+"-d").textContent=pad(Math.floor(r/86400000));
       document.getElementById("vls-"+BID+"-h").textContent=pad(Math.floor((r%86400000)/3600000));
@@ -77,9 +79,7 @@ function buildBannerInjectCode(banner) {
     var el=document.getElementById(ROOT_ID);
     if(!b||!b.visible){if(el)el.style.display="none";return;}
     try{if(sessionStorage.getItem("vls-bn-dismissed-"+BID)==="1"){if(el)el.style.display="none";return;}}catch(e){}
-    if(!b.deadline){
-      b.deadline=Date.now()+Math.max(0,((parseInt(b.days,10)||0)*86400+(parseInt(b.hours,10)||0)*3600+(parseInt(b.mins,10)||0)*60+(parseInt(b.secs,10)||0))*1000);
-    }
+    var duration=Math.max(0,((parseInt(b.days,10)||0)*86400+(parseInt(b.hours,10)||0)*3600+(parseInt(b.mins,10)||0)*60+(parseInt(b.secs,10)||0))*1000);
     ensureStyle();
     if(!el){el=document.createElement("div");el.id=ROOT_ID;document.body.insertBefore(el,document.body.firstChild);}
     var bg=safeHex(b.bg,"#204280"),fg=safeHex(b.fg,"#ffffff"),btnBg=safeHex(b.btnBg,"#e63946"),btnFg=safeHex(b.btnFg,"#ffffff");
@@ -102,7 +102,7 @@ function buildBannerInjectCode(banner) {
       +'</div><button class="vls-close" aria-label="Close" style="color:'+fg+'">&#215;</button></div>';
     var cls=el.querySelector(".vls-close");
     if(cls)cls.onclick=function(){try{sessionStorage.setItem("vls-bn-dismissed-"+BID,"1");}catch(e){}el.style.display="none";};
-    tick(b.deadline);
+    tick(duration);
   }
   function load(){
     fetch(API+"?t="+Date.now()).then(function(r){return r.json();}).then(function(data){
@@ -195,7 +195,7 @@ export default function BannerScreen() {
             return;
         setPublishing(true);
         try {
-            const next = banners.map(b => b.id === active.id ? withPublishDeadline(b) : b);
+            const next = banners.map(b => b.id === active.id ? withoutPublishDeadline(b) : b);
             setBanners(next);
             await api.put('/content/vls-banners', { banners: next });
             await api.post('/publish-banner', { banners: next });
