@@ -5,6 +5,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendPasswordResetEmail = sendPasswordResetEmail;
 const nodemailer_1 = __importDefault(require("nodemailer"));
+function parseSender(value) {
+    const fallback = { email: 'noreply@vls-online.com', name: 'VLS Online CMS' };
+    if (!value)
+        return fallback;
+    const match = value.match(/^"?([^"<]+)"?\s*<([^>]+)>$/);
+    if (match) {
+        return { name: match[1].trim(), email: match[2].trim() };
+    }
+    return { ...fallback, email: value.trim() };
+}
 function buildPasswordResetEmail(resetUrl) {
     return {
         subject: 'Reset your CMS password',
@@ -19,6 +29,30 @@ function buildPasswordResetEmail(resetUrl) {
       <p style="color:#6b7280;font-size:13px;">Link expires in 1 hour. If you did not request this, ignore this email.</p>
     `,
     };
+}
+async function sendWithMailerSend(to, email) {
+    const apiKey = process.env.MAILERSEND_API_KEY;
+    if (!apiKey) {
+        throw new Error('MAILERSEND_API_KEY is not configured');
+    }
+    const response = await fetch('https://api.mailersend.com/v1/email', {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            from: parseSender(process.env.EMAIL_FROM),
+            to: [{ email: to }],
+            subject: email.subject,
+            text: email.text,
+            html: email.html,
+        }),
+    });
+    if (!response.ok) {
+        const details = await response.text().catch(() => '');
+        throw new Error(`MailerSend ${response.status}: ${details}`);
+    }
 }
 function createTransport() {
     if (!process.env.SMTP_HOST) {
@@ -38,6 +72,10 @@ async function sendPasswordResetEmail(to, resetToken) {
     const baseUrl = process.env.APP_URL ?? 'http://localhost:3000';
     const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
     const email = buildPasswordResetEmail(resetUrl);
+    if (process.env.MAILERSEND_API_KEY) {
+        await sendWithMailerSend(to, email);
+        return;
+    }
     if (!process.env.SMTP_HOST && process.env.NODE_ENV !== 'production') {
         console.log(`[password-reset] Reset link for ${to}: ${resetUrl}`);
         return;
