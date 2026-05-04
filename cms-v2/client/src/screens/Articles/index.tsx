@@ -28,6 +28,10 @@ function parseArticles(text: string): ArticleGroup['articles'] {
   }).filter(article => article.title || article.url);
 }
 
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 function normalizeSection(section: Partial<ArticleSection> | undefined): ArticleSection {
   const fallback = defaultArticleSection();
   return {
@@ -99,7 +103,7 @@ export default function Articles() {
 
   function duplicateSection() {
     if (!draft) return;
-    const section = JSON.parse(JSON.stringify(draft)) as ArticleSection;
+    const section = clone(draft);
     section.id = `ags-${Date.now().toString(36)}`;
     section.name = `Copy of ${draft.name || 'Articles'}`;
     setActiveId(section.id);
@@ -149,6 +153,18 @@ export default function Articles() {
   function removeGroup(index: number) {
     if (!draft) return;
     patch({ groups: draft.groups.filter((_, i) => i !== index) });
+  }
+
+  function duplicateGroup(index: number) {
+    if (!draft) return;
+    const source = draft.groups[index];
+    if (!source) return;
+    const group = clone(source);
+    group.title = `Copy of ${source.title || 'Article group'}`;
+    group.short = source.short ? `Copy of ${source.short}` : 'Copy';
+    const groups = [...draft.groups];
+    groups.splice(index + 1, 0, group);
+    patch({ groups });
   }
 
   function generate() {
@@ -214,7 +230,10 @@ export default function Articles() {
                   <div key={index} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
                     <div className="mb-2 flex items-center justify-between">
                       <span className="text-xs font-semibold text-slate-500">{group.title || 'New group'} · {group.articles.length} articles</span>
-                      <button className="btn-danger" onClick={() => removeGroup(index)}>Remove</button>
+                      <div className="flex gap-2">
+                        <button className="btn-ghost text-xs" onClick={() => duplicateGroup(index)}>Duplicate</button>
+                        <button className="btn-danger" onClick={() => removeGroup(index)}>Remove</button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <Field label="Group title"><input className="input" value={group.title} onChange={e => updateGroup(index, { ...group, title: e.target.value })} /></Field>
