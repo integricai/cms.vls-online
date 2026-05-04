@@ -7,6 +7,12 @@ function attr(value) {
 function safeHex(value, fallback) {
     return /^#[0-9a-fA-F]{6}$/.test(value || '') ? value : fallback;
 }
+function clampNumber(value, fallback, min, max) {
+    const next = parseInt(String(value), 10);
+    if (!Number.isFinite(next))
+        return fallback;
+    return Math.min(max, Math.max(min, next));
+}
 export function generateContactFormHtml(config) {
     const uid = `vlsf${Math.random().toString(36).slice(2, 7)}`;
     const title = normalize(config.formTitle, 'formTitle');
@@ -15,6 +21,8 @@ export function generateContactFormHtml(config) {
     const thankDesc = normalize(config.thankDesc, 'formThank');
     const enquiryOptions = config.enquiryOptions || [];
     const recipients = Array.isArray(config.recipients) ? config.recipients : [];
+    const messageRows = clampNumber(config.messageRows, 4, 2, 20);
+    const messageMinHeight = clampNumber(config.messageMinHeight, 120, 80, 600);
     const optionHtml = enquiryOptions
         .filter((option) => String(option.label || '').trim())
         .map((option) => `<option value="${attr(option.label)}">${escapeHtml(option.label)}</option>`)
@@ -25,6 +33,7 @@ export function generateContactFormHtml(config) {
 .${uid} *{box-sizing:border-box;}
 .${uid} label{display:block;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin:0 0 6px;}
 .${uid} input,.${uid} select,.${uid} textarea{width:100%;border:1px solid #d8dee8;border-radius:8px;padding:10px 12px;font-family:Poppins,sans-serif;font-size:14px;color:#172033;outline:none;}
+.${uid} textarea{resize:vertical;}
 .${uid} input:focus,.${uid} select:focus,.${uid} textarea:focus{border-color:#204280;box-shadow:0 0 0 3px rgba(32,66,128,.14);}
 .${uid}-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .${uid}-field{margin-bottom:14px;}
@@ -47,7 +56,7 @@ export function generateContactFormHtml(config) {
       <div class="${uid}-field"><label>Phone</label><input id="${uid}-ph" placeholder="Phone number"></div>
     </div>
     <div class="${uid}-field"><label>Enquiry</label><select id="${uid}-eq"><option value="">Select...</option>${optionHtml}</select></div>
-    <div class="${uid}-field"><label>Message</label><textarea id="${uid}-cm" rows="4" placeholder="Your message…"></textarea></div>
+    <div class="${uid}-field"><label>Message</label><textarea id="${uid}-cm" rows="${messageRows}" style="min-height:${messageMinHeight}px;" placeholder="Your message…"></textarea></div>
     <div class="${uid}-field"><div id="${uid}-ts"></div></div>
     <button class="${uid}-btn" id="${uid}-btn" type="button" onclick="${uid}sub()">${submitLabel}</button>
     <div class="${uid}-err" id="${uid}-err"></div>
@@ -272,6 +281,8 @@ export function generateContactPageHtml(config) {
     const enquiryOptions = (config.enquiryOptions || []);
     const qualOptions = (config.qualificationOptions || []);
     const howHeardOptions = (config.howHeardOptions || []);
+    const messageRows = clampNumber(config.messageRows, 5, 2, 20);
+    const messageMinHeight = clampNumber(config.messageMinHeight, 140, 80, 700);
     const companyName = String(config.companyName || '').trim();
     const contactInfoLabel = String(config.contactInfoLabel || 'CONTACT INFORMATION').trim();
     const contactItems = (config.contactItems || []);
@@ -325,6 +336,7 @@ export function generateContactPageHtml(config) {
 .${uid}-f{margin-bottom:14px;}
 .${uid}-f label{display:block;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
 .${uid}-f input,.${uid}-f select,.${uid}-f textarea{width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:10px 13px;font-family:'Poppins',sans-serif;font-size:14px;color:#0f172a;outline:none;transition:border-color .15s;}
+.${uid}-f textarea{resize:vertical;}
 .${uid}-f input:focus,.${uid}-f select:focus,.${uid}-f textarea:focus{border-color:#204280;box-shadow:0 0 0 3px rgba(32,66,128,.1);}
 .${uid}-qlw{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
 .${uid}-qual{border:1.5px solid #e2e8f0;border-radius:999px;padding:7px 16px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:500;color:#374151;background:#fff;cursor:pointer;transition:all .15s;}
@@ -388,7 +400,7 @@ export function generateContactPageHtml(config) {
           <p class="${uid}-sec">Your Enquiry</p>
           ${enquiryOptHtml ? `<div class="${uid}-f"><label>What are you enquiring about? *</label><select id="${uid}-eq"><option value="">Select a topic...</option>${enquiryOptHtml}</select></div>` : ''}
           ${qualButtonsHtml ? `<div class="${uid}-f"><label>Which qualification are you interested in?</label><div class="${uid}-qlw" id="${uid}-qlw">${qualButtonsHtml}</div><input type="hidden" id="${uid}-qv" value=""></div>` : ''}
-          <div class="${uid}-f"><label>Your Message *</label><textarea id="${uid}-msg" rows="5" placeholder="Tell us what you'd like to know — the more detail you share, the better we can help." required></textarea></div>
+          <div class="${uid}-f"><label>Your Message *</label><textarea id="${uid}-msg" rows="${messageRows}" style="min-height:${messageMinHeight}px;" placeholder="Tell us what you'd like to know — the more detail you share, the better we can help." required></textarea></div>
           ${howHeardOptHtml ? `<div class="${uid}-f"><label>How did you hear about VLS?</label><select id="${uid}-hh"><option value="">Select an option...</option>${howHeardOptHtml}</select></div>` : ''}
           <div class="${uid}-f"><div id="${uid}-ts"></div></div>
           <div class="${uid}-foot">

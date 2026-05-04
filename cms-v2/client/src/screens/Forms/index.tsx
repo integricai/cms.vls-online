@@ -31,6 +31,8 @@ function defaultConfig(type: FormType): AnyConfig {
       thankDesc: normalize('Thank you for sharing the information. We will contact you soon.', 'formThank'),
       recipients: ['office@vls-online.com'],
       enquiryOptions: [],
+      messageRows: 4,
+      messageMinHeight: 120,
     };
   }
   if (type === 'contact-page') {
@@ -43,6 +45,8 @@ function defaultConfig(type: FormType): AnyConfig {
       privacyUrl: '/privacy',
       recipients: ['office@vls-online.com'],
       enquiryOptions: [],
+      messageRows: 5,
+      messageMinHeight: 140,
       qualificationOptions: ['ACCA', 'CIMA', 'CMA', 'CIA', 'Dip-IFR', 'Foundation Diploma', 'Not sure yet'],
       howHeardOptions: [],
       companyName: '',
@@ -169,6 +173,17 @@ function ContactFields({ cfg, patch }: { cfg: AnyConfig; patch: (p: AnyConfig) =
     <>
       <RichTextField label="Form title" value={normalize(cfg.formTitle, 'formTitle')} defaultKey="formTitle" onChange={formTitle => patch({ formTitle })} />
       <RichTextField label="Submit button text" value={normalize(cfg.submitText, 'formButton')} defaultKey="formButton" onChange={submitText => patch({ submitText })} />
+      <p className="section-label">Message Box</p>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Rows">
+          <input type="number" className="input" min={2} max={20} value={cfg.messageRows ?? 4}
+            onChange={e => patch({ messageRows: Number(e.target.value) })} />
+        </Field>
+        <Field label="Minimum height (px)">
+          <input type="number" className="input" min={80} max={600} value={cfg.messageMinHeight ?? 120}
+            onChange={e => patch({ messageMinHeight: Number(e.target.value) })} />
+        </Field>
+      </div>
       <p className="section-label">Thank You Message</p>
       <RichTextField label="Title" value={normalize(cfg.thankTitle, 'formThankTitle')} defaultKey="formThankTitle" onChange={thankTitle => patch({ thankTitle })} />
       <RichTextField label="Description" multiline value={normalize(cfg.thankDesc, 'formThank')} defaultKey="formThank" onChange={thankDesc => patch({ thankDesc })} />
@@ -223,6 +238,17 @@ function ContactPageFields({ cfg, patch }: { cfg: AnyConfig; patch: (p: AnyConfi
       <Field label="Privacy policy URL">
         <input className="input" value={cfg.privacyUrl || ''} onChange={e => patch({ privacyUrl: e.target.value })} />
       </Field>
+      <p className="section-label">Message Box</p>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Rows">
+          <input type="number" className="input" min={2} max={20} value={cfg.messageRows ?? 5}
+            onChange={e => patch({ messageRows: Number(e.target.value) })} />
+        </Field>
+        <Field label="Minimum height (px)">
+          <input type="number" className="input" min={80} max={700} value={cfg.messageMinHeight ?? 140}
+            onChange={e => patch({ messageMinHeight: Number(e.target.value) })} />
+        </Field>
+      </div>
       <p className="section-label">Thank You Message</p>
       <Field label="Title">
         <input className="input" value={cfg.thankTitle || ''} onChange={e => patch({ thankTitle: e.target.value })} />
