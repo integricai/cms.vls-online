@@ -152,6 +152,9 @@ function buildBannerInjectCode(banner: Banner): string {
     var el=document.getElementById(ROOT_ID);
     if(!b||!b.visible){if(el)el.style.display="none";return;}
     try{if(sessionStorage.getItem("vls-bn-dismissed-"+BID)==="1"){if(el)el.style.display="none";return;}}catch(e){}
+    if(!b.deadline){
+      b.deadline=Date.now()+Math.max(0,((parseInt(b.days,10)||0)*86400+(parseInt(b.hours,10)||0)*3600+(parseInt(b.mins,10)||0)*60+(parseInt(b.secs,10)||0))*1000);
+    }
     ensureStyle();
     if(!el){el=document.createElement("div");el.id=ROOT_ID;document.body.insertBefore(el,document.body.firstChild);}
     var bg=safeHex(b.bg,"#204280"),fg=safeHex(b.fg,"#ffffff"),btnBg=safeHex(b.btnBg,"#e63946"),btnFg=safeHex(b.btnFg,"#ffffff");
