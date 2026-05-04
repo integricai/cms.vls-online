@@ -1,5 +1,6 @@
 import { escapeHtml, normalize, textStyle } from '../../utils/text';
 const API_BASE = 'https://api.cms.vls-online.com';
+const TURNSTILE_SCRIPT = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 function attr(value) {
     return escapeHtml(value).replace(/"/g, '&quot;');
 }
@@ -47,6 +48,7 @@ export function generateContactFormHtml(config) {
     </div>
     <div class="${uid}-field"><label>Enquiry</label><select id="${uid}-eq"><option value="">Select...</option>${optionHtml}</select></div>
     <div class="${uid}-field"><label>Message</label><textarea id="${uid}-cm" rows="4" placeholder="Your message…"></textarea></div>
+    <div class="${uid}-field"><div id="${uid}-ts"></div></div>
     <button class="${uid}-btn" id="${uid}-btn" type="button" onclick="${uid}sub()">${submitLabel}</button>
     <div class="${uid}-err" id="${uid}-err"></div>
   </div>
@@ -58,6 +60,31 @@ export function generateContactFormHtml(config) {
 <script data-cfasync="false">
 (function(){
   var RCP=${JSON.stringify(recipients)};
+  var tsToken='';
+  var tsWidget=null;
+  function showErr(msg){var err=document.getElementById('${uid}-err');err.textContent=msg;err.style.display='block';}
+  function resetTurnstile(){tsToken='';if(window.turnstile&&tsWidget!==null){window.turnstile.reset(tsWidget);}}
+  function loadTurnstile(){
+    fetch('${API_BASE}/api/turnstile-site-key').then(function(r){return r.json();}).then(function(data){
+      if(!data.ok||!data.siteKey){throw new Error('Missing Turnstile site key');}
+      function render(){
+        tsWidget=window.turnstile.render('#${uid}-ts',{
+          sitekey:data.siteKey,
+          callback:function(token){tsToken=token;},
+          'expired-callback':function(){tsToken='';},
+          'error-callback':function(){tsToken='';showErr('Verification failed to load. Please refresh and try again.');}
+        });
+      }
+      if(window.turnstile){render();return;}
+      var s=document.createElement('script');
+      s.src='${TURNSTILE_SCRIPT}';
+      s.async=true;
+      s.defer=true;
+      s.onload=render;
+      document.head.appendChild(s);
+    }).catch(function(){showErr('Verification could not load. Please refresh and try again.');});
+  }
+  loadTurnstile();
   window['${uid}sub']=async function(){
     var fn=document.getElementById('${uid}-fn').value.trim();
     var ln=document.getElementById('${uid}-ln').value.trim();
@@ -71,11 +98,12 @@ export function generateContactFormHtml(config) {
     err.style.display='none';
     if(!fn){err.textContent='Please enter your first name.';err.style.display='block';return;}
     if(!em||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(em)){err.textContent='Please enter a valid email address.';err.style.display='block';return;}
+    if(!tsToken){err.textContent='Please complete the verification.';err.style.display='block';return;}
     var orig=btn.textContent;
     btn.disabled=true;btn.textContent='Sending…';
     try{
       var r=await fetch('${API_BASE}/api/submit-form',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({firstName:fn,lastName:ln,email:em,phoneCode:pc,phoneNumber:ph,enquiry:eq,comments:cm,recipients:RCP})});
+        body:JSON.stringify({firstName:fn,lastName:ln,email:em,phoneCode:pc,phoneNumber:ph,enquiry:eq,comments:cm,recipients:RCP,turnstileToken:tsToken})});
       var data=await r.json();
       if(r.ok&&data.ok){
         document.getElementById('${uid}-form').style.display='none';
@@ -83,11 +111,13 @@ export function generateContactFormHtml(config) {
       } else {
         err.textContent=data.error||'Something went wrong. Please try again.';
         err.style.display='block';
+        resetTurnstile();
         btn.disabled=false;btn.textContent=orig;
       }
     }catch(e){
       err.textContent='Unable to send. Please check your connection and try again.';
       err.style.display='block';
+      resetTurnstile();
       btn.disabled=false;btn.textContent=orig;
     }
   };
@@ -146,6 +176,7 @@ export function generateReportIssueHtml(config) {
         <div class="${uid}-field"><label>Issue type</label><select id="${uid}-it">${issueTypes.map((issue) => `<option>${escapeHtml(issue)}</option>`).join('')}</select></div>
         <div class="${uid}-field"><label>Course / paper</label><input id="${uid}-cn" placeholder="e.g. PM, FA1"></div>
         <div class="${uid}-field"><label>Describe the issue *</label><textarea id="${uid}-msg" rows="6" placeholder="Please describe the issue in detail…" required></textarea></div>
+        <div class="${uid}-field"><div id="${uid}-ts"></div></div>
         <button class="${uid}-btn" id="${uid}-btn" type="button" onclick="${uid}submit()">${escapeHtml(config.btnText || 'Submit Report')}</button>
         <div class="${uid}-err" id="${uid}-err"></div>
       </div>
@@ -161,6 +192,31 @@ export function generateReportIssueHtml(config) {
 (function(){
   var RCP=${JSON.stringify(recipients)};
   var TY_URL=${JSON.stringify(tyUrl)};
+  var tsToken='';
+  var tsWidget=null;
+  function showErr(msg){var err=document.getElementById('${uid}-err');err.textContent=msg;err.style.display='block';}
+  function resetTurnstile(){tsToken='';if(window.turnstile&&tsWidget!==null){window.turnstile.reset(tsWidget);}}
+  function loadTurnstile(){
+    fetch('${API_BASE}/api/turnstile-site-key').then(function(r){return r.json();}).then(function(data){
+      if(!data.ok||!data.siteKey){throw new Error('Missing Turnstile site key');}
+      function render(){
+        tsWidget=window.turnstile.render('#${uid}-ts',{
+          sitekey:data.siteKey,
+          callback:function(token){tsToken=token;},
+          'expired-callback':function(){tsToken='';},
+          'error-callback':function(){tsToken='';showErr('Verification failed to load. Please refresh and try again.');}
+        });
+      }
+      if(window.turnstile){render();return;}
+      var s=document.createElement('script');
+      s.src='${TURNSTILE_SCRIPT}';
+      s.async=true;
+      s.defer=true;
+      s.onload=render;
+      document.head.appendChild(s);
+    }).catch(function(){showErr('Verification could not load. Please refresh and try again.');});
+  }
+  loadTurnstile();
   window['${uid}submit']=async function(){
     var fn=document.getElementById('${uid}-fn').value.trim();
     var ln=document.getElementById('${uid}-ln').value.trim();
@@ -176,13 +232,14 @@ export function generateReportIssueHtml(config) {
     if(!fn){err.textContent='Please enter your first name.';err.style.display='block';return;}
     if(!em||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(em)){err.textContent='Please enter a valid email address.';err.style.display='block';return;}
     if(!msg){err.textContent='Please describe the issue.';err.style.display='block';return;}
+    if(!tsToken){err.textContent='Please complete the verification.';err.style.display='block';return;}
     var now=new Date();var pad=function(n){return String(n).padStart(2,'0');};
     var ref='VLS-'+now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate())+pad(now.getHours())+pad(now.getMinutes());
     var orig=btn.textContent;
     btn.disabled=true;btn.textContent='Sending…';
     try{
       var r=await fetch('${API_BASE}/api/submit-report',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({firstName:fn,lastName:ln,email:em,phone:ph,qualification:ql,issueType:it,courseName:cn,message:msg,recipients:RCP,refNumber:ref})});
+        body:JSON.stringify({firstName:fn,lastName:ln,email:em,phone:ph,qualification:ql,issueType:it,courseName:cn,message:msg,recipients:RCP,refNumber:ref,turnstileToken:tsToken})});
       var data=await r.json();
       if(r.ok&&data.ok){
         if(TY_URL){window.location.href=TY_URL+'?ref='+encodeURIComponent(ref);}
@@ -190,11 +247,13 @@ export function generateReportIssueHtml(config) {
       } else {
         err.textContent=data.error||'Something went wrong. Please try again.';
         err.style.display='block';
+        resetTurnstile();
         btn.disabled=false;btn.textContent=orig;
       }
     }catch(e){
       err.textContent='Unable to send. Please check your connection and try again.';
       err.style.display='block';
+      resetTurnstile();
       btn.disabled=false;btn.textContent=orig;
     }
   };

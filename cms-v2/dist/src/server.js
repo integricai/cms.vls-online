@@ -12,6 +12,7 @@ const snippets_1 = __importDefault(require("./routes/snippets"));
 const content_1 = __importDefault(require("./routes/content"));
 const users_1 = __importDefault(require("./routes/users"));
 const public_1 = __importDefault(require("./routes/public"));
+const errorAlert_1 = require("./utils/errorAlert");
 const app = (0, express_1.default)();
 const PORT = Number(process.env.PORT ?? 3001);
 // ── Middleware ────────────────────────────────────────────────────
@@ -34,9 +35,33 @@ app.use((_req, res) => {
     res.status(404).json({ ok: false, error: 'Not found' });
 });
 // ── Global error handler ──────────────────────────────────────────
-app.use((err, _req, res, _next) => {
+app.use((err, req, res, _next) => {
     console.error('[error]', err);
+    (0, errorAlert_1.sendErrorAlert)({
+        area: 'CMS API request failure',
+        explanation: `Request failed while handling ${req.method} ${req.originalUrl}. This may indicate a database, email, or route-level exception.`,
+        error: err,
+        req,
+    }).catch(alertErr => {
+        console.error('[alert] failed to send CMS API error alert', alertErr);
+    });
     res.status(500).json({ ok: false, error: 'Internal server error' });
+});
+process.on('unhandledRejection', reason => {
+    console.error('[unhandledRejection]', reason);
+    (0, errorAlert_1.sendErrorAlert)({
+        area: 'CMS API unhandled rejection',
+        explanation: 'A promise rejected without being handled. The API process may be unstable.',
+        error: reason,
+    }).catch(alertErr => console.error('[alert] failed to send unhandled rejection alert', alertErr));
+});
+process.on('uncaughtException', err => {
+    console.error('[uncaughtException]', err);
+    (0, errorAlert_1.sendErrorAlert)({
+        area: 'CMS API uncaught exception',
+        explanation: 'An uncaught exception reached the process boundary. The API process may crash or restart.',
+        error: err,
+    }).catch(alertErr => console.error('[alert] failed to send uncaught exception alert', alertErr));
 });
 // ── Start ─────────────────────────────────────────────────────────
 app.listen(PORT, () => {

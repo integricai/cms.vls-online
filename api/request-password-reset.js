@@ -1,5 +1,6 @@
 import { randomBytes } from 'crypto';
 import { put } from '@vercel/blob';
+import { sendErrorAlert } from './_error-alert.js';
 
 function normalizeEmail(value) {
   return String(value == null ? '' : value).trim().toLowerCase();
@@ -124,20 +125,46 @@ export default async function handler(req, res) {
   }
 
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    await sendErrorAlert({
+      area: 'Legacy password reset storage configuration',
+      explanation: 'Password reset could not save the reset token because BLOB_READ_WRITE_TOKEN is missing.',
+      error: new Error('BLOB_READ_WRITE_TOKEN is not configured'),
+      req,
+      extra: { email },
+    }).catch(alertErr => console.error('[alert] reset storage config alert failed', alertErr));
     return res.status(500).json({ error: 'Password reset is not available (storage not configured).' });
   }
   if (!process.env.MAILERSEND_API_KEY) {
+    await sendErrorAlert({
+      area: 'Legacy password reset email configuration',
+      explanation: 'Password reset could not send email because MAILERSEND_API_KEY is missing.',
+      error: new Error('MAILERSEND_API_KEY is not configured'),
+      req,
+      extra: { email },
+    }).catch(alertErr => console.error('[alert] reset email config alert failed', alertErr));
     return res.status(500).json({ error: 'Password reset is not available (email service not configured).' });
   }
 
   const token   = randomBytes(32).toString('hex');
   const expires = Date.now() + 30 * 60 * 1000; // 30 minutes
 
-  await put(
-    `cms/reset-tokens/${token}.json`,
-    JSON.stringify({ email, role, expires }),
-    { access: 'private', addRandomSuffix: false }
-  );
+  try {
+    await put(
+      `cms/reset-tokens/${token}.json`,
+      JSON.stringify({ email, role, expires }),
+      { access: 'private', addRandomSuffix: false }
+    );
+  } catch (e) {
+    console.error('[reset] token storage exception', e);
+    await sendErrorAlert({
+      area: 'Legacy password reset token storage failed',
+      explanation: 'Password reset token could not be stored in Vercel Blob.',
+      error: e,
+      req,
+      extra: { email, role },
+    }).catch(alertErr => console.error('[alert] reset token storage alert failed', alertErr));
+    return res.status(500).json({ error: 'Password reset is not available. Please try again.' });
+  }
 
   const appUrl   = getAppUrl(req);
   const resetUrl = `${appUrl}/?reset_token=${token}`;
@@ -159,10 +186,24 @@ export default async function handler(req, res) {
     if (!msResp.ok) {
       const errText = await msResp.text().catch(() => '');
       console.error('[reset] MailerSend error', msResp.status, errText);
+      await sendErrorAlert({
+        area: 'Legacy password reset email failed',
+        explanation: 'MailerSend rejected or failed the legacy password reset email.',
+        error: new Error(`MailerSend ${msResp.status}: ${errText}`),
+        req,
+        extra: { email, resetUrl },
+      }).catch(alertErr => console.error('[alert] reset email alert failed', alertErr));
       return res.status(500).json({ error: 'Failed to send reset email. Please try again.' });
     }
   } catch (e) {
     console.error('[reset] email send exception', e);
+    await sendErrorAlert({
+      area: 'Legacy password reset email exception',
+      explanation: 'An exception occurred while sending the legacy password reset email.',
+      error: e,
+      req,
+      extra: { email, resetUrl },
+    }).catch(alertErr => console.error('[alert] reset email exception alert failed', alertErr));
     return res.status(500).json({ error: 'Failed to send reset email. Please try again.' });
   }
 

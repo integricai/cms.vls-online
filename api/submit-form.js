@@ -1,6 +1,9 @@
 // Vercel serverless function — handles enquiry form submission
 // Sends notification to admin emails + thank-you to submitter via MailerSend API
 
+import { sendErrorAlert } from './_error-alert.js';
+import { verifyTurnstileToken } from './_turnstile.js';
+
 function esc(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -14,7 +17,15 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const apiKey = process.env.MAILERSEND_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Email service not configured' });
+  if (!apiKey) {
+    await sendErrorAlert({
+      area: 'Contact form email configuration',
+      explanation: 'Contact form submission could not send because MAILERSEND_API_KEY is missing.',
+      error: new Error('MAILERSEND_API_KEY is not configured'),
+      req,
+    }).catch(alertErr => console.error('[alert] contact form config alert failed', alertErr));
+    return res.status(500).json({ error: 'Email service not configured' });
+  }
 
   let body;
   try {
@@ -25,11 +36,24 @@ export default async function handler(req, res) {
 
   const {
     firstName = '', lastName = '', email = '',
-    phoneCode = '', phoneNumber = '', enquiry = '', comments = ''
+    phoneCode = '', phoneNumber = '', enquiry = '', comments = '',
+    turnstileToken = ''
   } = body;
 
   if (!firstName.trim() || !email.trim()) {
     return res.status(400).json({ error: 'First name and email are required' });
+  }
+
+  const turnstile = await verifyTurnstileToken(turnstileToken, req);
+  if (!turnstile.ok) {
+    await sendErrorAlert({
+      area: 'Contact form captcha failed',
+      explanation: 'Contact form submission was blocked because Turnstile verification failed.',
+      error: new Error(turnstile.error),
+      req,
+      extra: { submitter: email, details: turnstile.details },
+    }).catch(alertErr => console.error('[alert] contact form captcha alert failed', alertErr));
+    return res.status(400).json({ error: turnstile.error });
   }
 
   const fullName  = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
@@ -92,7 +116,7 @@ export default async function handler(req, res) {
   };
 
   try {
-    const [adminRes] = await Promise.all([
+    const [adminRes, thankYouRes] = await Promise.all([
       fetch(MS_URL, {
         method: 'POST',
         headers,
@@ -119,11 +143,38 @@ export default async function handler(req, res) {
     if (!adminRes.ok) {
       const errText = await adminRes.text().catch(() => '');
       console.error('MailerSend error', adminRes.status, errText);
+      await sendErrorAlert({
+        area: 'Contact form admin email failed',
+        explanation: 'MailerSend rejected or failed the admin notification for a contact form submission.',
+        error: new Error(`MailerSend ${adminRes.status}: ${errText}`),
+        req,
+        extra: { adminTo, submitter: email, enquiry },
+      }).catch(alertErr => console.error('[alert] contact form admin alert failed', alertErr));
       return res.status(500).json({ error: `MailerSend ${adminRes.status}: ${errText}` });
+    }
+
+    if (!thankYouRes.ok) {
+      const errText = await thankYouRes.text().catch(() => '');
+      console.error('MailerSend thank-you error', thankYouRes.status, errText);
+      await sendErrorAlert({
+        area: 'Contact form user confirmation failed',
+        explanation: 'The contact form admin notification was sent, but the submitter confirmation email failed.',
+        error: new Error(`MailerSend ${thankYouRes.status}: ${errText}`),
+        req,
+        extra: { submitter: email, fullName },
+      }).catch(alertErr => console.error('[alert] contact form thank-you alert failed', alertErr));
     }
 
     return res.status(200).json({ ok: true });
   } catch (e) {
+    console.error('[contact] exception', e);
+    await sendErrorAlert({
+      area: 'Contact form exception',
+      explanation: 'An exception occurred while processing the contact form submission.',
+      error: e,
+      req,
+      extra: { adminTo, submitter: email, enquiry },
+    }).catch(alertErr => console.error('[alert] contact form exception alert failed', alertErr));
     return res.status(500).json({ error: 'Email service error. Please try again.' });
   }
 }

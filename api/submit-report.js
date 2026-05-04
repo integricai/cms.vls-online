@@ -1,5 +1,8 @@
 // Report-an-Issue form submission — sends admin notification + user confirmation via MailerSend
 
+import { sendErrorAlert } from './_error-alert.js';
+import { verifyTurnstileToken } from './_turnstile.js';
+
 function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
@@ -19,7 +22,15 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const apiKey = process.env.MAILERSEND_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Email service not configured' });
+  if (!apiKey) {
+    await sendErrorAlert({
+      area: 'Report issue email configuration',
+      explanation: 'Report issue submission could not send because MAILERSEND_API_KEY is missing.',
+      error: new Error('MAILERSEND_API_KEY is not configured'),
+      req,
+    }).catch(alertErr => console.error('[alert] report config alert failed', alertErr));
+    return res.status(500).json({ error: 'Email service not configured' });
+  }
 
   let body;
   try { body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body; }
@@ -29,7 +40,7 @@ export default async function handler(req, res) {
     firstName = '', lastName = '', email = '', phone = '',
     qualification = '', courseName = '', issueType = '', message = '',
     screenshotName = '', screenshotData = '', screenshotType = '',
-    refNumber = ''
+    refNumber = '', turnstileToken = ''
   } = body || {};
 
   if (!firstName.trim() || !email.trim()) {
@@ -37,6 +48,18 @@ export default async function handler(req, res) {
   }
   if (!message.trim()) {
     return res.status(400).json({ error: 'Please describe the issue' });
+  }
+
+  const turnstile = await verifyTurnstileToken(turnstileToken, req);
+  if (!turnstile.ok) {
+    await sendErrorAlert({
+      area: 'Report issue captcha failed',
+      explanation: 'Report issue submission was blocked because Turnstile verification failed.',
+      error: new Error(turnstile.error),
+      req,
+      extra: { submitter: email, issueType, refNumber, details: turnstile.details },
+    }).catch(alertErr => console.error('[alert] report captcha alert failed', alertErr));
+    return res.status(400).json({ error: turnstile.error });
   }
 
   const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
@@ -121,7 +144,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const [adminRes] = await Promise.all([
+    const [adminRes, confirmRes] = await Promise.all([
       fetch(MS_URL, { method: 'POST', headers, body: JSON.stringify(adminPayload) }),
       fetch(MS_URL, {
         method: 'POST', headers,
@@ -137,12 +160,38 @@ export default async function handler(req, res) {
     if (!adminRes.ok) {
       const errText = await adminRes.text().catch(() => '');
       console.error('[report] MailerSend error', adminRes.status, errText);
+      await sendErrorAlert({
+        area: 'Report issue admin email failed',
+        explanation: 'MailerSend rejected or failed the admin notification for a report issue submission.',
+        error: new Error(`MailerSend ${adminRes.status}: ${errText}`),
+        req,
+        extra: { adminTo, submitter: email, issueType, refNumber },
+      }).catch(alertErr => console.error('[alert] report admin alert failed', alertErr));
       return res.status(500).json({ error: 'Failed to send report. Please try again.' });
+    }
+
+    if (!confirmRes.ok) {
+      const errText = await confirmRes.text().catch(() => '');
+      console.error('[report] confirmation MailerSend error', confirmRes.status, errText);
+      await sendErrorAlert({
+        area: 'Report issue user confirmation failed',
+        explanation: 'The report issue admin notification was sent, but the submitter confirmation email failed.',
+        error: new Error(`MailerSend ${confirmRes.status}: ${errText}`),
+        req,
+        extra: { submitter: email, fullName, issueType, refNumber },
+      }).catch(alertErr => console.error('[alert] report confirmation alert failed', alertErr));
     }
 
     return res.status(200).json({ ok: true });
   } catch (e) {
     console.error('[report] exception', e);
+    await sendErrorAlert({
+      area: 'Report issue exception',
+      explanation: 'An exception occurred while processing a report issue submission.',
+      error: e,
+      req,
+      extra: { adminTo, submitter: email, issueType, refNumber },
+    }).catch(alertErr => console.error('[alert] report exception alert failed', alertErr));
     return res.status(500).json({ error: 'Email service error. Please try again.' });
   }
 }

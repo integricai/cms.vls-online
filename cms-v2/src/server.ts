@@ -8,6 +8,7 @@ import snippetsRouter from './routes/snippets';
 import contentRouter from './routes/content';
 import usersRouter from './routes/users';
 import publicRouter from './routes/public';
+import { sendErrorAlert } from './utils/errorAlert';
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
@@ -41,9 +42,35 @@ app.use((_req, res) => {
 
 // ── Global error handler ──────────────────────────────────────────
 
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[error]', err);
+  sendErrorAlert({
+    area: 'CMS API request failure',
+    explanation: `Request failed while handling ${req.method} ${req.originalUrl}. This may indicate a database, email, or route-level exception.`,
+    error: err,
+    req,
+  }).catch(alertErr => {
+    console.error('[alert] failed to send CMS API error alert', alertErr);
+  });
   res.status(500).json({ ok: false, error: 'Internal server error' });
+});
+
+process.on('unhandledRejection', reason => {
+  console.error('[unhandledRejection]', reason);
+  sendErrorAlert({
+    area: 'CMS API unhandled rejection',
+    explanation: 'A promise rejected without being handled. The API process may be unstable.',
+    error: reason,
+  }).catch(alertErr => console.error('[alert] failed to send unhandled rejection alert', alertErr));
+});
+
+process.on('uncaughtException', err => {
+  console.error('[uncaughtException]', err);
+  sendErrorAlert({
+    area: 'CMS API uncaught exception',
+    explanation: 'An uncaught exception reached the process boundary. The API process may crash or restart.',
+    error: err,
+  }).catch(alertErr => console.error('[alert] failed to send uncaught exception alert', alertErr));
 });
 
 // ── Start ─────────────────────────────────────────────────────────
