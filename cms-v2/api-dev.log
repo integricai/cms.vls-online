@@ -8,3 +8,5 @@
 [33m[nodemon] watching extensions: ts[39m
 [32m[nodemon] starting `ts-node src/server.ts`[39m
 cms-v2 running on http://localhost:3001
+[password-reset] Reset link for nadir.khan@integricai.co.uk: http://127.0.0.1:5173/reset-password?token=a5ecdd3c906183bbce209cc875e2d6a95143574b59f06055c67810e857375b84
+[password-reset] Reset link for nadir.khan@integricai.co.uk: http://127.0.0.1:5173/reset-password?token=bedebb25a67a65b49a7c65894bd3ad32009476a953cbf211981e17581d4b066d
