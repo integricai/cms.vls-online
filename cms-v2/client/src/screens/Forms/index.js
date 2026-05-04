@@ -5,12 +5,13 @@ import { api } from '../../api/client';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
 import { normalize } from '../../utils/text';
-import { generateContactFormHtml, generateReportIssueHtml, generateReportTyHtml } from './generateHtml';
+import { generateContactFormHtml, generateContactPageHtml, generateReportIssueHtml, generateReportTyHtml } from './generateHtml';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
 const CONFIG = {
     contact: { title: 'Contact Form', key: 'vls-form-config' },
     'report-issue': { title: 'Report an Issue', key: 'vls-report-config' },
     'report-issue-ty': { title: 'Report an Issue - TY', key: 'vls-report-ty-config' },
+    'contact-page': { title: 'Contact Page Form', key: 'vls-contact-page-config' },
 };
 function newId(prefix) {
     return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
@@ -24,6 +25,32 @@ function defaultConfig(type) {
             thankDesc: normalize('Thank you for sharing the information. We will contact you soon.', 'formThank'),
             recipients: ['office@vls-online.com'],
             enquiryOptions: [],
+        };
+    }
+    if (type === 'contact-page') {
+        return {
+            formLabel: 'SEND US A MESSAGE',
+            formSubheader: "We'll respond within 1 working day",
+            submitText: 'Send Message →',
+            thankTitle: 'Message sent!',
+            thankDesc: "Thank you for reaching out. We'll be in touch within 1 working day.",
+            privacyUrl: '/privacy',
+            recipients: ['office@vls-online.com'],
+            enquiryOptions: [],
+            qualificationOptions: ['ACCA', 'CIMA', 'CMA', 'CIA', 'Dip-IFR', 'Foundation Diploma', 'Not sure yet'],
+            howHeardOptions: [],
+            companyName: '',
+            contactInfoLabel: 'CONTACT INFORMATION',
+            contactItems: [],
+            supportHoursLabel: 'SUPPORT HOURS',
+            supportHours: [],
+            responseNote: '',
+            followLabel: 'FOLLOW VLS',
+            socialLinks: [],
+            faqTitle: '',
+            faqDesc: '',
+            faqBtnText: 'View FAQs →',
+            faqBtnUrl: '',
         };
     }
     if (type === 'report-issue-ty') {
@@ -85,6 +112,9 @@ function ContactFields({ cfg, patch }) {
 function ReportFields({ cfg, patch }) {
     return (_jsxs(_Fragment, { children: [_jsx(StringList, { label: "Notification Recipients", items: cfg.recipients || [], placeholder: "office@example.com", onChange: recipients => patch({ recipients }) }), _jsx("p", { className: "section-label", children: "Hero" }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(Field, { label: "Eyebrow", children: _jsx("input", { className: "input", value: cfg.heroEyebrow || '', onChange: e => patch({ heroEyebrow: e.target.value }) }) }), _jsx(ColorInput, { label: "Hero background", value: cfg.heroBg || '#0d1f3c', onChange: heroBg => patch({ heroBg }) }), _jsx(ColorInput, { label: "Eyebrow colour", value: cfg.eyebrowTc || '#72cdf4', onChange: eyebrowTc => patch({ eyebrowTc }) }), _jsx(ColorInput, { label: "Title colour", value: cfg.titleTc || '#ffffff', onChange: titleTc => patch({ titleTc }) })] }), _jsx(Field, { label: "Title", children: _jsx("input", { className: "input", value: cfg.heroTitle || '', onChange: e => patch({ heroTitle: e.target.value }) }) }), _jsx(Field, { label: "Description", children: _jsx("textarea", { className: "input", rows: 3, value: cfg.heroDesc || '', onChange: e => patch({ heroDesc: e.target.value }) }) }), _jsx("p", { className: "section-label", children: "Left Sidebar" }), _jsx(Field, { label: "How it works heading", children: _jsx("input", { className: "input", value: cfg.hiwHeading || '', onChange: e => patch({ hiwHeading: e.target.value }) }) }), _jsx(Field, { label: "How it works description", children: _jsx("textarea", { className: "input", rows: 3, value: cfg.hiwDesc || '', onChange: e => patch({ hiwDesc: e.target.value }) }) }), _jsx(ObjectList, { label: "Steps", items: cfg.steps || [], fields: ['title', 'desc'], makeItem: () => ({ title: '', desc: '' }), onChange: steps => patch({ steps }) }), _jsx(ObjectList, { label: "Feature Cards", items: cfg.cards || [], fields: ['icon', 'title', 'desc'], makeItem: () => ({ icon: '', title: '', desc: '' }), onChange: cards => patch({ cards }) }), _jsx(StringList, { label: "Contact Items", items: cfg.contactItems || [], onChange: contactItems => patch({ contactItems }) }), _jsx("p", { className: "section-label", children: "Form Options" }), _jsx(ColorInput, { label: "Accent", value: cfg.accent || '#204280', onChange: accent => patch({ accent }) }), _jsx(Field, { label: "Submit button text", children: _jsx("input", { className: "input", value: cfg.btnText || '', onChange: e => patch({ btnText: e.target.value }) }) }), _jsx(Field, { label: "Thank you URL", children: _jsx("input", { className: "input", value: cfg.tyUrl || '', onChange: e => patch({ tyUrl: e.target.value }) }) }), _jsx(StringList, { label: "Qualification Options", items: cfg.qualifications || [], onChange: qualifications => patch({ qualifications }) }), _jsx(StringList, { label: "Issue Type Options", items: cfg.issueTypes || [], onChange: issueTypes => patch({ issueTypes }) })] }));
 }
+function ContactPageFields({ cfg, patch }) {
+    return (_jsxs(_Fragment, { children: [_jsx("p", { className: "section-label", children: "Form Header" }), _jsx(Field, { label: "Label (e.g. SEND US A MESSAGE)", children: _jsx("input", { className: "input", value: cfg.formLabel || '', onChange: e => patch({ formLabel: e.target.value }) }) }), _jsx(Field, { label: "Subheader", children: _jsx("input", { className: "input", value: cfg.formSubheader || '', onChange: e => patch({ formSubheader: e.target.value }) }) }), _jsx(Field, { label: "Submit button text", children: _jsx("input", { className: "input", value: cfg.submitText || '', onChange: e => patch({ submitText: e.target.value }) }) }), _jsx(Field, { label: "Privacy policy URL", children: _jsx("input", { className: "input", value: cfg.privacyUrl || '', onChange: e => patch({ privacyUrl: e.target.value }) }) }), _jsx("p", { className: "section-label", children: "Thank You Message" }), _jsx(Field, { label: "Title", children: _jsx("input", { className: "input", value: cfg.thankTitle || '', onChange: e => patch({ thankTitle: e.target.value }) }) }), _jsx(Field, { label: "Description", children: _jsx("textarea", { className: "input", rows: 2, value: cfg.thankDesc || '', onChange: e => patch({ thankDesc: e.target.value }) }) }), _jsx(StringList, { label: "Recipients", items: cfg.recipients || [], placeholder: "office@example.com", onChange: recipients => patch({ recipients }) }), _jsx(ObjectList, { label: "Enquiry Topic Options", items: cfg.enquiryOptions || [], fields: ['label'], makeItem: () => ({ id: newId('eq'), label: '' }), onChange: enquiryOptions => patch({ enquiryOptions }) }), _jsx(StringList, { label: "Qualification Buttons", items: cfg.qualificationOptions || [], placeholder: "ACCA", onChange: qualificationOptions => patch({ qualificationOptions }) }), _jsx(StringList, { label: "How Did You Hear Options", items: cfg.howHeardOptions || [], placeholder: "Google / Search engine", onChange: howHeardOptions => patch({ howHeardOptions }) }), _jsx("p", { className: "section-label", children: "Contact Info Panel" }), _jsx(Field, { label: "Contact info label", children: _jsx("input", { className: "input", value: cfg.contactInfoLabel || '', onChange: e => patch({ contactInfoLabel: e.target.value }) }) }), _jsx(Field, { label: "Company name", children: _jsx("input", { className: "input", value: cfg.companyName || '', onChange: e => patch({ companyName: e.target.value }) }) }), _jsx(ObjectList, { label: "Contact Items", items: cfg.contactItems || [], fields: ['icon', 'label', 'value', 'subtext', 'url'], makeItem: () => ({ icon: '📧', label: '', value: '', subtext: '', url: '' }), onChange: contactItems => patch({ contactItems }) }), _jsx("p", { className: "section-label", children: "Support Hours" }), _jsx(Field, { label: "Section label", children: _jsx("input", { className: "input", value: cfg.supportHoursLabel || '', onChange: e => patch({ supportHoursLabel: e.target.value }) }) }), _jsx(ObjectList, { label: "Hours rows", items: cfg.supportHours || [], fields: ['day', 'hours'], makeItem: () => ({ day: '', hours: '' }), onChange: supportHours => patch({ supportHours }) }), _jsx(Field, { label: "Response note", children: _jsx("textarea", { className: "input", rows: 2, value: cfg.responseNote || '', onChange: e => patch({ responseNote: e.target.value }) }) }), _jsx("p", { className: "section-label", children: "Social Links" }), _jsx(Field, { label: "Section label", children: _jsx("input", { className: "input", value: cfg.followLabel || '', onChange: e => patch({ followLabel: e.target.value }) }) }), _jsx(ObjectList, { label: "Social links", items: cfg.socialLinks || [], fields: ['platform', 'handle', 'url', 'icon'], makeItem: () => ({ platform: '', handle: '', url: '', icon: '🔗' }), onChange: socialLinks => patch({ socialLinks }) }), _jsx("p", { className: "section-label", children: "FAQ Callout" }), _jsx(Field, { label: "Title", children: _jsx("input", { className: "input", value: cfg.faqTitle || '', onChange: e => patch({ faqTitle: e.target.value }) }) }), _jsx(Field, { label: "Description", children: _jsx("input", { className: "input", value: cfg.faqDesc || '', onChange: e => patch({ faqDesc: e.target.value }) }) }), _jsx(Field, { label: "Button text", children: _jsx("input", { className: "input", value: cfg.faqBtnText || '', onChange: e => patch({ faqBtnText: e.target.value }) }) }), _jsx(Field, { label: "Button URL", children: _jsx("input", { className: "input", value: cfg.faqBtnUrl || '', onChange: e => patch({ faqBtnUrl: e.target.value }) }) })] }));
+}
 function ReportTyFields({ cfg, patch }) {
     return (_jsxs(_Fragment, { children: [_jsx("p", { className: "section-label", children: "Hero" }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(ColorInput, { label: "Hero background", value: cfg.heroBg || '#0d1f3c', onChange: heroBg => patch({ heroBg }) }), _jsx(ColorInput, { label: "Icon background", value: cfg.iconBg || '#1e3a5f', onChange: iconBg => patch({ iconBg }) })] }), _jsx(Field, { label: "Heading", children: _jsx("input", { className: "input", value: cfg.heading || '', onChange: e => patch({ heading: e.target.value }) }) }), _jsx(Field, { label: "Subtitle", children: _jsx("input", { className: "input", value: cfg.subtitle || '', onChange: e => patch({ subtitle: e.target.value }) }) }), _jsx(Field, { label: "Reference label", children: _jsx("input", { className: "input", value: cfg.refLabel || '', onChange: e => patch({ refLabel: e.target.value }) }) }), _jsx(ObjectList, { label: "What Happens Next", items: cfg.steps || [], fields: ['title', 'desc', 'badge'], makeItem: () => ({ title: '', desc: '', badge: '' }), onChange: steps => patch({ steps }) }), _jsx("p", { className: "section-label", children: "Follow-up Box" }), _jsx(Field, { label: "Title", children: _jsx("input", { className: "input", value: cfg.fuTitle || '', onChange: e => patch({ fuTitle: e.target.value }) }) }), _jsx(Field, { label: "Description", children: _jsx("input", { className: "input", value: cfg.fuDesc || '', onChange: e => patch({ fuDesc: e.target.value }) }) }), _jsx(StringList, { label: "Contact Items", items: cfg.contacts || [], onChange: contacts => patch({ contacts }) }), _jsx("p", { className: "section-label", children: "Buttons" }), _jsx(Field, { label: "Button 1 text", children: _jsx("input", { className: "input", value: cfg.btn1Text || '', onChange: e => patch({ btn1Text: e.target.value }) }) }), _jsx(Field, { label: "Button 1 URL", children: _jsx("input", { className: "input", value: cfg.btn1Url || '', onChange: e => patch({ btn1Url: e.target.value }) }) }), _jsx(Field, { label: "Button 2 text", children: _jsx("input", { className: "input", value: cfg.btn2Text || '', onChange: e => patch({ btn2Text: e.target.value }) }) }), _jsx(Field, { label: "Button 2 URL", children: _jsx("input", { className: "input", value: cfg.btn2Url || '', onChange: e => patch({ btn2Url: e.target.value }) }) })] }));
 }
@@ -122,13 +152,15 @@ export default function Forms() {
     function generate() {
         const next = type === 'contact'
             ? generateContactFormHtml(state)
-            : type === 'report-issue'
-                ? generateReportIssueHtml(state)
-                : generateReportTyHtml(state);
+            : type === 'contact-page'
+                ? generateContactPageHtml(state)
+                : type === 'report-issue'
+                    ? generateReportIssueHtml(state)
+                    : generateReportTyHtml(state);
         setHtml(wrapGeneratedHtml(config?.title || 'Forms', next));
         setTab('preview');
     }
     if (loading)
         return _jsx("div", { className: "p-5 text-sm text-slate-400", children: "Loading..." });
-    return (_jsxs("div", { className: "flex h-full", children: [_jsxs("div", { className: "w-[520px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white", children: [_jsxs("div", { className: "sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4", children: [_jsx("h1", { className: "text-base font-bold text-slate-900", children: config.title }), _jsx("p", { className: "mt-0.5 text-xs text-slate-400", children: "Forms" }), _jsxs("div", { className: "mt-4 flex gap-2", children: [_jsx("button", { className: "btn-primary flex-1 justify-center", disabled: saving, onClick: save, children: saving ? 'Saving...' : saved ? 'Saved' : 'Save' }), _jsx("button", { className: "btn-success flex-1 justify-center", onClick: generate, children: "Generate HTML" })] })] }), _jsxs("div", { className: "px-5 py-4", children: [type === 'contact' && _jsx(ContactFields, { cfg: state, patch: patch }), type === 'report-issue' && _jsx(ReportFields, { cfg: state, patch: patch }), type === 'report-issue-ty' && _jsx(ReportTyFields, { cfg: state, patch: patch })] })] }), _jsx(OutputPane, { html: html, tab: tab, setTab: setTab })] }));
+    return (_jsxs("div", { className: "flex h-full", children: [_jsxs("div", { className: "w-[520px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white", children: [_jsxs("div", { className: "sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4", children: [_jsx("h1", { className: "text-base font-bold text-slate-900", children: config.title }), _jsx("p", { className: "mt-0.5 text-xs text-slate-400", children: "Forms" }), _jsxs("div", { className: "mt-4 flex gap-2", children: [_jsx("button", { className: "btn-primary flex-1 justify-center", disabled: saving, onClick: save, children: saving ? 'Saving...' : saved ? 'Saved' : 'Save' }), _jsx("button", { className: "btn-success flex-1 justify-center", onClick: generate, children: "Generate HTML" })] })] }), _jsxs("div", { className: "px-5 py-4", children: [type === 'contact' && _jsx(ContactFields, { cfg: state, patch: patch }), type === 'contact-page' && _jsx(ContactPageFields, { cfg: state, patch: patch }), type === 'report-issue' && _jsx(ReportFields, { cfg: state, patch: patch }), type === 'report-issue-ty' && _jsx(ReportTyFields, { cfg: state, patch: patch })] })] }), _jsx(OutputPane, { html: html, tab: tab, setTab: setTab })] }));
 }

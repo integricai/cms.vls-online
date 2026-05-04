@@ -49,6 +49,7 @@ const NAV = [
         group: 'Forms',
         children: [
             { to: '/forms/contact', label: 'Contact Form' },
+            { to: '/forms/contact-page', label: 'Contact Page Form' },
             { to: '/forms/report-issue', label: 'Report an Issue' },
             { to: '/forms/report-issue-ty', label: 'Report an Issue - TY' },
         ],
@@ -86,6 +87,7 @@ const NAV = [
             { to: '/feature-cards-v2', label: 'Feature Card v2' },
             { to: '/feature-cards-v3', label: 'Feature Card v3' },
             { to: '/step-cards', label: 'Step Cards' },
+            { to: '/vertical-cards', label: 'Vertical Cards' },
         ],
     },
 ];

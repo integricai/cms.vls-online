@@ -181,6 +181,7 @@ export interface Banner {
   btnFg: string;
   padLeft: number;
   padRight: number;
+  deadline?: number;
 }
 
 export interface BannerContent { banners: Banner[]; }

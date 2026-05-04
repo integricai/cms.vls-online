@@ -14,6 +14,10 @@
       "use": "@vercel/node"
     },
     {
+      "src": "api/publish-banner.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "api/turnstile-site-key.js",
       "use": "@vercel/node"
     }
@@ -21,6 +25,7 @@
   "routes": [
     { "src": "/api/submit-form",         "dest": "api/submit-form.js"         },
     { "src": "/api/submit-report",       "dest": "api/submit-report.js"       },
+    { "src": "/api/publish-banner",      "dest": "api/publish-banner.js"      },
     { "src": "/api/turnstile-site-key",  "dest": "api/turnstile-site-key.js"  },
     { "src": "/(.*)",                    "dest": "cms-v2/src/server.ts"       }
   ]

@@ -260,6 +260,216 @@ export function generateReportIssueHtml(config) {
 })();
 </script>`;
 }
+export function generateContactPageHtml(config) {
+    const uid = `vlscp${Math.random().toString(36).slice(2, 7)}`;
+    const formLabel = String(config.formLabel || 'SEND US A MESSAGE').trim();
+    const formSubheader = String(config.formSubheader || "We'll respond within 1 working day").trim();
+    const submitText = String(config.submitText || 'Send Message →').trim();
+    const thankTitle = String(config.thankTitle || 'Message sent!').trim();
+    const thankDesc = String(config.thankDesc || "Thank you for reaching out. We'll be in touch within 1 working day.").trim();
+    const privacyUrl = String(config.privacyUrl || '/privacy').trim();
+    const recipients = Array.isArray(config.recipients) ? config.recipients : [];
+    const enquiryOptions = (config.enquiryOptions || []);
+    const qualOptions = (config.qualificationOptions || []);
+    const howHeardOptions = (config.howHeardOptions || []);
+    const companyName = String(config.companyName || '').trim();
+    const contactInfoLabel = String(config.contactInfoLabel || 'CONTACT INFORMATION').trim();
+    const contactItems = (config.contactItems || []);
+    const supportHoursLabel = String(config.supportHoursLabel || 'SUPPORT HOURS').trim();
+    const supportHours = (config.supportHours || []);
+    const responseNote = String(config.responseNote || '').trim();
+    const followLabel = String(config.followLabel || 'FOLLOW VLS').trim();
+    const socialLinks = (config.socialLinks || []);
+    const faqTitle = String(config.faqTitle || '').trim();
+    const faqDesc = String(config.faqDesc || '').trim();
+    const faqBtnText = String(config.faqBtnText || 'View FAQs →').trim();
+    const faqBtnUrl = String(config.faqBtnUrl || '').trim();
+    const enquiryOptHtml = enquiryOptions
+        .filter((o) => String(o.label || '').trim())
+        .map((o) => `<option value="${attr(o.label)}">${escapeHtml(o.label)}</option>`)
+        .join('');
+    const howHeardOptHtml = howHeardOptions
+        .filter((s) => String(s || '').trim())
+        .map((s) => `<option value="${attr(s)}">${escapeHtml(s)}</option>`)
+        .join('');
+    const qualButtonsHtml = qualOptions
+        .filter((q) => String(q || '').trim())
+        .map((q) => `<button type="button" class="${uid}-qual" data-val="${attr(q)}" onclick="${uid}TQ(this)">${escapeHtml(q)}</button>`)
+        .join('');
+    const contactItemsHtml = contactItems.map((ci) => {
+        const valHtml = ci.url
+            ? `<a href="${attr(ci.url)}" class="${uid}-civ" style="color:#204280;text-decoration:none;">${escapeHtml(ci.value || '')}</a>`
+            : `<span class="${uid}-civ">${escapeHtml(ci.value || '')}</span>`;
+        return `<div class="${uid}-ci"><div class="${uid}-cic">${escapeHtml(ci.icon || '\u{1F4E7}')}</div><div><div class="${uid}-cil">${escapeHtml(ci.label || '')}</div>${valHtml}${ci.subtext ? `<div class="${uid}-cis">${escapeHtml(ci.subtext)}</div>` : ''}</div></div>`;
+    }).join('');
+    const hoursHtml = supportHours.map((h) => {
+        const closed = /^closed$/i.test(String(h.hours || '').trim());
+        return `<div class="${uid}-shr"><span>${escapeHtml(h.day || '')}</span><span style="${closed ? 'color:#ef4444;font-weight:600' : 'font-weight:600'}">${escapeHtml(h.hours || '')}</span></div>`;
+    }).join('');
+    const socialHtml = socialLinks.map((s) => `<a href="${attr(s.url || '#')}" class="${uid}-sl" target="_blank" rel="noopener"><div class="${uid}-sic">${escapeHtml(s.icon || '\u{1F517}')}</div><div><div class="${uid}-sp">${escapeHtml(s.platform || '')}</div><div class="${uid}-sha">${escapeHtml(s.handle || '')}</div></div></a>`).join('');
+    const hasRight = companyName || contactItems.length || supportHours.length || socialLinks.length || faqTitle;
+    return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;}
+#${uid}{font-family:'Poppins',sans-serif;padding:40px 24px;max-width:1140px;margin:0 auto;}
+#${uid}-lay{display:grid;grid-template-columns:${hasRight ? '1fr 380px' : '1fr'};gap:28px;align-items:start;}
+#${uid}-fw{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;}
+#${uid}-fhdr{background:#0d1f3c;padding:18px 24px;display:flex;align-items:center;gap:14px;}
+#${uid}-fhi{width:42px;height:42px;border-radius:8px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+#${uid}-fhl{font-size:11px;font-weight:700;color:rgba(255,255,255,.55);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;}
+#${uid}-fhs{font-size:16px;font-weight:700;color:#fff;}
+#${uid}-fb{padding:24px;}
+.${uid}-sec{font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.1em;text-transform:uppercase;margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid #f1f5f9;}
+.${uid}-sec+.${uid}-sec{margin-top:20px;}
+.${uid}-g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.${uid}-f{margin-bottom:14px;}
+.${uid}-f label{display:block;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
+.${uid}-f input,.${uid}-f select,.${uid}-f textarea{width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:10px 13px;font-family:'Poppins',sans-serif;font-size:14px;color:#0f172a;outline:none;transition:border-color .15s;}
+.${uid}-f input:focus,.${uid}-f select:focus,.${uid}-f textarea:focus{border-color:#204280;box-shadow:0 0 0 3px rgba(32,66,128,.1);}
+.${uid}-qlw{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+.${uid}-qual{border:1.5px solid #e2e8f0;border-radius:999px;padding:7px 16px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:500;color:#374151;background:#fff;cursor:pointer;transition:all .15s;}
+.${uid}-qual.on{background:#204280;border-color:#204280;color:#fff;font-weight:600;}
+.${uid}-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:4px;}
+.${uid}-prv{font-size:12px;color:#94a3b8;}.${uid}-prv a{color:#204280;text-decoration:none;}
+.${uid}-btn{border:0;border-radius:8px;background:#0d1f3c;color:#fff;padding:12px 28px;font-family:'Poppins',sans-serif;font-size:15px;font-weight:700;cursor:pointer;}
+.${uid}-btn:disabled{opacity:.6;cursor:not-allowed;}
+.${uid}-err{display:none;margin-top:12px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:13px;color:#b91c1c;}
+#${uid}-ty{display:none;padding:48px 24px;text-align:center;background:#fff;border:1px solid #e5e7eb;border-radius:14px;}
+#${uid}-tyi{width:64px;height:64px;border-radius:50%;background:#204280;display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;margin:0 auto 20px;}
+#${uid}-tyh{font-size:22px;font-weight:700;color:#0d1f3c;margin:0 0 10px;}
+#${uid}-tyd{font-size:15px;color:#64748b;line-height:1.7;margin:0;}
+#${uid}-right{display:flex;flex-direction:column;gap:16px;}
+.${uid}-rc{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;}
+.${uid}-rch{background:#0d1f3c;padding:14px 20px;}
+.${uid}-rchl{font-size:11px;font-weight:700;color:#72cdf4;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;}
+.${uid}-rcht{font-size:16px;font-weight:700;color:#fff;}
+.${uid}-rcb{padding:18px 20px;}
+.${uid}-ci{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;}.${uid}-ci:last-child{margin-bottom:0;}
+.${uid}-cic{width:36px;height:36px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.${uid}-cil{font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;}
+.${uid}-civ{font-size:14px;font-weight:600;color:#374151;display:block;}
+.${uid}-cis{font-size:12px;color:#64748b;margin-top:2px;}
+.${uid}-shr{display:flex;justify-content:space-between;font-size:14px;color:#374151;padding:8px 0;border-bottom:1px solid #f1f5f9;}.${uid}-shr:last-child{border-bottom:0;}
+.${uid}-rn{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;display:flex;gap:8px;margin-top:10px;}
+.${uid}-rni{font-size:14px;color:#16a34a;flex-shrink:0;}.${uid}-rnt{font-size:12px;color:#166534;line-height:1.5;}
+.${uid}-slg{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.${uid}-sl{display:flex;align-items:center;gap:10px;background:#1e293b;border-radius:10px;padding:10px 14px;text-decoration:none;}
+.${uid}-sic{width:30px;height:30px;border-radius:6px;background:#334155;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.${uid}-sp{font-size:13px;font-weight:600;color:#fff;}.${uid}-sha{font-size:11px;color:#94a3b8;}
+.${uid}-faq{display:flex;align-items:center;gap:14px;background:#f8faff;border:1px solid #e0e7ff;border-radius:12px;padding:16px 20px;}
+.${uid}-faqi{width:36px;height:36px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.${uid}-faqt{font-size:14px;font-weight:700;color:#0d1f3c;margin-bottom:2px;}.${uid}-faqd{font-size:12px;color:#64748b;}
+.${uid}-faqb{flex-shrink:0;border:1.5px solid #204280;border-radius:8px;padding:8px 14px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:700;color:#204280;background:#fff;text-decoration:none;white-space:nowrap;}
+@media(max-width:900px){#${uid}-lay{grid-template-columns:1fr;}}
+@media(max-width:600px){.${uid}-g2{grid-template-columns:1fr;}.${uid}-foot{flex-direction:column;align-items:stretch;}.${uid}-btn{width:100%;text-align:center;}}
+</style>
+
+<section id="${uid}">
+  <div id="${uid}-lay">
+    <div id="${uid}-left">
+      <div id="${uid}-fw">
+        <div id="${uid}-fhdr">
+          <div id="${uid}-fhi">✉</div>
+          <div>
+            <div id="${uid}-fhl">${escapeHtml(formLabel)}</div>
+            <div id="${uid}-fhs">${escapeHtml(formSubheader)}</div>
+          </div>
+        </div>
+        <div id="${uid}-fb">
+          <p class="${uid}-sec">Your Details</p>
+          <div class="${uid}-g2">
+            <div class="${uid}-f"><label>First Name *</label><input id="${uid}-fn" placeholder="e.g. Sarah" required></div>
+            <div class="${uid}-f"><label>Last Name *</label><input id="${uid}-ln" placeholder="e.g. Mitchell" required></div>
+          </div>
+          <div class="${uid}-g2">
+            <div class="${uid}-f"><label>Email Address *</label><input id="${uid}-em" type="email" placeholder="sarah@email.com" required></div>
+            <div class="${uid}-f"><label>Phone / WhatsApp</label><input id="${uid}-ph" placeholder="+44 7700 000000"></div>
+          </div>
+          <p class="${uid}-sec">Your Enquiry</p>
+          ${enquiryOptHtml ? `<div class="${uid}-f"><label>What are you enquiring about? *</label><select id="${uid}-eq"><option value="">Select a topic...</option>${enquiryOptHtml}</select></div>` : ''}
+          ${qualButtonsHtml ? `<div class="${uid}-f"><label>Which qualification are you interested in?</label><div class="${uid}-qlw" id="${uid}-qlw">${qualButtonsHtml}</div><input type="hidden" id="${uid}-qv" value=""></div>` : ''}
+          <div class="${uid}-f"><label>Your Message *</label><textarea id="${uid}-msg" rows="5" placeholder="Tell us what you'd like to know — the more detail you share, the better we can help." required></textarea></div>
+          ${howHeardOptHtml ? `<div class="${uid}-f"><label>How did you hear about VLS?</label><select id="${uid}-hh"><option value="">Select an option...</option>${howHeardOptHtml}</select></div>` : ''}
+          <div class="${uid}-f"><div id="${uid}-ts"></div></div>
+          <div class="${uid}-foot">
+            <span class="${uid}-prv">🔒 Your data is handled securely — <a href="${attr(privacyUrl)}">Privacy Policy</a></span>
+            <button class="${uid}-btn" id="${uid}-btn" type="button" onclick="${uid}Sub()">${escapeHtml(submitText)}</button>
+          </div>
+          <div class="${uid}-err" id="${uid}-err"></div>
+        </div>
+      </div>
+      <div id="${uid}-ty">
+        <div id="${uid}-tyi">✓</div>
+        <h3 id="${uid}-tyh">${escapeHtml(thankTitle)}</h3>
+        <p id="${uid}-tyd">${escapeHtml(thankDesc)}</p>
+      </div>
+    </div>
+    ${hasRight ? `<div id="${uid}-right">
+      ${(companyName || contactItems.length) ? `<div class="${uid}-rc"><div class="${uid}-rch"><div class="${uid}-rchl">${escapeHtml(contactInfoLabel)}</div><div class="${uid}-rcht">${escapeHtml(companyName)}</div></div><div class="${uid}-rcb">${contactItemsHtml}</div></div>` : ''}
+      ${supportHours.length ? `<div class="${uid}-rc"><div class="${uid}-rcb"><p style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.1em;text-transform:uppercase;margin:0 0 10px;">${escapeHtml(supportHoursLabel)}</p>${hoursHtml}${responseNote ? `<div class="${uid}-rn"><span class="${uid}-rni">⚡</span><span class="${uid}-rnt">${escapeHtml(responseNote)}</span></div>` : ''}</div></div>` : ''}
+      ${socialLinks.length ? `<div class="${uid}-rc"><div class="${uid}-rcb"><p style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.1em;text-transform:uppercase;margin:0 0 10px;">${escapeHtml(followLabel)}</p><div class="${uid}-slg">${socialHtml}</div></div></div>` : ''}
+      ${faqTitle ? `<div class="${uid}-faq"><div class="${uid}-faqi">❓</div><div style="flex:1;"><div class="${uid}-faqt">${escapeHtml(faqTitle)}</div>${faqDesc ? `<div class="${uid}-faqd">${escapeHtml(faqDesc)}</div>` : ''}</div>${faqBtnText ? `<a href="${attr(faqBtnUrl || '#')}" class="${uid}-faqb">${escapeHtml(faqBtnText)}</a>` : ''}</div>` : ''}
+    </div>` : ''}
+  </div>
+</section>
+<script data-cfasync="false">
+(function(){
+  var RCP=${JSON.stringify(recipients)};
+  var tsToken='';var tsWidget=null;
+  function showErr(msg){var e=document.getElementById('${uid}-err');e.textContent=msg;e.style.display='block';}
+  function resetTs(){tsToken='';if(window.turnstile&&tsWidget!==null)window.turnstile.reset(tsWidget);}
+  function loadTs(){
+    fetch('${API_BASE}/api/turnstile-site-key').then(function(r){return r.json();}).then(function(d){
+      if(!d.ok||!d.siteKey)throw new Error('no key');
+      function render(){tsWidget=window.turnstile.render('#${uid}-ts',{sitekey:d.siteKey,callback:function(t){tsToken=t;},'expired-callback':function(){tsToken='';},'error-callback':function(){tsToken='';showErr('Verification failed. Please refresh.');}});}
+      if(window.turnstile){render();return;}
+      var s=document.createElement('script');s.src='${TURNSTILE_SCRIPT}';s.async=true;s.defer=true;s.onload=render;document.head.appendChild(s);
+    }).catch(function(){showErr('Verification could not load. Please refresh.');});
+  }
+  loadTs();
+  window['${uid}TQ']=function(el){
+    document.querySelectorAll('.${uid}-qual').forEach(function(b){b.classList.remove('on');});
+    el.classList.add('on');
+    var v=document.getElementById('${uid}-qv');if(v)v.value=el.getAttribute('data-val');
+  };
+  window['${uid}Sub']=async function(){
+    var fn=document.getElementById('${uid}-fn').value.trim();
+    var ln=document.getElementById('${uid}-ln').value.trim();
+    var em=document.getElementById('${uid}-em').value.trim();
+    var ph=document.getElementById('${uid}-ph').value.trim();
+    var eqEl=document.getElementById('${uid}-eq');var eq=eqEl?eqEl.value:'';
+    var qvEl=document.getElementById('${uid}-qv');var ql=qvEl?qvEl.value:'';
+    var msg=document.getElementById('${uid}-msg').value.trim();
+    var hhEl=document.getElementById('${uid}-hh');var hh=hhEl?hhEl.value:'';
+    var btn=document.getElementById('${uid}-btn');
+    var err=document.getElementById('${uid}-err');
+    err.style.display='none';
+    if(!fn){showErr('Please enter your first name.');return;}
+    if(!ln){showErr('Please enter your last name.');return;}
+    if(!em||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(em)){showErr('Please enter a valid email address.');return;}
+    ${enquiryOptHtml ? `if(!eq){showErr('Please select an enquiry topic.');return;}` : ''}
+    if(!msg){showErr('Please enter your message.');return;}
+    if(!tsToken){showErr('Please complete the verification.');return;}
+    var orig=btn.textContent;btn.disabled=true;btn.textContent='Sending…';
+    try{
+      var r=await fetch('${API_BASE}/api/submit-form',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({firstName:fn,lastName:ln,email:em,phone:ph,enquiry:eq,qualification:ql,comments:msg,howHeard:hh,recipients:RCP,turnstileToken:tsToken})});
+      var data=await r.json();
+      if(r.ok&&data.ok){
+        document.getElementById('${uid}-fw').style.display='none';
+        document.getElementById('${uid}-ty').style.display='block';
+      }else{
+        showErr(data.error||'Something went wrong. Please try again.');
+        resetTs();btn.disabled=false;btn.textContent=orig;
+      }
+    }catch(e){
+      showErr('Unable to send. Please check your connection and try again.');
+      resetTs();btn.disabled=false;btn.textContent=orig;
+    }
+  };
+})();
+</script>`;
+}
 export function generateReportTyHtml(config) {
     const uid = `rty${Math.random().toString(36).slice(2, 7)}`;
     const heroBg = safeHex(config.heroBg, '#0d1f3c');
