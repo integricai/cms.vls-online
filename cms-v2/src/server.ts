@@ -28,6 +28,16 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true, data: { status: 'ok', ts: new Date().toISOString() } });
 });
 
+app.get('/api/turnstile-site-key', (_req, res) => {
+  const siteKey = process.env.TURNSTILE_SITE_KEY;
+  if (!siteKey) {
+    return res.status(500).json({ ok: false, error: 'Turnstile is not configured' });
+  }
+
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json({ ok: true, siteKey });
+});
+
 app.use('/api/auth', authRouter);
 app.use('/api/snippets', snippetsRouter);
 app.use('/api/content', contentRouter);
