@@ -36,7 +36,9 @@ export default async function handler(req, res) {
 
   const {
     firstName = '', lastName = '', email = '',
-    phoneCode = '', phoneNumber = '', enquiry = '', comments = '',
+    phoneCode = '', phoneNumber = '', phone = '',
+    enquiry = '', comments = '',
+    qualification = '', howHeard = '',
     turnstileToken = ''
   } = body;
 
@@ -57,9 +59,7 @@ export default async function handler(req, res) {
   }
 
   const fullName  = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
-  const fullPhone = phoneCode
-    ? `${phoneCode} ${phoneNumber}`.trim()
-    : phoneNumber.trim();
+  const fullPhone = phone.trim() || (phoneCode ? `${phoneCode} ${phoneNumber}`.trim() : phoneNumber.trim());
 
   const recipients = Array.isArray(body.recipients)
     ? body.recipients.filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e).trim())).map(e => String(e).trim())
@@ -86,8 +86,12 @@ export default async function handler(req, res) {
           <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#262a32;">${esc(fullPhone) || '&mdash;'}</td></tr>
       <tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;font-weight:600;vertical-align:top;">Enquiry</td>
           <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#262a32;">${esc(enquiry) || '&mdash;'}</td></tr>
-      <tr><td style="padding:10px 0;color:#6b7280;font-weight:600;vertical-align:top;">Comments</td>
-          <td style="padding:10px 0;color:#262a32;white-space:pre-wrap;">${esc(comments) || '&mdash;'}</td></tr>
+      <tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;font-weight:600;vertical-align:top;">Message</td>
+          <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#262a32;white-space:pre-wrap;">${esc(comments) || '&mdash;'}</td></tr>
+      ${qualification ? `<tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;font-weight:600;vertical-align:top;">Qualification</td>
+          <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#262a32;">${esc(qualification)}</td></tr>` : ''}
+      ${howHeard ? `<tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;font-weight:600;vertical-align:top;">How They Found Us</td>
+          <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#262a32;">${esc(howHeard)}</td></tr>` : ''}
     </table>
   </div>
   <p style="text-align:center;font-size:12px;color:#9ca3af;margin-top:16px;">VLS Online — Course Enquiry System</p>

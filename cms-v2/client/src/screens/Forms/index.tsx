@@ -4,10 +4,10 @@ import { api } from '../../api/client';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
 import { normalize } from '../../utils/text';
-import { generateContactFormHtml, generateReportIssueHtml, generateReportTyHtml } from './generateHtml';
+import { generateContactFormHtml, generateContactPageHtml, generateReportIssueHtml, generateReportTyHtml } from './generateHtml';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
-type FormType = 'contact' | 'report-issue' | 'report-issue-ty';
+type FormType = 'contact' | 'report-issue' | 'report-issue-ty' | 'contact-page';
 type Tab = 'preview' | 'html';
 type AnyConfig = Record<string, any>;
 
@@ -15,6 +15,7 @@ const CONFIG = {
   contact: { title: 'Contact Form', key: 'vls-form-config' },
   'report-issue': { title: 'Report an Issue', key: 'vls-report-config' },
   'report-issue-ty': { title: 'Report an Issue - TY', key: 'vls-report-ty-config' },
+  'contact-page': { title: 'Contact Page Form', key: 'vls-contact-page-config' },
 } as const;
 
 function newId(prefix: string) {
@@ -30,6 +31,32 @@ function defaultConfig(type: FormType): AnyConfig {
       thankDesc: normalize('Thank you for sharing the information. We will contact you soon.', 'formThank'),
       recipients: ['office@vls-online.com'],
       enquiryOptions: [],
+    };
+  }
+  if (type === 'contact-page') {
+    return {
+      formLabel: 'SEND US A MESSAGE',
+      formSubheader: "We'll respond within 1 working day",
+      submitText: 'Send Message →',
+      thankTitle: 'Message sent!',
+      thankDesc: "Thank you for reaching out. We'll be in touch within 1 working day.",
+      privacyUrl: '/privacy',
+      recipients: ['office@vls-online.com'],
+      enquiryOptions: [],
+      qualificationOptions: ['ACCA', 'CIMA', 'CMA', 'CIA', 'Dip-IFR', 'Foundation Diploma', 'Not sure yet'],
+      howHeardOptions: [],
+      companyName: '',
+      contactInfoLabel: 'CONTACT INFORMATION',
+      contactItems: [],
+      supportHoursLabel: 'SUPPORT HOURS',
+      supportHours: [],
+      responseNote: '',
+      followLabel: 'FOLLOW VLS',
+      socialLinks: [],
+      faqTitle: '',
+      faqDesc: '',
+      faqBtnText: 'View FAQs →',
+      faqBtnUrl: '',
     };
   }
   if (type === 'report-issue-ty') {
@@ -180,6 +207,71 @@ function ReportFields({ cfg, patch }: { cfg: AnyConfig; patch: (p: AnyConfig) =>
   );
 }
 
+function ContactPageFields({ cfg, patch }: { cfg: AnyConfig; patch: (p: AnyConfig) => void }) {
+  return (
+    <>
+      <p className="section-label">Form Header</p>
+      <Field label="Label (e.g. SEND US A MESSAGE)">
+        <input className="input" value={cfg.formLabel || ''} onChange={e => patch({ formLabel: e.target.value })} />
+      </Field>
+      <Field label="Subheader">
+        <input className="input" value={cfg.formSubheader || ''} onChange={e => patch({ formSubheader: e.target.value })} />
+      </Field>
+      <Field label="Submit button text">
+        <input className="input" value={cfg.submitText || ''} onChange={e => patch({ submitText: e.target.value })} />
+      </Field>
+      <Field label="Privacy policy URL">
+        <input className="input" value={cfg.privacyUrl || ''} onChange={e => patch({ privacyUrl: e.target.value })} />
+      </Field>
+      <p className="section-label">Thank You Message</p>
+      <Field label="Title">
+        <input className="input" value={cfg.thankTitle || ''} onChange={e => patch({ thankTitle: e.target.value })} />
+      </Field>
+      <Field label="Description">
+        <textarea className="input" rows={2} value={cfg.thankDesc || ''} onChange={e => patch({ thankDesc: e.target.value })} />
+      </Field>
+      <StringList label="Recipients" items={cfg.recipients || []} placeholder="office@example.com" onChange={recipients => patch({ recipients })} />
+      <ObjectList label="Enquiry Topic Options" items={cfg.enquiryOptions || []} fields={['label']} makeItem={() => ({ id: newId('eq'), label: '' })} onChange={enquiryOptions => patch({ enquiryOptions })} />
+      <StringList label="Qualification Buttons" items={cfg.qualificationOptions || []} placeholder="ACCA" onChange={qualificationOptions => patch({ qualificationOptions })} />
+      <StringList label="How Did You Hear Options" items={cfg.howHeardOptions || []} placeholder="Google / Search engine" onChange={howHeardOptions => patch({ howHeardOptions })} />
+      <p className="section-label">Contact Info Panel</p>
+      <Field label="Contact info label">
+        <input className="input" value={cfg.contactInfoLabel || ''} onChange={e => patch({ contactInfoLabel: e.target.value })} />
+      </Field>
+      <Field label="Company name">
+        <input className="input" value={cfg.companyName || ''} onChange={e => patch({ companyName: e.target.value })} />
+      </Field>
+      <ObjectList label="Contact Items" items={cfg.contactItems || []} fields={['icon', 'label', 'value', 'subtext', 'url']} makeItem={() => ({ icon: '📧', label: '', value: '', subtext: '', url: '' })} onChange={contactItems => patch({ contactItems })} />
+      <p className="section-label">Support Hours</p>
+      <Field label="Section label">
+        <input className="input" value={cfg.supportHoursLabel || ''} onChange={e => patch({ supportHoursLabel: e.target.value })} />
+      </Field>
+      <ObjectList label="Hours rows" items={cfg.supportHours || []} fields={['day', 'hours']} makeItem={() => ({ day: '', hours: '' })} onChange={supportHours => patch({ supportHours })} />
+      <Field label="Response note">
+        <textarea className="input" rows={2} value={cfg.responseNote || ''} onChange={e => patch({ responseNote: e.target.value })} />
+      </Field>
+      <p className="section-label">Social Links</p>
+      <Field label="Section label">
+        <input className="input" value={cfg.followLabel || ''} onChange={e => patch({ followLabel: e.target.value })} />
+      </Field>
+      <ObjectList label="Social links" items={cfg.socialLinks || []} fields={['platform', 'handle', 'url', 'icon']} makeItem={() => ({ platform: '', handle: '', url: '', icon: '🔗' })} onChange={socialLinks => patch({ socialLinks })} />
+      <p className="section-label">FAQ Callout</p>
+      <Field label="Title">
+        <input className="input" value={cfg.faqTitle || ''} onChange={e => patch({ faqTitle: e.target.value })} />
+      </Field>
+      <Field label="Description">
+        <input className="input" value={cfg.faqDesc || ''} onChange={e => patch({ faqDesc: e.target.value })} />
+      </Field>
+      <Field label="Button text">
+        <input className="input" value={cfg.faqBtnText || ''} onChange={e => patch({ faqBtnText: e.target.value })} />
+      </Field>
+      <Field label="Button URL">
+        <input className="input" value={cfg.faqBtnUrl || ''} onChange={e => patch({ faqBtnUrl: e.target.value })} />
+      </Field>
+    </>
+  );
+}
+
 function ReportTyFields({ cfg, patch }: { cfg: AnyConfig; patch: (p: AnyConfig) => void }) {
   return (
     <>
@@ -242,9 +334,11 @@ export default function Forms() {
   function generate() {
     const next = type === 'contact'
       ? generateContactFormHtml(state)
-      : type === 'report-issue'
-        ? generateReportIssueHtml(state)
-        : generateReportTyHtml(state);
+      : type === 'contact-page'
+        ? generateContactPageHtml(state)
+        : type === 'report-issue'
+          ? generateReportIssueHtml(state)
+          : generateReportTyHtml(state);
     setHtml(wrapGeneratedHtml(config?.title || 'Forms', next));
     setTab('preview');
   }
@@ -264,6 +358,7 @@ export default function Forms() {
         </div>
         <div className="px-5 py-4">
           {type === 'contact' && <ContactFields cfg={state} patch={patch} />}
+          {type === 'contact-page' && <ContactPageFields cfg={state} patch={patch} />}
           {type === 'report-issue' && <ReportFields cfg={state} patch={patch} />}
           {type === 'report-issue-ty' && <ReportTyFields cfg={state} patch={patch} />}
         </div>
