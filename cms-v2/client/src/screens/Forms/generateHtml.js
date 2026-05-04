@@ -281,6 +281,10 @@ export function generateContactPageHtml(config) {
     const enquiryOptions = (config.enquiryOptions || []);
     const qualOptions = (config.qualificationOptions || []);
     const howHeardOptions = (config.howHeardOptions || []);
+    const padTop = clampNumber(config.padTop, 40, 0, 240);
+    const padBottom = clampNumber(config.padBottom, 40, 0, 240);
+    const padLeft = clampNumber(config.padLeft, 24, 0, 240);
+    const padRight = clampNumber(config.padRight, 24, 0, 240);
     const messageRows = clampNumber(config.messageRows, 5, 2, 20);
     const messageMinHeight = clampNumber(config.messageMinHeight, 140, 80, 700);
     const companyName = String(config.companyName || '').trim();
@@ -322,7 +326,7 @@ export function generateContactPageHtml(config) {
     return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;}
-#${uid}{font-family:'Poppins',sans-serif;padding:40px 24px;max-width:1140px;margin:0 auto;}
+#${uid}{font-family:'Poppins',sans-serif;padding:${padTop}px ${padRight}px ${padBottom}px ${padLeft}px;max-width:1140px;margin:0 auto;}
 #${uid}-lay{display:grid;grid-template-columns:${hasRight ? '1fr 380px' : '1fr'};gap:28px;align-items:start;}
 #${uid}-fw{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;}
 #${uid}-fhdr{background:#0d1f3c;padding:18px 24px;display:flex;align-items:center;gap:14px;}

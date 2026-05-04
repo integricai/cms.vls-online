@@ -42,6 +42,10 @@ function defaultConfig(type: FormType): AnyConfig {
       submitText: 'Send Message →',
       thankTitle: 'Message sent!',
       thankDesc: "Thank you for reaching out. We'll be in touch within 1 working day.",
+      padTop: 40,
+      padBottom: 40,
+      padLeft: 24,
+      padRight: 24,
       privacyUrl: '/privacy',
       recipients: ['office@vls-online.com'],
       enquiryOptions: [],
@@ -238,6 +242,25 @@ function ContactPageFields({ cfg, patch }: { cfg: AnyConfig; patch: (p: AnyConfi
       <Field label="Privacy policy URL">
         <input className="input" value={cfg.privacyUrl || ''} onChange={e => patch({ privacyUrl: e.target.value })} />
       </Field>
+      <p className="section-label">Outer Padding</p>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Top (px)">
+          <input type="number" className="input" min={0} max={240} value={cfg.padTop ?? 40}
+            onChange={e => patch({ padTop: Number(e.target.value) })} />
+        </Field>
+        <Field label="Bottom (px)">
+          <input type="number" className="input" min={0} max={240} value={cfg.padBottom ?? 40}
+            onChange={e => patch({ padBottom: Number(e.target.value) })} />
+        </Field>
+        <Field label="Left (px)">
+          <input type="number" className="input" min={0} max={240} value={cfg.padLeft ?? 24}
+            onChange={e => patch({ padLeft: Number(e.target.value) })} />
+        </Field>
+        <Field label="Right (px)">
+          <input type="number" className="input" min={0} max={240} value={cfg.padRight ?? 24}
+            onChange={e => patch({ padRight: Number(e.target.value) })} />
+        </Field>
+      </div>
       <p className="section-label">Message Box</p>
       <div className="grid grid-cols-2 gap-2">
         <Field label="Rows">
