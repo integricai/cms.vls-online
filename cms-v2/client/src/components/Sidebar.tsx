@@ -92,6 +92,7 @@ const NAV: NavEntry[] = [
       { to: '/feature-cards-v2', label: 'Feature Card v2' },
       { to: '/feature-cards-v3', label: 'Feature Card v3' },
       { to: '/step-cards',       label: 'Step Cards' },
+      { to: '/vertical-cards',   label: 'Vertical Cards' },
     ],
   },
 ];

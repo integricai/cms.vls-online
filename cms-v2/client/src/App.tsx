@@ -30,6 +30,7 @@ import Events from './screens/Events';
 import Articles from './screens/Articles';
 import FullScreenSections from './screens/FullScreenSections';
 import SplitScreenSections from './screens/SplitScreenSections';
+import VerticalCards from './screens/VerticalCards';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   return getToken() ? <>{children}</> : <Navigate to="/login" replace />;
@@ -71,6 +72,7 @@ export default function App() {
           <Route path="/feature-cards-v2" element={<FeatureCardsV2 />} />
           <Route path="/feature-cards-v3" element={<FeatureCardsV3 />} />
           <Route path="/step-cards"       element={<StepCards />} />
+          <Route path="/vertical-cards"   element={<VerticalCards />} />
           <Route path="/legal-page"       element={<LegalPage />} />
           <Route path="/team"             element={<Team />} />
           <Route path="/faq"                   element={<FAQ />} />
