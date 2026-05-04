@@ -17,6 +17,10 @@ function makeDefault(): CourseDescState {
   };
 }
 
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 function newBlock(type: CourseDescBlockType): CourseDescBlock {
   switch (type) {
     case 'paragraph':         return { type, p: normalize('', 'cdescDesc') };
@@ -150,6 +154,13 @@ export default function CourseDescScreen() {
   }
   function newComponent() { setActiveId(null); setName(''); setState(makeDefault()); setSaved(false); }
 
+  function duplicateComponent() {
+    setActiveId(`cd-${Date.now().toString(36)}`);
+    setName(`Copy of ${name || 'Course Description'}`);
+    setState(clone(state));
+    setSaved(false);
+  }
+
   async function save() {
     if (!name.trim()) { alert('Enter a component name first.'); return; }
     setSaving(true);
@@ -212,6 +223,7 @@ export default function CourseDescScreen() {
                 {components.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               <button onClick={newComponent} className="btn-ghost text-xs px-3">+ New</button>
+              <button onClick={duplicateComponent} disabled={!name && state.blocks.length === 0} className="btn-ghost text-xs px-3">Duplicate</button>
               {activeId && <button onClick={deleteComponent} className="btn-danger text-xs px-3">Delete</button>}
             </div>
             <Field label="Component name">

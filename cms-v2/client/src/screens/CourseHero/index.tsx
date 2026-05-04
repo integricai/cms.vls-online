@@ -25,6 +25,10 @@ function makeDefault(): CourseHeroState {
   };
 }
 
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 function ColorRow({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <Field label={label}>
@@ -73,6 +77,13 @@ export default function CourseHeroScreen() {
   }
 
   function newComponent() { setActiveId(null); setName(''); setState(makeDefault()); setSaved(false); }
+
+  function duplicateComponent() {
+    setActiveId(`ch-${Date.now().toString(36)}`);
+    setName(`Copy of ${name || 'Course Hero'}`);
+    setState(clone(state));
+    setSaved(false);
+  }
 
   async function save() {
     if (!name.trim()) { alert('Enter a component name first.'); return; }
@@ -148,6 +159,7 @@ export default function CourseHeroScreen() {
                 {components.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               <button onClick={newComponent} className="btn-ghost text-xs px-3">+ New</button>
+              <button onClick={duplicateComponent} disabled={!name && state.tags.length === 0 && state.pills.length === 0 && state.learnItems.length === 0} className="btn-ghost text-xs px-3">Duplicate</button>
               {activeId && <button onClick={deleteComponent} className="btn-danger text-xs px-3">Delete</button>}
             </div>
             <Field label="Component name">

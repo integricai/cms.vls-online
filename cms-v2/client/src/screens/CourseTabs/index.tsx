@@ -25,6 +25,14 @@ function makeSupportRow(): CourseTabSupportRow {
   return { cols: 2, cards: [makeCard(), makeCard()] };
 }
 
+function id(prefix: string) {
+  return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+}
+
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 function makeBlock(type: CourseTabBlockType): CourseTabBlock {
   const base: CourseTabBlockData = {};
   if (type === 'paragraph') return { type, data: { para: normalize('', 'ctabsPara') } };
@@ -41,7 +49,7 @@ function makeBlock(type: CourseTabBlockType): CourseTabBlock {
 }
 
 function makeTab(): CourseTab {
-  return { id: 'tab-' + Date.now().toString(36), icon: '', label: 'New Tab', blocks: [] };
+  return { id: id('tab-'), icon: '', label: 'New Tab', blocks: [] };
 }
 
 const BLOCK_LABELS: Record<CourseTabBlockType, string> = {
@@ -362,6 +370,20 @@ export default function CourseTabsScreen() {
   }
   function newComponent() { setActiveId(null); setName(''); setState(makeDefault()); setActiveTabIdx(0); setSaved(false); }
 
+  function duplicateComponent() {
+    const copied = clone(state);
+    copied.tabs = copied.tabs.map((tab, index) => ({
+      ...tab,
+      id: id('tab-'),
+      label: index === 0 ? tab.label : tab.label,
+    }));
+    setActiveId(`ctb-${Date.now().toString(36)}`);
+    setName(`Copy of ${name || 'Course Tabs'}`);
+    setState(copied);
+    setActiveTabIdx(0);
+    setSaved(false);
+  }
+
   async function save() {
     if (!name.trim()) { alert('Enter a component name first.'); return; }
     setSaving(true);
@@ -392,6 +414,19 @@ export default function CourseTabsScreen() {
   function removeTab(i: number) {
     const tabs = state.tabs.filter((_, idx) => idx !== i);
     upd({ tabs }); setActiveTabIdx(Math.min(activeTabIdx, tabs.length - 1));
+  }
+  function duplicateTab(i: number) {
+    const source = state.tabs[i];
+    if (!source) return;
+    const copy: CourseTab = {
+      ...clone(source),
+      id: id('tab-'),
+      label: `Copy of ${source.label || `Tab ${i + 1}`}`,
+    };
+    const tabs = [...state.tabs];
+    tabs.splice(i + 1, 0, copy);
+    upd({ tabs });
+    setActiveTabIdx(i + 1);
   }
   function updateTab(i: number, patch: Partial<CourseTab>) {
     const tabs = [...state.tabs]; tabs[i] = { ...tabs[i], ...patch }; upd({ tabs });
@@ -446,6 +481,7 @@ export default function CourseTabsScreen() {
                 {components.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               <button onClick={newComponent} className="btn-ghost text-xs px-3">+ New</button>
+              <button onClick={duplicateComponent} disabled={!name && state.tabs.length === 0} className="btn-ghost text-xs px-3">Duplicate</button>
               {activeId && <button onClick={deleteComponent} className="btn-danger text-xs px-3">Delete</button>}
             </div>
             <Field label="Component name">
@@ -467,6 +503,7 @@ export default function CourseTabsScreen() {
                   onClick={e => e.stopPropagation()}
                   onChange={e => { e.stopPropagation(); updateTab(i, { label: e.target.value }); }} />
                 <span className="text-xs text-slate-400 shrink-0">{tab.blocks.length} blocks</span>
+                <button onClick={e => { e.stopPropagation(); duplicateTab(i); }} className="btn-ghost text-xs shrink-0">Duplicate</button>
                 <button onClick={e => { e.stopPropagation(); removeTab(i); }} className="btn-danger text-xs shrink-0">✕</button>
               </div>
             ))}
