@@ -97,6 +97,37 @@ export function generatePanelHtml(section, mode) {
 <div class="${uid}"${mode === 'left' ? ' style="padding:24px 20px;"' : ''}>
 ${eyebrow.text ? `  <div style="font-family:'Poppins',sans-serif;text-transform:uppercase;margin:0 0 ${mode === 'left' ? 10 : 16}px;${mode === 'right' ? 'padding:20px 0 0 20px;' : ''}${textStyle(eyebrow)}">${escapeHtml(eyebrow.text)}</div>\n` : ''}${heading.text ? `  <h2 style="font-family:'Poppins',sans-serif;margin:0 0 16px;${mode === 'right' ? 'padding:0 0 0 20px;' : ''}line-height:1.2;${textStyle(heading)}">${escapeHtml(heading.text)}</h2>\n` : ''}${desc.text ? `  <div style="font-family:'Poppins',sans-serif;margin:0 0 24px;${mode === 'right' ? 'padding:0 0 0 20px;' : ''}line-height:1.6;${textStyle(desc)}">${desc.text}</div>\n` : ''}${cards ? `  <div class="${uid}-cards"${mode === 'right' ? ' style="padding:0 20px 20px;"' : ''}>\n${cards}\n  </div>\n` : ''}</div>`;
 }
+function scrollHref(value) {
+    const raw = String(value || '').trim();
+    if (!raw)
+        return '#';
+    if (raw.startsWith('#'))
+        return raw;
+    const clean = raw.replace(/^[#.]/, '').trim();
+    return clean ? `#${clean}` : '#';
+}
+function scrollAttrs(uid, value) {
+    const raw = String(value || '').trim();
+    if (!raw)
+        return '';
+    const fn = `${uid}Scroll`;
+    return ` data-scroll-selector="${escapeHtml(raw)}" onclick="return window[${JSON.stringify(fn).replace(/"/g, '&quot;')}](${JSON.stringify(raw).replace(/"/g, '&quot;')})"`;
+}
+function buildScrollScript(uid) {
+    return `<script data-cfasync="false">(function(){`
+        + `window[${JSON.stringify(uid + 'Scroll')}]=function(sel){`
+        + `if(!sel)return false;var el=null;`
+        + `try{el=document.querySelector(sel);}catch(e){}`
+        + `var clean=String(sel).replace(/^[#.]/,'').trim();`
+        + `if(!el&&clean){el=document.getElementById(clean)`
+        + `||document.querySelector('[data-scroll-target="'+clean+'"]')`
+        + `||document.querySelector('[data-vls-anchor="'+clean+'"]')`
+        + `||document.querySelector('[name="'+clean+'"]');`
+        + `if(!el){try{el=document.querySelector('.'+clean);}catch(e){}}}`
+        + `if(el&&el.scrollIntoView){el.scrollIntoView({behavior:'smooth',block:'start'});}`
+        + `return false;`
+        + `};})();<\/script>`;
+}
 export function generateLeftHeroHtml(data) {
     const uid = `plh${Date.now().toString(36)}`;
     const heading = tv(data.heading, 'plhHeading');
@@ -133,12 +164,21 @@ export function generateLeftHeroHtml(data) {
         });
         out += '  </div>\n';
     }
+    const hasScroll = !!(data.primaryCtaScroll || data.secondaryCtaScroll);
     if (data.primaryCta || data.secondaryCta) {
+        if (hasScroll)
+            out += buildScrollScript(uid) + '\n';
         out += '  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:36px;">\n';
-        if (data.primaryCta)
-            out += `    <a href="${attr(data.primaryCtaUrl || '#')}" style="display:inline-block;padding:13px 26px;background:${safeHex(data.primaryBg, '#204280')};color:${safeHex(data.primaryTc, '#ffffff')};font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;border-radius:8px;text-decoration:none;">${escapeHtml(data.primaryCta)}</a>\n`;
-        if (data.secondaryCta)
-            out += `    <a href="${attr(data.secondaryCtaUrl || '#')}" style="display:inline-block;padding:13px 26px;border:2px solid ${safeHex(data.secondaryBorder, '#4a5568')};color:${safeHex(data.secondaryTc, '#ffffff')};font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;border-radius:8px;text-decoration:none;background:transparent;">${escapeHtml(data.secondaryCta)}</a>\n`;
+        if (data.primaryCta) {
+            const href = data.primaryCtaScroll ? scrollHref(data.primaryCtaScroll) : attr(data.primaryCtaUrl || '#');
+            const extras = data.primaryCtaScroll ? scrollAttrs(uid, data.primaryCtaScroll) : '';
+            out += `    <a href="${href}"${extras} style="display:inline-block;padding:13px 26px;background:${safeHex(data.primaryBg, '#204280')};color:${safeHex(data.primaryTc, '#ffffff')};font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;border-radius:8px;text-decoration:none;">${escapeHtml(data.primaryCta)}</a>\n`;
+        }
+        if (data.secondaryCta) {
+            const href = data.secondaryCtaScroll ? scrollHref(data.secondaryCtaScroll) : attr(data.secondaryCtaUrl || '#');
+            const extras = data.secondaryCtaScroll ? scrollAttrs(uid, data.secondaryCtaScroll) : '';
+            out += `    <a href="${href}"${extras} style="display:inline-block;padding:13px 26px;border:2px solid ${safeHex(data.secondaryBorder, '#4a5568')};color:${safeHex(data.secondaryTc, '#ffffff')};font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;border-radius:8px;text-decoration:none;background:transparent;">${escapeHtml(data.secondaryCta)}</a>\n`;
+        }
         out += '  </div>\n';
     }
     const stats = (data.statsItems || []).filter(s => s.value);
