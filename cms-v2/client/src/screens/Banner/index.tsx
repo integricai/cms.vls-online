@@ -47,6 +47,9 @@ function BannerForm({ banner: b, onChange }: { banner: Banner; onChange: (patch:
   return (
     <div className="space-y-0">
       <p className="section-label">Identity</p>
+      <Field label="Banner ID" hint="Embedded in the inject code — links this banner to its pages">
+        <input className="input font-mono bg-slate-50 text-slate-500 select-all" value={b.id} readOnly />
+      </Field>
       <Field label="Banner name" hint="CMS only">
         <input className="input" value={b.name} placeholder="e.g. March Promo Banner"
           onChange={e => onChange({ name: e.target.value })} />
@@ -194,10 +197,13 @@ function buildInjectCode(banner: Banner): string {
     if(showTimer)tick(deadline,hideOnExpiry);
   }
   function load(){
-    fetch(API+"?t="+Date.now()).then(function(r){return r.json();}).then(function(data){
+    fetch(API+"?t="+Date.now()).then(function(r){
+      if(!r.ok)throw new Error("VLS Banner API returned "+r.status);
+      return r.json();
+    }).then(function(data){
       var b=(data.banners||[]).find(function(x){return x.id===BID;});
       render(b);
-    }).catch(function(e){console.warn("VLS Banner:",e);});
+    }).catch(function(e){console.error("VLS Banner ["+BID+"]:",e.message||e);});
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",load);else load();
 })();

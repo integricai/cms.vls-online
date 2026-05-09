@@ -29,11 +29,19 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true, data: { status: 'ok', ts: new Date().toISOString() } });
 });
 
+// Public — no auth, must allow any origin (fetched from Zenler/external pages)
+app.options('/api/publish-banner', (_req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.status(204).end();
+});
+
 app.get('/api/publish-banner', async (_req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
   try {
     const row = await getContent('vls-banners');
     const data = row?.data && typeof row.data === 'object' ? row.data as { banners?: unknown[] } : {};
-    res.setHeader('Cache-Control', 'no-store');
     return res.json({ banners: Array.isArray(data.banners) ? data.banners : [] });
   } catch (err) {
     next(err);
