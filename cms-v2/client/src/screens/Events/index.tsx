@@ -1,11 +1,10 @@
-import { wrapGeneratedHtml } from '../../utils/htmlComments';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
 import type { EventDescriptionBlock, EventsContent, TextData, VlsEvent } from '../../types/cms';
 import { normalize } from '../../utils/text';
-import { buildEventEmbedCode, buildEventsListEmbedCode, eventText, renderEventCardHtml, renderEventsListPreview } from './generateHtml';
+import { buildEventEmbedCode, buildEventsListEmbedCode, eventText, renderEventsListPreview } from './generateHtml';
 
 type ContentResponse<T> = {
   key: string;
@@ -95,8 +94,8 @@ export default function Events() {
   const [publishing, setPublishing] = useState(false);
   const [published, setPublished] = useState(false);
   const [calDate, setCalDate] = useState(() => new Date());
-  const [mode, setMode] = useState<'preview' | 'html'>('preview');
-  const [html, setHtml] = useState('');
+  const [mode, setMode] = useState<'preview' | 'code'>('preview');
+  const [embedCode, setEmbedCode] = useState(() => buildEventsListEmbedCode(publicEventsUrl()));
 
   const sorted = useMemo(() => {
     return events.slice().sort((a, b) => (a.startsAt || '') < (b.startsAt || '') ? 1 : -1);
@@ -135,12 +134,11 @@ export default function Events() {
     setSaved(false);
     setPublished(false);
     setMode('preview');
-    setHtml(wrapGeneratedHtml('Events', renderEventCardHtml(event)));
   }
 
   function generateListHtml() {
-    setHtml(wrapGeneratedHtml('Events', buildEventsListEmbedCode(publicEventsUrl())));
-    setMode('html');
+    setEmbedCode(buildEventsListEmbedCode(publicEventsUrl()));
+    setMode('code');
   }
 
   async function saveEvent() {
@@ -156,7 +154,6 @@ export default function Events() {
       setEvents(next);
       setSelectedId(draft.id);
       setSaved(true);
-      setHtml(wrapGeneratedHtml('Events', renderEventCardHtml(draft)));
     } finally {
       setSaving(false);
     }
@@ -176,7 +173,6 @@ export default function Events() {
       setSelectedId(draft.id);
       setSaved(true);
       setPublished(true);
-      setHtml(wrapGeneratedHtml('Events', renderEventCardHtml(draft)));
     } finally {
       setPublishing(false);
     }
@@ -191,7 +187,7 @@ export default function Events() {
       setEvents(next);
       setDraft(null);
       setSelectedId(null);
-      setHtml('');
+      setEmbedCode(buildEventsListEmbedCode(publicEventsUrl()));
     } finally {
       setSaving(false);
     }
@@ -345,7 +341,7 @@ export default function Events() {
         {draft && selectedId && (
           <div className="sticky bottom-0 flex gap-2 border-t border-slate-100 bg-white px-5 py-3">
             <button className="btn-danger" onClick={deleteEvent}>Delete</button>
-            <button className="btn-ghost text-xs ml-auto" onClick={() => { setHtml(wrapGeneratedHtml('Events', buildEventEmbedCode(draft.id, publicEventsUrl()))); setMode('html'); }}>Get Embed Code</button>
+            <button className="btn-ghost text-xs ml-auto" onClick={() => { setEmbedCode(buildEventEmbedCode(draft.id, publicEventsUrl())); setMode('code'); }}>Get Single-Event Code</button>
           </div>
         )}
       </div>
@@ -357,9 +353,9 @@ export default function Events() {
           <button className="btn-ghost my-2 text-xs" onClick={() => setCalDate(new Date(calDate.getFullYear(), calDate.getMonth() + 1, 1))}>›</button>
           <button className="btn-ghost my-2 text-xs" onClick={() => setCalDate(new Date())}>Today</button>
           <div className="ml-auto flex">
-            {(['preview', 'html'] as const).map(tab => (
-              <button key={tab} onClick={() => { setMode(tab); if (tab === 'preview') setHtml(draft ? renderEventCardHtml(draft) : renderEventsListPreview(events)); }} className={`px-4 py-3 text-sm font-medium capitalize transition border-b-2 -mb-px ${mode === tab ? 'border-brand text-brand' : 'border-transparent text-slate-400 hover:text-slate-700'}`}>
-                {tab === 'html' ? 'HTML' : 'Preview'}
+            {(['preview', 'code'] as const).map(tab => (
+              <button key={tab} onClick={() => setMode(tab)} className={`px-4 py-3 text-sm font-medium transition border-b-2 -mb-px ${mode === tab ? 'border-brand text-brand' : 'border-transparent text-slate-400 hover:text-slate-700'}`}>
+                {tab === 'code' ? 'Embed Code' : 'Preview'}
               </button>
             ))}
           </div>
@@ -367,12 +363,17 @@ export default function Events() {
         {mode === 'preview' ? (
           <div className="flex-1 overflow-auto bg-slate-50 p-5">
             <div className="mb-5">{renderCalendar()}</div>
-            <iframe title="event-preview" srcDoc={`<!doctype html><html><body style="margin:0;padding:20px;background:#f8fafc">${html || renderEventsListPreview(events)}</body></html>`} className="h-96 w-full rounded-lg border border-slate-200 bg-white" />
+            <iframe title="event-preview" srcDoc={`<!doctype html><html><body style="margin:0;padding:20px;background:#f8fafc">${renderEventsListPreview(events)}</body></html>`} className="h-96 w-full rounded-lg border border-slate-200 bg-white" />
           </div>
         ) : (
-          <div className="relative flex-1 overflow-auto bg-slate-900 p-4">
-            <button onClick={() => navigator.clipboard.writeText(html)} className="absolute right-4 top-4 rounded bg-slate-700 px-3 py-1 text-xs text-slate-300 hover:bg-slate-600">Copy</button>
-            <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">{html || '// Click List Embed or Get Code first'}</pre>
+          <div className="flex-1 overflow-auto bg-slate-900 p-4">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="rounded bg-blue-900/60 border border-blue-700 px-3 py-2 text-xs text-blue-200 flex-1">
+                Paste this code once into your Zenler page. Events will load automatically from the CMS — no re-pasting needed when you add or update events.
+              </div>
+              <button onClick={() => navigator.clipboard.writeText(embedCode)} className="shrink-0 rounded bg-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-600">Copy</button>
+            </div>
+            <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">{embedCode}</pre>
           </div>
         )}
       </div>
