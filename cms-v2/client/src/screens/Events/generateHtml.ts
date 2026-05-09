@@ -76,6 +76,20 @@ function eventCardCss(): string {
 </style>`;
 }
 
+function eventCardCssRules(): string {
+  return [
+    '.vls-ev-card{font-family:Poppins,sans-serif;display:flex;border-radius:12px;border:1px solid #e0e0f0;overflow:hidden;max-width:100%;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.06);}',
+    '.vls-ev-date{background:#534AB7;width:76px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:16px 8px;}',
+    '.vls-ev-body{flex:1;min-width:0;padding:16px 20px;}',
+    '.vls-ev-top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:start;}',
+    '.vls-ev-copy{min-width:0;}',
+    '.vls-ev-cta-wrap{display:flex;justify-content:flex-end;align-items:center;align-self:center;}',
+    '.vls-ev-cta{display:inline-flex;align-items:center;justify-content:center;padding:9px 20px;background:#534AB7;border-radius:6px;text-decoration:none;white-space:nowrap;}',
+    '.vls-ev-desc{margin-top:14px;}',
+    '@media(max-width:640px){.vls-ev-body{display:flex;flex-direction:column;padding:16px 18px;}.vls-ev-top{display:contents;}.vls-ev-copy{order:1;}.vls-ev-desc{order:2;margin-top:14px;}.vls-ev-cta-wrap{order:3;width:100%;margin-top:14px;justify-content:stretch;}.vls-ev-cta{width:100%;text-align:center;}}',
+  ].join('');
+}
+
 export function renderEventCardHtml(event: VlsEvent): string {
   const name = normalize(event.name, 'eventName');
   const hosts = normalize(event.hosts, 'eventMeta');
@@ -154,7 +168,8 @@ export function eventText(value: TextValue | undefined): string {
 function embedRendererJs(): string {
   return `var MONS=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
 var CLOCK=${JSON.stringify(CLOCK)},PIN=${JSON.stringify(PIN)};
-var EVENT_CSS=${JSON.stringify(eventCardCss())};
+var EVENT_CSS=${JSON.stringify(eventCardCssRules())};
+function ensureEventCss(){if(document.getElementById("vls-event-card-css"))return;var s=document.createElement("style");s.id="vls-event-card-css";s.textContent=EVENT_CSS;document.head.appendChild(s);}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function attr(s){return esc(s).replace(/"/g,"&quot;");}
 function txt(v){return v&&typeof v==="object"&&!Array.isArray(v)?String(v.text||""):String(v||"");}
@@ -164,6 +179,6 @@ function mon(s){var d=new Date(s);return isNaN(d.getTime())?"":MONS[d.getMonth()
 function day(s){var d=new Date(s);return isNaN(d.getTime())?"":d.getDate();}
 function tm(s,tz){try{return new Date(s).toLocaleString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:tz||"Europe/London",timeZoneName:"short"});}catch(e){return s||"";}}
 function desc(blocks){var h="";(blocks||[]).forEach(function(b){if(b.type==="heading-para"){if(txt(b.heading))h+='<h3 style="font-family:Poppins,sans-serif;margin:0 0 5px;text-align:left;'+sty(b.heading,15,"#204280","700",0)+'">'+esc(txt(b.heading))+'</h3>';if(txt(b.para))h+='<p style="font-family:Poppins,sans-serif;line-height:1.6;margin:0 0 10px;text-align:left;'+sty(b.para,14,"#262a32","400",0)+'">'+esc(txt(b.para))+'</p>';}else if(b.type==="paragraph"){if(txt(b.para))h+='<p style="font-family:Poppins,sans-serif;line-height:1.6;margin:0 0 10px;text-align:left;'+sty(b.para,14,"#262a32","400",0)+'">'+esc(txt(b.para))+'</p>';}else if(b.type==="list"){h+='<ul style="padding-left:0;list-style:none;margin:0 0 10px;">';(b.items||[]).forEach(function(i){if(txt(i))h+='<li style="font-family:Poppins,sans-serif;padding:2px 0;display:flex;gap:8px;align-items:flex-start;'+sty(i,14,"#262a32","400",0)+'"><span style="color:#534AB7;font-weight:700;flex-shrink:0;">&bull;</span>'+esc(txt(i))+'</li>';});h+='</ul>';}});return h;}
-function card(ev){var name=norm(ev.name,18,"#1a1a1a","700",0),hosts=norm(ev.hosts,13,"#262a32","400",0),venue=norm(ev.venue,13,"#262a32","400",0),cta=norm(ev.ctaText,13,"#ffffff","500",0);var info=[];if(ev.startsAt)info.push('<span style="display:inline-flex;align-items:center;gap:6px;font-family:Poppins,sans-serif;font-size:13px;color:#262a32;">'+CLOCK+tm(ev.startsAt,ev.timezone)+'</span>');if(venue.text)info.push('<span style="display:inline-flex;align-items:center;gap:6px;font-family:Poppins,sans-serif;'+sty(venue,13,"#262a32","400",0)+'">'+PIN+esc(venue.text)+'</span>');var hasdesc=(ev.description||[]).length>0;return EVENT_CSS+'<div class="vls-ev-card"><div class="vls-ev-date">'+(ev.startsAt?'<span style="font-family:Poppins,sans-serif;color:rgba(255,255,255,.8);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;">'+mon(ev.startsAt)+'</span><span style="font-family:Poppins,sans-serif;color:#fff;font-size:38px;font-weight:700;line-height:1;">'+day(ev.startsAt)+'</span>':'')+'</div><div class="vls-ev-body"><div class="vls-ev-top"><div class="vls-ev-copy"><h2 style="font-family:Poppins,sans-serif;margin:0 0 6px;text-align:left;'+sty(name,18,"#1a1a1a","700",0)+'">'+esc(name.text||"Untitled")+'</h2>'+(hosts.text?'<div style="font-family:Poppins,sans-serif;margin-bottom:8px;text-align:left;'+sty(hosts,13,"#262a32","400",0)+'">Host: '+esc(hosts.text)+'</div>':'')+(info.length?'<div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:12px;">'+info.join("")+'</div>':'')+'</div>'+(cta.text?'<div class="vls-ev-cta-wrap"><a class="vls-ev-cta" href="'+attr(ev.ctaUrl||"#")+'" style="'+sty(cta,13,"#ffffff","500",0)+'">'+esc(cta.text)+'</a></div>':'')+'</div>'+(hasdesc?'<div class="vls-ev-desc"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 14px;">'+desc(ev.description)+'</div>':'')+'</div></div>';}
+function card(ev){ensureEventCss();var name=norm(ev.name,18,"#1a1a1a","700",0),hosts=norm(ev.hosts,13,"#262a32","400",0),venue=norm(ev.venue,13,"#262a32","400",0),cta=norm(ev.ctaText,13,"#ffffff","500",0);var info=[];if(ev.startsAt)info.push('<span style="display:inline-flex;align-items:center;gap:6px;font-family:Poppins,sans-serif;font-size:13px;color:#262a32;">'+CLOCK+tm(ev.startsAt,ev.timezone)+'</span>');if(venue.text)info.push('<span style="display:inline-flex;align-items:center;gap:6px;font-family:Poppins,sans-serif;'+sty(venue,13,"#262a32","400",0)+'">'+PIN+esc(venue.text)+'</span>');var hasdesc=(ev.description||[]).length>0;return '<div class="vls-ev-card"><div class="vls-ev-date">'+(ev.startsAt?'<span style="font-family:Poppins,sans-serif;color:rgba(255,255,255,.8);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;">'+mon(ev.startsAt)+'</span><span style="font-family:Poppins,sans-serif;color:#fff;font-size:38px;font-weight:700;line-height:1;">'+day(ev.startsAt)+'</span>':'')+'</div><div class="vls-ev-body"><div class="vls-ev-top"><div class="vls-ev-copy"><h2 style="font-family:Poppins,sans-serif;margin:0 0 6px;text-align:left;'+sty(name,18,"#1a1a1a","700",0)+'">'+esc(name.text||"Untitled")+'</h2>'+(hosts.text?'<div style="font-family:Poppins,sans-serif;margin-bottom:8px;text-align:left;'+sty(hosts,13,"#262a32","400",0)+'">Host: '+esc(hosts.text)+'</div>':'')+(info.length?'<div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:12px;">'+info.join("")+'</div>':'')+'</div>'+(cta.text?'<div class="vls-ev-cta-wrap"><a class="vls-ev-cta" href="'+attr(ev.ctaUrl||"#")+'" style="'+sty(cta,13,"#ffffff","500",0)+'">'+esc(cta.text)+'</a></div>':'')+'</div>'+(hasdesc?'<div class="vls-ev-desc"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 14px;">'+desc(ev.description)+'</div>':'')+'</div></div>';}
 function render(ev){var el=document.getElementById("vls-event-"+EID);if(el)el.innerHTML=card(ev);}`;
 }
