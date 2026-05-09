@@ -9,6 +9,7 @@ import contentRouter from './routes/content';
 import usersRouter from './routes/users';
 import publicRouter from './routes/public';
 import { sendErrorAlert } from './utils/errorAlert';
+import { getContent } from './models/content';
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
@@ -26,6 +27,17 @@ app.use(express.json());
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, data: { status: 'ok', ts: new Date().toISOString() } });
+});
+
+app.get('/api/publish-banner', async (_req, res, next) => {
+  try {
+    const row = await getContent('vls-banners');
+    const data = row?.data && typeof row.data === 'object' ? row.data as { banners?: unknown[] } : {};
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ banners: Array.isArray(data.banners) ? data.banners : [] });
+  } catch (err) {
+    next(err);
+  }
 });
 
 app.get('/api/turnstile-site-key', (_req, res) => {

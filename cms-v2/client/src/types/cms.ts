@@ -167,6 +167,7 @@ export interface Banner {
   id: string;
   name: string;
   visible: boolean;
+  hideOnExpiry: boolean;
   title: TextValue;
   sub: TextValue;
   ctaText: TextValue;
