@@ -5,6 +5,7 @@ export interface JwtPayload {
   email: string;
   username: string;
   role: 'admin' | 'editor' | 'viewer';
+  deployId?: string;
 }
 
 export interface LoginRequest {

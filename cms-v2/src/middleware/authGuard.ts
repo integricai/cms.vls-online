@@ -28,6 +28,11 @@ export function authGuard(req: Request, res: Response, next: NextFunction): void
 
   try {
     const payload = jwt.verify(token, secret) as JwtPayload;
+    const currentDeployId = process.env.VERCEL_DEPLOYMENT_ID ?? process.env.DEPLOY_ID ?? 'local';
+    if (currentDeployId !== 'local' && payload.deployId !== currentDeployId) {
+      res.status(401).json({ ok: false, error: 'Session invalidated by new deployment — please log in again' });
+      return;
+    }
     req.user = payload;
     next();
   } catch {

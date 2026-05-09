@@ -98,8 +98,9 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     }
 
     const secret = getJwtSecret();
+    const deployId = process.env.VERCEL_DEPLOYMENT_ID ?? process.env.DEPLOY_ID ?? 'local';
     const token = jwt.sign(
-      { userId: user.id, email: user.email, username: user.username, role: user.role },
+      { userId: user.id, email: user.email, username: user.username, role: user.role, deployId },
       secret,
       { expiresIn: '8h' },
     );
