@@ -622,3 +622,26 @@ export interface HeroV2State {
 }
 export interface HeroV2Component { id: string; name: string; data: HeroV2State; }
 export interface HeroV2Content { components: HeroV2Component[]; }
+
+// ── Page Description with Menu ─────────────────────────────────────────────────
+export interface PageDescMenuItem { title: string; scrollTarget: string; }
+
+export interface PageDescWithMenuState {
+  menuTitle: string;
+  menuBg: string;
+  menuItemTc: string;
+  menuActiveBg: string;
+  menuActiveTc: string;
+  menuItems: PageDescMenuItem[];
+  icon: string;
+  title: string;
+  titleTc: string;
+  titleSize: number;
+  introBold: TextValue;
+  introP1: TextValue;
+  introP2: TextValue;
+  blocks: CourseDescBlock[];
+}
+
+export interface PageDescWithMenuComponent { id: string; name: string; data: PageDescWithMenuState; }
+export interface PageDescWithMenuContent { components: PageDescWithMenuComponent[]; }

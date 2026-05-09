@@ -63,6 +63,7 @@ const NAV: NavEntry[] = [
   {
     group: 'Page Builder',
     children: [
+      { to: '/page-desc-with-menu', label: 'Page Desc with Menu' },
       {
         sub: 'Full Screen Sections',
         children: [

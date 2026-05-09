@@ -31,6 +31,7 @@ import Articles from './screens/Articles';
 import FullScreenSections from './screens/FullScreenSections';
 import SplitScreenSections from './screens/SplitScreenSections';
 import VerticalCards from './screens/VerticalCards';
+import PageDescWithMenu from './screens/PageDescWithMenu';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   return getToken() ? <>{children}</> : <Navigate to="/login" replace />;
@@ -81,6 +82,7 @@ export default function App() {
           <Route path="/articles"              element={<Articles />} />
           <Route path="/full-screen/:type"     element={<FullScreenSections />} />
           <Route path="/split-screen/:type"    element={<SplitScreenSections />} />
+          <Route path="/page-desc-with-menu"  element={<PageDescWithMenu />} />
           <Route path="/split-screen-sections" element={<Navigate to="/split-screen/left-hero" replace />} />
           <Route path="/settings/users"   element={<RequireAdmin><UserManagement /></RequireAdmin>} />
         </Route>
