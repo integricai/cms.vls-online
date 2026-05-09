@@ -278,10 +278,12 @@ function HeroEditor() {
           <LinesField label="Eyebrow labels" value={state.eyebrowLabels} onChange={eyebrowLabels => patch({ eyebrowLabels })} />
           <LinesField label="Descriptions" value={state.descs} onChange={descs => patch({ descs })} />
           <p className="section-label">Calls to Action</p>
-          <Field label="Primary CTA"><input className="input" value={state.primaryCta} onChange={e => patch({ primaryCta: e.target.value })} /></Field>
-          <Field label="Primary URL"><input className="input" value={state.primaryCtaUrl} onChange={e => patch({ primaryCtaUrl: e.target.value })} /></Field>
-          <Field label="Secondary CTA"><input className="input" value={state.secondaryCta} onChange={e => patch({ secondaryCta: e.target.value })} /></Field>
-          <Field label="Secondary URL"><input className="input" value={state.secondaryCtaUrl} onChange={e => patch({ secondaryCtaUrl: e.target.value })} /></Field>
+          <Field label="Primary CTA title"><input className="input" value={state.primaryCta} onChange={e => patch({ primaryCta: e.target.value })} /></Field>
+          <Field label="Primary CTA URL"><input className="input" value={state.primaryCtaUrl} onChange={e => patch({ primaryCtaUrl: e.target.value })} /></Field>
+          <Field label="Primary CTA scroll target" hint="CSS selector or class — overrides URL, e.g. .section-faq or #my-id"><input className="input" value={state.primaryCtaScroll} placeholder=".section-name or #section-id" onChange={e => patch({ primaryCtaScroll: e.target.value })} /></Field>
+          <Field label="Secondary CTA title"><input className="input" value={state.secondaryCta} onChange={e => patch({ secondaryCta: e.target.value })} /></Field>
+          <Field label="Secondary CTA URL"><input className="input" value={state.secondaryCtaUrl} onChange={e => patch({ secondaryCtaUrl: e.target.value })} /></Field>
+          <Field label="Secondary CTA scroll target" hint="CSS selector or class — overrides URL, e.g. .section-faq or #my-id"><input className="input" value={state.secondaryCtaScroll} placeholder=".section-name or #section-id" onChange={e => patch({ secondaryCtaScroll: e.target.value })} /></Field>
           <p className="section-label">Pathway</p>
           {state.pathwayItems.map((item, i) => (
             <div key={i} className="mb-2 grid grid-cols-[70px_1fr_auto] gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2">

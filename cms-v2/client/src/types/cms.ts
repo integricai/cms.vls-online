@@ -334,10 +334,12 @@ export interface PageLeftHeroState {
   pathwayItems: LeftHeroPathwayItem[];
   primaryCta: string;
   primaryCtaUrl: string;
+  primaryCtaScroll: string;
   primaryBg: string;
   primaryTc: string;
   secondaryCta: string;
   secondaryCtaUrl: string;
+  secondaryCtaScroll: string;
   secondaryBorder: string;
   secondaryTc: string;
   statsVc: string;
