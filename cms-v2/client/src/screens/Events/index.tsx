@@ -81,7 +81,8 @@ function dateLabel(value: string): string {
 }
 
 function publicEventsUrl(): string {
-  return `${window.location.origin}/api/public/events`;
+  const apiBase = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
+  return `${apiBase}/api/public/events`;
 }
 
 export default function Events() {
