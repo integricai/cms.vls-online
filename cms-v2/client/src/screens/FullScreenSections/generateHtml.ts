@@ -332,8 +332,8 @@ export function generatePhv2Html(d: Phv2State): string {
   if (d.trustItems.length) {
     L.push(`    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;">`);
     d.trustItems.forEach((item, i) => {
-      if (i === 0 && item.icon) L.push(`      <span style="color:${e(d.trustDot)};">${e(item.icon)}</span>`);
-      else if (i > 0) L.push(`      <span style="color:${e(d.trustDot)};font-size:12px;">·</span>`);
+      if (i > 0) L.push(`      <span style="color:${e(d.trustDot)};font-size:12px;">·</span>`);
+      if (item.icon) L.push(`      <span>${e(item.icon)}</span>`);
       L.push(`      <span style="font-family:Poppins,sans-serif;font-size:13px;color:${e(d.trustTc)};">${e(item.text)}</span>`);
     });
     L.push(`    </div>`);
