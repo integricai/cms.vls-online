@@ -92,6 +92,8 @@ export default function Events() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [published, setPublished] = useState(false);
   const [calDate, setCalDate] = useState(() => new Date());
   const [mode, setMode] = useState<'preview' | 'html'>('preview');
   const [html, setHtml] = useState('');
@@ -112,11 +114,14 @@ export default function Events() {
   function patch(partial: Partial<VlsEvent>) {
     setDraft(prev => prev ? { ...prev, ...partial } : prev);
     setSaved(false);
+    setPublished(false);
   }
 
   function selectEvent(event: VlsEvent) {
     setSelectedId(event.id);
     setDraft(JSON.parse(JSON.stringify(event)));
+    setSaved(false);
+    setPublished(false);
     if (event.startsAt) {
       const d = new Date(event.startsAt);
       if (!Number.isNaN(d.getTime())) setCalDate(d);
@@ -127,17 +132,21 @@ export default function Events() {
     const event = newEvent(date);
     setSelectedId(null);
     setDraft(event);
+    setSaved(false);
+    setPublished(false);
     setMode('preview');
     setHtml(wrapGeneratedHtml('Events', renderEventCardHtml(event)));
+  }
+
+  function generateListHtml() {
+    setHtml(wrapGeneratedHtml('Events', buildEventsListEmbedCode(publicEventsUrl())));
+    setMode('html');
   }
 
   async function saveEvent() {
     if (!draft) return;
     const name = normalize(draft.name, 'eventName');
-    if (!name.text.trim()) {
-      alert('Please enter an event name.');
-      return;
-    }
+    if (!name.text.trim()) { alert('Please enter an event name.'); return; }
     setSaving(true);
     try {
       const next = selectedId
@@ -150,6 +159,26 @@ export default function Events() {
       setHtml(wrapGeneratedHtml('Events', renderEventCardHtml(draft)));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function publish() {
+    if (!draft) return;
+    const name = normalize(draft.name, 'eventName');
+    if (!name.text.trim()) { alert('Please enter an event name.'); return; }
+    setPublishing(true);
+    try {
+      const next = selectedId
+        ? events.map(event => event.id === selectedId ? draft : event)
+        : [...events, draft];
+      await api.put('/content/vls-events', { events: next });
+      setEvents(next);
+      setSelectedId(draft.id);
+      setSaved(true);
+      setPublished(true);
+      setHtml(wrapGeneratedHtml('Events', renderEventCardHtml(draft)));
+    } finally {
+      setPublishing(false);
     }
   }
 
@@ -248,13 +277,20 @@ export default function Events() {
     <div className="flex h-full">
       <div className="w-[480px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
         <div className="sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4">
-          <div className="flex items-center gap-2">
-            <h1 className="text-base font-bold text-slate-900">Events</h1>
-            <span className="ml-auto text-xs text-slate-400">{events.length} events</span>
-          </div>
+          <h1 className="text-base font-bold text-slate-900">Events</h1>
+          <p className="text-xs text-slate-400 mt-0.5">Embed code updates automatically — paste once, always live</p>
           <div className="mt-3 flex gap-2">
-            <button className="btn-ghost text-xs" onClick={() => { setHtml(wrapGeneratedHtml('Events', buildEventsListEmbedCode(publicEventsUrl()))); setMode('html'); }}>List Embed</button>
-            <button className="btn-primary text-xs" onClick={() => startNew()}>+ New Event</button>
+            <button onClick={saveEvent} disabled={saving || !draft} className="btn-primary flex-1 justify-center">
+              {saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save'}
+            </button>
+            <button onClick={generateListHtml} className="btn-success flex-1 justify-center">⚡ Generate HTML</button>
+            <button onClick={publish} disabled={publishing || !draft} className={`flex-1 justify-center ${published ? 'btn-success' : 'btn-primary'}`}>
+              {publishing ? 'Publishing…' : published ? '✓ Published' : '🚀 Publish'}
+            </button>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-xs text-slate-400">{events.length} event{events.length !== 1 ? 's' : ''}</span>
+            <button className="btn-ghost text-xs ml-auto" onClick={() => startNew()}>+ New Event</button>
           </div>
         </div>
 
@@ -306,11 +342,10 @@ export default function Events() {
           <div className="px-5 py-10 text-center text-sm text-slate-400">Select an event or click a calendar day to create one.</div>
         )}
 
-        {draft && (
+        {draft && selectedId && (
           <div className="sticky bottom-0 flex gap-2 border-t border-slate-100 bg-white px-5 py-3">
-            {selectedId && <button className="btn-danger" onClick={deleteEvent}>Delete</button>}
-            {selectedId && <button className="btn-ghost text-xs" onClick={() => { setHtml(wrapGeneratedHtml('Events', buildEventEmbedCode(draft.id, publicEventsUrl()))); setMode('html'); }}>Get Code</button>}
-            <button className="btn-primary ml-auto" disabled={saving} onClick={saveEvent}>{saving ? 'Saving...' : saved ? 'Saved' : selectedId ? 'Save Changes' : 'Create Event'}</button>
+            <button className="btn-danger" onClick={deleteEvent}>Delete</button>
+            <button className="btn-ghost text-xs ml-auto" onClick={() => { setHtml(wrapGeneratedHtml('Events', buildEventEmbedCode(draft.id, publicEventsUrl()))); setMode('html'); }}>Get Embed Code</button>
           </div>
         )}
       </div>
