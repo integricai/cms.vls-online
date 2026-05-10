@@ -645,3 +645,18 @@ export interface PageDescWithMenuState {
 
 export interface PageDescWithMenuComponent { id: string; name: string; data: PageDescWithMenuState; }
 export interface PageDescWithMenuContent { components: PageDescWithMenuComponent[]; }
+
+// ── Book a Meeting Section (BMS) ──────────────────────────────────────────────
+export interface BmsCheckItem { text: TextValue; }
+export interface BmsState {
+  bg: string;
+  padTop: number; padBot: number; padLeft: number; padRight: number;
+  imgUrl: string; imgAlt: string; imgSplit: number;
+  eyebrow: string; eyebrowColor: string; eyebrowDot: boolean;
+  headingPre: TextValue; headingAccent: string; headingAccentColor: string;
+  desc: TextValue;
+  checkColor: string; checks: BmsCheckItem[];
+  ctaText: TextValue; ctaUrl: string; ctaBg: string; ctaTc: string;
+  footerNote: string; footerNoteTc: string;
+}
+export interface BmsComponent { id: string; name: string; data: BmsState; }

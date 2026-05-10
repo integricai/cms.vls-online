@@ -184,6 +184,11 @@ export const DEFAULTS = {
   rpsCardDesc:  { size: 13, color: '#cbd5e1', weight: '400', letterSpacing: 0 },
   rpsCardCta:   { size: 13, color: '#ffffff', weight: '700', letterSpacing: 0 },
   plhHeading:   { size: 38, color: '#ffffff', weight: '700', letterSpacing: 0 },
+  // Book a Meeting Section (BMS)
+  bmsHeadingPre: { size: 32, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
+  bmsDesc:       { size: 15, color: '#374151', weight: '400', letterSpacing: 0 },
+  bmsCheck:      { size: 15, color: '#374151', weight: '400', letterSpacing: 0 },
+  bmsCta:        { size: 15, color: '#ffffff', weight: '600', letterSpacing: 0 },
 } as const;
 
 export type DefaultKey = keyof typeof DEFAULTS;

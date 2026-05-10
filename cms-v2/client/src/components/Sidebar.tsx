@@ -73,6 +73,7 @@ const NAV: NavEntry[] = [
           { to: '/full-screen/reach',          label: 'Global Reach' },
           { to: '/full-screen/hero-banner',    label: 'Hero Banner' },
           { to: '/full-screen/hero-banner-v2', label: 'Hero Banner v2' },
+          { to: '/full-screen/book-meeting',   label: 'Book a Meeting' },
         ],
       },
       {

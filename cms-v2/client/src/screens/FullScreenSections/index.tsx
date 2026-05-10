@@ -8,12 +8,13 @@ import type {
   ReachState, ReachComponent, ReachStat, ReachRegion,
   PhbState, PhbComponent,
   Phv2State, Phv2Component, Phv2TrustItem, Phv2Card,
+  BmsState, BmsComponent, BmsCheckItem,
   TextValue,
 } from '../../types/cms';
 import { normalize } from '../../utils/text';
 import {
   generateDcsHtml, generateDcs2Html, generateDcs3Html, generateReachHtml,
-  generatePhbHtml, generatePhv2Html,
+  generatePhbHtml, generatePhv2Html, generateBmsHtml,
 } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
@@ -41,6 +42,39 @@ function makePhb(): PhbState {
 }
 function makePhv2(): Phv2State {
   return { bg: '#0d1f3c', padTop: 48, padBot: 48, padLeft: 60, padRight: 60, split: 60, colGap: 48, breadcrumb: '', breadcrumbTc: '#94a3b8', eyebrowTc: '#4a90d9', eyebrowDot: '#4a90d9', eyebrowLabels: [], heading: normalize('', 'phv2Heading'), headingAccent: '', headingAccentColor: '#4a90d9', headingPost: '', desc: normalize('', 'phv2Desc'), trustTc: '#94a3b8', trustDot: '#4a90d9', trustItems: [], cardBg: '#0f2744', cardBorder: '#1e3a5f', cardRadius: 10, cardVc: '#ffffff', cardLc: '#94a3b8', cards: [] };
+}
+
+function makeBms(): BmsState {
+  return {
+    bg: '#ffffff', padTop: 60, padBot: 60, padLeft: 60, padRight: 60,
+    imgUrl: '', imgAlt: '', imgSplit: 45,
+    eyebrow: '', eyebrowColor: '#1a56a3', eyebrowDot: true,
+    headingPre: normalize('', 'bmsHeadingPre'), headingAccent: '', headingAccentColor: '#1a56a3',
+    desc: normalize('', 'bmsDesc'),
+    checkColor: '#1a56a3', checks: [],
+    ctaText: normalize('', 'bmsCta'), ctaUrl: '', ctaBg: '#1a56a3', ctaTc: '#ffffff',
+    footerNote: '', footerNoteTc: '#6b7280',
+  };
+}
+
+function normBms(raw: any): BmsState {
+  return {
+    bg: raw.bg || '#ffffff',
+    padTop: normalizeNum(raw.padTop, 60), padBot: normalizeNum(raw.padBot, 60),
+    padLeft: normalizeNum(raw.padLeft, 60), padRight: normalizeNum(raw.padRight, 60),
+    imgUrl: raw.imgUrl || '', imgAlt: raw.imgAlt || '',
+    imgSplit: normalizeNum(raw.imgSplit, 45),
+    eyebrow: raw.eyebrow || '', eyebrowColor: raw.eyebrowColor || '#1a56a3',
+    eyebrowDot: raw.eyebrowDot !== false,
+    headingPre: raw.headingPre || normalize('', 'bmsHeadingPre'),
+    headingAccent: raw.headingAccent || '', headingAccentColor: raw.headingAccentColor || '#1a56a3',
+    desc: raw.desc || normalize('', 'bmsDesc'),
+    checkColor: raw.checkColor || '#1a56a3',
+    checks: (raw.checks || []),
+    ctaText: raw.ctaText || normalize('', 'bmsCta'),
+    ctaUrl: raw.ctaUrl || '', ctaBg: raw.ctaBg || '#1a56a3', ctaTc: raw.ctaTc || '#ffffff',
+    footerNote: raw.footerNote || '', footerNoteTc: raw.footerNoteTc || '#6b7280',
+  };
 }
 
 function normalizeNum(v: unknown, fb: number) { const n = Number(v); return isNaN(n) ? fb : n; }
@@ -892,6 +926,118 @@ function Phv2Tab({ onHtml }: { onHtml: (html: string) => void }) {
   );
 }
 
+function BmsTab({ onHtml }: { onHtml: (html: string) => void }) {
+  const [comps, setComps]       = useState<BmsComponent[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [name, setName]         = useState('');
+  const [state, setState]       = useState<BmsState>(makeBms());
+  const [saving, setSaving]     = useState(false);
+  const [saved, setSaved]       = useState(false);
+  const [loaded, setLoaded]     = useState(false);
+
+  useEffect(() => {
+    api.get<any>('/content/vls-bms-components').then(row => {
+      const raw = row?.data as any;
+      const cs: BmsComponent[] = (raw?.components || []).map((c: any) => ({ ...c, data: normBms(c.data || {}) }));
+      setComps(cs);
+      if (cs.length) { setActiveId(cs[0].id); setName(cs[0].name); setState(cs[0].data); }
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, []);
+
+  const upd = useCallback((p: Partial<BmsState>) => { setState(prev => ({ ...prev, ...p })); setSaved(false); }, []);
+
+  function load(id: string) {
+    if (!id) { setActiveId(null); setName(''); setState(makeBms()); setSaved(false); return; }
+    const c = comps.find(c => c.id === id);
+    if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
+  }
+
+  async function save() {
+    if (!name.trim()) { alert('Enter a component name.'); return; }
+    setSaving(true);
+    const id = activeId || `bms-${Date.now().toString(36)}`;
+    const updated = activeId ? comps.map(c => c.id === id ? { id, name, data: state } : c) : [...comps, { id, name, data: state }];
+    await api.put('/content/vls-bms-components', { components: updated });
+    setComps(updated); setActiveId(id); setSaved(true); setSaving(false);
+  }
+
+  async function del() {
+    if (!activeId || !confirm('Delete this component?')) return;
+    const updated = comps.filter(c => c.id !== activeId);
+    await api.put('/content/vls-bms-components', { components: updated });
+    setComps(updated); setActiveId(null); setName(''); setState(makeBms());
+  }
+
+  function updCheck(i: number, p: Partial<BmsCheckItem>) { const a = [...state.checks]; a[i] = { ...a[i], ...p }; upd({ checks: a }); }
+
+  if (!loaded) return <div className="p-5 text-xs text-slate-400">Loading…</div>;
+
+  return (
+    <div className="flex flex-col">
+      <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
+        onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
+        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Book a Meeting Section', generateBmsHtml(state)))} />
+      <div className="px-5 py-4 space-y-1 overflow-y-auto">
+        <p className="section-label">Layout</p>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <ColorInput label="Background" value={state.bg} onChange={v => upd({ bg: v })} />
+          <Field label="Image split %"><input type="number" className="input" min={20} max={80} value={state.imgSplit} onChange={e => upd({ imgSplit: Number(e.target.value) })} /></Field>
+        </div>
+        <PaddingRow value={state} onChange={upd} />
+
+        <p className="section-label mt-3">Left Column — Image</p>
+        <Field label="Image URL"><input className="input" value={state.imgUrl} placeholder="https://…" onChange={e => upd({ imgUrl: e.target.value })} /></Field>
+        <Field label="Alt text"><input className="input" value={state.imgAlt} onChange={e => upd({ imgAlt: e.target.value })} /></Field>
+
+        <p className="section-label mt-3">Right Column — Content</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Eyebrow text"><input className="input" value={state.eyebrow} onChange={e => upd({ eyebrow: e.target.value })} /></Field>
+          <ColorInput label="Eyebrow colour" value={state.eyebrowColor} onChange={v => upd({ eyebrowColor: v })} />
+        </div>
+        <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer mb-2">
+          <input type="checkbox" checked={state.eyebrowDot} onChange={e => upd({ eyebrowDot: e.target.checked })} />
+          Show dot before eyebrow
+        </label>
+
+        <p className="text-xs font-semibold text-slate-500 mt-2 mb-1">Heading</p>
+        <RichTextField label="Heading text" value={tv(state.headingPre, 'bmsHeadingPre')} defaultKey="bmsHeadingPre" onChange={v => upd({ headingPre: v })} />
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Accent phrase"><input className="input" value={state.headingAccent} onChange={e => upd({ headingAccent: e.target.value })} /></Field>
+          <ColorInput label="Accent colour" value={state.headingAccentColor} onChange={v => upd({ headingAccentColor: v })} />
+        </div>
+
+        <RichTextField label="Description" value={tv(state.desc, 'bmsDesc')} defaultKey="bmsDesc" multiline onChange={v => upd({ desc: v })} />
+
+        <p className="text-xs font-semibold text-slate-500 mt-3 mb-1">Checklist</p>
+        <ColorInput label="Check icon colour" value={state.checkColor} onChange={v => upd({ checkColor: v })} />
+        {state.checks.map((ch, i) => (
+          <div key={i} className="flex gap-2 items-start mb-1">
+            <div className="flex-1">
+              <RichTextField label={`Item ${i + 1}`} value={tv(ch.text, 'bmsCheck')} defaultKey="bmsCheck"
+                onChange={v => updCheck(i, { text: v })} />
+            </div>
+            <button onClick={() => upd({ checks: state.checks.filter((_, idx) => idx !== i) })} className="btn-danger mt-6 text-xs">✕</button>
+          </div>
+        ))}
+        <button onClick={() => upd({ checks: [...state.checks, { text: normalize('', 'bmsCheck') }] })} className="btn-ghost text-xs w-full">+ Add item</button>
+
+        <p className="text-xs font-semibold text-slate-500 mt-3 mb-1">CTA Button</p>
+        <RichTextField label="Button text" value={tv(state.ctaText, 'bmsCta')} defaultKey="bmsCta" onChange={v => upd({ ctaText: v })} />
+        <Field label="Button URL"><input className="input" value={state.ctaUrl} placeholder="https://…" onChange={e => upd({ ctaUrl: e.target.value })} /></Field>
+        <div className="grid grid-cols-2 gap-2">
+          <ColorInput label="Button bg" value={state.ctaBg} onChange={v => upd({ ctaBg: v })} />
+          <ColorInput label="Button text" value={state.ctaTc} onChange={v => upd({ ctaTc: v })} />
+        </div>
+
+        <p className="text-xs font-semibold text-slate-500 mt-3 mb-1">Footer Note</p>
+        <Field label="Note text"><input className="input" value={state.footerNote} placeholder="🔒 Free · Online · …" onChange={e => upd({ footerNote: e.target.value })} /></Field>
+        <ColorInput label="Note colour" value={state.footerNoteTc} onChange={v => upd({ footerNoteTc: v })} />
+      </div>
+    </div>
+  );
+}
+
 // ── Section titles ─────────────────────────────────────────────────────────────
 
 const SECTION_TITLES: Record<string, { title: string; desc: string }> = {
@@ -901,6 +1047,7 @@ const SECTION_TITLES: Record<string, { title: string; desc: string }> = {
   'reach':          { title: 'Global Reach',     desc: 'Text + stats + world map + regions' },
   'hero-banner':    { title: 'Hero Banner',      desc: 'Eyebrow + heading + bullets + badge card' },
   'hero-banner-v2': { title: 'Hero Banner v2',   desc: 'Two-column: text left + info cards right' },
+  'book-meeting':   { title: 'Book a Meeting',   desc: 'Image left + eyebrow/heading/checklist/CTA right' },
 };
 
 // ── Main screen ────────────────────────────────────────────────────────────────
@@ -929,6 +1076,7 @@ export default function FullScreenSections() {
           {type === 'reach'          && <ReachTab onHtml={handleHtml} />}
           {type === 'hero-banner'    && <PhbTab   onHtml={handleHtml} />}
           {type === 'hero-banner-v2' && <Phv2Tab  onHtml={handleHtml} />}
+          {type === 'book-meeting'   && <BmsTab   onHtml={handleHtml} />}
           {!type && <div className="p-6 text-sm text-slate-400">Select a section type from the sidebar.</div>}
         </div>
       </div>

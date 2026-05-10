@@ -1,4 +1,4 @@
-import type { DcsState, Dcs2State, Dcs3State, ReachState, PhbState, Phv2State } from '../../types/cms';
+import type { DcsState, Dcs2State, Dcs3State, ReachState, PhbState, Phv2State, BmsState } from '../../types/cms';
 import { normalize, textStyle, escapeHtml } from '../../utils/text';
 
 const e = escapeHtml;
@@ -363,6 +363,87 @@ export function generatePhv2Html(d: Phv2State): string {
     L.push(`  </div>`);
   }
 
+  L.push(`</div>`);
+  return L.join('\n');
+}
+
+// ── Book a Meeting Section (BMS) ───────────────────────────────────────────────
+
+export function generateBmsHtml(d: BmsState): string {
+  const id = uid();
+  const headingPre = n(d.headingPre, 'bmsHeadingPre');
+  const desc       = n(d.desc,       'bmsDesc');
+  const ctaText    = n(d.ctaText,    'bmsCta');
+  const L: string[] = [];
+
+  L.push('<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">');
+  L.push('<style>');
+  L.push(`@media(max-width:768px){.${id}-wrap{flex-direction:column!important;}.${id}-left{width:100%!important;min-height:280px;}.${id}-right{padding:40px 24px!important;}}`);
+  L.push('</style>');
+  L.push(`<div class="${id}-wrap" style="display:flex;align-items:stretch;background:${e(d.bg)};box-sizing:border-box;">`);
+
+  // Left: image
+  L.push(`  <div class="${id}-left" style="width:${d.imgSplit}%;overflow:hidden;flex-shrink:0;">`);
+  if (d.imgUrl) {
+    L.push(`    <img src="${e(d.imgUrl)}" alt="${e(d.imgAlt)}" style="width:100%;height:100%;object-fit:cover;display:block;">`);
+  } else {
+    L.push(`    <div style="width:100%;height:100%;min-height:400px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-family:Poppins,sans-serif;font-size:14px;color:#9ca3af;">Image</div>`);
+  }
+  L.push(`  </div>`);
+
+  // Right: content
+  L.push(`  <div class="${id}-right" style="flex:1;padding:${d.padTop}px ${d.padRight}px ${d.padBot}px ${d.padLeft}px;box-sizing:border-box;">`);
+
+  // Eyebrow
+  if (d.eyebrow) {
+    L.push(`    <div style="font-family:Poppins,sans-serif;font-size:13px;font-weight:600;color:${e(d.eyebrowColor)};letter-spacing:0.1em;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:6px;">`);
+    if (d.eyebrowDot) L.push(`      <span>●</span>`);
+    L.push(`      ${e(d.eyebrow)}`);
+    L.push(`    </div>`);
+  }
+
+  // Heading
+  L.push(`    <h2 style="font-family:Poppins,sans-serif;${textStyle(headingPre)};margin:0 0 16px;line-height:1.25;">`);
+  if (headingPre.text) L.push(`      ${e(headingPre.text)}`);
+  if (d.headingAccent) L.push(`      <span style="color:${e(d.headingAccentColor)};">${e(d.headingAccent)}</span>`);
+  L.push(`    </h2>`);
+
+  // Description
+  if (desc.text) {
+    L.push(`    <p style="font-family:Poppins,sans-serif;${textStyle(desc)};margin:0 0 24px;line-height:1.7;">${e(desc.text)}</p>`);
+  }
+
+  // Checklist
+  if (d.checks.length) {
+    L.push(`    <ul style="list-style:none;padding:0;margin:0 0 28px;">`);
+    for (const ch of d.checks) {
+      const cht = n(ch.text, 'bmsCheck');
+      L.push(`      <li style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">`);
+      L.push(`        <span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:${e(d.checkColor)}20;display:flex;align-items:center;justify-content:center;">`);
+      L.push(`          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="${e(d.checkColor)}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
+      L.push(`        </span>`);
+      if (cht.text) L.push(`        <span style="font-family:Poppins,sans-serif;${textStyle(cht)};line-height:1.5;">${e(cht.text)}</span>`);
+      L.push(`      </li>`);
+    }
+    L.push(`    </ul>`);
+  }
+
+  // CTA button
+  if (ctaText.text && d.ctaUrl) {
+    L.push(`    <div style="margin-bottom:16px;">`);
+    L.push(`      <a href="${e(d.ctaUrl)}" style="display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:8px;background:${e(d.ctaBg)};color:${e(d.ctaTc)};font-family:Poppins,sans-serif;${textStyle(ctaText)};text-decoration:none;">`);
+    L.push(`        ${e(ctaText.text)}`);
+    L.push(`        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
+    L.push(`      </a>`);
+    L.push(`    </div>`);
+  }
+
+  // Footer note
+  if (d.footerNote) {
+    L.push(`    <p style="font-family:Poppins,sans-serif;font-size:13px;color:${e(d.footerNoteTc)};margin:0;line-height:1.5;">${e(d.footerNote)}</p>`);
+  }
+
+  L.push(`  </div>`);
   L.push(`</div>`);
   return L.join('\n');
 }
