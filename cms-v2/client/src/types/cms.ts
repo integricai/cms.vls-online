@@ -464,7 +464,7 @@ export interface Fc2Content { components: Fc2Component[]; }
 // ── Feature Card v3 ───────────────────────────────────────────────────────────
 export interface Fc3Tag { code: string; name: string; }
 export interface Fc3Card { headerBg: string; number: string; title: string; subtitle: string; tags: Fc3Tag[]; }
-export interface Fc3State { bg: string; padTop: number; padBottom: number; padLeft: number; padRight: number; cols: number; gap: number; eyebrow: string; eyebrowColor: string; headingText: string; headingColor: string; descText: string; descColor: string; cards: Fc3Card[]; }
+export interface Fc3State { bg: string; padTop: number; padBottom: number; padLeft: number; padRight: number; cols: number; gap: number; eyebrow: string; eyebrowColor: string; headingText: string; headingColor: string; descText: string; descColor: string; cardTitleStyle: TextValue; cardSubStyle: TextValue; cardItemStyle: TextValue; cards: Fc3Card[]; }
 export interface Fc3Component { id: string; name: string; data: Fc3State; }
 export interface Fc3Content { components: Fc3Component[]; }
 

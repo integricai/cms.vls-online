@@ -3,12 +3,25 @@ import { api } from '../../api/client';
 import type { Fc3State, Fc3Component, Fc3Content, Fc3Card, Fc3Tag } from '../../types/cms';
 import { generateVerticalCardsHtml } from './generateHtml';
 import Field from '../../components/Field';
+import RichTextField from '../../components/RichTextField';
+import { normalize } from '../../utils/text';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 function makeTag(): Fc3Tag { return { code: '', name: '' }; }
 function makeCard(): Fc3Card { return { headerBg: '#204280', number: '01', title: '', subtitle: '', tags: [] }; }
 function makeDefault(): Fc3State {
-  return { bg: '#f8faff', padTop: 60, padBottom: 60, padLeft: 80, padRight: 80, cols: 3, gap: 24, eyebrow: '', eyebrowColor: '#4a90d9', headingText: '', headingColor: '#1a1a1a', descText: '', descColor: '#4a5568', cards: [] };
+  return {
+    bg: '#f8faff', padTop: 60, padBottom: 60, padLeft: 80, padRight: 80, cols: 3, gap: 24,
+    eyebrow: '', eyebrowColor: '#4a90d9', headingText: '', headingColor: '#1a1a1a',
+    descText: '', descColor: '#4a5568',
+    cardTitleStyle: normalize('', 'vc3CardTitle'),
+    cardSubStyle:   normalize('', 'vc3CardSub'),
+    cardItemStyle:  normalize('', 'vc3CardItem'),
+    cards: [],
+  };
+}
+function tv(v: Fc3State['cardTitleStyle'], k: 'vc3CardTitle' | 'vc3CardSub' | 'vc3CardItem') {
+  return normalize(v as any, k);
 }
 
 function ColorRow({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
@@ -46,7 +59,7 @@ export default function VerticalCardsScreen() {
           comps = (raw.sections as any[]).map((s: any, i: number) => ({
             id: s.id || `vc-${i}`,
             name: s.name || `Section ${i + 1}`,
-            data: { bg: s.bg ?? '#f8faff', padTop: s.padTop ?? 60, padBottom: s.padBottom ?? 60, padLeft: s.padLeft ?? 80, padRight: s.padRight ?? 80, cols: s.cols ?? 3, gap: s.gap ?? 24, eyebrow: s.eyebrow ?? '', eyebrowColor: s.eyebrowColor ?? '#4a90d9', headingText: s.headingText ?? '', headingColor: s.headingColor ?? '#1a1a1a', descText: s.descText ?? '', descColor: s.descColor ?? '#4a5568', cards: s.cards || [] },
+            data: { bg: s.bg ?? '#f8faff', padTop: s.padTop ?? 60, padBottom: s.padBottom ?? 60, padLeft: s.padLeft ?? 80, padRight: s.padRight ?? 80, cols: s.cols ?? 3, gap: s.gap ?? 24, eyebrow: s.eyebrow ?? '', eyebrowColor: s.eyebrowColor ?? '#4a90d9', headingText: s.headingText ?? '', headingColor: s.headingColor ?? '#1a1a1a', descText: s.descText ?? '', descColor: s.descColor ?? '#4a5568', cardTitleStyle: s.cardTitleStyle ?? normalize('', 'vc3CardTitle'), cardSubStyle: s.cardSubStyle ?? normalize('', 'vc3CardSub'), cardItemStyle: s.cardItemStyle ?? normalize('', 'vc3CardItem'), cards: s.cards || [] },
           }));
         }
         setComponents(comps);
@@ -88,6 +101,15 @@ export default function VerticalCardsScreen() {
     setComponents(comps); newComponent();
   }
 
+  async function duplicateComponent() {
+    if (!activeId) return;
+    const newId   = `vc-${Date.now().toString(36)}`;
+    const newName = `${name} (copy)`;
+    const comps   = [...components, { id: newId, name: newName, data: state }];
+    await api.put('/content/vls-vertical-cards', { components: comps });
+    setComponents(comps); setActiveId(newId); setName(newName); setSaved(true);
+  }
+
   function updateCard(i: number, patch: Partial<Fc3Card>) { const a = [...state.cards]; a[i] = { ...a[i], ...patch }; upd({ cards: a }); }
   function addCard()             { upd({ cards: [...state.cards, makeCard()] }); }
   function removeCard(i: number) { upd({ cards: state.cards.filter((_, idx) => idx !== i) }); }
@@ -124,6 +146,7 @@ export default function VerticalCardsScreen() {
                 {components.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               <button onClick={newComponent} className="btn-ghost text-xs px-3">+ New</button>
+              {activeId && <button onClick={duplicateComponent} className="btn-ghost text-xs px-3">⧉ Dupe</button>}
               {activeId && <button onClick={deleteComponent} className="btn-danger text-xs px-3">Delete</button>}
             </div>
             <Field label="Component name">
@@ -179,6 +202,15 @@ export default function VerticalCardsScreen() {
               onChange={e => upd({ descText: e.target.value })} />
           </Field>
           <ColorRow label="Description colour" value={state.descColor} onChange={v => upd({ descColor: v })} />
+
+          {/* Card text styles */}
+          <p className="section-label">Card Text Styles</p>
+          <RichTextField label="Heading" value={tv(state.cardTitleStyle, 'vc3CardTitle')} defaultKey="vc3CardTitle"
+            onChange={v => upd({ cardTitleStyle: v })} />
+          <RichTextField label="Sub heading" value={tv(state.cardSubStyle, 'vc3CardSub')} defaultKey="vc3CardSub"
+            onChange={v => upd({ cardSubStyle: v })} />
+          <RichTextField label="Item text" value={tv(state.cardItemStyle, 'vc3CardItem')} defaultKey="vc3CardItem"
+            onChange={v => upd({ cardItemStyle: v })} />
 
           {/* Cards */}
           <p className="section-label">Cards</p>
