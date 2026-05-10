@@ -47,7 +47,7 @@ function makePhv2(): Phv2State {
 function makeBms(): BmsState {
   return {
     bg: '#ffffff', padTop: 60, padBot: 60, padLeft: 60, padRight: 60,
-    imgUrl: '', imgAlt: '', imgSplit: 45,
+    imgUrl: '', imgAlt: '', imgSplit: 45, imgFit: 'cover', imgPosition: 'center',
     eyebrow: '', eyebrowColor: '#1a56a3', eyebrowDot: true,
     headingPre: normalize('', 'bmsHeadingPre'), headingAccent: '', headingAccentColor: '#1a56a3',
     desc: normalize('', 'bmsDesc'),
@@ -64,6 +64,7 @@ function normBms(raw: any): BmsState {
     padLeft: normalizeNum(raw.padLeft, 60), padRight: normalizeNum(raw.padRight, 60),
     imgUrl: raw.imgUrl || '', imgAlt: raw.imgAlt || '',
     imgSplit: normalizeNum(raw.imgSplit, 45),
+    imgFit: raw.imgFit || 'cover', imgPosition: raw.imgPosition || 'center',
     eyebrow: raw.eyebrow || '', eyebrowColor: raw.eyebrowColor || '#1a56a3',
     eyebrowDot: raw.eyebrowDot !== false,
     headingPre: raw.headingPre || normalize('', 'bmsHeadingPre'),
@@ -989,6 +990,29 @@ function BmsTab({ onHtml }: { onHtml: (html: string) => void }) {
         <p className="section-label mt-3">Left Column — Image</p>
         <Field label="Image URL"><input className="input" value={state.imgUrl} placeholder="https://…" onChange={e => upd({ imgUrl: e.target.value })} /></Field>
         <Field label="Alt text"><input className="input" value={state.imgAlt} onChange={e => upd({ imgAlt: e.target.value })} /></Field>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Image fit">
+            <select className="input" value={state.imgFit} onChange={e => upd({ imgFit: e.target.value })}>
+              <option value="cover">Cover (crop to fill)</option>
+              <option value="contain">Contain (show full)</option>
+              <option value="fill">Fill (stretch)</option>
+              <option value="scale-down">Scale down</option>
+            </select>
+          </Field>
+          <Field label="Image position">
+            <select className="input" value={state.imgPosition} onChange={e => upd({ imgPosition: e.target.value })}>
+              <option value="center">Center</option>
+              <option value="top center">Top</option>
+              <option value="bottom center">Bottom</option>
+              <option value="left center">Left</option>
+              <option value="right center">Right</option>
+              <option value="top left">Top left</option>
+              <option value="top right">Top right</option>
+              <option value="bottom left">Bottom left</option>
+              <option value="bottom right">Bottom right</option>
+            </select>
+          </Field>
+        </div>
 
         <p className="section-label mt-3">Right Column — Content</p>
         <div className="grid grid-cols-2 gap-2">

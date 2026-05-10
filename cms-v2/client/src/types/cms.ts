@@ -651,7 +651,7 @@ export interface BmsCheckItem { text: TextValue; }
 export interface BmsState {
   bg: string;
   padTop: number; padBot: number; padLeft: number; padRight: number;
-  imgUrl: string; imgAlt: string; imgSplit: number;
+  imgUrl: string; imgAlt: string; imgSplit: number; imgFit: string; imgPosition: string;
   eyebrow: string; eyebrowColor: string; eyebrowDot: boolean;
   headingPre: TextValue; headingAccent: string; headingAccentColor: string;
   desc: TextValue;

@@ -385,7 +385,9 @@ export function generateBmsHtml(d: BmsState): string {
   // Left: image
   L.push(`  <div class="${id}-left" style="width:${d.imgSplit}%;overflow:hidden;flex-shrink:0;">`);
   if (d.imgUrl) {
-    L.push(`    <img src="${e(d.imgUrl)}" alt="${e(d.imgAlt)}" style="width:100%;height:100%;object-fit:cover;display:block;">`);
+    const fit = d.imgFit || 'cover';
+    const pos = d.imgPosition || 'center';
+    L.push(`    <img src="${e(d.imgUrl)}" alt="${e(d.imgAlt)}" style="width:100%;height:100%;object-fit:${fit};object-position:${e(pos)};display:block;">`);
   } else {
     L.push(`    <div style="width:100%;height:100%;min-height:400px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-family:Poppins,sans-serif;font-size:14px;color:#9ca3af;">Image</div>`);
   }
