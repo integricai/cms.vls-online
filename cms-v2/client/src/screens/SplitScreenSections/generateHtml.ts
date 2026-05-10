@@ -141,7 +141,7 @@ export function generateLeftHeroHtml(data: PageLeftHeroState) {
   const heading = tv(data.heading, 'plhHeading');
   const statsDiv = safeHex(data.statsDiv, '#1e3a5f');
   let out = `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>#${uid}{font-family:'Poppins',sans-serif;box-sizing:border-box;}#${uid} *{box-sizing:border-box;}@media(max-width:767px){#${uid}{padding:32px 20px!important;}#${uid} .plh-heading{font-size:clamp(24px,7vw,40px)!important;}#${uid} .plh-stats{flex-wrap:wrap;}#${uid} .plh-stat{flex:0 0 calc(50% - 1px)!important;border-right:none!important;padding:12px 16px!important;border-bottom:1px solid ${statsDiv};}}</style>
+<style>#${uid}{font-family:'Poppins',sans-serif;box-sizing:border-box;overflow-wrap:break-word;word-break:break-word;}#${uid} *{box-sizing:border-box;}#${uid} .plh-cta-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:36px;}@media(max-width:767px){#${uid}{padding:32px 20px!important;}#${uid} .plh-heading{font-size:clamp(22px,6.5vw,38px)!important;line-height:1.2!important;}#${uid} .plh-stats{flex-wrap:wrap!important;}#${uid} .plh-stat{flex:0 0 calc(50% - 1px)!important;border-right:none!important;padding:12px 16px!important;border-bottom:1px solid ${statsDiv};}#${uid} .plh-cta-row{flex-direction:column;}#${uid} .plh-cta-row a{width:100%!important;text-align:center!important;display:block!important;box-sizing:border-box!important;}}</style>
 <div id="${uid}" style="background:${safeHex(data.bg, '#0d1f3c')};padding:${clampInt(data.padTop, 48, 0, 200)}px ${clampInt(data.padRight, 40, 0, 200)}px ${clampInt(data.padBot, 56, 0, 200)}px ${clampInt(data.padLeft, 60, 0, 200)}px;">
 `;
   if (data.breadcrumb) out += `  <p style="font-family:'Poppins',sans-serif;font-size:12px;color:${safeHex(data.breadcrumbTc, '#94a3b8')};margin:0 0 20px;font-weight:400;">${escapeHtml(data.breadcrumb)}</p>\n`;
@@ -172,7 +172,7 @@ export function generateLeftHeroHtml(data: PageLeftHeroState) {
   const hasScroll = !!(data.primaryCtaScroll || data.secondaryCtaScroll);
   if (data.primaryCta || data.secondaryCta) {
     if (hasScroll) out += buildScrollScript(uid) + '\n';
-    out += '  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:36px;">\n';
+    out += '  <div class="plh-cta-row">\n';
     if (data.primaryCta) {
       const href = data.primaryCtaScroll ? scrollHref(data.primaryCtaScroll) : attr(data.primaryCtaUrl || '#');
       const extras = data.primaryCtaScroll ? scrollAttrs(uid, data.primaryCtaScroll) : '';
