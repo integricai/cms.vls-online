@@ -9,12 +9,13 @@ import type {
   PhbState, PhbComponent,
   Phv2State, Phv2Component, Phv2TrustItem, Phv2Card,
   BmsState, BmsComponent, BmsCheckItem,
+  CbState, CbComponent,
   TextValue,
 } from '../../types/cms';
 import { normalize } from '../../utils/text';
 import {
   generateDcsHtml, generateDcs2Html, generateDcs3Html, generateReachHtml,
-  generatePhbHtml, generatePhv2Html, generateBmsHtml,
+  generatePhbHtml, generatePhv2Html, generateBmsHtml, generateCbHtml,
 } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
@@ -72,6 +73,37 @@ function normBms(raw: any): BmsState {
     desc: raw.desc || normalize('', 'bmsDesc'),
     checkColor: raw.checkColor || '#1a56a3',
     checks: (raw.checks || []),
+    ctaText: raw.ctaText || normalize('', 'bmsCta'),
+    ctaUrl: raw.ctaUrl || '', ctaBg: raw.ctaBg || '#1a56a3', ctaTc: raw.ctaTc || '#ffffff',
+    footerNote: raw.footerNote || '', footerNoteTc: raw.footerNoteTc || '#6b7280',
+  };
+}
+
+function makeCb(): CbState {
+  return {
+    bg: '#ffffff', padTop: 60, padBot: 60, padLeft: 60, padRight: 60, maxWidth: 800,
+    eyebrow: '', eyebrowColor: '#1a56a3', eyebrowDot: true,
+    headingPre: normalize('', 'bmsHeadingPre'), headingAccent: '', headingAccentColor: '#1a56a3',
+    desc: normalize('', 'bmsDesc'),
+    checkColor: '#1a56a3', checks: [],
+    ctaText: normalize('', 'bmsCta'), ctaUrl: '', ctaBg: '#1a56a3', ctaTc: '#ffffff',
+    footerNote: '', footerNoteTc: '#6b7280',
+  };
+}
+
+function normCb(raw: any): CbState {
+  return {
+    bg: raw.bg || '#ffffff',
+    padTop: normalizeNum(raw.padTop, 60), padBot: normalizeNum(raw.padBot, 60),
+    padLeft: normalizeNum(raw.padLeft, 60), padRight: normalizeNum(raw.padRight, 60),
+    maxWidth: normalizeNum(raw.maxWidth, 800),
+    eyebrow: raw.eyebrow || '', eyebrowColor: raw.eyebrowColor || '#1a56a3',
+    eyebrowDot: raw.eyebrowDot !== false,
+    headingPre: raw.headingPre || normalize('', 'bmsHeadingPre'),
+    headingAccent: raw.headingAccent || '', headingAccentColor: raw.headingAccentColor || '#1a56a3',
+    desc: raw.desc || normalize('', 'bmsDesc'),
+    checkColor: raw.checkColor || '#1a56a3',
+    checks: raw.checks || [],
     ctaText: raw.ctaText || normalize('', 'bmsCta'),
     ctaUrl: raw.ctaUrl || '', ctaBg: raw.ctaBg || '#1a56a3', ctaTc: raw.ctaTc || '#ffffff',
     footerNote: raw.footerNote || '', footerNoteTc: raw.footerNoteTc || '#6b7280',
@@ -1062,6 +1094,114 @@ function BmsTab({ onHtml }: { onHtml: (html: string) => void }) {
   );
 }
 
+function CbTab({ onHtml }: { onHtml: (html: string) => void }) {
+  const [comps, setComps]       = useState<CbComponent[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [name, setName]         = useState('');
+  const [state, setState]       = useState<CbState>(makeCb());
+  const [saving, setSaving]     = useState(false);
+  const [saved, setSaved]       = useState(false);
+  const [loaded, setLoaded]     = useState(false);
+
+  useEffect(() => {
+    api.get<any>('/content/vls-cb-components').then(row => {
+      const raw = row?.data as any;
+      const cs: CbComponent[] = (raw?.components || []).map((c: any) => ({ ...c, data: normCb(c.data || {}) }));
+      setComps(cs);
+      if (cs.length) { setActiveId(cs[0].id); setName(cs[0].name); setState(cs[0].data); }
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, []);
+
+  const upd = useCallback((p: Partial<CbState>) => { setState(prev => ({ ...prev, ...p })); setSaved(false); }, []);
+
+  function load(id: string) {
+    if (!id) { setActiveId(null); setName(''); setState(makeCb()); setSaved(false); return; }
+    const c = comps.find(c => c.id === id);
+    if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
+  }
+
+  async function save() {
+    if (!name.trim()) { alert('Enter a component name.'); return; }
+    setSaving(true);
+    const id = activeId || `cb-${Date.now().toString(36)}`;
+    const updated = activeId ? comps.map(c => c.id === id ? { id, name, data: state } : c) : [...comps, { id, name, data: state }];
+    await api.put('/content/vls-cb-components', { components: updated });
+    setComps(updated); setActiveId(id); setSaved(true); setSaving(false);
+  }
+
+  async function del() {
+    if (!activeId || !confirm('Delete this component?')) return;
+    const updated = comps.filter(c => c.id !== activeId);
+    await api.put('/content/vls-cb-components', { components: updated });
+    setComps(updated); setActiveId(null); setName(''); setState(makeCb());
+  }
+
+  function updCheck(i: number, p: Partial<BmsCheckItem>) { const a = [...state.checks]; a[i] = { ...a[i], ...p }; upd({ checks: a }); }
+
+  if (!loaded) return <div className="p-5 text-xs text-slate-400">Loading…</div>;
+
+  return (
+    <div className="flex flex-col">
+      <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
+        onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
+        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Content CTA Block', generateCbHtml(state)))} />
+      <div className="px-5 py-4 space-y-1 overflow-y-auto">
+        <p className="section-label">Layout</p>
+        <PaddingRow value={state} onChange={upd} />
+        <div className="grid grid-cols-2 gap-2">
+          <ColorInput label="Background" value={state.bg} onChange={v => upd({ bg: v })} />
+          <Field label="Max width (px)"><input type="number" className="input" min={400} max={1600} value={state.maxWidth} onChange={e => upd({ maxWidth: Number(e.target.value) })} /></Field>
+        </div>
+
+        <p className="section-label mt-3">Content</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Eyebrow text"><input className="input" value={state.eyebrow} onChange={e => upd({ eyebrow: e.target.value })} /></Field>
+          <ColorInput label="Eyebrow colour" value={state.eyebrowColor} onChange={v => upd({ eyebrowColor: v })} />
+        </div>
+        <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer mb-2">
+          <input type="checkbox" checked={state.eyebrowDot} onChange={e => upd({ eyebrowDot: e.target.checked })} />
+          Show dot before eyebrow
+        </label>
+
+        <p className="text-xs font-semibold text-slate-500 mt-2 mb-1">Heading</p>
+        <RichTextField label="Heading text" value={tv(state.headingPre, 'bmsHeadingPre')} defaultKey="bmsHeadingPre" onChange={v => upd({ headingPre: v })} />
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Accent phrase"><input className="input" value={state.headingAccent} onChange={e => upd({ headingAccent: e.target.value })} /></Field>
+          <ColorInput label="Accent colour" value={state.headingAccentColor} onChange={v => upd({ headingAccentColor: v })} />
+        </div>
+
+        <RichTextField label="Description" value={tv(state.desc, 'bmsDesc')} defaultKey="bmsDesc" multiline onChange={v => upd({ desc: v })} />
+
+        <p className="text-xs font-semibold text-slate-500 mt-3 mb-1">Checklist</p>
+        <ColorInput label="Check icon colour" value={state.checkColor} onChange={v => upd({ checkColor: v })} />
+        {state.checks.map((ch, i) => (
+          <div key={i} className="flex gap-2 items-start mb-1">
+            <div className="flex-1">
+              <RichTextField label={`Item ${i + 1}`} value={tv(ch.text, 'bmsCheck')} defaultKey="bmsCheck"
+                onChange={v => updCheck(i, { text: v })} />
+            </div>
+            <button onClick={() => upd({ checks: state.checks.filter((_, idx) => idx !== i) })} className="btn-danger mt-6 text-xs">✕</button>
+          </div>
+        ))}
+        <button onClick={() => upd({ checks: [...state.checks, { text: normalize('', 'bmsCheck') }] })} className="btn-ghost text-xs w-full">+ Add item</button>
+
+        <p className="text-xs font-semibold text-slate-500 mt-3 mb-1">CTA Button</p>
+        <RichTextField label="Button text" value={tv(state.ctaText, 'bmsCta')} defaultKey="bmsCta" onChange={v => upd({ ctaText: v })} />
+        <Field label="Button URL"><input className="input" value={state.ctaUrl} placeholder="https://…" onChange={e => upd({ ctaUrl: e.target.value })} /></Field>
+        <div className="grid grid-cols-2 gap-2">
+          <ColorInput label="Button bg" value={state.ctaBg} onChange={v => upd({ ctaBg: v })} />
+          <ColorInput label="Button text" value={state.ctaTc} onChange={v => upd({ ctaTc: v })} />
+        </div>
+
+        <p className="text-xs font-semibold text-slate-500 mt-3 mb-1">Footer Note</p>
+        <Field label="Note text"><input className="input" value={state.footerNote} placeholder="🔒 Free · Online · …" onChange={e => upd({ footerNote: e.target.value })} /></Field>
+        <ColorInput label="Note colour" value={state.footerNoteTc} onChange={v => upd({ footerNoteTc: v })} />
+      </div>
+    </div>
+  );
+}
+
 // ── Section titles ─────────────────────────────────────────────────────────────
 
 const SECTION_TITLES: Record<string, { title: string; desc: string }> = {
@@ -1072,6 +1212,7 @@ const SECTION_TITLES: Record<string, { title: string; desc: string }> = {
   'hero-banner':    { title: 'Hero Banner',      desc: 'Eyebrow + heading + bullets + badge card' },
   'hero-banner-v2': { title: 'Hero Banner v2',   desc: 'Two-column: text left + info cards right' },
   'book-meeting':   { title: 'Book a Meeting',   desc: 'Image left + eyebrow/heading/checklist/CTA right' },
+  'content-block':  { title: 'Content CTA Block', desc: 'Single column: eyebrow/heading/checklist/CTA' },
 };
 
 // ── Main screen ────────────────────────────────────────────────────────────────
@@ -1101,6 +1242,7 @@ export default function FullScreenSections() {
           {type === 'hero-banner'    && <PhbTab   onHtml={handleHtml} />}
           {type === 'hero-banner-v2' && <Phv2Tab  onHtml={handleHtml} />}
           {type === 'book-meeting'   && <BmsTab   onHtml={handleHtml} />}
+          {type === 'content-block' && <CbTab    onHtml={handleHtml} />}
           {!type && <div className="p-6 text-sm text-slate-400">Select a section type from the sidebar.</div>}
         </div>
       </div>

@@ -660,3 +660,17 @@ export interface BmsState {
   footerNote: string; footerNoteTc: string;
 }
 export interface BmsComponent { id: string; name: string; data: BmsState; }
+
+// ── Content CTA Block (CB) — single-column, no image ─────────────────────────
+export interface CbState {
+  bg: string;
+  padTop: number; padBot: number; padLeft: number; padRight: number;
+  maxWidth: number;
+  eyebrow: string; eyebrowColor: string; eyebrowDot: boolean;
+  headingPre: TextValue; headingAccent: string; headingAccentColor: string;
+  desc: TextValue;
+  checkColor: string; checks: BmsCheckItem[];
+  ctaText: TextValue; ctaUrl: string; ctaBg: string; ctaTc: string;
+  footerNote: string; footerNoteTc: string;
+}
+export interface CbComponent { id: string; name: string; data: CbState; }

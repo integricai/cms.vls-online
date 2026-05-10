@@ -1,4 +1,4 @@
-import type { DcsState, Dcs2State, Dcs3State, ReachState, PhbState, Phv2State, BmsState } from '../../types/cms';
+import type { DcsState, Dcs2State, Dcs3State, ReachState, PhbState, Phv2State, BmsState, CbState } from '../../types/cms';
 import { normalize, textStyle, escapeHtml } from '../../utils/text';
 
 const e = escapeHtml;
@@ -441,6 +441,67 @@ export function generateBmsHtml(d: BmsState): string {
   }
 
   // Footer note
+  if (d.footerNote) {
+    L.push(`    <p style="font-family:Poppins,sans-serif;font-size:13px;color:${e(d.footerNoteTc)};margin:0;line-height:1.5;">${e(d.footerNote)}</p>`);
+  }
+
+  L.push(`  </div>`);
+  L.push(`</div>`);
+  return L.join('\n');
+}
+
+// ── Content CTA Block (CB) — single column, no image ──────────────────────────
+
+export function generateCbHtml(d: CbState): string {
+  const id = uid();
+  const headingPre = n(d.headingPre, 'bmsHeadingPre');
+  const desc       = n(d.desc,       'bmsDesc');
+  const ctaText    = n(d.ctaText,    'bmsCta');
+  const L: string[] = [];
+
+  L.push('<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">');
+  L.push(`<div id="${id}" style="background:${e(d.bg)};box-sizing:border-box;padding:${d.padTop}px ${d.padRight}px ${d.padBot}px ${d.padLeft}px;">`);
+  L.push(`  <div style="max-width:${d.maxWidth || 800}px;margin:0 auto;">`);
+
+  if (d.eyebrow) {
+    L.push(`    <div style="font-family:Poppins,sans-serif;font-size:13px;font-weight:600;color:${e(d.eyebrowColor)};letter-spacing:0.1em;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:6px;">`);
+    if (d.eyebrowDot) L.push(`      <span>●</span>`);
+    L.push(`      ${e(d.eyebrow)}`);
+    L.push(`    </div>`);
+  }
+
+  L.push(`    <h2 style="font-family:Poppins,sans-serif;${textStyle(headingPre)};margin:0 0 16px;line-height:1.25;">`);
+  if (headingPre.text) L.push(`      ${e(headingPre.text)}`);
+  if (d.headingAccent) L.push(`      <span style="color:${e(d.headingAccentColor)};">${e(d.headingAccent)}</span>`);
+  L.push(`    </h2>`);
+
+  if (desc.text) {
+    L.push(`    <p style="font-family:Poppins,sans-serif;${textStyle(desc)};margin:0 0 24px;line-height:1.7;">${e(desc.text)}</p>`);
+  }
+
+  if (d.checks.length) {
+    L.push(`    <ul style="list-style:none;padding:0;margin:0 0 28px;">`);
+    for (const ch of d.checks) {
+      const cht = n(ch.text, 'bmsCheck');
+      L.push(`      <li style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">`);
+      L.push(`        <span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:${e(d.checkColor)}20;display:flex;align-items:center;justify-content:center;">`);
+      L.push(`          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="${e(d.checkColor)}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
+      L.push(`        </span>`);
+      if (cht.text) L.push(`        <span style="font-family:Poppins,sans-serif;${textStyle(cht)};line-height:1.5;">${e(cht.text)}</span>`);
+      L.push(`      </li>`);
+    }
+    L.push(`    </ul>`);
+  }
+
+  if (ctaText.text && d.ctaUrl) {
+    L.push(`    <div style="margin-bottom:16px;">`);
+    L.push(`      <a href="${e(d.ctaUrl)}" style="display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:8px;background:${e(d.ctaBg)};color:${e(d.ctaTc)};font-family:Poppins,sans-serif;${textStyle(ctaText)};text-decoration:none;">`);
+    L.push(`        ${e(ctaText.text)}`);
+    L.push(`        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
+    L.push(`      </a>`);
+    L.push(`    </div>`);
+  }
+
   if (d.footerNote) {
     L.push(`    <p style="font-family:Poppins,sans-serif;font-size:13px;color:${e(d.footerNoteTc)};margin:0;line-height:1.5;">${e(d.footerNote)}</p>`);
   }

@@ -77,6 +77,12 @@ const NAV: NavEntry[] = [
         ],
       },
       {
+        sub: 'Single Column',
+        children: [
+          { to: '/full-screen/content-block', label: 'Content CTA Block' },
+        ],
+      },
+      {
         sub: 'Split Screen Sections',
         children: [
           { to: '/split-screen/left-hero',    label: 'Left Hero Section' },
