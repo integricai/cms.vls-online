@@ -109,6 +109,7 @@ export interface FaqSection {
   name: string;
   icon: string;
   title: TextValue;
+  titleGap: number;
   items: FaqItem[];
 }
 

@@ -30,6 +30,7 @@ function makeSection(): FaqSection {
     name: 'FAQ Section',
     icon: '❔',
     title: normalize('Frequently Asked Questions', 'faqTitle'),
+    titleGap: 8,
     items: [],
   };
 }
@@ -55,8 +56,9 @@ function normalizeSection(section: any): FaqSection {
   return {
     id: section?.id || id('fqs'),
     name: section?.name || '',
-    icon: section?.icon || '❔',
+    icon: section?.icon ?? '❔',
     title: normalize(section?.title || 'Frequently Asked Questions', 'faqTitle'),
+    titleGap: Number.isFinite(Number(section?.titleGap)) ? Number(section.titleGap) : 8,
     items: (section?.items || []).map(normalizeFaq),
   };
 }
@@ -194,6 +196,7 @@ export default function FAQ() {
       name: `NEW_${active.name || 'FAQ Section'}`,
       icon: active.icon,
       title: structuredClone(normalize(active.title, 'faqTitle')),
+      titleGap: active.titleGap,
       items: active.items.map(item => ({ ...structuredClone(item), id: id('fq') })),
     };
     const index = sections.findIndex(section => section.id === active.id);
@@ -282,7 +285,7 @@ export default function FAQ() {
             <p className="section-label">Section Title</p>
             <div className="grid grid-cols-[88px_1fr] gap-3">
               <Field label="Icon">
-                <input className="input" value={active.icon} placeholder="❔" onChange={e => updateSection({ ...active, icon: e.target.value })} />
+                <input className="input" value={active.icon} placeholder="Leave blank for no icon" onChange={e => updateSection({ ...active, icon: e.target.value })} />
               </Field>
               <RichTextField
                 label="Title"
@@ -291,6 +294,16 @@ export default function FAQ() {
                 onChange={title => updateSection({ ...active, title })}
               />
             </div>
+            <Field label="Gap below title (px)">
+              <input
+                type="number"
+                min={0}
+                max={80}
+                className="input"
+                value={active.titleGap}
+                onChange={e => updateSection({ ...active, titleGap: Number(e.target.value) })}
+              />
+            </Field>
             <p className="section-label">Questions</p>
             {active.items.map((item, index) => (
               <FaqEditor

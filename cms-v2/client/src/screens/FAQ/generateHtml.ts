@@ -1,6 +1,11 @@
 import type { FaqItem, FaqSection, TextValue } from '../../types/cms';
 import { escapeHtml, normalize, textStyle } from '../../utils/text';
 
+function clamp(value: number | undefined, fallback: number, min: number, max: number) {
+  const n = Number(value ?? fallback);
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+}
+
 function textContent(value: TextValue | undefined) {
   if (!value) return '';
   return typeof value === 'string' ? value : value.text || '';
@@ -75,7 +80,7 @@ export function generateFaqHtml(sectionOrItems: FaqSection | FaqItem[]) {
   lines.push('');
   lines.push('<style>');
   lines.push(`.${uid}{font-family:Poppins,sans-serif;width:100%;}`);
-  lines.push(`.${uid}-head{display:flex;align-items:center;gap:8px;margin:0 0 8px;}`);
+  lines.push(`.${uid}-head{display:flex;align-items:center;gap:8px;margin:0;}`);
   lines.push(`.${uid}-head-ico{display:inline-flex;align-items:center;justify-content:center;color:#534AB7;font-size:20px;line-height:1;flex-shrink:0;}`);
   lines.push(`.${uid}-title{font-family:Poppins,sans-serif;margin:0;line-height:1.25;}`);
   lines.push(`.${uid}-item{border-bottom:1.5px solid #e5e7eb;}`);
@@ -93,9 +98,10 @@ export function generateFaqHtml(sectionOrItems: FaqSection | FaqItem[]) {
   lines.push(`<div class="${uid}">`);
   if (section) {
     const title = normalize(section.title || 'Frequently Asked Questions', 'faqTitle');
-    const icon = section.icon || '❔';
+    const icon = section.icon ?? '❔';
+    const titleGap = clamp(section.titleGap, 8, 0, 80);
     if (title.text.trim() || icon.trim()) {
-      lines.push(`  <div class="${uid}-head">`);
+      lines.push(`  <div class="${uid}-head" style="margin-bottom:${titleGap}px;">`);
       if (icon.trim()) lines.push(`    <span class="${uid}-head-ico" aria-hidden="true">${escapeHtml(icon)}</span>`);
       if (title.text.trim()) lines.push(`    <h2 class="${uid}-title" style="${textStyle(title)}">${escapeHtml(title.text)}</h2>`);
       lines.push('  </div>');
