@@ -24,6 +24,7 @@ import StepCards from './screens/StepCards';
 import LegalPage from './screens/LegalPage';
 import Team from './screens/Team';
 import UserManagement from './screens/UserManagement';
+import MenuManagement from './screens/MenuManagement';
 import Forms from './screens/Forms';
 import FAQ from './screens/FAQ';
 import Events from './screens/Events';
@@ -85,6 +86,7 @@ export default function App() {
           <Route path="/page-desc-with-menu"  element={<PageDescWithMenu />} />
           <Route path="/split-screen-sections" element={<Navigate to="/split-screen/left-hero" replace />} />
           <Route path="/settings/users"   element={<RequireAdmin><UserManagement /></RequireAdmin>} />
+          <Route path="/settings/menu"    element={<RequireAdmin><MenuManagement /></RequireAdmin>} />
         </Route>
       </Routes>
     </BrowserRouter>
