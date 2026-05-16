@@ -41,9 +41,10 @@ export async function saveBlogAsset(args: {
   data: Buffer;
 }): Promise<void> {
   await ensureBlogAssetsTable();
+  const base64Data = args.data.toString('base64');
   await sql`
     INSERT INTO cms_blog_assets (id, filename, source_url, content_type, size_bytes, data, created_at)
-    VALUES (${args.id}, ${args.filename}, ${args.sourceUrl}, ${args.contentType}, ${args.data.length}, ${args.data}, NOW())
+    VALUES (${args.id}, ${args.filename}, ${args.sourceUrl}, ${args.contentType}, ${args.data.length}, decode(${base64Data}, 'base64'), NOW())
     ON CONFLICT (id) DO UPDATE
       SET filename = EXCLUDED.filename,
           source_url = EXCLUDED.source_url,
@@ -61,16 +62,20 @@ export async function getBlogAsset(id: string): Promise<BlogAsset | null> {
       filename,
       content_type AS "contentType",
       size_bytes AS "sizeBytes",
-      data
+      encode(data, 'base64') AS "dataBase64"
     FROM cms_blog_assets
     WHERE id = ${id}
   `;
-  const row = rows[0] as (Omit<BlogAsset, 'data'> & { data: Buffer | Uint8Array | string }) | undefined;
+  const row = rows[0] as (Omit<BlogAsset, 'data'> & { dataBase64: string }) | undefined;
   if (!row) return null;
-  const data = typeof row.data === 'string'
-    ? Buffer.from(row.data.replace(/^\\x/i, ''), 'hex')
-    : Buffer.from(row.data);
-  return { ...row, data };
+  const data = Buffer.from(row.dataBase64, 'base64');
+  return {
+    id: row.id,
+    filename: row.filename,
+    contentType: row.contentType,
+    sizeBytes: row.sizeBytes,
+    data,
+  };
 }
 
 export async function deleteBlogAssets(ids: string[]): Promise<void> {

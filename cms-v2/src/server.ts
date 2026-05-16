@@ -102,9 +102,7 @@ app.get('/blog-assets/:id/:filename', async (req, res, next) => {
     if (!asset) return res.status(404).send('Image not found');
     res.setHeader('Content-Type', asset.contentType);
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    if (Number.isFinite(asset.sizeBytes)) {
-      res.setHeader('Content-Length', String(asset.sizeBytes));
-    }
+    res.setHeader('Content-Length', String(asset.data.length));
     return res.send(asset.data);
   } catch (err) {
     next(err);
