@@ -8,6 +8,7 @@ import { wrapGeneratedHtml } from '../../utils/htmlComments';
 type ImportResponse = { post: BlogPost; warnings: string[] };
 
 const TOPICS = ['ACCA', 'Accounting', 'Finance', 'Tax', 'Audit', 'Study Tips', 'Exam Preparation', 'Career Advice'];
+const API_ORIGIN = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/api\/?$/, '').replace(/\/$/, '');
 
 function statusClass(type: 'success' | 'error' | 'warning' | 'info'): string {
   return {
@@ -22,6 +23,10 @@ function formatDate(value: string): string {
   if (!value) return 'No date';
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-GB');
+}
+
+function previewDocument(html: string): string {
+  return `<!doctype html><html><head><meta charset="utf-8"><base href="${API_ORIGIN}/"></head><body style="margin:0">${html || '<p style="font-family:sans-serif;color:#94a3b8;padding:24px">Import a blog post to preview.</p>'}</body></html>`;
 }
 
 export default function Blog() {
@@ -251,7 +256,7 @@ export default function Blog() {
         ) : (
           <iframe
             title="blog-preview"
-            srcDoc={`<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0">${visibleHtml || '<p style="font-family:sans-serif;color:#94a3b8;padding:24px">Import a blog post to preview.</p>'}</body></html>`}
+            srcDoc={previewDocument(visibleHtml)}
             className="w-full flex-1 border-0 bg-slate-50"
             sandbox="allow-same-origin allow-scripts"
           />

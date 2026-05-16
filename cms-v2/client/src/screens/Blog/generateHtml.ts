@@ -36,7 +36,7 @@ function articleSchema(post: BlogPost): string {
 }
 
 const baseCss = `<style>
-.vls-blog{font-family:Poppins,Arial,sans-serif;color:#0d1f3c;background:linear-gradient(180deg,#0d1f3c 0,#0d1f3c 250px,#f5f8fc 250px,#f5f8fc 100%);}
+.vls-blog{font-family:Poppins,Arial,sans-serif;color:#0d1f3c;background:linear-gradient(180deg,#0d1f3c 0,#0d1f3c 430px,#f5f8fc 430px,#f5f8fc 100%);}
 .vls-blog *{box-sizing:border-box;}
 .vls-blog a{color:#1f73b7;text-decoration:none;font-weight:700;}
 .vls-blog-shell{max-width:1160px;margin:0 auto;padding:46px 24px;}
