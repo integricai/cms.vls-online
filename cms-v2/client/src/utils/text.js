@@ -102,6 +102,7 @@ export const DEFAULTS = {
     eventMeta: { size: 13, color: '#262a32', weight: '400', letterSpacing: 0 },
     eventCta: { size: 13, color: '#ffffff', weight: '500', letterSpacing: 0 },
     // FAQ
+    faqTitle: { size: 28, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
     faq: { size: 15, color: '#262a32', weight: '400', letterSpacing: 0 },
     faqQuestion: { size: 16, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
     faqHeading: { size: 16, color: '#204280', weight: '700', letterSpacing: 0 },
@@ -182,6 +183,15 @@ export const DEFAULTS = {
     rpsCardDesc: { size: 13, color: '#cbd5e1', weight: '400', letterSpacing: 0 },
     rpsCardCta: { size: 13, color: '#ffffff', weight: '700', letterSpacing: 0 },
     plhHeading: { size: 38, color: '#ffffff', weight: '700', letterSpacing: 0 },
+    // Vertical Cards (Feature Card v3)
+    vc3CardTitle: { size: 20, color: '#ffffff', weight: '700', letterSpacing: 0 },
+    vc3CardSub: { size: 13, color: '#e5e7eb', weight: '400', letterSpacing: 0 },
+    vc3CardItem: { size: 13, color: '#374151', weight: '400', letterSpacing: 0 },
+    // Book a Meeting Section (BMS)
+    bmsHeadingPre: { size: 32, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
+    bmsDesc: { size: 15, color: '#374151', weight: '400', letterSpacing: 0 },
+    bmsCheck: { size: 15, color: '#374151', weight: '400', letterSpacing: 0 },
+    bmsCta: { size: 15, color: '#ffffff', weight: '600', letterSpacing: 0 },
 };
 export function normalize(value, key) {
     const d = DEFAULTS[key];

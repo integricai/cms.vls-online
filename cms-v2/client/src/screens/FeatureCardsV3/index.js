@@ -3,11 +3,20 @@ import { useEffect, useState, useCallback } from 'react';
 import { api } from '../../api/client';
 import { generateFeatureCardsV3Html } from './generateHtml';
 import Field from '../../components/Field';
+import { normalize } from '../../utils/text';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
 function makeTag() { return { code: '', name: '' }; }
 function makeCard() { return { headerBg: '#204280', number: '01', title: '', subtitle: '', tags: [] }; }
 function makeDefault() {
-    return { bg: '#f8faff', padTop: 60, padBottom: 60, padLeft: 80, padRight: 80, cols: 3, gap: 24, eyebrow: '', eyebrowColor: '#4a90d9', headingText: '', headingColor: '#1a1a1a', descText: '', descColor: '#4a5568', cards: [] };
+    return {
+        bg: '#f8faff', padTop: 60, padBottom: 60, padLeft: 80, padRight: 80, cols: 3, gap: 24,
+        eyebrow: '', eyebrowColor: '#4a90d9', headingText: '', headingColor: '#1a1a1a',
+        descText: '', descColor: '#4a5568',
+        cardTitleStyle: normalize('', 'vc3CardTitle'),
+        cardSubStyle: normalize('', 'vc3CardSub'),
+        cardItemStyle: normalize('', 'vc3CardItem'),
+        cards: [],
+    };
 }
 function ColorRow({ label, value, onChange }) {
     return (_jsx(Field, { label: label, children: _jsxs("div", { className: "flex gap-2 items-center", children: [_jsx("input", { type: "color", value: /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#000000', onChange: e => onChange(e.target.value), className: "w-10 h-9 p-0.5 border border-slate-300 rounded cursor-pointer shrink-0" }), _jsx("input", { type: "text", value: value, className: "input", onChange: e => { if (/^#[0-9a-fA-F]{6}$/.test(e.target.value))
@@ -35,7 +44,7 @@ export default function FeatureCardsV3Screen() {
                 comps = raw.sections.map((s, i) => ({
                     id: s.id || `fc3-${i}`,
                     name: s.name || `Section ${i + 1}`,
-                    data: { bg: s.bg ?? '#f8faff', padTop: s.padTop ?? 60, padBottom: s.padBottom ?? 60, padLeft: s.padLeft ?? 80, padRight: s.padRight ?? 80, cols: s.cols ?? 3, gap: s.gap ?? 24, eyebrow: s.eyebrow ?? '', eyebrowColor: s.eyebrowColor ?? '#4a90d9', headingText: s.headingText ?? '', headingColor: s.headingColor ?? '#1a1a1a', descText: s.descText ?? '', descColor: s.descColor ?? '#4a5568', cards: s.cards || [] },
+                    data: { bg: s.bg ?? '#f8faff', padTop: s.padTop ?? 60, padBottom: s.padBottom ?? 60, padLeft: s.padLeft ?? 80, padRight: s.padRight ?? 80, cols: s.cols ?? 3, gap: s.gap ?? 24, eyebrow: s.eyebrow ?? '', eyebrowColor: s.eyebrowColor ?? '#4a90d9', headingText: s.headingText ?? '', headingColor: s.headingColor ?? '#1a1a1a', descText: s.descText ?? '', descColor: s.descColor ?? '#4a5568', cardTitleStyle: s.cardTitleStyle ?? normalize('', 'vc3CardTitle'), cardSubStyle: s.cardSubStyle ?? normalize('', 'vc3CardSub'), cardItemStyle: s.cardItemStyle ?? normalize('', 'vc3CardItem'), cards: s.cards || [] },
                 }));
             }
             setComponents(comps);

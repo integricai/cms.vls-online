@@ -1,4 +1,4 @@
-import type { FaqItem, TextValue } from '../../types/cms';
+import type { FaqItem, FaqSection, TextValue } from '../../types/cms';
 import { escapeHtml, normalize, textStyle } from '../../utils/text';
 
 function textContent(value: TextValue | undefined) {
@@ -47,7 +47,13 @@ function answerPlainText(item: FaqItem) {
   return parts.join(' ');
 }
 
-export function generateFaqHtml(items: FaqItem[]) {
+function sectionItems(sectionOrItems: FaqSection | FaqItem[]) {
+  return Array.isArray(sectionOrItems) ? sectionOrItems : sectionOrItems.items;
+}
+
+export function generateFaqHtml(sectionOrItems: FaqSection | FaqItem[]) {
+  const section = Array.isArray(sectionOrItems) ? null : sectionOrItems;
+  const items = sectionItems(sectionOrItems);
   const valid = items.filter(item => textContent(item.question).trim());
   if (!valid.length) return '<!-- Add FAQ items and generate HTML -->';
 
@@ -69,6 +75,9 @@ export function generateFaqHtml(items: FaqItem[]) {
   lines.push('');
   lines.push('<style>');
   lines.push(`.${uid}{font-family:Poppins,sans-serif;width:100%;}`);
+  lines.push(`.${uid}-head{display:flex;align-items:center;gap:12px;margin:0 0 22px;}`);
+  lines.push(`.${uid}-head-ico{width:42px;height:42px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:#eef2ff;color:#534AB7;font-size:22px;line-height:1;flex-shrink:0;}`);
+  lines.push(`.${uid}-title{font-family:Poppins,sans-serif;margin:0;line-height:1.25;}`);
   lines.push(`.${uid}-item{border-bottom:1.5px solid #e5e7eb;}`);
   lines.push(`.${uid}-item:first-child{border-top:1.5px solid #e5e7eb;}`);
   lines.push(`.${uid}-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;background:none;border:none;cursor:pointer;font-family:Poppins,sans-serif;font-size:16px;font-weight:600;color:#1a1a1a;}`);
@@ -82,6 +91,16 @@ export function generateFaqHtml(items: FaqItem[]) {
   lines.push('</style>');
   lines.push('');
   lines.push(`<div class="${uid}">`);
+  if (section) {
+    const title = normalize(section.title || 'Frequently Asked Questions', 'faqTitle');
+    const icon = section.icon || '❔';
+    if (title.text.trim() || icon.trim()) {
+      lines.push(`  <div class="${uid}-head">`);
+      if (icon.trim()) lines.push(`    <span class="${uid}-head-ico" aria-hidden="true">${escapeHtml(icon)}</span>`);
+      if (title.text.trim()) lines.push(`    <h2 class="${uid}-title" style="${textStyle(title)}">${escapeHtml(title.text)}</h2>`);
+      lines.push('  </div>');
+    }
+  }
   valid.forEach(item => {
     const question = normalize(item.question, 'faqQuestion');
     lines.push(`  <div class="${uid}-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">`);

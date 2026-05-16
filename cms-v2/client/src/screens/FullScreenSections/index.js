@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import { normalize } from '../../utils/text';
-import { generateDcsHtml, generateDcs2Html, generateDcs3Html, generateReachHtml, generatePhbHtml, generatePhv2Html, } from './generateHtml';
+import { generateDcsHtml, generateDcs2Html, generateDcs3Html, generateReachHtml, generatePhbHtml, generatePhv2Html, generateBmsHtml, generateCbHtml, } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
@@ -27,6 +27,67 @@ function makePhb() {
 }
 function makePhv2() {
     return { bg: '#0d1f3c', padTop: 48, padBot: 48, padLeft: 60, padRight: 60, split: 60, colGap: 48, breadcrumb: '', breadcrumbTc: '#94a3b8', eyebrowTc: '#4a90d9', eyebrowDot: '#4a90d9', eyebrowLabels: [], heading: normalize('', 'phv2Heading'), headingAccent: '', headingAccentColor: '#4a90d9', headingPost: '', desc: normalize('', 'phv2Desc'), trustTc: '#94a3b8', trustDot: '#4a90d9', trustItems: [], cardBg: '#0f2744', cardBorder: '#1e3a5f', cardRadius: 10, cardVc: '#ffffff', cardLc: '#94a3b8', cards: [] };
+}
+function makeBms() {
+    return {
+        bg: '#ffffff', padTop: 60, padBot: 60, padLeft: 60, padRight: 60,
+        imgUrl: '', imgAlt: '', imgSplit: 45, imgFit: 'cover', imgPosition: 'center',
+        eyebrow: '', eyebrowColor: '#1a56a3', eyebrowDot: true,
+        headingPre: normalize('', 'bmsHeadingPre'), headingAccent: '', headingAccentColor: '#1a56a3',
+        desc: normalize('', 'bmsDesc'),
+        checkColor: '#1a56a3', checks: [],
+        ctaText: normalize('', 'bmsCta'), ctaUrl: '', ctaBg: '#1a56a3', ctaTc: '#ffffff',
+        footerNote: '', footerNoteTc: '#6b7280',
+    };
+}
+function normBms(raw) {
+    return {
+        bg: raw.bg || '#ffffff',
+        padTop: normalizeNum(raw.padTop, 60), padBot: normalizeNum(raw.padBot, 60),
+        padLeft: normalizeNum(raw.padLeft, 60), padRight: normalizeNum(raw.padRight, 60),
+        imgUrl: raw.imgUrl || '', imgAlt: raw.imgAlt || '',
+        imgSplit: normalizeNum(raw.imgSplit, 45),
+        imgFit: raw.imgFit || 'cover', imgPosition: raw.imgPosition || 'center',
+        eyebrow: raw.eyebrow || '', eyebrowColor: raw.eyebrowColor || '#1a56a3',
+        eyebrowDot: raw.eyebrowDot !== false,
+        headingPre: raw.headingPre || normalize('', 'bmsHeadingPre'),
+        headingAccent: raw.headingAccent || '', headingAccentColor: raw.headingAccentColor || '#1a56a3',
+        desc: raw.desc || normalize('', 'bmsDesc'),
+        checkColor: raw.checkColor || '#1a56a3',
+        checks: (raw.checks || []),
+        ctaText: raw.ctaText || normalize('', 'bmsCta'),
+        ctaUrl: raw.ctaUrl || '', ctaBg: raw.ctaBg || '#1a56a3', ctaTc: raw.ctaTc || '#ffffff',
+        footerNote: raw.footerNote || '', footerNoteTc: raw.footerNoteTc || '#6b7280',
+    };
+}
+function makeCb() {
+    return {
+        bg: '#ffffff', padTop: 60, padBot: 60, padLeft: 60, padRight: 60, maxWidth: 800,
+        eyebrow: '', eyebrowColor: '#1a56a3', eyebrowDot: true,
+        headingPre: normalize('', 'bmsHeadingPre'), headingAccent: '', headingAccentColor: '#1a56a3',
+        desc: normalize('', 'bmsDesc'),
+        checkColor: '#1a56a3', checks: [],
+        ctaText: normalize('', 'bmsCta'), ctaUrl: '', ctaBg: '#1a56a3', ctaTc: '#ffffff',
+        footerNote: '', footerNoteTc: '#6b7280',
+    };
+}
+function normCb(raw) {
+    return {
+        bg: raw.bg || '#ffffff',
+        padTop: normalizeNum(raw.padTop, 60), padBot: normalizeNum(raw.padBot, 60),
+        padLeft: normalizeNum(raw.padLeft, 60), padRight: normalizeNum(raw.padRight, 60),
+        maxWidth: normalizeNum(raw.maxWidth, 800),
+        eyebrow: raw.eyebrow || '', eyebrowColor: raw.eyebrowColor || '#1a56a3',
+        eyebrowDot: raw.eyebrowDot !== false,
+        headingPre: raw.headingPre || normalize('', 'bmsHeadingPre'),
+        headingAccent: raw.headingAccent || '', headingAccentColor: raw.headingAccentColor || '#1a56a3',
+        desc: raw.desc || normalize('', 'bmsDesc'),
+        checkColor: raw.checkColor || '#1a56a3',
+        checks: raw.checks || [],
+        ctaText: raw.ctaText || normalize('', 'bmsCta'),
+        ctaUrl: raw.ctaUrl || '', ctaBg: raw.ctaBg || '#1a56a3', ctaTc: raw.ctaTc || '#ffffff',
+        footerNote: raw.footerNote || '', footerNoteTc: raw.footerNoteTc || '#6b7280',
+    };
 }
 function normalizeNum(v, fb) { const n = Number(v); return isNaN(n) ? fb : n; }
 function normDcs(raw) {
@@ -548,6 +609,140 @@ function Phv2Tab({ onHtml }) {
         return _jsx("div", { className: "p-5 text-xs text-slate-400", children: "Loading\u2026" });
     return (_jsxs("div", { className: "flex flex-col", children: [_jsx(CmpMgr, { components: comps, activeId: activeId, name: name, saving: saving, saved: saved, onSelect: load, onNew: () => load(''), onDelete: del, onNameChange: setName, onSave: save, onGenerate: () => onHtml(wrapGeneratedHtml('Hero Banner V2', generatePhv2Html(state))) }), _jsxs("div", { className: "px-5 py-4 space-y-1 overflow-y-auto", children: [_jsx("p", { className: "section-label", children: "Layout" }), _jsx(PaddingRow, { value: state, onChange: upd }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(ColorInput, { label: "Background", value: state.bg, onChange: v => upd({ bg: v }) }), _jsx(Field, { label: "Left width %", children: _jsx("input", { type: "number", className: "input", min: 30, max: 80, value: state.split, onChange: e => upd({ split: Number(e.target.value) }) }) }), _jsx(Field, { label: "Column gap (px)", children: _jsx("input", { type: "number", className: "input", min: 0, max: 120, value: state.colGap, onChange: e => upd({ colGap: Number(e.target.value) }) }) })] }), _jsx("p", { className: "section-label mt-3", children: "Left Column" }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(Field, { label: "Breadcrumb", children: _jsx("input", { className: "input", value: state.breadcrumb, placeholder: "Home \u203A Section", onChange: e => upd({ breadcrumb: e.target.value }) }) }), _jsx(ColorInput, { label: "Breadcrumb colour", value: state.breadcrumbTc, onChange: v => upd({ breadcrumbTc: v }) }), _jsx(ColorInput, { label: "Eyebrow colour", value: state.eyebrowTc, onChange: v => upd({ eyebrowTc: v }) }), _jsx(ColorInput, { label: "Eyebrow dot colour", value: state.eyebrowDot, onChange: v => upd({ eyebrowDot: v }) })] }), _jsx("p", { className: "text-xs font-semibold text-slate-500 mt-2 mb-1", children: "Eyebrow Labels" }), state.eyebrowLabels.map((l, i) => (_jsxs("div", { className: "flex gap-2 items-center mb-1", children: [_jsx("input", { className: "input flex-1", value: l, onChange: e => { const a = [...state.eyebrowLabels]; a[i] = e.target.value; upd({ eyebrowLabels: a }); } }), _jsx("button", { onClick: () => upd({ eyebrowLabels: state.eyebrowLabels.filter((_, idx) => idx !== i) }), className: "btn-danger text-xs", children: "\u2715" })] }, i))), _jsx("button", { onClick: () => upd({ eyebrowLabels: [...state.eyebrowLabels, ''] }), className: "btn-ghost text-xs w-full", children: "+ Add label" }), _jsx("p", { className: "text-xs font-semibold text-slate-500 mt-3 mb-1", children: "Heading" }), _jsx(RichTextField, { label: "Heading (pre-accent)", value: tv(state.heading, 'phv2Heading'), defaultKey: "phv2Heading", onChange: v => upd({ heading: v }) }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(Field, { label: "Accent phrase", children: _jsx("input", { className: "input", value: state.headingAccent, onChange: e => upd({ headingAccent: e.target.value }) }) }), _jsx(ColorInput, { label: "Accent colour", value: state.headingAccentColor, onChange: v => upd({ headingAccentColor: v }) })] }), _jsx(Field, { label: "Post-accent text", children: _jsx("input", { className: "input", value: state.headingPost, onChange: e => upd({ headingPost: e.target.value }) }) }), _jsx(RichTextField, { label: "Description", value: tv(state.desc, 'phv2Desc'), defaultKey: "phv2Desc", multiline: true, onChange: v => upd({ desc: v }) }), _jsx("p", { className: "text-xs font-semibold text-slate-500 mt-2 mb-1", children: "Trust Strip" }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(ColorInput, { label: "Text colour", value: state.trustTc, onChange: v => upd({ trustTc: v }) }), _jsx(ColorInput, { label: "Dot colour", value: state.trustDot, onChange: v => upd({ trustDot: v }) })] }), state.trustItems.map((item, i) => (_jsxs("div", { className: "flex gap-2 items-center mb-1", children: [_jsx(Field, { label: "Icon", className: "w-20", children: _jsx("input", { className: "input text-center", value: item.icon, onChange: e => updTrust(i, { icon: e.target.value }) }) }), _jsx(Field, { label: "Text", className: "flex-1", children: _jsx("input", { className: "input", value: item.text, onChange: e => updTrust(i, { text: e.target.value }) }) }), _jsx("button", { onClick: () => upd({ trustItems: state.trustItems.filter((_, idx) => idx !== i) }), className: "btn-danger mt-5 text-xs", children: "\u2715" })] }, i))), _jsx("button", { onClick: () => upd({ trustItems: [...state.trustItems, { icon: '', text: '' }] }), className: "btn-ghost text-xs w-full", children: "+ Add trust item" }), _jsx("p", { className: "section-label mt-3", children: "Right Column \u2014 Cards" }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(ColorInput, { label: "Card bg", value: state.cardBg, onChange: v => upd({ cardBg: v }) }), _jsx(ColorInput, { label: "Card border", value: state.cardBorder, onChange: v => upd({ cardBorder: v }) }), _jsx(Field, { label: "Border radius", children: _jsx("input", { type: "number", className: "input", min: 0, max: 30, value: state.cardRadius, onChange: e => upd({ cardRadius: Number(e.target.value) }) }) }), _jsx(ColorInput, { label: "Value colour", value: state.cardVc, onChange: v => upd({ cardVc: v }) }), _jsx(ColorInput, { label: "Label colour", value: state.cardLc, onChange: v => upd({ cardLc: v }) })] }), state.cards.map((card, i) => (_jsxs("div", { className: "rounded border border-slate-200 bg-slate-50 p-3 mb-2", children: [_jsxs("div", { className: "flex gap-2 items-center mb-2", children: [_jsxs("span", { className: "text-xs font-semibold text-slate-500 flex-1", children: ["Card ", i + 1] }), _jsx("button", { onClick: () => upd({ cards: state.cards.filter((_, idx) => idx !== i) }), className: "btn-danger text-xs", children: "\u2715" })] }), _jsxs("div", { className: "grid grid-cols-2 gap-2 mb-2", children: [_jsx(Field, { label: "Type", children: _jsxs("select", { className: "input", value: card.type, onChange: e => updCard(i, { type: e.target.value }), children: [_jsx("option", { value: "stat", children: "Stat (number + label)" }), _jsx("option", { value: "info", children: "Info (title + subtitle)" }), _jsx("option", { value: "tags", children: "Tags (title + tag list)" })] }) }), _jsxs("label", { className: "flex items-center gap-2 text-sm text-slate-600 cursor-pointer mt-5", children: [_jsx("input", { type: "checkbox", checked: card.full, onChange: e => updCard(i, { full: e.target.checked }) }), "Full width"] })] }), _jsx(Field, { label: "Value / Title", children: _jsx("input", { className: "input", value: card.value, onChange: e => updCard(i, { value: e.target.value }) }) }), _jsx(Field, { label: "Label / Subtitle / Tags", children: _jsx("input", { className: "input", value: card.label, onChange: e => updCard(i, { label: e.target.value }) }) })] }, i))), _jsx("button", { onClick: () => upd({ cards: [...state.cards, { type: 'stat', full: false, value: '', label: '' }] }), className: "btn-ghost text-xs w-full", children: "+ Add card" })] })] }));
 }
+function BmsTab({ onHtml }) {
+    const [comps, setComps] = useState([]);
+    const [activeId, setActiveId] = useState(null);
+    const [name, setName] = useState('');
+    const [state, setState] = useState(makeBms());
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+    useEffect(() => {
+        api.get('/content/vls-bms-components').then(row => {
+            const raw = row?.data;
+            const cs = (raw?.components || []).map((c) => ({ ...c, data: normBms(c.data || {}) }));
+            setComps(cs);
+            if (cs.length) {
+                setActiveId(cs[0].id);
+                setName(cs[0].name);
+                setState(cs[0].data);
+            }
+            setLoaded(true);
+        }).catch(() => setLoaded(true));
+    }, []);
+    const upd = useCallback((p) => { setState(prev => ({ ...prev, ...p })); setSaved(false); }, []);
+    function load(id) {
+        if (!id) {
+            setActiveId(null);
+            setName('');
+            setState(makeBms());
+            setSaved(false);
+            return;
+        }
+        const c = comps.find(c => c.id === id);
+        if (c) {
+            setActiveId(c.id);
+            setName(c.name);
+            setState(c.data);
+            setSaved(false);
+        }
+    }
+    async function save() {
+        if (!name.trim()) {
+            alert('Enter a component name.');
+            return;
+        }
+        setSaving(true);
+        const id = activeId || `bms-${Date.now().toString(36)}`;
+        const updated = activeId ? comps.map(c => c.id === id ? { id, name, data: state } : c) : [...comps, { id, name, data: state }];
+        await api.put('/content/vls-bms-components', { components: updated });
+        setComps(updated);
+        setActiveId(id);
+        setSaved(true);
+        setSaving(false);
+    }
+    async function del() {
+        if (!activeId || !confirm('Delete this component?'))
+            return;
+        const updated = comps.filter(c => c.id !== activeId);
+        await api.put('/content/vls-bms-components', { components: updated });
+        setComps(updated);
+        setActiveId(null);
+        setName('');
+        setState(makeBms());
+    }
+    function updCheck(i, p) { const a = [...state.checks]; a[i] = { ...a[i], ...p }; upd({ checks: a }); }
+    if (!loaded)
+        return _jsx("div", { className: "p-5 text-xs text-slate-400", children: "Loading\u2026" });
+    return (_jsxs("div", { className: "flex flex-col", children: [_jsx(CmpMgr, { components: comps, activeId: activeId, name: name, saving: saving, saved: saved, onSelect: load, onNew: () => load(''), onDelete: del, onNameChange: setName, onSave: save, onGenerate: () => onHtml(wrapGeneratedHtml('Book a Meeting Section', generateBmsHtml(state))) }), _jsxs("div", { className: "px-5 py-4 space-y-1 overflow-y-auto", children: [_jsx("p", { className: "section-label", children: "Layout" }), _jsxs("div", { className: "grid grid-cols-2 gap-2 mb-3", children: [_jsx(ColorInput, { label: "Background", value: state.bg, onChange: v => upd({ bg: v }) }), _jsx(Field, { label: "Image split %", children: _jsx("input", { type: "number", className: "input", min: 20, max: 80, value: state.imgSplit, onChange: e => upd({ imgSplit: Number(e.target.value) }) }) })] }), _jsx(PaddingRow, { value: state, onChange: upd }), _jsx("p", { className: "section-label mt-3", children: "Left Column \u2014 Image" }), _jsx(Field, { label: "Image URL", children: _jsx("input", { className: "input", value: state.imgUrl, placeholder: "https://\u2026", onChange: e => upd({ imgUrl: e.target.value }) }) }), _jsx(Field, { label: "Alt text", children: _jsx("input", { className: "input", value: state.imgAlt, onChange: e => upd({ imgAlt: e.target.value }) }) }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(Field, { label: "Image fit", children: _jsxs("select", { className: "input", value: state.imgFit, onChange: e => upd({ imgFit: e.target.value }), children: [_jsx("option", { value: "cover", children: "Cover (crop to fill)" }), _jsx("option", { value: "contain", children: "Contain (show full)" }), _jsx("option", { value: "fill", children: "Fill (stretch)" }), _jsx("option", { value: "scale-down", children: "Scale down" })] }) }), _jsx(Field, { label: "Image position", children: _jsxs("select", { className: "input", value: state.imgPosition, onChange: e => upd({ imgPosition: e.target.value }), children: [_jsx("option", { value: "center", children: "Center" }), _jsx("option", { value: "top center", children: "Top" }), _jsx("option", { value: "bottom center", children: "Bottom" }), _jsx("option", { value: "left center", children: "Left" }), _jsx("option", { value: "right center", children: "Right" }), _jsx("option", { value: "top left", children: "Top left" }), _jsx("option", { value: "top right", children: "Top right" }), _jsx("option", { value: "bottom left", children: "Bottom left" }), _jsx("option", { value: "bottom right", children: "Bottom right" })] }) })] }), _jsx("p", { className: "section-label mt-3", children: "Right Column \u2014 Content" }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(Field, { label: "Eyebrow text", children: _jsx("input", { className: "input", value: state.eyebrow, onChange: e => upd({ eyebrow: e.target.value }) }) }), _jsx(ColorInput, { label: "Eyebrow colour", value: state.eyebrowColor, onChange: v => upd({ eyebrowColor: v }) })] }), _jsxs("label", { className: "flex items-center gap-2 text-sm text-slate-600 cursor-pointer mb-2", children: [_jsx("input", { type: "checkbox", checked: state.eyebrowDot, onChange: e => upd({ eyebrowDot: e.target.checked }) }), "Show dot before eyebrow"] }), _jsx("p", { className: "text-xs font-semibold text-slate-500 mt-2 mb-1", children: "Heading" }), _jsx(RichTextField, { label: "Heading text", value: tv(state.headingPre, 'bmsHeadingPre'), defaultKey: "bmsHeadingPre", onChange: v => upd({ headingPre: v }) }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(Field, { label: "Accent phrase", children: _jsx("input", { className: "input", value: state.headingAccent, onChange: e => upd({ headingAccent: e.target.value }) }) }), _jsx(ColorInput, { label: "Accent colour", value: state.headingAccentColor, onChange: v => upd({ headingAccentColor: v }) })] }), _jsx(RichTextField, { label: "Description", value: tv(state.desc, 'bmsDesc'), defaultKey: "bmsDesc", multiline: true, onChange: v => upd({ desc: v }) }), _jsx("p", { className: "text-xs font-semibold text-slate-500 mt-3 mb-1", children: "Checklist" }), _jsx(ColorInput, { label: "Check icon colour", value: state.checkColor, onChange: v => upd({ checkColor: v }) }), state.checks.map((ch, i) => (_jsxs("div", { className: "flex gap-2 items-start mb-1", children: [_jsx("div", { className: "flex-1", children: _jsx(RichTextField, { label: `Item ${i + 1}`, value: tv(ch.text, 'bmsCheck'), defaultKey: "bmsCheck", onChange: v => updCheck(i, { text: v }) }) }), _jsx("button", { onClick: () => upd({ checks: state.checks.filter((_, idx) => idx !== i) }), className: "btn-danger mt-6 text-xs", children: "\u2715" })] }, i))), _jsx("button", { onClick: () => upd({ checks: [...state.checks, { text: normalize('', 'bmsCheck') }] }), className: "btn-ghost text-xs w-full", children: "+ Add item" }), _jsx("p", { className: "text-xs font-semibold text-slate-500 mt-3 mb-1", children: "CTA Button" }), _jsx(RichTextField, { label: "Button text", value: tv(state.ctaText, 'bmsCta'), defaultKey: "bmsCta", onChange: v => upd({ ctaText: v }) }), _jsx(Field, { label: "Button URL", children: _jsx("input", { className: "input", value: state.ctaUrl, placeholder: "https://\u2026", onChange: e => upd({ ctaUrl: e.target.value }) }) }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(ColorInput, { label: "Button bg", value: state.ctaBg, onChange: v => upd({ ctaBg: v }) }), _jsx(ColorInput, { label: "Button text", value: state.ctaTc, onChange: v => upd({ ctaTc: v }) })] }), _jsx("p", { className: "text-xs font-semibold text-slate-500 mt-3 mb-1", children: "Footer Note" }), _jsx(Field, { label: "Note text", children: _jsx("input", { className: "input", value: state.footerNote, placeholder: "\uD83D\uDD12 Free \u00B7 Online \u00B7 \u2026", onChange: e => upd({ footerNote: e.target.value }) }) }), _jsx(ColorInput, { label: "Note colour", value: state.footerNoteTc, onChange: v => upd({ footerNoteTc: v }) })] })] }));
+}
+function CbTab({ onHtml }) {
+    const [comps, setComps] = useState([]);
+    const [activeId, setActiveId] = useState(null);
+    const [name, setName] = useState('');
+    const [state, setState] = useState(makeCb());
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+    useEffect(() => {
+        api.get('/content/vls-cb-components').then(row => {
+            const raw = row?.data;
+            const cs = (raw?.components || []).map((c) => ({ ...c, data: normCb(c.data || {}) }));
+            setComps(cs);
+            if (cs.length) {
+                setActiveId(cs[0].id);
+                setName(cs[0].name);
+                setState(cs[0].data);
+            }
+            setLoaded(true);
+        }).catch(() => setLoaded(true));
+    }, []);
+    const upd = useCallback((p) => { setState(prev => ({ ...prev, ...p })); setSaved(false); }, []);
+    function load(id) {
+        if (!id) {
+            setActiveId(null);
+            setName('');
+            setState(makeCb());
+            setSaved(false);
+            return;
+        }
+        const c = comps.find(c => c.id === id);
+        if (c) {
+            setActiveId(c.id);
+            setName(c.name);
+            setState(c.data);
+            setSaved(false);
+        }
+    }
+    async function save() {
+        if (!name.trim()) {
+            alert('Enter a component name.');
+            return;
+        }
+        setSaving(true);
+        const id = activeId || `cb-${Date.now().toString(36)}`;
+        const updated = activeId ? comps.map(c => c.id === id ? { id, name, data: state } : c) : [...comps, { id, name, data: state }];
+        await api.put('/content/vls-cb-components', { components: updated });
+        setComps(updated);
+        setActiveId(id);
+        setSaved(true);
+        setSaving(false);
+    }
+    async function del() {
+        if (!activeId || !confirm('Delete this component?'))
+            return;
+        const updated = comps.filter(c => c.id !== activeId);
+        await api.put('/content/vls-cb-components', { components: updated });
+        setComps(updated);
+        setActiveId(null);
+        setName('');
+        setState(makeCb());
+    }
+    function updCheck(i, p) { const a = [...state.checks]; a[i] = { ...a[i], ...p }; upd({ checks: a }); }
+    if (!loaded)
+        return _jsx("div", { className: "p-5 text-xs text-slate-400", children: "Loading\u2026" });
+    return (_jsxs("div", { className: "flex flex-col", children: [_jsx(CmpMgr, { components: comps, activeId: activeId, name: name, saving: saving, saved: saved, onSelect: load, onNew: () => load(''), onDelete: del, onNameChange: setName, onSave: save, onGenerate: () => onHtml(wrapGeneratedHtml('Content CTA Block', generateCbHtml(state))) }), _jsxs("div", { className: "px-5 py-4 space-y-1 overflow-y-auto", children: [_jsx("p", { className: "section-label", children: "Layout" }), _jsx(PaddingRow, { value: state, onChange: upd }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(ColorInput, { label: "Background", value: state.bg, onChange: v => upd({ bg: v }) }), _jsx(Field, { label: "Max width (px)", children: _jsx("input", { type: "number", className: "input", min: 400, max: 1600, value: state.maxWidth, onChange: e => upd({ maxWidth: Number(e.target.value) }) }) })] }), _jsx("p", { className: "section-label mt-3", children: "Content" }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(Field, { label: "Eyebrow text", children: _jsx("input", { className: "input", value: state.eyebrow, onChange: e => upd({ eyebrow: e.target.value }) }) }), _jsx(ColorInput, { label: "Eyebrow colour", value: state.eyebrowColor, onChange: v => upd({ eyebrowColor: v }) })] }), _jsxs("label", { className: "flex items-center gap-2 text-sm text-slate-600 cursor-pointer mb-2", children: [_jsx("input", { type: "checkbox", checked: state.eyebrowDot, onChange: e => upd({ eyebrowDot: e.target.checked }) }), "Show dot before eyebrow"] }), _jsx("p", { className: "text-xs font-semibold text-slate-500 mt-2 mb-1", children: "Heading" }), _jsx(RichTextField, { label: "Heading text", value: tv(state.headingPre, 'bmsHeadingPre'), defaultKey: "bmsHeadingPre", onChange: v => upd({ headingPre: v }) }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(Field, { label: "Accent phrase", children: _jsx("input", { className: "input", value: state.headingAccent, onChange: e => upd({ headingAccent: e.target.value }) }) }), _jsx(ColorInput, { label: "Accent colour", value: state.headingAccentColor, onChange: v => upd({ headingAccentColor: v }) })] }), _jsx(RichTextField, { label: "Description", value: tv(state.desc, 'bmsDesc'), defaultKey: "bmsDesc", multiline: true, onChange: v => upd({ desc: v }) }), _jsx("p", { className: "text-xs font-semibold text-slate-500 mt-3 mb-1", children: "Checklist" }), _jsx(ColorInput, { label: "Check icon colour", value: state.checkColor, onChange: v => upd({ checkColor: v }) }), state.checks.map((ch, i) => (_jsxs("div", { className: "flex gap-2 items-start mb-1", children: [_jsx("div", { className: "flex-1", children: _jsx(RichTextField, { label: `Item ${i + 1}`, value: tv(ch.text, 'bmsCheck'), defaultKey: "bmsCheck", onChange: v => updCheck(i, { text: v }) }) }), _jsx("button", { onClick: () => upd({ checks: state.checks.filter((_, idx) => idx !== i) }), className: "btn-danger mt-6 text-xs", children: "\u2715" })] }, i))), _jsx("button", { onClick: () => upd({ checks: [...state.checks, { text: normalize('', 'bmsCheck') }] }), className: "btn-ghost text-xs w-full", children: "+ Add item" }), _jsx("p", { className: "text-xs font-semibold text-slate-500 mt-3 mb-1", children: "CTA Button" }), _jsx(RichTextField, { label: "Button text", value: tv(state.ctaText, 'bmsCta'), defaultKey: "bmsCta", onChange: v => upd({ ctaText: v }) }), _jsx(Field, { label: "Button URL", children: _jsx("input", { className: "input", value: state.ctaUrl, placeholder: "https://\u2026", onChange: e => upd({ ctaUrl: e.target.value }) }) }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(ColorInput, { label: "Button bg", value: state.ctaBg, onChange: v => upd({ ctaBg: v }) }), _jsx(ColorInput, { label: "Button text", value: state.ctaTc, onChange: v => upd({ ctaTc: v }) })] }), _jsx("p", { className: "text-xs font-semibold text-slate-500 mt-3 mb-1", children: "Footer Note" }), _jsx(Field, { label: "Note text", children: _jsx("input", { className: "input", value: state.footerNote, placeholder: "\uD83D\uDD12 Free \u00B7 Online \u00B7 \u2026", onChange: e => upd({ footerNote: e.target.value }) }) }), _jsx(ColorInput, { label: "Note colour", value: state.footerNoteTc, onChange: v => upd({ footerNoteTc: v }) })] })] }));
+}
 // ── Section titles ─────────────────────────────────────────────────────────────
 const SECTION_TITLES = {
     'dcs': { title: 'Two Column v1', desc: 'Left text + right icon cards' },
@@ -556,6 +751,8 @@ const SECTION_TITLES = {
     'reach': { title: 'Global Reach', desc: 'Text + stats + world map + regions' },
     'hero-banner': { title: 'Hero Banner', desc: 'Eyebrow + heading + bullets + badge card' },
     'hero-banner-v2': { title: 'Hero Banner v2', desc: 'Two-column: text left + info cards right' },
+    'book-meeting': { title: 'Book a Meeting', desc: 'Image left + eyebrow/heading/checklist/CTA right' },
+    'content-block': { title: 'Content CTA Block', desc: 'Single column: eyebrow/heading/checklist/CTA' },
 };
 // ── Main screen ────────────────────────────────────────────────────────────────
 export default function FullScreenSections() {
@@ -564,7 +761,7 @@ export default function FullScreenSections() {
     const [previewHtml, setPreviewHtml] = useState('');
     function handleHtml(html) { setPreviewHtml(html); setActiveTab('preview'); }
     const meta = SECTION_TITLES[type || ''] ?? { title: 'Full Screen Section', desc: '' };
-    return (_jsxs("div", { className: "flex h-full", children: [_jsxs("div", { className: "w-[520px] shrink-0 flex flex-col border-r border-slate-200 bg-white overflow-hidden", children: [_jsxs("div", { className: "shrink-0 border-b border-slate-100 bg-white px-5 py-4", children: [_jsx("h1", { className: "text-base font-bold text-slate-900", children: meta.title }), meta.desc && _jsx("p", { className: "text-xs text-slate-400 mt-0.5", children: meta.desc })] }), _jsxs("div", { className: "flex-1 overflow-y-auto", children: [type === 'dcs' && _jsx(DcsTab, { onHtml: handleHtml }), type === 'dcs2' && _jsx(Dcs2Tab, { onHtml: handleHtml }), type === 'dcs3' && _jsx(Dcs3Tab, { onHtml: handleHtml }), type === 'reach' && _jsx(ReachTab, { onHtml: handleHtml }), type === 'hero-banner' && _jsx(PhbTab, { onHtml: handleHtml }), type === 'hero-banner-v2' && _jsx(Phv2Tab, { onHtml: handleHtml }), !type && _jsx("div", { className: "p-6 text-sm text-slate-400", children: "Select a section type from the sidebar." })] })] }), _jsxs("div", { className: "flex flex-1 flex-col overflow-hidden", children: [_jsx("div", { className: "flex border-b border-slate-200 bg-white px-4", children: ['preview', 'html'].map(tab => (_jsx("button", { onClick: () => setActiveTab(tab), className: `px-4 py-3 text-sm font-medium transition border-b-2 -mb-px ${activeTab === tab ? 'border-brand text-brand' : 'border-transparent text-slate-400 hover:text-slate-700'}`, children: tab === 'html' ? 'HTML' : 'Preview' }, tab))) }), activeTab === 'preview' ? (_jsx("iframe", { srcDoc: previewHtml
+    return (_jsxs("div", { className: "flex h-full", children: [_jsxs("div", { className: "w-[520px] shrink-0 flex flex-col border-r border-slate-200 bg-white overflow-hidden", children: [_jsxs("div", { className: "shrink-0 border-b border-slate-100 bg-white px-5 py-4", children: [_jsx("h1", { className: "text-base font-bold text-slate-900", children: meta.title }), meta.desc && _jsx("p", { className: "text-xs text-slate-400 mt-0.5", children: meta.desc })] }), _jsxs("div", { className: "flex-1 overflow-y-auto", children: [type === 'dcs' && _jsx(DcsTab, { onHtml: handleHtml }), type === 'dcs2' && _jsx(Dcs2Tab, { onHtml: handleHtml }), type === 'dcs3' && _jsx(Dcs3Tab, { onHtml: handleHtml }), type === 'reach' && _jsx(ReachTab, { onHtml: handleHtml }), type === 'hero-banner' && _jsx(PhbTab, { onHtml: handleHtml }), type === 'hero-banner-v2' && _jsx(Phv2Tab, { onHtml: handleHtml }), type === 'book-meeting' && _jsx(BmsTab, { onHtml: handleHtml }), type === 'content-block' && _jsx(CbTab, { onHtml: handleHtml }), !type && _jsx("div", { className: "p-6 text-sm text-slate-400", children: "Select a section type from the sidebar." })] })] }), _jsxs("div", { className: "flex flex-1 flex-col overflow-hidden", children: [_jsx("div", { className: "flex border-b border-slate-200 bg-white px-4", children: ['preview', 'html'].map(tab => (_jsx("button", { onClick: () => setActiveTab(tab), className: `px-4 py-3 text-sm font-medium transition border-b-2 -mb-px ${activeTab === tab ? 'border-brand text-brand' : 'border-transparent text-slate-400 hover:text-slate-700'}`, children: tab === 'html' ? 'HTML' : 'Preview' }, tab))) }), activeTab === 'preview' ? (_jsx("iframe", { srcDoc: previewHtml
                             ? `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0">${previewHtml}</body></html>`
                             : '<p style="font-family:sans-serif;color:#94a3b8;padding:24px">Click ⚡ Generate HTML to preview.</p>', className: "flex-1 w-full border-0 bg-slate-50", sandbox: "allow-same-origin allow-scripts" })) : (_jsxs("div", { className: "relative flex-1 overflow-auto bg-slate-900 p-4", children: [_jsx("button", { onClick: () => navigator.clipboard.writeText(previewHtml), className: "absolute right-4 top-4 rounded bg-slate-700 px-3 py-1 text-xs text-slate-300 hover:bg-slate-600", children: "Copy" }), _jsx("pre", { className: "text-xs text-slate-300 whitespace-pre-wrap font-mono leading-relaxed", children: previewHtml || '// Click ⚡ Generate HTML first' })] }))] })] }));
 }

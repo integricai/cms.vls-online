@@ -107,6 +107,8 @@ export interface FaqItem {
 export interface FaqSection {
   id: string;
   name: string;
+  icon: string;
+  title: TextValue;
   items: FaqItem[];
 }
 

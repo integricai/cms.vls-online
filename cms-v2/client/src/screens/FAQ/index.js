@@ -20,7 +20,13 @@ function makeFaq() {
     };
 }
 function makeSection() {
-    return { id: id('fqs'), name: 'FAQ Section', items: [] };
+    return {
+        id: id('fqs'),
+        name: 'FAQ Section',
+        icon: '❔',
+        title: normalize('Frequently Asked Questions', 'faqTitle'),
+        items: [],
+    };
 }
 function textOf(value) {
     if (!value)
@@ -42,6 +48,8 @@ function normalizeSection(section) {
     return {
         id: section?.id || id('fqs'),
         name: section?.name || '',
+        icon: section?.icon || '❔',
+        title: normalize(section?.title || 'Frequently Asked Questions', 'faqTitle'),
         items: (section?.items || []).map(normalizeFaq),
     };
 }
@@ -95,6 +103,8 @@ export default function FAQ() {
         const copy = {
             id: id('fqs'),
             name: `NEW_${active.name || 'FAQ Section'}`,
+            icon: active.icon,
+            title: structuredClone(normalize(active.title, 'faqTitle')),
             items: active.items.map(item => ({ ...structuredClone(item), id: id('fq') })),
         };
         const index = sections.findIndex(section => section.id === active.id);
@@ -144,5 +154,5 @@ export default function FAQ() {
     }
     if (loading)
         return _jsx("div", { className: "p-5 text-sm text-slate-400", children: "Loading FAQ..." });
-    return (_jsxs("div", { className: "flex h-full", children: [_jsxs("div", { className: "w-[560px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white", children: [_jsxs("div", { className: "sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4", children: [_jsxs("div", { className: "flex items-start justify-between gap-3", children: [_jsxs("div", { children: [_jsx("h1", { className: "text-base font-bold text-slate-900", children: "FAQ" }), _jsxs("p", { className: "mt-0.5 text-xs text-slate-400", children: ["Site wide Sections / ", sections.length, " sections / ", totalFaqs, " FAQs"] })] }), _jsx("button", { onClick: addSection, className: "btn-ghost text-xs", children: "+ New Section" })] }), _jsxs("div", { className: "mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3", children: [_jsx("p", { className: "section-label mt-0", children: "FAQ Sections" }), _jsxs("div", { className: "mb-2 flex gap-2", children: [_jsxs("select", { className: "input flex-1", value: activeId || '', onChange: e => setActiveId(e.target.value), children: [_jsx("option", { value: "", children: "- select -" }), sections.map(section => _jsxs("option", { value: section.id, children: [section.name || 'Untitled section', " (", section.items.length, ")"] }, section.id))] }), active && _jsx("button", { onClick: duplicateSection, className: "btn-ghost text-xs", children: "Duplicate" }), active && _jsx("button", { onClick: deleteSection, className: "btn-danger text-xs", children: "Delete" })] }), _jsxs("div", { className: "flex gap-2", children: [_jsx("button", { onClick: save, disabled: saving, className: "btn-primary flex-1 justify-center", children: saving ? 'Saving...' : saved ? 'Saved' : 'Save All' }), _jsx("button", { onClick: () => { setHtml(wrapGeneratedHtml('FAQ', generateFaqHtml(active?.items || []))); setTab('preview'); }, disabled: !active, className: "btn-success flex-1 justify-center", children: "Generate HTML" })] })] })] }), !active ? (_jsx("div", { className: "p-5 text-sm text-slate-400", children: "Create or select a FAQ section." })) : (_jsxs("div", { className: "px-5 py-4", children: [_jsx(Field, { label: "Section name", children: _jsx("input", { className: "input", value: active.name, onChange: e => updateSection({ ...active, name: e.target.value }) }) }), _jsx("p", { className: "section-label", children: "Questions" }), active.items.map((item, index) => (_jsx(FaqEditor, { item: item, index: index, total: active.items.length, onChange: next => updateFaq(index, next), onRemove: () => updateSection({ ...active, items: active.items.filter((_, i) => i !== index) }), onMove: dir => moveFaq(index, dir) }, item.id))), _jsx("button", { onClick: addFaq, className: "btn-ghost mb-6 w-full justify-center", children: "+ Add FAQ" })] }))] }), _jsx(OutputPane, { html: html, tab: tab, setTab: setTab })] }));
+    return (_jsxs("div", { className: "flex h-full", children: [_jsxs("div", { className: "w-[560px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white", children: [_jsxs("div", { className: "sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4", children: [_jsxs("div", { className: "flex items-start justify-between gap-3", children: [_jsxs("div", { children: [_jsx("h1", { className: "text-base font-bold text-slate-900", children: "FAQ" }), _jsxs("p", { className: "mt-0.5 text-xs text-slate-400", children: ["Site wide Sections / ", sections.length, " sections / ", totalFaqs, " FAQs"] })] }), _jsx("button", { onClick: addSection, className: "btn-ghost text-xs", children: "+ New Section" })] }), _jsxs("div", { className: "mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3", children: [_jsx("p", { className: "section-label mt-0", children: "FAQ Sections" }), _jsxs("div", { className: "mb-2 flex gap-2", children: [_jsxs("select", { className: "input flex-1", value: activeId || '', onChange: e => setActiveId(e.target.value), children: [_jsx("option", { value: "", children: "- select -" }), sections.map(section => _jsxs("option", { value: section.id, children: [section.name || 'Untitled section', " (", section.items.length, ")"] }, section.id))] }), active && _jsx("button", { onClick: duplicateSection, className: "btn-ghost text-xs", children: "Duplicate" }), active && _jsx("button", { onClick: deleteSection, className: "btn-danger text-xs", children: "Delete" })] }), _jsxs("div", { className: "flex gap-2", children: [_jsx("button", { onClick: save, disabled: saving, className: "btn-primary flex-1 justify-center", children: saving ? 'Saving...' : saved ? 'Saved' : 'Save All' }), _jsx("button", { onClick: () => { setHtml(wrapGeneratedHtml('FAQ', generateFaqHtml(active || []))); setTab('preview'); }, disabled: !active, className: "btn-success flex-1 justify-center", children: "Generate HTML" })] })] })] }), !active ? (_jsx("div", { className: "p-5 text-sm text-slate-400", children: "Create or select a FAQ section." })) : (_jsxs("div", { className: "px-5 py-4", children: [_jsx(Field, { label: "Section name", children: _jsx("input", { className: "input", value: active.name, onChange: e => updateSection({ ...active, name: e.target.value }) }) }), _jsx("p", { className: "section-label", children: "Section Title" }), _jsxs("div", { className: "grid grid-cols-[88px_1fr] gap-3", children: [_jsx(Field, { label: "Icon", children: _jsx("input", { className: "input", value: active.icon, placeholder: "\u2754", onChange: e => updateSection({ ...active, icon: e.target.value }) }) }), _jsx(RichTextField, { label: "Title", value: normalize(active.title, 'faqTitle'), defaultKey: "faqTitle", onChange: title => updateSection({ ...active, title }) })] }), _jsx("p", { className: "section-label", children: "Questions" }), active.items.map((item, index) => (_jsx(FaqEditor, { item: item, index: index, total: active.items.length, onChange: next => updateFaq(index, next), onRemove: () => updateSection({ ...active, items: active.items.filter((_, i) => i !== index) }), onMove: dir => moveFaq(index, dir) }, item.id))), _jsx("button", { onClick: addFaq, className: "btn-ghost mb-6 w-full justify-center", children: "+ Add FAQ" })] }))] }), _jsx(OutputPane, { html: html, tab: tab, setTab: setTab })] }));
 }

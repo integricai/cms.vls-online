@@ -1,4 +1,4 @@
-import { escapeHtml } from '../../utils/text';
+import { escapeHtml, normalize, textStyle } from '../../utils/text';
 function safeHex(v, fallback) {
     return /^#[0-9a-fA-F]{6}$/.test(v ?? '') ? v : fallback;
 }
@@ -28,6 +28,9 @@ export function generateVerticalCardsHtml(data) {
     const headingColor = safeHex(data.headingColor, '#1a1a1a');
     const descText = (data.descText || '').trim();
     const descColor = safeHex(data.descColor, '#4a5568');
+    const titleStyle = normalize(data.cardTitleStyle, 'vc3CardTitle');
+    const subStyle = normalize(data.cardSubStyle, 'vc3CardSub');
+    const itemStyle = normalize(data.cardItemStyle, 'vc3CardItem');
     const cards = (data.cards || []).filter(c => c.title);
     const css = `<style>`
         + `#${uid}{font-family:'Poppins',sans-serif;background:${bg};padding:${padTop}px ${padRight}px ${padBottom}px ${padLeft}px;box-sizing:border-box;}`
@@ -39,12 +42,12 @@ export function generateVerticalCardsHtml(data) {
         + `.${uid}-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);display:flex;flex-direction:column;}`
         + `.${uid}-hdr{padding:24px 20px;}`
         + `.${uid}-badge{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.2);font-size:14px;font-weight:700;color:#fff;margin-bottom:12px;}`
-        + `.${uid}-ctitle{font-size:20px;font-weight:700;color:#fff;margin:0 0 6px;line-height:1.2;}`
-        + `.${uid}-csub{font-size:13px;color:rgba(255,255,255,0.8);margin:0;}`
+        + `.${uid}-ctitle{${textStyle(titleStyle)}margin:0 0 6px;line-height:1.2;}`
+        + `.${uid}-csub{${textStyle(subStyle)}margin:0;}`
         + `.${uid}-body{padding:16px 20px;flex:1;display:flex;flex-direction:column;gap:8px;}`
         + `.${uid}-tag{display:flex;align-items:center;gap:10px;padding:9px 12px;background:#f8f9fa;border-radius:8px;}`
         + `.${uid}-code{font-size:11px;font-weight:700;letter-spacing:0.06em;padding:3px 8px;border-radius:4px;white-space:nowrap;flex-shrink:0;}`
-        + `.${uid}-tname{font-size:13px;color:#374151;line-height:1.4;}`
+        + `.${uid}-tname{${textStyle(itemStyle)}line-height:1.4;}`
         + `@media(max-width:900px){#${uid}-grid{grid-template-columns:repeat(${Math.min(cols, 2)},1fr);}}`
         + `@media(max-width:600px){#${uid}-grid{grid-template-columns:1fr;}}`
         + `</style>`;
