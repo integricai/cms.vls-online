@@ -8,8 +8,11 @@ import snippetsRouter from './routes/snippets';
 import contentRouter from './routes/content';
 import usersRouter from './routes/users';
 import publicRouter from './routes/public';
+import blogRouter from './routes/blog';
 import { sendErrorAlert } from './utils/errorAlert';
 import { getContent } from './models/content';
+import { listBlogPosts } from './models/blog';
+import { blogTopicSlug, renderBlogArticle, renderBlogLanding } from './services/blogRender';
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
@@ -62,7 +65,35 @@ app.use('/api/auth', authRouter);
 app.use('/api/snippets', snippetsRouter);
 app.use('/api/content', contentRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/blog', blogRouter);
 app.use('/api/public', publicRouter);
+
+app.get('/blog', async (_req, res, next) => {
+  try {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    return res.send(renderBlogLanding(await listBlogPosts()));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/blog/:topic/:slug', async (req, res, next) => {
+  try {
+    const posts = await listBlogPosts();
+    const post = posts.find(item =>
+      item.status === 'published'
+      && item.slug === req.params.slug
+      && blogTopicSlug(item.topic) === req.params.topic
+    );
+    if (!post) return res.status(404).send('Blog post not found');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    return res.send(renderBlogArticle(post));
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ── 404 catch-all ─────────────────────────────────────────────────
 

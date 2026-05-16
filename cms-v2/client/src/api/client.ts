@@ -64,7 +64,12 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     throw new Error(`Server error (${res.status})`);
   }
 
-  if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
+  if (!res.ok) {
+    const error = new Error(json?.error ?? `HTTP ${res.status}`) as Error & { data?: unknown; status?: number };
+    error.data = json?.data;
+    error.status = res.status;
+    throw error;
+  }
   return json!.data as T;
 }
 

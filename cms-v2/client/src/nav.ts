@@ -36,6 +36,7 @@ export const NAV: NavGroup[] = [
     children: [
       { to: '/events',     label: 'Events' },
       { to: '/articles',   label: 'Articles' },
+      { to: '/blog',       label: 'Blog Import' },
       { to: '/legal-page', label: 'Legal Page' },
       { to: '/team',       label: 'Team' },
     ],

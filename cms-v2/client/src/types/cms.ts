@@ -147,6 +147,39 @@ export interface ArticleSection {
 
 export interface ArticleGroupsContent { sections: ArticleSection[]; }
 
+// ── Blog ─────────────────────────────────────────────────────────────────────
+
+export type BlogStatus = 'draft' | 'published';
+
+export interface BlogImage {
+  sourceUrl: string;
+  localPath: string;
+  alt: string;
+  contentType: string;
+}
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  topic: string;
+  tags: string[];
+  summary: string;
+  bodyHtml: string;
+  featuredImagePath: string;
+  images: BlogImage[];
+  originalSourceUrl: string;
+  canonicalUrl: string;
+  metaTitle: string;
+  metaDescription: string;
+  author: string;
+  publishDate: string;
+  createdDate: string;
+  updatedDate: string;
+  status: BlogStatus;
+  url?: string;
+}
+
 // ── Promotion Section ─────────────────────────────────────────────────────────
 
 export interface PromoSection {
