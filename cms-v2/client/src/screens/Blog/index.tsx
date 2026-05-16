@@ -32,6 +32,7 @@ export default function Blog() {
   const [slugOverride, setSlugOverride] = useState('');
   const [status, setStatus] = useState<BlogStatus>('published');
   const [importing, setImporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'warning' | 'info'; text: string } | null>(null);
   const [duplicate, setDuplicate] = useState<BlogPost | null>(null);
   const [selectedId, setSelectedId] = useState<string>('');
@@ -107,6 +108,24 @@ export default function Blog() {
     setPosts(items => items.map(post => post.id === updated.id ? updated : post));
     setSelectedId(updated.id);
     setMessage({ type: 'success', text: 'Blog post updated' });
+  }
+
+  async function deleteSelected() {
+    if (!selected) return;
+    if (!window.confirm(`Delete "${selected.title}" from the blog library?`)) return;
+    setDeleting(true);
+    try {
+      await api.delete<{ id: string }>(`/blog/posts/${selected.id}`);
+      const remaining = posts.filter(post => post.id !== selected.id);
+      setPosts(remaining);
+      setSelectedId(remaining[0]?.id || '');
+      setTab(remaining.length ? 'landing' : 'html');
+      setMessage({ type: 'success', text: 'Blog post deleted' });
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Delete failed' });
+    } finally {
+      setDeleting(false);
+    }
   }
 
   if (loading) return <div className="flex h-full items-center justify-center text-sm text-slate-400">Loading blog posts...</div>;
@@ -205,6 +224,9 @@ export default function Blog() {
               <div><strong>Canonical:</strong> {selected.canonicalUrl}</div>
               <div><strong>Images stored:</strong> {selected.images.length}</div>
             </div>
+            <button className="btn-danger mt-3 w-full justify-center border border-red-100 py-2 text-sm" disabled={deleting} onClick={deleteSelected}>
+              {deleting ? 'Deleting...' : 'Delete blog post'}
+            </button>
           </div>
         )}
       </div>

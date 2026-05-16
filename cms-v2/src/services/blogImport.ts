@@ -1,8 +1,8 @@
 import dns from 'dns/promises';
 import net from 'net';
 import path from 'path';
-import { put } from '@vercel/blob';
 import type { BlogImage, BlogPost } from '../models/blog';
+import { saveBlogAsset } from '../models/blogAsset';
 
 const MAX_PAGE_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
@@ -402,15 +402,17 @@ async function storeImage(image: ScrapedImage, slug: string, index: number, exis
   }
 
   const filename = cleanImageFilename(url, `image-${index + 1}`, contentType);
-  const pathname = `cms/blog/${slug}/${index + 1}-${filename}`;
-  const result = await put(pathname, downloaded.buffer, {
-    access: 'public',
-    addRandomSuffix: false,
+  const id = `${slug}-${index + 1}-${slugify(filename.replace(/\.[a-z0-9]+$/i, ''))}`;
+  await saveBlogAsset({
+    id,
+    filename,
+    sourceUrl: image.sourceUrl,
     contentType,
+    data: downloaded.buffer,
   });
   return {
     sourceUrl: image.sourceUrl,
-    localPath: result.url,
+    localPath: `/blog-assets/${encodeURIComponent(id)}/${encodeURIComponent(filename)}`,
     alt: image.alt,
     contentType,
   };

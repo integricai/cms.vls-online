@@ -12,6 +12,7 @@ import blogRouter from './routes/blog';
 import { sendErrorAlert } from './utils/errorAlert';
 import { getContent } from './models/content';
 import { listBlogPosts } from './models/blog';
+import { getBlogAsset } from './models/blogAsset';
 import { blogTopicSlug, renderBlogArticle, renderBlogLanding } from './services/blogRender';
 
 const app = express();
@@ -90,6 +91,19 @@ app.get('/blog/:topic/:slug', async (req, res, next) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
     return res.send(renderBlogArticle(post));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/blog-assets/:id/:filename', async (req, res, next) => {
+  try {
+    const asset = await getBlogAsset(req.params.id);
+    if (!asset) return res.status(404).send('Image not found');
+    res.setHeader('Content-Type', asset.contentType);
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.setHeader('Content-Length', String(asset.sizeBytes));
+    return res.send(asset.data);
   } catch (err) {
     next(err);
   }

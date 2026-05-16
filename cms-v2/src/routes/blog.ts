@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
 import { listBlogPosts, saveBlogPosts, type BlogPost, type BlogStatus } from '../models/blog';
+import { deleteBlogAssets } from '../models/blogAsset';
 import { BlogImportError, importBlogPost, slugify } from '../services/blogImport';
 
 const router = Router();
@@ -110,6 +111,26 @@ router.patch('/posts/:id', requireRole('admin', 'editor'), async (req: Request, 
     const nextPosts = posts.map(post => post.id === nextPost.id ? nextPost : post);
     await saveBlogPosts(nextPosts, req.user!.userId);
     return res.json({ ok: true, data: withUrl(nextPost) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/posts/:id', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const posts = await listBlogPosts();
+    const post = posts.find(item => item.id === req.params.id);
+    if (!post) return res.status(404).json({ ok: false, error: 'Blog post not found' });
+
+    const assetIds = (post.images || [])
+      .map(image => image.localPath.match(/\/blog-assets\/([^/]+)/)?.[1])
+      .filter((id): id is string => Boolean(id))
+      .map(id => decodeURIComponent(id));
+
+    const nextPosts = posts.filter(item => item.id !== req.params.id);
+    await saveBlogPosts(nextPosts, req.user!.userId);
+    await deleteBlogAssets([...new Set(assetIds)]);
+    return res.json({ ok: true, data: { id: req.params.id } });
   } catch (err) {
     next(err);
   }
