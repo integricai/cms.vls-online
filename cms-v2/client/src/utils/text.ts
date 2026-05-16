@@ -104,7 +104,7 @@ export const DEFAULTS = {
   eventMeta:          { size: 13, color: '#262a32', weight: '400', letterSpacing: 0 },
   eventCta:           { size: 13, color: '#ffffff', weight: '500', letterSpacing: 0 },
   // FAQ
-  faqTitle:            { size: 28, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
+  faqTitle:            { size: 24, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
   faq:                 { size: 15, color: '#262a32', weight: '400', letterSpacing: 0 },
   faqQuestion:         { size: 16, color: '#1a1a1a', weight: '700', letterSpacing: 0 },
   faqHeading:          { size: 16, color: '#204280', weight: '700', letterSpacing: 0 },

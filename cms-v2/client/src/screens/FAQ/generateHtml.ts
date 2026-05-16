@@ -75,8 +75,8 @@ export function generateFaqHtml(sectionOrItems: FaqSection | FaqItem[]) {
   lines.push('');
   lines.push('<style>');
   lines.push(`.${uid}{font-family:Poppins,sans-serif;width:100%;}`);
-  lines.push(`.${uid}-head{display:flex;align-items:center;gap:12px;margin:0 0 22px;}`);
-  lines.push(`.${uid}-head-ico{width:42px;height:42px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:#eef2ff;color:#534AB7;font-size:22px;line-height:1;flex-shrink:0;}`);
+  lines.push(`.${uid}-head{display:flex;align-items:center;gap:8px;margin:0 0 8px;}`);
+  lines.push(`.${uid}-head-ico{display:inline-flex;align-items:center;justify-content:center;color:#534AB7;font-size:20px;line-height:1;flex-shrink:0;}`);
   lines.push(`.${uid}-title{font-family:Poppins,sans-serif;margin:0;line-height:1.25;}`);
   lines.push(`.${uid}-item{border-bottom:1.5px solid #e5e7eb;}`);
   lines.push(`.${uid}-item:first-child{border-top:1.5px solid #e5e7eb;}`);
