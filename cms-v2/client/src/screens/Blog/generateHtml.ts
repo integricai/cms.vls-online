@@ -15,9 +15,13 @@ function absoluteAssetUrl(value: string): string {
 }
 
 function bodyWithAbsoluteAssets(html: string): string {
-  return html.replace(/(<img\b[^>]*\ssrc=["'])(\/blog-assets\/[^"']+)(["'][^>]*>)/gi, (_match, start: string, src: string, end: string) => {
-    return `${start}${absoluteAssetUrl(src)}${end}`;
-  });
+  return html
+    .replace(/(<img\b[^>]*\ssrc=["'])(\/blog-assets\/[^"']+)(["'][^>]*>)/gi, (_match, start: string, src: string, end: string) => {
+      return `${start}${absoluteAssetUrl(src)}${end}`;
+    })
+    .replace(/(<a\b[^>]*\shref=["'])https?:\/\/blog\.vls-online\.com\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
+      return `${start}/blog/${slug}/${end}`;
+    });
 }
 
 function topicSlug(topic: string): string {
@@ -93,9 +97,6 @@ export function generateBlogArticleHtml(post: BlogPost): string {
   const metaDescription = post.metaDescription || post.summary;
   const featuredImage = absoluteAssetUrl(post.featuredImagePath);
   const tags = post.tags.map(tag => `<span class="vls-blog-tag">${escapeHtml(tag)}</span>`).join('');
-  const featured = featuredImage
-    ? `<img class="vls-blog-hero" src="${attr(featuredImage)}" alt="${attr(post.title)}">`
-    : '';
   return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>${escapeHtml(post.metaTitle || post.title)}</title>
 <meta name="description" content="${attr(metaDescription)}">
@@ -109,7 +110,6 @@ ${baseCss}
     <span class="vls-blog-kicker">${escapeHtml(post.topic)}</span>
     <h1>${escapeHtml(post.title)}</h1>
     <div class="vls-blog-meta">${post.author ? `<span>${escapeHtml(post.author)}</span>` : ''}${post.publishDate ? `<span>${escapeHtml(formatDate(post.publishDate))}</span>` : ''}<span>${escapeHtml(post.status)}</span></div>
-    ${featured}
     <div class="vls-blog-layout">
       <article class="vls-blog-article">${bodyWithAbsoluteAssets(post.bodyHtml)}</article>
       <aside class="vls-blog-side">

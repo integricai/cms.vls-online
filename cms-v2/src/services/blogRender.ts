@@ -9,6 +9,12 @@ function attr(value: string): string {
   return escapeHtml(value).replace(/"/g, '&quot;');
 }
 
+function rewriteArticleLinks(html: string): string {
+  return html.replace(/(<a\b[^>]*\shref=["'])https?:\/\/blog\.vls-online\.com\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
+    return `${start}/blog/${slug}/${end}`;
+  });
+}
+
 function formatDate(value: string): string {
   if (!value) return '';
   const date = new Date(value);
@@ -65,9 +71,8 @@ export function renderBlogArticle(post: BlogPost): string {
     <span class="kicker">${escapeHtml(post.topic)}</span>
     <h1>${escapeHtml(post.title)}</h1>
     <div class="meta">${post.author ? `<span>${escapeHtml(post.author)}</span>` : ''}${post.publishDate ? `<span>${escapeHtml(formatDate(post.publishDate))}</span>` : ''}</div>
-    ${post.featuredImagePath ? `<img class="hero" src="${attr(post.featuredImagePath)}" alt="${attr(post.title)}">` : ''}
     <div class="layout">
-      <article class="article">${post.bodyHtml}</article>
+      <article class="article">${rewriteArticleLinks(post.bodyHtml)}</article>
       <aside class="side"><strong>Topic</strong><div class="tags"><span class="tag">${escapeHtml(post.topic)}</span></div>${tags ? `<strong style="display:block;margin-top:18px">Tags</strong><div class="tags">${tags}</div>` : ''}</aside>
     </div>
     <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}<\/script>
