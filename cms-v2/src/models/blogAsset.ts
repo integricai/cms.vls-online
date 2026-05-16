@@ -56,12 +56,21 @@ export async function saveBlogAsset(args: {
 export async function getBlogAsset(id: string): Promise<BlogAsset | null> {
   await ensureBlogAssetsTable();
   const rows = await sql`
-    SELECT id, filename, content_type, size_bytes, data
+    SELECT
+      id,
+      filename,
+      content_type AS "contentType",
+      size_bytes AS "sizeBytes",
+      data
     FROM cms_blog_assets
     WHERE id = ${id}
   `;
-  const row = rows[0] as BlogAsset | undefined;
-  return row ?? null;
+  const row = rows[0] as (Omit<BlogAsset, 'data'> & { data: Buffer | Uint8Array | string }) | undefined;
+  if (!row) return null;
+  const data = typeof row.data === 'string'
+    ? Buffer.from(row.data.replace(/^\\x/i, ''), 'hex')
+    : Buffer.from(row.data);
+  return { ...row, data };
 }
 
 export async function deleteBlogAssets(ids: string[]): Promise<void> {
