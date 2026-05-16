@@ -19,7 +19,7 @@ function bodyWithAbsoluteAssets(html: string): string {
     .replace(/(<img\b[^>]*\ssrc=["'])(\/blog-assets\/[^"']+)(["'][^>]*>)/gi, (_match, start: string, src: string, end: string) => {
       return `${start}${absoluteAssetUrl(src)}${end}`;
     })
-    .replace(/(<a\b[^>]*\shref=["'])https?:\/\/blog\.vls-online\.com\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
+    .replace(/(<a\b[^>]*\shref=["'])(?:https?:\/\/(?:blog\.)?vls-online\.com)?\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
       return `${start}/blog/${slug}/${end}`;
     });
 }

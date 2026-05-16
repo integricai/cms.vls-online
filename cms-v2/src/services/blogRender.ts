@@ -10,7 +10,7 @@ function attr(value: string): string {
 }
 
 function rewriteArticleLinks(html: string): string {
-  return html.replace(/(<a\b[^>]*\shref=["'])https?:\/\/blog\.vls-online\.com\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
+  return html.replace(/(<a\b[^>]*\shref=["'])(?:https?:\/\/(?:blog\.)?vls-online\.com)?\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
     return `${start}/blog/${slug}/${end}`;
   });
 }

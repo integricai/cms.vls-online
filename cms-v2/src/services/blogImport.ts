@@ -272,6 +272,12 @@ function sanitizeHtml(html: string): string {
     .trim();
 }
 
+function normalizeBlogLinks(html: string): string {
+  return html.replace(/(<a\b[^>]*\shref=["'])(?:https?:\/\/(?:blog\.)?vls-online\.com)?\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
+    return `${start}/blog/${slug}/${end}`;
+  });
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -456,7 +462,7 @@ export async function importBlogPost(request: ImportRequest): Promise<ImportResu
   const { topic, tags } = inferTopicAndTags(scraped, sourceUrl, request.topicOverride);
   const now = new Date().toISOString();
   const replacedBody = replaceImageSources(scraped.bodyHtml, replacements, baseUrl);
-  const cleanBody = sanitizeHtml(replacedBody);
+  const cleanBody = normalizeBlogLinks(sanitizeHtml(replacedBody));
   const existingPost = request.replacePostId
     ? request.existingPosts.find(post => post.id === request.replacePostId)
     : undefined;
