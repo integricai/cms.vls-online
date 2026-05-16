@@ -1,8 +1,23 @@
 import type { BlogPost } from '../../types/cms';
 import { escapeHtml } from '../../utils/text';
 
+const ASSET_ORIGIN = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/api\/?$/, '').replace(/\/$/, '');
+
 function attr(value: string): string {
   return escapeHtml(value || '').replace(/"/g, '&quot;');
+}
+
+function absoluteAssetUrl(value: string): string {
+  if (!value) return '';
+  if (/^https?:\/\//i.test(value) || value.startsWith('data:')) return value;
+  if (value.startsWith('/blog-assets/')) return `${ASSET_ORIGIN}${value}`;
+  return value;
+}
+
+function bodyWithAbsoluteAssets(html: string): string {
+  return html.replace(/(<img\b[^>]*\ssrc=["'])(\/blog-assets\/[^"']+)(["'][^>]*>)/gi, (_match, start: string, src: string, end: string) => {
+    return `${start}${absoluteAssetUrl(src)}${end}`;
+  });
 }
 
 function topicSlug(topic: string): string {
@@ -21,12 +36,13 @@ function formatDate(value: string): string {
 }
 
 function articleSchema(post: BlogPost): string {
+  const featuredImage = absoluteAssetUrl(post.featuredImagePath);
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title,
     description: post.metaDescription || post.summary,
-    image: post.featuredImagePath ? [post.featuredImagePath] : undefined,
+    image: featuredImage ? [featuredImage] : undefined,
     author: post.author ? { '@type': 'Person', name: post.author } : undefined,
     datePublished: post.publishDate || post.createdDate,
     dateModified: post.updatedDate,
@@ -75,9 +91,10 @@ const baseCss = `<style>
 
 export function generateBlogArticleHtml(post: BlogPost): string {
   const metaDescription = post.metaDescription || post.summary;
+  const featuredImage = absoluteAssetUrl(post.featuredImagePath);
   const tags = post.tags.map(tag => `<span class="vls-blog-tag">${escapeHtml(tag)}</span>`).join('');
-  const featured = post.featuredImagePath
-    ? `<img class="vls-blog-hero" src="${attr(post.featuredImagePath)}" alt="${attr(post.title)}">`
+  const featured = featuredImage
+    ? `<img class="vls-blog-hero" src="${attr(featuredImage)}" alt="${attr(post.title)}">`
     : '';
   return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>${escapeHtml(post.metaTitle || post.title)}</title>
@@ -85,7 +102,7 @@ export function generateBlogArticleHtml(post: BlogPost): string {
 <link rel="canonical" href="${attr(post.canonicalUrl || blogUrl(post))}">
 <meta property="og:title" content="${attr(post.metaTitle || post.title)}">
 <meta property="og:description" content="${attr(metaDescription)}">
-${post.featuredImagePath ? `<meta property="og:image" content="${attr(post.featuredImagePath)}">` : ''}
+${featuredImage ? `<meta property="og:image" content="${attr(featuredImage)}">` : ''}
 ${baseCss}
 <main class="vls-blog">
   <div class="vls-blog-shell">
@@ -94,7 +111,7 @@ ${baseCss}
     <div class="vls-blog-meta">${post.author ? `<span>${escapeHtml(post.author)}</span>` : ''}${post.publishDate ? `<span>${escapeHtml(formatDate(post.publishDate))}</span>` : ''}<span>${escapeHtml(post.status)}</span></div>
     ${featured}
     <div class="vls-blog-layout">
-      <article class="vls-blog-article">${post.bodyHtml}</article>
+      <article class="vls-blog-article">${bodyWithAbsoluteAssets(post.bodyHtml)}</article>
       <aside class="vls-blog-side">
         <strong>Topic</strong>
         <div class="vls-blog-tags"><span class="vls-blog-tag">${escapeHtml(post.topic)}</span></div>
@@ -111,7 +128,7 @@ export function generateBlogLandingHtml(posts: BlogPost[]): string {
   const topics = ['All', ...Array.from(new Set(published.map(post => post.topic))).sort()];
   const filters = topics.map(topic => `<button type="button" class="vls-blog-filter${topic === 'All' ? ' is-active' : ''}" data-topic="${attr(topic)}">${escapeHtml(topic)}</button>`).join('');
   const cards = published.map(post => `<article class="vls-blog-card" data-topic="${attr(post.topic)}" data-search="${attr(`${post.title} ${post.summary} ${post.topic} ${post.tags.join(' ')}`.toLowerCase())}">
-    ${post.featuredImagePath ? `<img src="${attr(post.featuredImagePath)}" alt="${attr(post.title)}">` : ''}
+    ${post.featuredImagePath ? `<img src="${attr(absoluteAssetUrl(post.featuredImagePath))}" alt="${attr(post.title)}">` : ''}
     <div class="vls-blog-card-body">
       <span class="vls-blog-kicker">${escapeHtml(post.topic)}</span>
       <h2>${escapeHtml(post.title)}</h2>

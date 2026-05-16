@@ -42,6 +42,7 @@ export default function Blog() {
   const [duplicate, setDuplicate] = useState<BlogPost | null>(null);
   const [selectedId, setSelectedId] = useState<string>('');
   const [tab, setTab] = useState<'landing' | 'article' | 'html'>('landing');
+  const [htmlTarget, setHtmlTarget] = useState<'article' | 'landing'>('article');
   const [topicFilter, setTopicFilter] = useState('All');
   const [query, setQuery] = useState('');
 
@@ -64,7 +65,7 @@ export default function Blog() {
   });
   const landingHtml = wrapGeneratedHtml('Blog Landing', generateBlogLandingHtml(posts));
   const articleHtml = selected ? wrapGeneratedHtml('Blog Article', generateBlogArticleHtml(selected)) : '';
-  const visibleHtml = tab === 'article' ? articleHtml : landingHtml;
+  const visibleHtml = tab === 'article' ? articleHtml : tab === 'html' && htmlTarget === 'article' ? articleHtml : landingHtml;
 
   async function loadPosts(nextSelectedId?: string) {
     const data = await api.get<BlogPost[]>('/blog/posts');
@@ -241,7 +242,11 @@ export default function Blog() {
           {(['landing', 'article', 'html'] as const).map(item => (
             <button
               key={item}
-              onClick={() => setTab(item)}
+              onClick={() => {
+                setTab(item);
+                if (item === 'article') setHtmlTarget('article');
+                if (item === 'landing') setHtmlTarget('landing');
+              }}
               className={`-mb-px border-b-2 px-4 py-3 text-sm font-medium capitalize transition ${tab === item ? 'border-brand text-brand' : 'border-transparent text-slate-400 hover:text-slate-700'}`}
             >
               {item === 'html' ? 'HTML' : item}
@@ -250,7 +255,11 @@ export default function Blog() {
         </div>
         {tab === 'html' ? (
           <div className="relative flex-1 overflow-auto bg-slate-900 p-4">
-            <button onClick={() => navigator.clipboard.writeText(visibleHtml)} className="absolute right-4 top-4 rounded bg-slate-700 px-3 py-1 text-xs text-slate-300 hover:bg-slate-600">Copy</button>
+            <div className="absolute right-4 top-4 flex gap-2">
+              <button onClick={() => setHtmlTarget('article')} disabled={!selected} className={`rounded px-3 py-1 text-xs ${htmlTarget === 'article' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>Article HTML</button>
+              <button onClick={() => setHtmlTarget('landing')} className={`rounded px-3 py-1 text-xs ${htmlTarget === 'landing' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>Landing HTML</button>
+              <button onClick={() => navigator.clipboard.writeText(visibleHtml)} className="rounded bg-slate-700 px-3 py-1 text-xs text-slate-300 hover:bg-slate-600">Copy</button>
+            </div>
             <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-slate-300">{visibleHtml || '// Import a blog post first'}</pre>
           </div>
         ) : (
