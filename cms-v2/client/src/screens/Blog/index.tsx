@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import Field from '../../components/Field';
-import type { BlogPost, BlogStatus } from '../../types/cms';
+import type { BlogPost, BlogStatus, FooterData, HeaderConfig } from '../../types/cms';
 import { generateBlogArticleHtml, generateBlogLandingHtml, blogUrl } from './generateHtml';
+import { generateBlogHeaderHtml } from '../BlogHeader/generateHtml';
+import { generateFooterHtml } from '../Footer/generateHtml';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 type ImportResponse = { post: BlogPost; warnings: string[] };
@@ -29,6 +31,22 @@ function previewDocument(html: string): string {
   return `<!doctype html><html><head><meta charset="utf-8"><base href="${API_ORIGIN}/"></head><body style="margin:0">${html || '<p style="font-family:sans-serif;color:#94a3b8;padding:24px">Import a blog post to preview.</p>'}</body></html>`;
 }
 
+function minifyHtml(html: string): string {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/>\s+</g, '><')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function unwrapFooterData(raw: unknown): FooterData | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const candidate = raw as FooterData & { footer?: FooterData };
+  return candidate.footer && typeof candidate.footer === 'object' && !Array.isArray(candidate.footer)
+    ? candidate.footer
+    : candidate;
+}
+
 export default function Blog() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +61,9 @@ export default function Blog() {
   const [selectedId, setSelectedId] = useState<string>('');
   const [tab, setTab] = useState<'landing' | 'article' | 'html'>('landing');
   const [htmlTarget, setHtmlTarget] = useState<'article' | 'landing'>('article');
+  const [includeChrome, setIncludeChrome] = useState(false);
+  const [blogHeaderConfig, setBlogHeaderConfig] = useState<HeaderConfig | null>(null);
+  const [footerData, setFooterData] = useState<FooterData | null>(null);
   const [topicFilter, setTopicFilter] = useState('All');
   const [query, setQuery] = useState('');
 
@@ -56,6 +77,16 @@ export default function Blog() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    api.get<{ data: { config?: HeaderConfig } }>('/content/vls-blog-header-config')
+      .then(row => setBlogHeaderConfig((row?.data as { config?: HeaderConfig })?.config || null))
+      .catch(() => setBlogHeaderConfig(null));
+
+    api.get<{ data: FooterData & { footer?: FooterData } }>('/content/vls-footer')
+      .then(row => setFooterData(unwrapFooterData(row?.data)))
+      .catch(() => setFooterData(null));
+  }, []);
+
   const selected = posts.find(post => post.id === selectedId) || posts[0] || null;
   const topics = useMemo(() => ['All', ...Array.from(new Set([...TOPICS, ...posts.map(post => post.topic)])).filter(Boolean)], [posts]);
   const filteredPosts = posts.filter(post => {
@@ -64,8 +95,17 @@ export default function Blog() {
     return topicOk && (!query.trim() || haystack.includes(query.toLowerCase()));
   });
   const landingHtml = wrapGeneratedHtml('Blog Landing', generateBlogLandingHtml(posts));
-  const articleHtml = selected ? wrapGeneratedHtml('Blog Article', generateBlogArticleHtml(selected)) : '';
+  const articleBodyHtml = selected ? generateBlogArticleHtml(selected) : '';
+  const articleHtml = selected ? wrapGeneratedHtml('Blog Article', articleBodyHtml) : '';
+  const fullArticleHtml = selected
+    ? minifyHtml([
+        blogHeaderConfig ? wrapGeneratedHtml('Blog Header', generateBlogHeaderHtml(blogHeaderConfig)) : '',
+        wrapGeneratedHtml('Blog Article', articleBodyHtml),
+        footerData ? wrapGeneratedHtml('Footer', generateFooterHtml(footerData)) : '',
+      ].filter(Boolean).join('\n'))
+    : '';
   const visibleHtml = tab === 'article' ? articleHtml : tab === 'html' && htmlTarget === 'article' ? articleHtml : landingHtml;
+  const copyHtml = tab === 'html' && htmlTarget === 'article' && includeChrome ? fullArticleHtml : visibleHtml;
 
   async function loadPosts(nextSelectedId?: string) {
     const data = await api.get<BlogPost[]>('/blog/posts');
@@ -255,12 +295,22 @@ export default function Blog() {
         </div>
         {tab === 'html' ? (
           <div className="relative flex-1 overflow-auto bg-slate-900 p-4">
-            <div className="absolute right-4 top-4 flex gap-2">
+            <div className="absolute right-4 top-4 flex flex-wrap items-center justify-end gap-2">
+              {htmlTarget === 'article' && (
+                <label className="flex items-center gap-2 rounded bg-slate-800 px-3 py-1 text-xs text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={includeChrome}
+                    onChange={event => setIncludeChrome(event.target.checked)}
+                  />
+                  Include header and footer
+                </label>
+              )}
               <button onClick={() => setHtmlTarget('article')} disabled={!selected} className={`rounded px-3 py-1 text-xs ${htmlTarget === 'article' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>Article HTML</button>
               <button onClick={() => setHtmlTarget('landing')} className={`rounded px-3 py-1 text-xs ${htmlTarget === 'landing' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>Landing HTML</button>
-              <button onClick={() => navigator.clipboard.writeText(visibleHtml)} className="rounded bg-slate-700 px-3 py-1 text-xs text-slate-300 hover:bg-slate-600">Copy</button>
+              <button onClick={() => navigator.clipboard.writeText(copyHtml)} className="rounded bg-slate-700 px-3 py-1 text-xs text-slate-300 hover:bg-slate-600">Copy</button>
             </div>
-            <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-slate-300">{visibleHtml || '// Import a blog post first'}</pre>
+            <pre className="whitespace-pre-wrap pt-12 font-mono text-xs leading-relaxed text-slate-300">{copyHtml || '// Import a blog post first'}</pre>
           </div>
         ) : (
           <iframe
