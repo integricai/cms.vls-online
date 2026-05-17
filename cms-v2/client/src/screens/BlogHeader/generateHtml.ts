@@ -6,6 +6,7 @@ export function generateBlogHeaderHtml(cfg: HeaderConfig): string {
     .replace('.block.parrot.zenstyle.headers{display:none!important;}\n', '')
     .replace(/class="(vlsh[^"]*-wrap)"/, 'class="$1 vls-blog-header-generated"');
   const cleanup = `<style>
+html body .vls-zen-hidden{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;}
 html body .zbv-blog-nav,
 html body .zbv-blog-nav ul,
 html body .zbv-blog-nav li,
@@ -18,6 +19,37 @@ html body .vls-blog-header-no-dots li:before,
 html body .vls-blog-header-no-dots li:after{content:none!important;display:none!important;}
 </style>`;
   const script = `<script data-cfasync="false">(function(){
+function hideNode(el){
+  if(!el)return;
+  el.classList.add('vls-zen-hidden');
+  el.style.setProperty('display','none','important');
+  el.style.setProperty('visibility','hidden','important');
+  el.style.setProperty('height','0','important');
+  el.style.setProperty('min-height','0','important');
+  el.style.setProperty('max-height','0','important');
+  el.style.setProperty('margin','0','important');
+  el.style.setProperty('padding','0','important');
+  el.style.setProperty('border','0','important');
+  el.style.setProperty('overflow','hidden','important');
+}
+function hideOldZenlerHeader(){
+  document.querySelectorAll('#header5,[data-zen="zen_header_dynamic"],.block.parrot.zenstyle.headers').forEach(function(el){
+    if(el.querySelector('.vls-blog-header-generated'))return;
+    hideNode(el);
+  });
+}
+function hideZenBlogIntro(){
+  var generated=document.querySelector('.vls-blog-header-generated');
+  if(!generated)return;
+  var holder=generated.closest('#zen_blog_post,[data-zd="zen_blog_post"],.zbv-blog-05');
+  if(!holder)return;
+  var child=holder.firstElementChild;
+  while(child && child!==generated){
+    var next=child.nextElementSibling;
+    hideNode(child);
+    child=next;
+  }
+}
 function cleanMenuDots(){
   document.querySelectorAll('.zbv-blog-nav ul,ul.dynamic_menu_texts,ul[class*="-ul"],ul[class*="-drop"]').forEach(function(ul){
     ul.classList.add('vls-blog-header-no-dots');
@@ -39,7 +71,7 @@ function preferHeaderZenMenu(){
     }
   });
 }
-function run(){cleanMenuDots();preferHeaderZenMenu();}
+function run(){hideOldZenlerHeader();hideZenBlogIntro();cleanMenuDots();preferHeaderZenMenu();}
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',run);}else{run();}
 setTimeout(run,300);setTimeout(run,1000);setTimeout(run,2500);
 new MutationObserver(run).observe(document.body,{childList:true,subtree:true});
