@@ -2,11 +2,10 @@ import type { HeaderConfig } from '../../types/cms';
 import { generateHeaderHtml } from '../Header/generateHtml';
 
 export function generateBlogHeaderHtml(cfg: HeaderConfig): string {
-  const base = generateHeaderHtml(cfg);
+  const base = generateHeaderHtml(cfg)
+    .replace('.block.parrot.zenstyle.headers{display:none!important;}\n', '')
+    .replace(/class="(vlsh[^"]*-wrap)"/, 'class="$1 vls-blog-header-generated"');
   const cleanup = `<style>
-html body #header5.block.parrot.zenstyle.headers,
-html body [data-zen="zen_header_dynamic"].block.parrot.zenstyle.headers,
-html body .block.parrot.zenstyle.headers:has(.zbv-blog-nav),
 html body .zbv-blog-05.block.hero,
 html body .zbv-blog-05[data-uniqid],
 html body #zen_blog_post,
@@ -45,9 +44,13 @@ function forceHide(target){
     target.style.setProperty('border','0','important');
     target.style.setProperty('overflow','hidden','important');
 }
+function hasGeneratedContent(target){
+  return !!(target && target.querySelector && target.querySelector('.vls-blog-header-generated,.vlsft-grid,.vls-blog'));
+}
 function hideZenBlogPost(){
   document.querySelectorAll('#header5,[data-zen="zen_header_dynamic"],.block.parrot.zenstyle.headers,.zbv-blog-05.block.hero,.zbv-blog-05[data-uniqid],#zen_blog_post,[data-zd="zen_blog_post"]').forEach(function(el){
     var target=el.id==='zen_blog_post'||el.getAttribute('data-zd')==='zen_blog_post' ? el.closest('.zbv-blog-05.block.hero') || el : el;
+    if(hasGeneratedContent(target))return;
     if(target.matches && target.matches('.block.parrot.zenstyle.headers') && !target.querySelector('.zbv-blog-nav'))return;
     forceHide(target);
   });

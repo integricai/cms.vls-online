@@ -16,7 +16,6 @@ export function generateFooterHtml(data: FooterData): string {
   const BG = '#0f2155';
 
   const css = `.${P}-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:40px;padding-bottom:32px;}`
-    + `.block.footer-style.parrot.zenstyle.bg-layer.padding-top-50.padding-bottom-50.center-center.footer-block{display:none!important;}`
     + `.${P}-col{}`
     + `.${P}-hdr{margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;cursor:default;}`
     + `.${P}-arrow{display:none;font-size:18px;color:rgba(255,255,255,.7);line-height:1;}`
@@ -46,7 +45,7 @@ export function generateFooterHtml(data: FooterData): string {
       + `</div>`;
   }
 
-  let html = `<footer style="background:${BG};color:#fff;font-family:Poppins,sans-serif;">`;
+  let html = `<footer class="${P}-generated" style="background:${BG};color:#fff;font-family:Poppins,sans-serif;">`;
   html += `<style>${css}</style>`;
   html += `<div style="padding:52px 40px 0;">`;
   html += `<div class="${P}-grid">`;
@@ -109,7 +108,7 @@ export function generateFooterHtml(data: FooterData): string {
   }
   html += `</div>`;
   html += `</div>`;
-  html += `<script>function vlsFtTog(h){if(window.innerWidth>768)return;var c=h.parentElement,o=c.classList.contains('open');document.querySelectorAll('.${P}-col').forEach(function(x){x.classList.remove('open');});if(!o)c.classList.add('open');}document.querySelectorAll('.${P}-yr').forEach(function(el){el.textContent=new Date().getFullYear();});<\/script>`;
+  html += `<script>function vlsFtTog(h){if(window.innerWidth>768)return;var c=h.parentElement,o=c.classList.contains('open');document.querySelectorAll('.${P}-col').forEach(function(x){x.classList.remove('open');});if(!o)c.classList.add('open');}function vlsHideOldFooter(){document.querySelectorAll('.block.footer-style.parrot.zenstyle.bg-layer.padding-top-50.padding-bottom-50.center-center.footer-block').forEach(function(el){if(el.querySelector('.${P}-generated'))return;el.style.setProperty('display','none','important');el.style.setProperty('height','0','important');el.style.setProperty('overflow','hidden','important');});}document.querySelectorAll('.${P}-yr').forEach(function(el){el.textContent=new Date().getFullYear();});if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',vlsHideOldFooter);}else{vlsHideOldFooter();}setTimeout(vlsHideOldFooter,500);<\/script>`;
   html += `</footer>`;
   return html;
 }
