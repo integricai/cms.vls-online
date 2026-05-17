@@ -9,11 +9,20 @@ export function generateBlogHeaderHtml(cfg: HeaderConfig): string {
   const cleanup = `<style>
 html body .vls-zen-hidden{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;}
 html body .vls-blog-header-generated{background:#fff!important;}
-html body .vls-blog-header-generated [class$="-brand"]{padding-top:24px!important;padding-bottom:8px!important;}
+html body .vls-blog-header-generated [class$="-brand"]{padding-top:8px!important;padding-bottom:6px!important;}
 html body .vls-blog-header-generated [class$="-brand-inner"],
 html body .vls-blog-header-generated [class$="-menu-inner"]{max-width:1120px!important;}
-html body .vls-blog-header-generated [class$="-nav"]{display:block!important;}
-html body .vls-blog-header-generated [class$="-ul"]{display:flex!important;}
+html body .vls-blog-header-generated [class$="-nl"]{padding-top:11px!important;padding-bottom:11px!important;}
+@media(min-width:769px){
+  html body .vls-blog-header-generated [class$="-nav"]{display:block!important;}
+  html body .vls-blog-header-generated [class$="-ul"]{display:flex!important;}
+}
+@media(max-width:768px){
+  html body .vls-blog-header-generated [class$="-nav"]:not([class*="-open"]){display:none!important;}
+  html body .vls-blog-header-generated [class$="-nav"][class*="-open"]{display:block!important;}
+  html body .vls-blog-header-generated [class$="-ul"]{display:flex!important;flex-direction:column!important;align-items:stretch!important;}
+  html body .vls-blog-header-generated [class$="-nl"]{padding-top:10px!important;padding-bottom:10px!important;}
+}
 html body .zbv-blog-nav,
 html body .zbv-blog-nav ul,
 html body .zbv-blog-nav li,
