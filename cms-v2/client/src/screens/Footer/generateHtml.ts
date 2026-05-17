@@ -108,7 +108,7 @@ export function generateFooterHtml(data: FooterData): string {
   }
   html += `</div>`;
   html += `</div>`;
-  html += `<script>function vlsFtTog(h){if(window.innerWidth>768)return;var c=h.parentElement,o=c.classList.contains('open');document.querySelectorAll('.${P}-col').forEach(function(x){x.classList.remove('open');});if(!o)c.classList.add('open');}function vlsHideOldFooter(){document.querySelectorAll('.block.footer-style.parrot.zenstyle.bg-layer.padding-top-50.padding-bottom-50.center-center.footer-block').forEach(function(el){if(el.querySelector('.${P}-generated'))return;el.style.setProperty('display','none','important');el.style.setProperty('height','0','important');el.style.setProperty('overflow','hidden','important');});}document.querySelectorAll('.${P}-yr').forEach(function(el){el.textContent=new Date().getFullYear();});if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',vlsHideOldFooter);}else{vlsHideOldFooter();}setTimeout(vlsHideOldFooter,500);<\/script>`;
+  html += `<script>function vlsFtTog(h){if(window.innerWidth>768)return;var c=h.parentElement,o=c.classList.contains('open');document.querySelectorAll('.${P}-col').forEach(function(x){x.classList.remove('open');});if(!o)c.classList.add('open');}document.querySelectorAll('.${P}-yr').forEach(function(el){el.textContent=new Date().getFullYear();});<\/script>`;
   html += `</footer>`;
   return html;
 }
