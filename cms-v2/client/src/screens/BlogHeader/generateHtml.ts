@@ -4,11 +4,16 @@ import { generateHeaderHtml } from '../Header/generateHtml';
 export function generateBlogHeaderHtml(cfg: HeaderConfig): string {
   const base = generateHeaderHtml({ ...cfg, useZenMenu: true })
     .replace('.block.parrot.zenstyle.headers{display:none!important;}\n', '')
+    .replace('<script type="module" data-cfasync="false">', '<script data-cfasync="false">')
     .replace(/class="(vlsh[^"]*-wrap)"/, 'class="$1 vls-blog-header-generated"');
   const cleanup = `<style>
 html body .vls-zen-hidden{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;}
+html body .vls-blog-header-generated{background:#fff!important;}
+html body .vls-blog-header-generated [class$="-brand"]{padding-top:24px!important;padding-bottom:8px!important;}
 html body .vls-blog-header-generated [class$="-brand-inner"],
 html body .vls-blog-header-generated [class$="-menu-inner"]{max-width:1120px!important;}
+html body .vls-blog-header-generated [class$="-nav"]{display:block!important;}
+html body .vls-blog-header-generated [class$="-ul"]{display:flex!important;}
 html body .zbv-blog-nav,
 html body .zbv-blog-nav ul,
 html body .zbv-blog-nav li,

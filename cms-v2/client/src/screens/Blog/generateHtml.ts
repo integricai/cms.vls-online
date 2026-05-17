@@ -56,7 +56,7 @@ function articleSchema(post: BlogPost): string {
 }
 
 const baseCss = `<style>
-.vls-blog{font-family:Poppins,Arial,sans-serif;color:#0d1f3c;background:linear-gradient(180deg,#0d1f3c 0,#0d1f3c 430px,#f5f8fc 430px,#f5f8fc 100%);}
+.vls-blog{font-family:Poppins,Arial,sans-serif;color:#0d1f3c;background:linear-gradient(180deg,#0d1f3c 0,#0d1f3c 430px,#f5f8fc 430px,#f5f8fc 100%);margin-top:34px;}
 .vls-blog *{box-sizing:border-box;}
 .vls-blog a{color:#1f73b7;text-decoration:none;font-weight:700;}
 .vls-blog-shell{max-width:1160px;margin:0 auto;padding:46px 24px;}
@@ -95,7 +95,7 @@ html body .vls-blog .vls-blog-shell>h1{font-size:clamp(34px,5vw,58px);line-heigh
 .vls-blog-page-btn:disabled{opacity:.45;cursor:not-allowed;}
 .vls-blog-page-status{font-size:13px;color:#64748b;margin-left:8px;}
 @media(max-width:900px){.vls-blog-layout{grid-template-columns:1fr}.vls-blog-side{position:static}.vls-blog-grid{grid-template-columns:1fr 1fr}.vls-blog-article{padding:24px}.vls-blog-search{margin-left:0;width:100%;}}
-@media(max-width:620px){.vls-blog-shell{padding:28px 16px}.vls-blog-grid{grid-template-columns:1fr}.vls-blog h1{font-size:34px}.vls-blog-article{padding:18px}}
+@media(max-width:620px){.vls-blog{margin-top:28px}.vls-blog-shell{padding:28px 16px}.vls-blog-grid{grid-template-columns:1fr}.vls-blog h1{font-size:34px}.vls-blog-article{padding:18px}}
 </style>`;
 
 export function generateBlogArticleHtml(post: BlogPost): string {
