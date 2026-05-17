@@ -98,7 +98,21 @@ function MenuItemRow({ item, depth, onUpdate, onDelete, onAddChild }: {
   );
 }
 
-export default function HeaderScreen() {
+interface HeaderEditorProps {
+  title?: string;
+  subtitle?: string;
+  contentKey?: string;
+  generateHtml?: (cfg: HeaderConfig) => string;
+  commentName?: string;
+}
+
+export function HeaderEditor({
+  title = 'Header',
+  subtitle = 'Site header with logo, navigation and CTAs',
+  contentKey = 'vls-header-config',
+  generateHtml = generateHeaderHtml,
+  commentName = 'Header',
+}: HeaderEditorProps) {
   const [cfg, setCfg]         = useState<HeaderConfig>(makeDefault());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
@@ -107,14 +121,14 @@ export default function HeaderScreen() {
   const [previewHtml, setPreviewHtml] = useState('');
 
   useEffect(() => {
-    api.get<{ data: { config: HeaderConfig } }>('/content/vls-header-config')
+    api.get<{ data: { config: HeaderConfig } }>(`/content/${contentKey}`)
       .then(row => {
         const c = (row?.data as { config?: HeaderConfig })?.config;
         if (c) setCfg(c);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [contentKey]);
 
   const update = useCallback((patch: Partial<HeaderConfig>) => {
     setCfg(prev => ({ ...prev, ...patch }));
@@ -169,7 +183,7 @@ export default function HeaderScreen() {
   async function save() {
     setSaving(true);
     try {
-      await api.put('/content/vls-header-config', { config: cfg });
+      await api.put(`/content/${contentKey}`, { config: cfg });
       setSaved(true);
     } finally {
       setSaving(false);
@@ -177,7 +191,7 @@ export default function HeaderScreen() {
   }
 
   function generate() {
-    setPreviewHtml(wrapGeneratedHtml('Header', generateHeaderHtml(cfg)));
+    setPreviewHtml(wrapGeneratedHtml(commentName, generateHtml(cfg)));
     setActiveTab('preview');
   }
 
@@ -206,8 +220,8 @@ export default function HeaderScreen() {
     <div className="flex h-full">
       <div className="w-[480px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
         <div className="sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4">
-          <h1 className="text-base font-bold text-slate-900">Header</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Site header with logo, navigation and CTAs</p>
+          <h1 className="text-base font-bold text-slate-900">{title}</h1>
+          <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
         </div>
 
         <div className="border-b border-slate-100 bg-white px-5 py-3 flex gap-2">
@@ -375,4 +389,8 @@ export default function HeaderScreen() {
       </div>
     </div>
   );
+}
+
+export default function HeaderScreen() {
+  return <HeaderEditor />;
 }

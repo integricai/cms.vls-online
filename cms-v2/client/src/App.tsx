@@ -6,6 +6,7 @@ import ResetPassword from './screens/ResetPassword';
 import HomeHero from './screens/HomeHero';
 import AboutUs from './screens/AboutUs';
 import Header from './screens/Header';
+import BlogHeader from './screens/BlogHeader';
 import Footer from './screens/Footer';
 import Banner from './screens/Banner';
 import PromotionSection from './screens/PromotionSection';
@@ -58,6 +59,7 @@ export default function App() {
         >
           <Route index element={<Navigate to="/header" replace />} />
           <Route path="/header"            element={<Header />} />
+          <Route path="/blog-header"       element={<BlogHeader />} />
           <Route path="/footer"            element={<Footer />} />
           <Route path="/banner"            element={<Banner />} />
           <Route path="/promotion-section" element={<PromotionSection />} />

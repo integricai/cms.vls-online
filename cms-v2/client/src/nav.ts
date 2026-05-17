@@ -8,6 +8,7 @@ export const NAV: NavGroup[] = [
     group: 'Global',
     children: [
       { to: '/header',            label: 'Header' },
+      { to: '/blog-header',       label: 'Blog Header' },
       { to: '/footer',            label: 'Footer' },
       { to: '/banner',            label: 'Banner' },
       { to: '/promotion-section', label: 'Promotion Section' },
