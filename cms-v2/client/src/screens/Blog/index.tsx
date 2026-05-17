@@ -47,6 +47,10 @@ function unwrapFooterData(raw: unknown): FooterData | null {
     : candidate;
 }
 
+function combinedCleanupHtml(): string {
+  return `<script data-cfasync="false">(function(){function hide(el){if(!el)return;el.style.setProperty('display','none','important');el.style.setProperty('visibility','hidden','important');el.style.setProperty('height','0','important');el.style.setProperty('min-height','0','important');el.style.setProperty('max-height','0','important');el.style.setProperty('margin','0','important');el.style.setProperty('padding','0','important');el.style.setProperty('border','0','important');el.style.setProperty('overflow','hidden','important');}function keep(el){return !!(el.matches&&el.matches('script,style,link,meta,title'))||!!(el.querySelector&&el.querySelector('.vls-blog-header-generated,.vls-blog,.vlsft-generated'))||!!(el.matches&&el.matches('.vls-blog-header-generated,.vls-blog,.vlsft-generated'));}function clean(){document.querySelectorAll('.block.footer-style.parrot.zenstyle.bg-layer.padding-top-50.padding-bottom-50.center-center.footer-block,.footer-block[data-zen="zen_footer_dynamic"],[data-zen="zen_footer_dynamic"]').forEach(function(el){if(!el.querySelector('.vlsft-generated'))hide(el);});var holder=document.querySelector('#zen_blog_post,[data-zd="zen_blog_post"]');if(holder){Array.prototype.slice.call(holder.children).forEach(function(child){if(!keep(child))hide(child);});}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',clean);}else{clean();}setTimeout(clean,300);setTimeout(clean,1000);setTimeout(clean,2500);})();<\/script>`;
+}
+
 export default function Blog() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +106,7 @@ export default function Blog() {
         blogHeaderConfig ? wrapGeneratedHtml('Blog Header', generateBlogHeaderHtml(blogHeaderConfig)) : '',
         wrapGeneratedHtml('Blog Article', articleBodyHtml),
         footerData ? wrapGeneratedHtml('Footer', generateFooterHtml(footerData)) : '',
+        combinedCleanupHtml(),
       ].filter(Boolean).join('\n'))
     : '';
   const visibleHtml = tab === 'article' ? articleHtml : tab === 'html' && htmlTarget === 'article' ? articleHtml : landingHtml;
