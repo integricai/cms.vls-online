@@ -62,7 +62,7 @@ const baseCss = `<style>
 .vls-blog-shell{max-width:1160px;margin:0 auto;padding:46px 24px;}
 .vls-blog-kicker{display:inline-flex;align-items:center;border-radius:999px;background:#e8f3fc;color:#1f73b7;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:7px 12px;}
 .vls-blog>.vls-blog-shell>.vls-blog-kicker{background:#14345f;color:#72cdf4;border:1px solid rgba(114,205,244,.28);}
-.vls-blog h1{font-size:clamp(34px,5vw,58px);line-height:1.05;margin:18px 0 14px;letter-spacing:0;color:#fff;max-width:920px;}
+.vls-blog .vls-blog-shell>h1{font-size:clamp(34px,5vw,58px);line-height:1.05;margin:18px 0 14px;letter-spacing:0;color:#fff!important;max-width:920px;}
 .vls-blog h2{font-size:28px;line-height:1.2;margin:34px 0 12px;color:#0d1f3c;}
 .vls-blog h3{font-size:22px;line-height:1.3;margin:28px 0 10px;color:#14345f;}
 .vls-blog p,.vls-blog li{font-size:16px;line-height:1.75;color:#42526b;}
