@@ -9,10 +9,12 @@ export function generateBlogHeaderHtml(cfg: HeaderConfig): string {
   const cleanup = `<style>
 html body .vls-zen-hidden{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;}
 html body .vls-blog-header-generated{background:#fff!important;}
-html body .vls-blog-header-generated [class$="-brand"]{padding-top:8px!important;padding-bottom:6px!important;}
+html body .vls-blog-header-generated [class$="-brand"]{padding-top:0!important;padding-bottom:4px!important;}
 html body .vls-blog-header-generated [class$="-brand-inner"],
 html body .vls-blog-header-generated [class$="-menu-inner"]{max-width:1120px!important;}
-html body .vls-blog-header-generated [class$="-nl"]{padding-top:11px!important;padding-bottom:11px!important;}
+html body .vls-blog-header-generated [class$="-menubar"]{min-height:0!important;}
+html body .vls-blog-header-generated [class$="-menu-inner"]{min-height:0!important;}
+html body .vls-blog-header-generated [class$="-nl"]{padding-top:7px!important;padding-bottom:7px!important;line-height:1.2!important;}
 @media(min-width:769px){
   html body .vls-blog-header-generated [class$="-nav"]{display:block!important;}
   html body .vls-blog-header-generated [class$="-ul"]{display:flex!important;}
@@ -21,7 +23,7 @@ html body .vls-blog-header-generated [class$="-nl"]{padding-top:11px!important;p
   html body .vls-blog-header-generated [class$="-nav"]:not([class*="-open"]){display:none!important;}
   html body .vls-blog-header-generated [class$="-nav"][class*="-open"]{display:block!important;}
   html body .vls-blog-header-generated [class$="-ul"]{display:flex!important;flex-direction:column!important;align-items:stretch!important;}
-  html body .vls-blog-header-generated [class$="-nl"]{padding-top:10px!important;padding-bottom:10px!important;}
+  html body .vls-blog-header-generated [class$="-nl"]{padding-top:8px!important;padding-bottom:8px!important;}
 }
 html body .zbv-blog-nav,
 html body .zbv-blog-nav ul,
