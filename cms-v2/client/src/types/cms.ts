@@ -644,7 +644,8 @@ export interface Phv2Component { id: string; name: string; data: Phv2State; }
 // Hero Section V2
 export interface HeroV2Cta { text: string; url: string; scroll: string; style: 'solid' | 'outlined'; bg: string; tc: string; bc: string; }
 export interface HeroV2Stat { value: string; label: string; }
-export interface HeroV2RCard { icon: string; iconBg: string; title: string; subtitle: string; count: string; url: string; }
+export type HeroV2RCardType = 'stat' | 'info' | 'tags';
+export interface HeroV2RCard { type: HeroV2RCardType; icon: string; iconBg: string; title: string; subtitle: string; count: string; url: string; tags?: string[]; }
 export interface HeroV2State {
   bg: string;
   leftW: number;

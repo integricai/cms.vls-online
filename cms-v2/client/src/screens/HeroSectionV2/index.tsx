@@ -24,7 +24,7 @@ function makeCta(): HeroV2Cta {
   return { text: '', url: '#', scroll: '', style: 'solid', bg: '#1e3a5f', tc: '#ffffff', bc: '#ffffff' };
 }
 function makeStat(): HeroV2Stat { return { value: '', label: '' }; }
-function makeRCard(): HeroV2RCard { return { icon: '📚', iconBg: '#1a56a3', title: '', subtitle: '', count: '', url: '#' }; }
+function makeRCard(): HeroV2RCard { return { type: 'info', icon: '1', iconBg: '#1a56a3', title: '', subtitle: '', count: '', url: '#', tags: [] }; }
 
 function ColorRow({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
@@ -111,6 +111,9 @@ export default function HeroSectionV2Screen() {
   function updateRCard(i: number, patch: Partial<HeroV2RCard>) { const a = [...state.rcards]; a[i] = { ...a[i], ...patch }; upd({ rcards: a }); }
   function addRCard()              { upd({ rcards: [...state.rcards, makeRCard()] }); }
   function removeRCard(i: number)  { upd({ rcards: state.rcards.filter((_, idx) => idx !== i) }); }
+  function updateRCardTags(i: number, value: string) {
+    updateRCard(i, { tags: value.split('\n').map(tag => tag.trim()).filter(Boolean) });
+  }
 
   if (loading) return <div className="flex h-full items-center justify-center text-sm text-slate-400">Loading…</div>;
 
@@ -260,6 +263,13 @@ export default function HeroSectionV2Screen() {
             {state.rcards.map((card, i) => (
               <div key={i} className="relative rounded border border-slate-200 bg-slate-50 p-3">
                 <button onClick={() => removeRCard(i)} className="btn-danger absolute right-2 top-2">✕</button>
+                <Field label="Box type">
+                  <select className="input" value={card.type || 'info'} onChange={e => updateRCard(i, { type: e.target.value as HeroV2RCard['type'] })}>
+                    <option value="info">Info</option>
+                    <option value="stat">Stat</option>
+                    <option value="tags">Tags</option>
+                  </select>
+                </Field>
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="Icon (emoji)">
                     <input className="input" value={card.icon} placeholder="📚"
@@ -275,6 +285,12 @@ export default function HeroSectionV2Screen() {
                   <input className="input" value={card.subtitle} placeholder="Foundation · Applied Knowledge · Skills"
                     onChange={e => updateRCard(i, { subtitle: e.target.value })} />
                 </Field>
+                {(card.type || 'info') === 'tags' && (
+                  <Field label="Tags" hint="One per line">
+                    <textarea className="input" rows={4} value={(card.tags || []).join('\n')} placeholder={'Leadership\nGovernance\nStrategy'}
+                      onChange={e => updateRCardTags(i, e.target.value)} />
+                  </Field>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="Count badge (optional)">
                     <input className="input" value={card.count} placeholder="75 courses"

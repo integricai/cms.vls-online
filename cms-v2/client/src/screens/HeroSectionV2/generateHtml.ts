@@ -28,6 +28,19 @@ function buildScrollScript(uid: string): string {
     + `})()\<\/script>`;
 }
 
+function cardType(value: string | undefined): 'stat' | 'info' | 'tags' {
+  return value === 'stat' || value === 'tags' ? value : 'info';
+}
+
+function splitTags(tags: string[] | undefined, fallback: string | undefined): string[] {
+  const explicit = (tags ?? []).map(tag => tag.trim()).filter(Boolean);
+  if (explicit.length) return explicit;
+  return String(fallback || '')
+    .split(/\n|,/)
+    .map(tag => tag.trim())
+    .filter(Boolean);
+}
+
 export function generateHeroV2Html(d: HeroV2State): string {
   const uid    = 'h2-' + Date.now().toString(36);
   const bg     = safeHex(d.bg,       '#0d1f3c');
@@ -111,19 +124,43 @@ export function generateHeroV2Html(d: HeroV2State): string {
     leftParts.push(`<div style="display:flex;flex-wrap:wrap;gap:28px;">${statItems}</div>`);
   }
 
-  // Right column: rcards
+  // Right column: stat, info and tags boxes
   const rcards = d.rcards ?? [];
-  const rCardsHtml = rcards.map(r => {
+  const rCardsHtml = rcards.map((r, index) => {
+    const type = cardType(r.type);
     const ibg = safeHex(r.iconBg, '#1a56a3');
-    return `<a href="${escapeHtml(r.url || '#')}" style="display:flex;align-items:center;gap:14px;background:${cardBg};border-radius:10px;padding:14px 18px;text-decoration:none;border:1px solid rgba(255,255,255,0.06);">`
-      + `<div style="width:44px;height:44px;min-width:44px;border-radius:10px;background:${ibg};display:flex;align-items:center;justify-content:center;font-size:22px;">${escapeHtml(r.icon || '📚')}</div>`
+    if (type === 'stat') {
+      return `<div style="background:${cardBg};border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:18px 20px;min-height:105px;">`
+        + `<p style="font-family:'Poppins',sans-serif;font-size:28px;line-height:1;font-weight:800;color:#ffffff;margin:0 0 12px;">${escapeHtml(r.title || r.count || '')}</p>`
+        + `<p style="font-family:'Poppins',sans-serif;font-size:11px;line-height:1.5;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#9bb2ca;margin:0;">${escapeHtml(r.subtitle || '')}</p>`
+        + `</div>`;
+    }
+
+    if (type === 'tags') {
+      const tagsHtml = splitTags(r.tags, r.subtitle).map((tag, tagIndex) =>
+        `<div style="display:flex;align-items:center;gap:8px;">`
+        + `<span style="width:18px;height:18px;border-radius:4px;background:${ibg};display:inline-flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-size:10px;font-weight:700;color:#9bd7ff;flex-shrink:0;">${escapeHtml(String.fromCharCode(65 + (tagIndex % 26)))}</span>`
+        + `<span style="font-family:'Poppins',sans-serif;font-size:12px;line-height:1.45;color:#c3d0df;">${escapeHtml(tag)}</span>`
+        + `</div>`,
+      ).join('');
+      return `<div style="grid-column:1/-1;background:${cardBg};border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:18px 20px;">`
+        + `<p style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:#5fb3e7;margin:0 0 12px;">${escapeHtml(r.title || '')}</p>`
+        + `<div style="display:grid;gap:7px;">${tagsHtml}</div>`
+        + `</div>`;
+    }
+
+    const badge = (r.icon || String(index + 1)).trim();
+    const content = `<div style="display:flex;align-items:flex-start;gap:14px;background:${cardBg};border-radius:8px;padding:16px 18px;text-decoration:none;border:1px solid rgba(255,255,255,0.08);grid-column:1/-1;">`
+      + `<div style="width:28px;height:28px;min-width:28px;border-radius:999px;background:${ibg};display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-size:13px;font-weight:800;color:#ffffff;">${escapeHtml(badge)}</div>`
       + `<div style="flex:1;min-width:0;">`
-      + `<p style="font-family:'Poppins',sans-serif;font-weight:700;font-size:14px;color:#ffffff;margin:0 0 3px;">${escapeHtml(r.title || '')}</p>`
-      + `<p style="font-family:'Poppins',sans-serif;font-size:12px;color:#64748b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(r.subtitle || '')}</p>`
+      + `<p style="font-family:'Poppins',sans-serif;font-weight:800;font-size:13px;line-height:1.35;color:#ffffff;margin:0 0 4px;">${escapeHtml(r.title || '')}</p>`
+      + `<p style="font-family:'Poppins',sans-serif;font-size:12px;line-height:1.55;color:#9bb2ca;margin:0;">${escapeHtml(r.subtitle || '')}</p>`
       + `</div>`
       + (r.count ? `<span style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:600;color:#ffffff;background:rgba(255,255,255,0.12);border-radius:999px;padding:3px 10px;white-space:nowrap;">${escapeHtml(r.count)}</span>` : '')
-      + `<span style="color:#64748b;font-size:16px;margin-left:4px;">›</span>`
-      + `</a>`;
+      + `</div>`;
+    return r.url && r.url !== '#'
+      ? `<a href="${escapeHtml(r.url)}" style="display:block;text-decoration:none;grid-column:1/-1;">${content}</a>`
+      : content;
   }).join('\n    ');
 
   const css = `<style>`
@@ -131,10 +168,10 @@ export function generateHeroV2Html(d: HeroV2State): string {
     + `#${uid} *{box-sizing:border-box;}`
     + `#${uid} .h2-body{display:flex;flex-wrap:wrap;gap:40px;align-items:center;}`
     + `#${uid} .h2-left{flex:0 0 ${lw}%;min-width:280px;}`
-    + `#${uid} .h2-right{flex:1;min-width:260px;display:flex;flex-direction:column;gap:10px;}`
+    + `#${uid} .h2-right{flex:1;min-width:260px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}`
     + `@media(max-width:768px){`
     + `#${uid} .h2-left{flex:none;width:100%;}`
-    + `#${uid} .h2-right{width:100%;}`
+    + `#${uid} .h2-right{width:100%;grid-template-columns:1fr;}`
     + `}`
     + `</style>`;
 
