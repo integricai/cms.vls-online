@@ -185,6 +185,12 @@ export const DEFAULTS = {
   rpsCardDesc:  { size: 13, color: '#cbd5e1', weight: '400', letterSpacing: 0 },
   rpsCardCta:   { size: 13, color: '#ffffff', weight: '700', letterSpacing: 0 },
   plhHeading:   { size: 38, color: '#ffffff', weight: '700', letterSpacing: 0 },
+  // Gradient Banner Section
+  gbEyebrow:   { size: 11, color: '#4cc9f0', weight: '600', letterSpacing: 0.12 },
+  gbTitle:     { size: 24, color: '#ffffff', weight: '700', letterSpacing: 0 },
+  gbDesc:      { size: 14, color: '#cbd5e1', weight: '400', letterSpacing: 0 },
+  gbPrimary:   { size: 13, color: '#0d1f3c', weight: '700', letterSpacing: 0 },
+  gbSecondary: { size: 13, color: '#ffffff', weight: '700', letterSpacing: 0 },
   // Vertical Cards (Feature Card v3)
   vc3CardTitle: { size: 20, color: '#ffffff', weight: '700', letterSpacing: 0 },
   vc3CardSub:   { size: 13, color: '#e5e7eb', weight: '400', letterSpacing: 0 },

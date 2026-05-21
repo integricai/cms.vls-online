@@ -197,6 +197,31 @@ export interface PromoSection {
 
 export interface PromoContent { sections: PromoSection[]; }
 
+// ── Gradient Banner Section ───────────────────────────────────────────────────
+
+export interface GradientBannerSection {
+  id: string;
+  name: string;
+  gradientLeft: string;
+  gradientRight: string;
+  padTop: number;
+  padBot: number;
+  padLeft: number;
+  padRight: number;
+  eyebrow: TextValue;
+  title: TextValue;
+  desc: TextValue;
+  primaryText: TextValue;
+  primaryUrl: string;
+  primaryBg: string;
+  secondaryText: TextValue;
+  secondaryUrl: string;
+  secondaryBg: string;
+  secondaryBorder: string;
+}
+
+export interface GradientBannerContent { sections: GradientBannerSection[]; }
+
 // ── Banner ────────────────────────────────────────────────────────────────────
 
 export interface Banner {

@@ -77,6 +77,7 @@ export const NAV: NavGroup[] = [
         sub: 'Single Column',
         children: [
           { to: '/full-screen/content-block', label: 'Content CTA Block' },
+          { to: '/gradient-banner-section', label: 'Banner Section' },
         ],
       },
       {
