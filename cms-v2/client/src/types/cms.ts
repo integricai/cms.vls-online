@@ -334,6 +334,10 @@ export interface SplitContentSection {
   id: string;
   name: string;
   bg: string;
+  padTop: number;
+  padBot: number;
+  padLeft: number;
+  padRight: number;
   imageBoxWidth: number;
   imageBoxHeight: number;
   eyebrow: TextValue;

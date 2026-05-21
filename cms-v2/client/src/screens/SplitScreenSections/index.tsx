@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import Field from '../../components/Field';
+import PaddingControl from '../../components/PaddingControl';
 import RichTextField from '../../components/RichTextField';
 import type {
   GenericSectionComponent,
@@ -620,6 +621,9 @@ function PanelEditor({ type }: { type: Extract<SplitType, 'left-generic' | 'righ
         <SavedSelector title={config.title} items={items} activeId={activeId} name={name} saving={saving} saved={saved} onSelect={load} onNew={newItem} onDuplicate={duplicate} onDelete={del} onName={setName} onSave={save} onGenerate={() => { setHtml(wrapGeneratedHtml(config.title, generatePanelHtml(state, mode))); setTab('preview'); }} />
         <div className="px-5 py-4">
           <p className="section-label mt-0">Section</p>
+          {mode === 'right' && (
+            <PaddingControl value={state} defaults={{ padTop: 20, padBot: 20, padLeft: 20, padRight: 20 }} onChange={patch} />
+          )}
           <ColorInput label="Background" value={state.bg} onChange={bg => patch({ bg })} />
           <div className="grid grid-cols-2 gap-2">
             <NumberInput label="Image width (%)" value={state.imageBoxWidth ?? 100} min={10} max={100} onChange={imageBoxWidth => patch({ imageBoxWidth })} />
