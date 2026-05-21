@@ -63,6 +63,7 @@ ${card.imageUrl ? `      <div class="split-card-img-frame" style="${frameStyle}"
     const hasIcon = (card.icon || '').trim();
     const hasStat = (card.statValue || '').trim();
     const titleOnly = !descText && !hasStat;
+    const contentIndent = hasIcon ? 'margin-left:48px;' : '';
     let out = `    <div style="background:${cardBg};border:1px solid ${cardBorder};border-radius:12px;padding:${titleOnly ? '14px 20px' : '20px'};">\n`;
     if (hasIcon) {
       out += `      <div style="display:flex;gap:12px;align-items:center;${titleOnly ? '' : 'margin-bottom:10px;'}">
@@ -71,9 +72,9 @@ ${title.text ? `        <h3 style="margin:0;font-family:'Poppins',sans-serif;lin
     } else if (title.text) {
       out += `      <h3 style="margin:0${titleOnly ? '' : ' 0 10px'};font-family:'Poppins',sans-serif;line-height:1.3;${textStyle(title)}">${escapeHtml(title.text)}</h3>\n`;
     }
-    if (descText) out += `      <div style="margin:0${hasStat ? ' 0 16px' : ''};font-family:'Poppins',sans-serif;line-height:1.6;${textStyle(desc)}">${descText}</div>\n`;
+    if (descText) out += `      <div style="margin:0${hasStat ? ' 0 16px' : ''};${contentIndent}font-family:'Poppins',sans-serif;line-height:1.6;${textStyle(desc)}">${descText}</div>\n`;
     if (hasStat) {
-      out += `      <div style="background:${safeHex(card.statBg, defaults.iconBg)};border-radius:8px;padding:12px 16px;display:flex;gap:14px;align-items:center;">
+      out += `      <div style="${contentIndent}background:${safeHex(card.statBg, defaults.iconBg)};border-radius:8px;padding:12px 16px;display:flex;gap:14px;align-items:center;">
         <span style="font-family:'Poppins',sans-serif;font-size:28px;font-weight:800;color:${safeHex(card.statValueColor, '#ffffff')};white-space:nowrap;">${escapeHtml(hasStat)}</span>
 ${card.statLabel ? `        <span style="font-family:'Poppins',sans-serif;font-size:13px;color:${safeHex(card.statLabelColor, '#94a3b8')};line-height:1.4;">${escapeHtml(card.statLabel)}</span>\n` : ''}      </div>\n`;
     }
