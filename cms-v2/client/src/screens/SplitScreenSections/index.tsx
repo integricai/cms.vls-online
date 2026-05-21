@@ -571,15 +571,22 @@ function PanelEditor({ type }: { type: Extract<SplitType, 'left-generic' | 'righ
     setSaved(false);
   }
 
-  function duplicate() {
+  async function duplicate() {
     const id = addId(mode === 'left' ? 'lgs' : 'rps');
     const nextName = name ? `Copy of ${name}` : `Copy of ${config.title}`;
     const nextItem = { ...structuredClone(state), id, name: nextName };
-    setItems(prev => [...prev, nextItem]);
-    setActiveId(id);
-    setName(nextName);
-    setState(nextItem);
-    setSaved(false);
+    const next = [...items, nextItem];
+    setSaving(true);
+    try {
+      await api.put(`/content/${config.key}`, { sections: next });
+      setItems(next);
+      setActiveId(id);
+      setName(nextName);
+      setState(nextItem);
+      setSaved(true);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function save() {
