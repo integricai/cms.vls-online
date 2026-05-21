@@ -307,6 +307,13 @@ export function generatePhv2Html(d: Phv2State): string {
   L.push('<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">');
   L.push('<style>');
   L.push(`@media(max-width:768px){.${id}-wrap{flex-direction:column!important;}.${id}-left,.${id}-right{width:100%!important;}}`);
+  L.push(`.${id}-desc{font-family:Poppins,sans-serif;line-height:1.7;margin:0 0 20px;}`);
+  L.push(`.${id}-desc p{margin:0 0 14px;line-height:inherit;}`);
+  L.push(`.${id}-desc p:last-child{margin-bottom:0;}`);
+  L.push(`.${id}-desc ul{list-style:none;padding:0;margin:16px 0 0;display:grid;gap:10px;}`);
+  L.push(`.${id}-desc li{display:flex;align-items:flex-start;gap:10px;margin:0;line-height:1.55;}`);
+  L.push(`.${id}-desc li::before{content:"✓";width:20px;height:20px;border-radius:6px;background:rgba(74,144,217,.28);border:1px solid rgba(74,144,217,.32);color:#7dc4ff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;line-height:1;flex:0 0 20px;margin-top:1px;}`);
+  L.push(`.${id}-desc strong{color:#ffffff;font-weight:700;}`);
   L.push('</style>');
   L.push(`<div class="${id}-wrap" style="display:flex;gap:${d.colGap}px;align-items:flex-start;background:${d.bg};box-sizing:border-box;padding:${d.padTop}px ${d.padRight}px ${d.padBot}px ${d.padLeft}px;">`);
 
@@ -327,7 +334,7 @@ export function generatePhv2Html(d: Phv2State): string {
   if (d.headingPost) L.push(`      ${e(d.headingPost)}`);
   L.push(`    </h1>`);
   if (desc.text) {
-    L.push(`    <p style="font-family:Poppins,sans-serif;${textStyle(desc)};line-height:1.7;margin:0 0 20px;">${e(desc.text)}</p>`);
+    L.push(`    <div class="${id}-desc" style="${textStyle(desc)}">${desc.text}</div>`);
   }
   if (d.trustItems.length) {
     L.push(`    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;">`);
