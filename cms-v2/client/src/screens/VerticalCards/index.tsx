@@ -110,9 +110,10 @@ export default function VerticalCardsScreen() {
     setComponents(comps); setActiveId(newId); setName(newName); setSaved(true);
   }
 
-  function updateCard(i: number, patch: Partial<Fc3Card>) { const a = [...state.cards]; a[i] = { ...a[i], ...patch }; upd({ cards: a }); }
-  function addCard()             { upd({ cards: [...state.cards, makeCard()] }); }
-  function removeCard(i: number) { upd({ cards: state.cards.filter((_, idx) => idx !== i) }); }
+function updateCard(i: number, patch: Partial<Fc3Card>) { const a = [...state.cards]; a[i] = { ...a[i], ...patch }; upd({ cards: a }); }
+function addCard()             { upd({ cards: [...state.cards, makeCard()] }); }
+function duplicateCard(i: number) { const a = [...state.cards]; a.splice(i + 1, 0, structuredClone(a[i])); upd({ cards: a }); }
+function removeCard(i: number) { upd({ cards: state.cards.filter((_, idx) => idx !== i) }); }
   function updateTag(ci: number, ti: number, patch: Partial<Fc3Tag>) { const cards = [...state.cards]; const tags = [...cards[ci].tags]; tags[ti] = { ...tags[ti], ...patch }; cards[ci] = { ...cards[ci], tags }; upd({ cards }); }
   function addTag(ci: number)    { const cards = [...state.cards]; cards[ci] = { ...cards[ci], tags: [...cards[ci].tags, makeTag()] }; upd({ cards }); }
   function removeTag(ci: number, ti: number) { const cards = [...state.cards]; cards[ci] = { ...cards[ci], tags: cards[ci].tags.filter((_, idx) => idx !== ti) }; upd({ cards }); }
@@ -159,11 +160,14 @@ export default function VerticalCardsScreen() {
           <p className="section-label">Layout</p>
           <div className="grid grid-cols-2 gap-2">
             <ColorRow label="Background" value={state.bg} onChange={v => upd({ bg: v })} />
-            <Field label="Columns">
+            <Field label="Cards per row">
               <select className="input" value={state.cols} onChange={e => upd({ cols: Number(e.target.value) })}>
-                <option value={2}>2 columns</option>
-                <option value={3}>3 columns</option>
-                <option value={4}>4 columns</option>
+                <option value={1}>1 card</option>
+                <option value={2}>2 cards</option>
+                <option value={3}>3 cards</option>
+                <option value={4}>4 cards</option>
+                <option value={5}>5 cards</option>
+                <option value={6}>6 cards</option>
               </select>
             </Field>
             <Field label="Gap (px)">
@@ -216,8 +220,11 @@ export default function VerticalCardsScreen() {
           <p className="section-label">Cards</p>
           <div className="space-y-3 mb-2">
             {state.cards.map((card, ci) => (
-              <div key={ci} className="relative rounded border border-slate-200 bg-slate-50 p-3">
-                <button onClick={() => removeCard(ci)} className="btn-danger absolute right-2 top-2">✕</button>
+              <div key={ci} className="relative rounded border border-slate-200 bg-slate-50 p-3 pt-12">
+                <div className="absolute right-2 top-2 flex gap-2">
+                  <button onClick={() => duplicateCard(ci)} className="btn-ghost text-xs">Duplicate</button>
+                  <button onClick={() => removeCard(ci)} className="btn-danger">✕</button>
+                </div>
                 <ColorRow label="Header background" value={card.headerBg} onChange={v => updateCard(ci, { headerBg: v })} />
                 <div className="grid grid-cols-3 gap-2">
                   <Field label="Number badge">

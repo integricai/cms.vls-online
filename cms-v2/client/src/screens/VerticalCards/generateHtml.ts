@@ -23,7 +23,7 @@ export function generateVerticalCardsHtml(data: Fc3State): string {
   const padBottom    = clamp(data.padBottom, 60, 0, 200);
   const padLeft      = clamp(data.padLeft,   80, 0, 200);
   const padRight     = clamp(data.padRight,  80, 0, 200);
-  const cols         = clamp(data.cols,       3, 2, 4);
+  const cols         = clamp(data.cols,       3, 1, 6);
   const gap          = clamp(data.gap,       24, 0,  80);
   const eyebrow      = (data.eyebrow      || '').trim();
   const eyebrowColor = safeHex(data.eyebrowColor, '#4a90d9');
@@ -42,7 +42,7 @@ export function generateVerticalCardsHtml(data: Fc3State): string {
     + `#${uid}-eyebrow{font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${eyebrowColor};margin-bottom:10px;}`
     + `#${uid}-h2{font-size:32px;font-weight:700;color:${headingColor};margin:0 0 14px;line-height:1.2;}`
     + `#${uid}-desc{font-size:16px;color:${descColor};margin:0 auto;max-width:720px;line-height:1.7;}`
-    + `#${uid}-grid{display:grid;grid-template-columns:repeat(${cols},1fr);gap:${gap}px;}`
+    + `#${uid}-grid{display:grid;grid-template-columns:repeat(${cols},minmax(0,340px));gap:${gap}px;justify-content:center;align-items:stretch;}`
     + `.${uid}-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);display:flex;flex-direction:column;}`
     + `.${uid}-hdr{padding:24px 20px;}`
     + `.${uid}-badge{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.2);font-size:14px;font-weight:700;color:#fff;margin-bottom:12px;}`
@@ -52,7 +52,7 @@ export function generateVerticalCardsHtml(data: Fc3State): string {
     + `.${uid}-tag{display:flex;align-items:center;gap:10px;padding:9px 12px;background:#f8f9fa;border-radius:8px;}`
     + `.${uid}-code{font-size:11px;font-weight:700;letter-spacing:0.06em;padding:3px 8px;border-radius:4px;white-space:nowrap;flex-shrink:0;}`
     + `.${uid}-tname{${textStyle(itemStyle)}line-height:1.4;}`
-    + `@media(max-width:900px){#${uid}-grid{grid-template-columns:repeat(${Math.min(cols, 2)},1fr);}}`
+    + `@media(max-width:900px){#${uid}-grid{grid-template-columns:repeat(${Math.min(cols, 2)},minmax(0,340px));}}`
     + `@media(max-width:600px){#${uid}-grid{grid-template-columns:1fr;}}`
     + `</style>`;
 
