@@ -54,8 +54,8 @@ export function generateVerticalCardsHtml(data: Fc3State): string {
     + `#${uid}-eyebrow{font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${eyebrowColor};margin-bottom:10px;}`
     + `#${uid}-h2{font-size:32px;font-weight:700;color:${headingColor};margin:0 0 14px;line-height:1.2;}`
     + `#${uid}-desc{font-size:16px;color:${descColor};margin:0 auto;max-width:720px;line-height:1.7;}`
-    + `#${uid}-grid{display:grid;grid-template-columns:repeat(${cols},minmax(0,340px));gap:${gap}px;justify-content:center;align-items:stretch;}`
-    + `.${uid}-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);display:flex;flex-direction:column;}`
+    + `#${uid}-grid{display:flex;flex-wrap:wrap;gap:${gap}px;justify-content:center;align-items:stretch;}`
+    + `.${uid}-card{width:calc((100% - ${gap * (cols - 1)}px) / ${cols});max-width:340px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);display:flex;flex-direction:column;}`
     + `.${uid}-hdr{padding:24px 20px;}`
     + `.${uid}-badge{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.2);font-size:14px;font-weight:700;color:#fff;margin-bottom:12px;}`
     + `.${uid}-ctitle{${textStyle(titleStyle)}margin:0 0 6px;line-height:1.2;}`
@@ -80,8 +80,8 @@ export function generateVerticalCardsHtml(data: Fc3State): string {
     + `.${uid}-cta-foot-text{font-size:12px;font-weight:400;color:#697386;line-height:1.4;}`
     + `.${uid}-cta-foot-text strong{font-family:'Poppins',sans-serif;font-weight:500;color:#071739;}`
     + `.${uid}-cta-btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:10px 18px;border-radius:7px;text-decoration:none;white-space:nowrap;font-size:12px;font-weight:700;}`
-    + `@media(max-width:900px){#${uid}-grid{grid-template-columns:repeat(${Math.min(cols, 2)},minmax(0,340px));}}`
-    + `@media(max-width:600px){#${uid}-grid{grid-template-columns:1fr;}}`
+    + `@media(max-width:900px){.${uid}-card{width:calc((100% - ${gap * (Math.min(cols, 2) - 1)}px) / ${Math.min(cols, 2)});}}`
+    + `@media(max-width:600px){.${uid}-card{width:100%;max-width:none;}}`
     + `</style>`;
 
   const headerHtml = (eyebrow || headingText || descText)
