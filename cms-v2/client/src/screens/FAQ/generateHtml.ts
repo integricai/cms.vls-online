@@ -30,7 +30,7 @@ function answerInnerHtml(item: FaqItem) {
   }
 
   if ((item.type === 'bullets' || item.type === 'heading-bullets') && bullets.length) {
-    lines.push('<ul style="padding-left:0;list-style:none;margin:0 0 4px;">');
+    lines.push('<ul style="padding-left:0;list-style:none;margin:0 0 4px;text-align:left !important;">');
     bullets.forEach(entry => {
       const bullet = normalize(entry, 'faqBullet');
       if (!bullet.text.trim()) return;
@@ -79,23 +79,24 @@ export function generateFaqHtml(sectionOrItems: FaqSection | FaqItem[]) {
   lines.push('</script>');
   lines.push('');
   lines.push('<style>');
-  lines.push(`.${uid}{font-family:Poppins,sans-serif;width:100%;}`);
-  lines.push(`.${uid}-head{display:flex;align-items:center;gap:8px;margin:0;}`);
+  lines.push(`.${uid}{font-family:Poppins,sans-serif;width:100%;text-align:left !important;}`);
+  lines.push(`.${uid},.${uid} *{text-align:left !important;}`);
+  lines.push(`.${uid}-head{display:flex;align-items:center;gap:8px;margin:0;text-align:left !important;}`);
   lines.push(`.${uid}-head-ico{display:inline-flex;align-items:center;justify-content:center;color:#534AB7;font-size:20px;line-height:1;flex-shrink:0;}`);
-  lines.push(`.${uid}-title{font-family:Poppins,sans-serif;margin:0;line-height:1.25;}`);
+  lines.push(`.${uid}-title{font-family:Poppins,sans-serif;margin:0;line-height:1.25;text-align:left !important;}`);
   lines.push(`.${uid}-item{border-bottom:1.5px solid #e5e7eb;}`);
   lines.push(`.${uid}-item:first-child{border-top:1.5px solid #e5e7eb;}`);
-  lines.push(`.${uid}-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;background:none;border:none;cursor:pointer;font-family:Poppins,sans-serif;font-size:16px;font-weight:600;color:#1a1a1a;}`);
+  lines.push(`.${uid}-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;background:none;border:none;cursor:pointer;font-family:Poppins,sans-serif;font-size:16px;font-weight:600;color:#1a1a1a;text-align:left !important;}`);
   lines.push(`.${uid}-btn:hover{color:#534AB7;}`);
-  lines.push(`.${uid}-q{transition:color .2s ease;}`);
+  lines.push(`.${uid}-q{transition:color .2s ease;text-align:left !important;}`);
   lines.push(`.${uid}-btn[aria-expanded="true"] .${uid}-q{color:#534AB7 !important;}`);
   lines.push(`.${uid}-ico{width:18px;height:18px;flex-shrink:0;transition:transform .2s;stroke:#534AB7;fill:none;stroke-width:2.5;}`);
   lines.push(`.${uid}-btn[aria-expanded="true"] .${uid}-ico{transform:rotate(180deg);}`);
-  lines.push(`.${uid}-ans{display:none;padding:0 0 16px;}`);
+  lines.push(`.${uid}-ans{display:none;padding:0 0 16px;text-align:left !important;}`);
   lines.push(`.${uid}-ans.open{display:block;}`);
   lines.push('</style>');
   lines.push('');
-  lines.push(`<div class="${uid}">`);
+  lines.push(`<div class="${uid}" style="text-align:left !important;">`);
   if (section) {
     const title = normalize(section.title || 'Frequently Asked Questions', 'faqTitle');
     const icon = section.icon ?? '❔';
@@ -103,7 +104,7 @@ export function generateFaqHtml(sectionOrItems: FaqSection | FaqItem[]) {
     if (title.text.trim() || icon.trim()) {
       lines.push(`  <div class="${uid}-head" style="margin-bottom:${titleGap}px;">`);
       if (icon.trim()) lines.push(`    <span class="${uid}-head-ico" aria-hidden="true">${escapeHtml(icon)}</span>`);
-      if (title.text.trim()) lines.push(`    <h2 class="${uid}-title" style="${textStyle(title)}">${escapeHtml(title.text)}</h2>`);
+      if (title.text.trim()) lines.push(`    <h2 class="${uid}-title" style="text-align:left !important;${textStyle(title)}">${escapeHtml(title.text)}</h2>`);
       lines.push('  </div>');
     }
   }
@@ -111,11 +112,11 @@ export function generateFaqHtml(sectionOrItems: FaqSection | FaqItem[]) {
     const question = normalize(item.question, 'faqQuestion');
     lines.push(`  <div class="${uid}-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">`);
     lines.push(`    <button class="${uid}-btn" aria-expanded="false" onclick="${uid}T(this)">`);
-    lines.push(`      <span class="${uid}-q" itemprop="name" style="${textStyle(question)}">${escapeHtml(question.text)}</span>`);
+    lines.push(`      <span class="${uid}-q" itemprop="name" style="text-align:left !important;${textStyle(question)}">${escapeHtml(question.text)}</span>`);
     lines.push(`      <svg class="${uid}-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>`);
     lines.push('    </button>');
     lines.push(`    <div class="${uid}-ans" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">`);
-    lines.push('      <div itemprop="text">');
+    lines.push('      <div itemprop="text" style="text-align:left !important;">');
     lines.push(`        ${answerInnerHtml(item)}`);
     lines.push('      </div>');
     lines.push('    </div>');
