@@ -15,6 +15,18 @@ function hexToRgb(hex: string): string {
   const b = parseInt(h.slice(4, 6), 16);
   return (isNaN(r) || isNaN(g) || isNaN(b)) ? '32,66,128' : `${r},${g},${b}`;
 }
+function attr(value: string | undefined): string {
+  return escapeHtml(value || '').replace(/'/g, '&#39;');
+}
+function strongHtml(value: string | undefined): string {
+  const tokenOpen = '%%VLS_STRONG_OPEN%%';
+  const tokenClose = '%%VLS_STRONG_CLOSE%%';
+  return escapeHtml(value || '')
+    .replace(/&lt;strong&gt;/gi, tokenOpen)
+    .replace(/&lt;\/strong&gt;/gi, tokenClose)
+    .replace(new RegExp(tokenOpen, 'g'), '<strong>')
+    .replace(new RegExp(tokenClose, 'g'), '</strong>');
+}
 
 export function generateVerticalCardsHtml(data: Fc3State): string {
   const uid          = 'vc' + Date.now().toString(36);
@@ -52,6 +64,22 @@ export function generateVerticalCardsHtml(data: Fc3State): string {
     + `.${uid}-tag{display:flex;align-items:center;gap:10px;padding:9px 12px;background:#f8f9fa;border-radius:8px;}`
     + `.${uid}-code{font-size:11px;font-weight:700;letter-spacing:0.06em;padding:3px 8px;border-radius:4px;white-space:nowrap;flex-shrink:0;}`
     + `.${uid}-tname{${textStyle(itemStyle)}line-height:1.4;}`
+    + `.${uid}-cta-card{border:1px solid #e5e7eb;box-shadow:none;}`
+    + `.${uid}-cta-head{position:relative;min-height:80px;padding:0 16px;display:flex;align-items:flex-end;overflow:hidden;}`
+    + `.${uid}-cta-head::after{content:"";position:absolute;right:16px;top:-20px;width:74px;height:74px;border-radius:50%;background:rgba(255,255,255,.08);}`
+    + `.${uid}-cta-label{position:relative;z-index:1;margin-bottom:12px;display:inline-flex;align-items:center;border-radius:999px;padding:4px 12px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.2);font-size:10px;font-weight:700;color:#ffffff;line-height:1;}`
+    + `.${uid}-cta-num{position:absolute;right:24px;top:15px;z-index:1;font-size:20px;font-weight:800;color:rgba(255,255,255,.15);letter-spacing:.02em;}`
+    + `.${uid}-cta-body{padding:16px;flex:1;display:flex;flex-direction:column;}`
+    + `.${uid}-cta-code{display:inline-flex;width:max-content;margin-bottom:10px;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;line-height:1;}`
+    + `.${uid}-cta-title{font-size:18px;font-weight:700;color:#071739;line-height:1.25;margin:0 0 6px;}`
+    + `.${uid}-cta-sub{font-size:12px;font-weight:400;color:#7b8493;margin:0 0 12px;line-height:1.45;}`
+    + `.${uid}-cta-list{list-style:none;margin:0 0 22px;padding:0;display:grid;gap:7px;}`
+    + `.${uid}-cta-list li{position:relative;margin:0;padding-left:14px;font-size:12px;font-weight:400;color:#5e6877;line-height:1.35;}`
+    + `.${uid}-cta-list li::before{content:"";position:absolute;left:0;top:.55em;width:5px;height:5px;border-radius:50%;background:#1267ae;}`
+    + `.${uid}-cta-footer{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:14px;}`
+    + `.${uid}-cta-foot-text{font-size:12px;font-weight:400;color:#697386;line-height:1.4;}`
+    + `.${uid}-cta-foot-text strong{font-family:'Poppins',sans-serif;font-weight:500;color:#071739;}`
+    + `.${uid}-cta-btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:10px 18px;border-radius:7px;text-decoration:none;white-space:nowrap;font-size:12px;font-weight:700;}`
     + `@media(max-width:900px){#${uid}-grid{grid-template-columns:repeat(${Math.min(cols, 2)},minmax(0,340px));}}`
     + `@media(max-width:600px){#${uid}-grid{grid-template-columns:1fr;}}`
     + `</style>`;
@@ -68,6 +96,28 @@ export function generateVerticalCardsHtml(data: Fc3State): string {
     const hbg  = safeHex(card.headerBg, '#204280');
     const rgb  = hexToRgb(hbg);
     const tags = (card.tags || []).filter(t => t.code || t.name);
+    if ((card.type || 'standard') === 'cta') {
+      const tagsHtml = tags.map(t => `<li>${escapeHtml(t.name || t.code)}</li>`).join('');
+      const firstCode = tags.find(t => t.code)?.code || card.number;
+      const label = (card.headerLabel || '').trim();
+      const footer = strongHtml(card.footerHtml);
+      const ctaText = (card.ctaText || '').trim();
+      return `<div class="${uid}-card ${uid}-cta-card">`
+        + `<div class="${uid}-cta-head" style="background:linear-gradient(135deg,${hbg},rgba(${rgb},.78));">`
+        + (label ? `<span class="${uid}-cta-label">${escapeHtml(label)}</span>` : '')
+        + (card.number ? `<span class="${uid}-cta-num">${escapeHtml(card.number)}</span>` : '')
+        + `</div>`
+        + `<div class="${uid}-cta-body">`
+        + (firstCode ? `<div class="${uid}-cta-code" style="background:rgba(${rgb},.12);color:${hbg};">${escapeHtml(firstCode)}</div>` : '')
+        + `<h3 class="${uid}-cta-title">${escapeHtml(card.title)}</h3>`
+        + (card.subtitle ? `<p class="${uid}-cta-sub">${escapeHtml(card.subtitle)}</p>` : '')
+        + (tagsHtml ? `<ul class="${uid}-cta-list">${tagsHtml}</ul>` : '')
+        + ((footer || ctaText) ? `<div class="${uid}-cta-footer">`
+          + (footer ? `<div class="${uid}-cta-foot-text">${footer}</div>` : '<div></div>')
+          + (ctaText ? `<a class="${uid}-cta-btn" href="${attr(card.ctaUrl || '#')}" style="background:${safeHex(card.ctaBg, '#0d1f3c')};color:${safeHex(card.ctaColor, '#ffffff')};">${escapeHtml(ctaText)}</a>` : '')
+          + `</div>` : '')
+        + `</div></div>`;
+    }
     const tagsHtml = tags.map(t =>
       `<div class="${uid}-tag">`
       + (t.code ? `<span class="${uid}-code" style="background:rgba(${rgb},0.12);color:${hbg};">${escapeHtml(t.code)}</span>` : '')

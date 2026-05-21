@@ -8,7 +8,22 @@ import { normalize } from '../../utils/text';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 function makeTag(): Fc3Tag { return { code: '', name: '' }; }
-function makeCard(): Fc3Card { return { headerBg: '#204280', number: '01', title: '', subtitle: '', tags: [] }; }
+function makeCard(): Fc3Card {
+  return {
+    type: 'standard',
+    headerBg: '#204280',
+    number: '01',
+    headerLabel: 'Applied Knowledge',
+    title: '',
+    subtitle: '',
+    tags: [],
+    footerHtml: '<strong>Full scale</strong> · Timed',
+    ctaText: 'View Mock →',
+    ctaUrl: '#',
+    ctaBg: '#0d1f3c',
+    ctaColor: '#ffffff',
+  };
+}
 function makeDefault(): Fc3State {
   return {
     bg: '#f8faff', padTop: 60, padBottom: 60, padLeft: 80, padRight: 80, cols: 3, gap: 24,
@@ -226,11 +241,23 @@ function removeCard(i: number) { upd({ cards: state.cards.filter((_, idx) => idx
                   <button onClick={() => removeCard(ci)} className="btn-danger">✕</button>
                 </div>
                 <ColorRow label="Header background" value={card.headerBg} onChange={v => updateCard(ci, { headerBg: v })} />
+                <Field label="Card variation">
+                  <select className="input" value={card.type || 'standard'} onChange={e => updateCard(ci, { type: e.target.value as Fc3Card['type'] })}>
+                    <option value="standard">Standard</option>
+                    <option value="cta">CTA card</option>
+                  </select>
+                </Field>
                 <div className="grid grid-cols-3 gap-2">
                   <Field label="Number badge">
                     <input className="input" value={card.number} placeholder="01"
                       onChange={e => updateCard(ci, { number: e.target.value })} />
                   </Field>
+                  {(card.type || 'standard') === 'cta' && (
+                    <Field label="Header label" className="col-span-2">
+                      <input className="input" value={card.headerLabel || ''} placeholder="Applied Knowledge"
+                        onChange={e => updateCard(ci, { headerLabel: e.target.value })} />
+                    </Field>
+                  )}
                   <Field label="Title" className="col-span-2">
                     <input className="input" value={card.title} placeholder="Applied Knowledge"
                       onChange={e => updateCard(ci, { title: e.target.value })} />
@@ -253,6 +280,27 @@ function removeCard(i: number) { upd({ cards: state.cards.filter((_, idx) => idx
                   ))}
                 </div>
                 <button onClick={() => addTag(ci)} className="btn-ghost text-xs w-full">+ Add item</button>
+                {(card.type || 'standard') === 'cta' && (
+                  <>
+                    <p className="text-xs font-semibold text-slate-500 mt-3 mb-1">CTA Footer</p>
+                    <Field label="Left bottom text" hint="Allowed HTML: <strong>">
+                      <textarea className="input" rows={2} value={card.footerHtml || ''}
+                        onChange={e => updateCard(ci, { footerHtml: e.target.value })} />
+                    </Field>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="CTA text">
+                        <input className="input" value={card.ctaText || ''}
+                          onChange={e => updateCard(ci, { ctaText: e.target.value })} />
+                      </Field>
+                      <Field label="CTA URL">
+                        <input className="input" value={card.ctaUrl || ''}
+                          onChange={e => updateCard(ci, { ctaUrl: e.target.value })} />
+                      </Field>
+                      <ColorRow label="CTA bg" value={card.ctaBg || '#0d1f3c'} onChange={v => updateCard(ci, { ctaBg: v })} />
+                      <ColorRow label="CTA text" value={card.ctaColor || '#ffffff'} onChange={v => updateCard(ci, { ctaColor: v })} />
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>
