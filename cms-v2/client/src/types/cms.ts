@@ -391,6 +391,25 @@ export interface PageLeftHeroComponent { id: string; name: string; data: PageLef
 export interface SplitSectionsContent { sections: SplitContentSection[]; }
 export interface PageLeftHeroContent { components: PageLeftHeroComponent[]; }
 
+export interface GenericSectionState {
+  bg: string;
+  padTop: number;
+  padBot: number;
+  padLeft: number;
+  padRight: number;
+  maxWidth: number;
+  eyebrow: TextValue;
+  heading: TextValue;
+  body: TextValue;
+  calloutShow: boolean;
+  calloutIcon: string;
+  calloutBg: string;
+  calloutBorder: string;
+  calloutText: TextValue;
+}
+export interface GenericSectionComponent { id: string; name: string; data: GenericSectionState; }
+export interface GenericSectionContent { components: GenericSectionComponent[]; }
+
 // ── Course Hero Left ──────────────────────────────────────────────────────────
 
 export interface CourseHeroPill { icon: string; value: string; label: string; }

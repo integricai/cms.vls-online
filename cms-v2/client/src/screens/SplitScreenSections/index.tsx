@@ -4,6 +4,8 @@ import { api } from '../../api/client';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
 import type {
+  GenericSectionComponent,
+  GenericSectionState,
   LeftHeroPathwayItem,
   LeftHeroStatItem,
   LeftHeroTrustItem,
@@ -14,11 +16,11 @@ import type {
   TextData,
 } from '../../types/cms';
 import { normalize } from '../../utils/text';
-import { makeLeftGeneric, makeLeftHero, makeRightPane } from './defaults';
-import { generateLeftHeroHtml, generatePanelHtml } from './generateHtml';
+import { makeGenericSection, makeLeftGeneric, makeLeftHero, makeRightPane } from './defaults';
+import { generateGenericSectionHtml, generateLeftHeroHtml, generatePanelHtml } from './generateHtml';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
-type SplitType = 'left-hero' | 'left-generic' | 'right-pane';
+type SplitType = 'left-hero' | 'left-generic' | 'right-pane' | 'generic-section';
 type Tab = 'preview' | 'html';
 
 const CONFIG = {
@@ -41,6 +43,12 @@ const CONFIG = {
     dataKey: 'sections',
     mode: 'panel',
     panelMode: 'right',
+  },
+  'generic-section': {
+    title: 'Generic Section',
+    key: 'vls-generic-section-components',
+    dataKey: 'components',
+    mode: 'generic',
   },
 } as const;
 
@@ -384,6 +392,122 @@ function CardEditor({ card, mode, onChange, onRemove }: { card: SplitSectionCard
   );
 }
 
+function GenericEditor() {
+  const [items, setItems] = useState<GenericSectionComponent[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [state, setState] = useState<GenericSectionState>(makeGenericSection());
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [html, setHtml] = useState('');
+  const [tab, setTab] = useState<Tab>('preview');
+
+  useEffect(() => {
+    api.get<any>('/content/vls-generic-section-components')
+      .then(row => {
+        const next = ((row?.data?.components || []) as GenericSectionComponent[]).map(c => ({ ...c, data: { ...makeGenericSection(), ...(c.data || {}) } }));
+        setItems(next);
+        if (next[0]) {
+          setActiveId(next[0].id);
+          setName(next[0].name);
+          setState(next[0].data);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  function patch(p: Partial<GenericSectionState>) {
+    setState(prev => ({ ...prev, ...p }));
+    setSaved(false);
+  }
+
+  function load(id: string) {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    setActiveId(item.id);
+    setName(item.name);
+    setState({ ...makeGenericSection(), ...(item.data || {}) });
+    setSaved(false);
+  }
+
+  function newItem() {
+    setActiveId(null);
+    setName('');
+    setState(makeGenericSection());
+    setSaved(false);
+  }
+
+  function duplicate() {
+    const id = addId('gs');
+    const nextName = name ? `Copy of ${name}` : 'Copy of Generic Section';
+    const nextItem = { id, name: nextName, data: structuredClone(state) };
+    setItems(prev => [...prev, nextItem]);
+    setActiveId(id);
+    setName(nextName);
+    setSaved(false);
+  }
+
+  async function save() {
+    if (!name.trim()) { alert('Enter a name before saving.'); return; }
+    setSaving(true);
+    const id = activeId || addId('gs');
+    const item = { id, name, data: state };
+    const next = activeId ? items.map(i => i.id === id ? item : i) : [...items, item];
+    if (!next.some(i => i.id === id)) next.push(item);
+    await api.put('/content/vls-generic-section-components', { components: next });
+    setItems(next);
+    setActiveId(id);
+    setSaved(true);
+    setSaving(false);
+  }
+
+  async function del() {
+    if (!activeId || !confirm('Delete this generic section?')) return;
+    const next = items.filter(item => item.id !== activeId);
+    await api.put('/content/vls-generic-section-components', { components: next });
+    setItems(next);
+    newItem();
+  }
+
+  if (loading) return <div className="p-5 text-xs text-slate-400">Loading...</div>;
+
+  return (
+    <div className="flex h-full">
+      <div className="w-[500px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
+        <SavedSelector title="Generic Section" items={items} activeId={activeId} name={name} saving={saving} saved={saved} onSelect={load} onNew={newItem} onDuplicate={duplicate} onDelete={del} onName={setName} onSave={save} onGenerate={() => { setHtml(wrapGeneratedHtml('Generic Section', generateGenericSectionHtml(state))); setTab('preview'); }} />
+        <div className="px-5 py-4">
+          <p className="section-label mt-0">Layout</p>
+          <ColorInput label="Background" value={state.bg} onChange={bg => patch({ bg })} />
+          <div className="grid grid-cols-2 gap-2">
+            <NumberInput label="Max width" value={state.maxWidth} min={320} max={1400} onChange={maxWidth => patch({ maxWidth })} />
+            <NumberInput label="Top" value={state.padTop} onChange={padTop => patch({ padTop })} />
+            <NumberInput label="Bottom" value={state.padBot} onChange={padBot => patch({ padBot })} />
+            <NumberInput label="Left" value={state.padLeft} onChange={padLeft => patch({ padLeft })} />
+            <NumberInput label="Right" value={state.padRight} onChange={padRight => patch({ padRight })} />
+          </div>
+          <p className="section-label">Content</p>
+          <RichTextField label="Eyebrow" value={normalize(state.eyebrow, 'lgsEyebrow')} defaultKey="lgsEyebrow" onChange={eyebrow => patch({ eyebrow })} />
+          <RichTextField label="Heading" value={normalize(state.heading, 'lgsHeading')} defaultKey="lgsHeading" onChange={heading => patch({ heading })} />
+          <RichTextField label="Body" multiline value={normalize(state.body, 'lgsDesc')} defaultKey="lgsDesc" onChange={body => patch({ body })} />
+          <p className="section-label">Callout</p>
+          <label className="mb-2 flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+            <input type="checkbox" checked={state.calloutShow} onChange={e => patch({ calloutShow: e.target.checked })} />
+            Show callout
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Icon"><input className="input" value={state.calloutIcon} onChange={e => patch({ calloutIcon: e.target.value })} /></Field>
+            <ColorInput label="Callout bg" value={state.calloutBg} onChange={calloutBg => patch({ calloutBg })} />
+            <ColorInput label="Callout border" value={state.calloutBorder} onChange={calloutBorder => patch({ calloutBorder })} />
+          </div>
+          <RichTextField label="Callout text" multiline value={normalize(state.calloutText, 'lgsCardDesc')} defaultKey="lgsCardDesc" onChange={calloutText => patch({ calloutText })} />
+        </div>
+      </div>
+      <OutputPane html={html} tab={tab} setTab={setTab} />
+    </div>
+  );
+}
+
 function PanelEditor({ type }: { type: Extract<SplitType, 'left-generic' | 'right-pane'> }) {
   const config = CONFIG[type];
   const mode = config.panelMode;
@@ -515,5 +639,6 @@ export default function SplitScreenSections() {
 
   if (!type || !(type in CONFIG)) return <Navigate to="/split-screen/left-hero" replace />;
   if (type === 'left-hero') return <HeroEditor />;
+  if (type === 'generic-section') return <GenericEditor />;
   return <PanelEditor type={type} />;
 }

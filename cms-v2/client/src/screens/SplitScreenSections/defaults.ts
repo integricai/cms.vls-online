@@ -1,4 +1,4 @@
-import type { PageLeftHeroState, SplitContentSection } from '../../types/cms';
+import type { GenericSectionState, PageLeftHeroState, SplitContentSection } from '../../types/cms';
 import { normalize } from '../../utils/text';
 
 export function makeLeftHero(): PageLeftHeroState {
@@ -97,5 +97,24 @@ export function makeRightPane(counter = 1): SplitContentSection {
         statLabelColor: '#94a3b8',
       },
     ],
+  };
+}
+
+export function makeGenericSection(): GenericSectionState {
+  return {
+    bg: '#ffffff',
+    padTop: 64,
+    padBot: 64,
+    padLeft: 48,
+    padRight: 48,
+    maxWidth: 760,
+    eyebrow: normalize('Why mock exams matter', 'lgsEyebrow'),
+    heading: normalize('The most effective way to prepare for your ACCA final exam', 'lgsHeading'),
+    body: normalize('', 'lgsDesc'),
+    calloutShow: true,
+    calloutIcon: '💡',
+    calloutBg: '#eaf5ff',
+    calloutBorder: '#b9dcff',
+    calloutText: normalize('Pro tip from our tutors: Attempt your mock exam at least 2 weeks before the real exam — this gives you enough time to address the weaknesses it reveals.', 'lgsCardDesc'),
   };
 }

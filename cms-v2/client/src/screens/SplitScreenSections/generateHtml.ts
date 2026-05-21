@@ -1,4 +1,4 @@
-import type { PageLeftHeroState, SplitContentSection, SplitSectionCard, TextValue } from '../../types/cms';
+import type { GenericSectionState, PageLeftHeroState, SplitContentSection, SplitSectionCard, TextValue } from '../../types/cms';
 import { escapeHtml, normalize, textStyle, type DefaultKey } from '../../utils/text';
 
 function attr(s: string) {
@@ -103,6 +103,27 @@ export function generatePanelHtml(section: SplitContentSection, mode: 'left' | '
 <style>.${uid}{font-family:'Poppins',sans-serif;background:${bg};box-sizing:border-box;}.${uid} *{box-sizing:border-box;}${mode === 'left' ? `.${uid}-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;}` : `.${uid}-cards{display:flex;flex-direction:column;gap:12px;}`}@media(max-width:600px){.${uid}-cards>*{grid-column:span 2!important;}.${uid} .split-card-img{flex-direction:column!important;}.${uid} .split-card-img-frame{width:100%!important;max-width:none!important;min-width:0!important;}.${uid} .split-card-img-copy{padding:14px 0 0!important;width:100%!important;}.${uid} .split-card-img-cta a{width:100%!important;display:block!important;}}</style>
 <div class="${uid}"${mode === 'left' ? ' style="padding:24px 20px;"' : ''}>
 ${eyebrow.text ? `  <div style="font-family:'Poppins',sans-serif;text-transform:uppercase;margin:0 0 ${mode === 'left' ? 10 : 16}px;${mode === 'right' ? 'padding:20px 0 0 20px;' : ''}${textStyle(eyebrow)}">${escapeHtml(eyebrow.text)}</div>\n` : ''}${heading.text ? `  <h2 style="font-family:'Poppins',sans-serif;margin:0 0 16px;${mode === 'right' ? 'padding:0 0 0 20px;' : ''}line-height:1.2;${textStyle(heading)}">${escapeHtml(heading.text)}</h2>\n` : ''}${desc.text ? `  <div style="font-family:'Poppins',sans-serif;margin:0 0 24px;${mode === 'right' ? 'padding:0 0 0 20px;' : ''}line-height:1.6;${textStyle(desc)}">${desc.text}</div>\n` : ''}${cards ? `  <div class="${uid}-cards"${mode === 'right' ? ' style="padding:0 20px 20px;"' : ''}>\n${cards}\n  </div>\n` : ''}</div>`;
+}
+
+export function generateGenericSectionHtml(data: GenericSectionState) {
+  const uid = `gs${Date.now().toString(36)}`;
+  const eyebrow = tv(data.eyebrow, 'lgsEyebrow');
+  const heading = tv(data.heading, 'lgsHeading');
+  const body = tv(data.body, 'lgsDesc');
+  const callout = tv(data.calloutText, 'lgsCardDesc');
+  const bg = safeHex(data.bg, '#ffffff');
+  const calloutBg = safeHex(data.calloutBg, '#eaf5ff');
+  const calloutBorder = safeHex(data.calloutBorder, '#b9dcff');
+
+  return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>#${uid}{font-family:'Poppins',sans-serif;box-sizing:border-box;background:${bg};padding:${clampInt(data.padTop, 64, 0, 240)}px ${clampInt(data.padRight, 48, 0, 240)}px ${clampInt(data.padBot, 64, 0, 240)}px ${clampInt(data.padLeft, 48, 0, 240)}px;}#${uid} *{box-sizing:border-box;}#${uid} .${uid}-inner{max-width:${clampInt(data.maxWidth, 760, 320, 1400)}px;margin:0 auto;}#${uid} .${uid}-body{margin:0 0 24px;line-height:1.75;}#${uid} .${uid}-body p{margin:0 0 18px;line-height:inherit;}#${uid} .${uid}-body p:last-child{margin-bottom:0;}#${uid} .${uid}-body strong{font-weight:600;color:#0d1f3c;}#${uid} .${uid}-body ul{list-style:none;padding:0;margin:18px 0;display:grid;gap:10px;}#${uid} .${uid}-body li{position:relative;display:block;margin:0;padding-left:30px;line-height:1.6;}#${uid} .${uid}-body li::before{content:"✓";position:absolute;left:0;top:2px;width:20px;height:20px;border-radius:6px;background:rgba(74,144,217,.14);border:1px solid rgba(74,144,217,.28);color:#1f73b7;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;line-height:1;}@media(max-width:640px){#${uid}{padding:40px 22px!important;}#${uid} h2{font-size:28px!important;}}</style>
+<section id="${uid}">
+  <div class="${uid}-inner">
+${eyebrow.text ? `    <div style="font-family:'Poppins',sans-serif;text-transform:uppercase;margin:0 0 12px;${textStyle(eyebrow)}">${escapeHtml(eyebrow.text)}</div>\n` : ''}${heading.text ? `    <h2 style="font-family:'Poppins',sans-serif;margin:0 0 18px;line-height:1.18;${textStyle(heading)}">${escapeHtml(heading.text)}</h2>\n` : ''}${body.text ? `    <div class="${uid}-body" style="${textStyle(body)}">${body.text}</div>\n` : ''}${data.calloutShow && callout.text ? `    <div style="display:flex;align-items:flex-start;gap:12px;background:${calloutBg};border:1px solid ${calloutBorder};border-radius:8px;padding:16px 18px;">
+      <span style="font-size:17px;line-height:1.5;flex-shrink:0;">${escapeHtml(data.calloutIcon || '')}</span>
+      <div style="font-family:'Poppins',sans-serif;line-height:1.65;${textStyle(callout)}">${callout.text}</div>
+    </div>\n` : ''}  </div>
+</section>`;
 }
 
 function scrollHref(value: string | undefined): string {

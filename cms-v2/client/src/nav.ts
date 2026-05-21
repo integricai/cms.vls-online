@@ -85,6 +85,7 @@ export const NAV: NavGroup[] = [
           { to: '/split-screen/left-hero',    label: 'Left Hero Section' },
           { to: '/split-screen/left-generic', label: 'Left Generic Section' },
           { to: '/split-screen/right-pane',   label: 'Right Pane Section' },
+          { to: '/split-screen/generic-section', label: 'Generic Section' },
         ],
       },
     ],
