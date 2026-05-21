@@ -311,9 +311,9 @@ export function generatePhv2Html(d: Phv2State): string {
   L.push(`.${id}-desc p{margin:0 0 14px;line-height:inherit;}`);
   L.push(`.${id}-desc p:last-child{margin-bottom:0;}`);
   L.push(`.${id}-desc ul{list-style:none;padding:0;margin:16px 0 0;display:grid;gap:10px;}`);
-  L.push(`.${id}-desc li{display:flex;align-items:flex-start;gap:10px;margin:0;line-height:1.55;}`);
-  L.push(`.${id}-desc li::before{content:"✓";width:20px;height:20px;border-radius:6px;background:rgba(74,144,217,.28);border:1px solid rgba(74,144,217,.32);color:#7dc4ff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;line-height:1;flex:0 0 20px;margin-top:1px;}`);
-  L.push(`.${id}-desc strong{color:#ffffff;font-weight:700;}`);
+  L.push(`.${id}-desc li{position:relative;display:block;margin:0;padding-left:30px;line-height:1.55;}`);
+  L.push(`.${id}-desc li::before{content:"✓";position:absolute;left:0;top:1px;width:20px;height:20px;border-radius:6px;background:rgba(74,144,217,.28);border:1px solid rgba(74,144,217,.32);color:#7dc4ff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;line-height:1;}`);
+  L.push(`.${id}-desc strong{display:inline;color:#ffffff;font-weight:600;}`);
   L.push('</style>');
   L.push(`<div class="${id}-wrap" style="display:flex;gap:${d.colGap}px;align-items:flex-start;background:${d.bg};box-sizing:border-box;padding:${d.padTop}px ${d.padRight}px ${d.padBot}px ${d.padLeft}px;">`);
 
