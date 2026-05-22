@@ -702,6 +702,29 @@ export interface Phv2State {
 }
 export interface Phv2Component { id: string; name: string; data: Phv2State; }
 
+// Page Hero Banner V3 (PHV3) - mock exam sales hero
+export interface Phv3Feature { icon: string; text: string; }
+export interface Phv3Stat { value: string; label: string; }
+export interface Phv3Include { icon: string; title: string; desc: string; }
+export interface Phv3State {
+  bg: string;
+  padTop: number; padBot: number; padLeft: number; padRight: number;
+  split: number; colGap: number; railMaxWidth: number;
+  breadcrumb: string; eyebrowLabels: string[];
+  heading: TextValue; desc: TextValue;
+  chipBg: string; chipBorder: string; chipTc: string;
+  features: Phv3Feature[];
+  formatLabel: string; formatBg: string; formatBorder: string;
+  stats: Phv3Stat[];
+  primaryText: string; primaryUrl: string; primaryBg: string; primaryTc: string;
+  secondaryText: string; secondaryUrl: string; secondaryBg: string; secondaryTc: string; secondaryBorder: string;
+  cardLabel: string; cardTitle: string; cardTop: string; cardMarks: string;
+  cardBg: string; cardHeaderBg: string; cardBorder: string; cardButtonBg: string;
+  sampleText: string; sampleUrl: string; includesTitle: string; includes: Phv3Include[];
+  refundText: string;
+}
+export interface Phv3Component { id: string; name: string; data: Phv3State; }
+
 // Hero Section V2
 export interface HeroV2Cta { text: string; url: string; scroll: string; style: 'solid' | 'outlined'; bg: string; tc: string; bc: string; }
 export interface HeroV2Stat { value: string; label: string; }

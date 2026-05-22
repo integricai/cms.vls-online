@@ -8,6 +8,7 @@ import type {
   ReachState, ReachComponent, ReachStat, ReachRegion,
   PhbState, PhbComponent,
   Phv2State, Phv2Component, Phv2TrustItem, Phv2Card,
+  Phv3State, Phv3Component, Phv3Feature, Phv3Stat, Phv3Include,
   BmsState, BmsComponent, BmsCheckItem,
   CbState, CbComponent,
   TextValue,
@@ -15,7 +16,7 @@ import type {
 import { normalize } from '../../utils/text';
 import {
   generateDcsHtml, generateDcs2Html, generateDcs3Html, generateReachHtml,
-  generatePhbHtml, generatePhv2Html, generateBmsHtml, generateCbHtml,
+  generatePhbHtml, generatePhv2Html, generatePhv3Html, generateBmsHtml, generateCbHtml,
 } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
@@ -43,6 +44,43 @@ function makePhb(): PhbState {
 }
 function makePhv2(): Phv2State {
   return { bg: '#0d1f3c', padTop: 48, padBot: 48, padLeft: 60, padRight: 60, split: 60, colGap: 48, breadcrumb: '', breadcrumbTc: '#94a3b8', eyebrowTc: '#4a90d9', eyebrowDot: '#4a90d9', eyebrowLabels: [], heading: normalize('', 'phv2Heading'), headingAccent: '', headingAccentColor: '#4a90d9', headingPost: '', desc: normalize('', 'phv2Desc'), trustTc: '#94a3b8', trustDot: '#4a90d9', trustItems: [], cardBg: '#0f2744', cardBorder: '#1e3a5f', cardRadius: 10, cardVc: '#ffffff', cardLc: '#94a3b8', cards: [] };
+}
+
+function makePhv3(): Phv3State {
+  return {
+    bg: '#0b4f91', padTop: 52, padBot: 44, padLeft: 32, padRight: 32, split: 62, colGap: 40, railMaxWidth: 690,
+    breadcrumb: 'Home › Mock Exams › ACCA MA (F2)', eyebrowLabels: ['ACCA · F2 · MA', 'Applied Knowledge'],
+    heading: normalize('ACCA MA (F2)\nMock Exams', 'phv2Heading'),
+    desc: normalize('Three complete full-scale mock exams for ACCA Management Accounting — built on the official ACCA MA syllabus. Attempt under real exam conditions and receive instant results with full solutions by email.', 'phv2Desc'),
+    chipBg: '#2b6ea9', chipBorder: '#4f8fc1', chipTc: '#ffffff',
+    features: [
+      { icon: '🎯', text: '3 Full Mock Exams' },
+      { icon: '⏱', text: '2 Hours each' },
+      { icon: '⚡', text: 'Instant results' },
+      { icon: '📧', text: 'Solutions by email' },
+      { icon: '💻', text: 'Online · Any device' },
+    ],
+    formatLabel: 'EXAM FORMAT', formatBg: '#2b6ea9', formatBorder: '#4f8fc1',
+    stats: [
+      { value: '35', label: '2-MARK QS' },
+      { value: '3', label: '10-MARK QS' },
+      { value: '100', label: 'TOTAL MARKS' },
+      { value: '50', label: 'PASS MARK' },
+    ],
+    primaryText: 'Buy Now →', primaryUrl: '', primaryBg: '#55b7ed', primaryTc: '#041b31',
+    secondaryText: 'Preview free mock', secondaryUrl: '', secondaryBg: '#245f9a', secondaryTc: '#ffffff', secondaryBorder: '#4f8fc1',
+    cardLabel: 'F2 · Applied Knowledge', cardTitle: 'MA', cardTop: '3 complete mock exams', cardMarks: '100 marks each',
+    cardBg: '#ffffff', cardHeaderBg: '#1565aa', cardBorder: '#8ec8ef', cardButtonBg: '#2168ad',
+    sampleText: 'Try a free sample mock', sampleUrl: '', includesTitle: 'EACH MOCK EXAM INCLUDES',
+    includes: [
+      { icon: '⚡', title: 'Instant results', desc: 'on submission' },
+      { icon: '📧', title: 'Full solutions', desc: 'sent to your email' },
+      { icon: '🎯', title: 'Exam-standard', desc: 'questions' },
+      { icon: '⏱', title: '2-hour', desc: 'timed format' },
+      { icon: '💻', title: 'Online · any device', desc: '' },
+    ],
+    refundText: '🔒 3-day refund policy — not satisfied? Request a full refund within 3 days.',
+  };
 }
 
 function makeBms(): BmsState {
@@ -213,6 +251,23 @@ function normPhv2(raw: any): Phv2State {
     cardRadius: normalizeNum(raw.cardRadius, 10),
     cardVc: raw.cardVc || '#ffffff', cardLc: raw.cardLc || '#94a3b8',
     cards: raw.cards || [],
+  };
+}
+
+function normPhv3(raw: any): Phv3State {
+  const d = { ...makePhv3(), ...(raw || {}) };
+  return {
+    ...d,
+    padTop: normalizeNum(d.padTop, 52), padBot: normalizeNum(d.padBot, 44),
+    padLeft: normalizeNum(d.padLeft, 32), padRight: normalizeNum(d.padRight, 32),
+    split: normalizeNum(d.split, 62), colGap: normalizeNum(d.colGap, 40),
+    railMaxWidth: normalizeNum(d.railMaxWidth, 690),
+    heading: d.heading || normalize('', 'phv2Heading'),
+    desc: d.desc || normalize('', 'phv2Desc'),
+    eyebrowLabels: d.eyebrowLabels || [],
+    features: d.features || [],
+    stats: d.stats || [],
+    includes: d.includes || [],
   };
 }
 
@@ -959,6 +1014,151 @@ function Phv2Tab({ onHtml }: { onHtml: (html: string) => void }) {
   );
 }
 
+function Phv3Tab({ onHtml }: { onHtml: (html: string) => void }) {
+  const [comps, setComps]     = useState<Phv3Component[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [name, setName]       = useState('');
+  const [state, setState]     = useState<Phv3State>(makePhv3());
+  const [saving, setSaving]   = useState(false);
+  const [saved, setSaved]     = useState(false);
+  const [loaded, setLoaded]   = useState(false);
+
+  useEffect(() => {
+    api.get<any>('/content/vls-phv3-components').then(row => {
+      const raw = row?.data as any;
+      const cs: Phv3Component[] = (raw?.components || []).map((c: any) => ({ ...c, data: normPhv3(c.data || {}) }));
+      setComps(cs);
+      if (cs.length) { setActiveId(cs[0].id); setName(cs[0].name); setState(cs[0].data); }
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, []);
+
+  const upd = useCallback((p: Partial<Phv3State>) => { setState(prev => ({ ...prev, ...p })); setSaved(false); }, []);
+
+  function load(id: string) {
+    if (!id) { setActiveId(null); setName(''); setState(makePhv3()); setSaved(false); return; }
+    const c = comps.find(c => c.id === id);
+    if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
+  }
+
+  async function save() {
+    if (!name.trim()) { alert('Enter a component name.'); return; }
+    setSaving(true);
+    const id = activeId || `phv3-${Date.now().toString(36)}`;
+    const updated = activeId ? comps.map(c => c.id === id ? { id, name, data: state } : c) : [...comps, { id, name, data: state }];
+    await api.put('/content/vls-phv3-components', { components: updated });
+    setComps(updated); setActiveId(id); setSaved(true); setSaving(false);
+  }
+
+  async function del() {
+    if (!activeId || !confirm('Delete this component?')) return;
+    const updated = comps.filter(c => c.id !== activeId);
+    await api.put('/content/vls-phv3-components', { components: updated });
+    setComps(updated); setActiveId(null); setName(''); setState(makePhv3());
+  }
+
+  function updFeature(i: number, p: Partial<Phv3Feature>) { const a = [...state.features]; a[i] = { ...a[i], ...p }; upd({ features: a }); }
+  function updStat(i: number, p: Partial<Phv3Stat>) { const a = [...state.stats]; a[i] = { ...a[i], ...p }; upd({ stats: a }); }
+  function updInclude(i: number, p: Partial<Phv3Include>) { const a = [...state.includes]; a[i] = { ...a[i], ...p }; upd({ includes: a }); }
+
+  if (!loaded) return <div className="p-5 text-xs text-slate-400">Loading…</div>;
+
+  return (
+    <div className="flex flex-col">
+      <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
+        onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
+        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Hero Banner V3', generatePhv3Html(state)))} />
+      <div className="px-5 py-4 space-y-1 overflow-y-auto">
+        <p className="section-label">Layout</p>
+        <PaddingRow value={state} onChange={upd} />
+        <div className="grid grid-cols-2 gap-2">
+          <ColorInput label="Background" value={state.bg} onChange={v => upd({ bg: v })} />
+          <Field label="Left width %"><input type="number" className="input" min={45} max={75} value={state.split} onChange={e => upd({ split: Number(e.target.value) })} /></Field>
+          <Field label="Column gap"><input type="number" className="input" min={0} max={100} value={state.colGap} onChange={e => upd({ colGap: Number(e.target.value) })} /></Field>
+          <Field label="Left rail max width"><input type="number" className="input" min={420} max={900} value={state.railMaxWidth} onChange={e => upd({ railMaxWidth: Number(e.target.value) })} /></Field>
+        </div>
+
+        <p className="section-label mt-3">Left Content</p>
+        <Field label="Breadcrumb"><input className="input" value={state.breadcrumb} onChange={e => upd({ breadcrumb: e.target.value })} /></Field>
+        {state.eyebrowLabels.map((label, i) => (
+          <div key={i} className="flex gap-2 items-center mb-1">
+            <input className="input flex-1" value={label} onChange={e => { const a = [...state.eyebrowLabels]; a[i] = e.target.value; upd({ eyebrowLabels: a }); }} />
+            <button onClick={() => upd({ eyebrowLabels: state.eyebrowLabels.filter((_, idx) => idx !== i) })} className="btn-danger text-xs">✕</button>
+          </div>
+        ))}
+        <button onClick={() => upd({ eyebrowLabels: [...state.eyebrowLabels, ''] })} className="btn-ghost text-xs w-full">+ Add label</button>
+        <RichTextField label="Heading" value={tv(state.heading, 'phv2Heading')} defaultKey="phv2Heading" multiline onChange={v => upd({ heading: v })} />
+        <RichTextField label="Description" value={tv(state.desc, 'phv2Desc')} defaultKey="phv2Desc" multiline onChange={v => upd({ desc: v })} />
+
+        <p className="section-label mt-3">Feature Chips</p>
+        <div className="grid grid-cols-3 gap-2">
+          <ColorInput label="Chip bg" value={state.chipBg} onChange={v => upd({ chipBg: v })} />
+          <ColorInput label="Chip border" value={state.chipBorder} onChange={v => upd({ chipBorder: v })} />
+          <ColorInput label="Chip text" value={state.chipTc} onChange={v => upd({ chipTc: v })} />
+        </div>
+        {state.features.map((feature, i) => (
+          <div key={i} className="grid grid-cols-[70px_1fr_auto] gap-2 items-end mb-1">
+            <Field label="Icon"><input className="input text-center" value={feature.icon} onChange={e => updFeature(i, { icon: e.target.value })} /></Field>
+            <Field label="Text"><input className="input" value={feature.text} onChange={e => updFeature(i, { text: e.target.value })} /></Field>
+            <button onClick={() => upd({ features: state.features.filter((_, idx) => idx !== i) })} className="btn-danger mb-0.5 text-xs">✕</button>
+          </div>
+        ))}
+        <button onClick={() => upd({ features: [...state.features, { icon: '', text: '' }] })} className="btn-ghost text-xs w-full">+ Add chip</button>
+
+        <p className="section-label mt-3">Exam Format</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Label"><input className="input" value={state.formatLabel} onChange={e => upd({ formatLabel: e.target.value })} /></Field>
+          <ColorInput label="Box bg" value={state.formatBg} onChange={v => upd({ formatBg: v })} />
+          <ColorInput label="Box border" value={state.formatBorder} onChange={v => upd({ formatBorder: v })} />
+        </div>
+        {state.stats.map((stat, i) => (
+          <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end mb-1">
+            <Field label="Value"><input className="input" value={stat.value} onChange={e => updStat(i, { value: e.target.value })} /></Field>
+            <Field label="Label"><input className="input" value={stat.label} onChange={e => updStat(i, { label: e.target.value })} /></Field>
+            <button onClick={() => upd({ stats: state.stats.filter((_, idx) => idx !== i) })} className="btn-danger mb-0.5 text-xs">✕</button>
+          </div>
+        ))}
+        <button onClick={() => upd({ stats: [...state.stats, { value: '', label: '' }] })} className="btn-ghost text-xs w-full">+ Add stat</button>
+
+        <p className="section-label mt-3">Buttons</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Primary text"><input className="input" value={state.primaryText} onChange={e => upd({ primaryText: e.target.value })} /></Field>
+          <Field label="Primary URL"><input className="input" value={state.primaryUrl} onChange={e => upd({ primaryUrl: e.target.value })} /></Field>
+          <ColorInput label="Primary bg" value={state.primaryBg} onChange={v => upd({ primaryBg: v })} />
+          <ColorInput label="Primary text" value={state.primaryTc} onChange={v => upd({ primaryTc: v })} />
+          <Field label="Secondary text"><input className="input" value={state.secondaryText} onChange={e => upd({ secondaryText: e.target.value })} /></Field>
+          <Field label="Secondary URL"><input className="input" value={state.secondaryUrl} onChange={e => upd({ secondaryUrl: e.target.value })} /></Field>
+        </div>
+
+        <p className="section-label mt-3">Right Card</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Pill label"><input className="input" value={state.cardLabel} onChange={e => upd({ cardLabel: e.target.value })} /></Field>
+          <Field label="Large title"><input className="input" value={state.cardTitle} onChange={e => upd({ cardTitle: e.target.value })} /></Field>
+          <Field label="Top copy"><input className="input" value={state.cardTop} onChange={e => upd({ cardTop: e.target.value })} /></Field>
+          <Field label="Marks copy"><input className="input" value={state.cardMarks} onChange={e => upd({ cardMarks: e.target.value })} /></Field>
+          <Field label="Sample button"><input className="input" value={state.sampleText} onChange={e => upd({ sampleText: e.target.value })} /></Field>
+          <Field label="Sample URL"><input className="input" value={state.sampleUrl} onChange={e => upd({ sampleUrl: e.target.value })} /></Field>
+          <ColorInput label="Card bg" value={state.cardBg} onChange={v => upd({ cardBg: v })} />
+          <ColorInput label="Header bg" value={state.cardHeaderBg} onChange={v => upd({ cardHeaderBg: v })} />
+          <ColorInput label="Border" value={state.cardBorder} onChange={v => upd({ cardBorder: v })} />
+          <ColorInput label="Button bg" value={state.cardButtonBg} onChange={v => upd({ cardButtonBg: v })} />
+        </div>
+        <Field label="Includes title"><input className="input" value={state.includesTitle} onChange={e => upd({ includesTitle: e.target.value })} /></Field>
+        {state.includes.map((item, i) => (
+          <div key={i} className="grid grid-cols-[58px_1fr_1fr_auto] gap-2 items-end mb-1">
+            <Field label="Icon"><input className="input text-center" value={item.icon} onChange={e => updInclude(i, { icon: e.target.value })} /></Field>
+            <Field label="Title"><input className="input" value={item.title} onChange={e => updInclude(i, { title: e.target.value })} /></Field>
+            <Field label="Description"><input className="input" value={item.desc} onChange={e => updInclude(i, { desc: e.target.value })} /></Field>
+            <button onClick={() => upd({ includes: state.includes.filter((_, idx) => idx !== i) })} className="btn-danger mb-0.5 text-xs">✕</button>
+          </div>
+        ))}
+        <button onClick={() => upd({ includes: [...state.includes, { icon: '', title: '', desc: '' }] })} className="btn-ghost text-xs w-full">+ Add include</button>
+        <Field label="Refund note"><input className="input" value={state.refundText} onChange={e => upd({ refundText: e.target.value })} /></Field>
+      </div>
+    </div>
+  );
+}
+
 function BmsTab({ onHtml }: { onHtml: (html: string) => void }) {
   const [comps, setComps]       = useState<BmsComponent[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -1211,6 +1411,7 @@ const SECTION_TITLES: Record<string, { title: string; desc: string }> = {
   'reach':          { title: 'Global Reach',     desc: 'Text + stats + world map + regions' },
   'hero-banner':    { title: 'Hero Banner',      desc: 'Eyebrow + heading + bullets + badge card' },
   'hero-banner-v2': { title: 'Hero Banner v2',   desc: 'Two-column: text left + info cards right' },
+  'hero-banner-v3': { title: 'Hero Banner v3',   desc: 'Mock exam hero with aligned format box + purchase card' },
   'book-meeting':   { title: 'Book a Meeting',   desc: 'Image left + eyebrow/heading/checklist/CTA right' },
   'content-block':  { title: 'Content CTA Block', desc: 'Single column: eyebrow/heading/checklist/CTA' },
 };
@@ -1241,6 +1442,7 @@ export default function FullScreenSections() {
           {type === 'reach'          && <ReachTab onHtml={handleHtml} />}
           {type === 'hero-banner'    && <PhbTab   onHtml={handleHtml} />}
           {type === 'hero-banner-v2' && <Phv2Tab  onHtml={handleHtml} />}
+          {type === 'hero-banner-v3' && <Phv3Tab  onHtml={handleHtml} />}
           {type === 'book-meeting'   && <BmsTab   onHtml={handleHtml} />}
           {type === 'content-block' && <CbTab    onHtml={handleHtml} />}
           {!type && <div className="p-6 text-sm text-slate-400">Select a section type from the sidebar.</div>}

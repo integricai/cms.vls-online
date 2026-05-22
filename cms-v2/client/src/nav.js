@@ -3,6 +3,7 @@ export const NAV = [
         group: 'Global',
         children: [
             { to: '/header', label: 'Header' },
+            { to: '/blog-header', label: 'Blog Header' },
             { to: '/footer', label: 'Footer' },
             { to: '/banner', label: 'Banner' },
             { to: '/promotion-section', label: 'Promotion Section' },
@@ -31,6 +32,7 @@ export const NAV = [
         children: [
             { to: '/events', label: 'Events' },
             { to: '/articles', label: 'Articles' },
+            { to: '/blog', label: 'Blog Import' },
             { to: '/legal-page', label: 'Legal Page' },
             { to: '/team', label: 'Team' },
         ],
@@ -63,6 +65,7 @@ export const NAV = [
                     { to: '/full-screen/reach', label: 'Global Reach' },
                     { to: '/full-screen/hero-banner', label: 'Hero Banner' },
                     { to: '/full-screen/hero-banner-v2', label: 'Hero Banner v2' },
+                    { to: '/full-screen/hero-banner-v3', label: 'Hero Banner v3' },
                     { to: '/full-screen/book-meeting', label: 'Book a Meeting' },
                 ],
             },
@@ -70,6 +73,7 @@ export const NAV = [
                 sub: 'Single Column',
                 children: [
                     { to: '/full-screen/content-block', label: 'Content CTA Block' },
+                    { to: '/gradient-banner-section', label: 'Banner Section' },
                 ],
             },
             {
@@ -78,6 +82,7 @@ export const NAV = [
                     { to: '/split-screen/left-hero', label: 'Left Hero Section' },
                     { to: '/split-screen/left-generic', label: 'Left Generic Section' },
                     { to: '/split-screen/right-pane', label: 'Right Pane Section' },
+                    { to: '/split-screen/generic-section', label: 'Generic Section' },
                 ],
             },
         ],
