@@ -80,17 +80,31 @@ export function generateContactFormHtml(config: AnyConfig) {
   var RCP=${JSON.stringify(recipients)};
   var tsToken='';
   var tsWidget=null;
+  var tsResolve=null;
+  var tsReject=null;
   function showErr(msg){var err=document.getElementById('${uid}-err');err.textContent=msg;err.style.display='block';}
   function resetTurnstile(){tsToken='';if(window.turnstile&&tsWidget!==null){window.turnstile.reset(tsWidget);}}
+  function getTurnstileToken(){
+    return new Promise(function(resolve,reject){
+      if(!window.turnstile||tsWidget===null){reject(new Error('Verification is still loading. Please try again.'));return;}
+      tsToken='';tsResolve=resolve;tsReject=reject;
+      var timer=setTimeout(function(){tsResolve=null;tsReject=null;reject(new Error('Verification timed out. Please try again.'));},30000);
+      var done=function(token){clearTimeout(timer);tsResolve=null;tsReject=null;resolve(token);};
+      tsResolve=done;
+      try{window.turnstile.reset(tsWidget);window.turnstile.execute(tsWidget);}catch(e){clearTimeout(timer);tsResolve=null;tsReject=null;reject(new Error('Verification failed to start. Please refresh and try again.'));}
+    });
+  }
   function loadTurnstile(){
     fetch('${API_BASE}/api/turnstile-site-key').then(function(r){return r.json();}).then(function(data){
       if(!data.ok||!data.siteKey){throw new Error('Missing Turnstile site key');}
       function render(){
         tsWidget=window.turnstile.render('#${uid}-ts',{
           sitekey:data.siteKey,
-          callback:function(token){tsToken=token;},
-          'expired-callback':function(){tsToken='';},
-          'error-callback':function(){tsToken='';showErr('Verification failed to load. Please refresh and try again.');}
+          execution:'execute',
+          callback:function(token){tsToken=token;if(tsResolve){tsResolve(token);}},
+          'expired-callback':function(){tsToken='';if(tsReject){tsReject(new Error('Verification expired. Please try again.'));}},
+          'timeout-callback':function(){tsToken='';if(tsReject){tsReject(new Error('Verification timed out. Please try again.'));}},
+          'error-callback':function(){tsToken='';if(tsReject){tsReject(new Error('Verification failed. Please try again.'));}else{showErr('Verification failed to load. Please refresh and try again.');}}
         });
       }
       if(window.turnstile){render();return;}
@@ -116,12 +130,12 @@ export function generateContactFormHtml(config: AnyConfig) {
     err.style.display='none';
     if(!fn){err.textContent='Please enter your first name.';err.style.display='block';return;}
     if(!em||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(em)){err.textContent='Please enter a valid email address.';err.style.display='block';return;}
-    if(!tsToken){err.textContent='Please complete the verification.';err.style.display='block';return;}
     var orig=btn.textContent;
     btn.disabled=true;btn.textContent='Sending…';
     try{
+      var freshToken=await getTurnstileToken();
       var r=await fetch('${API_BASE}/api/submit-form',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({firstName:fn,lastName:ln,email:em,phoneCode:pc,phoneNumber:ph,enquiry:eq,comments:cm,recipients:RCP,turnstileToken:tsToken})});
+        body:JSON.stringify({firstName:fn,lastName:ln,email:em,phoneCode:pc,phoneNumber:ph,enquiry:eq,comments:cm,recipients:RCP,turnstileToken:freshToken})});
       var data=await r.json();
       if(r.ok&&data.ok){
         document.getElementById('${uid}-form').style.display='none';
@@ -214,17 +228,31 @@ export function generateReportIssueHtml(config: AnyConfig) {
   var TY_URL=${JSON.stringify(tyUrl)};
   var tsToken='';
   var tsWidget=null;
+  var tsResolve=null;
+  var tsReject=null;
   function showErr(msg){var err=document.getElementById('${uid}-err');err.textContent=msg;err.style.display='block';}
   function resetTurnstile(){tsToken='';if(window.turnstile&&tsWidget!==null){window.turnstile.reset(tsWidget);}}
+  function getTurnstileToken(){
+    return new Promise(function(resolve,reject){
+      if(!window.turnstile||tsWidget===null){reject(new Error('Verification is still loading. Please try again.'));return;}
+      tsToken='';tsResolve=resolve;tsReject=reject;
+      var timer=setTimeout(function(){tsResolve=null;tsReject=null;reject(new Error('Verification timed out. Please try again.'));},30000);
+      var done=function(token){clearTimeout(timer);tsResolve=null;tsReject=null;resolve(token);};
+      tsResolve=done;
+      try{window.turnstile.reset(tsWidget);window.turnstile.execute(tsWidget);}catch(e){clearTimeout(timer);tsResolve=null;tsReject=null;reject(new Error('Verification failed to start. Please refresh and try again.'));}
+    });
+  }
   function loadTurnstile(){
     fetch('${API_BASE}/api/turnstile-site-key').then(function(r){return r.json();}).then(function(data){
       if(!data.ok||!data.siteKey){throw new Error('Missing Turnstile site key');}
       function render(){
         tsWidget=window.turnstile.render('#${uid}-ts',{
           sitekey:data.siteKey,
-          callback:function(token){tsToken=token;},
-          'expired-callback':function(){tsToken='';},
-          'error-callback':function(){tsToken='';showErr('Verification failed to load. Please refresh and try again.');}
+          execution:'execute',
+          callback:function(token){tsToken=token;if(tsResolve){tsResolve(token);}},
+          'expired-callback':function(){tsToken='';if(tsReject){tsReject(new Error('Verification expired. Please try again.'));}},
+          'timeout-callback':function(){tsToken='';if(tsReject){tsReject(new Error('Verification timed out. Please try again.'));}},
+          'error-callback':function(){tsToken='';if(tsReject){tsReject(new Error('Verification failed. Please try again.'));}else{showErr('Verification failed to load. Please refresh and try again.');}}
         });
       }
       if(window.turnstile){render();return;}
@@ -252,14 +280,14 @@ export function generateReportIssueHtml(config: AnyConfig) {
     if(!fn){err.textContent='Please enter your first name.';err.style.display='block';return;}
     if(!em||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(em)){err.textContent='Please enter a valid email address.';err.style.display='block';return;}
     if(!msg){err.textContent='Please describe the issue.';err.style.display='block';return;}
-    if(!tsToken){err.textContent='Please complete the verification.';err.style.display='block';return;}
     var now=new Date();var pad=function(n){return String(n).padStart(2,'0');};
     var ref='VLS-'+now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate())+pad(now.getHours())+pad(now.getMinutes());
     var orig=btn.textContent;
     btn.disabled=true;btn.textContent='Sending…';
     try{
+      var freshToken=await getTurnstileToken();
       var r=await fetch('${API_BASE}/api/submit-report',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({firstName:fn,lastName:ln,email:em,phone:ph,qualification:ql,issueType:it,courseName:cn,message:msg,recipients:RCP,refNumber:ref,turnstileToken:tsToken})});
+        body:JSON.stringify({firstName:fn,lastName:ln,email:em,phone:ph,qualification:ql,issueType:it,courseName:cn,message:msg,recipients:RCP,refNumber:ref,turnstileToken:freshToken})});
       var data=await r.json();
       if(r.ok&&data.ok){
         if(TY_URL){window.location.href=TY_URL+'?ref='+encodeURIComponent(ref);}
@@ -454,12 +482,23 @@ export function generateContactPageHtml(config: AnyConfig) {
 (function(){
   var RCP=${JSON.stringify(recipients)};
   var tsToken='';var tsWidget=null;
+  var tsResolve=null;var tsReject=null;
   function showErr(msg){var e=document.getElementById('${uid}-err');e.textContent=msg;e.style.display='block';}
   function resetTs(){tsToken='';if(window.turnstile&&tsWidget!==null)window.turnstile.reset(tsWidget);}
+  function getTurnstileToken(){
+    return new Promise(function(resolve,reject){
+      if(!window.turnstile||tsWidget===null){reject(new Error('Verification is still loading. Please try again.'));return;}
+      tsToken='';tsResolve=resolve;tsReject=reject;
+      var timer=setTimeout(function(){tsResolve=null;tsReject=null;reject(new Error('Verification timed out. Please try again.'));},30000);
+      var done=function(token){clearTimeout(timer);tsResolve=null;tsReject=null;resolve(token);};
+      tsResolve=done;
+      try{window.turnstile.reset(tsWidget);window.turnstile.execute(tsWidget);}catch(e){clearTimeout(timer);tsResolve=null;tsReject=null;reject(new Error('Verification failed to start. Please refresh and try again.'));}
+    });
+  }
   function loadTs(){
     fetch('${API_BASE}/api/turnstile-site-key').then(function(r){return r.json();}).then(function(d){
       if(!d.ok||!d.siteKey)throw new Error('no key');
-      function render(){tsWidget=window.turnstile.render('#${uid}-ts',{sitekey:d.siteKey,callback:function(t){tsToken=t;},'expired-callback':function(){tsToken='';},'error-callback':function(){tsToken='';showErr('Verification failed. Please refresh.');}});}
+      function render(){tsWidget=window.turnstile.render('#${uid}-ts',{sitekey:d.siteKey,execution:'execute',callback:function(t){tsToken=t;if(tsResolve){tsResolve(t);}},'expired-callback':function(){tsToken='';if(tsReject){tsReject(new Error('Verification expired. Please try again.'));}},'timeout-callback':function(){tsToken='';if(tsReject){tsReject(new Error('Verification timed out. Please try again.'));}},'error-callback':function(){tsToken='';if(tsReject){tsReject(new Error('Verification failed. Please try again.'));}else{showErr('Verification failed. Please refresh.');}}});}
       if(window.turnstile){render();return;}
       var s=document.createElement('script');s.src='${TURNSTILE_SCRIPT}';s.async=true;s.defer=true;s.onload=render;document.head.appendChild(s);
     }).catch(function(){showErr('Verification could not load. Please refresh.');});
@@ -487,11 +526,11 @@ export function generateContactPageHtml(config: AnyConfig) {
     if(!em||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(em)){showErr('Please enter a valid email address.');return;}
     ${enquiryOptHtml ? `if(!eq){showErr('Please select an enquiry topic.');return;}` : ''}
     if(!msg){showErr('Please enter your message.');return;}
-    if(!tsToken){showErr('Please complete the verification.');return;}
     var orig=btn.textContent;btn.disabled=true;btn.textContent='Sending…';
     try{
+      var freshToken=await getTurnstileToken();
       var r=await fetch('${API_BASE}/api/submit-form',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({firstName:fn,lastName:ln,email:em,phone:ph,enquiry:eq,qualification:ql,comments:msg,howHeard:hh,recipients:RCP,turnstileToken:tsToken})});
+        body:JSON.stringify({firstName:fn,lastName:ln,email:em,phone:ph,enquiry:eq,qualification:ql,comments:msg,howHeard:hh,recipients:RCP,turnstileToken:freshToken})});
       var data=await r.json();
       if(r.ok&&data.ok){
         document.getElementById('${uid}-fw').style.display='none';
