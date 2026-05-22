@@ -709,18 +709,18 @@ export interface Phv3Include { icon: string; title: string; desc: string; }
 export interface Phv3State {
   bg: string;
   padTop: number; padBot: number; padLeft: number; padRight: number;
-  split: number; colGap: number; railMaxWidth: number;
+  split: number; colGap: number; railMaxWidth: number; actionMaxWidth: number;
   breadcrumb: string; eyebrowLabels: string[];
   heading: TextValue; desc: TextValue;
   chipBg: string; chipBorder: string; chipTc: string;
   features: Phv3Feature[];
   formatLabel: string; formatBg: string; formatBorder: string;
   stats: Phv3Stat[];
-  primaryText: string; primaryUrl: string; primaryBg: string; primaryTc: string;
-  secondaryText: string; secondaryUrl: string; secondaryBg: string; secondaryTc: string; secondaryBorder: string;
-  cardLabel: string; cardTitle: string; cardTop: string; cardMarks: string;
+  primaryText: string; primaryUrl: string; primaryScroll: string; primaryBg: string; primaryTc: string;
+  secondaryText: string; secondaryUrl: string; secondaryScroll: string; secondaryBg: string; secondaryTc: string; secondaryBorder: string;
+  cardLabel: string; cardTitle: string; cardTop: string; cardMarks: string; cardPrimaryText: string; cardPrimaryUrl: string; cardPrimaryScroll: string;
   cardBg: string; cardHeaderBg: string; cardBorder: string; cardButtonBg: string;
-  sampleText: string; sampleUrl: string; includesTitle: string; includes: Phv3Include[];
+  sampleText: string; sampleUrl: string; sampleScroll: string; includesTitle: string; includes: Phv3Include[];
   refundText: string;
 }
 export interface Phv3Component { id: string; name: string; data: Phv3State; }

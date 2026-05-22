@@ -48,7 +48,7 @@ function makePhv2(): Phv2State {
 
 function makePhv3(): Phv3State {
   return {
-    bg: '#0b4f91', padTop: 52, padBot: 44, padLeft: 32, padRight: 32, split: 62, colGap: 40, railMaxWidth: 690,
+    bg: '#0b4f91', padTop: 52, padBot: 44, padLeft: 32, padRight: 32, split: 62, colGap: 40, railMaxWidth: 690, actionMaxWidth: 520,
     breadcrumb: 'Home › Mock Exams › ACCA MA (F2)', eyebrowLabels: ['ACCA · F2 · MA', 'Applied Knowledge'],
     heading: normalize('ACCA MA (F2)\nMock Exams', 'phv2Heading'),
     desc: normalize('Three complete full-scale mock exams for ACCA Management Accounting — built on the official ACCA MA syllabus. Attempt under real exam conditions and receive instant results with full solutions by email.', 'phv2Desc'),
@@ -67,11 +67,11 @@ function makePhv3(): Phv3State {
       { value: '100', label: 'TOTAL MARKS' },
       { value: '50', label: 'PASS MARK' },
     ],
-    primaryText: 'Buy Now →', primaryUrl: '', primaryBg: '#55b7ed', primaryTc: '#041b31',
-    secondaryText: 'Preview free mock', secondaryUrl: '', secondaryBg: '#245f9a', secondaryTc: '#ffffff', secondaryBorder: '#4f8fc1',
-    cardLabel: 'F2 · Applied Knowledge', cardTitle: 'MA', cardTop: '3 complete mock exams', cardMarks: '100 marks each',
+    primaryText: 'Buy Now →', primaryUrl: '', primaryScroll: '', primaryBg: '#55b7ed', primaryTc: '#041b31',
+    secondaryText: 'Preview free mock', secondaryUrl: '', secondaryScroll: '', secondaryBg: '#245f9a', secondaryTc: '#ffffff', secondaryBorder: '#4f8fc1',
+    cardLabel: 'F2 · Applied Knowledge', cardTitle: 'MA', cardTop: '3 complete mock exams', cardMarks: '100 marks each', cardPrimaryText: 'Buy Now →', cardPrimaryUrl: '', cardPrimaryScroll: '',
     cardBg: '#ffffff', cardHeaderBg: '#1565aa', cardBorder: '#8ec8ef', cardButtonBg: '#2168ad',
-    sampleText: 'Try a free sample mock', sampleUrl: '', includesTitle: 'EACH MOCK EXAM INCLUDES',
+    sampleText: 'Try a free sample mock', sampleUrl: '', sampleScroll: '', includesTitle: 'EACH MOCK EXAM INCLUDES',
     includes: [
       { icon: '⚡', title: 'Instant results', desc: 'on submission' },
       { icon: '📧', title: 'Full solutions', desc: 'sent to your email' },
@@ -262,6 +262,13 @@ function normPhv3(raw: any): Phv3State {
     padLeft: normalizeNum(d.padLeft, 32), padRight: normalizeNum(d.padRight, 32),
     split: normalizeNum(d.split, 62), colGap: normalizeNum(d.colGap, 40),
     railMaxWidth: normalizeNum(d.railMaxWidth, 690),
+    actionMaxWidth: normalizeNum(d.actionMaxWidth, 520),
+    primaryScroll: d.primaryScroll || '',
+    secondaryScroll: d.secondaryScroll || '',
+    cardPrimaryText: d.cardPrimaryText || d.primaryText || '',
+    cardPrimaryUrl: d.cardPrimaryUrl || d.primaryUrl || '',
+    cardPrimaryScroll: d.cardPrimaryScroll || d.primaryScroll || '',
+    sampleScroll: d.sampleScroll || '',
     heading: d.heading || normalize('', 'phv2Heading'),
     desc: d.desc || normalize('', 'phv2Desc'),
     eyebrowLabels: d.eyebrowLabels || [],
@@ -1076,6 +1083,7 @@ function Phv3Tab({ onHtml }: { onHtml: (html: string) => void }) {
           <Field label="Left width %"><input type="number" className="input" min={45} max={75} value={state.split} onChange={e => upd({ split: Number(e.target.value) })} /></Field>
           <Field label="Column gap"><input type="number" className="input" min={0} max={100} value={state.colGap} onChange={e => upd({ colGap: Number(e.target.value) })} /></Field>
           <Field label="Left rail max width"><input type="number" className="input" min={420} max={900} value={state.railMaxWidth} onChange={e => upd({ railMaxWidth: Number(e.target.value) })} /></Field>
+          <Field label="Cards / exam box width"><input type="number" className="input" min={360} max={760} value={state.actionMaxWidth} onChange={e => upd({ actionMaxWidth: Number(e.target.value) })} /></Field>
         </div>
 
         <p className="section-label mt-3">Left Content</p>
@@ -1124,10 +1132,12 @@ function Phv3Tab({ onHtml }: { onHtml: (html: string) => void }) {
         <div className="grid grid-cols-2 gap-2">
           <Field label="Primary text"><input className="input" value={state.primaryText} onChange={e => upd({ primaryText: e.target.value })} /></Field>
           <Field label="Primary URL"><input className="input" value={state.primaryUrl} onChange={e => upd({ primaryUrl: e.target.value })} /></Field>
+          <Field label="Primary scroll target"><input className="input" value={state.primaryScroll} placeholder="#pricing" onChange={e => upd({ primaryScroll: e.target.value })} /></Field>
           <ColorInput label="Primary bg" value={state.primaryBg} onChange={v => upd({ primaryBg: v })} />
           <ColorInput label="Primary text" value={state.primaryTc} onChange={v => upd({ primaryTc: v })} />
           <Field label="Secondary text"><input className="input" value={state.secondaryText} onChange={e => upd({ secondaryText: e.target.value })} /></Field>
           <Field label="Secondary URL"><input className="input" value={state.secondaryUrl} onChange={e => upd({ secondaryUrl: e.target.value })} /></Field>
+          <Field label="Secondary scroll target"><input className="input" value={state.secondaryScroll} placeholder="#sample-mock" onChange={e => upd({ secondaryScroll: e.target.value })} /></Field>
         </div>
 
         <p className="section-label mt-3">Right Card</p>
@@ -1136,8 +1146,12 @@ function Phv3Tab({ onHtml }: { onHtml: (html: string) => void }) {
           <Field label="Large title"><input className="input" value={state.cardTitle} onChange={e => upd({ cardTitle: e.target.value })} /></Field>
           <Field label="Top copy"><input className="input" value={state.cardTop} onChange={e => upd({ cardTop: e.target.value })} /></Field>
           <Field label="Marks copy"><input className="input" value={state.cardMarks} onChange={e => upd({ cardMarks: e.target.value })} /></Field>
+          <Field label="Buy button text"><input className="input" value={state.cardPrimaryText} onChange={e => upd({ cardPrimaryText: e.target.value })} /></Field>
+          <Field label="Buy button URL"><input className="input" value={state.cardPrimaryUrl} onChange={e => upd({ cardPrimaryUrl: e.target.value })} /></Field>
+          <Field label="Buy scroll target"><input className="input" value={state.cardPrimaryScroll} placeholder="#pricing" onChange={e => upd({ cardPrimaryScroll: e.target.value })} /></Field>
           <Field label="Sample button"><input className="input" value={state.sampleText} onChange={e => upd({ sampleText: e.target.value })} /></Field>
           <Field label="Sample URL"><input className="input" value={state.sampleUrl} onChange={e => upd({ sampleUrl: e.target.value })} /></Field>
+          <Field label="Sample scroll target"><input className="input" value={state.sampleScroll} placeholder="#sample-mock" onChange={e => upd({ sampleScroll: e.target.value })} /></Field>
           <ColorInput label="Card bg" value={state.cardBg} onChange={v => upd({ cardBg: v })} />
           <ColorInput label="Header bg" value={state.cardHeaderBg} onChange={v => upd({ cardHeaderBg: v })} />
           <ColorInput label="Border" value={state.cardBorder} onChange={v => upd({ cardBorder: v })} />

@@ -9,6 +9,19 @@ function n(v: unknown, key: Parameters<typeof normalize>[1]) {
   return normalize(v as any, key);
 }
 
+function jsString(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
+}
+
+function actionAttrs(url?: string, scroll?: string): string {
+  const target = (scroll || url || '#').trim() || '#';
+  const href = scroll ? (scroll.startsWith('#') ? scroll : '#') : target;
+  const click = scroll
+    ? ` onclick="var t=document.querySelector('${jsString(scroll)}');if(t){event.preventDefault();t.scrollIntoView({behavior:'smooth',block:'start'});}"`
+    : '';
+  return `href="${e(href)}"${click}`;
+}
+
 // ── DCS (Two Column v1) ────────────────────────────────────────────────────────
 
 export function generateDcsHtml(d: DcsState): string {
@@ -383,6 +396,7 @@ export function generatePhv3Html(d: Phv3State): string {
   const heading = n(d.heading, 'phv2Heading');
   const desc    = n(d.desc,    'phv2Desc');
   const rail = Math.max(420, Number(d.railMaxWidth) || 690);
+  const actionWidth = Math.max(360, Number(d.actionMaxWidth) || 520);
   const L: string[] = [];
 
   L.push('<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">');
@@ -392,6 +406,7 @@ export function generatePhv3Html(d: Phv3State): string {
   L.push(`.${id}-left{width:${d.split}%;min-width:0;}`);
   L.push(`.${id}-right{flex:1;min-width:320px;display:flex;justify-content:flex-end;}`);
   L.push(`.${id}-rail{width:100%;max-width:${rail}px;}`);
+  L.push(`.${id}-actions{width:100%;max-width:${actionWidth}px;}`);
   L.push(`.${id}-chips{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:24px 0 28px;}`);
   L.push(`.${id}-chip{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 18px;border-radius:8px;background:${e(d.chipBg)};border:1px solid ${e(d.chipBorder)};color:${e(d.chipTc)};font-family:Poppins,sans-serif;font-size:13px;font-weight:700;box-sizing:border-box;}`);
   L.push(`.${id}-format{width:100%;box-sizing:border-box;background:${e(d.formatBg)};border:1px solid ${e(d.formatBorder)};border-radius:10px;padding:24px 22px 22px;margin-bottom:28px;}`);
@@ -401,7 +416,7 @@ export function generatePhv3Html(d: Phv3State): string {
   L.push(`.${id}-cardhead{position:relative;min-height:118px;background:${e(d.cardHeaderBg)};overflow:hidden;padding:14px 16px;box-sizing:border-box;}`);
   L.push(`.${id}-cardhead:after{content:"";position:absolute;right:-24px;top:-36px;width:124px;height:124px;border-radius:50%;background:rgba(255,255,255,.08);}`);
   L.push(`.${id}-desc p{margin:0 0 12px;line-height:inherit;}.${id}-desc p:last-child{margin-bottom:0;}`);
-  L.push(`@media(max-width:900px){.${id}-wrap{flex-direction:column!important;padding-left:22px!important;padding-right:22px!important;}.${id}-left,.${id}-right{width:100%!important;}.${id}-right{justify-content:flex-start;}.${id}-card{max-width:100%;}.${id}-statgrid{grid-template-columns:repeat(2,1fr)!important;}}`);
+  L.push(`@media(max-width:900px){.${id}-wrap{flex-direction:column!important;padding-left:22px!important;padding-right:22px!important;}.${id}-left,.${id}-right{width:100%!important;}.${id}-actions{max-width:100%!important;}.${id}-right{justify-content:flex-start;}.${id}-card{max-width:100%;}.${id}-statgrid{grid-template-columns:repeat(2,1fr)!important;}}`);
   L.push(`@media(max-width:520px){.${id}-statgrid{grid-template-columns:1fr!important;}.${id}-cta a{width:100%;justify-content:center;}.${id}-chip{width:100%;}}`);
   L.push('</style>');
 
@@ -421,14 +436,18 @@ export function generatePhv3Html(d: Phv3State): string {
   if (desc.text) L.push(`        <div class="${id}-desc" style="font-family:Poppins,sans-serif;${textStyle(desc)};line-height:1.7;color:${desc.color || '#c8e1f7'};">${e(desc.text)}</div>`);
 
   if (d.features.length) {
+    L.push(`        <div class="${id}-actions">`);
     L.push(`        <div class="${id}-chips">`);
     for (const item of d.features) {
       L.push(`          <span class="${id}-chip"><span>${e(item.icon)}</span><span>${e(item.text)}</span></span>`);
     }
     L.push(`        </div>`);
-  }
 
-  L.push(`        <div class="${id}-format">`);
+    L.push(`        <div class="${id}-format">`);
+  } else {
+    L.push(`        <div class="${id}-actions">`);
+    L.push(`        <div class="${id}-format">`);
+  }
   L.push(`          <div style="font-family:Poppins,sans-serif;font-size:13px;font-weight:800;color:rgba(255,255,255,.52);letter-spacing:.08em;margin-bottom:18px;">${e(d.formatLabel)}</div>`);
   L.push(`          <div class="${id}-statgrid">`);
   for (const stat of d.stats) {
@@ -438,8 +457,9 @@ export function generatePhv3Html(d: Phv3State): string {
   L.push(`        </div>`);
 
   L.push(`        <div class="${id}-cta">`);
-  if (d.primaryText) L.push(`          <a href="${e(d.primaryUrl || '#')}" style="display:inline-flex;align-items:center;justify-content:center;min-width:148px;min-height:50px;border-radius:9px;background:${e(d.primaryBg)};color:${e(d.primaryTc)};font-family:Poppins,sans-serif;font-size:14px;font-weight:800;text-decoration:none;">${e(d.primaryText)}</a>`);
-  if (d.secondaryText) L.push(`          <a href="${e(d.secondaryUrl || '#')}" style="display:inline-flex;align-items:center;justify-content:center;min-width:164px;min-height:50px;border-radius:9px;background:${e(d.secondaryBg)};border:1px solid ${e(d.secondaryBorder)};color:${e(d.secondaryTc)};font-family:Poppins,sans-serif;font-size:14px;font-weight:700;text-decoration:none;">${e(d.secondaryText)}</a>`);
+  if (d.primaryText) L.push(`          <a ${actionAttrs(d.primaryUrl, d.primaryScroll)} style="display:inline-flex;align-items:center;justify-content:center;min-width:148px;min-height:50px;border-radius:9px;background:${e(d.primaryBg)};color:${e(d.primaryTc)};font-family:Poppins,sans-serif;font-size:14px;font-weight:800;text-decoration:none;">${e(d.primaryText)}</a>`);
+  if (d.secondaryText) L.push(`          <a ${actionAttrs(d.secondaryUrl, d.secondaryScroll)} style="display:inline-flex;align-items:center;justify-content:center;min-width:164px;min-height:50px;border-radius:9px;background:${e(d.secondaryBg)};border:1px solid ${e(d.secondaryBorder)};color:${e(d.secondaryTc)};font-family:Poppins,sans-serif;font-size:14px;font-weight:700;text-decoration:none;">${e(d.secondaryText)}</a>`);
+  L.push(`        </div>`);
   L.push(`        </div>`);
   L.push(`      </div>`);
   L.push(`    </div>`);
@@ -452,8 +472,8 @@ export function generatePhv3Html(d: Phv3State): string {
   L.push(`        </div>`);
   L.push(`        <div style="padding:24px 24px 22px;">`);
   L.push(`          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:16px;"><span style="font-size:13px;font-weight:700;color:#8b8f98;">${e(d.cardTop)}</span><span style="font-size:14px;font-weight:800;color:#07172d;">${e(d.cardMarks)}</span></div>`);
-  if (d.primaryText) L.push(`          <a href="${e(d.primaryUrl || '#')}" style="display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:9px;background:${e(d.cardButtonBg)};color:#ffffff;font-size:14px;font-weight:800;text-decoration:none;margin-bottom:12px;">${e(d.primaryText)}</a>`);
-  if (d.sampleText) L.push(`          <a href="${e(d.sampleUrl || '#')}" style="display:flex;align-items:center;justify-content:center;min-height:46px;border-radius:9px;background:#f5f7fb;border:1px solid #d9e1ec;color:#2168ad;font-size:13px;font-weight:800;text-decoration:none;margin-bottom:20px;">${e(d.sampleText)}</a>`);
+  if (d.cardPrimaryText) L.push(`          <a ${actionAttrs(d.cardPrimaryUrl, d.cardPrimaryScroll)} style="display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:9px;background:${e(d.cardButtonBg)};color:#ffffff;font-size:14px;font-weight:800;text-decoration:none;margin-bottom:12px;">${e(d.cardPrimaryText)}</a>`);
+  if (d.sampleText) L.push(`          <a ${actionAttrs(d.sampleUrl, d.sampleScroll)} style="display:flex;align-items:center;justify-content:center;min-height:46px;border-radius:9px;background:#f5f7fb;border:1px solid #d9e1ec;color:#2168ad;font-size:13px;font-weight:800;text-decoration:none;margin-bottom:20px;">${e(d.sampleText)}</a>`);
   L.push(`          <div style="height:1px;background:#e7edf5;margin-bottom:16px;"></div>`);
   if (d.includesTitle) L.push(`          <div style="font-size:12px;font-weight:800;color:#9299a4;letter-spacing:.08em;margin-bottom:12px;">${e(d.includesTitle)}</div>`);
   for (const item of d.includes) {
