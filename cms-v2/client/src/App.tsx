@@ -21,6 +21,7 @@ import ProgramCardsV2 from './screens/ProgramCardsV2';
 import FeatureCards from './screens/FeatureCards';
 import FeatureCardsV2 from './screens/FeatureCardsV2';
 import FeatureCardsV3 from './screens/FeatureCardsV3';
+import FeatureCardsV4 from './screens/FeatureCardsV4';
 import StepCards from './screens/StepCards';
 import LegalPage from './screens/LegalPage';
 import Team from './screens/Team';
@@ -77,6 +78,7 @@ export default function App() {
           <Route path="/feature-cards"    element={<FeatureCards />} />
           <Route path="/feature-cards-v2" element={<FeatureCardsV2 />} />
           <Route path="/feature-cards-v3" element={<FeatureCardsV3 />} />
+          <Route path="/feature-cards-v4" element={<FeatureCardsV4 />} />
           <Route path="/step-cards"       element={<StepCards />} />
           <Route path="/vertical-cards"   element={<VerticalCards />} />
           <Route path="/gradient-banner-section" element={<GradientBannerSection />} />

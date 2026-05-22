@@ -565,6 +565,12 @@ export interface Fc3State { bg: string; padTop: number; padBottom: number; padLe
 export interface Fc3Component { id: string; name: string; data: Fc3State; }
 export interface Fc3Content { components: Fc3Component[]; }
 
+// ── Feature Card v4 ───────────────────────────────────────────────────────────
+export interface Fc4Card { badge: string; badgeBg: string; badgeTc: string; title: string; subtitle: string; ctaText: string; ctaUrl: string; }
+export interface Fc4State { bg: string; padTop: number; padBottom: number; padLeft: number; padRight: number; maxWidth: number; cols: number; gap: number; eyebrow: string; eyebrowTc: string; heading: string; headingTc: string; cardBg: string; cardBorder: string; cardRadius: number; titleTc: string; subtitleTc: string; ctaTc: string; cards: Fc4Card[]; }
+export interface Fc4Component { id: string; name: string; data: Fc4State; }
+export interface Fc4Content { components: Fc4Component[]; }
+
 // ── Program Cards V2 ──────────────────────────────────────────────────────────
 export interface Pcv2Card { id: string; imageUrl: string; imageAlt: string; accent: string; ctaBg: string; tagBg: string; cardBg: string; eyebrow: TextValue; title: TextValue; desc: TextValue; chips: string; meta: TextValue; cta: TextValue; url: string; }
 export interface Pcv2State { bg: string; maxWidth: number; gap: number; cards: Pcv2Card[]; }
