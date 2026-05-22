@@ -11,12 +11,13 @@ import type {
   Phv3State, Phv3Component, Phv3Feature, Phv3Stat, Phv3Include,
   BmsState, BmsComponent, BmsCheckItem,
   CbState, CbComponent,
+  Bv2State, Bv2Component, Bv2Step,
   TextValue,
 } from '../../types/cms';
 import { normalize } from '../../utils/text';
 import {
   generateDcsHtml, generateDcs2Html, generateDcs3Html, generateReachHtml,
-  generatePhbHtml, generatePhv2Html, generatePhv3Html, generateBmsHtml, generateCbHtml,
+  generatePhbHtml, generatePhv2Html, generatePhv3Html, generateBmsHtml, generateCbHtml, generateBv2Html,
 } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
@@ -126,6 +127,22 @@ function makeCb(): CbState {
     checkColor: '#1a56a3', checks: [],
     ctaText: normalize('', 'bmsCta'), ctaUrl: '', ctaBg: '#1a56a3', ctaTc: '#ffffff',
     footerNote: '', footerNoteTc: '#6b7280',
+  };
+}
+
+function makeBv2(): Bv2State {
+  return {
+    bg: '#10213d', padTop: 42, padBot: 42, padLeft: 26, padRight: 26,
+    maxWidth: 1180, gap: 42,
+    eyebrow: 'HOW IT WORKS', eyebrowColor: '#4db3f4',
+    numberBg: '#2374bd', numberTc: '#ffffff', titleTc: '#ffffff',
+    desc: normalize('', 'bmsDesc'),
+    steps: [
+      { number: '1', title: 'Purchase & access', desc: normalize('Buy the mock exam and access all three exams instantly from your course dashboard.', 'bmsDesc') },
+      { number: '2', title: 'Attempt under exam conditions', desc: normalize('Sit in a quiet room, set your timer, and attempt the full mock just as you would on exam day.', 'bmsDesc') },
+      { number: '3', title: 'Get instant results', desc: normalize('Your score is displayed immediately after submission — no waiting for a tutor to mark your work.', 'bmsDesc') },
+      { number: '4', title: 'Review & target weak areas', desc: normalize('Full solutions arrive in your email immediately. Use your score to focus your remaining revision.', 'bmsDesc') },
+    ],
   };
 }
 
@@ -251,6 +268,19 @@ function normPhv2(raw: any): Phv2State {
     cardRadius: normalizeNum(raw.cardRadius, 10),
     cardVc: raw.cardVc || '#ffffff', cardLc: raw.cardLc || '#94a3b8',
     cards: raw.cards || [],
+  };
+}
+
+function normBv2(raw: any): Bv2State {
+  const d = { ...makeBv2(), ...(raw || {}) };
+  return {
+    ...d,
+    padTop: normalizeNum(d.padTop, 42), padBot: normalizeNum(d.padBot, 42),
+    padLeft: normalizeNum(d.padLeft, 26), padRight: normalizeNum(d.padRight, 26),
+    maxWidth: normalizeNum(d.maxWidth, 1180),
+    gap: normalizeNum(d.gap, 42),
+    desc: d.desc || normalize('', 'bmsDesc'),
+    steps: d.steps || [],
   };
 }
 
@@ -1416,6 +1446,97 @@ function CbTab({ onHtml }: { onHtml: (html: string) => void }) {
   );
 }
 
+function Bv2Tab({ onHtml }: { onHtml: (html: string) => void }) {
+  const [comps, setComps]       = useState<Bv2Component[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [name, setName]         = useState('');
+  const [state, setState]       = useState<Bv2State>(makeBv2());
+  const [saving, setSaving]     = useState(false);
+  const [saved, setSaved]       = useState(false);
+  const [loaded, setLoaded]     = useState(false);
+
+  useEffect(() => {
+    api.get<any>('/content/vls-bv2-components').then(row => {
+      const raw = row?.data as any;
+      const cs: Bv2Component[] = (raw?.components || []).map((c: any) => ({ ...c, data: normBv2(c.data || {}) }));
+      setComps(cs);
+      if (cs.length) { setActiveId(cs[0].id); setName(cs[0].name); setState(cs[0].data); }
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, []);
+
+  const upd = useCallback((p: Partial<Bv2State>) => { setState(prev => ({ ...prev, ...p })); setSaved(false); }, []);
+
+  function load(id: string) {
+    if (!id) { setActiveId(null); setName(''); setState(makeBv2()); setSaved(false); return; }
+    const c = comps.find(c => c.id === id);
+    if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
+  }
+
+  async function save() {
+    if (!name.trim()) { alert('Enter a component name.'); return; }
+    setSaving(true);
+    const id = activeId || `bv2-${Date.now().toString(36)}`;
+    const updated = activeId ? comps.map(c => c.id === id ? { id, name, data: state } : c) : [...comps, { id, name, data: state }];
+    await api.put('/content/vls-bv2-components', { components: updated });
+    setComps(updated); setActiveId(id); setSaved(true); setSaving(false);
+  }
+
+  async function del() {
+    if (!activeId || !confirm('Delete this component?')) return;
+    const updated = comps.filter(c => c.id !== activeId);
+    await api.put('/content/vls-bv2-components', { components: updated });
+    setComps(updated); setActiveId(null); setName(''); setState(makeBv2());
+  }
+
+  function updStep(i: number, p: Partial<Bv2Step>) { const a = [...state.steps]; a[i] = { ...a[i], ...p }; upd({ steps: a }); }
+
+  if (!loaded) return <div className="p-5 text-xs text-slate-400">Loading…</div>;
+
+  return (
+    <div className="flex flex-col">
+      <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
+        onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
+        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Banner v2', generateBv2Html(state)))} />
+      <div className="px-5 py-4 space-y-1 overflow-y-auto">
+        <p className="section-label">Layout</p>
+        <PaddingRow value={state} onChange={upd} />
+        <div className="grid grid-cols-2 gap-2">
+          <ColorInput label="Background" value={state.bg} onChange={v => upd({ bg: v })} />
+          <Field label="Max width"><input type="number" className="input" min={600} max={1600} value={state.maxWidth} onChange={e => upd({ maxWidth: Number(e.target.value) })} /></Field>
+          <Field label="Step gap"><input type="number" className="input" min={12} max={90} value={state.gap} onChange={e => upd({ gap: Number(e.target.value) })} /></Field>
+        </div>
+
+        <p className="section-label mt-3">Heading</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Eyebrow"><input className="input" value={state.eyebrow} onChange={e => upd({ eyebrow: e.target.value })} /></Field>
+          <ColorInput label="Eyebrow colour" value={state.eyebrowColor} onChange={v => upd({ eyebrowColor: v })} />
+          <ColorInput label="Number bg" value={state.numberBg} onChange={v => upd({ numberBg: v })} />
+          <ColorInput label="Number text" value={state.numberTc} onChange={v => upd({ numberTc: v })} />
+          <ColorInput label="Title text" value={state.titleTc} onChange={v => upd({ titleTc: v })} />
+        </div>
+        <RichTextField label="Description style" value={tv(state.desc, 'bmsDesc')} defaultKey="bmsDesc" onChange={v => upd({ desc: v })} />
+
+        <p className="section-label mt-3">Steps</p>
+        {state.steps.map((step, i) => (
+          <div key={i} className="rounded border border-slate-200 bg-slate-50 p-3 mb-2">
+            <div className="flex gap-2 items-center mb-2">
+              <span className="text-xs font-semibold text-slate-500 flex-1">Step {i + 1}</span>
+              <button onClick={() => upd({ steps: state.steps.filter((_, idx) => idx !== i) })} className="btn-danger text-xs">✕</button>
+            </div>
+            <div className="grid grid-cols-[80px_1fr] gap-2">
+              <Field label="Number"><input className="input" value={step.number} onChange={e => updStep(i, { number: e.target.value })} /></Field>
+              <Field label="Title"><input className="input" value={step.title} onChange={e => updStep(i, { title: e.target.value })} /></Field>
+            </div>
+            <RichTextField label="Description" value={tv(step.desc, 'bmsDesc')} defaultKey="bmsDesc" multiline onChange={v => updStep(i, { desc: v })} />
+          </div>
+        ))}
+        <button onClick={() => upd({ steps: [...state.steps, { number: String(state.steps.length + 1), title: '', desc: normalize('', 'bmsDesc') }] })} className="btn-ghost text-xs w-full">+ Add step</button>
+      </div>
+    </div>
+  );
+}
+
 // ── Section titles ─────────────────────────────────────────────────────────────
 
 const SECTION_TITLES: Record<string, { title: string; desc: string }> = {
@@ -1428,6 +1549,7 @@ const SECTION_TITLES: Record<string, { title: string; desc: string }> = {
   'hero-banner-v3': { title: 'Hero Banner v3',   desc: 'Mock exam hero with aligned format box + purchase card' },
   'book-meeting':   { title: 'Book a Meeting',   desc: 'Image left + eyebrow/heading/checklist/CTA right' },
   'content-block':  { title: 'Content CTA Block', desc: 'Single column: eyebrow/heading/checklist/CTA' },
+  'banner-v2':      { title: 'Banner v2',        desc: 'Single-column horizontal process banner' },
 };
 
 // ── Main screen ────────────────────────────────────────────────────────────────
@@ -1459,6 +1581,7 @@ export default function FullScreenSections() {
           {type === 'hero-banner-v3' && <Phv3Tab  onHtml={handleHtml} />}
           {type === 'book-meeting'   && <BmsTab   onHtml={handleHtml} />}
           {type === 'content-block' && <CbTab    onHtml={handleHtml} />}
+          {type === 'banner-v2' && <Bv2Tab    onHtml={handleHtml} />}
           {!type && <div className="p-6 text-sm text-slate-400">Select a section type from the sidebar.</div>}
         </div>
       </div>

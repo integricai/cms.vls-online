@@ -73,6 +73,7 @@ export const NAV = [
                 sub: 'Single Column',
                 children: [
                     { to: '/full-screen/content-block', label: 'Content CTA Block' },
+                    { to: '/full-screen/banner-v2', label: 'Banner v2' },
                     { to: '/gradient-banner-section', label: 'Banner Section' },
                 ],
             },

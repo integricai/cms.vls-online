@@ -795,3 +795,17 @@ export interface CbState {
   footerNote: string; footerNoteTc: string;
 }
 export interface CbComponent { id: string; name: string; data: CbState; }
+
+// ── Banner V2 (BV2) — single-column process strip ───────────────────────────
+export interface Bv2Step { number: string; title: string; desc: TextValue; }
+export interface Bv2State {
+  bg: string;
+  padTop: number; padBot: number; padLeft: number; padRight: number;
+  maxWidth: number; gap: number;
+  eyebrow: string; eyebrowColor: string;
+  numberBg: string; numberTc: string;
+  titleTc: string;
+  desc: TextValue;
+  steps: Bv2Step[];
+}
+export interface Bv2Component { id: string; name: string; data: Bv2State; }

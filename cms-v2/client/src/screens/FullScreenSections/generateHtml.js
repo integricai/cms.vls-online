@@ -606,3 +606,35 @@ export function generateCbHtml(d) {
     L.push(`</div>`);
     return L.join('\n');
 }
+// ── Banner V2 (BV2) — single-column process strip ────────────────────────────
+export function generateBv2Html(d) {
+    const id = uid();
+    const L = [];
+    L.push('<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">');
+    L.push('<style>');
+    L.push(`.${id}-steps{display:grid;grid-template-columns:repeat(${Math.max(1, d.steps.length || 4)},minmax(0,1fr));gap:${d.gap}px;}`);
+    L.push(`@media(max-width:900px){.${id}-steps{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}`);
+    L.push(`@media(max-width:560px){.${id}-steps{grid-template-columns:1fr!important;}}`);
+    L.push('</style>');
+    L.push(`<section style="background:${e(d.bg)};box-sizing:border-box;padding:${d.padTop}px ${d.padRight}px ${d.padBot}px ${d.padLeft}px;">`);
+    L.push(`  <div style="max-width:${d.maxWidth}px;margin:0 auto;">`);
+    if (d.eyebrow) {
+        L.push(`    <div style="font-family:Poppins,sans-serif;font-size:12px;font-weight:800;letter-spacing:.12em;color:${e(d.eyebrowColor)};text-transform:uppercase;margin-bottom:28px;">${e(d.eyebrow)}</div>`);
+    }
+    L.push(`    <div class="${id}-steps">`);
+    d.steps.forEach((step, i) => {
+        const copy = n(step.desc, 'bmsDesc');
+        L.push(`      <div style="display:flex;align-items:flex-start;gap:18px;min-width:0;">`);
+        L.push(`        <div style="width:34px;height:34px;border-radius:50%;background:${e(d.numberBg)};color:${e(d.numberTc)};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:Poppins,sans-serif;font-size:13px;font-weight:800;line-height:1;">${e(step.number || String(i + 1))}</div>`);
+        L.push(`        <div style="min-width:0;">`);
+        L.push(`          <h3 style="font-family:Poppins,sans-serif;font-size:14px;font-weight:800;color:${e(d.titleTc)};line-height:1.35;margin:0 0 6px;">${e(step.title)}</h3>`);
+        if (copy.text)
+            L.push(`          <p style="font-family:Poppins,sans-serif;${textStyle(copy)};line-height:1.55;margin:0;">${e(copy.text)}</p>`);
+        L.push(`        </div>`);
+        L.push(`      </div>`);
+    });
+    L.push(`    </div>`);
+    L.push(`  </div>`);
+    L.push(`</section>`);
+    return L.join('\n');
+}

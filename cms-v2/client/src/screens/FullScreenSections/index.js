@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import { normalize } from '../../utils/text';
-import { generateDcsHtml, generateDcs2Html, generateDcs3Html, generateReachHtml, generatePhbHtml, generatePhv2Html, generatePhv3Html, generateBmsHtml, generateCbHtml, } from './generateHtml';
+import { generateDcsHtml, generateDcs2Html, generateDcs3Html, generateReachHtml, generatePhbHtml, generatePhv2Html, generatePhv3Html, generateBmsHtml, generateCbHtml, generateBv2Html, } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
@@ -105,6 +105,21 @@ function makeCb() {
         checkColor: '#1a56a3', checks: [],
         ctaText: normalize('', 'bmsCta'), ctaUrl: '', ctaBg: '#1a56a3', ctaTc: '#ffffff',
         footerNote: '', footerNoteTc: '#6b7280',
+    };
+}
+function makeBv2() {
+    return {
+        bg: '#10213d', padTop: 42, padBot: 42, padLeft: 26, padRight: 26,
+        maxWidth: 1180, gap: 42,
+        eyebrow: 'HOW IT WORKS', eyebrowColor: '#4db3f4',
+        numberBg: '#2374bd', numberTc: '#ffffff', titleTc: '#ffffff',
+        desc: normalize('', 'bmsDesc'),
+        steps: [
+            { number: '1', title: 'Purchase & access', desc: normalize('Buy the mock exam and access all three exams instantly from your course dashboard.', 'bmsDesc') },
+            { number: '2', title: 'Attempt under exam conditions', desc: normalize('Sit in a quiet room, set your timer, and attempt the full mock just as you would on exam day.', 'bmsDesc') },
+            { number: '3', title: 'Get instant results', desc: normalize('Your score is displayed immediately after submission — no waiting for a tutor to mark your work.', 'bmsDesc') },
+            { number: '4', title: 'Review & target weak areas', desc: normalize('Full solutions arrive in your email immediately. Use your score to focus your remaining revision.', 'bmsDesc') },
+        ],
     };
 }
 function normCb(raw) {
@@ -227,6 +242,18 @@ function normPhv2(raw) {
         cardRadius: normalizeNum(raw.cardRadius, 10),
         cardVc: raw.cardVc || '#ffffff', cardLc: raw.cardLc || '#94a3b8',
         cards: raw.cards || [],
+    };
+}
+function normBv2(raw) {
+    const d = { ...makeBv2(), ...(raw || {}) };
+    return {
+        ...d,
+        padTop: normalizeNum(d.padTop, 42), padBot: normalizeNum(d.padBot, 42),
+        padLeft: normalizeNum(d.padLeft, 26), padRight: normalizeNum(d.padRight, 26),
+        maxWidth: normalizeNum(d.maxWidth, 1180),
+        gap: normalizeNum(d.gap, 42),
+        desc: d.desc || normalize('', 'bmsDesc'),
+        steps: d.steps || [],
     };
 }
 function normPhv3(raw) {
@@ -871,6 +898,73 @@ function CbTab({ onHtml }) {
         return _jsx("div", { className: "p-5 text-xs text-slate-400", children: "Loading\u2026" });
     return (_jsxs("div", { className: "flex flex-col", children: [_jsx(CmpMgr, { components: comps, activeId: activeId, name: name, saving: saving, saved: saved, onSelect: load, onNew: () => load(''), onDelete: del, onNameChange: setName, onSave: save, onGenerate: () => onHtml(wrapGeneratedHtml('Content CTA Block', generateCbHtml(state))) }), _jsxs("div", { className: "px-5 py-4 space-y-1 overflow-y-auto", children: [_jsx("p", { className: "section-label", children: "Layout" }), _jsx(PaddingRow, { value: state, onChange: upd }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(ColorInput, { label: "Background", value: state.bg, onChange: v => upd({ bg: v }) }), _jsx(Field, { label: "Max width (px)", children: _jsx("input", { type: "number", className: "input", min: 400, max: 1600, value: state.maxWidth, onChange: e => upd({ maxWidth: Number(e.target.value) }) }) })] }), _jsx("p", { className: "section-label mt-3", children: "Content" }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(Field, { label: "Eyebrow text", children: _jsx("input", { className: "input", value: state.eyebrow, onChange: e => upd({ eyebrow: e.target.value }) }) }), _jsx(ColorInput, { label: "Eyebrow colour", value: state.eyebrowColor, onChange: v => upd({ eyebrowColor: v }) })] }), _jsxs("label", { className: "flex items-center gap-2 text-sm text-slate-600 cursor-pointer mb-2", children: [_jsx("input", { type: "checkbox", checked: state.eyebrowDot, onChange: e => upd({ eyebrowDot: e.target.checked }) }), "Show dot before eyebrow"] }), _jsx("p", { className: "text-xs font-semibold text-slate-500 mt-2 mb-1", children: "Heading" }), _jsx(RichTextField, { label: "Heading text", value: tv(state.headingPre, 'bmsHeadingPre'), defaultKey: "bmsHeadingPre", onChange: v => upd({ headingPre: v }) }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(Field, { label: "Accent phrase", children: _jsx("input", { className: "input", value: state.headingAccent, onChange: e => upd({ headingAccent: e.target.value }) }) }), _jsx(ColorInput, { label: "Accent colour", value: state.headingAccentColor, onChange: v => upd({ headingAccentColor: v }) })] }), _jsx(RichTextField, { label: "Description", value: tv(state.desc, 'bmsDesc'), defaultKey: "bmsDesc", multiline: true, onChange: v => upd({ desc: v }) }), _jsx("p", { className: "text-xs font-semibold text-slate-500 mt-3 mb-1", children: "Checklist" }), _jsx(ColorInput, { label: "Check icon colour", value: state.checkColor, onChange: v => upd({ checkColor: v }) }), state.checks.map((ch, i) => (_jsxs("div", { className: "flex gap-2 items-start mb-1", children: [_jsx("div", { className: "flex-1", children: _jsx(RichTextField, { label: `Item ${i + 1}`, value: tv(ch.text, 'bmsCheck'), defaultKey: "bmsCheck", onChange: v => updCheck(i, { text: v }) }) }), _jsx("button", { onClick: () => upd({ checks: state.checks.filter((_, idx) => idx !== i) }), className: "btn-danger mt-6 text-xs", children: "\u2715" })] }, i))), _jsx("button", { onClick: () => upd({ checks: [...state.checks, { text: normalize('', 'bmsCheck') }] }), className: "btn-ghost text-xs w-full", children: "+ Add item" }), _jsx("p", { className: "text-xs font-semibold text-slate-500 mt-3 mb-1", children: "CTA Button" }), _jsx(RichTextField, { label: "Button text", value: tv(state.ctaText, 'bmsCta'), defaultKey: "bmsCta", onChange: v => upd({ ctaText: v }) }), _jsx(Field, { label: "Button URL", children: _jsx("input", { className: "input", value: state.ctaUrl, placeholder: "https://\u2026", onChange: e => upd({ ctaUrl: e.target.value }) }) }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(ColorInput, { label: "Button bg", value: state.ctaBg, onChange: v => upd({ ctaBg: v }) }), _jsx(ColorInput, { label: "Button text", value: state.ctaTc, onChange: v => upd({ ctaTc: v }) })] }), _jsx("p", { className: "text-xs font-semibold text-slate-500 mt-3 mb-1", children: "Footer Note" }), _jsx(Field, { label: "Note text", children: _jsx("input", { className: "input", value: state.footerNote, placeholder: "\uD83D\uDD12 Free \u00B7 Online \u00B7 \u2026", onChange: e => upd({ footerNote: e.target.value }) }) }), _jsx(ColorInput, { label: "Note colour", value: state.footerNoteTc, onChange: v => upd({ footerNoteTc: v }) })] })] }));
 }
+function Bv2Tab({ onHtml }) {
+    const [comps, setComps] = useState([]);
+    const [activeId, setActiveId] = useState(null);
+    const [name, setName] = useState('');
+    const [state, setState] = useState(makeBv2());
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+    useEffect(() => {
+        api.get('/content/vls-bv2-components').then(row => {
+            const raw = row?.data;
+            const cs = (raw?.components || []).map((c) => ({ ...c, data: normBv2(c.data || {}) }));
+            setComps(cs);
+            if (cs.length) {
+                setActiveId(cs[0].id);
+                setName(cs[0].name);
+                setState(cs[0].data);
+            }
+            setLoaded(true);
+        }).catch(() => setLoaded(true));
+    }, []);
+    const upd = useCallback((p) => { setState(prev => ({ ...prev, ...p })); setSaved(false); }, []);
+    function load(id) {
+        if (!id) {
+            setActiveId(null);
+            setName('');
+            setState(makeBv2());
+            setSaved(false);
+            return;
+        }
+        const c = comps.find(c => c.id === id);
+        if (c) {
+            setActiveId(c.id);
+            setName(c.name);
+            setState(c.data);
+            setSaved(false);
+        }
+    }
+    async function save() {
+        if (!name.trim()) {
+            alert('Enter a component name.');
+            return;
+        }
+        setSaving(true);
+        const id = activeId || `bv2-${Date.now().toString(36)}`;
+        const updated = activeId ? comps.map(c => c.id === id ? { id, name, data: state } : c) : [...comps, { id, name, data: state }];
+        await api.put('/content/vls-bv2-components', { components: updated });
+        setComps(updated);
+        setActiveId(id);
+        setSaved(true);
+        setSaving(false);
+    }
+    async function del() {
+        if (!activeId || !confirm('Delete this component?'))
+            return;
+        const updated = comps.filter(c => c.id !== activeId);
+        await api.put('/content/vls-bv2-components', { components: updated });
+        setComps(updated);
+        setActiveId(null);
+        setName('');
+        setState(makeBv2());
+    }
+    function updStep(i, p) { const a = [...state.steps]; a[i] = { ...a[i], ...p }; upd({ steps: a }); }
+    if (!loaded)
+        return _jsx("div", { className: "p-5 text-xs text-slate-400", children: "Loading\u2026" });
+    return (_jsxs("div", { className: "flex flex-col", children: [_jsx(CmpMgr, { components: comps, activeId: activeId, name: name, saving: saving, saved: saved, onSelect: load, onNew: () => load(''), onDelete: del, onNameChange: setName, onSave: save, onGenerate: () => onHtml(wrapGeneratedHtml('Banner v2', generateBv2Html(state))) }), _jsxs("div", { className: "px-5 py-4 space-y-1 overflow-y-auto", children: [_jsx("p", { className: "section-label", children: "Layout" }), _jsx(PaddingRow, { value: state, onChange: upd }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(ColorInput, { label: "Background", value: state.bg, onChange: v => upd({ bg: v }) }), _jsx(Field, { label: "Max width", children: _jsx("input", { type: "number", className: "input", min: 600, max: 1600, value: state.maxWidth, onChange: e => upd({ maxWidth: Number(e.target.value) }) }) }), _jsx(Field, { label: "Step gap", children: _jsx("input", { type: "number", className: "input", min: 12, max: 90, value: state.gap, onChange: e => upd({ gap: Number(e.target.value) }) }) })] }), _jsx("p", { className: "section-label mt-3", children: "Heading" }), _jsxs("div", { className: "grid grid-cols-2 gap-2", children: [_jsx(Field, { label: "Eyebrow", children: _jsx("input", { className: "input", value: state.eyebrow, onChange: e => upd({ eyebrow: e.target.value }) }) }), _jsx(ColorInput, { label: "Eyebrow colour", value: state.eyebrowColor, onChange: v => upd({ eyebrowColor: v }) }), _jsx(ColorInput, { label: "Number bg", value: state.numberBg, onChange: v => upd({ numberBg: v }) }), _jsx(ColorInput, { label: "Number text", value: state.numberTc, onChange: v => upd({ numberTc: v }) }), _jsx(ColorInput, { label: "Title text", value: state.titleTc, onChange: v => upd({ titleTc: v }) })] }), _jsx(RichTextField, { label: "Description style", value: tv(state.desc, 'bmsDesc'), defaultKey: "bmsDesc", onChange: v => upd({ desc: v }) }), _jsx("p", { className: "section-label mt-3", children: "Steps" }), state.steps.map((step, i) => (_jsxs("div", { className: "rounded border border-slate-200 bg-slate-50 p-3 mb-2", children: [_jsxs("div", { className: "flex gap-2 items-center mb-2", children: [_jsxs("span", { className: "text-xs font-semibold text-slate-500 flex-1", children: ["Step ", i + 1] }), _jsx("button", { onClick: () => upd({ steps: state.steps.filter((_, idx) => idx !== i) }), className: "btn-danger text-xs", children: "\u2715" })] }), _jsxs("div", { className: "grid grid-cols-[80px_1fr] gap-2", children: [_jsx(Field, { label: "Number", children: _jsx("input", { className: "input", value: step.number, onChange: e => updStep(i, { number: e.target.value }) }) }), _jsx(Field, { label: "Title", children: _jsx("input", { className: "input", value: step.title, onChange: e => updStep(i, { title: e.target.value }) }) })] }), _jsx(RichTextField, { label: "Description", value: tv(step.desc, 'bmsDesc'), defaultKey: "bmsDesc", multiline: true, onChange: v => updStep(i, { desc: v }) })] }, i))), _jsx("button", { onClick: () => upd({ steps: [...state.steps, { number: String(state.steps.length + 1), title: '', desc: normalize('', 'bmsDesc') }] }), className: "btn-ghost text-xs w-full", children: "+ Add step" })] })] }));
+}
 // ── Section titles ─────────────────────────────────────────────────────────────
 const SECTION_TITLES = {
     'dcs': { title: 'Two Column v1', desc: 'Left text + right icon cards' },
@@ -882,6 +976,7 @@ const SECTION_TITLES = {
     'hero-banner-v3': { title: 'Hero Banner v3', desc: 'Mock exam hero with aligned format box + purchase card' },
     'book-meeting': { title: 'Book a Meeting', desc: 'Image left + eyebrow/heading/checklist/CTA right' },
     'content-block': { title: 'Content CTA Block', desc: 'Single column: eyebrow/heading/checklist/CTA' },
+    'banner-v2': { title: 'Banner v2', desc: 'Single-column horizontal process banner' },
 };
 // ── Main screen ────────────────────────────────────────────────────────────────
 export default function FullScreenSections() {
@@ -890,7 +985,7 @@ export default function FullScreenSections() {
     const [previewHtml, setPreviewHtml] = useState('');
     function handleHtml(html) { setPreviewHtml(html); setActiveTab('preview'); }
     const meta = SECTION_TITLES[type || ''] ?? { title: 'Full Screen Section', desc: '' };
-    return (_jsxs("div", { className: "flex h-full", children: [_jsxs("div", { className: "w-[520px] shrink-0 flex flex-col border-r border-slate-200 bg-white overflow-hidden", children: [_jsxs("div", { className: "shrink-0 border-b border-slate-100 bg-white px-5 py-4", children: [_jsx("h1", { className: "text-base font-bold text-slate-900", children: meta.title }), meta.desc && _jsx("p", { className: "text-xs text-slate-400 mt-0.5", children: meta.desc })] }), _jsxs("div", { className: "flex-1 overflow-y-auto", children: [type === 'dcs' && _jsx(DcsTab, { onHtml: handleHtml }), type === 'dcs2' && _jsx(Dcs2Tab, { onHtml: handleHtml }), type === 'dcs3' && _jsx(Dcs3Tab, { onHtml: handleHtml }), type === 'reach' && _jsx(ReachTab, { onHtml: handleHtml }), type === 'hero-banner' && _jsx(PhbTab, { onHtml: handleHtml }), type === 'hero-banner-v2' && _jsx(Phv2Tab, { onHtml: handleHtml }), type === 'hero-banner-v3' && _jsx(Phv3Tab, { onHtml: handleHtml }), type === 'book-meeting' && _jsx(BmsTab, { onHtml: handleHtml }), type === 'content-block' && _jsx(CbTab, { onHtml: handleHtml }), !type && _jsx("div", { className: "p-6 text-sm text-slate-400", children: "Select a section type from the sidebar." })] })] }), _jsxs("div", { className: "flex flex-1 flex-col overflow-hidden", children: [_jsx("div", { className: "flex border-b border-slate-200 bg-white px-4", children: ['preview', 'html'].map(tab => (_jsx("button", { onClick: () => setActiveTab(tab), className: `px-4 py-3 text-sm font-medium transition border-b-2 -mb-px ${activeTab === tab ? 'border-brand text-brand' : 'border-transparent text-slate-400 hover:text-slate-700'}`, children: tab === 'html' ? 'HTML' : 'Preview' }, tab))) }), activeTab === 'preview' ? (_jsx("iframe", { srcDoc: previewHtml
+    return (_jsxs("div", { className: "flex h-full", children: [_jsxs("div", { className: "w-[520px] shrink-0 flex flex-col border-r border-slate-200 bg-white overflow-hidden", children: [_jsxs("div", { className: "shrink-0 border-b border-slate-100 bg-white px-5 py-4", children: [_jsx("h1", { className: "text-base font-bold text-slate-900", children: meta.title }), meta.desc && _jsx("p", { className: "text-xs text-slate-400 mt-0.5", children: meta.desc })] }), _jsxs("div", { className: "flex-1 overflow-y-auto", children: [type === 'dcs' && _jsx(DcsTab, { onHtml: handleHtml }), type === 'dcs2' && _jsx(Dcs2Tab, { onHtml: handleHtml }), type === 'dcs3' && _jsx(Dcs3Tab, { onHtml: handleHtml }), type === 'reach' && _jsx(ReachTab, { onHtml: handleHtml }), type === 'hero-banner' && _jsx(PhbTab, { onHtml: handleHtml }), type === 'hero-banner-v2' && _jsx(Phv2Tab, { onHtml: handleHtml }), type === 'hero-banner-v3' && _jsx(Phv3Tab, { onHtml: handleHtml }), type === 'book-meeting' && _jsx(BmsTab, { onHtml: handleHtml }), type === 'content-block' && _jsx(CbTab, { onHtml: handleHtml }), type === 'banner-v2' && _jsx(Bv2Tab, { onHtml: handleHtml }), !type && _jsx("div", { className: "p-6 text-sm text-slate-400", children: "Select a section type from the sidebar." })] })] }), _jsxs("div", { className: "flex flex-1 flex-col overflow-hidden", children: [_jsx("div", { className: "flex border-b border-slate-200 bg-white px-4", children: ['preview', 'html'].map(tab => (_jsx("button", { onClick: () => setActiveTab(tab), className: `px-4 py-3 text-sm font-medium transition border-b-2 -mb-px ${activeTab === tab ? 'border-brand text-brand' : 'border-transparent text-slate-400 hover:text-slate-700'}`, children: tab === 'html' ? 'HTML' : 'Preview' }, tab))) }), activeTab === 'preview' ? (_jsx("iframe", { srcDoc: previewHtml
                             ? `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0">${previewHtml}</body></html>`
                             : '<p style="font-family:sans-serif;color:#94a3b8;padding:24px">Click ⚡ Generate HTML to preview.</p>', className: "flex-1 w-full border-0 bg-slate-50", sandbox: "allow-same-origin allow-scripts" })) : (_jsxs("div", { className: "relative flex-1 overflow-auto bg-slate-900 p-4", children: [_jsx("button", { onClick: () => navigator.clipboard.writeText(previewHtml), className: "absolute right-4 top-4 rounded bg-slate-700 px-3 py-1 text-xs text-slate-300 hover:bg-slate-600", children: "Copy" }), _jsx("pre", { className: "text-xs text-slate-300 whitespace-pre-wrap font-mono leading-relaxed", children: previewHtml || '// Click ⚡ Generate HTML first' })] }))] })] }));
 }
