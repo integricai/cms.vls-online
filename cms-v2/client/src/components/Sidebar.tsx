@@ -32,12 +32,21 @@ interface Props {
 
 export default function Sidebar({ isOpen, onClose }: Props) {
   const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [openSubGroups, setOpenSubGroups] = useState<Set<string>>(new Set());
   const { config } = useSidebarConfig();
   const currentUser = getCurrentUser();
   const isAdmin = currentUser?.role === 'admin';
 
   function toggleGroup(name: string) {
     setOpenGroup(prev => (prev === name ? null : name));
+  }
+
+  function toggleSubGroup(id: string) {
+    setOpenSubGroups(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   }
 
   function renderNavItem(item: SidebarConfigItem) {
@@ -61,13 +70,34 @@ export default function Sidebar({ isOpen, onClose }: Props) {
   function renderSubGroup(sub: SidebarConfigSubGroup) {
     const visibleItems = sub.children.filter(i => !i.hidden);
     if (visibleItems.length === 0) return null;
+    const expanded = openSubGroups.has(sub.id);
     return (
       <div key={sub.id}>
-        <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-          {sub.id}
-        </div>
-        <div className="ml-3 mb-1 space-y-0.5 border-l border-slate-700 pl-2">
-          {visibleItems.map(item => renderNavItem(item))}
+        <button
+          onClick={() => toggleSubGroup(sub.id)}
+          className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left transition hover:bg-slate-800"
+        >
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            {sub.id}
+          </span>
+          <svg
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className={`h-3 w-3 text-slate-500 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}
+          >
+            <path
+              fillRule="evenodd"
+              d="M7.293 4.293a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414-1.414L11.586 10 7.293 5.707a1 1 0 010-1.414z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </button>
+        <div
+          className={`overflow-hidden transition-[max-height] duration-200 ease-in-out ${expanded ? 'max-h-[600px]' : 'max-h-0'}`}
+        >
+          <div className="ml-3 mb-1 space-y-0.5 border-l border-slate-700 pl-2">
+            {visibleItems.map(item => renderNavItem(item))}
+          </div>
         </div>
       </div>
     );

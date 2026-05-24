@@ -11,7 +11,6 @@ export const NAV: NavGroup[] = [
       { to: '/blog-header',       label: 'Blog Header' },
       { to: '/footer',            label: 'Footer' },
       { to: '/banner',            label: 'Banner' },
-      { to: '/course-price',      label: 'Course Price' },
       { to: '/promotion-section', label: 'Promotion Section' },
       { to: '/contact-footer',    label: 'Contact Footer' },
     ],
@@ -61,7 +60,6 @@ export const NAV: NavGroup[] = [
   {
     group: 'Page Builder',
     children: [
-      { to: '/page-desc-with-menu', label: 'Page Desc with Menu' },
       {
         sub: 'Full Screen Sections',
         children: [
@@ -73,15 +71,16 @@ export const NAV: NavGroup[] = [
           { to: '/full-screen/hero-banner-v2', label: 'Hero Banner v2' },
           { to: '/full-screen/hero-banner-v3', label: 'Hero Banner v3' },
           { to: '/full-screen/book-meeting',   label: 'Book a Meeting' },
-          { to: '/full-screen/payment-plans',  label: 'Payment Plans' },
         ],
       },
       {
         sub: 'Single Column',
         children: [
-          { to: '/full-screen/content-block', label: 'Content CTA Block' },
-          { to: '/full-screen/banner-v2', label: 'Banner v2' },
-          { to: '/gradient-banner-section', label: 'Banner Section' },
+          { to: '/page-desc-with-menu',        label: 'Banner with Menu' },
+          { to: '/full-screen/payment-plans',  label: 'Payment Plans' },
+          { to: '/full-screen/content-block',  label: 'Content CTA Block' },
+          { to: '/full-screen/banner-v2',      label: 'Banner v2' },
+          { to: '/gradient-banner-section',    label: 'Banner Section' },
         ],
       },
       {
@@ -98,6 +97,7 @@ export const NAV: NavGroup[] = [
   {
     group: 'Cards',
     children: [
+      { to: '/course-price',     label: 'Price Card' },
       { to: '/program-cards',    label: 'Program Cards' },
       { to: '/program-cards-v2', label: 'Program Cards v2' },
       { to: '/feature-cards',    label: 'Feature Cards' },

@@ -55,7 +55,6 @@ export const NAV = [
     {
         group: 'Page Builder',
         children: [
-            { to: '/page-desc-with-menu', label: 'Page Desc with Menu' },
             {
                 sub: 'Full Screen Sections',
                 children: [
@@ -72,6 +71,8 @@ export const NAV = [
             {
                 sub: 'Single Column',
                 children: [
+                    { to: '/page-desc-with-menu', label: 'Banner with Menu' },
+                    { to: '/full-screen/payment-plans', label: 'Payment Plans' },
                     { to: '/full-screen/content-block', label: 'Content CTA Block' },
                     { to: '/full-screen/banner-v2', label: 'Banner v2' },
                     { to: '/gradient-banner-section', label: 'Banner Section' },
@@ -91,6 +92,7 @@ export const NAV = [
     {
         group: 'Cards',
         children: [
+            { to: '/course-price', label: 'Price Card' },
             { to: '/program-cards', label: 'Program Cards' },
             { to: '/program-cards-v2', label: 'Program Cards v2' },
             { to: '/feature-cards', label: 'Feature Cards' },
