@@ -877,6 +877,18 @@ export interface PaymentPlanCard {
   ctaUrl: string;
   ctaStyle: 'solid' | 'outline';
   refundText: string;
+  // Course mapping
+  courseId?: number;
+  // Per-card typography
+  fontFamily?: string;
+  labelSize?: number; labelWeight?: number;
+  titleSize?: number; titleWeight?: number;
+  priceLabelSize?: number; priceLabelWeight?: number;
+  amountSize?: number;
+  featureSize?: number; featureWeight?: number;
+  ctaSize?: number; ctaWeight?: number;
+  refundSize?: number; refundWeight?: number;
+  badgeSize?: number; badgeWeight?: number;
 }
 export interface PaymentIncludedItem { text: string; }
 export interface PaymentPlansState {

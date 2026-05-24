@@ -92,8 +92,6 @@ export const NAV = [
     {
         group: 'Cards',
         children: [
-            { to: '/payment-cards', label: 'Payment Cards' },
-            { to: '/course-price', label: 'Price Card' },
             { to: '/program-cards', label: 'Program Cards' },
             { to: '/program-cards-v2', label: 'Program Cards v2' },
             { to: '/feature-cards', label: 'Feature Cards' },

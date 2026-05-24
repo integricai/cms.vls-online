@@ -1,4 +1,4 @@
-import type { DcsState, Dcs2State, Dcs3State, ReachState, PhbState, Phv2State, Phv3State, BmsState, CbState, Bv2State, PaymentPlansState } from '../../types/cms';
+import type { DcsState, Dcs2State, Dcs3State, ReachState, PhbState, Phv2State, Phv3State, BmsState, CbState, Bv2State, PaymentPlansState, PaymentPlanCard } from '../../types/cms';
 import { normalize, textStyle, escapeHtml } from '../../utils/text';
 
 const e = escapeHtml;
@@ -684,13 +684,43 @@ function ppText(value: unknown): string {
   return typeof value === 'string' ? value : value == null ? '' : String(value);
 }
 
+const PP_SYSTEM_FONTS = new Set(['Arial', 'Georgia', 'Verdana', 'Trebuchet MS', 'Times New Roman', 'Courier New', 'Impact']);
+
+function ppFontVars(card: PaymentPlanCard): string {
+  const ff = ((card.fontFamily || 'Poppins') + '').replace(/['"<>]/g, '').trim() || 'Poppins';
+  const sz = (v: number | undefined, def: number) => `${Math.max(8, Math.min(80, Number.isFinite(Number(v)) ? Number(v) : def))}px`;
+  const wt = (v: number | undefined, def: number) => [400, 500, 600, 700, 800, 900].includes(Number(v)) ? String(Number(v)) : String(def);
+  return [
+    `--pp-ff:'${ff}'`,
+    `--pp-lbl-sz:${sz(card.labelSize, 12)}`, `--pp-lbl-wt:${wt(card.labelWeight, 800)}`,
+    `--pp-ttl-sz:${sz(card.titleSize, 16)}`, `--pp-ttl-wt:${wt(card.titleWeight, 800)}`,
+    `--pp-plbl-sz:${sz(card.priceLabelSize, 11)}`, `--pp-plbl-wt:${wt(card.priceLabelWeight, 800)}`,
+    `--pp-amt-sz:${sz(card.amountSize, 46)}`,
+    `--pp-feat-sz:${sz(card.featureSize, 14)}`, `--pp-feat-wt:${wt(card.featureWeight, 400)}`,
+    `--pp-cta-sz:${sz(card.ctaSize, 15)}`, `--pp-cta-wt:${wt(card.ctaWeight, 800)}`,
+    `--pp-rfnd-sz:${sz(card.refundSize, 12)}`, `--pp-rfnd-wt:${wt(card.refundWeight, 400)}`,
+    `--pp-badge-sz:${sz(card.badgeSize, 10)}`, `--pp-badge-wt:${wt(card.badgeWeight, 800)}`,
+  ].join(';');
+}
+
 export function generatePaymentPlansHtml(d: PaymentPlansState, componentId = ''): string {
   const id = uid();
   const cards = (d.cards || []).filter(card => ppText(card.title).trim() || ppText(card.label).trim());
   const included = (d.includedItems || []).filter(item => ppText(item.text).trim());
   const L: string[] = [];
 
-  L.push('<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">');
+  // Load Google Fonts for all unique non-system font families used across cards
+  const fontFamilies = new Set<string>();
+  cards.forEach(card => {
+    const ff = ((card.fontFamily || 'Poppins') + '').replace(/['"<>]/g, '').trim();
+    if (ff) fontFamilies.add(ff);
+  });
+  if (!fontFamilies.size) fontFamilies.add('Poppins');
+  fontFamilies.forEach(ff => {
+    if (!PP_SYSTEM_FONTS.has(ff)) {
+      L.push(`<link href="https://fonts.googleapis.com/css2?family=${ff.replace(/\s+/g, '+')}:wght@400;500;600;700;800&display=swap" rel="stylesheet">`);
+    }
+  });
   L.push('<style>');
   L.push(`.${id}-outer{background:${e(d.bg)};box-sizing:border-box;padding:${d.padTop}px ${d.padRight}px ${d.padBot}px ${d.padLeft}px;font-family:Poppins,Arial,sans-serif;}`);
   L.push(`.${id}-shell{max-width:${d.maxWidth}px;margin:0 auto;background:${e(d.sectionBg)};border:1px solid ${e(d.border)};border-radius:${d.radius}px;overflow:hidden;box-shadow:0 14px 36px rgba(15,23,42,.05);}`);
@@ -700,25 +730,25 @@ export function generatePaymentPlansHtml(d: PaymentPlansState, componentId = '')
   L.push(`.${id}-title{font-size:25px;font-weight:800;line-height:1.2;color:#111827;margin:0 0 10px;letter-spacing:0;}`);
   L.push(`.${id}-desc{font-size:15px;line-height:1.65;color:#4b5563;margin:0;max-width:860px;}`);
   L.push(`.${id}-cards{display:grid;grid-template-columns:repeat(${Math.max(1, cards.length || 3)},minmax(0,1fr));gap:18px;padding:34px 44px;}`);
-  L.push(`.${id}-card{position:relative;display:flex;flex-direction:column;min-height:350px;border:1px solid #e3e5e8;border-top:3px solid var(--pp-accent,#204280);border-radius:14px;background:#fff;padding:24px 26px 22px;box-sizing:border-box;}`);
+  L.push(`.${id}-card{position:relative;display:flex;flex-direction:column;min-height:350px;border:1px solid #e3e5e8;border-top:3px solid var(--pp-accent,#204280);border-radius:14px;background:#fff;padding:24px 26px 22px;box-sizing:border-box;font-family:var(--pp-ff,'Poppins'),Arial,sans-serif;}`);
   L.push(`.${id}-card.is-featured{border-color:var(--pp-accent,#204280);box-shadow:0 10px 28px rgba(32,66,128,.09);}`);
-  L.push(`.${id}-badge{position:absolute;top:-1px;right:22px;background:var(--pp-accent,#204280);color:#fff;border-radius:0 0 7px 7px;padding:6px 12px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}`);
-  L.push(`.${id}-label{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#374151;margin:2px 0 10px;}`);
-  L.push(`.${id}-name{font-size:16px;font-weight:800;line-height:1.35;color:#111827;min-height:44px;margin:0 0 20px;}`);
+  L.push(`.${id}-badge{position:absolute;top:-1px;right:22px;background:var(--pp-accent,#204280);color:#fff;border-radius:0 0 7px 7px;padding:6px 12px;font-size:var(--pp-badge-sz,10px);font-weight:var(--pp-badge-wt,800);letter-spacing:.08em;text-transform:uppercase;}`);
+  L.push(`.${id}-label{font-size:var(--pp-lbl-sz,12px);font-weight:var(--pp-lbl-wt,800);letter-spacing:.12em;text-transform:uppercase;color:#374151;margin:2px 0 10px;}`);
+  L.push(`.${id}-name{font-size:var(--pp-ttl-sz,16px);font-weight:var(--pp-ttl-wt,800);line-height:1.35;color:#111827;min-height:44px;margin:0 0 20px;}`);
   L.push(`.${id}-rule{height:1px;background:#e4e4e4;margin:0 0 20px;}`);
   L.push(`.${id}-discount-row{display:flex;align-items:center;gap:9px;min-height:24px;margin-bottom:6px;}`);
   L.push(`.${id}-regular{font-size:14px;color:#4b5563;text-decoration:line-through;text-decoration-thickness:1.4px;}`);
   L.push(`.${id}-discount{display:inline-flex;align-items:center;justify-content:center;border:1px solid #a7d8bb;background:#e9f8ef;color:#006b3c;border-radius:999px;min-width:82px;padding:3px 10px;font-size:11px;font-weight:800;}`);
-  L.push(`.${id}-price-label{font-size:11px;font-weight:800;letter-spacing:.1em;color:#4b5563;text-transform:uppercase;margin:0 0 3px;}`);
+  L.push(`.${id}-price-label{font-size:var(--pp-plbl-sz,11px);font-weight:var(--pp-plbl-wt,800);letter-spacing:.1em;color:#4b5563;text-transform:uppercase;margin:0 0 3px;}`);
   L.push(`.${id}-price{display:flex;align-items:flex-start;color:#0f1d3d;margin-bottom:28px;}`);
   L.push(`.${id}-curr{font-size:18px;font-weight:800;line-height:1;margin-top:22px;margin-right:5px;}`);
-  L.push(`.${id}-amount{font-size:46px;font-weight:800;line-height:1;letter-spacing:0;}`);
-  L.push(`.${id}-feature{display:flex;align-items:flex-start;gap:10px;color:#4b5563;font-size:14px;line-height:1.45;margin:0 0 24px;}`);
+  L.push(`.${id}-amount{font-size:var(--pp-amt-sz,46px);font-weight:800;line-height:1;letter-spacing:0;}`);
+  L.push(`.${id}-feature{display:flex;align-items:flex-start;gap:10px;color:#4b5563;font-size:var(--pp-feat-sz,14px);font-weight:var(--pp-feat-wt,400);line-height:1.45;margin:0 0 24px;}`);
   L.push(`.${id}-feature:before{content:"";width:6px;height:6px;border-radius:999px;background:#c9c9c9;flex-shrink:0;margin-top:8px;}`);
-  L.push(`.${id}-cta{display:flex;align-items:center;justify-content:center;min-height:46px;border-radius:9px;text-decoration:none;font-size:15px;font-weight:800;margin-top:auto;}`);
+  L.push(`.${id}-cta{display:flex;align-items:center;justify-content:center;min-height:46px;border-radius:9px;text-decoration:none;font-size:var(--pp-cta-sz,15px);font-weight:var(--pp-cta-wt,800);margin-top:auto;}`);
   L.push(`.${id}-cta.solid{background:var(--pp-accent,#204280);border:1px solid var(--pp-accent,#204280);color:#fff;}`);
   L.push(`.${id}-cta.outline{background:#f7f6f0;border:1px solid #d8d5cc;color:var(--pp-accent,#204280);}`);
-  L.push(`.${id}-refund{text-align:center;margin:14px 0 0;color:#4b5563;font-size:12px;line-height:1.45;}`);
+  L.push(`.${id}-refund{text-align:center;margin:14px 0 0;color:#4b5563;font-size:var(--pp-rfnd-sz,12px);font-weight:var(--pp-rfnd-wt,400);line-height:1.45;}`);
   L.push(`.${id}-included{background:${e(d.includedBg)};border-top:1px solid ${e(d.border)};padding:32px 44px 38px;}`);
   L.push(`.${id}-included-title{font-size:13px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:#404040;margin:0 0 24px;}`);
   L.push(`.${id}-included-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 28px;}`);
@@ -740,7 +770,7 @@ export function generatePaymentPlansHtml(d: PaymentPlansState, componentId = '')
   L.push(`    </div>`);
   L.push(`    <div class="${id}-cards">`);
   cards.forEach((card, index) => {
-    const style = `--pp-accent:${card.accent || '#204280'}`;
+    const style = `--pp-accent:${card.accent || '#204280'};${ppFontVars(card)}`;
     const calc = ppCardCalc(card);
     L.push(`      <article class="${id}-card${card.featured ? ' is-featured' : ''}" style="${style}">`);
     if (card.badge) L.push(`        <div class="${id}-badge">${e(card.badge)}</div>`);

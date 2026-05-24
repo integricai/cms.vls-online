@@ -1604,6 +1604,19 @@ function Bv2Tab({ onHtml }: { onHtml: (html: string) => void }) {
   );
 }
 
+type ActiveCourse = { id: number; name: string };
+
+const PP_FONT_FAMILIES = ['Poppins', 'Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Raleway', 'Oswald', 'Source Sans Pro', 'PT Sans', 'Arial', 'Georgia'];
+const PP_WEIGHTS = [400, 500, 600, 700, 800, 900];
+
+function WeightSel({ value, def, onChange }: { value: number | undefined; def: number; onChange: (w: number) => void }) {
+  return (
+    <select className="input text-xs py-0.5" value={String(value ?? def)} onChange={e => onChange(Number(e.target.value))}>
+      {PP_WEIGHTS.map(w => <option key={w} value={w}>{w}</option>)}
+    </select>
+  );
+}
+
 function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
   const [comps, setComps] = useState<PaymentPlansComponent[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -1614,6 +1627,10 @@ function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
   const [saved, setSaved] = useState(false);
   const [published, setPublished] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [courses, setCourses] = useState<ActiveCourse[]>([]);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ fetched: number; inserted: number; updated: number; deactivated: number } | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     api.get<any>('/content/vls-payment-plan-components').then(row => {
@@ -1624,6 +1641,24 @@ function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
       setLoaded(true);
     }).catch(() => setLoaded(true));
   }, []);
+
+  useEffect(() => {
+    api.get<ActiveCourse[]>('/courses/active').then(data => setCourses(data || [])).catch(() => {});
+  }, []);
+
+  async function syncCourses() {
+    setSyncing(true); setSyncResult(null); setSyncError(null);
+    try {
+      const result = await api.post<{ fetched: number; inserted: number; updated: number; deactivated: number }>('/courses/sync', {});
+      setSyncResult(result);
+      const fresh = await api.get<ActiveCourse[]>('/courses/active');
+      setCourses(fresh || []);
+    } catch {
+      setSyncError('Sync failed — check Zenler credentials or try again.');
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   const upd = useCallback((p: Partial<PaymentPlansState>) => { setState(prev => ({ ...prev, ...p })); setSaved(false); }, []);
 
@@ -1682,6 +1717,21 @@ function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
         onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
         onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Payment Plans', generatePaymentPlansHtml(state, activeId || '')))} />
+      <div className="border-b border-slate-100 px-5 py-3 bg-blue-50/60">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1.5">Zenler Course Sync</p>
+        <button onClick={syncCourses} disabled={syncing} className="btn-ghost w-full justify-center text-xs">
+          {syncing ? 'Syncing…' : '↻ Sync Courses from Zenler'}
+        </button>
+        {syncResult && (
+          <p className="mt-1.5 text-[11px] text-slate-500">
+            {syncResult.fetched} fetched · {syncResult.inserted} new · {syncResult.updated} updated · {syncResult.deactivated} deactivated
+          </p>
+        )}
+        {syncError && <p className="mt-1.5 text-[11px] text-red-500">{syncError}</p>}
+        {courses.length > 0 && !syncResult && (
+          <p className="mt-1 text-[11px] text-slate-400">{courses.length} course{courses.length !== 1 ? 's' : ''} available</p>
+        )}
+      </div>
       <div className="border-b border-slate-100 px-5 py-3">
         <button onClick={publish} disabled={publishing} className="btn-success w-full justify-center text-xs">
           {publishing ? 'Publishing...' : published ? 'Published live updates' : 'Publish Payment Plans'}
@@ -1736,10 +1786,65 @@ function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
               </Field>
               <Field label="Refund note"><input className="input" value={card.refundText} onChange={e => updCard(i, { refundText: e.target.value })} /></Field>
             </div>
-            <label className="flex items-center gap-2 text-xs text-slate-600">
+            <div className="mt-2">
+              <Field label="Linked Zenler course">
+                <select className="input" value={card.courseId ?? ''} onChange={e => updCard(i, { courseId: e.target.value ? Number(e.target.value) : undefined })}>
+                  <option value="">— none —</option>
+                  {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </Field>
+            </div>
+            <label className="mt-2 flex items-center gap-2 text-xs text-slate-600">
               <input type="checkbox" checked={card.featured} onChange={e => updCard(i, { featured: e.target.checked })} />
               Featured border
             </label>
+            <details className="mt-2">
+              <summary className="cursor-pointer select-none text-xs font-semibold text-slate-500">Typography</summary>
+              <div className="mt-2 space-y-1.5">
+                <Field label="Font family">
+                  <select className="input text-xs" value={card.fontFamily || 'Poppins'} onChange={e => updCard(i, { fontFamily: e.target.value })}>
+                    {PP_FONT_FAMILIES.map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                </Field>
+                <div className="grid grid-cols-3 gap-1 items-center text-[11px] text-slate-500">
+                  <span className="font-semibold">Field</span>
+                  <span className="font-semibold">Size</span>
+                  <span className="font-semibold">Weight</span>
+
+                  <span className="flex items-center">Label</span>
+                  <input type="number" min={8} max={36} className="input text-xs py-0.5" value={card.labelSize ?? 12} onChange={e => updCard(i, { labelSize: Number(e.target.value) })} />
+                  <WeightSel value={card.labelWeight} def={800} onChange={w => updCard(i, { labelWeight: w })} />
+
+                  <span className="flex items-center">Title</span>
+                  <input type="number" min={8} max={36} className="input text-xs py-0.5" value={card.titleSize ?? 16} onChange={e => updCard(i, { titleSize: Number(e.target.value) })} />
+                  <WeightSel value={card.titleWeight} def={800} onChange={w => updCard(i, { titleWeight: w })} />
+
+                  <span className="flex items-center">Price label</span>
+                  <input type="number" min={8} max={24} className="input text-xs py-0.5" value={card.priceLabelSize ?? 11} onChange={e => updCard(i, { priceLabelSize: Number(e.target.value) })} />
+                  <WeightSel value={card.priceLabelWeight} def={800} onChange={w => updCard(i, { priceLabelWeight: w })} />
+
+                  <span className="flex items-center">Price amount</span>
+                  <input type="number" min={20} max={80} className="input text-xs py-0.5" value={card.amountSize ?? 46} onChange={e => updCard(i, { amountSize: Number(e.target.value) })} />
+                  <span />
+
+                  <span className="flex items-center">Feature</span>
+                  <input type="number" min={8} max={24} className="input text-xs py-0.5" value={card.featureSize ?? 14} onChange={e => updCard(i, { featureSize: Number(e.target.value) })} />
+                  <WeightSel value={card.featureWeight} def={400} onChange={w => updCard(i, { featureWeight: w })} />
+
+                  <span className="flex items-center">CTA button</span>
+                  <input type="number" min={8} max={24} className="input text-xs py-0.5" value={card.ctaSize ?? 15} onChange={e => updCard(i, { ctaSize: Number(e.target.value) })} />
+                  <WeightSel value={card.ctaWeight} def={800} onChange={w => updCard(i, { ctaWeight: w })} />
+
+                  <span className="flex items-center">Refund note</span>
+                  <input type="number" min={8} max={18} className="input text-xs py-0.5" value={card.refundSize ?? 12} onChange={e => updCard(i, { refundSize: Number(e.target.value) })} />
+                  <WeightSel value={card.refundWeight} def={400} onChange={w => updCard(i, { refundWeight: w })} />
+
+                  <span className="flex items-center">Badge</span>
+                  <input type="number" min={8} max={18} className="input text-xs py-0.5" value={card.badgeSize ?? 10} onChange={e => updCard(i, { badgeSize: Number(e.target.value) })} />
+                  <WeightSel value={card.badgeWeight} def={800} onChange={w => updCard(i, { badgeWeight: w })} />
+                </div>
+              </div>
+            </details>
           </div>
         ))}
         <button onClick={() => upd({ cards: [...state.cards, { label: '', title: '', regularPrice: 0, discountPercent: 0, currency: '$', priceLabel: 'Your price', feature: '', badge: '', featured: false, accent: '#204280', ctaText: 'Enrol Now →', ctaUrl: '#', ctaStyle: 'solid', refundText: '' }] })} className="btn-ghost mb-4 w-full text-xs">+ Add payment card</button>
