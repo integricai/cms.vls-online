@@ -11,6 +11,7 @@ export const NAV: NavGroup[] = [
       { to: '/blog-header',       label: 'Blog Header' },
       { to: '/footer',            label: 'Footer' },
       { to: '/banner',            label: 'Banner' },
+      { to: '/course-price',      label: 'Course Price' },
       { to: '/promotion-section', label: 'Promotion Section' },
       { to: '/contact-footer',    label: 'Contact Footer' },
     ],

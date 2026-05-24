@@ -248,6 +248,36 @@ export interface Banner {
 
 export interface BannerContent { banners: Banner[]; }
 
+// ── Course Price ──────────────────────────────────────────────────────────────
+
+export interface CoursePrice {
+  id: string;
+  name: string;
+  visible: boolean;
+  eyebrow: string;
+  title: string;
+  regularPrice: number;
+  discountPercent: number;
+  currency: string;
+  priceLabel: string;
+  savingPrefix: string;
+  includesLabel: string;
+  includes: string[];
+  ctaText: string;
+  ctaUrl: string;
+  refundText: string;
+  bg: string;
+  border: string;
+  accent: string;
+  discountBg: string;
+  discountTc: string;
+  saveBg: string;
+  saveBorder: string;
+  radius: number;
+}
+
+export interface CoursePriceContent { prices: CoursePrice[]; }
+
 // ── Footer ────────────────────────────────────────────────────────────────────
 
 export interface FooterLink { id: string; label: TextValue; url: string; }

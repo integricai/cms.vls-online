@@ -10,6 +10,7 @@ import {
 const CMS_MIGRATION_FILES = [
   'vls-about-us.json',
   'vls-banners.json',
+  'vls-course-prices.json',
   'vls-events.json',
   'vls-faq.json',
   'vls-feature-cards.json',

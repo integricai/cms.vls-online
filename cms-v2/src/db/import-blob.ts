@@ -20,6 +20,7 @@ const BLOB_FILES = [
   'vls-programs',
   'vls-team',
   'vls-banners',
+  'vls-course-prices',
   'vls-about-us',
   'vls-article-groups',
   'vls-form-config',

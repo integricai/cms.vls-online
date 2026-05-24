@@ -52,6 +52,24 @@ app.get('/api/publish-banner', async (_req, res, next) => {
   }
 });
 
+app.options('/api/publish-course-prices', (_req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.status(204).end();
+});
+
+app.get('/api/publish-course-prices', async (_req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const row = await getContent('vls-course-prices');
+    const data = row?.data && typeof row.data === 'object' ? row.data as { prices?: unknown[] } : {};
+    return res.json({ prices: Array.isArray(data.prices) ? data.prices : [] });
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.get('/api/turnstile-site-key', (_req, res) => {
   const siteKey = process.env.TURNSTILE_SITE_KEY;
   if (!siteKey) {
