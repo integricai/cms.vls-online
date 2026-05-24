@@ -67,6 +67,46 @@ export interface Snippet {
 
 export type SnippetInput = Pick<Snippet, 'key' | 'title' | 'html' | 'meta'>;
 
+// ── Courses ───────────────────────────────────────────────────────
+
+export interface Course {
+  id: number;
+  zenlerCourseId: string;
+  name: string;
+  slug: string | null;
+  category: string | null;
+  level: string | null;
+  status: string | null;
+  zenlerUrl: string | null;
+  isActive: boolean;
+  lastSyncedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CoursePaymentCard {
+  id: number;
+  courseId: number;
+  courseName?: string;
+  title: string;
+  description: string;
+  normalPrice: number;
+  discountPrice: number | null;
+  currency: string;
+  ctaButtonText: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CourseSyncResult {
+  fetched: number;
+  inserted: number;
+  updated: number;
+  deactivated: number;
+  syncedAt: string;
+}
+
 // ── API responses ─────────────────────────────────────────────────
 
 export interface ApiSuccess<T = unknown> {

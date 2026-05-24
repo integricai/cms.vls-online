@@ -9,6 +9,7 @@ import contentRouter from './routes/content';
 import usersRouter from './routes/users';
 import publicRouter from './routes/public';
 import blogRouter from './routes/blog';
+import coursesRouter from './routes/courses';
 import { sendErrorAlert } from './utils/errorAlert';
 import { getContent } from './models/content';
 import { listBlogPosts } from './models/blog';
@@ -85,6 +86,7 @@ app.use('/api/snippets', snippetsRouter);
 app.use('/api/content', contentRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/blog', blogRouter);
+app.use('/api/courses', coursesRouter);
 app.use('/api/public', publicRouter);
 
 app.get('/blog', async (_req, res, next) => {
