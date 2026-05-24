@@ -33,6 +33,7 @@ export async function fetchZenlerCourses(): Promise<ZenlerCourseDto[]> {
     const response = await fetch(url, {
       headers: {
         'X-API-KEY': apiKey,
+        'X-Account-Name': accountName,
         'Accept': 'application/json',
       },
     });
