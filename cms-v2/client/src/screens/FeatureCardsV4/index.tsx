@@ -130,6 +130,13 @@ export default function FeatureCardsV4Screen() {
     setSaved(false);
   }
 
+  function duplicateComponent() {
+    setActiveId(null);
+    setName(name ? `Copy of ${name}` : 'Copy of Feature Cards v4');
+    setState(normalizeState(JSON.parse(JSON.stringify(state)) as Fc4State));
+    setSaved(false);
+  }
+
   async function save() {
     if (!name.trim()) {
       alert('Enter a component name first.');
@@ -177,6 +184,20 @@ export default function FeatureCardsV4Screen() {
     upd({ cards: [...state.cards, makeCard()] });
   }
 
+  function duplicateCard(index: number) {
+    const cards = [...state.cards];
+    cards.splice(index + 1, 0, { ...cards[index] });
+    upd({ cards });
+  }
+
+  function moveCard(index: number, direction: -1 | 1) {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= state.cards.length) return;
+    const cards = [...state.cards];
+    [cards[index], cards[nextIndex]] = [cards[nextIndex], cards[index]];
+    upd({ cards });
+  }
+
   function removeCard(index: number) {
     upd({ cards: state.cards.filter((_, i) => i !== index) });
   }
@@ -212,6 +233,7 @@ export default function FeatureCardsV4Screen() {
                 {components.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               <button onClick={newComponent} className="btn-ghost text-xs px-3">+ New</button>
+              <button onClick={duplicateComponent} disabled={!activeId && !name.trim()} className="btn-ghost text-xs px-3">Duplicate</button>
               {activeId && <button onClick={deleteComponent} className="btn-danger text-xs px-3">Delete</button>}
             </div>
             <Field label="Component name">
@@ -278,8 +300,16 @@ export default function FeatureCardsV4Screen() {
           <div className="space-y-3 mb-2">
             {state.cards.map((card, index) => (
               <div key={index} className="relative rounded border border-slate-200 bg-slate-50 p-3">
-                <button onClick={() => removeCard(index)} className="btn-danger absolute right-2 top-2">✕</button>
-                <div className="grid grid-cols-2 gap-2 pr-9">
+                <div className="mb-3 flex items-center gap-2 pr-1">
+                  <span className="flex-1 text-xs font-semibold text-slate-500">
+                    Card {index + 1}{card.title ? ` · ${card.title}` : ''}
+                  </span>
+                  <button onClick={() => moveCard(index, -1)} disabled={index === 0} className="btn-ghost text-xs px-2">Up</button>
+                  <button onClick={() => moveCard(index, 1)} disabled={index === state.cards.length - 1} className="btn-ghost text-xs px-2">Down</button>
+                  <button onClick={() => duplicateCard(index)} className="btn-ghost text-xs px-2">Duplicate</button>
+                  <button onClick={() => removeCard(index)} className="btn-danger text-xs px-2">Remove</button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   <Field label="Badge">
                     <input className="input" value={card.badge} onChange={e => updateCard(index, { badge: e.target.value })} />
                   </Field>
