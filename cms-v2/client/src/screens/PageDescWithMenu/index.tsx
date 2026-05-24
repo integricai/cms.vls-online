@@ -22,7 +22,19 @@ function makeDefault(): PageDescWithMenuState {
     menuItemTc: '#374151',
     menuActiveBg: '#204280',
     menuActiveTc: '#ffffff',
-    menuItems: [],
+    menuItems: [
+      { title: 'Course Overview', scrollTarget: '#course-overview' },
+      { title: 'Features', scrollTarget: '#course-features' },
+      { title: 'Tutor', scrollTarget: '#course-tutor' },
+      { title: 'FAQ', scrollTarget: '#course-faq' },
+      { title: 'Curriculum', scrollTarget: '#course-curriculum' },
+      { title: 'Pricing', scrollTarget: '#course-pricing' },
+    ],
+    bannerHeading: 'Start your ACCA journey with VLS',
+    bannerSubheading: 'Study with structured lessons, expert tutors, revision support and exam-focused resources.',
+    bannerCtaText: 'Enrol Now',
+    bannerCtaUrl: '#course-pricing',
+    bannerCtaNewTab: false,
     icon: '📖',
     title: '',
     titleTc: '#1a1a1a',
@@ -31,6 +43,19 @@ function makeDefault(): PageDescWithMenuState {
     introP1:   normalize('', 'cdescDesc'),
     introP2:   normalize('', 'cdescDesc'),
     blocks: [],
+  };
+}
+
+function withDefaults(data?: Partial<PageDescWithMenuState>): PageDescWithMenuState {
+  const defaults = makeDefault();
+  return {
+    ...defaults,
+    ...(data || {}),
+    menuItems: data?.menuItems?.length ? data.menuItems : defaults.menuItems,
+    introBold: data?.introBold ?? defaults.introBold,
+    introP1: data?.introP1 ?? defaults.introP1,
+    introP2: data?.introP2 ?? defaults.introP2,
+    blocks: data?.blocks ?? defaults.blocks,
   };
 }
 
@@ -153,7 +178,7 @@ export default function PageDescWithMenuScreen() {
       .then(row => {
         const comps = (row?.data as PageDescWithMenuContent)?.components ?? [];
         setComponents(comps);
-        if (comps.length > 0) { setActiveId(comps[0].id); setName(comps[0].name); setState(comps[0].data || makeDefault()); }
+        if (comps.length > 0) { setActiveId(comps[0].id); setName(comps[0].name); setState(withDefaults(comps[0].data)); }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -167,7 +192,7 @@ export default function PageDescWithMenuScreen() {
     if (!id) { newComponent(); return; }
     const c = components.find(c => c.id === id);
     if (!c) return;
-    setActiveId(c.id); setName(c.name); setState(c.data || makeDefault()); setSaved(false);
+    setActiveId(c.id); setName(c.name); setState(withDefaults(c.data)); setSaved(false);
   }
   function newComponent() { setActiveId(null); setName(''); setState(makeDefault()); setSaved(false); }
 
@@ -219,6 +244,18 @@ export default function PageDescWithMenuScreen() {
   }
   function removeMenuItem(i: number) { upd({ menuItems: state.menuItems.filter((_, idx) => idx !== i) }); }
   function addMenuItem() { upd({ menuItems: [...state.menuItems, { title: '', scrollTarget: '' }] }); }
+  function applyDefaultMenuItems() {
+    upd({
+      menuItems: [
+        { title: 'Course Overview', scrollTarget: '#course-overview' },
+        { title: 'Features', scrollTarget: '#course-features' },
+        { title: 'Tutor', scrollTarget: '#course-tutor' },
+        { title: 'FAQ', scrollTarget: '#course-faq' },
+        { title: 'Curriculum', scrollTarget: '#course-curriculum' },
+        { title: 'Pricing', scrollTarget: '#course-pricing' },
+      ],
+    });
+  }
 
   if (loading) return <div className="flex h-full items-center justify-center text-sm text-slate-400">Loading…</div>;
 
@@ -228,8 +265,8 @@ export default function PageDescWithMenuScreen() {
     <div className="flex h-full">
       <div className="w-[480px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
         <div className="sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4">
-          <h1 className="text-base font-bold text-slate-900">Page Description with Menu</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Course-description layout with left sidebar navigation</p>
+          <h1 className="text-base font-bold text-slate-900">Page Desc with Menu</h1>
+          <p className="text-xs text-slate-400 mt-0.5">Sticky course navigation with compact enrolment banner</p>
         </div>
 
         <div className="border-b border-slate-100 bg-white px-5 py-3 flex gap-2">
@@ -308,8 +345,33 @@ export default function PageDescWithMenuScreen() {
             </Field>
           </div>
 
+          <p className="section-label mt-4">Banner</p>
+          <Field label="Banner heading">
+            <input className="input" value={state.bannerHeading ?? ''} placeholder="Start your ACCA journey with VLS"
+              onChange={e => upd({ bannerHeading: e.target.value })} />
+          </Field>
+          <Field label="Banner subheading">
+            <textarea className="input min-h-[72px]" value={state.bannerSubheading ?? ''} placeholder="Study with structured lessons, expert tutors, revision support and exam-focused resources."
+              onChange={e => upd({ bannerSubheading: e.target.value })} />
+          </Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="CTA text">
+              <input className="input" value={state.bannerCtaText ?? ''} placeholder="Enrol Now"
+                onChange={e => upd({ bannerCtaText: e.target.value })} />
+            </Field>
+            <Field label="CTA URL" hint="Leave as #course-pricing to scroll to pricing">
+              <input className="input" value={state.bannerCtaUrl ?? ''} placeholder="#course-pricing"
+                onChange={e => upd({ bannerCtaUrl: e.target.value })} />
+            </Field>
+          </div>
+          <label className="mb-4 flex items-center gap-2 text-xs text-slate-600">
+            <input type="checkbox" checked={!!state.bannerCtaNewTab}
+              onChange={e => upd({ bannerCtaNewTab: e.target.checked })} />
+            Open CTA in a new tab
+          </label>
+
           <p className="section-label mt-4">Menu Items</p>
-          <p className="text-xs text-slate-400 mb-3">Each item scrolls to a section on the page. Use a CSS class or ID as the scroll target.</p>
+          <p className="text-xs text-slate-400 mb-3">Each item scrolls to a same-page anchor. The generated HTML adds these stable IDs to the matching course page sections when missing.</p>
           {state.menuItems.map((item, i) => (
             <div key={i} className="rounded border border-slate-200 bg-white p-3 mb-2">
               <div className="flex items-center justify-between mb-2">
@@ -326,9 +388,13 @@ export default function PageDescWithMenuScreen() {
               </Field>
             </div>
           ))}
-          <button onClick={addMenuItem} className="btn-ghost text-xs w-full mb-4">+ Add menu item</button>
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <button onClick={addMenuItem} className="btn-ghost text-xs w-full">+ Add menu item</button>
+            <button onClick={applyDefaultMenuItems} className="btn-ghost text-xs w-full">Use course defaults</button>
+          </div>
 
-          <p className="section-label">Always-visible Intro</p>
+          <p className="section-label">Legacy Description Fields</p>
+          <p className="text-xs text-slate-400 mb-3">Kept for older saved data, but no longer rendered by this component.</p>
           <RichTextField label="Bold intro paragraph" multiline value={asTV(state.introBold, 'cdescIntroBold')}
             defaultKey="cdescIntroBold" onChange={v => upd({ introBold: v })} />
           <RichTextField label="Intro paragraph 1" multiline value={asTV(state.introP1, 'cdescDesc')}

@@ -790,6 +790,11 @@ export interface PageDescWithMenuState {
   menuActiveBg: string;
   menuActiveTc: string;
   menuItems: PageDescMenuItem[];
+  bannerHeading?: string;
+  bannerSubheading?: string;
+  bannerCtaText?: string;
+  bannerCtaUrl?: string;
+  bannerCtaNewTab?: boolean;
   icon: string;
   title: string;
   titleTc: string;
