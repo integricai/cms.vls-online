@@ -12,7 +12,7 @@ import type {
   BmsState, BmsComponent, BmsCheckItem,
   CbState, CbComponent,
   Bv2State, Bv2Component, Bv2Step,
-  PaymentPlansState, PaymentPlansComponent, PaymentPlanCard, PaymentIncludedItem, CoursePrice, CoursePriceContent,
+  PaymentPlansState, PaymentPlansComponent, PaymentPlanCard, PaymentIncludedItem,
   TextValue,
 } from '../../types/cms';
 import { normalize } from '../../utils/text';
@@ -155,9 +155,9 @@ function makePaymentPlans(): PaymentPlansState {
     title: 'Choose your access plan',
     desc: 'All plans include the complete FA1 course with full tutor support. Select the access duration that best fits your exam timeline.',
     cards: [
-      { priceId: 'cp1', label: '4 month access', badge: '', featured: false, accent: '#10213d', ctaStyle: 'solid' },
-      { priceId: 'cp2', label: '6 month access', badge: 'Most popular', featured: true, accent: '#2168ad', ctaStyle: 'solid' },
-      { priceId: 'cp3', label: 'Revision only', badge: '', featured: false, accent: '#1c765c', ctaStyle: 'outline' },
+      { label: '4 month access', title: 'Complete Course + Tutor Support', regularPrice: 310, discountPercent: 65, currency: '$', priceLabel: 'Your price', feature: '4 months from enrolment date', badge: '', featured: false, accent: '#10213d', ctaText: 'Enrol Now →', ctaUrl: '#', ctaStyle: 'solid', refundText: '3-day refund policy' },
+      { label: '6 month access', title: 'Complete Course + Tutor Support', regularPrice: 330, discountPercent: 61, currency: '$', priceLabel: 'Your price', feature: '6 months from enrolment date', badge: 'Most popular', featured: true, accent: '#2168ad', ctaText: 'Enrol Now →', ctaUrl: '#', ctaStyle: 'solid', refundText: '3-day refund policy' },
+      { label: 'Revision only', title: 'Practice Kit + Mock Exam Access', regularPrice: 49, discountPercent: 0, currency: '$', priceLabel: 'Your price', feature: '3 months from enrolment date', badge: '', featured: false, accent: '#1c765c', ctaText: 'Enrol Now →', ctaUrl: '#', ctaStyle: 'outline', refundText: '3-day refund policy' },
     ],
     includedBg: '#f4f2ec',
     includedTitle: 'Everything included in every plan',
@@ -1584,24 +1584,20 @@ function Bv2Tab({ onHtml }: { onHtml: (html: string) => void }) {
 
 function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
   const [comps, setComps] = useState<PaymentPlansComponent[]>([]);
-  const [prices, setPrices] = useState<CoursePrice[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [state, setState] = useState<PaymentPlansState>(makePaymentPlans());
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [published, setPublished] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      api.get<any>('/content/vls-payment-plan-components').catch(() => null),
-      api.get<{ data: CoursePriceContent }>('/content/vls-course-prices').catch(() => null),
-    ]).then(([row, priceRow]) => {
+    api.get<any>('/content/vls-payment-plan-components').then(row => {
       const raw = row?.data as any;
       const cs: PaymentPlansComponent[] = (raw?.components || []).map((c: any) => ({ ...c, data: normPaymentPlans(c.data || {}) }));
-      const ps = (priceRow?.data as CoursePriceContent | undefined)?.prices || [];
       setComps(cs);
-      setPrices(ps);
       if (cs.length) { setActiveId(cs[0].id); setName(cs[0].name); setState(cs[0].data); }
       setLoaded(true);
     }).catch(() => setLoaded(true));
@@ -1612,7 +1608,7 @@ function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
   function load(id: string) {
     if (!id) { setActiveId(null); setName(''); setState(makePaymentPlans()); setSaved(false); return; }
     const c = comps.find(c => c.id === id);
-    if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
+    if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); setPublished(false); }
   }
 
   function duplicate() {
@@ -1620,15 +1616,31 @@ function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
     setName(`Copy of ${name || 'Payment plans'}`);
     setState(JSON.parse(JSON.stringify(state)) as PaymentPlansState);
     setSaved(false);
+    setPublished(false);
   }
 
-  async function save() {
-    if (!name.trim()) { alert('Enter a component name.'); return; }
-    setSaving(true);
+  async function persist(markPublished = false): Promise<string | null> {
+    if (!name.trim()) { alert('Enter a component name.'); return null; }
     const id = activeId || `pp-${Date.now().toString(36)}`;
     const updated = activeId ? comps.map(c => c.id === id ? { id, name, data: state } : c) : [...comps, { id, name, data: state }];
     await api.put('/content/vls-payment-plan-components', { components: updated });
-    setComps(updated); setActiveId(id); setSaved(true); setSaving(false);
+    setComps(updated); setActiveId(id); setSaved(true); setPublished(markPublished);
+    return id;
+  }
+
+  async function save() {
+    setSaving(true);
+    try { await persist(false); } finally { setSaving(false); }
+  }
+
+  async function publish() {
+    setPublishing(true);
+    try {
+      const id = await persist(true);
+      if (id) onHtml(wrapGeneratedHtml('Payment Plans', generatePaymentPlansHtml(state, id)));
+    } finally {
+      setPublishing(false);
+    }
   }
 
   async function del() {
@@ -1647,7 +1659,13 @@ function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
         onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
-        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Payment Plans', generatePaymentPlansHtml(state)))} />
+        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Payment Plans', generatePaymentPlansHtml(state, activeId || '')))} />
+      <div className="border-b border-slate-100 px-5 py-3">
+        <button onClick={publish} disabled={publishing} className="btn-success w-full justify-center text-xs">
+          {publishing ? 'Publishing...' : published ? 'Published live updates' : 'Publish Payment Plans'}
+        </button>
+        <p className="mt-2 text-[11px] text-slate-400">Publish saves this component and updates the live page cards through the component embed.</p>
+      </div>
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
         <PaddingRow value={state} onChange={upd} />
@@ -1669,29 +1687,32 @@ function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
         <Field label="Description"><textarea className="input min-h-[84px]" value={state.desc} onChange={e => upd({ desc: e.target.value })} /></Field>
 
         <p className="section-label mt-3">Payment Cards</p>
-        <p className="mb-3 text-xs text-slate-400">Choose Global Course Price IDs. Prices, discounts, CTA links, and visibility update live when the global price card is published.</p>
+        <p className="mb-3 text-xs text-slate-400">Cards live inside this component. Set the regular price and discount here; publish to update matching live embeds.</p>
         {state.cards.map((card, i) => (
           <div key={i} className="mb-2 rounded border border-slate-200 bg-slate-50 p-3">
             <div className="mb-2 flex items-center gap-2">
               <span className="flex-1 text-xs font-semibold text-slate-500">Card {i + 1}</span>
               <button onClick={() => upd({ cards: state.cards.filter((_, idx) => idx !== i) })} className="btn-danger text-xs">✕</button>
             </div>
-            <Field label="Global price card">
-              <select className="input" value={card.priceId} onChange={e => updCard(i, { priceId: e.target.value })}>
-                <option value="">— select price card —</option>
-                {prices.map(price => <option key={price.id} value={price.id}>{price.name || price.title || price.id} ({price.id})</option>)}
-              </select>
-            </Field>
             <div className="grid grid-cols-2 gap-2">
               <Field label="Local label"><input className="input" value={card.label} placeholder="4 month access" onChange={e => updCard(i, { label: e.target.value })} /></Field>
+              <Field label="Title"><input className="input" value={card.title} placeholder="Complete Course + Tutor Support" onChange={e => updCard(i, { title: e.target.value })} /></Field>
+              <Field label="Currency"><input className="input" value={card.currency} onChange={e => updCard(i, { currency: e.target.value })} /></Field>
+              <Field label="Regular price"><input type="number" min={0} step="0.01" className="input" value={card.regularPrice} onChange={e => updCard(i, { regularPrice: Number(e.target.value) })} /></Field>
+              <Field label="Discount %"><input type="number" min={0} max={100} step="0.01" className="input" value={card.discountPercent} onChange={e => updCard(i, { discountPercent: Number(e.target.value) })} /></Field>
+              <Field label="Price label"><input className="input" value={card.priceLabel} onChange={e => updCard(i, { priceLabel: e.target.value })} /></Field>
+              <Field label="Feature line"><input className="input" value={card.feature} placeholder="4 months from enrolment date" onChange={e => updCard(i, { feature: e.target.value })} /></Field>
               <Field label="Badge"><input className="input" value={card.badge} placeholder="Most popular" onChange={e => updCard(i, { badge: e.target.value })} /></Field>
               <ColorInput label="Accent" value={card.accent} onChange={v => updCard(i, { accent: v })} />
+              <Field label="CTA text"><input className="input" value={card.ctaText} onChange={e => updCard(i, { ctaText: e.target.value })} /></Field>
+              <Field label="CTA URL"><input className="input" value={card.ctaUrl} onChange={e => updCard(i, { ctaUrl: e.target.value })} /></Field>
               <Field label="Button style">
                 <select className="input" value={card.ctaStyle} onChange={e => updCard(i, { ctaStyle: e.target.value as PaymentPlanCard['ctaStyle'] })}>
                   <option value="solid">Solid</option>
                   <option value="outline">Outline</option>
                 </select>
               </Field>
+              <Field label="Refund note"><input className="input" value={card.refundText} onChange={e => updCard(i, { refundText: e.target.value })} /></Field>
             </div>
             <label className="flex items-center gap-2 text-xs text-slate-600">
               <input type="checkbox" checked={card.featured} onChange={e => updCard(i, { featured: e.target.checked })} />
@@ -1699,7 +1720,7 @@ function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
             </label>
           </div>
         ))}
-        <button onClick={() => upd({ cards: [...state.cards, { priceId: prices[0]?.id || '', label: '', badge: '', featured: false, accent: '#204280', ctaStyle: 'solid' }] })} className="btn-ghost mb-4 w-full text-xs">+ Add payment card</button>
+        <button onClick={() => upd({ cards: [...state.cards, { label: '', title: '', regularPrice: 0, discountPercent: 0, currency: '$', priceLabel: 'Your price', feature: '', badge: '', featured: false, accent: '#204280', ctaText: 'Enrol Now →', ctaUrl: '#', ctaStyle: 'solid', refundText: '' }] })} className="btn-ghost mb-4 w-full text-xs">+ Add payment card</button>
 
         <p className="section-label">Included List</p>
         <Field label="Included title"><input className="input" value={state.includedTitle} onChange={e => upd({ includedTitle: e.target.value })} /></Field>
@@ -1729,7 +1750,7 @@ const SECTION_TITLES: Record<string, { title: string; desc: string }> = {
   'hero-banner-v2': { title: 'Hero Banner v2',   desc: 'Two-column: text left + info cards right' },
   'hero-banner-v3': { title: 'Hero Banner v3',   desc: 'Mock exam hero with aligned format box + purchase card' },
   'book-meeting':   { title: 'Book a Meeting',   desc: 'Image left + eyebrow/heading/checklist/CTA right' },
-  'payment-plans':  { title: 'Payment Plans',     desc: 'Live course price cards from Global Course Prices' },
+  'payment-plans':  { title: 'Payment Plans',     desc: 'Component-owned course access cards with live published pricing' },
   'content-block':  { title: 'Content CTA Block', desc: 'Single column: eyebrow/heading/checklist/CTA' },
   'banner-v2':      { title: 'Banner v2',        desc: 'Single-column horizontal process banner' },
 };

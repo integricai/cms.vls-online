@@ -668,52 +668,66 @@ export function generateBv2Html(d: Bv2State): string {
 
 // ── Payment Plans (PP) — live cards connected to Global Course Prices ─────────
 
-export function generatePaymentPlansHtml(d: PaymentPlansState): string {
+function ppMoney(value: number): string {
+  const rounded = Math.round((Number.isFinite(value) ? value : 0) * 100) / 100;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
+}
+
+function ppCardCalc(card: { regularPrice: number; discountPercent: number }) {
+  const regular = Math.max(0, Number(card.regularPrice) || 0);
+  const discount = Math.max(0, Math.min(100, Number(card.discountPercent) || 0));
+  const saving = regular * (discount / 100);
+  return { regular, discount, saving, final: Math.max(0, regular - saving), hasDiscount: discount > 0 && saving > 0 };
+}
+
+export function generatePaymentPlansHtml(d: PaymentPlansState, componentId = ''): string {
   const id = uid();
-  const cards = (d.cards || []).filter(card => card.priceId.trim());
+  const cards = (d.cards || []).filter(card => card.title.trim() || card.label.trim());
   const included = (d.includedItems || []).filter(item => item.text.trim());
   const L: string[] = [];
 
   L.push('<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">');
   L.push('<style>');
   L.push(`.${id}-outer{background:${e(d.bg)};box-sizing:border-box;padding:${d.padTop}px ${d.padRight}px ${d.padBot}px ${d.padLeft}px;font-family:Poppins,Arial,sans-serif;}`);
-  L.push(`.${id}-shell{max-width:${d.maxWidth}px;margin:0 auto;background:${e(d.sectionBg)};border:1px solid ${e(d.border)};border-radius:${d.radius}px;overflow:hidden;}`);
-  L.push(`.${id}-head{padding:42px 56px 34px;border-bottom:1px solid ${e(d.border)};}`);
-  L.push(`.${id}-eyebrow{font-size:15px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${e(d.eyebrowColor)};display:flex;align-items:center;gap:10px;margin-bottom:14px;}`);
-  L.push(`.${id}-eyebrow:before{content:"";width:7px;height:7px;border-radius:999px;background:${e(d.eyebrowColor)};}`);
-  L.push(`.${id}-title{font-size:31px;font-weight:800;line-height:1.18;color:#151515;margin:0 0 12px;}`);
-  L.push(`.${id}-desc{font-size:17px;line-height:1.7;color:#444;margin:0;max-width:1040px;}`);
-  L.push(`.${id}-cards{display:grid;grid-template-columns:repeat(${Math.max(1, cards.length || 3)},minmax(0,1fr));gap:22px;padding:42px 56px;}`);
-  L.push(`.${id}-card{position:relative;display:flex;flex-direction:column;min-height:430px;border:1px solid #dedede;border-top:4px solid var(--pp-accent,#204280);border-radius:18px;background:#fff;padding:30px 32px 28px;box-sizing:border-box;}`);
-  L.push(`.${id}-card.is-featured{border-color:var(--pp-accent,#204280);}`);
-  L.push(`.${id}-badge{position:absolute;top:-1px;left:50%;transform:translateX(-50%);min-width:160px;text-align:center;background:var(--pp-accent,#204280);color:#fff;border-radius:0 0 8px 8px;padding:7px 14px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}`);
-  L.push(`.${id}-label{font-size:14px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#414141;margin:2px 0 12px;}`);
-  L.push(`.${id}-name{font-size:18px;font-weight:800;line-height:1.35;color:#171717;min-height:50px;margin:0 0 24px;}`);
-  L.push(`.${id}-rule{height:1px;background:#ddd;margin:0 0 24px;}`);
-  L.push(`.${id}-discount-row{display:flex;align-items:center;gap:10px;min-height:27px;margin-bottom:7px;}`);
-  L.push(`.${id}-regular{font-size:16px;color:#4a4a4a;text-decoration:line-through;text-decoration-thickness:1.5px;}`);
-  L.push(`.${id}-discount{display:inline-flex;align-items:center;justify-content:center;border:1px solid #9ed7b6;background:#e9f8ef;color:#006b3c;border-radius:999px;min-width:100px;padding:3px 12px;font-size:13px;font-weight:800;}`);
-  L.push(`.${id}-price-label{font-size:13px;font-weight:800;letter-spacing:.1em;color:#414141;text-transform:uppercase;margin:0 0 3px;}`);
+  L.push(`.${id}-shell{max-width:${d.maxWidth}px;margin:0 auto;background:${e(d.sectionBg)};border:1px solid ${e(d.border)};border-radius:${d.radius}px;overflow:hidden;box-shadow:0 14px 36px rgba(15,23,42,.05);}`);
+  L.push(`.${id}-head{padding:34px 44px 28px;border-bottom:1px solid ${e(d.border)};}`);
+  L.push(`.${id}-eyebrow{font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:${e(d.eyebrowColor)};display:flex;align-items:center;gap:9px;margin-bottom:12px;}`);
+  L.push(`.${id}-eyebrow:before{content:"";width:6px;height:6px;border-radius:999px;background:${e(d.eyebrowColor)};}`);
+  L.push(`.${id}-title{font-size:25px;font-weight:800;line-height:1.2;color:#111827;margin:0 0 10px;letter-spacing:0;}`);
+  L.push(`.${id}-desc{font-size:15px;line-height:1.65;color:#4b5563;margin:0;max-width:860px;}`);
+  L.push(`.${id}-cards{display:grid;grid-template-columns:repeat(${Math.max(1, cards.length || 3)},minmax(0,1fr));gap:18px;padding:34px 44px;}`);
+  L.push(`.${id}-card{position:relative;display:flex;flex-direction:column;min-height:350px;border:1px solid #e3e5e8;border-top:3px solid var(--pp-accent,#204280);border-radius:14px;background:#fff;padding:24px 26px 22px;box-sizing:border-box;}`);
+  L.push(`.${id}-card.is-featured{border-color:var(--pp-accent,#204280);box-shadow:0 10px 28px rgba(32,66,128,.09);}`);
+  L.push(`.${id}-badge{position:absolute;top:-1px;right:22px;background:var(--pp-accent,#204280);color:#fff;border-radius:0 0 7px 7px;padding:6px 12px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}`);
+  L.push(`.${id}-label{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#374151;margin:2px 0 10px;}`);
+  L.push(`.${id}-name{font-size:16px;font-weight:800;line-height:1.35;color:#111827;min-height:44px;margin:0 0 20px;}`);
+  L.push(`.${id}-rule{height:1px;background:#e4e4e4;margin:0 0 20px;}`);
+  L.push(`.${id}-discount-row{display:flex;align-items:center;gap:9px;min-height:24px;margin-bottom:6px;}`);
+  L.push(`.${id}-regular{font-size:14px;color:#4b5563;text-decoration:line-through;text-decoration-thickness:1.4px;}`);
+  L.push(`.${id}-discount{display:inline-flex;align-items:center;justify-content:center;border:1px solid #a7d8bb;background:#e9f8ef;color:#006b3c;border-radius:999px;min-width:82px;padding:3px 10px;font-size:11px;font-weight:800;}`);
+  L.push(`.${id}-price-label{font-size:11px;font-weight:800;letter-spacing:.1em;color:#4b5563;text-transform:uppercase;margin:0 0 3px;}`);
   L.push(`.${id}-price{display:flex;align-items:flex-start;color:#0f1d3d;margin-bottom:28px;}`);
-  L.push(`.${id}-curr{font-size:23px;font-weight:800;line-height:1;margin-top:28px;margin-right:6px;}`);
-  L.push(`.${id}-amount{font-size:58px;font-weight:800;line-height:1;letter-spacing:0;}`);
-  L.push(`.${id}-feature{display:flex;align-items:flex-start;gap:10px;color:#444;font-size:16px;line-height:1.45;margin:0 0 28px;}`);
-  L.push(`.${id}-feature:before{content:"";width:7px;height:7px;border-radius:999px;background:#c9c9c9;flex-shrink:0;margin-top:9px;}`);
-  L.push(`.${id}-cta{display:flex;align-items:center;justify-content:center;min-height:56px;border-radius:12px;text-decoration:none;font-size:18px;font-weight:800;margin-top:auto;}`);
+  L.push(`.${id}-curr{font-size:18px;font-weight:800;line-height:1;margin-top:22px;margin-right:5px;}`);
+  L.push(`.${id}-amount{font-size:46px;font-weight:800;line-height:1;letter-spacing:0;}`);
+  L.push(`.${id}-feature{display:flex;align-items:flex-start;gap:10px;color:#4b5563;font-size:14px;line-height:1.45;margin:0 0 24px;}`);
+  L.push(`.${id}-feature:before{content:"";width:6px;height:6px;border-radius:999px;background:#c9c9c9;flex-shrink:0;margin-top:8px;}`);
+  L.push(`.${id}-cta{display:flex;align-items:center;justify-content:center;min-height:46px;border-radius:9px;text-decoration:none;font-size:15px;font-weight:800;margin-top:auto;}`);
   L.push(`.${id}-cta.solid{background:var(--pp-accent,#204280);border:1px solid var(--pp-accent,#204280);color:#fff;}`);
   L.push(`.${id}-cta.outline{background:#f7f6f0;border:1px solid #d8d5cc;color:var(--pp-accent,#204280);}`);
-  L.push(`.${id}-refund{text-align:center;margin:16px 0 0;color:#4b4b4b;font-size:14px;}`);
-  L.push(`.${id}-included{background:${e(d.includedBg)};border-top:1px solid ${e(d.border)};padding:38px 56px 46px;}`);
-  L.push(`.${id}-included-title{font-size:15px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#404040;margin:0 0 28px;}`);
-  L.push(`.${id}-included-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px 34px;}`);
-  L.push(`.${id}-inc{display:grid;grid-template-columns:36px 1fr;gap:14px;align-items:flex-start;font-size:17px;line-height:1.35;color:#171717;}`);
-  L.push(`.${id}-check{width:28px;height:28px;border-radius:8px;background:#e8f4ff;border:1px solid #a8d2fb;color:#1d75bd;display:flex;align-items:center;justify-content:center;font-size:15px;}`);
-  L.push(`.${id}-help{display:flex;gap:18px;align-items:flex-start;margin-top:34px;background:#fff;border:1px solid #ddd;border-radius:14px;padding:20px 24px;color:#3f3f3f;font-size:16px;line-height:1.55;}`);
+  L.push(`.${id}-refund{text-align:center;margin:14px 0 0;color:#4b5563;font-size:12px;line-height:1.45;}`);
+  L.push(`.${id}-included{background:${e(d.includedBg)};border-top:1px solid ${e(d.border)};padding:32px 44px 38px;}`);
+  L.push(`.${id}-included-title{font-size:13px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:#404040;margin:0 0 24px;}`);
+  L.push(`.${id}-included-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 28px;}`);
+  L.push(`.${id}-inc{display:grid;grid-template-columns:30px 1fr;gap:12px;align-items:flex-start;font-size:15px;line-height:1.35;color:#171717;}`);
+  L.push(`.${id}-check{width:24px;height:24px;border-radius:7px;background:#e8f4ff;border:1px solid #a8d2fb;color:#1d75bd;display:flex;align-items:center;justify-content:center;font-size:13px;}`);
+  L.push(`.${id}-help{display:flex;gap:14px;align-items:flex-start;margin-top:30px;background:#fff;border:1px solid #ddd;border-radius:12px;padding:17px 20px;color:#3f3f3f;font-size:14px;line-height:1.55;}`);
   L.push(`@media(max-width:980px){.${id}-cards{grid-template-columns:1fr!important;}.${id}-included-grid{grid-template-columns:1fr 1fr;}.${id}-head,.${id}-cards,.${id}-included{padding-left:28px;padding-right:28px;}}`);
-  L.push(`@media(max-width:620px){.${id}-outer{padding-left:0!important;padding-right:0!important;}.${id}-shell{border-left:0;border-right:0;border-radius:0;}.${id}-head{padding:28px 20px 24px;}.${id}-title{font-size:25px;}.${id}-desc{font-size:15px;}.${id}-cards{padding:28px 20px;gap:18px;}.${id}-card{padding:26px 24px 24px;min-height:0;}.${id}-included{padding:30px 20px 34px;}.${id}-included-grid{grid-template-columns:1fr;gap:18px;}}`);
+  L.push(`@media(max-width:620px){.${id}-outer{padding-left:0!important;padding-right:0!important;}.${id}-shell{border-left:0;border-right:0;border-radius:0;}.${id}-head{padding:26px 20px 22px;}.${id}-title{font-size:23px;}.${id}-desc{font-size:14px;}.${id}-cards{padding:24px 20px;gap:16px;}.${id}-card{padding:24px 22px 22px;min-height:0;}.${id}-included{padding:28px 20px 32px;}.${id}-included-grid{grid-template-columns:1fr;gap:16px;}}`);
   L.push('</style>');
 
-  L.push(`<section class="${id}-outer">`);
+  L.push(`<div id="${id}-data" data-payment-plan-component="${e(componentId)}" style="display:none"></div>`);
+
+  L.push(`<section id="${id}-root" class="${id}-outer">`);
   L.push(`  <div class="${id}-shell">`);
   L.push(`    <div class="${id}-head">`);
   if (d.eyebrow) L.push(`      <div class="${id}-eyebrow">${e(d.eyebrow)}</div>`);
@@ -723,17 +737,18 @@ export function generatePaymentPlansHtml(d: PaymentPlansState): string {
   L.push(`    <div class="${id}-cards">`);
   cards.forEach((card, index) => {
     const style = `--pp-accent:${card.accent || '#204280'}`;
-    L.push(`      <article class="${id}-card${card.featured ? ' is-featured' : ''}" style="${style}" data-vls-price-card="${e(card.priceId)}">`);
+    const calc = ppCardCalc(card);
+    L.push(`      <article class="${id}-card${card.featured ? ' is-featured' : ''}" style="${style}">`);
     if (card.badge) L.push(`        <div class="${id}-badge">${e(card.badge)}</div>`);
     L.push(`        <div class="${id}-label">${e(card.label || `Plan ${index + 1}`)}</div>`);
-    L.push(`        <h3 class="${id}-name" data-vls-price-field="title">Loading plan...</h3>`);
+    L.push(`        <h3 class="${id}-name">${e(card.title)}</h3>`);
     L.push(`        <div class="${id}-rule"></div>`);
-    L.push(`        <div class="${id}-discount-row" data-vls-price-discount-only><span class="${id}-regular" data-vls-price-field="regular"></span><span class="${id}-discount" data-vls-price-field="discount"></span></div>`);
-    L.push(`        <div class="${id}-price-label" data-vls-price-field="priceLabel">YOUR PRICE</div>`);
-    L.push(`        <div class="${id}-price"><span class="${id}-curr" data-vls-price-field="currency"></span><span class="${id}-amount" data-vls-price-field="amount"></span></div>`);
-    L.push(`        <div class="${id}-feature"><span data-vls-price-field="primaryInclude">Course access</span></div>`);
-    L.push(`        <a class="${id}-cta ${card.ctaStyle === 'outline' ? 'outline' : 'solid'}" href="#" data-vls-price-field="cta">Enrol Now →</a>`);
-    L.push(`        <div class="${id}-refund" data-vls-price-field="refund"></div>`);
+    if (calc.hasDiscount) L.push(`        <div class="${id}-discount-row"><span class="${id}-regular">${e(card.currency || '$')}${e(ppMoney(calc.regular))}</span><span class="${id}-discount">Save ${e(ppMoney(calc.discount))}%</span></div>`);
+    L.push(`        <div class="${id}-price-label">${e(card.priceLabel || 'YOUR PRICE')}</div>`);
+    L.push(`        <div class="${id}-price"><span class="${id}-curr">${e(card.currency || '$')}</span><span class="${id}-amount">${e(ppMoney(calc.final))}</span></div>`);
+    if (card.feature) L.push(`        <div class="${id}-feature"><span>${e(card.feature)}</span></div>`);
+    L.push(`        <a class="${id}-cta ${card.ctaStyle === 'outline' ? 'outline' : 'solid'}" href="${e(card.ctaUrl || '#')}">${e(card.ctaText || 'Enrol Now →')}</a>`);
+    if (card.refundText) L.push(`        <div class="${id}-refund">${e(card.refundText)}</div>`);
     L.push(`      </article>`);
   });
   L.push(`    </div>`);
@@ -751,7 +766,9 @@ export function generatePaymentPlansHtml(d: PaymentPlansState): string {
   L.push(`  </div>`);
   L.push(`</section>`);
 
-  L.push(`<script type="text/javascript">(function(){var IDS=${JSON.stringify(cards.map(card => card.priceId))};var API="https://api.cms.vls-online.com/api/publish-course-prices";function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}function num(v,f){var n=Number(v);return isFinite(n)?n:f;}function money(v){var n=Math.round(num(v,0)*100)/100;return Math.abs(n%1)<.001?String(Math.round(n)):n.toFixed(2);}function calc(p){var regular=Math.max(0,num(p.regularPrice,0));var discount=Math.max(0,Math.min(100,num(p.discountPercent,0)));var saving=regular*(discount/100);return{regular:regular,discount:discount,saving:saving,final:Math.max(0,regular-saving),hasDiscount:discount>0&&saving>0};}function setText(root,name,value){root.querySelectorAll('[data-vls-price-field="'+name+'"]').forEach(function(node){node.textContent=value;});}function setHref(root,name,value){root.querySelectorAll('[data-vls-price-field="'+name+'"]').forEach(function(node){node.setAttribute("href",value||"#");});}function render(p){var roots=document.querySelectorAll('[data-vls-price-card="'+p.id+'"]');var c=calc(p),curr=p.currency||"£",items=Array.isArray(p.includes)?p.includes.filter(Boolean):[];roots.forEach(function(root){if(!p.visible){root.style.display="none";return;}root.style.display="";root.querySelectorAll("[data-vls-price-discount-only]").forEach(function(node){node.style.display=c.hasDiscount?"":"none";});setText(root,"title",p.title||"");setText(root,"regular",c.hasDiscount?curr+money(c.regular):"");setText(root,"discount",c.hasDiscount?"Save "+money(c.discount)+"%":"");setText(root,"priceLabel",p.priceLabel||"YOUR PRICE");setText(root,"currency",curr);setText(root,"amount",money(c.final));setText(root,"primaryInclude",items[0]||"");setText(root,"cta",p.ctaText||"Enrol Now →");setHref(root,"cta",p.ctaUrl||"#");setText(root,"refund",p.refundText||"");});}function load(){fetch(API+"?t="+Date.now()).then(function(r){if(!r.ok)throw new Error("VLS Course Price API returned "+r.status);return r.json();}).then(function(data){var all=data.prices||[];IDS.forEach(function(id){var p=all.find(function(x){return x.id===id;});if(p)render(p);});}).catch(function(e){console.error("VLS payment plans:",e.message||e);});}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",load);else load();})();<\/script>`);
+  if (componentId) {
+    L.push(`<script type="text/javascript">(function(){var CID=${JSON.stringify(componentId)},ROOT=${JSON.stringify(`${id}-root`)},API="https://api.cms.vls-online.com/api/publish-payment-plan-components";function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}function num(v,f){var n=Number(v);return isFinite(n)?n:f;}function money(v){var n=Math.round(num(v,0)*100)/100;return Math.abs(n%1)<.001?String(Math.round(n)):n.toFixed(2);}function calc(c){var r=Math.max(0,num(c.regularPrice,0)),d=Math.max(0,Math.min(100,num(c.discountPercent,0))),s=r*(d/100);return{regular:r,discount:d,final:Math.max(0,r-s),has:d>0&&s>0};}function cardHtml(c,i){var x=calc(c),curr=esc(c.currency||"$"),accent=esc(c.accent||"#204280"),cls="${id}-card"+(c.featured?" is-featured":"");return '<article class="'+cls+'" style="--pp-accent:'+accent+'">'+(c.badge?'<div class="${id}-badge">'+esc(c.badge)+'</div>':'')+'<div class="${id}-label">'+esc(c.label||("Plan "+(i+1)))+'</div><h3 class="${id}-name">'+esc(c.title||"")+'</h3><div class="${id}-rule"></div>'+(x.has?'<div class="${id}-discount-row"><span class="${id}-regular">'+curr+money(x.regular)+'</span><span class="${id}-discount">Save '+money(x.discount)+'%</span></div>':'')+'<div class="${id}-price-label">'+esc(c.priceLabel||"YOUR PRICE")+'</div><div class="${id}-price"><span class="${id}-curr">'+curr+'</span><span class="${id}-amount">'+money(x.final)+'</span></div>'+(c.feature?'<div class="${id}-feature"><span>'+esc(c.feature)+'</span></div>':'')+'<a class="${id}-cta '+(c.ctaStyle==="outline"?"outline":"solid")+'" href="'+esc(c.ctaUrl||"#")+'">'+esc(c.ctaText||"Enrol Now →")+'</a>'+(c.refundText?'<div class="${id}-refund">'+esc(c.refundText)+'</div>':'')+'</article>';}function render(d){var root=document.getElementById(ROOT);if(!root||!d)return;root.style.background=d.bg||root.style.background;var cards=Array.isArray(d.cards)?d.cards:[],inc=Array.isArray(d.includedItems)?d.includedItems:[];var html='<div class="${id}-shell"><div class="${id}-head">'+(d.eyebrow?'<div class="${id}-eyebrow">'+esc(d.eyebrow)+'</div>':'')+(d.title?'<h2 class="${id}-title">'+esc(d.title)+'</h2>':'')+(d.desc?'<p class="${id}-desc">'+esc(d.desc)+'</p>':'')+'</div><div class="${id}-cards" style="grid-template-columns:repeat('+Math.max(1,cards.length)+',minmax(0,1fr))">'+cards.map(cardHtml).join("")+'</div>';if(inc.length||d.includedTitle||d.helpText){html+='<div class="${id}-included">'+(d.includedTitle?'<h3 class="${id}-included-title">'+esc(d.includedTitle)+'</h3>':'')+(inc.length?'<div class="${id}-included-grid">'+inc.filter(function(x){return x&&x.text;}).map(function(x){return '<div class="${id}-inc"><span class="${id}-check">✓</span><span>'+esc(x.text)+'</span></div>';}).join("")+'</div>':'')+(d.helpText?'<div class="${id}-help"><span aria-hidden="true">💡</span><span>'+esc(d.helpText)+'</span></div>':'')+'</div>';}root.innerHTML=html+'</div>';}function load(){fetch(API+"?t="+Date.now()).then(function(r){if(!r.ok)throw new Error("VLS Payment Plans API returned "+r.status);return r.json();}).then(function(data){var cmp=(data.components||[]).find(function(x){return x.id===CID;});if(cmp&&cmp.data)render(cmp.data);}).catch(function(e){console.error("VLS Payment Plans ["+CID+"]:",e.message||e);});}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",load);else load();})();<\/script>`);
+  }
 
   return L.join('\n');
 }
