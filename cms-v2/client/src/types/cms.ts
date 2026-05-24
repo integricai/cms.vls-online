@@ -883,6 +883,8 @@ export interface PaymentPlanCard {
   fontFamily?: string;
   labelSize?: number; labelWeight?: number;
   titleSize?: number; titleWeight?: number;
+  regularPriceSize?: number; regularPriceWeight?: number;
+  discountBadgeSize?: number; discountBadgeWeight?: number;
   priceLabelSize?: number; priceLabelWeight?: number;
   amountSize?: number;
   featureSize?: number; featureWeight?: number;

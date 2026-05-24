@@ -1819,6 +1819,14 @@ function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
                   <input type="number" min={8} max={36} className="input text-xs py-0.5" value={card.titleSize ?? 16} onChange={e => updCard(i, { titleSize: Number(e.target.value) })} />
                   <WeightSel value={card.titleWeight} def={800} onChange={w => updCard(i, { titleWeight: w })} />
 
+                  <span className="flex items-center">Regular price</span>
+                  <input type="number" min={8} max={24} className="input text-xs py-0.5" value={card.regularPriceSize ?? 14} onChange={e => updCard(i, { regularPriceSize: Number(e.target.value) })} />
+                  <WeightSel value={card.regularPriceWeight} def={400} onChange={w => updCard(i, { regularPriceWeight: w })} />
+
+                  <span className="flex items-center">Discount badge</span>
+                  <input type="number" min={8} max={18} className="input text-xs py-0.5" value={card.discountBadgeSize ?? 11} onChange={e => updCard(i, { discountBadgeSize: Number(e.target.value) })} />
+                  <WeightSel value={card.discountBadgeWeight} def={800} onChange={w => updCard(i, { discountBadgeWeight: w })} />
+
                   <span className="flex items-center">Price label</span>
                   <input type="number" min={8} max={24} className="input text-xs py-0.5" value={card.priceLabelSize ?? 11} onChange={e => updCard(i, { priceLabelSize: Number(e.target.value) })} />
                   <WeightSel value={card.priceLabelWeight} def={800} onChange={w => updCard(i, { priceLabelWeight: w })} />

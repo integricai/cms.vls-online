@@ -694,6 +694,8 @@ function ppFontVars(card: PaymentPlanCard): string {
     `--pp-ff:'${ff}'`,
     `--pp-lbl-sz:${sz(card.labelSize, 12)}`, `--pp-lbl-wt:${wt(card.labelWeight, 800)}`,
     `--pp-ttl-sz:${sz(card.titleSize, 16)}`, `--pp-ttl-wt:${wt(card.titleWeight, 800)}`,
+    `--pp-reg-sz:${sz(card.regularPriceSize, 14)}`, `--pp-reg-wt:${wt(card.regularPriceWeight, 400)}`,
+    `--pp-disc-sz:${sz(card.discountBadgeSize, 11)}`, `--pp-disc-wt:${wt(card.discountBadgeWeight, 800)}`,
     `--pp-plbl-sz:${sz(card.priceLabelSize, 11)}`, `--pp-plbl-wt:${wt(card.priceLabelWeight, 800)}`,
     `--pp-amt-sz:${sz(card.amountSize, 46)}`,
     `--pp-feat-sz:${sz(card.featureSize, 14)}`, `--pp-feat-wt:${wt(card.featureWeight, 400)}`,
@@ -737,8 +739,8 @@ export function generatePaymentPlansHtml(d: PaymentPlansState, componentId = '')
   L.push(`.${id}-name{font-size:var(--pp-ttl-sz,16px);font-weight:var(--pp-ttl-wt,800);line-height:1.35;color:#111827;min-height:44px;margin:0 0 20px;}`);
   L.push(`.${id}-rule{height:1px;background:#e4e4e4;margin:0 0 20px;}`);
   L.push(`.${id}-discount-row{display:flex;align-items:center;gap:9px;min-height:24px;margin-bottom:6px;}`);
-  L.push(`.${id}-regular{font-size:14px;color:#4b5563;text-decoration:line-through;text-decoration-thickness:1.4px;}`);
-  L.push(`.${id}-discount{display:inline-flex;align-items:center;justify-content:center;border:1px solid #a7d8bb;background:#e9f8ef;color:#006b3c;border-radius:999px;min-width:82px;padding:3px 10px;font-size:11px;font-weight:800;}`);
+  L.push(`.${id}-regular{font-size:var(--pp-reg-sz,14px);font-weight:var(--pp-reg-wt,400);color:#4b5563;text-decoration:line-through;text-decoration-thickness:1.4px;}`);
+  L.push(`.${id}-discount{display:inline-flex;align-items:center;justify-content:center;border:1px solid #a7d8bb;background:#e9f8ef;color:#006b3c;border-radius:999px;min-width:82px;padding:3px 10px;font-size:var(--pp-disc-sz,11px);font-weight:var(--pp-disc-wt,800);}`);
   L.push(`.${id}-price-label{font-size:var(--pp-plbl-sz,11px);font-weight:var(--pp-plbl-wt,800);letter-spacing:.1em;color:#4b5563;text-transform:uppercase;margin:0 0 3px;}`);
   L.push(`.${id}-price{display:flex;align-items:flex-start;color:#0f1d3d;margin-bottom:28px;}`);
   L.push(`.${id}-curr{font-size:18px;font-weight:800;line-height:1;margin-top:22px;margin-right:5px;}`);
