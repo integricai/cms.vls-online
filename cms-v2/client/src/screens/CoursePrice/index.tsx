@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import Field from '../../components/Field';
+import type { Course } from '../../../../shared/types';
 import type { CoursePrice, CoursePriceContent } from '../../types/cms';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
 import { calculatedPrice, generateCoursePriceHtml, money } from './generateHtml';
 
 let idCounter = 0;
 const COURSE_PRICE_API_URL = 'https://api.cms.vls-online.com/api/publish-course-prices';
+const FONT_FAMILIES = ['Poppins', 'Inter', 'Roboto', 'Lato', 'Montserrat', 'DM Sans', 'Open Sans', 'Arial', 'Georgia'];
+const FONT_WEIGHTS = [400, 500, 600, 700, 800, 900];
+const SYSTEM_FONTS = ['Arial', 'Georgia'];
 
 function newCoursePrice(): CoursePrice {
   idCounter++;
@@ -14,6 +18,7 @@ function newCoursePrice(): CoursePrice {
     id: `cp${idCounter}`,
     name: '',
     visible: true,
+    courseId: undefined,
     eyebrow: 'ACCA • APPLIED KNOWLEDGE',
     title: 'ACCA FA1 - Recording Financial Transactions',
     regularPrice: 279,
@@ -42,30 +47,16 @@ function newCoursePrice(): CoursePrice {
     saveBg: '#f0fbf4',
     saveBorder: '#b7e4c7',
     radius: 14,
+    fontFamily: 'Poppins',
+    eyebrowSize: 11,
+    eyebrowWeight: 700,
+    titleSize: 15,
+    titleWeight: 700,
+    amountSize: 46,
+    bodySize: 13,
+    ctaSize: 14,
+    ctaWeight: 800,
   };
-}
-
-function ColorPair({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <Field label={label}>
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          className="h-9 w-10 shrink-0 cursor-pointer rounded border border-slate-300 p-0.5"
-        />
-        <input
-          type="text"
-          value={value}
-          className="input"
-          onChange={e => {
-            if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) onChange(e.target.value);
-          }}
-        />
-      </div>
-    </Field>
-  );
 }
 
 function buildInjectCode(price: CoursePrice): string {
@@ -82,8 +73,19 @@ function buildInjectCode(price: CoursePrice): string {
   function ensureStyle(p){
     if(document.getElementById(STYLE_ID))return;
     var accent=hex(p.accent,"#204280"),border=hex(p.border,"#e5e7eb"),discountBg=hex(p.discountBg,"#eaf8ef"),discountTc=hex(p.discountTc,"#057a3d"),saveBg=hex(p.saveBg,"#f0fbf4"),saveBorder=hex(p.saveBorder,"#b7e4c7"),bg=hex(p.bg,"#ffffff"),radius=Math.max(0,Math.min(40,parseInt(p.radius,10)||14));
+    var ff=String(p.fontFamily||"Poppins").replace(/['"<>]/g,"");
+    var eyebrowSz=Math.max(8,Math.min(24,parseInt(p.eyebrowSize,10)||11));
+    var eyebrowWt=parseInt(p.eyebrowWeight,10)||700;
+    var titleSz=Math.max(10,Math.min(36,parseInt(p.titleSize,10)||15));
+    var titleWt=parseInt(p.titleWeight,10)||700;
+    var amountSz=Math.max(20,Math.min(80,parseInt(p.amountSize,10)||46));
+    var bodySz=Math.max(10,Math.min(20,parseInt(p.bodySize,10)||13));
+    var ctaSz=Math.max(10,Math.min(24,parseInt(p.ctaSize,10)||14));
+    var ctaWt=parseInt(p.ctaWeight,10)||800;
+    var sysFonts=["Arial","Georgia","Times New Roman","Courier New","Verdana"];
+    if(sysFonts.indexOf(ff)<0){var fid="vls-gf-"+ff.replace(/\s/g,"-");if(!document.getElementById(fid)){var fl=document.createElement("link");fl.id=fid;fl.rel="stylesheet";fl.href="https://fonts.googleapis.com/css2?family="+encodeURIComponent(ff)+":wght@400;500;600;700;800;900&display=swap";document.head.appendChild(fl);}}
     var s=document.createElement("style");s.id=STYLE_ID;
-    s.textContent='.vls-price-card{box-sizing:border-box;width:100%;max-width:300px;background:'+bg+';border:1px solid '+border+';border-top:4px solid '+accent+';border-radius:'+radius+'px;overflow:hidden;font-family:Poppins,Arial,sans-serif;color:#111827;box-shadow:0 8px 24px rgba(15,23,42,.08)}.vls-price-card *{box-sizing:border-box}.vls-price-head{padding:18px 20px 16px;border-bottom:1px solid #e5e7eb}.vls-price-eyebrow{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:'+accent+'}.vls-price-eyebrow:before{content:"";width:5px;height:5px;border-radius:999px;background:'+accent+'}.vls-price-title{margin-top:6px;font-size:15px;line-height:1.35;font-weight:700;color:#111827}.vls-price-body{padding:18px 20px 14px}.vls-price-row{display:flex;align-items:center;gap:10px;min-height:22px}.vls-price-regular{font-size:15px;color:#374151;text-decoration:line-through;text-decoration-thickness:1.5px}.vls-price-discount{display:inline-flex;align-items:center;border:1px solid '+saveBorder+';background:'+discountBg+';color:'+discountTc+';font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px}.vls-price-label{margin-top:12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#4b5563}.vls-price-final{display:flex;align-items:flex-start;gap:3px;margin-top:4px;color:#102a63}.vls-price-currency{font-size:20px;font-weight:800;line-height:1.25;margin-top:8px}.vls-price-amount{font-size:46px;font-weight:800;line-height:1}.vls-price-save{margin-top:8px;border:1px solid '+saveBorder+';background:'+saveBg+';color:#006b3c;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:600}.vls-price-inc-label{margin-top:28px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#4b5563}.vls-price-inc{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:11px}.vls-price-inc li{display:grid;grid-template-columns:18px 1fr;gap:9px;align-items:start;font-size:13px;line-height:1.35;color:#111827}.vls-price-check{display:inline-flex;width:17px;height:17px;border-radius:5px;align-items:center;justify-content:center;background:#eff8ff;border:1px solid #bfdbfe;color:#1d75bd;font-size:11px;line-height:1}.vls-price-cta{display:block;margin-top:30px;width:100%;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#111827;text-decoration:none;text-align:center;padding:10px 12px;font-size:14px;font-weight:800}.vls-price-refund{margin:10px 0 0;text-align:center;color:#4b5563;font-size:11px}@media(max-width:640px){.vls-price-card{max-width:none}.vls-price-amount{font-size:42px}}';
+    s.textContent='.vls-price-card{box-sizing:border-box;width:100%;max-width:300px;background:'+bg+';border:1px solid '+border+';border-top:4px solid '+accent+';border-radius:'+radius+'px;overflow:hidden;font-family:\''+ff+'\',Arial,sans-serif;color:#111827;box-shadow:0 8px 24px rgba(15,23,42,.08)}.vls-price-card *{box-sizing:border-box}.vls-price-head{padding:18px 20px 16px;border-bottom:1px solid #e5e7eb}.vls-price-eyebrow{display:flex;align-items:center;gap:7px;font-size:'+eyebrowSz+'px;font-weight:'+eyebrowWt+';letter-spacing:.08em;text-transform:uppercase;color:'+accent+'}.vls-price-eyebrow:before{content:"";width:5px;height:5px;border-radius:999px;background:'+accent+'}.vls-price-title{margin-top:6px;font-size:'+titleSz+'px;line-height:1.35;font-weight:'+titleWt+';color:#111827}.vls-price-body{padding:18px 20px 14px}.vls-price-row{display:flex;align-items:center;gap:10px;min-height:22px}.vls-price-regular{font-size:15px;color:#374151;text-decoration:line-through;text-decoration-thickness:1.5px}.vls-price-discount{display:inline-flex;align-items:center;border:1px solid '+saveBorder+';background:'+discountBg+';color:'+discountTc+';font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px}.vls-price-label{margin-top:12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#4b5563}.vls-price-final{display:flex;align-items:flex-start;gap:3px;margin-top:4px;color:#102a63}.vls-price-currency{font-size:20px;font-weight:800;line-height:1.25;margin-top:8px}.vls-price-amount{font-size:'+amountSz+'px;font-weight:800;line-height:1}.vls-price-save{margin-top:8px;border:1px solid '+saveBorder+';background:'+saveBg+';color:#006b3c;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:600}.vls-price-inc-label{margin-top:28px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#4b5563}.vls-price-inc{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:11px}.vls-price-inc li{display:grid;grid-template-columns:18px 1fr;gap:9px;align-items:start;font-size:'+bodySz+'px;line-height:1.35;color:#111827}.vls-price-check{display:inline-flex;width:17px;height:17px;border-radius:5px;align-items:center;justify-content:center;background:#eff8ff;border:1px solid #bfdbfe;color:#1d75bd;font-size:11px;line-height:1}.vls-price-cta{display:block;margin-top:30px;width:100%;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#111827;text-decoration:none;text-align:center;padding:10px 12px;font-size:'+ctaSz+'px;font-weight:'+ctaWt+'}.vls-price-refund{margin:10px 0 0;text-align:center;color:#4b5563;font-size:11px}@media(max-width:640px){.vls-price-card{max-width:none}.vls-price-amount{font-size:'+(amountSz-4)+'px}}';
     document.head.appendChild(s);
   }
   function fullCard(p,c){
@@ -126,13 +128,62 @@ function buildInjectCode(price: CoursePrice): string {
 </script>`;
 }
 
-function CoursePriceForm({ price, onChange }: { price: CoursePrice; onChange: (patch: Partial<CoursePrice>) => void }) {
+function ColorPair({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <Field label={label}>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className="h-9 w-10 shrink-0 cursor-pointer rounded border border-slate-300 p-0.5"
+        />
+        <input
+          type="text"
+          value={value}
+          className="input"
+          onChange={e => {
+            if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) onChange(e.target.value);
+          }}
+        />
+      </div>
+    </Field>
+  );
+}
+
+function WeightSelect({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <Field label={label}>
+      <select className="input" value={value} onChange={e => onChange(Number(e.target.value))}>
+        {FONT_WEIGHTS.map(w => <option key={w} value={w}>{w}</option>)}
+      </select>
+    </Field>
+  );
+}
+
+function CoursePriceForm({
+  price,
+  courses,
+  onChange,
+}: {
+  price: CoursePrice;
+  courses: Course[];
+  onChange: (patch: Partial<CoursePrice>) => void;
+}) {
   const calc = calculatedPrice(price);
 
   function updateInclude(index: number, value: string) {
     const next = [...price.includes];
     next[index] = value;
     onChange({ includes: next });
+  }
+
+  function handleCourseSelect(courseId: number) {
+    const course = courses.find(c => c.id === courseId);
+    onChange({
+      courseId,
+      ...(course && !price.title ? { title: course.name } : {}),
+    });
   }
 
   return (
@@ -149,6 +200,26 @@ function CoursePriceForm({ price, onChange }: { price: CoursePrice; onChange: (p
           <option value="true">Visible - update cards on pages</option>
           <option value="false">Hidden - hide matching cards</option>
         </select>
+      </Field>
+
+      <p className="section-label">Linked Course</p>
+      <Field label="Zenler Course" hint="Links this price card to a local course record">
+        {courses.length === 0 ? (
+          <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            No active courses. Go to <strong>Payment Cards</strong> and run "Sync Courses from Zenler" first.
+          </p>
+        ) : (
+          <select
+            className="input"
+            value={price.courseId ?? 0}
+            onChange={e => handleCourseSelect(Number(e.target.value))}
+          >
+            <option value={0}>— none —</option>
+            {courses.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        )}
       </Field>
 
       <p className="section-label">Course</p>
@@ -218,12 +289,44 @@ function CoursePriceForm({ price, onChange }: { price: CoursePrice; onChange: (p
       <Field label="Border radius (px)">
         <input type="number" min={0} max={40} className="input" value={price.radius} onChange={e => onChange({ radius: Number(e.target.value) })} />
       </Field>
+
+      <p className="section-label">Typography</p>
+      <Field label="Font family">
+        <select
+          className="input"
+          value={price.fontFamily ?? 'Poppins'}
+          onChange={e => onChange({ fontFamily: e.target.value })}
+        >
+          {FONT_FAMILIES.map(f => <option key={f} value={f}>{f}</option>)}
+        </select>
+      </Field>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Eyebrow size (px)">
+          <input type="number" min={8} max={24} className="input" value={price.eyebrowSize ?? 11} onChange={e => onChange({ eyebrowSize: Number(e.target.value) })} />
+        </Field>
+        <WeightSelect label="Eyebrow weight" value={price.eyebrowWeight ?? 700} onChange={v => onChange({ eyebrowWeight: v })} />
+        <Field label="Title size (px)">
+          <input type="number" min={10} max={36} className="input" value={price.titleSize ?? 15} onChange={e => onChange({ titleSize: Number(e.target.value) })} />
+        </Field>
+        <WeightSelect label="Title weight" value={price.titleWeight ?? 700} onChange={v => onChange({ titleWeight: v })} />
+        <Field label="Price amount size (px)">
+          <input type="number" min={20} max={80} className="input" value={price.amountSize ?? 46} onChange={e => onChange({ amountSize: Number(e.target.value) })} />
+        </Field>
+        <Field label="Body / includes size (px)">
+          <input type="number" min={10} max={20} className="input" value={price.bodySize ?? 13} onChange={e => onChange({ bodySize: Number(e.target.value) })} />
+        </Field>
+        <Field label="CTA button size (px)">
+          <input type="number" min={10} max={24} className="input" value={price.ctaSize ?? 14} onChange={e => onChange({ ctaSize: Number(e.target.value) })} />
+        </Field>
+        <WeightSelect label="CTA button weight" value={price.ctaWeight ?? 800} onChange={v => onChange({ ctaWeight: v })} />
+      </div>
     </div>
   );
 }
 
 export default function CoursePriceScreen() {
   const [prices, setPrices] = useState<CoursePrice[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -237,20 +340,21 @@ export default function CoursePriceScreen() {
   const active = prices.find(price => price.id === activeId) ?? null;
 
   useEffect(() => {
-    api.get<{ data: CoursePriceContent }>('/content/vls-course-prices')
-      .then(row => {
-        const items = (row?.data as CoursePriceContent)?.prices ?? [];
-        items.forEach(item => {
-          const next = parseInt(item.id.replace('cp', ''), 10);
-          if (next > idCounter) idCounter = next;
-        });
-        if (items.length > 0) {
-          setPrices(items);
-          setActiveId(items[0].id);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      api.get<{ data: CoursePriceContent }>('/content/vls-course-prices').catch(() => null),
+      api.get<Course[]>('/courses/active').catch(() => []),
+    ]).then(([row, activeCourses]) => {
+      if (activeCourses) setCourses(activeCourses as Course[]);
+      const items = (row?.data as CoursePriceContent)?.prices ?? [];
+      items.forEach(item => {
+        const next = parseInt(item.id.replace('cp', ''), 10);
+        if (next > idCounter) idCounter = next;
+      });
+      if (items.length > 0) {
+        setPrices(items);
+        setActiveId(items[0].id);
+      }
+    }).finally(() => setLoading(false));
   }, []);
 
   const updateActive = useCallback((patch: Partial<CoursePrice>) => {
@@ -280,6 +384,23 @@ export default function CoursePriceScreen() {
     setActiveTab('preview');
   }
 
+  function duplicatePrice(id: string) {
+    const source = prices.find(p => p.id === id);
+    if (!source) return;
+    idCounter++;
+    const copy: CoursePrice = { ...source, id: `cp${idCounter}`, name: source.name ? `${source.name} (Copy)` : '' };
+    setPrices(prev => {
+      const idx = prev.findIndex(p => p.id === id);
+      const next = [...prev];
+      next.splice(idx + 1, 0, copy);
+      return next;
+    });
+    setActiveId(copy.id);
+    setInjectCode('');
+    setSaved(false);
+    setActiveTab('preview');
+  }
+
   function deletePrice(id: string) {
     setPrices(prev => {
       const next = prev.filter(price => price.id !== id);
@@ -292,6 +413,18 @@ export default function CoursePriceScreen() {
     });
     setSaved(false);
     setPublished(false);
+  }
+
+  function movePrice(id: string, dir: -1 | 1) {
+    setPrices(prev => {
+      const idx = prev.findIndex(p => p.id === id);
+      const swap = idx + dir;
+      if (swap < 0 || swap >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[swap]] = [next[swap], next[idx]];
+      return next;
+    });
+    setSaved(false);
   }
 
   async function saveAndGenerate() {
@@ -320,8 +453,8 @@ export default function CoursePriceScreen() {
       setPublished(true);
       setSaved(true);
       setActiveTab('html');
-    } catch (error: any) {
-      setPublishError(error?.message || 'Publish failed. Please try again.');
+    } catch (error: unknown) {
+      setPublishError(error instanceof Error ? error.message : 'Publish failed. Please try again.');
     } finally {
       setPublishing(false);
     }
@@ -331,16 +464,21 @@ export default function CoursePriceScreen() {
     return <div className="flex h-full items-center justify-center text-sm text-slate-400">Loading…</div>;
   }
 
+  const activeFontFamily = active?.fontFamily ?? 'Poppins';
+  const googleFontsHref = SYSTEM_FONTS.includes(activeFontFamily)
+    ? ''
+    : `https://fonts.googleapis.com/css2?family=${encodeURIComponent(activeFontFamily)}:wght@400;500;600;700;800;900&display=swap`;
+
   const previewDoc = active
-    ? `<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"></head><body style="margin:0;background:#f8f9fc;padding:28px">${wrapGeneratedHtml('Course Price', generateCoursePriceHtml(active))}</body></html>`
+    ? `<!doctype html><html><head><meta charset="utf-8">${googleFontsHref ? `<link href="${googleFontsHref}" rel="stylesheet">` : ''}</head><body style="margin:0;background:#f8f9fc;padding:28px">${wrapGeneratedHtml('Course Price', generateCoursePriceHtml(active))}</body></html>`
     : '<p style="font-family:sans-serif;color:#94a3b8;padding:24px">Select a price card to preview.</p>';
 
   return (
     <div className="flex h-full">
       <div className="w-[440px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
         <div className="sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4">
-          <h1 className="text-base font-bold text-slate-900">Course Prices</h1>
-          <p className="mt-0.5 text-xs text-slate-400">Price cards - paste inject code once, publish updates live</p>
+          <h1 className="text-base font-bold text-slate-900">Price Cards</h1>
+          <p className="mt-0.5 text-xs text-slate-400">Price cards — paste inject code once, publish updates live</p>
         </div>
 
         <div className="space-y-2 border-b border-slate-100 bg-white px-5 py-3">
@@ -357,9 +495,6 @@ export default function CoursePriceScreen() {
             <p className="text-[11px] text-slate-500">
               Add <span className="font-mono">data-vls-price-card="{active?.id || 'cp1'}"</span> to the live course card container.
             </p>
-            <p className="text-[11px] text-slate-500">
-              Optional fields: <span className="font-mono">regular</span>, <span className="font-mono">discount</span>, <span className="font-mono">price</span>, <span className="font-mono">amount</span>, <span className="font-mono">saving</span>, <span className="font-mono">saveText</span>, <span className="font-mono">cta</span>.
-            </p>
           </div>
         </div>
 
@@ -373,36 +508,56 @@ export default function CoursePriceScreen() {
               <p className="py-4 text-center text-sm text-slate-400">No price cards yet.</p>
             ) : (
               <div className="space-y-1">
-                {prices.map(price => (
+                {prices.map((price, idx) => (
                   <div
                     key={price.id}
                     onClick={() => selectPrice(price.id)}
-                    className={`flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm transition ${
+                    className={`flex cursor-pointer items-center gap-1 rounded-lg px-2 py-2 text-sm transition ${
                       price.id === activeId
                         ? 'bg-brand text-white'
                         : 'border border-slate-200 bg-white text-slate-700 hover:border-brand/40'
                     }`}
                   >
-                    <div className="flex min-w-0 items-center gap-2">
+                    {/* Sort buttons */}
+                    <div className="flex shrink-0 flex-col">
+                      <button
+                        title="Move up"
+                        onClick={e => { e.stopPropagation(); movePrice(price.id, -1); }}
+                        disabled={idx === 0}
+                        className={`leading-none px-0.5 text-[10px] disabled:opacity-20 ${price.id === activeId ? 'text-white/70 hover:text-white' : 'text-slate-400 hover:text-slate-700'}`}
+                      >▲</button>
+                      <button
+                        title="Move down"
+                        onClick={e => { e.stopPropagation(); movePrice(price.id, 1); }}
+                        disabled={idx === prices.length - 1}
+                        className={`leading-none px-0.5 text-[10px] disabled:opacity-20 ${price.id === activeId ? 'text-white/70 hover:text-white' : 'text-slate-400 hover:text-slate-700'}`}
+                      >▼</button>
+                    </div>
+
+                    {/* Label */}
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
                       <span className={`text-xs ${price.id === activeId ? 'text-white/70' : 'text-slate-400'}`}>{price.visible ? '●' : '○'}</span>
                       <span className="truncate font-medium">{price.name || price.title || 'Untitled'}</span>
                     </div>
+
+                    {/* Duplicate + Delete */}
                     <button
-                      onClick={event => {
-                        event.stopPropagation();
-                        deletePrice(price.id);
-                      }}
-                      className={`ml-2 shrink-0 text-xs ${price.id === activeId ? 'text-white/70 hover:text-white' : 'text-slate-400 hover:text-red-500'}`}
-                    >
-                      ✕
-                    </button>
+                      title="Duplicate"
+                      onClick={e => { e.stopPropagation(); duplicatePrice(price.id); }}
+                      className={`shrink-0 text-xs ${price.id === activeId ? 'text-white/70 hover:text-white' : 'text-slate-400 hover:text-brand'}`}
+                    >⧉</button>
+                    <button
+                      title="Delete"
+                      onClick={e => { e.stopPropagation(); deletePrice(price.id); }}
+                      className={`shrink-0 text-xs ${price.id === activeId ? 'text-white/70 hover:text-white' : 'text-slate-400 hover:text-red-500'}`}
+                    >✕</button>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          {active && <CoursePriceForm price={active} onChange={updateActive} />}
+          {active && <CoursePriceForm price={active} courses={courses} onChange={updateActive} />}
         </div>
       </div>
 

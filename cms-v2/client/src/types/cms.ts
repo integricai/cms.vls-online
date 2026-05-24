@@ -254,6 +254,7 @@ export interface CoursePrice {
   id: string;
   name: string;
   visible: boolean;
+  courseId?: number;
   eyebrow: string;
   title: string;
   regularPrice: number;
@@ -274,6 +275,15 @@ export interface CoursePrice {
   saveBg: string;
   saveBorder: string;
   radius: number;
+  fontFamily?: string;
+  eyebrowSize?: number;
+  eyebrowWeight?: number;
+  titleSize?: number;
+  titleWeight?: number;
+  amountSize?: number;
+  bodySize?: number;
+  ctaSize?: number;
+  ctaWeight?: number;
 }
 
 export interface CoursePriceContent { prices: CoursePrice[]; }
