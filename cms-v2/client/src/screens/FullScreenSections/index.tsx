@@ -12,12 +12,13 @@ import type {
   BmsState, BmsComponent, BmsCheckItem,
   CbState, CbComponent,
   Bv2State, Bv2Component, Bv2Step,
+  PaymentPlansState, PaymentPlansComponent, PaymentPlanCard, PaymentIncludedItem, CoursePrice, CoursePriceContent,
   TextValue,
 } from '../../types/cms';
 import { normalize } from '../../utils/text';
 import {
   generateDcsHtml, generateDcs2Html, generateDcs3Html, generateReachHtml,
-  generatePhbHtml, generatePhv2Html, generatePhv3Html, generateBmsHtml, generateCbHtml, generateBv2Html,
+  generatePhbHtml, generatePhv2Html, generatePhv3Html, generateBmsHtml, generateCbHtml, generateBv2Html, generatePaymentPlansHtml,
 } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
@@ -143,6 +144,35 @@ function makeBv2(): Bv2State {
       { number: '3', title: 'Get instant results', desc: normalize('Your score is displayed immediately after submission — no waiting for a tutor to mark your work.', 'bmsDesc') },
       { number: '4', title: 'Review & target weak areas', desc: normalize('Full solutions arrive in your email immediately. Use your score to focus your remaining revision.', 'bmsDesc') },
     ],
+  };
+}
+
+function makePaymentPlans(): PaymentPlansState {
+  return {
+    bg: '#f4f2ec', padTop: 48, padBot: 48, padLeft: 32, padRight: 32,
+    maxWidth: 1280, sectionBg: '#ffffff', border: '#d9d9d9', radius: 26,
+    eyebrow: 'ACCA FA1 — RECORDING FINANCIAL TRANSACTIONS', eyebrowColor: '#1d5fa8',
+    title: 'Choose your access plan',
+    desc: 'All plans include the complete FA1 course with full tutor support. Select the access duration that best fits your exam timeline.',
+    cards: [
+      { priceId: 'cp1', label: '4 month access', badge: '', featured: false, accent: '#10213d', ctaStyle: 'solid' },
+      { priceId: 'cp2', label: '6 month access', badge: 'Most popular', featured: true, accent: '#2168ad', ctaStyle: 'solid' },
+      { priceId: 'cp3', label: 'Revision only', badge: '', featured: false, accent: '#1c765c', ctaStyle: 'outline' },
+    ],
+    includedBg: '#f4f2ec',
+    includedTitle: 'Everything included in every plan',
+    includedItems: [
+      { text: '46 hours of HD syllabus topic videos' },
+      { text: '42 hours of kit question videos with solutions' },
+      { text: 'Chapter quizzes with automated feedback' },
+      { text: 'Exam-focused study notes' },
+      { text: 'Tutor support via WhatsApp group' },
+      { text: 'Weekly live sessions + recordings' },
+      { text: 'Final mock exam with tutor feedback' },
+      { text: 'Mobile app — study on any device' },
+      { text: 'ACCA exam questions and full solutions' },
+    ],
+    helpText: "Not sure which plan is right for you? The 6-month plan is ideal if your exam is more than 3 months away or if you plan to resit. Contact us at office@vls-online.com and we'll help you choose.",
   };
 }
 
@@ -284,6 +314,19 @@ function normBv2(raw: any): Bv2State {
   };
 }
 
+function normPaymentPlans(raw: any): PaymentPlansState {
+  const d = { ...makePaymentPlans(), ...(raw || {}) };
+  return {
+    ...d,
+    padTop: normalizeNum(d.padTop, 48), padBot: normalizeNum(d.padBot, 48),
+    padLeft: normalizeNum(d.padLeft, 32), padRight: normalizeNum(d.padRight, 32),
+    maxWidth: normalizeNum(d.maxWidth, 1280),
+    radius: normalizeNum(d.radius, 26),
+    cards: d.cards || [],
+    includedItems: d.includedItems || [],
+  };
+}
+
 function normPhv3(raw: any): Phv3State {
   const d = { ...makePhv3(), ...(raw || {}) };
   return {
@@ -338,9 +381,10 @@ function PaddingRow({ value, onChange }: { value: { padTop: number; padBot: numb
 interface CmpMgrProps<C> {
   components: C[]; activeId: string | null; name: string; saving: boolean; saved: boolean;
   onSelect: (id: string) => void; onNew: () => void; onDelete: () => void;
+  onDuplicate?: () => void;
   onNameChange: (n: string) => void; onSave: () => void; onGenerate: () => void;
 }
-function CmpMgr<C extends { id: string; name: string }>({ components, activeId, name, saving, saved, onSelect, onNew, onDelete, onNameChange, onSave, onGenerate }: CmpMgrProps<C>) {
+function CmpMgr<C extends { id: string; name: string }>({ components, activeId, name, saving, saved, onSelect, onNew, onDelete, onDuplicate, onNameChange, onSave, onGenerate }: CmpMgrProps<C>) {
   return (
     <div className="border-b border-slate-100 bg-white px-5 py-3">
       <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 mb-3">
@@ -351,6 +395,7 @@ function CmpMgr<C extends { id: string; name: string }>({ components, activeId, 
             {components.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <button onClick={onNew} className="btn-ghost text-xs px-3">+ New</button>
+          {activeId && onDuplicate && <button onClick={onDuplicate} className="btn-ghost text-xs px-3">Duplicate</button>}
           {activeId && <button onClick={onDelete} className="btn-danger text-xs px-3">Delete</button>}
         </div>
         <Field label="Component name">
@@ -1537,6 +1582,142 @@ function Bv2Tab({ onHtml }: { onHtml: (html: string) => void }) {
   );
 }
 
+function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
+  const [comps, setComps] = useState<PaymentPlansComponent[]>([]);
+  const [prices, setPrices] = useState<CoursePrice[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [state, setState] = useState<PaymentPlansState>(makePaymentPlans());
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      api.get<any>('/content/vls-payment-plan-components').catch(() => null),
+      api.get<{ data: CoursePriceContent }>('/content/vls-course-prices').catch(() => null),
+    ]).then(([row, priceRow]) => {
+      const raw = row?.data as any;
+      const cs: PaymentPlansComponent[] = (raw?.components || []).map((c: any) => ({ ...c, data: normPaymentPlans(c.data || {}) }));
+      const ps = (priceRow?.data as CoursePriceContent | undefined)?.prices || [];
+      setComps(cs);
+      setPrices(ps);
+      if (cs.length) { setActiveId(cs[0].id); setName(cs[0].name); setState(cs[0].data); }
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, []);
+
+  const upd = useCallback((p: Partial<PaymentPlansState>) => { setState(prev => ({ ...prev, ...p })); setSaved(false); }, []);
+
+  function load(id: string) {
+    if (!id) { setActiveId(null); setName(''); setState(makePaymentPlans()); setSaved(false); return; }
+    const c = comps.find(c => c.id === id);
+    if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
+  }
+
+  function duplicate() {
+    setActiveId(null);
+    setName(`Copy of ${name || 'Payment plans'}`);
+    setState(JSON.parse(JSON.stringify(state)) as PaymentPlansState);
+    setSaved(false);
+  }
+
+  async function save() {
+    if (!name.trim()) { alert('Enter a component name.'); return; }
+    setSaving(true);
+    const id = activeId || `pp-${Date.now().toString(36)}`;
+    const updated = activeId ? comps.map(c => c.id === id ? { id, name, data: state } : c) : [...comps, { id, name, data: state }];
+    await api.put('/content/vls-payment-plan-components', { components: updated });
+    setComps(updated); setActiveId(id); setSaved(true); setSaving(false);
+  }
+
+  async function del() {
+    if (!activeId || !confirm('Delete this component?')) return;
+    const updated = comps.filter(c => c.id !== activeId);
+    await api.put('/content/vls-payment-plan-components', { components: updated });
+    setComps(updated); setActiveId(null); setName(''); setState(makePaymentPlans());
+  }
+
+  function updCard(i: number, p: Partial<PaymentPlanCard>) { const a = [...state.cards]; a[i] = { ...a[i], ...p }; upd({ cards: a }); }
+  function updIncluded(i: number, p: Partial<PaymentIncludedItem>) { const a = [...state.includedItems]; a[i] = { ...a[i], ...p }; upd({ includedItems: a }); }
+
+  if (!loaded) return <div className="p-5 text-xs text-slate-400">Loading…</div>;
+
+  return (
+    <div className="flex flex-col">
+      <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
+        onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
+        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Payment Plans', generatePaymentPlansHtml(state)))} />
+      <div className="px-5 py-4 space-y-1 overflow-y-auto">
+        <p className="section-label">Layout</p>
+        <PaddingRow value={state} onChange={upd} />
+        <div className="grid grid-cols-2 gap-2">
+          <ColorInput label="Page background" value={state.bg} onChange={v => upd({ bg: v })} />
+          <ColorInput label="Section background" value={state.sectionBg} onChange={v => upd({ sectionBg: v })} />
+          <ColorInput label="Border" value={state.border} onChange={v => upd({ border: v })} />
+          <ColorInput label="Included background" value={state.includedBg} onChange={v => upd({ includedBg: v })} />
+          <Field label="Max width"><input type="number" className="input" min={720} max={1800} value={state.maxWidth} onChange={e => upd({ maxWidth: Number(e.target.value) })} /></Field>
+          <Field label="Radius"><input type="number" className="input" min={0} max={48} value={state.radius} onChange={e => upd({ radius: Number(e.target.value) })} /></Field>
+        </div>
+
+        <p className="section-label mt-3">Header</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Eyebrow"><input className="input" value={state.eyebrow} onChange={e => upd({ eyebrow: e.target.value })} /></Field>
+          <ColorInput label="Eyebrow colour" value={state.eyebrowColor} onChange={v => upd({ eyebrowColor: v })} />
+        </div>
+        <Field label="Title"><input className="input" value={state.title} onChange={e => upd({ title: e.target.value })} /></Field>
+        <Field label="Description"><textarea className="input min-h-[84px]" value={state.desc} onChange={e => upd({ desc: e.target.value })} /></Field>
+
+        <p className="section-label mt-3">Payment Cards</p>
+        <p className="mb-3 text-xs text-slate-400">Choose Global Course Price IDs. Prices, discounts, CTA links, and visibility update live when the global price card is published.</p>
+        {state.cards.map((card, i) => (
+          <div key={i} className="mb-2 rounded border border-slate-200 bg-slate-50 p-3">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="flex-1 text-xs font-semibold text-slate-500">Card {i + 1}</span>
+              <button onClick={() => upd({ cards: state.cards.filter((_, idx) => idx !== i) })} className="btn-danger text-xs">✕</button>
+            </div>
+            <Field label="Global price card">
+              <select className="input" value={card.priceId} onChange={e => updCard(i, { priceId: e.target.value })}>
+                <option value="">— select price card —</option>
+                {prices.map(price => <option key={price.id} value={price.id}>{price.name || price.title || price.id} ({price.id})</option>)}
+              </select>
+            </Field>
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Local label"><input className="input" value={card.label} placeholder="4 month access" onChange={e => updCard(i, { label: e.target.value })} /></Field>
+              <Field label="Badge"><input className="input" value={card.badge} placeholder="Most popular" onChange={e => updCard(i, { badge: e.target.value })} /></Field>
+              <ColorInput label="Accent" value={card.accent} onChange={v => updCard(i, { accent: v })} />
+              <Field label="Button style">
+                <select className="input" value={card.ctaStyle} onChange={e => updCard(i, { ctaStyle: e.target.value as PaymentPlanCard['ctaStyle'] })}>
+                  <option value="solid">Solid</option>
+                  <option value="outline">Outline</option>
+                </select>
+              </Field>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-slate-600">
+              <input type="checkbox" checked={card.featured} onChange={e => updCard(i, { featured: e.target.checked })} />
+              Featured border
+            </label>
+          </div>
+        ))}
+        <button onClick={() => upd({ cards: [...state.cards, { priceId: prices[0]?.id || '', label: '', badge: '', featured: false, accent: '#204280', ctaStyle: 'solid' }] })} className="btn-ghost mb-4 w-full text-xs">+ Add payment card</button>
+
+        <p className="section-label">Included List</p>
+        <Field label="Included title"><input className="input" value={state.includedTitle} onChange={e => upd({ includedTitle: e.target.value })} /></Field>
+        {state.includedItems.map((item, i) => (
+          <div key={i} className="mb-2 flex gap-2">
+            <input className="input" value={item.text} onChange={e => updIncluded(i, { text: e.target.value })} />
+            <button onClick={() => upd({ includedItems: state.includedItems.filter((_, idx) => idx !== i) })} className="btn-danger shrink-0 text-xs">✕</button>
+          </div>
+        ))}
+        <button onClick={() => upd({ includedItems: [...state.includedItems, { text: '' }] })} className="btn-ghost mb-4 w-full text-xs">+ Add included item</button>
+
+        <p className="section-label">Help Note</p>
+        <Field label="Help text"><textarea className="input min-h-[92px]" value={state.helpText} onChange={e => upd({ helpText: e.target.value })} /></Field>
+      </div>
+    </div>
+  );
+}
+
 // ── Section titles ─────────────────────────────────────────────────────────────
 
 const SECTION_TITLES: Record<string, { title: string; desc: string }> = {
@@ -1548,6 +1729,7 @@ const SECTION_TITLES: Record<string, { title: string; desc: string }> = {
   'hero-banner-v2': { title: 'Hero Banner v2',   desc: 'Two-column: text left + info cards right' },
   'hero-banner-v3': { title: 'Hero Banner v3',   desc: 'Mock exam hero with aligned format box + purchase card' },
   'book-meeting':   { title: 'Book a Meeting',   desc: 'Image left + eyebrow/heading/checklist/CTA right' },
+  'payment-plans':  { title: 'Payment Plans',     desc: 'Live course price cards from Global Course Prices' },
   'content-block':  { title: 'Content CTA Block', desc: 'Single column: eyebrow/heading/checklist/CTA' },
   'banner-v2':      { title: 'Banner v2',        desc: 'Single-column horizontal process banner' },
 };
@@ -1580,6 +1762,7 @@ export default function FullScreenSections() {
           {type === 'hero-banner-v2' && <Phv2Tab  onHtml={handleHtml} />}
           {type === 'hero-banner-v3' && <Phv3Tab  onHtml={handleHtml} />}
           {type === 'book-meeting'   && <BmsTab   onHtml={handleHtml} />}
+          {type === 'payment-plans'  && <PaymentPlansTab onHtml={handleHtml} />}
           {type === 'content-block' && <CbTab    onHtml={handleHtml} />}
           {type === 'banner-v2' && <Bv2Tab    onHtml={handleHtml} />}
           {!type && <div className="p-6 text-sm text-slate-400">Select a section type from the sidebar.</div>}

@@ -88,7 +88,8 @@ function buildInjectCode(price: CoursePrice): string {
   }
   function fullCard(p,c){
     var curr=esc(p.currency||"£"),items=Array.isArray(p.includes)?p.includes.filter(Boolean):[];
-    return '<div class="vls-price-card"><div class="vls-price-head">'+(p.eyebrow?'<div class="vls-price-eyebrow">'+esc(p.eyebrow)+'</div>':'')+(p.title?'<div class="vls-price-title">'+esc(p.title)+'</div>':'')+'</div><div class="vls-price-body"><div class="vls-price-row"><span class="vls-price-regular">'+curr+esc(money(c.regular))+'</span><span class="vls-price-discount">'+esc(money(c.discount))+'% OFF</span></div><div class="vls-price-label">'+esc(p.priceLabel||"YOUR PRICE")+'</div><div class="vls-price-final"><span class="vls-price-currency">'+curr+'</span><span class="vls-price-amount">'+esc(money(c.final))+'</span></div><div class="vls-price-save">🎉 '+esc(p.savingPrefix||"You save")+' '+curr+esc(money(c.saving))+' on this course</div>'+(items.length?'<div class="vls-price-inc-label">'+esc(p.includesLabel||"THIS COURSE INCLUDES")+'</div><ul class="vls-price-inc">'+items.map(function(item){return '<li><span class="vls-price-check">✓</span><span>'+esc(item)+'</span></li>';}).join("")+'</ul>':'')+(p.ctaText?'<a class="vls-price-cta" href="'+esc(p.ctaUrl||"#")+'">'+esc(p.ctaText)+'</a>':'')+(p.refundText?'<div class="vls-price-refund">'+esc(p.refundText)+'</div>':'')+'</div></div>';
+    var hasDiscount=c.discount>0&&c.saving>0;
+    return '<div class="vls-price-card"><div class="vls-price-head">'+(p.eyebrow?'<div class="vls-price-eyebrow">'+esc(p.eyebrow)+'</div>':'')+(p.title?'<div class="vls-price-title">'+esc(p.title)+'</div>':'')+'</div><div class="vls-price-body">'+(hasDiscount?'<div class="vls-price-row"><span class="vls-price-regular">'+curr+esc(money(c.regular))+'</span><span class="vls-price-discount">'+esc(money(c.discount))+'% OFF</span></div>':'')+'<div class="vls-price-label">'+esc(p.priceLabel||"YOUR PRICE")+'</div><div class="vls-price-final"><span class="vls-price-currency">'+curr+'</span><span class="vls-price-amount">'+esc(money(c.final))+'</span></div>'+(hasDiscount?'<div class="vls-price-save">🎉 '+esc(p.savingPrefix||"You save")+' '+curr+esc(money(c.saving))+' on this course</div>':'')+(items.length?'<div class="vls-price-inc-label">'+esc(p.includesLabel||"THIS COURSE INCLUDES")+'</div><ul class="vls-price-inc">'+items.map(function(item){return '<li><span class="vls-price-check">✓</span><span>'+esc(item)+'</span></li>';}).join("")+'</ul>':'')+(p.ctaText?'<a class="vls-price-cta" href="'+esc(p.ctaUrl||"#")+'">'+esc(p.ctaText)+'</a>':'')+(p.refundText?'<div class="vls-price-refund">'+esc(p.refundText)+'</div>':'')+'</div></div>';
   }
   function setText(root,name,value){var nodes=root.querySelectorAll('[data-vls-price-field="'+name+'"]');for(var i=0;i<nodes.length;i++)nodes[i].textContent=value;}
   function setHref(root,name,value){var nodes=root.querySelectorAll('[data-vls-price-field="'+name+'"]');for(var i=0;i<nodes.length;i++)nodes[i].setAttribute("href",value||"#");}
@@ -100,13 +101,15 @@ function buildInjectCode(price: CoursePrice): string {
     for(var i=0;i<roots.length;i++){
       var root=roots[i];root.style.display="";
       if(!root.querySelector("[data-vls-price-field]")){root.innerHTML=fullCard(p,c);continue;}
-      setText(root,"regular",curr+money(c.regular));
-      setText(root,"discount",money(c.discount)+"% OFF");
+      var hasDiscount=c.discount>0&&c.saving>0;
+      root.querySelectorAll("[data-vls-price-discount-only]").forEach(function(node){node.style.display=hasDiscount?"":"none";});
+      setText(root,"regular",hasDiscount?curr+money(c.regular):"");
+      setText(root,"discount",hasDiscount?money(c.discount)+"% OFF":"");
       setText(root,"price",curr+money(c.final));
       setText(root,"currency",curr);
       setText(root,"amount",money(c.final));
-      setText(root,"saving",curr+money(c.saving));
-      setText(root,"saveText",(p.savingPrefix||"You save")+" "+curr+money(c.saving)+" on this course");
+      setText(root,"saving",hasDiscount?curr+money(c.saving):"");
+      setText(root,"saveText",hasDiscount?(p.savingPrefix||"You save")+" "+curr+money(c.saving)+" on this course":"");
       setText(root,"priceLabel",p.priceLabel||"YOUR PRICE");
       setText(root,"cta",p.ctaText||"");
       setHref(root,"cta",p.ctaUrl||"#");

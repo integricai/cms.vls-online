@@ -23,6 +23,7 @@ export function calculatedPrice(price: CoursePrice): { discount: number; yourPri
 
 export function generateCoursePriceHtml(price: CoursePrice): string {
   const { discount, yourPrice, saving } = calculatedPrice(price);
+  const hasDiscount = discount > 0 && saving > 0;
   const currency = escapeHtml(price.currency || '£');
   const regular = money(price.regularPrice);
   const finalPrice = money(yourPrice);
@@ -59,13 +60,13 @@ export function generateCoursePriceHtml(price: CoursePrice): string {
     ${price.title ? `<div class="vls-price-title">${escapeHtml(price.title)}</div>` : ''}
   </div>
   <div class="vls-price-body">
-    <div class="vls-price-row">
+    ${hasDiscount ? `<div class="vls-price-row">
       <span class="vls-price-regular">${currency}${escapeHtml(regular)}</span>
       <span class="vls-price-discount">${escapeHtml(money(discount))}% OFF</span>
-    </div>
+    </div>` : ''}
     <div class="vls-price-label">${escapeHtml(price.priceLabel || 'YOUR PRICE')}</div>
     <div class="vls-price-final"><span class="vls-price-currency">${currency}</span><span class="vls-price-amount">${escapeHtml(finalPrice)}</span></div>
-    <div class="vls-price-save">🎉 ${escapeHtml(price.savingPrefix || 'You save')} ${currency}${escapeHtml(saved)} on this course</div>
+    ${hasDiscount ? `<div class="vls-price-save">🎉 ${escapeHtml(price.savingPrefix || 'You save')} ${currency}${escapeHtml(saved)} on this course</div>` : ''}
     ${includes.length ? `<div class="vls-price-inc-label">${escapeHtml(price.includesLabel || 'THIS COURSE INCLUDES')}</div>
     <ul class="vls-price-inc">${includes.map(item => `<li><span class="vls-price-check">✓</span><span>${escapeHtml(item)}</span></li>`).join('')}</ul>` : ''}
     ${price.ctaText ? `<a class="vls-price-cta" href="${escapeHtml(price.ctaUrl || '#')}">${escapeHtml(price.ctaText)}</a>` : ''}

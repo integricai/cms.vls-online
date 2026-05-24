@@ -73,6 +73,7 @@ export const NAV: NavGroup[] = [
           { to: '/full-screen/hero-banner-v2', label: 'Hero Banner v2' },
           { to: '/full-screen/hero-banner-v3', label: 'Hero Banner v3' },
           { to: '/full-screen/book-meeting',   label: 'Book a Meeting' },
+          { to: '/full-screen/payment-plans',  label: 'Payment Plans' },
         ],
       },
       {

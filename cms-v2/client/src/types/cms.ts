@@ -850,3 +850,18 @@ export interface Bv2State {
   steps: Bv2Step[];
 }
 export interface Bv2Component { id: string; name: string; data: Bv2State; }
+
+// ── Payment Plans (PP) — live price cards from Global Course Prices ──────────
+export interface PaymentPlanCard { priceId: string; label: string; badge: string; featured: boolean; accent: string; ctaStyle: 'solid' | 'outline'; }
+export interface PaymentIncludedItem { text: string; }
+export interface PaymentPlansState {
+  bg: string;
+  padTop: number; padBot: number; padLeft: number; padRight: number;
+  maxWidth: number; sectionBg: string; border: string; radius: number;
+  eyebrow: string; eyebrowColor: string;
+  title: string; desc: string;
+  cards: PaymentPlanCard[];
+  includedBg: string; includedTitle: string; includedItems: PaymentIncludedItem[];
+  helpText: string;
+}
+export interface PaymentPlansComponent { id: string; name: string; data: PaymentPlansState; }
