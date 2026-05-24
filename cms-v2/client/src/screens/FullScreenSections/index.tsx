@@ -1628,9 +1628,6 @@ function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
   const [published, setPublished] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [courses, setCourses] = useState<ActiveCourse[]>([]);
-  const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ fetched: number; inserted: number; updated: number; deactivated: number } | null>(null);
-  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     api.get<any>('/content/vls-payment-plan-components').then(row => {
@@ -1646,19 +1643,6 @@ function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
     api.get<ActiveCourse[]>('/courses/active').then(data => setCourses(data || [])).catch(() => {});
   }, []);
 
-  async function syncCourses() {
-    setSyncing(true); setSyncResult(null); setSyncError(null);
-    try {
-      const result = await api.post<{ fetched: number; inserted: number; updated: number; deactivated: number }>('/courses/sync', {});
-      setSyncResult(result);
-      const fresh = await api.get<ActiveCourse[]>('/courses/active');
-      setCourses(fresh || []);
-    } catch {
-      setSyncError('Sync failed — check Zenler credentials or try again.');
-    } finally {
-      setSyncing(false);
-    }
-  }
 
   const upd = useCallback((p: Partial<PaymentPlansState>) => { setState(prev => ({ ...prev, ...p })); setSaved(false); }, []);
 
@@ -1717,21 +1701,6 @@ function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
         onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
         onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Payment Plans', generatePaymentPlansHtml(state, activeId || '')))} />
-      <div className="border-b border-slate-100 px-5 py-3 bg-blue-50/60">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1.5">Zenler Course Sync</p>
-        <button onClick={syncCourses} disabled={syncing} className="btn-ghost w-full justify-center text-xs">
-          {syncing ? 'Syncing…' : '↻ Sync Courses from Zenler'}
-        </button>
-        {syncResult && (
-          <p className="mt-1.5 text-[11px] text-slate-500">
-            {syncResult.fetched} fetched · {syncResult.inserted} new · {syncResult.updated} updated · {syncResult.deactivated} deactivated
-          </p>
-        )}
-        {syncError && <p className="mt-1.5 text-[11px] text-red-500">{syncError}</p>}
-        {courses.length > 0 && !syncResult && (
-          <p className="mt-1 text-[11px] text-slate-400">{courses.length} course{courses.length !== 1 ? 's' : ''} available</p>
-        )}
-      </div>
       <div className="border-b border-slate-100 px-5 py-3">
         <button onClick={publish} disabled={publishing} className="btn-success w-full justify-center text-xs">
           {publishing ? 'Publishing...' : published ? 'Published live updates' : 'Publish Payment Plans'}

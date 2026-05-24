@@ -26,8 +26,7 @@ import FeatureCardsV4 from './screens/FeatureCardsV4';
 import StepCards from './screens/StepCards';
 import LegalPage from './screens/LegalPage';
 import Team from './screens/Team';
-import UserManagement from './screens/UserManagement';
-import MenuManagement from './screens/MenuManagement';
+import Settings from './screens/Settings';
 import Forms from './screens/Forms';
 import FAQ from './screens/FAQ';
 import Events from './screens/Events';
@@ -38,7 +37,7 @@ import SplitScreenSections from './screens/SplitScreenSections';
 import VerticalCards from './screens/VerticalCards';
 import GradientBannerSection from './screens/GradientBannerSection';
 import PageDescWithMenu from './screens/PageDescWithMenu';
-import PaymentCards from './screens/PaymentCards';
+
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   return getToken() ? <>{children}</> : <Navigate to="/login" replace />;
@@ -96,9 +95,9 @@ export default function App() {
           <Route path="/split-screen/:type"    element={<SplitScreenSections />} />
           <Route path="/page-desc-with-menu"  element={<PageDescWithMenu />} />
           <Route path="/split-screen-sections" element={<Navigate to="/split-screen/left-hero" replace />} />
-          <Route path="/payment-cards"     element={<RequireAdmin><PaymentCards /></RequireAdmin>} />
-          <Route path="/settings/users"   element={<RequireAdmin><UserManagement /></RequireAdmin>} />
-          <Route path="/settings/menu"    element={<RequireAdmin><MenuManagement /></RequireAdmin>} />
+          <Route path="/settings"          element={<RequireAdmin><Settings /></RequireAdmin>} />
+          <Route path="/settings/users"   element={<Navigate to="/settings" replace />} />
+          <Route path="/settings/menu"    element={<Navigate to="/settings" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

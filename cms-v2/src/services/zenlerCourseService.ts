@@ -23,7 +23,7 @@ export async function fetchZenlerCourses(): Promise<ZenlerCourseDto[]> {
     );
   }
 
-  const baseUrl = `https://${accountName}.newzenler.com/api/v1/courses`;
+  const baseUrl = `https://${accountName.toLowerCase()}.newzenler.com/api/v1/courses`;
   const allCourses: ZenlerCourseDto[] = [];
   let page = 1;
   const perPage = 100;
@@ -38,12 +38,16 @@ export async function fetchZenlerCourses(): Promise<ZenlerCourseDto[]> {
     });
 
     if (!response.ok) {
+      let detail = '';
+      try { detail = await response.text(); } catch { /* ignore */ }
+      console.error('[zenler] HTTP', response.status, url, detail.slice(0, 400));
       throw new Error(
-        `Zenler API error: ${response.status} ${response.statusText} — check ZENLER_ACCOUNT_NAME and ZENLER_API_KEY`,
+        `Zenler API returned ${response.status} ${response.statusText}${detail ? ': ' + detail.slice(0, 200) : ''}`,
       );
     }
 
     const body = await response.json() as unknown;
+    console.log('[zenler] page', page, 'raw keys:', Object.keys((body as object) ?? {}));
     const items = extractItems(body);
 
     if (items.length === 0) break;
