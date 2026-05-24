@@ -316,14 +316,36 @@ function normBv2(raw: any): Bv2State {
 
 function normPaymentPlans(raw: any): PaymentPlansState {
   const d = { ...makePaymentPlans(), ...(raw || {}) };
+  const defaults = makePaymentPlans();
+  const defaultCard = defaults.cards[0];
   return {
     ...d,
     padTop: normalizeNum(d.padTop, 48), padBot: normalizeNum(d.padBot, 48),
     padLeft: normalizeNum(d.padLeft, 32), padRight: normalizeNum(d.padRight, 32),
     maxWidth: normalizeNum(d.maxWidth, 1280),
     radius: normalizeNum(d.radius, 26),
-    cards: d.cards || [],
-    includedItems: d.includedItems || [],
+    cards: Array.isArray(d.cards) ? d.cards.map((card: any, index: number) => {
+      const fallback = defaults.cards[index] || defaultCard;
+      return {
+        ...fallback,
+        ...(card || {}),
+        label: card?.label ?? fallback.label ?? '',
+        title: card?.title ?? fallback.title ?? '',
+        regularPrice: normalizeNum(card?.regularPrice, fallback.regularPrice ?? 0),
+        discountPercent: normalizeNum(card?.discountPercent, fallback.discountPercent ?? 0),
+        currency: card?.currency ?? fallback.currency ?? '$',
+        priceLabel: card?.priceLabel ?? fallback.priceLabel ?? 'Your price',
+        feature: card?.feature ?? fallback.feature ?? '',
+        badge: card?.badge ?? '',
+        accent: card?.accent ?? fallback.accent ?? '#204280',
+        ctaText: card?.ctaText ?? fallback.ctaText ?? 'Enrol Now ->',
+        ctaUrl: card?.ctaUrl ?? fallback.ctaUrl ?? '#',
+        ctaStyle: card?.ctaStyle === 'outline' ? 'outline' : 'solid',
+        refundText: card?.refundText ?? fallback.refundText ?? '',
+        featured: Boolean(card?.featured),
+      };
+    }) : defaults.cards,
+    includedItems: Array.isArray(d.includedItems) ? d.includedItems.map((item: any) => ({ text: item?.text ?? '' })) : defaults.includedItems,
   };
 }
 

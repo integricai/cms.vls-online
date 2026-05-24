@@ -680,10 +680,14 @@ function ppCardCalc(card: { regularPrice: number; discountPercent: number }) {
   return { regular, discount, saving, final: Math.max(0, regular - saving), hasDiscount: discount > 0 && saving > 0 };
 }
 
+function ppText(value: unknown): string {
+  return typeof value === 'string' ? value : value == null ? '' : String(value);
+}
+
 export function generatePaymentPlansHtml(d: PaymentPlansState, componentId = ''): string {
   const id = uid();
-  const cards = (d.cards || []).filter(card => card.title.trim() || card.label.trim());
-  const included = (d.includedItems || []).filter(item => item.text.trim());
+  const cards = (d.cards || []).filter(card => ppText(card.title).trim() || ppText(card.label).trim());
+  const included = (d.includedItems || []).filter(item => ppText(item.text).trim());
   const L: string[] = [];
 
   L.push('<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">');
