@@ -28,6 +28,8 @@ function CoursesTab() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [debugData, setDebugData] = useState<string | null>(null);
+  const [debugging, setDebugging] = useState(false);
 
   useEffect(() => {
     api.get<Course[]>('/courses')
@@ -50,16 +52,35 @@ function CoursesTab() {
     }
   }
 
+  async function runDebug() {
+    setDebugging(true); setDebugData(null);
+    try {
+      const raw = await api.get<unknown>('/courses/zenler-debug');
+      setDebugData(JSON.stringify(raw, null, 2));
+    } catch (e) {
+      setDebugData('Error: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setDebugging(false);
+    }
+  }
+
   return (
     <div className="p-6 max-w-3xl">
       <h2 className="mb-1 text-sm font-bold text-slate-700">Zenler Course Sync</h2>
       <p className="mb-3 text-xs text-slate-500">
-        Sync courses from your Zenler school into the local database. Synced courses become available
-        as dropdown options when configuring payment cards.
+        Sync courses from your Zenler school into the local database. Synced courses become
+        available as dropdown options when configuring payment cards.
       </p>
-      <button onClick={sync} disabled={syncing} className="btn-primary mb-4">
-        {syncing ? 'Syncing…' : '↻ Sync Courses from Zenler'}
-      </button>
+
+      <div className="mb-4 flex gap-2">
+        <button onClick={sync} disabled={syncing} className="btn-primary">
+          {syncing ? 'Syncing…' : '↻ Sync Courses from Zenler'}
+        </button>
+        <button onClick={runDebug} disabled={debugging} className="btn-ghost text-xs">
+          {debugging ? 'Fetching…' : '🔍 Debug raw response'}
+        </button>
+      </div>
+
       {syncResult && (
         <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
           Sync complete — <strong>{syncResult.fetched}</strong> fetched ·{' '}
@@ -70,6 +91,14 @@ function CoursesTab() {
       {syncError && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {syncError}
+        </div>
+      )}
+      {debugData && (
+        <div className="mb-4">
+          <p className="mb-1 text-xs font-semibold text-slate-500">Raw Zenler API response (page 1):</p>
+          <pre className="overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-700 max-h-96">
+            {debugData}
+          </pre>
         </div>
       )}
 

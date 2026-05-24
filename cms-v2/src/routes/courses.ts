@@ -13,6 +13,24 @@ const router = Router();
 
 router.use(authGuard);
 
+// ── Debug: returns raw first-page Zenler response (admin only) ──────────────
+
+router.get('/zenler-debug', requireRole('admin'), async (_req: Request, res: Response) => {
+  const apiKey = process.env.ZENLER_API_KEY;
+  const accountName = process.env.ZENLER_ACCOUNT_NAME;
+  if (!apiKey || !accountName) return res.status(500).json({ ok: false, error: 'Zenler env vars missing' });
+  const url = `https://${accountName.toLowerCase()}.newzenler.com/api/v1/courses?page=1`;
+  try {
+    const r = await fetch(url, {
+      headers: { 'X-API-KEY': apiKey, 'X-Account-Name': accountName, 'Accept': 'application/json' },
+    });
+    const body = await r.json();
+    return res.json({ ok: true, status: r.status, data: body });
+  } catch (err) {
+    return res.status(502).json({ ok: false, error: String(err) });
+  }
+});
+
 // ── Course sync (admin only) ──────────────────────────────────────
 
 router.post('/sync', requireRole('admin'), async (_req: Request, res: Response) => {
