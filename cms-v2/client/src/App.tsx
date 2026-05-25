@@ -10,6 +10,7 @@ import BlogHeader from './screens/BlogHeader';
 import Footer from './screens/Footer';
 import Banner from './screens/Banner';
 import CoursePrice from './screens/CoursePrice';
+import PaymentCards from './screens/PaymentCards';
 import PromotionSection from './screens/PromotionSection';
 import ContactFooter from './screens/ContactFooter';
 import CourseHero from './screens/CourseHero';
@@ -66,6 +67,7 @@ export default function App() {
           <Route path="/footer"            element={<Footer />} />
           <Route path="/banner"            element={<Banner />} />
           <Route path="/course-price"      element={<CoursePrice />} />
+          <Route path="/payment-cards"     element={<PaymentCards />} />
           <Route path="/promotion-section" element={<PromotionSection />} />
           <Route path="/contact-footer"    element={<ContactFooter />} />
           <Route path="/home-hero"         element={<HomeHero />} />

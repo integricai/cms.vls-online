@@ -84,8 +84,10 @@ router.post(
         courseId,
         title,
         description,
+        optionType,
         normalPrice,
         discountPrice,
+        isDiscountActive,
         currency,
         ctaButtonText,
         isActive,
@@ -93,8 +95,10 @@ router.post(
         courseId?: number;
         title?: string;
         description?: string;
+        optionType?: string | null;
         normalPrice?: number;
         discountPrice?: number | null;
+        isDiscountActive?: boolean;
         currency?: string;
         ctaButtonText?: string;
         isActive?: boolean;
@@ -105,13 +109,24 @@ router.post(
           .status(400)
           .json({ ok: false, error: 'courseId, title and normalPrice are required' });
       }
+      if (normalPrice <= 0) {
+        return res.status(400).json({ ok: false, error: 'normalPrice must be greater than zero' });
+      }
+      if (isDiscountActive && (!discountPrice || discountPrice <= 0)) {
+        return res.status(400).json({ ok: false, error: 'discountPrice must be greater than zero when active' });
+      }
+      if (discountPrice != null && discountPrice > normalPrice) {
+        return res.status(400).json({ ok: false, error: 'discountPrice should not be greater than normalPrice' });
+      }
 
       const card = await createPaymentCard({
         courseId,
         title,
         description: description ?? '',
+        optionType: optionType ?? null,
         normalPrice,
         discountPrice: discountPrice ?? null,
+        isDiscountActive: isDiscountActive ?? false,
         currency: currency ?? 'GBP',
         ctaButtonText: ctaButtonText ?? 'Enrol Now',
         isActive: isActive ?? true,
@@ -138,8 +153,10 @@ router.put(
         courseId:      req.body.courseId,
         title:         req.body.title,
         description:   req.body.description,
+        optionType:    req.body.optionType,
         normalPrice:   req.body.normalPrice,
         discountPrice: req.body.discountPrice,
+        isDiscountActive: req.body.isDiscountActive,
         currency:      req.body.currency,
         ctaButtonText: req.body.ctaButtonText,
         isActive:      req.body.isActive,

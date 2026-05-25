@@ -88,15 +88,36 @@ export interface CoursePaymentCard {
   id: number;
   courseId: number;
   courseName?: string;
+  zenlerCourseId?: string;
+  courseSlug?: string | null;
   title: string;
   description: string;
+  optionType: string | null;
   normalPrice: number;
   discountPrice: number | null;
+  isDiscountActive: boolean;
+  finalDisplayPrice: number;
   currency: string;
   ctaButtonText: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface PublicPaymentOption {
+  id: string;
+  zenlerCourseId: string;
+  courseTitle: string;
+  courseSlug: string | null;
+  paymentCardTitle: string;
+  description: string;
+  optionType: string | null;
+  normalPrice: number;
+  discountedPrice: number | null;
+  isDiscountActive: boolean;
+  finalDisplayPrice: number;
+  currency: string;
+  buttonText: string;
 }
 
 export interface CourseSyncResult {

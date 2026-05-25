@@ -43,6 +43,15 @@ export async function listActiveCourses(): Promise<Course[]> {
   return (rows as DbRow[]).map(rowToCourse);
 }
 
+export async function getCourseByZenlerCourseId(zenlerCourseId: string): Promise<Course | null> {
+  const rows = await sql`
+    SELECT * FROM courses
+    WHERE zenler_course_id = ${zenlerCourseId}
+    LIMIT 1
+  `;
+  return rows[0] ? rowToCourse(rows[0] as DbRow) : null;
+}
+
 export async function upsertCourse(data: {
   zenlerCourseId: string;
   name: string;

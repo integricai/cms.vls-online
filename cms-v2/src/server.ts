@@ -10,6 +10,9 @@ import usersRouter from './routes/users';
 import publicRouter from './routes/public';
 import blogRouter from './routes/blog';
 import coursesRouter from './routes/courses';
+import adminPaymentsRouter from './routes/adminPayments';
+import paymentOptionsRouter from './routes/paymentOptions';
+import paymentsRouter, { stripeWebhookHandler } from './routes/payments';
 import { sendErrorAlert } from './utils/errorAlert';
 import { getContent } from './models/content';
 import { listBlogPosts } from './models/blog';
@@ -25,6 +28,8 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN ?? '*',
   credentials: true,
 }));
+
+app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -87,6 +92,9 @@ app.use('/api/content', contentRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/blog', blogRouter);
 app.use('/api/courses', coursesRouter);
+app.use('/api/admin', adminPaymentsRouter);
+app.use('/api/payment-options', paymentOptionsRouter);
+app.use('/api/payments', paymentsRouter);
 app.use('/api/public', publicRouter);
 
 app.get('/blog', async (_req, res, next) => {

@@ -75,10 +75,12 @@ function emptyForm() {
     courseId: 0,
     title: '',
     description: '',
+    optionType: 'Full Course',
     normalPrice: '',
     discountPrice: '',
+    isDiscountActive: true,
     currency: 'GBP',
-    ctaButtonText: 'Enrol Now',
+    ctaButtonText: 'Pay Now',
     isActive: true,
   };
 }
@@ -99,10 +101,10 @@ function CardForm({
   return (
     <div className="space-y-0">
       <p className="section-label">Course</p>
-      <Field label="Course" hint="Only active (synced) courses are listed">
+      <Field label="Zenler Course" hint="Courses are fetched server-side from Zenler and synced locally">
         {courses.length === 0 ? (
           <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            No active courses found. Run "Sync Courses from Zenler" first.
+            No active courses found. Refresh Zenler courses first.
           </p>
         ) : (
           <select
@@ -134,6 +136,18 @@ function CardForm({
           placeholder="Optional short description shown on the card"
           onChange={e => onChange({ description: e.target.value })}
         />
+      </Field>
+      <Field label="Option type">
+        <select
+          className="input"
+          value={form.optionType}
+          onChange={e => onChange({ optionType: e.target.value })}
+        >
+          <option value="Full Course">Full Course</option>
+          <option value="Revision Course">Revision Course</option>
+          <option value="Mock Exam">Mock Exam</option>
+          <option value="Other">Other</option>
+        </select>
       </Field>
 
       <p className="section-label">Pricing</p>
@@ -167,6 +181,16 @@ function CardForm({
           />
         </Field>
       </div>
+      <Field label="Discount active">
+        <select
+          className="input"
+          value={String(form.isDiscountActive)}
+          onChange={e => onChange({ isDiscountActive: e.target.value === 'true' })}
+        >
+          <option value="true">Active - use discounted price at checkout</option>
+          <option value="false">Inactive - use normal price at checkout</option>
+        </select>
+      </Field>
 
       <p className="section-label">CTA</p>
       <Field label="Button text">
@@ -197,8 +221,10 @@ function cardToForm(card: CoursePaymentCard): CardForm {
     courseId: card.courseId,
     title: card.title,
     description: card.description,
+    optionType: card.optionType ?? 'Full Course',
     normalPrice: String(card.normalPrice),
     discountPrice: card.discountPrice != null ? String(card.discountPrice) : '',
+    isDiscountActive: card.isDiscountActive,
     currency: card.currency,
     ctaButtonText: card.ctaButtonText,
     isActive: card.isActive,
@@ -210,10 +236,12 @@ function formToPayload(form: CardForm) {
     courseId: form.courseId,
     title: form.title.trim(),
     description: form.description.trim(),
+    optionType: form.optionType.trim() || null,
     normalPrice: Number(form.normalPrice),
     discountPrice: form.discountPrice !== '' ? Number(form.discountPrice) : null,
+    isDiscountActive: form.isDiscountActive,
     currency: form.currency.trim() || 'GBP',
-    ctaButtonText: form.ctaButtonText.trim() || 'Enrol Now',
+    ctaButtonText: form.ctaButtonText.trim() || 'Pay Now',
     isActive: form.isActive,
   };
 }
@@ -234,6 +262,7 @@ export default function PaymentCardsScreen() {
 
   async function loadData() {
     try {
+      if (isAdmin) await api.get<{ courses: Array<{ zenlerCourseId: string }> }>('/admin/zenler/courses').catch(() => null);
       const [cardsData, coursesData] = await Promise.all([
         api.get<CoursePaymentCard[]>('/courses/payment-cards'),
         api.get<Course[]>('/courses/active'),
@@ -283,17 +312,45 @@ export default function PaymentCardsScreen() {
       setSaveError('Normal price must be greater than 0.');
       return;
     }
+    if (payload.isDiscountActive && (!payload.discountPrice || payload.discountPrice <= 0)) {
+      setSaveError('Discounted price must be greater than 0 when the discount is active.');
+      return;
+    }
+    if (payload.discountPrice != null && payload.discountPrice > payload.normalPrice) {
+      setSaveError('Discounted price cannot be greater than the normal price.');
+      return;
+    }
+    const selectedCourse = courses.find(course => course.id === payload.courseId);
+    if (!selectedCourse) {
+      setSaveError('Selected course could not be found.');
+      return;
+    }
     setSaving(true);
     setSaveError('');
     try {
+      const adminPayload = {
+        id: mode === 'edit' ? selectedId : undefined,
+        zenlerCourseId: selectedCourse.zenlerCourseId,
+        courseTitle: selectedCourse.name,
+        courseSlug: selectedCourse.slug,
+        paymentCardTitle: payload.title,
+        description: payload.description,
+        optionType: payload.optionType,
+        normalPrice: payload.normalPrice,
+        discountedPrice: payload.discountPrice,
+        isDiscountActive: payload.isDiscountActive,
+        currency: payload.currency,
+        buttonText: payload.ctaButtonText,
+        isActive: payload.isActive,
+      };
       if (mode === 'create') {
-        const created = await api.post<CoursePaymentCard>('/courses/payment-cards', payload);
+        const created = await api.post<CoursePaymentCard>('/admin/payment-options', adminPayload);
         setCards(prev => [created, ...prev]);
         setSelectedId(created.id);
         setMode('edit');
         setForm(cardToForm(created));
       } else if (mode === 'edit' && selectedId != null) {
-        const updated = await api.put<CoursePaymentCard>(`/courses/payment-cards/${selectedId}`, payload);
+        const updated = await api.post<CoursePaymentCard>('/admin/payment-options', adminPayload);
         setCards(prev => prev.map(c => c.id === selectedId ? updated : c));
         setForm(cardToForm(updated));
       }
@@ -328,7 +385,7 @@ export default function PaymentCardsScreen() {
       <div className="shrink-0 border-b border-slate-200 bg-white px-5 py-4">
         <h1 className="text-base font-bold text-slate-900">Payment Cards</h1>
         <p className="mt-0.5 text-xs text-slate-400">
-          Database-backed payment cards linked to Zenler courses. Stripe checkout not yet implemented.
+          Database-backed payment options linked to Zenler courses. Checkout uses saved trusted prices only.
         </p>
       </div>
 
