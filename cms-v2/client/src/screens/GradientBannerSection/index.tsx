@@ -50,18 +50,22 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   );
 }
 
-function SectionList({ sections, activeId, onSelect, onCreate, onDelete }: {
+function SectionList({ sections, activeId, onSelect, onCreate, onDuplicate, onDelete }: {
   sections: GradientBannerSection[];
   activeId: string | null;
   onSelect: (id: string) => void;
   onCreate: () => void;
+  onDuplicate: () => void;
   onDelete: (id: string) => void;
 }) {
   return (
     <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Saved Sections</span>
-        <button onClick={onCreate} className="btn-ghost px-2 py-1 text-xs">+ New</button>
+        <div className="flex gap-2">
+          <button onClick={onCreate} className="btn-ghost px-2 py-1 text-xs">+ New</button>
+          {activeId && <button onClick={onDuplicate} className="btn-ghost px-2 py-1 text-xs">Duplicate</button>}
+        </div>
       </div>
       <div className="space-y-1">
         {sections.map(section => (
@@ -169,6 +173,18 @@ export default function GradientBannerSectionScreen() {
     setSaved(false);
   }
 
+  function duplicateSection() {
+    if (!section) return;
+    const next = {
+      ...JSON.parse(JSON.stringify(section)) as GradientBannerSection,
+      id: `gbs-${Date.now().toString(36)}`,
+      name: `Copy of ${section.name || 'Gradient Banner'}`,
+    };
+    setSections(prev => [...prev, next]);
+    setActiveId(next.id);
+    setSaved(false);
+  }
+
   function deleteSection(id: string) {
     setSections(prev => {
       const next = prev.filter(item => item.id !== id);
@@ -207,7 +223,7 @@ export default function GradientBannerSectionScreen() {
           </button>
         </div>
         <div className="px-5 py-4">
-          <SectionList sections={sections} activeId={activeId} onSelect={setActiveId} onCreate={createSection} onDelete={deleteSection} />
+          <SectionList sections={sections} activeId={activeId} onSelect={setActiveId} onCreate={createSection} onDuplicate={duplicateSection} onDelete={deleteSection} />
           {section && <BannerForm section={section} onChange={updateSection} />}
         </div>
       </div>

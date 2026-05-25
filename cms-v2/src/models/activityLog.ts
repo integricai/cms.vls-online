@@ -59,6 +59,11 @@ function rowToLog(row: DbRow): ActivityLog {
   };
 }
 
+function isMissingActivityLogTable(error: unknown): boolean {
+  const err = error as { code?: string; message?: string } | null;
+  return err?.code === '42P01' || /cms_activity_logs/i.test(err?.message ?? '') && /does not exist|relation/i.test(err?.message ?? '');
+}
+
 export async function createActivityLog(data: {
   userId: number | null;
   userEmail: string | null;
@@ -73,20 +78,25 @@ export async function createActivityLog(data: {
   afterJson?: unknown;
   ipAddress?: string | null;
   userAgent?: string | null;
-}): Promise<ActivityLog> {
-  const rows = await sql`
-    INSERT INTO cms_activity_logs
-      (user_id, user_email, username, user_role, action, component_key, component_name,
-       summary, changed_paths, before_json, after_json, ip_address, user_agent)
-    VALUES
-      (${data.userId}, ${data.userEmail}, ${data.username}, ${data.userRole}, ${data.action},
-       ${data.componentKey}, ${data.componentName ?? null}, ${data.summary},
-       ${JSON.stringify(data.changedPaths)}, ${data.beforeJson == null ? null : JSON.stringify(data.beforeJson)},
-       ${data.afterJson == null ? null : JSON.stringify(data.afterJson)}, ${data.ipAddress ?? null},
-       ${data.userAgent ?? null})
-    RETURNING *
-  `;
-  return rowToLog(rows[0] as DbRow);
+}): Promise<ActivityLog | null> {
+  try {
+    const rows = await sql`
+      INSERT INTO cms_activity_logs
+        (user_id, user_email, username, user_role, action, component_key, component_name,
+         summary, changed_paths, before_json, after_json, ip_address, user_agent)
+      VALUES
+        (${data.userId}, ${data.userEmail}, ${data.username}, ${data.userRole}, ${data.action},
+         ${data.componentKey}, ${data.componentName ?? null}, ${data.summary},
+         ${JSON.stringify(data.changedPaths)}, ${data.beforeJson == null ? null : JSON.stringify(data.beforeJson)},
+         ${data.afterJson == null ? null : JSON.stringify(data.afterJson)}, ${data.ipAddress ?? null},
+         ${data.userAgent ?? null})
+      RETURNING *
+    `;
+    return rowToLog(rows[0] as DbRow);
+  } catch (error) {
+    if (isMissingActivityLogTable(error)) return null;
+    throw error;
+  }
 }
 
 export async function listActivityLogs(options: {
@@ -98,25 +108,30 @@ export async function listActivityLogs(options: {
   const limit = Math.max(1, Math.min(100, options.limit ?? 25));
   const requestedUserId = options.userId ?? null;
 
-  const rows = options.isAdmin
-    ? requestedUserId
-      ? await sql`
-          SELECT * FROM cms_activity_logs
-          WHERE user_id = ${requestedUserId}
-          ORDER BY created_at DESC
-          LIMIT ${limit}
-        `
+  try {
+    const rows = options.isAdmin
+      ? requestedUserId
+        ? await sql`
+            SELECT * FROM cms_activity_logs
+            WHERE user_id = ${requestedUserId}
+            ORDER BY created_at DESC
+            LIMIT ${limit}
+          `
+        : await sql`
+            SELECT * FROM cms_activity_logs
+            ORDER BY created_at DESC
+            LIMIT ${limit}
+          `
       : await sql`
           SELECT * FROM cms_activity_logs
+          WHERE user_id = ${options.currentUserId}
           ORDER BY created_at DESC
           LIMIT ${limit}
-        `
-    : await sql`
-        SELECT * FROM cms_activity_logs
-        WHERE user_id = ${options.currentUserId}
-        ORDER BY created_at DESC
-        LIMIT ${limit}
-      `;
+        `;
 
-  return (rows as DbRow[]).map(rowToLog);
+    return (rows as DbRow[]).map(rowToLog);
+  } catch (error) {
+    if (isMissingActivityLogTable(error)) return [];
+    throw error;
+  }
 }

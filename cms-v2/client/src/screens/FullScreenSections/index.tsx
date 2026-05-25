@@ -26,6 +26,7 @@ import { wrapGeneratedHtml } from '../../utils/htmlComments';
 
 function tv<K extends Parameters<typeof normalize>[1]>(v: TextValue, k: K) { return normalize(v as any, k); }
 function hex(v: string, fb = '#ffffff') { return /^#[0-9a-fA-F]{6}$/.test(v) ? v : fb; }
+function cloneState<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T; }
 
 // ── Default states ─────────────────────────────────────────────────────────────
 
@@ -463,6 +464,13 @@ function DcsTab({ onHtml }: { onHtml: (html: string) => void }) {
     if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
   }
 
+  function duplicate() {
+    setActiveId(null);
+    setName(`Copy of ${name || 'Two Column v1'}`);
+    setState(cloneState(state));
+    setSaved(false);
+  }
+
   async function save() {
     if (!name.trim()) { alert('Enter a component name.'); return; }
     setSaving(true);
@@ -486,7 +494,7 @@ function DcsTab({ onHtml }: { onHtml: (html: string) => void }) {
   return (
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
-        onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
+        onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
         onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Two Column v1', generateDcsHtml(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
@@ -563,6 +571,13 @@ function Dcs2Tab({ onHtml }: { onHtml: (html: string) => void }) {
     if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
   }
 
+  function duplicate() {
+    setActiveId(null);
+    setName(`Copy of ${name || 'Two Column v2'}`);
+    setState(cloneState(state));
+    setSaved(false);
+  }
+
   async function save() {
     if (!name.trim()) { alert('Enter a component name.'); return; }
     setSaving(true);
@@ -586,7 +601,7 @@ function Dcs2Tab({ onHtml }: { onHtml: (html: string) => void }) {
   return (
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
-        onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
+        onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
         onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Two Column v2', generateDcs2Html(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
@@ -682,6 +697,13 @@ function Dcs3Tab({ onHtml }: { onHtml: (html: string) => void }) {
     if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
   }
 
+  function duplicate() {
+    setActiveId(null);
+    setName(`Copy of ${name || 'Two Column v3'}`);
+    setState(cloneState(state));
+    setSaved(false);
+  }
+
   async function save() {
     if (!name.trim()) { alert('Enter a component name.'); return; }
     setSaving(true);
@@ -706,7 +728,7 @@ function Dcs3Tab({ onHtml }: { onHtml: (html: string) => void }) {
   return (
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
-        onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
+        onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
         onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Two Column v3', generateDcs3Html(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
@@ -795,6 +817,13 @@ function ReachTab({ onHtml }: { onHtml: (html: string) => void }) {
     if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
   }
 
+  function duplicate() {
+    setActiveId(null);
+    setName(`Copy of ${name || 'Global Reach'}`);
+    setState(cloneState(state));
+    setSaved(false);
+  }
+
   async function save() {
     if (!name.trim()) { alert('Enter a component name.'); return; }
     setSaving(true);
@@ -819,7 +848,7 @@ function ReachTab({ onHtml }: { onHtml: (html: string) => void }) {
   return (
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
-        onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
+        onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
         onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Global Reach', generateReachHtml(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
@@ -903,6 +932,13 @@ function PhbTab({ onHtml }: { onHtml: (html: string) => void }) {
     if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
   }
 
+  function duplicate() {
+    setActiveId(null);
+    setName(`Copy of ${name || 'Hero Banner'}`);
+    setState(cloneState(state));
+    setSaved(false);
+  }
+
   async function save() {
     if (!name.trim()) { alert('Enter a component name.'); return; }
     setSaving(true);
@@ -924,7 +960,7 @@ function PhbTab({ onHtml }: { onHtml: (html: string) => void }) {
   return (
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
-        onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
+        onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
         onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Hero Banner', generatePhbHtml(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
@@ -1011,6 +1047,13 @@ function Phv2Tab({ onHtml }: { onHtml: (html: string) => void }) {
     if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
   }
 
+  function duplicate() {
+    setActiveId(null);
+    setName(`Copy of ${name || 'Hero Banner v2'}`);
+    setState(cloneState(state));
+    setSaved(false);
+  }
+
   async function save() {
     if (!name.trim()) { alert('Enter a component name.'); return; }
     setSaving(true);
@@ -1035,7 +1078,7 @@ function Phv2Tab({ onHtml }: { onHtml: (html: string) => void }) {
   return (
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
-        onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
+        onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
         onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Hero Banner V2', generatePhv2Html(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
@@ -1145,6 +1188,13 @@ function Phv3Tab({ onHtml }: { onHtml: (html: string) => void }) {
     if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
   }
 
+  function duplicate() {
+    setActiveId(null);
+    setName(`Copy of ${name || 'Hero Banner v3'}`);
+    setState(cloneState(state));
+    setSaved(false);
+  }
+
   async function save() {
     if (!name.trim()) { alert('Enter a component name.'); return; }
     setSaving(true);
@@ -1170,7 +1220,7 @@ function Phv3Tab({ onHtml }: { onHtml: (html: string) => void }) {
   return (
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
-        onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
+        onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
         onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Hero Banner V3', generatePhv3Html(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
@@ -1297,6 +1347,13 @@ function BmsTab({ onHtml }: { onHtml: (html: string) => void }) {
     if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
   }
 
+  function duplicate() {
+    setActiveId(null);
+    setName(`Copy of ${name || 'Book a Meeting'}`);
+    setState(cloneState(state));
+    setSaved(false);
+  }
+
   async function save() {
     if (!name.trim()) { alert('Enter a component name.'); return; }
     setSaving(true);
@@ -1320,7 +1377,7 @@ function BmsTab({ onHtml }: { onHtml: (html: string) => void }) {
   return (
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
-        onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
+        onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
         onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Book a Meeting Section', generateBmsHtml(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
@@ -1432,6 +1489,13 @@ function CbTab({ onHtml }: { onHtml: (html: string) => void }) {
     if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
   }
 
+  function duplicate() {
+    setActiveId(null);
+    setName(`Copy of ${name || 'Content CTA Block'}`);
+    setState(cloneState(state));
+    setSaved(false);
+  }
+
   async function save() {
     if (!name.trim()) { alert('Enter a component name.'); return; }
     setSaving(true);
@@ -1455,7 +1519,7 @@ function CbTab({ onHtml }: { onHtml: (html: string) => void }) {
   return (
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
-        onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
+        onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
         onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Content CTA Block', generateCbHtml(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
@@ -1540,6 +1604,13 @@ function Bv2Tab({ onHtml }: { onHtml: (html: string) => void }) {
     if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
   }
 
+  function duplicate() {
+    setActiveId(null);
+    setName(`Copy of ${name || 'Banner v2'}`);
+    setState(cloneState(state));
+    setSaved(false);
+  }
+
   async function save() {
     if (!name.trim()) { alert('Enter a component name.'); return; }
     setSaving(true);
@@ -1563,7 +1634,7 @@ function Bv2Tab({ onHtml }: { onHtml: (html: string) => void }) {
   return (
     <div className="flex flex-col">
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
-        onSelect={load} onNew={() => load('')} onDelete={del} onNameChange={setName}
+        onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
         onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Banner v2', generateBv2Html(state)))} />
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
         <p className="section-label">Layout</p>
