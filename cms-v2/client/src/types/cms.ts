@@ -110,6 +110,7 @@ export interface FaqSection {
   icon: string;
   title: TextValue;
   titleGap: number;
+  schemaId: string;
   items: FaqItem[];
 }
 

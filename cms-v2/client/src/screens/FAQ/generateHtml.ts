@@ -15,6 +15,13 @@ function stripHtml(value: string) {
   return value.replace(/<[^>]*>/g, '');
 }
 
+function safeJsonLd(value: unknown) {
+  return JSON.stringify(value, null, 2)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+}
+
 function answerInnerHtml(item: FaqItem) {
   const heading = normalize(item.heading, 'faqHeading');
   const para = normalize(item.para, 'faq');
@@ -65,6 +72,7 @@ export function generateFaqHtml(sectionOrItems: FaqSection | FaqItem[]) {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
+    ...(section?.schemaId?.trim() ? { '@id': section.schemaId.trim() } : {}),
     mainEntity: valid.map(item => ({
       '@type': 'Question',
       name: textContent(item.question),
@@ -75,7 +83,7 @@ export function generateFaqHtml(sectionOrItems: FaqSection | FaqItem[]) {
   const lines: string[] = [];
 
   lines.push('<script type="application/ld+json">');
-  lines.push(JSON.stringify(jsonLd, null, 2));
+  lines.push(safeJsonLd(jsonLd));
   lines.push('</script>');
   lines.push('');
   lines.push('<style>');

@@ -31,6 +31,7 @@ function makeSection(): FaqSection {
     icon: '❔',
     title: normalize('Frequently Asked Questions', 'faqTitle'),
     titleGap: 8,
+    schemaId: '',
     items: [],
   };
 }
@@ -59,6 +60,7 @@ function normalizeSection(section: any): FaqSection {
     icon: section?.icon ?? '❔',
     title: normalize(section?.title || 'Frequently Asked Questions', 'faqTitle'),
     titleGap: Number.isFinite(Number(section?.titleGap)) ? Number(section.titleGap) : 8,
+    schemaId: section?.schemaId || '',
     items: (section?.items || []).map(normalizeFaq),
   };
 }
@@ -197,6 +199,7 @@ export default function FAQ() {
       icon: active.icon,
       title: structuredClone(normalize(active.title, 'faqTitle')),
       titleGap: active.titleGap,
+      schemaId: active.schemaId,
       items: active.items.map(item => ({ ...structuredClone(item), id: id('fq') })),
     };
     const index = sections.findIndex(section => section.id === active.id);
@@ -302,6 +305,14 @@ export default function FAQ() {
                 className="input"
                 value={active.titleGap}
                 onChange={e => updateSection({ ...active, titleGap: Number(e.target.value) })}
+              />
+            </Field>
+            <Field label="Schema @id URL" hint="Optional. Example: https://vls-online.com/courses/fma#faq">
+              <input
+                className="input"
+                value={active.schemaId}
+                placeholder="https://vls-online.com/courses/fma#faq"
+                onChange={e => updateSection({ ...active, schemaId: e.target.value })}
               />
             </Field>
             <p className="section-label">Questions</p>
