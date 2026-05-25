@@ -20,7 +20,7 @@ export default function Login() {
       const data = await api.post<{ token: string; user: CurrentUser }>('/auth/login', { username, password });
       setToken(data.token);
       setCurrentUser(data.user);
-      navigate('/home-hero');
+      navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
