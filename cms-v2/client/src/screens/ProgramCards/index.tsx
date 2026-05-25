@@ -147,6 +147,12 @@ export default function ProgramCardsScreen() {
     setActiveId(c.id); setName(c.name); setState(c.data || makeDefault()); setSaved(false);
   }
   function newComponent() { setActiveId(null); setName(''); setState(makeDefault()); setSaved(false); }
+  function duplicateComponent() {
+    setActiveId(null);
+    setName(name ? `${name} (Copy)` : 'Program Cards Copy');
+    setState(JSON.parse(JSON.stringify(state)) as ProgramsState);
+    setSaved(false);
+  }
 
   async function saveComps(comps: ProgramsComponent[]) {
     await api.put('/content/vls-programs', { components: comps });
@@ -257,6 +263,7 @@ export default function ProgramCardsScreen() {
                 {components.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               <button onClick={newComponent} className="btn-ghost text-xs px-3">+ New</button>
+              <button onClick={duplicateComponent} disabled={!name && state.topics.length === 0} className="btn-ghost text-xs px-3">Duplicate</button>
               {activeId && <button onClick={deleteComponent} className="btn-danger text-xs px-3">Delete</button>}
             </div>
             <Field label="Section name (shown in filter pills)">

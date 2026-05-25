@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { getCurrentUser, getToken } from './api/client';
 import Layout from './components/Layout';
+import Dashboard from './screens/Dashboard';
 import Login from './screens/Login';
 import ResetPassword from './screens/ResetPassword';
 import HomeHero from './screens/HomeHero';
@@ -61,7 +62,8 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route index element={<Navigate to="/header" replace />} />
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard"         element={<Dashboard />} />
           <Route path="/header"            element={<Header />} />
           <Route path="/blog-header"       element={<BlogHeader />} />
           <Route path="/footer"            element={<Footer />} />

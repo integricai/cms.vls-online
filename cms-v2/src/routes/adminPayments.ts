@@ -3,6 +3,7 @@ import { authGuard, requireRole } from '../middleware/authGuard';
 import { upsertCourse, getCourseByZenlerCourseId } from '../models/course';
 import { createPaymentCard, updatePaymentCard } from '../models/coursePaymentCard';
 import { fetchZenlerCourses } from '../services/zenlerCourseService';
+import { createActivityLog } from '../models/activityLog';
 
 const router = Router();
 router.use(authGuard, requireRole('admin'));
@@ -87,6 +88,21 @@ router.post('/payment-options', async (req: Request, res: Response, next: NextFu
       : await createPaymentCard(payload);
 
     if (!paymentOption) return res.status(404).json({ ok: false, error: 'Payment option not found' });
+    await createActivityLog({
+      userId: req.user!.userId,
+      userEmail: req.user!.email,
+      username: req.user!.username,
+      userRole: req.user!.role,
+      action: id ? 'update payment option' : 'create payment option',
+      componentKey: 'payment-options',
+      componentName: paymentOption.title,
+      summary: `${id ? 'Updated' : 'Created'} payment option "${paymentOption.title}" for ${course.name}`,
+      changedPaths: ['zenlerCourseId', 'paymentCardTitle', 'normalPrice', 'discountedPrice', 'isDiscountActive', 'isActive'],
+      beforeJson: null,
+      afterJson: paymentOption,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') ?? null,
+    });
     return res.status(id ? 200 : 201).json({ ok: true, data: paymentOption });
   } catch (err) {
     next(err);

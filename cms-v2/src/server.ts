@@ -13,6 +13,7 @@ import coursesRouter from './routes/courses';
 import adminPaymentsRouter from './routes/adminPayments';
 import paymentOptionsRouter from './routes/paymentOptions';
 import paymentsRouter, { stripeWebhookHandler } from './routes/payments';
+import activityRouter from './routes/activity';
 import { sendErrorAlert } from './utils/errorAlert';
 import { getContent } from './models/content';
 import { listBlogPosts } from './models/blog';
@@ -95,6 +96,7 @@ app.use('/api/courses', coursesRouter);
 app.use('/api/admin', adminPaymentsRouter);
 app.use('/api/payment-options', paymentOptionsRouter);
 app.use('/api/payments', paymentsRouter);
+app.use('/api/activity', activityRouter);
 app.use('/api/public', publicRouter);
 
 app.get('/blog', async (_req, res, next) => {

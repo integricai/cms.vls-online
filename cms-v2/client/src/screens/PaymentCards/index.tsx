@@ -292,6 +292,16 @@ export default function PaymentCardsScreen() {
     setSaveError('');
   }
 
+  function duplicateCard(card: CoursePaymentCard) {
+    setSelectedId(null);
+    setForm({
+      ...cardToForm(card),
+      title: `${card.title} (Copy)`,
+    });
+    setMode('create');
+    setSaveError('');
+  }
+
   function cancelEdit() {
     setMode('idle');
     setSelectedId(null);
@@ -447,16 +457,22 @@ export default function PaymentCardsScreen() {
                       </p>
                     </div>
                     {isAdmin && (
-                      <button
-                        onClick={e => { e.stopPropagation(); handleDelete(card.id); }}
-                        className={`ml-2 shrink-0 text-xs ${
-                          card.id === selectedId
-                            ? 'text-white/70 hover:text-white'
-                            : 'text-slate-400 hover:text-red-500'
-                        }`}
-                      >
-                        ✕
-                      </button>
+                      <div className="ml-2 flex shrink-0 items-center gap-2">
+                        <button
+                          title="Duplicate"
+                          onClick={e => { e.stopPropagation(); duplicateCard(card); }}
+                          className={card.id === selectedId ? 'text-white/70 hover:text-white' : 'text-slate-400 hover:text-brand'}
+                        >
+                          ⧉
+                        </button>
+                        <button
+                          title="Delete"
+                          onClick={e => { e.stopPropagation(); handleDelete(card.id); }}
+                          className={card.id === selectedId ? 'text-white/70 hover:text-white' : 'text-slate-400 hover:text-red-500'}
+                        >
+                          ✕
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}

@@ -69,6 +69,12 @@ export default function FeatureCardsV2Screen() {
     setActiveId(c.id); setName(c.name); setState(c.data || makeDefault()); setSaved(false);
   }
   function newComponent() { setActiveId(null); setName(''); setState(makeDefault()); setSaved(false); }
+  function duplicateComponent() {
+    setActiveId(null);
+    setName(name ? `${name} (Copy)` : 'Feature Cards V2 Copy');
+    setState(JSON.parse(JSON.stringify(state)) as Fc2State);
+    setSaved(false);
+  }
 
   async function save() {
     if (!name.trim()) { alert('Enter a component name first.'); return; }
@@ -125,6 +131,7 @@ export default function FeatureCardsV2Screen() {
                 {components.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               <button onClick={newComponent} className="btn-ghost text-xs px-3">+ New</button>
+              <button onClick={duplicateComponent} disabled={!name && state.cards.length === 0} className="btn-ghost text-xs px-3">Duplicate</button>
               {activeId && <button onClick={deleteComponent} className="btn-danger text-xs px-3">Delete</button>}
             </div>
             <Field label="Component name">
