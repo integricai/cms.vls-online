@@ -64,6 +64,41 @@ function isMissingActivityLogTable(error: unknown): boolean {
   return err?.code === '42P01' || /cms_activity_logs/i.test(err?.message ?? '') && /does not exist|relation/i.test(err?.message ?? '');
 }
 
+let ensurePromise: Promise<void> | null = null;
+
+async function ensureActivityLogTable(): Promise<void> {
+  if (!ensurePromise) {
+    ensurePromise = (async () => {
+      await sql`
+        CREATE TABLE IF NOT EXISTS cms_activity_logs (
+          id             BIGSERIAL   PRIMARY KEY,
+          user_id        INTEGER     REFERENCES users (id) ON DELETE SET NULL,
+          user_email     TEXT,
+          username       TEXT,
+          user_role      TEXT,
+          action         TEXT        NOT NULL,
+          component_key  TEXT        NOT NULL,
+          component_name TEXT,
+          summary        TEXT        NOT NULL DEFAULT '',
+          changed_paths  JSONB       NOT NULL DEFAULT '[]',
+          before_json    JSONB,
+          after_json     JSONB,
+          ip_address     TEXT,
+          user_agent     TEXT,
+          created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `;
+      await sql`CREATE INDEX IF NOT EXISTS cms_activity_logs_user_id_idx ON cms_activity_logs (user_id)`;
+      await sql`CREATE INDEX IF NOT EXISTS cms_activity_logs_component_key_idx ON cms_activity_logs (component_key)`;
+      await sql`CREATE INDEX IF NOT EXISTS cms_activity_logs_created_at_idx ON cms_activity_logs (created_at DESC)`;
+    })().catch(error => {
+      ensurePromise = null;
+      throw error;
+    });
+  }
+  return ensurePromise;
+}
+
 export async function createActivityLog(data: {
   userId: number | null;
   userEmail: string | null;
@@ -94,7 +129,10 @@ export async function createActivityLog(data: {
     `;
     return rowToLog(rows[0] as DbRow);
   } catch (error) {
-    if (isMissingActivityLogTable(error)) return null;
+    if (isMissingActivityLogTable(error)) {
+      await ensureActivityLogTable();
+      return createActivityLog(data);
+    }
     throw error;
   }
 }
@@ -109,6 +147,7 @@ export async function listActivityLogs(options: {
   const requestedUserId = options.userId ?? null;
 
   try {
+    await ensureActivityLogTable();
     const rows = options.isAdmin
       ? requestedUserId
         ? await sql`
@@ -131,7 +170,10 @@ export async function listActivityLogs(options: {
 
     return (rows as DbRow[]).map(rowToLog);
   } catch (error) {
-    if (isMissingActivityLogTable(error)) return [];
+    if (isMissingActivityLogTable(error)) {
+      await ensureActivityLogTable();
+      return listActivityLogs(options);
+    }
     throw error;
   }
 }
