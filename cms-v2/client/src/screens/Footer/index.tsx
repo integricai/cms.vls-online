@@ -302,7 +302,7 @@ export default function FooterScreen() {
               : '<p style="font-family:sans-serif;color:#94a3b8;padding:24px">Click ⚡ Generate HTML to preview.</p>'
             }
             className="flex-1 w-full border-0 bg-slate-50"
-            sandbox="allow-same-origin allow-scripts"
+            sandbox="allow-scripts"
           />
         ) : (
           <div className="relative flex-1 overflow-auto bg-slate-900 p-4">
