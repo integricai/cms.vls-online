@@ -124,6 +124,8 @@ function buildFooterMarkup(data: FooterData, includeToggleScript: boolean, uid?:
 function buildFooterUpdaterScript(publicFooterUrl: string | undefined, uid: string): string {
   const url = String(publicFooterUrl || '').trim();
   if (!url) return '';
+  const scriptUrl = footerUpdaterUrl(url);
+  return `<script data-cfasync="false" src="${escapeHtml(scriptUrl)}" data-vls-footer-id="${escapeHtml(uid)}" data-vls-footer-endpoint="${escapeHtml(url)}"><\/script>`;
 
   return `<script data-cfasync="false">(function(){
 var ENDPOINT=${jsString(url)};
@@ -149,4 +151,13 @@ setTimeout(refresh,2500);
 export function generateFooterHtml(data: FooterData, publicFooterUrl?: string): string {
   const uid = 'vlsft-' + Math.random().toString(36).slice(2, 9);
   return buildFooterMarkup(data, true, uid, publicFooterUrl) + buildFooterUpdaterScript(publicFooterUrl, uid);
+}
+
+function footerUpdaterUrl(publicFooterUrl: string): string {
+  try {
+    const parsed = new URL(publicFooterUrl);
+    return `${parsed.origin}/api/public/footer-updater.js`;
+  } catch {
+    return '/api/public/footer-updater.js';
+  }
 }
