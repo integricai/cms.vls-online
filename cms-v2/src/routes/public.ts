@@ -28,6 +28,24 @@ router.get('/events', async (_req: Request, res: Response, next: NextFunction) =
   }
 });
 
+router.options('/footer', (_req, res) => {
+  allowPublicCors(res);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.status(204).end();
+});
+
+router.get('/footer', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const row = await getContent('vls-footer');
+    const data = row?.data && typeof row.data === 'object' ? row.data : null;
+    allowPublicCors(res);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ footer: data });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.options('/blog', (_req, res) => {
   allowPublicCors(res);
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');

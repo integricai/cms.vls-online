@@ -38,6 +38,11 @@ function makeDefault(): FooterData {
 
 const SOCIAL_PLATFORMS = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'whatsapp'];
 
+function publicFooterUrl(): string {
+  const apiBase = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
+  return `${apiBase}/api/public/footer`;
+}
+
 function LinkRow({ link, onRemove, onChange }: {
   link: FooterLink;
   onRemove: () => void;
@@ -176,9 +181,14 @@ export default function FooterScreen() {
     }
   }
 
+  async function publish() {
+    await save();
+    generate();
+  }
+
   function generate() {
     if (!data) return;
-    setPreviewHtml(wrapGeneratedHtml('Footer', generateFooterHtml(data)));
+    setPreviewHtml(wrapGeneratedHtml('Footer', generateFooterHtml(data, publicFooterUrl())));
     setActiveTab('preview');
   }
 
@@ -201,6 +211,9 @@ export default function FooterScreen() {
             {saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save'}
           </button>
           <button onClick={generate} className="btn-success flex-1 justify-center">⚡ Generate HTML</button>
+          <button onClick={publish} disabled={saving} className="btn-primary flex-1 justify-center">
+            {saving ? 'Publishing…' : '🚀 Publish'}
+          </button>
         </div>
 
         <div className="px-5 py-4 space-y-0">
