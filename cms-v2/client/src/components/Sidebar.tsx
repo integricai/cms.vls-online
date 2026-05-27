@@ -12,6 +12,7 @@ import {
 const ITEM_LOOKUP = buildItemLookup();
 
 function getLabel(id: string): string {
+  if (id === '/dashboard') return 'Dashboard';
   return ITEM_LOOKUP.get(id) ?? id;
 }
 
@@ -20,6 +21,7 @@ function visibleTopLevel(
 ): Array<SidebarConfigItem | SidebarConfigSubGroup> {
   return group.children.filter(child => {
     if (child.hidden) return false;
+    if (child.type === 'item' && child.id === '/dashboard') return false;
     if (child.type === 'subgroup') return child.children.some(i => !i.hidden);
     return true;
   });
@@ -192,6 +194,22 @@ export default function Sidebar({ isOpen, onClose }: Props) {
 
       {/* ── Footer ── */}
       <div className="border-t border-slate-700 px-2 py-3 min-w-[224px]">
+        <NavLink
+          to="/dashboard"
+          title="Dashboard"
+          className={({ isActive }) =>
+            `mb-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              isActive
+                ? 'bg-brand text-white'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`
+          }
+        >
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+            <path d="M3 4a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM11 4a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1V4zM11 10a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6zM3 12a1 1 0 011-1h5a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1v-4z" />
+          </svg>
+          Dashboard
+        </NavLink>
         {isAdmin && (
           <NavLink
             to="/settings"
