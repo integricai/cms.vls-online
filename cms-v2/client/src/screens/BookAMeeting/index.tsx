@@ -50,6 +50,10 @@ function normalize(raw: any): BookMeetingState {
   return { ...makeDefault(), ...(raw || {}) };
 }
 
+function renderPreview(data: BookMeetingState): string {
+  return wrapGeneratedHtml('Book a Meeting', generateBookMeetingHtml(data));
+}
+
 function listToText(items: Array<{ text: string }>): string {
   return items.map(item => item.text).join('\n');
 }
@@ -97,9 +101,22 @@ export default function BookAMeeting() {
           setActiveId(loaded[0].id);
           setName(loaded[0].name);
           setState(loaded[0].data);
+          setPreviewHtml(renderPreview(loaded[0].data));
+        } else {
+          const initial = makeDefault();
+          setState(initial);
+          setPreviewHtml(renderPreview(initial));
         }
       })
-      .catch(error => setLoadError(error instanceof Error ? error.message : String(error)))
+      .catch(error => {
+        if ((error as { status?: number })?.status === 404) {
+          const initial = makeDefault();
+          setState(initial);
+          setPreviewHtml(renderPreview(initial));
+          return;
+        }
+        setLoadError(error instanceof Error ? error.message : String(error));
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -110,9 +127,11 @@ export default function BookAMeeting() {
 
   function loadComponent(id: string) {
     if (!id) {
+      const initial = makeDefault();
       setActiveId(null);
       setName('Book a Meeting');
-      setState(makeDefault());
+      setState(initial);
+      setPreviewHtml(renderPreview(initial));
       setSaved(false);
       return;
     }
@@ -121,6 +140,7 @@ export default function BookAMeeting() {
     setActiveId(component.id);
     setName(component.name);
     setState(component.data);
+    setPreviewHtml(renderPreview(component.data));
     setSaved(false);
   }
 
@@ -154,12 +174,14 @@ export default function BookAMeeting() {
     setComponents(next);
     setActiveId(null);
     setName('Book a Meeting');
-    setState(makeDefault());
+    const initial = makeDefault();
+    setState(initial);
+    setPreviewHtml(renderPreview(initial));
     setSaved(false);
   }
 
   function generate() {
-    setPreviewHtml(wrapGeneratedHtml('Book a Meeting', generateBookMeetingHtml(state)));
+    setPreviewHtml(renderPreview(state));
     setActiveTab('preview');
   }
 
