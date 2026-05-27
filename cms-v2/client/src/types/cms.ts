@@ -647,6 +647,38 @@ export interface LegalPageState { hdrBg: string; eyebrow: string; title: string;
 export interface LegalPageComponent { id: string; name: string; data: LegalPageState; }
 export interface LegalPageContent { components: LegalPageComponent[]; }
 
+// ── Book a Meeting Page ──────────────────────────────────────────────────────
+export interface BookMeetingBullet { text: string; }
+export interface BookMeetingExpectItem { icon: string; iconBg: string; title: string; desc: string; }
+export interface BookMeetingState {
+  bg: string;
+  padTop: number;
+  padBottom: number;
+  padLeft: number;
+  padRight: number;
+  sidebarWidth: number;
+  leftHeaderBg: string;
+  leftEyebrow: string;
+  leftTitle: string;
+  bullets: BookMeetingBullet[];
+  expectTitle: string;
+  expectItems: BookMeetingExpectItem[];
+  tutorInitials: string;
+  tutorName: string;
+  tutorRole: string;
+  tutorBio: string;
+  contactTitle: string;
+  contactEmail: string;
+  contactWhatsapp: string;
+  meetingTitle: string;
+  meetingSubtitle: string;
+  tags: string[];
+  calendlyUrl: string;
+  calendlyHeight: number;
+}
+export interface BookMeetingComponent { id: string; name: string; data: BookMeetingState; }
+export interface BookMeetingContent { components: BookMeetingComponent[]; }
+
 // ── Team ──────────────────────────────────────────────────────────
 export interface TeamFeature { value: string; label: string; }
 export interface TeamCard { id: string; eyebrow: TextValue; name: TextValue; designation: TextValue; imgUrl: string; features: TeamFeature[]; paras: string[]; tags: string[]; }
