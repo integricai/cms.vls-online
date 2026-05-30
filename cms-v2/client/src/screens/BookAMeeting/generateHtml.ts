@@ -17,10 +17,19 @@ function td(value: Parameters<typeof normalize>[0], key: DefaultKey) {
   return normalize(value, key);
 }
 
+function withCalendlyTheme(url: string): string {
+  const [base, query = ''] = url.split('?');
+  const params = new URLSearchParams(query);
+  if (!params.has('primary_color')) params.set('primary_color', '0f3b6d');
+  if (!params.has('text_color')) params.set('text_color', '14365f');
+  if (!params.has('background_color')) params.set('background_color', 'ffffff');
+  return `${base}?${params.toString()}`;
+}
+
 export function generateBookMeetingHtml(data: BookMeetingState): string {
   const uid = 'vlsbook' + Math.random().toString(36).slice(2, 7);
-  const calendlyUrl = data.calendlyUrl || 'https://calendly.com/vls121/live-handholding-hour';
-  const calendlyHeight = Math.max(500, Number(data.calendlyHeight) || 700);
+  const calendlyUrl = withCalendlyTheme(data.calendlyUrl || 'https://calendly.com/vls121/live-handholding-hour');
+  const calendlyHeight = Math.max(650, Number(data.calendlyHeight) || 700);
   const maxWidth = 1120;
   const leftEyebrow = td(data.leftEyebrow, 'bookEyebrow');
   const leftTitle = td(data.leftTitle, 'bookIntroTitle');
@@ -49,8 +58,8 @@ export function generateBookMeetingHtml(data: BookMeetingState): string {
     .filter(item => item.titleData.text.trim() || item.descData.text.trim())
     .map(item => `
           <li>
-            <span style="background:${attr(item.iconBg || '#eaf3ff')}">${escapeHtml(item.icon || '')}</span>
-            <p>${item.titleData.text ? `<strong style="${textStyle(item.titleData)}">${escapeHtml(item.titleData.text)}</strong>` : ''}${item.descData.text ? ` <span style="${textStyle(item.descData)}">- ${item.descData.text}</span>` : ''}</p>
+            <span class="${uid}-expect-icon" style="background:${attr(item.iconBg || '#eaf3ff')}">${escapeHtml(item.icon || '')}</span>
+            <p>${item.titleData.text ? `<strong style="${textStyle(item.titleData)}">${escapeHtml(item.titleData.text)}</strong>` : ''}${item.descData.text ? ` <span class="${uid}-expect-desc" style="${textStyle(item.descData)}">- ${escapeHtml(item.descData.text)}</span>` : ''}</p>
           </li>`)
     .join('');
 
@@ -72,9 +81,10 @@ export function generateBookMeetingHtml(data: BookMeetingState): string {
 .${uid}-card-title{margin:0 0 14px;text-transform:uppercase;}
 .${uid}-expect{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:13px;}
 .${uid}-expect li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:start;}
-.${uid}-expect span{display:flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:8px;font-size:14px;}
+.${uid}-expect-icon{display:flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:8px;font-size:14px;line-height:1;flex-shrink:0;}
 .${uid}-expect p{margin:0;line-height:1.55;}
 .${uid}-expect strong{font-weight:800;}
+.${uid}-expect-desc{display:inline!important;width:auto!important;height:auto!important;border-radius:0!important;background:transparent!important;line-height:inherit!important;}
 .${uid}-tutor{display:grid;grid-template-columns:48px minmax(0,1fr);gap:13px;align-items:center;}
 .${uid}-avatar{display:flex;width:48px;height:48px;align-items:center;justify-content:center;border-radius:50%;background:#09376c;color:#fff;font-size:16px;font-weight:800;box-shadow:inset 0 0 0 4px #0b4b8f;}
 .${uid}-tutor h3{margin:0 0 3px;}
@@ -87,8 +97,9 @@ export function generateBookMeetingHtml(data: BookMeetingState): string {
 .${uid}-main p{margin:3px 0 0;}
 .${uid}-tags{display:flex;flex-wrap:wrap;gap:9px;padding:10px 26px 14px;background:#f8fafc;border-bottom:1px solid #e8eef7;}
 .${uid}-tag{display:inline-flex;align-items:center;border:1px solid #bfdbfe;border-radius:999px;background:#eff6ff;padding:5px 13px;}
-.${uid}-calendar{background:#f6f8fc;min-height:${calendlyHeight}px;}
-.${uid}-calendar .calendly-inline-widget{width:100%;}
+.${uid}-calendar{background:#fff;min-height:${calendlyHeight}px;}
+.${uid}-calendar .calendly-inline-widget{width:100%;height:${calendlyHeight}px!important;min-width:320px;}
+.${uid}-calendar .calendly-inline-widget iframe{width:100%!important;height:${calendlyHeight}px!important;min-height:${calendlyHeight}px!important;border:0!important;}
 @media(max-width:860px){.${uid}{padding:24px 14px;}.${uid}-main{min-height:auto;}.${uid}-main-head{padding:18px;}.${uid}-tags{padding:10px 18px 14px;}}
 </style>
 <section class="${uid}">
