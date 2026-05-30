@@ -16,7 +16,6 @@ export function generateBookMeetingHtml(data: BookMeetingState): string {
   const uid = 'vlsbook' + Math.random().toString(36).slice(2, 7);
   const calendlyUrl = data.calendlyUrl || 'https://calendly.com/vls121/live-handholding-hour';
   const calendlyHeight = Math.max(500, Number(data.calendlyHeight) || 700);
-  const sidebarWidth = Math.max(220, Number(data.sidebarWidth) || 255);
   const maxWidth = 1120;
 
   const bulletItems = data.bullets
@@ -41,7 +40,7 @@ export function generateBookMeetingHtml(data: BookMeetingState): string {
 <style>
 .${uid}{box-sizing:border-box;width:100%;background:${data.bg};padding:${data.padTop}px ${data.padRight}px ${data.padBottom}px ${data.padLeft}px;font-family:Poppins,Arial,sans-serif;color:#0f172a;}
 .${uid} *{box-sizing:border-box;}
-.${uid}-wrap{max-width:${maxWidth}px;margin:0 auto;display:grid;grid-template-columns:${sidebarWidth}px minmax(0,1fr);gap:28px;align-items:start;}
+.${uid}-wrap{max-width:${maxWidth}px;margin:0 auto;display:flex;flex-direction:column;gap:18px;align-items:stretch;}
 .${uid}-rail{display:flex;flex-direction:column;gap:18px;}
 .${uid}-card{overflow:hidden;border:1px solid #dfe6f0;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.03);}
 .${uid}-intro-head{background:${data.leftHeaderBg};padding:18px 20px;color:#fff;}
@@ -74,7 +73,7 @@ export function generateBookMeetingHtml(data: BookMeetingState): string {
 .${uid}-tag{display:inline-flex;align-items:center;border:1px solid #bfdbfe;border-radius:999px;background:#eff6ff;padding:5px 13px;font-size:11px;font-weight:700;color:#1d4ed8;}
 .${uid}-calendar{background:#f6f8fc;min-height:${calendlyHeight}px;}
 .${uid}-calendar .calendly-inline-widget{width:100%;}
-@media(max-width:860px){.${uid}{padding:24px 14px;}.${uid}-wrap{grid-template-columns:1fr;gap:18px;}.${uid}-main{min-height:auto;}.${uid}-main-head{padding:18px;}.${uid}-tags{padding:10px 18px 14px;}}
+@media(max-width:860px){.${uid}{padding:24px 14px;}.${uid}-main{min-height:auto;}.${uid}-main-head{padding:18px;}.${uid}-tags{padding:10px 18px 14px;}}
 </style>
 <section class="${uid}">
   <div class="${uid}-wrap">

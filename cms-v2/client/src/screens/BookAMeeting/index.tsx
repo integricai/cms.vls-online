@@ -230,7 +230,6 @@ export default function BookAMeeting() {
             <div className="grid grid-cols-2 gap-2">
               <Field label="Background"><input className="input" value={state.bg} onChange={event => patch({ bg: event.target.value })} /></Field>
               <Field label="Dark panel"><input className="input" value={state.leftHeaderBg} onChange={event => patch({ leftHeaderBg: event.target.value })} /></Field>
-              <Field label="Sidebar width"><input type="number" className="input" value={state.sidebarWidth} onChange={event => patch({ sidebarWidth: Number(event.target.value) })} /></Field>
               <Field label="Calendly height"><input type="number" className="input" value={state.calendlyHeight} onChange={event => patch({ calendlyHeight: Number(event.target.value) })} /></Field>
             </div>
           </div>
