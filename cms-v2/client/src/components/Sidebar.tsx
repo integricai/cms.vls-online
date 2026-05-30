@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { clearToken, getCurrentUser } from '../api/client';
 import { useSidebarConfig } from '../contexts/sidebarConfig';
 import {
@@ -36,8 +36,25 @@ export default function Sidebar({ isOpen, onClose }: Props) {
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [openSubGroups, setOpenSubGroups] = useState<Set<string>>(new Set());
   const { config } = useSidebarConfig();
+  const location = useLocation();
   const currentUser = getCurrentUser();
   const isAdmin = currentUser?.role === 'admin';
+
+  useEffect(() => {
+    for (const group of config) {
+      for (const child of group.children) {
+        if (child.type === 'item' && child.id === location.pathname) {
+          setOpenGroup(group.id);
+          return;
+        }
+        if (child.type === 'subgroup' && child.children.some(item => item.id === location.pathname)) {
+          setOpenGroup(group.id);
+          setOpenSubGroups(prev => new Set(prev).add(child.id));
+          return;
+        }
+      }
+    }
+  }, [config, location.pathname]);
 
   function toggleGroup(name: string) {
     setOpenGroup(prev => (prev === name ? null : name));

@@ -74,7 +74,11 @@ export function SidebarConfigProvider({ children }: { children: ReactNode }) {
     try {
       const row = await api.get<{ key: string; data: unknown }>('/content/vls-sidebar-config');
       if (row?.data && Array.isArray(row.data)) {
-        setConfig(mergeWithDefaults(row.data as SidebarConfig));
+        const merged = mergeWithDefaults(row.data as SidebarConfig);
+        setConfig(merged);
+        if (JSON.stringify(merged) !== JSON.stringify(row.data)) {
+          await api.put('/content/vls-sidebar-config', merged);
+        }
       }
     } catch {
       // No saved config yet — keep default

@@ -30,6 +30,7 @@ export const NAV: NavGroup[] = [
       { to: '/course-desc',       label: 'Course Description' },
       { to: '/course-tabs',       label: 'Course Tabs' },
       { to: '/course-finder',     label: 'Course Finder' },
+      { to: '/course-finder-banner', label: 'Course Finder Banner' },
       { to: '/hero-section-v2',   label: 'Hero Section V2' },
       { to: '/payment-cards',     label: 'Payment Cards' },
     ],

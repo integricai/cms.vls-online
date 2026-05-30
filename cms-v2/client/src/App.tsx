@@ -19,6 +19,7 @@ import CourseHeroRight from './screens/CourseHeroRight';
 import CourseDesc from './screens/CourseDesc';
 import CourseTabs from './screens/CourseTabs';
 import CourseFinder from './screens/CourseFinder';
+import CourseFinderBanner from './screens/CourseFinderBanner';
 import HeroSectionV2 from './screens/HeroSectionV2';
 import ProgramCards from './screens/ProgramCards';
 import ProgramCardsV2 from './screens/ProgramCardsV2';
@@ -81,6 +82,7 @@ export default function App() {
           <Route path="/course-desc"       element={<CourseDesc />} />
           <Route path="/course-tabs"       element={<CourseTabs />} />
           <Route path="/course-finder"     element={<CourseFinder />} />
+          <Route path="/course-finder-banner" element={<CourseFinderBanner />} />
           <Route path="/hero-section-v2"   element={<HeroSectionV2 />} />
           <Route path="/program-cards"    element={<ProgramCards />} />
           <Route path="/program-cards-v2" element={<ProgramCardsV2 />} />
