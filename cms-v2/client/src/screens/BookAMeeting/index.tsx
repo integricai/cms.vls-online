@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import Field from '../../components/Field';
-import type { BookMeetingComponent, BookMeetingState, BookMeetingExpectItem } from '../../types/cms';
+import RichTextField from '../../components/RichTextField';
+import type { BookMeetingComponent, BookMeetingState, BookMeetingExpectItem, TextValue } from '../../types/cms';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
+import { normalize as normalizeText, type DefaultKey } from '../../utils/text';
 import { generateBookMeetingHtml } from './generateHtml';
 
 const CONTENT_KEY = 'vls-book-a-meeting';
@@ -16,37 +18,42 @@ function makeDefault(): BookMeetingState {
     padRight: 0,
     sidebarWidth: 255,
     leftHeaderBg: '#0d1f3c',
-    leftEyebrow: 'WHO SHOULD BOOK?',
-    leftTitle: 'This session is for you if...',
+    leftEyebrow: normalizeText('WHO SHOULD BOOK?', 'bookEyebrow'),
+    leftTitle: normalizeText('This session is for you if...', 'bookIntroTitle'),
     bullets: [
-      { text: 'You want to start your ACCA, CIMA, or CMA qualification but are not sure where to begin.' },
-      { text: 'You are an existing ACCA student who needs advice about exam preparation or study strategy.' },
-      { text: 'You are planning to join VLS and want to understand which courses are right for your goals.' },
-      { text: 'You want to know about entry requirements, exemptions, or the qualification pathway before committing.' },
+      { text: normalizeText('You want to start your ACCA, CIMA, or CMA qualification but are not sure where to begin.', 'bookBullet') },
+      { text: normalizeText('You are an existing ACCA student who needs advice about exam preparation or study strategy.', 'bookBullet') },
+      { text: normalizeText('You are planning to join VLS and want to understand which courses are right for your goals.', 'bookBullet') },
+      { text: normalizeText('You want to know about entry requirements, exemptions, or the qualification pathway before committing.', 'bookBullet') },
     ],
-    expectTitle: 'WHAT TO EXPECT',
+    expectTitle: normalizeText('WHAT TO EXPECT', 'bookCardTitle'),
     expectItems: [
-      { icon: 'Doc', iconBg: '#eef4ff', title: 'Personalised guidance', desc: 'advice tailored to your background, goals, and timeline' },
-      { icon: 'Ok', iconBg: '#dcfce7', title: 'Course recommendation', desc: 'the right VLS course for your qualification and level' },
-      { icon: '30', iconBg: '#fef3c7', title: '30 minutes', desc: 'focused, efficient, and no time wasted' },
-      { icon: 'Q', iconBg: '#f3e8ff', title: 'Open Q&A', desc: 'ask anything about ACCA, CIMA, CMA, or the VLS platform' },
+      { icon: 'Doc', iconBg: '#eef4ff', title: normalizeText('Personalised guidance', 'bookExpectTitle'), desc: normalizeText('advice tailored to your background, goals, and timeline', 'bookExpectDesc') },
+      { icon: 'Ok', iconBg: '#dcfce7', title: normalizeText('Course recommendation', 'bookExpectTitle'), desc: normalizeText('the right VLS course for your qualification and level', 'bookExpectDesc') },
+      { icon: '30', iconBg: '#fef3c7', title: normalizeText('30 minutes', 'bookExpectTitle'), desc: normalizeText('focused, efficient, and no time wasted', 'bookExpectDesc') },
+      { icon: 'Q', iconBg: '#f3e8ff', title: normalizeText('Open Q&A', 'bookExpectTitle'), desc: normalizeText('ask anything about ACCA, CIMA, CMA, or the VLS platform', 'bookExpectDesc') },
     ],
     tutorInitials: 'SA',
-    tutorName: 'Syed M Ali',
-    tutorRole: 'Senior Tutor - ACCA & CIMA',
-    tutorBio: '20+ years experience - 200+ corporate clients - World Bank & EU consultant',
-    contactTitle: 'PREFER TO CONTACT US DIRECTLY?',
-    contactEmail: 'office@vls-online.com',
-    contactWhatsapp: 'WhatsApp: +44 7446 426261',
-    meetingTitle: 'Live Handholding Hour',
-    meetingSubtitle: 'Select a date and time that suits you - Vertex Learning Solutions',
-    tags: ['30 minutes', 'Free - No obligation', 'Online - Zoom / Google Meet', 'English & Urdu available'],
+    tutorName: normalizeText('Syed M Ali', 'bookTutorName'),
+    tutorRole: normalizeText('Senior Tutor - ACCA & CIMA', 'bookTutorRole'),
+    tutorBio: normalizeText('20+ years experience - 200+ corporate clients - World Bank & EU consultant', 'bookTutorBio'),
+    contactTitle: normalizeText('PREFER TO CONTACT US DIRECTLY?', 'bookEyebrow'),
+    contactEmail: normalizeText('office@vls-online.com', 'bookContactText'),
+    contactWhatsapp: normalizeText('WhatsApp: +44 7446 426261', 'bookContactText'),
+    meetingTitle: normalizeText('Live Handholding Hour', 'bookMeetingTitle'),
+    meetingSubtitle: normalizeText('Select a date and time that suits you - Vertex Learning Solutions', 'bookMeetingSub'),
+    tags: [
+      normalizeText('30 minutes', 'bookTag'),
+      normalizeText('Free - No obligation', 'bookTag'),
+      normalizeText('Online - Zoom / Google Meet', 'bookTag'),
+      normalizeText('English & Urdu available', 'bookTag'),
+    ],
     calendlyUrl: 'https://calendly.com/vls121/live-handholding-hour',
     calendlyHeight: 700,
   };
 }
 
-function normalize(raw: any): BookMeetingState {
+function normalizeState(raw: any): BookMeetingState {
   return { ...makeDefault(), ...(raw || {}) };
 }
 
@@ -54,23 +61,8 @@ function renderPreview(data: BookMeetingState): string {
   return wrapGeneratedHtml('Book a Meeting', generateBookMeetingHtml(data));
 }
 
-function listToText(items: Array<{ text: string }>): string {
-  return items.map(item => item.text).join('\n');
-}
-
-function textToList(value: string): Array<{ text: string }> {
-  return value.split('\n').map(text => ({ text }));
-}
-
-function expectToText(items: BookMeetingExpectItem[]): string {
-  return items.map(item => [item.icon, item.iconBg, item.title, item.desc].join(' | ')).join('\n');
-}
-
-function textToExpect(value: string): BookMeetingExpectItem[] {
-  return value.split('\n').map(line => {
-    const [icon = '', iconBg = '#eef4ff', title = '', desc = ''] = line.split('|').map(part => part.trim());
-    return { icon, iconBg, title, desc };
-  });
+function asText(value: TextValue, key: DefaultKey) {
+  return normalizeText(value, key);
 }
 
 export default function BookAMeeting() {
@@ -93,7 +85,7 @@ export default function BookAMeeting() {
           ? raw.components.map((component: any) => ({
               id: component.id,
               name: component.name || 'Book a Meeting',
-              data: normalize(component.data),
+              data: normalizeState(component.data),
             }))
           : [];
         setComponents(loaded);
@@ -123,6 +115,18 @@ export default function BookAMeeting() {
   function patch(update: Partial<BookMeetingState>) {
     setState(prev => ({ ...prev, ...update }));
     setSaved(false);
+  }
+
+  function updateBullet(index: number, text: TextValue) {
+    patch({ bullets: state.bullets.map((item, i) => i === index ? { ...item, text } : item) });
+  }
+
+  function updateExpect(index: number, update: Partial<BookMeetingExpectItem>) {
+    patch({ expectItems: state.expectItems.map((item, i) => i === index ? { ...item, ...update } : item) });
+  }
+
+  function updateTag(index: number, tag: TextValue) {
+    patch({ tags: state.tags.map((item, i) => i === index ? tag : item) });
   }
 
   function loadComponent(id: string) {
@@ -236,33 +240,60 @@ export default function BookAMeeting() {
 
           <div>
             <p className="section-label">Left Rail</p>
-            <Field label="Eyebrow"><input className="input" value={state.leftEyebrow} onChange={event => patch({ leftEyebrow: event.target.value })} /></Field>
-            <Field label="Title"><input className="input" value={state.leftTitle} onChange={event => patch({ leftTitle: event.target.value })} /></Field>
-            <Field label="Who should book? items">
-              <textarea className="input" rows={6} value={listToText(state.bullets)} onChange={event => patch({ bullets: textToList(event.target.value) })} />
-            </Field>
-            <Field label="What to expect" hint="icon | icon background | title | description">
-              <textarea className="input font-mono text-xs" rows={6} value={expectToText(state.expectItems)} onChange={event => patch({ expectItems: textToExpect(event.target.value) })} />
-            </Field>
+            <RichTextField label="Eyebrow" value={asText(state.leftEyebrow, 'bookEyebrow')} defaultKey="bookEyebrow" onChange={leftEyebrow => patch({ leftEyebrow })} />
+            <RichTextField label="Title" value={asText(state.leftTitle, 'bookIntroTitle')} defaultKey="bookIntroTitle" onChange={leftTitle => patch({ leftTitle })} />
+            <p className="text-xs font-semibold text-slate-500 mt-2 mb-1">Who should book? items</p>
+            <div className="space-y-2 mb-2">
+              {state.bullets.map((item, index) => (
+                <div key={index} className="rounded border border-slate-200 bg-slate-50 p-3">
+                  <RichTextField label={`Item ${index + 1}`} multiline value={asText(item.text, 'bookBullet')} defaultKey="bookBullet" onChange={text => updateBullet(index, text)} />
+                  <button className="btn-danger text-xs" onClick={() => patch({ bullets: state.bullets.filter((_, i) => i !== index) })}>Remove</button>
+                </div>
+              ))}
+            </div>
+            <button className="btn-ghost mb-3 w-full justify-center text-xs" onClick={() => patch({ bullets: [...state.bullets, { text: normalizeText('', 'bookBullet') }] })}>+ Add item</button>
+            <RichTextField label="What to expect heading" value={asText(state.expectTitle, 'bookCardTitle')} defaultKey="bookCardTitle" onChange={expectTitle => patch({ expectTitle })} />
+            <p className="text-xs font-semibold text-slate-500 mt-2 mb-1">What to expect items</p>
+            <div className="space-y-2 mb-2">
+              {state.expectItems.map((item, index) => (
+                <div key={index} className="rounded border border-slate-200 bg-slate-50 p-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Field label="Icon"><input className="input" value={item.icon} onChange={event => updateExpect(index, { icon: event.target.value })} /></Field>
+                    <Field label="Icon background"><input className="input" value={item.iconBg} onChange={event => updateExpect(index, { iconBg: event.target.value })} /></Field>
+                  </div>
+                  <RichTextField label="Title" value={asText(item.title, 'bookExpectTitle')} defaultKey="bookExpectTitle" onChange={title => updateExpect(index, { title })} />
+                  <RichTextField label="Description" multiline value={asText(item.desc, 'bookExpectDesc')} defaultKey="bookExpectDesc" onChange={desc => updateExpect(index, { desc })} />
+                  <button className="btn-danger text-xs" onClick={() => patch({ expectItems: state.expectItems.filter((_, i) => i !== index) })}>Remove</button>
+                </div>
+              ))}
+            </div>
+            <button className="btn-ghost mb-3 w-full justify-center text-xs" onClick={() => patch({ expectItems: [...state.expectItems, { icon: '', iconBg: '#eef4ff', title: normalizeText('', 'bookExpectTitle'), desc: normalizeText('', 'bookExpectDesc') }] })}>+ Add expectation</button>
           </div>
 
           <div>
             <p className="section-label">Tutor Card</p>
             <div className="grid grid-cols-2 gap-2">
               <Field label="Initials"><input className="input" value={state.tutorInitials} onChange={event => patch({ tutorInitials: event.target.value })} /></Field>
-              <Field label="Name"><input className="input" value={state.tutorName} onChange={event => patch({ tutorName: event.target.value })} /></Field>
             </div>
-            <Field label="Role"><input className="input" value={state.tutorRole} onChange={event => patch({ tutorRole: event.target.value })} /></Field>
-            <Field label="Bio"><textarea className="input" rows={2} value={state.tutorBio} onChange={event => patch({ tutorBio: event.target.value })} /></Field>
+            <RichTextField label="Name" value={asText(state.tutorName, 'bookTutorName')} defaultKey="bookTutorName" onChange={tutorName => patch({ tutorName })} />
+            <RichTextField label="Role" value={asText(state.tutorRole, 'bookTutorRole')} defaultKey="bookTutorRole" onChange={tutorRole => patch({ tutorRole })} />
+            <RichTextField label="Bio" multiline value={asText(state.tutorBio, 'bookTutorBio')} defaultKey="bookTutorBio" onChange={tutorBio => patch({ tutorBio })} />
           </div>
 
           <div>
             <p className="section-label">Calendar</p>
-            <Field label="Meeting title"><input className="input" value={state.meetingTitle} onChange={event => patch({ meetingTitle: event.target.value })} /></Field>
-            <Field label="Subtitle"><input className="input" value={state.meetingSubtitle} onChange={event => patch({ meetingSubtitle: event.target.value })} /></Field>
-            <Field label="Tags">
-              <textarea className="input" rows={3} value={state.tags.join('\n')} onChange={event => patch({ tags: event.target.value.split('\n') })} />
-            </Field>
+            <RichTextField label="Meeting title" value={asText(state.meetingTitle, 'bookMeetingTitle')} defaultKey="bookMeetingTitle" onChange={meetingTitle => patch({ meetingTitle })} />
+            <RichTextField label="Subtitle" value={asText(state.meetingSubtitle, 'bookMeetingSub')} defaultKey="bookMeetingSub" onChange={meetingSubtitle => patch({ meetingSubtitle })} />
+            <p className="text-xs font-semibold text-slate-500 mt-2 mb-1">Tags</p>
+            <div className="space-y-2 mb-2">
+              {state.tags.map((tag, index) => (
+                <div key={index} className="rounded border border-slate-200 bg-slate-50 p-3">
+                  <RichTextField label={`Tag ${index + 1}`} value={asText(tag, 'bookTag')} defaultKey="bookTag" onChange={value => updateTag(index, value)} />
+                  <button className="btn-danger text-xs" onClick={() => patch({ tags: state.tags.filter((_, i) => i !== index) })}>Remove</button>
+                </div>
+              ))}
+            </div>
+            <button className="btn-ghost mb-3 w-full justify-center text-xs" onClick={() => patch({ tags: [...state.tags, normalizeText('', 'bookTag')] })}>+ Add tag</button>
             <Field label="Calendly URL">
               <input className="input" value={state.calendlyUrl} onChange={event => patch({ calendlyUrl: event.target.value })} />
             </Field>
@@ -270,9 +301,9 @@ export default function BookAMeeting() {
 
           <div>
             <p className="section-label">Direct Contact</p>
-            <Field label="Title"><input className="input" value={state.contactTitle} onChange={event => patch({ contactTitle: event.target.value })} /></Field>
-            <Field label="Email"><input className="input" value={state.contactEmail} onChange={event => patch({ contactEmail: event.target.value })} /></Field>
-            <Field label="WhatsApp"><input className="input" value={state.contactWhatsapp} onChange={event => patch({ contactWhatsapp: event.target.value })} /></Field>
+            <RichTextField label="Title" value={asText(state.contactTitle, 'bookEyebrow')} defaultKey="bookEyebrow" onChange={contactTitle => patch({ contactTitle })} />
+            <RichTextField label="Email" value={asText(state.contactEmail, 'bookContactText')} defaultKey="bookContactText" onChange={contactEmail => patch({ contactEmail })} />
+            <RichTextField label="WhatsApp" value={asText(state.contactWhatsapp, 'bookContactText')} defaultKey="bookContactText" onChange={contactWhatsapp => patch({ contactWhatsapp })} />
           </div>
         </div>
       </div>

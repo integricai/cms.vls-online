@@ -200,6 +200,20 @@ export const DEFAULTS = {
   bmsDesc:       { size: 15, color: '#374151', weight: '400', letterSpacing: 0 },
   bmsCheck:      { size: 15, color: '#374151', weight: '400', letterSpacing: 0 },
   bmsCta:        { size: 15, color: '#ffffff', weight: '600', letterSpacing: 0 },
+  // Book a Meeting Page
+  bookEyebrow:       { size: 10, color: '#67d4ff', weight: '700', letterSpacing: 0.16 },
+  bookIntroTitle:    { size: 17, color: '#ffffff', weight: '700', letterSpacing: 0 },
+  bookBullet:        { size: 13, color: '#344256', weight: '400', letterSpacing: 0 },
+  bookCardTitle:     { size: 11, color: '#6b7280', weight: '700', letterSpacing: 0.16 },
+  bookExpectTitle:   { size: 12, color: '#0f172a', weight: '700', letterSpacing: 0 },
+  bookExpectDesc:    { size: 12, color: '#344256', weight: '400', letterSpacing: 0 },
+  bookTutorName:     { size: 14, color: '#0f172a', weight: '700', letterSpacing: 0 },
+  bookTutorRole:     { size: 12, color: '#64748b', weight: '700', letterSpacing: 0 },
+  bookTutorBio:      { size: 12, color: '#64748b', weight: '400', letterSpacing: 0 },
+  bookContactText:   { size: 12, color: '#bfdbfe', weight: '400', letterSpacing: 0 },
+  bookMeetingTitle:  { size: 18, color: '#0f172a', weight: '700', letterSpacing: 0 },
+  bookMeetingSub:    { size: 12, color: '#6b7280', weight: '400', letterSpacing: 0 },
+  bookTag:           { size: 11, color: '#1d4ed8', weight: '700', letterSpacing: 0 },
 } as const;
 
 export type DefaultKey = keyof typeof DEFAULTS;

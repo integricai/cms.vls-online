@@ -648,8 +648,8 @@ export interface LegalPageComponent { id: string; name: string; data: LegalPageS
 export interface LegalPageContent { components: LegalPageComponent[]; }
 
 // ── Book a Meeting Page ──────────────────────────────────────────────────────
-export interface BookMeetingBullet { text: string; }
-export interface BookMeetingExpectItem { icon: string; iconBg: string; title: string; desc: string; }
+export interface BookMeetingBullet { text: TextValue; }
+export interface BookMeetingExpectItem { icon: string; iconBg: string; title: TextValue; desc: TextValue; }
 export interface BookMeetingState {
   bg: string;
   padTop: number;
@@ -658,21 +658,21 @@ export interface BookMeetingState {
   padRight: number;
   sidebarWidth: number;
   leftHeaderBg: string;
-  leftEyebrow: string;
-  leftTitle: string;
+  leftEyebrow: TextValue;
+  leftTitle: TextValue;
   bullets: BookMeetingBullet[];
-  expectTitle: string;
+  expectTitle: TextValue;
   expectItems: BookMeetingExpectItem[];
   tutorInitials: string;
-  tutorName: string;
-  tutorRole: string;
-  tutorBio: string;
-  contactTitle: string;
-  contactEmail: string;
-  contactWhatsapp: string;
-  meetingTitle: string;
-  meetingSubtitle: string;
-  tags: string[];
+  tutorName: TextValue;
+  tutorRole: TextValue;
+  tutorBio: TextValue;
+  contactTitle: TextValue;
+  contactEmail: TextValue;
+  contactWhatsapp: TextValue;
+  meetingTitle: TextValue;
+  meetingSubtitle: TextValue;
+  tags: TextValue[];
   calendlyUrl: string;
   calendlyHeight: number;
 }
