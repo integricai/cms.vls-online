@@ -33,7 +33,7 @@ export default function CourseFinderBannerScreen() {
       .map(course => course.lastSyncedAt)
       .filter(Boolean)
       .sort();
-    return values.at(-1) || null;
+    return values.length > 0 ? values[values.length - 1] : null;
   }, [courses]);
 
   async function loadCourses() {
