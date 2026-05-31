@@ -1,6 +1,13 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
-import { listActiveCourses, listCourses } from '../models/course';
+import {
+  listActiveCourses,
+  listCourseDropdownOptions,
+  listCourses,
+  reorderCourses,
+  replaceCourseDropdownOptions,
+  updateCourseAdminMetadata,
+} from '../models/course';
 import {
   createPaymentCard,
   deletePaymentCard,
@@ -59,6 +66,74 @@ router.get('/active', async (_req: Request, res: Response, next: NextFunction) =
   try {
     const courses = await listActiveCourses();
     return res.json({ ok: true, data: courses });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/dropdown-options', requireRole('admin', 'editor'), async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const options = await listCourseDropdownOptions();
+    return res.json({ ok: true, data: options });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/dropdown-options', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = req.body as {
+      qualification?: string[];
+      level?: string[];
+      course_option?: string[];
+    };
+    const normalizeValues = (values: unknown): string[] => Array.isArray(values)
+      ? Array.from(new Set(values.map(value => String(value).trim()).filter(Boolean)))
+      : [];
+
+    const options = await replaceCourseDropdownOptions({
+      qualification: normalizeValues(body.qualification),
+      level: normalizeValues(body.level),
+      course_option: normalizeValues(body.course_option),
+    });
+    return res.json({ ok: true, data: options });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/reorder/order', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const ids = Array.isArray(req.body.ids)
+      ? req.body.ids.map((id: unknown) => Number(id)).filter((id: number) => Number.isInteger(id))
+      : [];
+    if (!ids.length) return res.status(400).json({ ok: false, error: 'ids are required' });
+
+    await reorderCourses(ids);
+    const courses = await listCourses();
+    return res.json({ ok: true, data: courses });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/:id', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ ok: false, error: 'Invalid course id' });
+    }
+
+    const course = await updateCourseAdminMetadata(id, {
+      isActive: typeof req.body.isActive === 'boolean' ? req.body.isActive : undefined,
+      sortOrder: Number.isInteger(req.body.sortOrder) ? req.body.sortOrder : undefined,
+      qualification: req.body.qualification === undefined ? undefined : (req.body.qualification || null),
+      courseLevel: req.body.courseLevel === undefined ? undefined : (req.body.courseLevel || null),
+      courseOption: req.body.courseOption === undefined ? undefined : (req.body.courseOption || null),
+    });
+
+    if (!course) return res.status(404).json({ ok: false, error: 'Course not found' });
+    return res.json({ ok: true, data: course });
   } catch (err) {
     next(err);
   }

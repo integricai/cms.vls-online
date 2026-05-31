@@ -8,6 +8,10 @@ type EmbeddedCourse = {
   level: string;
   status: string;
   url: string;
+  sortOrder: number;
+  qualification: string;
+  courseLevel: string;
+  courseOption: string;
 };
 
 function publicCourseUrl(course: CourseFinderCourse): string {
@@ -31,6 +35,10 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
       level: course.level || '',
       status: course.status || '',
       url: publicCourseUrl(course),
+      sortOrder: course.sortOrder || 0,
+      qualification: course.qualification || '',
+      courseLevel: course.courseLevel || '',
+      courseOption: course.courseOption || '',
     }));
 
   return `
@@ -123,6 +131,7 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
   var state = { qual: '', level: '', course: '', option: '' };
   var qualOrder = ['acca','cima','cma','cia','ifrs','other'];
   var qualLabels = { acca: 'ACCA', cima: 'CIMA', cma: 'CMA', cia: 'CIA', ifrs: 'Dip-IFR / IFRS', other: 'Other' };
+  var qualByLabel = { 'ACCA':'acca', 'CIMA':'cima', 'CMA':'cma', 'CIA':'cia', 'Dip-IFR / IFRS':'ifrs', 'Dip-IFR':'ifrs', 'IFRS':'ifrs' };
   var levelLabels = {
     foundation: 'Foundation Diploma', knowledge: 'Applied Knowledge', skills: 'Applied Skills',
     professional: 'Strategic Professional', revision: 'Revision Courses', bundles: 'Bundles & Subscriptions',
@@ -139,6 +148,7 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
   function textKey(course){ return (course.name + ' ' + course.slug + ' ' + course.category + ' ' + course.level).toLowerCase(); }
   function hasWord(text, word){ return new RegExp('(^|[^a-z0-9])' + word + '([^a-z0-9]|$)', 'i').test(text); }
   function classifyQual(course){
+    if (course.qualification && qualByLabel[course.qualification]) return qualByLabel[course.qualification];
     var t = textKey(course);
     if (/ifrs|dip-?ifr|cert-?ifr/.test(t)) return 'ifrs';
     if (/\\bcia\\b|internal auditing/.test(t)) return 'cia';
@@ -148,6 +158,11 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
     return 'other';
   }
   function classifyLevel(course, qual){
+    if (course.courseLevel) {
+      for (var levelKey in levelLabels) {
+        if (levelLabels[levelKey] === course.courseLevel) return levelKey;
+      }
+    }
     var t = textKey(course);
     if (/subscription|bundle|fullaccess|full access|annual/.test(t)) return 'bundles';
     if (/revision|mock/.test(t) && qual === 'acca') return 'revision';
@@ -168,6 +183,7 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
     return 'skills';
   }
   function inferOption(course){
+    if (course.courseOption) return course.courseOption;
     var t = textKey(course);
     if (/coming soon/.test(t)) return 'Coming Soon';
     if (/annual|subscription|fullaccess|full access/.test(t)) return 'Annual Plan';
@@ -193,7 +209,7 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
       var level = classifyLevel(course, qual);
       var key = courseKey(course, qual, level);
       var option = inferOption(course);
-      if (!map[key]) map[key] = { key: key, qual: qual, level: level, label: cleanLabel(course.name), order: index, urls: {}, options: [] };
+      if (!map[key]) map[key] = { key: key, qual: qual, level: level, label: cleanLabel(course.name), order: course.sortOrder || index, urls: {}, options: [] };
       if (option === 'Full Course' || map[key].label.length > cleanLabel(course.name).length) map[key].label = cleanLabel(course.name);
       map[key].urls[option] = course.url || '#';
       if (map[key].options.indexOf(option) === -1) map[key].options.push(option);

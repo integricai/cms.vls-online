@@ -79,7 +79,23 @@ export interface Course {
   status: string | null;
   zenlerUrl: string | null;
   isActive: boolean;
+  sortOrder: number;
+  qualification: string | null;
+  courseLevel: string | null;
+  courseOption: string | null;
   lastSyncedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type CourseDropdownKind = 'qualification' | 'level' | 'course_option';
+
+export interface CourseDropdownOption {
+  id: number;
+  kind: CourseDropdownKind;
+  value: string;
+  sortOrder: number;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -8,6 +8,10 @@ export interface CourseFinderCourse {
   status: string | null;
   zenlerUrl: string | null;
   isActive: boolean;
+  sortOrder?: number;
+  qualification?: string | null;
+  courseLevel?: string | null;
+  courseOption?: string | null;
   lastSyncedAt: string | null;
 }
 
@@ -19,6 +23,10 @@ type EmbeddedCourse = {
   level: string;
   status: string;
   url: string;
+  sortOrder: number;
+  qualification: string;
+  courseLevel: string;
+  courseOption: string;
 };
 
 function publicCourseUrl(course: CourseFinderCourse): string {
@@ -42,6 +50,10 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
       level: course.level || '',
       status: course.status || '',
       url: publicCourseUrl(course),
+      sortOrder: course.sortOrder || 0,
+      qualification: course.qualification || '',
+      courseLevel: course.courseLevel || '',
+      courseOption: course.courseOption || '',
     }));
 
   return `
@@ -236,6 +248,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
   var state = { qual: '', level: '', course: '', option: '', sort: 'default', page: 1 };
   var qualOrder = ['acca','cima','cma','cia','ifrs','other'];
   var qualLabels = { acca: 'ACCA', cima: 'CIMA', cma: 'CMA', cia: 'CIA', ifrs: 'Dip-IFR / IFRS', other: 'Other' };
+  var qualByLabel = { 'ACCA':'acca', 'CIMA':'cima', 'CMA':'cma', 'CIA':'cia', 'Dip-IFR / IFRS':'ifrs', 'Dip-IFR':'ifrs', 'IFRS':'ifrs' };
   var qualIcons = { acca: 'AC', cima: 'CI', cma: 'CM', cia: 'IA', ifrs: 'IF', other: 'OT' };
   var levelStyle = {
     foundation: ['Foundation Diploma','lb-blue','ct-blue','FD'],
@@ -263,6 +276,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
   function textKey(course){ return (course.name + ' ' + course.slug + ' ' + course.category + ' ' + course.level).toLowerCase(); }
   function hasWord(text, word){ return new RegExp('(^|[^a-z0-9])' + word + '([^a-z0-9]|$)', 'i').test(text); }
   function classifyQual(course){
+    if (course.qualification && qualByLabel[course.qualification]) return qualByLabel[course.qualification];
     var t = textKey(course);
     if (/ifrs|dip-?ifr|cert-?ifr/.test(t)) return 'ifrs';
     if (/\\bcia\\b|internal auditing/.test(t)) return 'cia';
@@ -272,6 +286,11 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
     return 'other';
   }
   function classifyLevel(course, qual){
+    if (course.courseLevel) {
+      for (var levelKey in levelStyle) {
+        if (levelStyle[levelKey][0] === course.courseLevel) return levelKey;
+      }
+    }
     var t = textKey(course);
     if (/subscription|bundle|fullaccess|full access|annual/.test(t)) return 'bundles';
     if (/revision|mock/.test(t) && qual === 'acca') return 'revision';
@@ -292,6 +311,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
     return 'skills';
   }
   function inferOption(course){
+    if (course.courseOption) return course.courseOption;
     var t = textKey(course);
     if (/coming soon/.test(t)) return 'Coming Soon';
     if (/annual|subscription|fullaccess|full access/.test(t)) return 'Annual Plan';
@@ -324,7 +344,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
       var option = inferOption(course);
       if (!map[key]) {
         map[key] = {
-          key: key, qual: qual, level: level, label: cleanLabel(course.name), order: index,
+          key: key, qual: qual, level: level, label: cleanLabel(course.name), order: course.sortOrder || index,
           urls: {}, options: [], sourceNames: []
         };
       }
