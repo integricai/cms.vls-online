@@ -249,10 +249,6 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
   var rawCourses = ${escapeScriptJson(embedded)};
   var PAGE_SIZE = 10;
   var state = { qual: '', level: '', course: '', option: '', sort: 'default', page: 1 };
-  var qualOrder = ['acca','cima','cma','cia','ifrs','other'];
-  var qualLabels = { acca: 'ACCA', cima: 'CIMA', cma: 'CMA', cia: 'CIA', ifrs: 'Dip-IFR / IFRS', other: 'Other' };
-  var qualByLabel = { 'ACCA':'acca', 'CIMA':'cima', 'CMA':'cma', 'CIA':'cia', 'Dip-IFR / IFRS':'ifrs', 'Dip-IFR':'ifrs', 'IFRS':'ifrs' };
-  var qualIcons = { acca: 'AC', cima: 'CI', cma: 'CM', cia: 'IA', ifrs: 'IF', other: 'OT' };
   var levelStyle = {
     foundation: ['Foundation Diploma','lb-blue','ct-blue','FD'],
     knowledge: ['Applied Knowledge','lb-teal','ct-teal','AK'],
@@ -278,46 +274,29 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
   }
   function textKey(course){ return (course.name + ' ' + course.slug + ' ' + course.category + ' ' + course.level).toLowerCase(); }
   function hasWord(text, word){ return new RegExp('(^|[^a-z0-9])' + word + '([^a-z0-9]|$)', 'i').test(text); }
-  function classifyQual(course){
-    if (course.qualification && qualByLabel[course.qualification]) return qualByLabel[course.qualification];
-    var t = textKey(course);
-    if (/ifrs|dip-?ifr|cert-?ifr/.test(t)) return 'ifrs';
-    if (/\\bcia\\b|internal auditing/.test(t)) return 'cia';
-    if (/\\bcma\\b|strategic financial management/.test(t)) return 'cma';
-    if (/\\bcima\\b|\\bba[1-4]\\b|fundamentals of business economics|digital world|managing performance|financial strategy/.test(t)) return 'cima';
-    if (/\\bacca\\b|\\bfa1\\b|\\bma1\\b|\\bfa2\\b|\\bma2\\b|\\bfbt\\b|\\bfab\\b|\\bfma\\b|\\bffa\\b|\\bsbl\\b|\\bsbr\\b|\\bafm\\b|\\bapm\\b|\\batx\\b|\\baaa\\b|performance management|financial reporting|financial management|audit and assurance|business and technology|management accounting|financial accounting/.test(t)) return 'acca';
-    return 'other';
+  function cleanValue(value, fallback){
+    var text = String(value || '').replace(/\\s+/g, ' ').trim();
+    return text || fallback;
   }
-  function classifyLevel(course, qual){
-    if (course.courseLevel) {
-      for (var levelKey in levelStyle) {
-        if (levelStyle[levelKey][0] === course.courseLevel) return levelKey;
-      }
-    }
-    var t = textKey(course);
-    if (/subscription|bundle|fullaccess|full access|annual/.test(t)) return 'bundles';
-    if (/revision|mock/.test(t) && qual === 'acca') return 'revision';
-    if (qual === 'cima') {
-      if (/\\bba[1-4]\\b|certificate/.test(t)) return 'certificate';
-      if (/\\be1\\b|\\bp1\\b|\\bf1\\b|operational|digital world/.test(t)) return 'operational';
-      if (/\\be2\\b|\\bp2\\b|\\bf2\\b|management level|managing performance|advanced management accounting|advanced financial reporting/.test(t)) return 'management';
-      return 'strategic';
-    }
-    if (qual === 'cma') return 'cma_all';
-    if (qual === 'cia') return 'cia_all';
-    if (qual === 'ifrs') return 'ifrs_all';
-    if (qual === 'other') return 'other_all';
-    if (/\\bfa1\\b|\\bma1\\b|\\bfa2\\b|\\bma2\\b|\\bfbt\\b|\\bfab\\b|\\bfma\\b|\\bffa\\b|foundation/.test(t)) return 'foundation';
-    if (hasWord(t,'bt') || hasWord(t,'ma') || hasWord(t,'fa') || /applied knowledge|business and technology|management accounting|financial accounting|\\bf2\\b|\\bf3\\b/.test(t)) return 'knowledge';
-    if (hasWord(t,'lw') || hasWord(t,'pm') || hasWord(t,'tx') || hasWord(t,'fr') || hasWord(t,'aa') || hasWord(t,'fm') || /applied skills|\\bf4\\b|\\bf5\\b|\\bf6\\b|\\bf7\\b|\\bf8\\b|\\bf9\\b|corporate and business law|taxation/.test(t)) return 'skills';
-    if (/\\bsbl\\b|\\bsbr\\b|\\bafm\\b|\\bapm\\b|\\batx\\b|\\baaa\\b|strategic professional|advanced/.test(t)) return 'professional';
-    return 'skills';
+  function getQualification(course){ return cleanValue(course.qualification, 'Other'); }
+  function getCourseLevels(course){
+    var levels = Array.isArray(course.courseLevels) ? course.courseLevels.map(function(level){ return cleanValue(level, ''); }).filter(Boolean) : [];
+    if (!levels.length && course.courseLevel) levels = [cleanValue(course.courseLevel, '')].filter(Boolean);
+    return levels.length ? levels : [inferLevelLabel(course)];
   }
-  function classifyExplicitLevel(label, fallbackCourse, qual){
-    for (var levelKey in levelStyle) {
-      if (levelStyle[levelKey][0] === label) return levelKey;
-    }
-    return classifyLevel(fallbackCourse, qual);
+  function inferLevelLabel(course){
+    var t = textKey(course);
+    if (/subscription|bundle|fullaccess|full access|annual/.test(t)) return 'Bundles & Subscriptions';
+    if (/revision|mock/.test(t)) return 'Revision Courses';
+    if (/\\bba[1-4]\\b|certificate/.test(t)) return 'Certificate Level';
+    if (/\\be1\\b|\\bp1\\b|\\bf1\\b|operational|digital world/.test(t)) return 'Operational Level';
+    if (/\\be2\\b|\\bp2\\b|\\bf2\\b|management level|managing performance|advanced management accounting|advanced financial reporting/.test(t)) return 'Management Level';
+    if (/\\be3\\b|\\bp3\\b|\\bf3\\b|strategic level|financial strategy/.test(t)) return 'Strategic Level';
+    if (/\\bfa1\\b|\\bma1\\b|\\bfa2\\b|\\bma2\\b|foundation/.test(t)) return 'Foundation Diploma';
+    if (hasWord(t,'bt') || hasWord(t,'ma') || hasWord(t,'fa') || /applied knowledge|business and technology|management accounting|financial accounting/.test(t)) return 'Applied Knowledge';
+    if (hasWord(t,'lw') || hasWord(t,'pm') || hasWord(t,'tx') || hasWord(t,'fr') || hasWord(t,'aa') || hasWord(t,'fm') || /applied skills|corporate and business law|taxation/.test(t)) return 'Applied Skills';
+    if (/\\bsbl\\b|\\bsbr\\b|\\bafm\\b|\\bapm\\b|\\batx\\b|\\baaa\\b|strategic professional|advanced/.test(t)) return 'Strategic Professional';
+    return 'Other Courses';
   }
   function inferOption(course){
     if (course.courseOption) return course.courseOption;
@@ -338,18 +317,43 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
       .replace(/\\s+Backup$/i, '')
       .trim();
   }
+  function levelStyleKey(label){
+    var clean = cleanValue(label, '').toLowerCase();
+    for (var levelKey in levelStyle) {
+      if (levelStyle[levelKey][0].toLowerCase() === clean) return levelKey;
+    }
+    if (/foundation/.test(clean)) return 'foundation';
+    if (/knowledge/.test(clean)) return 'knowledge';
+    if (/skills/.test(clean)) return 'skills';
+    if (/professional/.test(clean)) return 'professional';
+    if (/revision/.test(clean)) return 'revision';
+    if (/bundle|subscription/.test(clean)) return 'bundles';
+    if (/certificate/.test(clean)) return 'certificate';
+    if (/operational/.test(clean)) return 'operational';
+    if (/management/.test(clean)) return 'management';
+    if (/strategic/.test(clean)) return 'strategic';
+    if (/cma/.test(clean)) return 'cma_all';
+    if (/cia/.test(clean)) return 'cia_all';
+    if (/ifr/.test(clean)) return 'ifrs_all';
+    return 'other_all';
+  }
+  function qualIcon(label){
+    var clean = cleanValue(label, 'Other');
+    var letters = clean.replace(/[^a-z0-9 ]/gi, ' ').split(/\\s+/).filter(Boolean).map(function(part){ return part.charAt(0); }).join('').slice(0, 2).toUpperCase();
+    return letters || 'OT';
+  }
   function courseKey(course, qual, level){
     var t = textKey(course);
     var codes = ['fa1','ma1','fa2','ma2','fbt','fab','fma','ffa','sbl','sbr','afm','apm','atx','aaa','ba1','ba2','ba3','ba4','e1','p1','f1','e2','p2','f2','e3','p3','f3','cma1','cma2','cia1','cia2','cia3','dipifr','certifr','bt','ma','fa','lw','pm','tx','fr','aa','fm'];
-    for (var i=0;i<codes.length;i++){ if (hasWord(t, codes[i])) return qual + '-' + level + '-' + codes[i]; }
-    return qual + '-' + level + '-' + cleanLabel(course.name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+    var prefix = (qual + '-' + level).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+    for (var i=0;i<codes.length;i++){ if (hasWord(t, codes[i])) return prefix + '-' + codes[i]; }
+    return prefix + '-' + cleanLabel(course.name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   }
   function buildGroups(){
     var map = {};
     rawCourses.forEach(function(course, index){
-      var qual = classifyQual(course);
-      var explicitLevels = Array.isArray(course.courseLevels) ? course.courseLevels.filter(Boolean) : [];
-      var levels = explicitLevels.length ? explicitLevels.map(function(label){ return classifyExplicitLevel(label, course, qual); }) : [classifyLevel(course, qual)];
+      var qual = getQualification(course);
+      var levels = getCourseLevels(course);
       levels.forEach(function(level){
         var key = courseKey(course, qual, level);
         var option = inferOption(course);
@@ -368,10 +372,10 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
     return Object.keys(map).map(function(key){ return map[key]; });
   }
   var rows = buildGroups();
-  function levelLabel(key){ return (levelStyle[key] || levelStyle.other_all)[0]; }
-  function badgeClass(key){ return (levelStyle[key] || levelStyle.other_all)[1]; }
-  function thumbClass(key){ return (levelStyle[key] || levelStyle.other_all)[2]; }
-  function thumbText(key){ return (levelStyle[key] || levelStyle.other_all)[3]; }
+  function levelLabel(key){ return key || 'Other Courses'; }
+  function badgeClass(key){ return (levelStyle[levelStyleKey(key)] || levelStyle.other_all)[1]; }
+  function thumbClass(key){ return (levelStyle[levelStyleKey(key)] || levelStyle.other_all)[2]; }
+  function thumbText(key){ return (levelStyle[levelStyleKey(key)] || levelStyle.other_all)[3]; }
   function urlFor(row){ return row.urls[state.option] || row.urls['Full Course'] || row.urls[row.options[0]] || '#'; }
   function optionSort(a,b){
     var order = ['Full Course','Revision Course','Mock Exam','Study Notes','Bundle','Annual Plan','Coming Soon'];
@@ -403,7 +407,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
   function sortedRows(items){
     var copy = items.slice();
     if (state.sort === 'az') copy.sort(function(a,b){ return a.label.localeCompare(b.label); });
-    else if (state.sort === 'level') copy.sort(function(a,b){ return (qualLabels[a.qual] + levelLabel(a.level) + a.label).localeCompare(qualLabels[b.qual] + levelLabel(b.level) + b.label); });
+    else if (state.sort === 'level') copy.sort(function(a,b){ return (a.qual + levelLabel(a.level) + a.label).localeCompare(b.qual + levelLabel(b.level) + b.label); });
     else copy.sort(function(a,b){ return a.order - b.order; });
     return copy;
   }
@@ -416,7 +420,6 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
       seen[value] = true;
       output.push({ value: value, label: getLabel(item) });
     });
-    output.sort(function(a,b){ return a.label.localeCompare(b.label); });
     return output;
   }
   function resetFrom(stage){
@@ -432,10 +435,10 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
     state.page = Math.min(state.page, pages || 1);
     var start = (state.page - 1) * PAGE_SIZE;
     var slice = items.slice(start, start + PAGE_SIZE);
-    var qd = state.qual ? qualLabels[state.qual] : '';
+    var qd = state.qual || '';
     var currentLevel = state.level ? levelLabel(state.level) : '';
     var selectedCourse = state.course ? rows.filter(function(row){ return row.key === state.course; })[0] : null;
-    $('list-icon').textContent = state.qual ? qualIcons[state.qual] : 'CF';
+    $('list-icon').textContent = state.qual ? qualIcon(state.qual) : 'CF';
     $('list-title').textContent = selectedCourse ? selectedCourse.label : currentLevel ? qd + ' - ' + currentLevel : qd ? 'All ' + qd + ' Courses' : 'All VLS Courses';
     $('list-sub').textContent = state.qual ? 'Filtered by: ' + (currentLevel || qd) : 'Browse the full VLS course library';
     $('count').textContent = total + ' course' + (total === 1 ? '' : 's');
@@ -471,7 +474,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
     $('stat-papers').textContent = String(rows.length);
   }
   function initDropdowns(){
-    var qualItems = qualOrder.filter(function(q){ return rows.some(function(row){ return row.qual === q; }); }).map(function(q){ return { value: q, label: qualLabels[q] }; });
+    var qualItems = unique(rows, function(row){ return row.qual; }, function(row){ return row.qual; });
     populate($('qual'), qualItems, 'All qualifications');
   }
   $('qual').addEventListener('change', function(){
@@ -524,7 +527,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
     if (!selected) return;
     $('match-icon').textContent = state.option === 'Mock Exam' ? 'ME' : state.option === 'Revision Course' ? 'RV' : state.option === 'Study Notes' ? 'SN' : 'OK';
     $('match-name').textContent = selected.label;
-    $('match-path').textContent = qualLabels[selected.qual] + ' > ' + levelLabel(selected.level) + ' > ' + state.option;
+    $('match-path').textContent = selected.qual + ' > ' + levelLabel(selected.level) + ' > ' + state.option;
     $('match-link').href = urlFor(selected);
     $('match').classList.add('visible');
   });

@@ -131,16 +131,6 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
   if (!root) return;
   var rawCourses = ${escapeScriptJson(embedded)};
   var state = { qual: '', level: '', course: '', option: '' };
-  var qualOrder = ['acca','cima','cma','cia','ifrs','other'];
-  var qualLabels = { acca: 'ACCA', cima: 'CIMA', cma: 'CMA', cia: 'CIA', ifrs: 'Dip-IFR / IFRS', other: 'Other' };
-  var qualByLabel = { 'ACCA':'acca', 'CIMA':'cima', 'CMA':'cma', 'CIA':'cia', 'Dip-IFR / IFRS':'ifrs', 'Dip-IFR':'ifrs', 'IFRS':'ifrs' };
-  var levelLabels = {
-    foundation: 'Foundation Diploma', knowledge: 'Applied Knowledge', skills: 'Applied Skills',
-    professional: 'Strategic Professional', revision: 'Revision Courses', bundles: 'Bundles & Subscriptions',
-    certificate: 'Certificate Level', operational: 'Operational Level', management: 'Management Level',
-    strategic: 'Strategic Level', cma_all: 'CMA Qualification', cia_all: 'CIA Qualification',
-    ifrs_all: 'IFRS Qualification', other_all: 'Other Courses'
-  };
   function $(role){ return root.querySelector('[data-role="' + role + '"]'); }
   function esc(value){
     return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch){
@@ -149,46 +139,29 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
   }
   function textKey(course){ return (course.name + ' ' + course.slug + ' ' + course.category + ' ' + course.level).toLowerCase(); }
   function hasWord(text, word){ return new RegExp('(^|[^a-z0-9])' + word + '([^a-z0-9]|$)', 'i').test(text); }
-  function classifyQual(course){
-    if (course.qualification && qualByLabel[course.qualification]) return qualByLabel[course.qualification];
-    var t = textKey(course);
-    if (/ifrs|dip-?ifr|cert-?ifr/.test(t)) return 'ifrs';
-    if (/\\bcia\\b|internal auditing/.test(t)) return 'cia';
-    if (/\\bcma\\b|strategic financial management/.test(t)) return 'cma';
-    if (/\\bcima\\b|\\bba[1-4]\\b|fundamentals of business economics|digital world|managing performance|financial strategy/.test(t)) return 'cima';
-    if (/\\bacca\\b|\\bfa1\\b|\\bma1\\b|\\bfa2\\b|\\bma2\\b|\\bfbt\\b|\\bfab\\b|\\bfma\\b|\\bffa\\b|\\bsbl\\b|\\bsbr\\b|\\bafm\\b|\\bapm\\b|\\batx\\b|\\baaa\\b|performance management|financial reporting|financial management|audit and assurance|business and technology|management accounting|financial accounting/.test(t)) return 'acca';
-    return 'other';
+  function cleanValue(value, fallback){
+    var text = String(value || '').replace(/\\s+/g, ' ').trim();
+    return text || fallback;
   }
-  function classifyLevel(course, qual){
-    if (course.courseLevel) {
-      for (var levelKey in levelLabels) {
-        if (levelLabels[levelKey] === course.courseLevel) return levelKey;
-      }
-    }
-    var t = textKey(course);
-    if (/subscription|bundle|fullaccess|full access|annual/.test(t)) return 'bundles';
-    if (/revision|mock/.test(t) && qual === 'acca') return 'revision';
-    if (qual === 'cima') {
-      if (/\\bba[1-4]\\b|certificate/.test(t)) return 'certificate';
-      if (/\\be1\\b|\\bp1\\b|\\bf1\\b|operational|digital world/.test(t)) return 'operational';
-      if (/\\be2\\b|\\bp2\\b|\\bf2\\b|management level|managing performance|advanced management accounting|advanced financial reporting/.test(t)) return 'management';
-      return 'strategic';
-    }
-    if (qual === 'cma') return 'cma_all';
-    if (qual === 'cia') return 'cia_all';
-    if (qual === 'ifrs') return 'ifrs_all';
-    if (qual === 'other') return 'other_all';
-    if (/\\bfa1\\b|\\bma1\\b|\\bfa2\\b|\\bma2\\b|\\bfbt\\b|\\bfab\\b|\\bfma\\b|\\bffa\\b|foundation/.test(t)) return 'foundation';
-    if (hasWord(t,'bt') || hasWord(t,'ma') || hasWord(t,'fa') || /applied knowledge|business and technology|management accounting|financial accounting|\\bf2\\b|\\bf3\\b/.test(t)) return 'knowledge';
-    if (hasWord(t,'lw') || hasWord(t,'pm') || hasWord(t,'tx') || hasWord(t,'fr') || hasWord(t,'aa') || hasWord(t,'fm') || /applied skills|\\bf4\\b|\\bf5\\b|\\bf6\\b|\\bf7\\b|\\bf8\\b|\\bf9\\b|corporate and business law|taxation/.test(t)) return 'skills';
-    if (/\\bsbl\\b|\\bsbr\\b|\\bafm\\b|\\bapm\\b|\\batx\\b|\\baaa\\b|strategic professional|advanced/.test(t)) return 'professional';
-    return 'skills';
+  function getQualification(course){ return cleanValue(course.qualification, 'Other'); }
+  function getCourseLevels(course){
+    var levels = Array.isArray(course.courseLevels) ? course.courseLevels.map(function(level){ return cleanValue(level, ''); }).filter(Boolean) : [];
+    if (!levels.length && course.courseLevel) levels = [cleanValue(course.courseLevel, '')].filter(Boolean);
+    return levels.length ? levels : [inferLevelLabel(course)];
   }
-  function classifyExplicitLevel(label, fallbackCourse, qual){
-    for (var levelKey in levelLabels) {
-      if (levelLabels[levelKey] === label) return levelKey;
-    }
-    return classifyLevel(fallbackCourse, qual);
+  function inferLevelLabel(course){
+    var t = textKey(course);
+    if (/subscription|bundle|fullaccess|full access|annual/.test(t)) return 'Bundles & Subscriptions';
+    if (/revision|mock/.test(t)) return 'Revision Courses';
+    if (/\\bba[1-4]\\b|certificate/.test(t)) return 'Certificate Level';
+    if (/\\be1\\b|\\bp1\\b|\\bf1\\b|operational|digital world/.test(t)) return 'Operational Level';
+    if (/\\be2\\b|\\bp2\\b|\\bf2\\b|management level|managing performance|advanced management accounting|advanced financial reporting/.test(t)) return 'Management Level';
+    if (/\\be3\\b|\\bp3\\b|\\bf3\\b|strategic level|financial strategy/.test(t)) return 'Strategic Level';
+    if (/\\bfa1\\b|\\bma1\\b|\\bfa2\\b|\\bma2\\b|foundation/.test(t)) return 'Foundation Diploma';
+    if (hasWord(t,'bt') || hasWord(t,'ma') || hasWord(t,'fa') || /applied knowledge|business and technology|management accounting|financial accounting/.test(t)) return 'Applied Knowledge';
+    if (hasWord(t,'lw') || hasWord(t,'pm') || hasWord(t,'tx') || hasWord(t,'fr') || hasWord(t,'aa') || hasWord(t,'fm') || /applied skills|corporate and business law|taxation/.test(t)) return 'Applied Skills';
+    if (/\\bsbl\\b|\\bsbr\\b|\\bafm\\b|\\bapm\\b|\\batx\\b|\\baaa\\b|strategic professional|advanced/.test(t)) return 'Strategic Professional';
+    return 'Other Courses';
   }
   function inferOption(course){
     if (course.courseOption) return course.courseOption;
@@ -207,15 +180,15 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
   function courseKey(course, qual, level){
     var t = textKey(course);
     var codes = ['fa1','ma1','fa2','ma2','fbt','fab','fma','ffa','sbl','sbr','afm','apm','atx','aaa','ba1','ba2','ba3','ba4','e1','p1','f1','e2','p2','f2','e3','p3','f3','cma1','cma2','cia1','cia2','cia3','dipifr','certifr','bt','ma','fa','lw','pm','tx','fr','aa','fm'];
-    for (var i=0;i<codes.length;i++){ if (hasWord(t, codes[i])) return qual + '-' + level + '-' + codes[i]; }
-    return qual + '-' + level + '-' + cleanLabel(course.name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+    var prefix = (qual + '-' + level).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+    for (var i=0;i<codes.length;i++){ if (hasWord(t, codes[i])) return prefix + '-' + codes[i]; }
+    return prefix + '-' + cleanLabel(course.name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   }
   function buildGroups(){
     var map = {};
     rawCourses.forEach(function(course, index){
-      var qual = classifyQual(course);
-      var explicitLevels = Array.isArray(course.courseLevels) ? course.courseLevels.filter(Boolean) : [];
-      var levels = explicitLevels.length ? explicitLevels.map(function(label){ return classifyExplicitLevel(label, course, qual); }) : [classifyLevel(course, qual)];
+      var qual = getQualification(course);
+      var levels = getCourseLevels(course);
       levels.forEach(function(level){
         var key = courseKey(course, qual, level);
         var option = inferOption(course);
@@ -247,7 +220,6 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
       seen[value] = true;
       output.push({ value: value, label: getLabel(item) });
     });
-    output.sort(function(a,b){ return a.label.localeCompare(b.label); });
     return output;
   }
   function populate(select, items, placeholder){
@@ -281,7 +253,7 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
     $('stat-papers').textContent = String(rows.length);
   }
   function initDropdowns(){
-    var qualItems = qualOrder.filter(function(q){ return rows.some(function(row){ return row.qual === q; }); }).map(function(q){ return { value: q, label: qualLabels[q] }; });
+    var qualItems = unique(rows, function(row){ return row.qual; }, function(row){ return row.qual; });
     populate($('qual'), qualItems, 'All qualifications');
   }
   $('qual').addEventListener('change', function(){
@@ -291,7 +263,7 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
     if (!state.qual) { setStep(1,'active'); setStep(2,''); setStep(3,''); setStep(4,''); }
     else {
       setStep(1,'done'); setStep(2,'active');
-      populate($('level'), unique(filteredRows(), function(row){ return row.level; }, function(row){ return levelLabels[row.level] || 'Other Courses'; }), 'All levels');
+      populate($('level'), unique(filteredRows(), function(row){ return row.level; }, function(row){ return row.level || 'Other Courses'; }), 'All levels');
       $('level').disabled = false;
     }
   });
