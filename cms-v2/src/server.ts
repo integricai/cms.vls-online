@@ -19,6 +19,7 @@ import { getContent } from './models/content';
 import { listBlogPosts } from './models/blog';
 import { getBlogAsset } from './models/blogAsset';
 import { blogTopicSlug, renderBlogArticle, renderBlogLanding } from './services/blogRender';
+import { listCoursePrices } from './models/coursePrice';
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
@@ -69,9 +70,7 @@ app.get('/api/publish-course-prices', async (_req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'no-store');
   try {
-    const row = await getContent('vls-course-prices');
-    const data = row?.data && typeof row.data === 'object' ? row.data as { prices?: unknown[] } : {};
-    return res.json({ prices: Array.isArray(data.prices) ? data.prices : [] });
+    return res.json({ prices: await listCoursePrices() });
   } catch (err) {
     next(err);
   }

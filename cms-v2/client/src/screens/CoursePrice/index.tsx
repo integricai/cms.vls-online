@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import Field from '../../components/Field';
-import type { Course, CoursePriceRecord, ScrapedCoursePrice } from '../../../../shared/types';
+import type { Course, CoursePriceRecord } from '../../../../shared/types';
 import type { CoursePrice, CoursePriceContent } from '../../types/cms';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
 import { calculatedPrice, generateCoursePriceHtml, money } from './generateHtml';
@@ -164,18 +164,24 @@ function mergeDbPricesIntoCards(
 
 function buildInjectCode(price: CoursePrice): string {
   const rootId = `vls-plan-card-${price.id}`;
-  return `<div id="${rootId}" data-vls-price-card="${price.id}"></div>
+  const initialHtml = generateCoursePriceHtml(price);
+  const initialData = JSON.stringify(price).replace(/</g, '\\u003c');
+  return `<div id="${rootId}" data-vls-price-card="${price.id}">
+${initialHtml}
+</div>
 <script>
 (function(){
-  var PID=${JSON.stringify(price.id)}, ROOT=${JSON.stringify(rootId)}, API=${JSON.stringify(COURSE_PRICE_API_URL)};
+  var PID=${JSON.stringify(price.id)}, ROOT=${JSON.stringify(rootId)}, API=${JSON.stringify(COURSE_PRICE_API_URL)}, BASE=${initialData};
   function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
   function num(v,f){var n=Number(v);return isFinite(n)?n:f;}
   function money(v){var n=Math.round(num(v,0)*100)/100;return Math.abs(n%1)<.001?String(Math.round(n)):n.toFixed(2);}
   function hex(v,f){return /^#[0-9a-fA-F]{6}$/.test(String(v||"").trim())?String(v).trim():f;}
+  function curr(v){var c=String(v||"").toUpperCase();if(c==="USD")return "$";if(c==="GBP")return "£";if(c==="EUR")return "€";return v||"$";}
+  function dbCard(r){if(!r)return null;return Object.assign({},BASE,{visible:r.isEnabled!==false,regularPrice:num(r.regularPrice,0),regularPrice2:num(r.regularPrice2,0),discountPercent:num(r.discountPercent,0),discountPercent2:num(r.discountPercent2,0),currency:curr(r.currency||BASE.currency)});}
   function calc(p,i){var r=Math.max(0,num(i===1?p.regularPrice:p.regularPrice2,0)),d=Math.max(0,Math.min(100,num(i===1?p.discountPercent:p.discountPercent2,0))),s=r*(d/100);return{regular:r,discount:d,saving:s,final:Math.max(0,r-s)};}
   function option(p,i){var c=calc(p,i);if(c.regular<=0)return "";var curr=esc(p.currency||"$"),has=c.discount>0&&c.saving>0,title=i===1?(p.plan1Title||"Full Course"):(p.plan2Title||"Complete Package"),sub=i===1?(p.plan1Subtitle||"Complete syllabus, videos & notes"):(p.plan2Subtitle||"Course + live sessions + mock & tutor support"),badge=i===1?(p.plan1Badge||""):(p.plan2Badge||"BEST VALUE");return '<label class="vls-plan-option">'+(badge?'<span class="vls-plan-badge">'+esc(badge)+'</span>':'')+'<input type="radio" name="vls-plan-choice-'+PID+'" '+(i===1?'checked':'')+'><span class="vls-plan-radio"></span><span class="vls-plan-copy"><span class="vls-plan-title">'+esc(title)+'</span><span class="vls-plan-subtitle">'+esc(sub)+'</span></span><span class="vls-plan-price">'+(has?'<span class="vls-plan-regular">'+curr+money(c.regular)+'</span>':'')+'<span class="vls-plan-final">'+curr+money(c.final)+'</span>'+(has?'<span class="vls-plan-save">Save '+curr+money(c.saving)+' ('+money(c.discount)+'% off)</span>':'')+'</span></label>';}
   function render(p){var root=document.getElementById(ROOT);if(!root)return;if(!p||!p.visible){root.style.display="none";return;}root.style.display="";var accent=hex(p.accent,"#204280"),border=hex(p.border,"#d8e0f0"),discountBg=hex(p.discountBg,"#12a85a"),discountTc=hex(p.discountTc,"#fff"),saveBg=hex(p.saveBg,"#ecfdf3"),saveBorder=hex(p.saveBorder,"#b7e4c7"),bg=hex(p.bg,"#fff"),radius=Math.max(0,Math.min(40,parseInt(p.radius,10)||14)),ff=String(p.fontFamily||"Poppins").replace(/['"<>]/g,""),curr=esc(p.currency||"$"),first=calc(p,1).regular>0?calc(p,1):calc(p,2);var css='.vls-plan-card{box-sizing:border-box;width:100%;max-width:300px;background:'+bg+';border:1px solid '+border+';border-top:4px solid '+accent+';border-radius:'+radius+'px;overflow:hidden;font-family:\\''+ff+'\\',Arial,sans-serif;color:#10213d;box-shadow:0 16px 40px rgba(15,23,42,.12)}.vls-plan-card *{box-sizing:border-box}.vls-plan-inner{padding:16px 17px 14px}.vls-plan-eyebrow{display:inline-flex;border-radius:999px;background:#eff6ff;color:#2454d6;padding:7px 11px;font-size:'+(parseInt(p.eyebrowSize,10)||10)+'px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.vls-plan-heading{margin:17px 0 9px;font-size:'+(parseInt(p.titleSize,10)||11)+'px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#23365d}.vls-plan-list{display:grid;gap:10px}.vls-plan-option{position:relative;display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;min-height:92px;border:1px solid #e3e9f4;border-radius:12px;padding:15px 13px;background:#fff;cursor:pointer}.vls-plan-option:has(input:checked){border-color:'+accent+';box-shadow:0 0 0 1px '+accent+',0 10px 24px rgba(32,66,128,.12)}.vls-plan-option input{position:absolute;opacity:0}.vls-plan-radio{width:15px;height:15px;border-radius:999px;border:1px solid #b8c7e1;box-shadow:inset 0 0 0 3px #fff}.vls-plan-option:has(input:checked) .vls-plan-radio{background:'+accent+';border-color:'+accent+'}.vls-plan-title{display:block;font-size:'+(parseInt(p.planTitleSize,10)||13)+'px;font-weight:800;color:#0d1f3c}.vls-plan-subtitle{display:block;font-size:'+(parseInt(p.planSubtitleSize,10)||10)+'px;color:#61708a}.vls-plan-price{display:grid;justify-items:end;gap:3px;min-width:88px}.vls-plan-regular{font-size:13px;font-weight:700;color:#718096;text-decoration:line-through}.vls-plan-final{font-size:'+(parseInt(p.amountSize,10)||31)+'px;font-weight:900;line-height:1;color:#0d2558}.vls-plan-save{border-radius:5px;background:'+discountBg+';color:'+discountTc+';padding:4px 7px;font-size:'+(parseInt(p.discountSize,10)||11)+'px;font-weight:800;white-space:nowrap}.vls-plan-badge{position:absolute;right:10px;top:-9px;border-radius:999px;background:#0d1f4f;color:#fff;padding:4px 8px;font-size:9px;font-weight:800}.vls-plan-guarantee{display:grid;grid-template-columns:28px 1fr;gap:10px;margin-top:24px;border:1px solid '+saveBorder+';background:'+saveBg+';border-radius:9px;padding:11px;color:#0c6b3f}.vls-plan-shield{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:#fff;border:1px solid #cdeed9}.vls-plan-guarantee-title{display:block;font-size:'+(parseInt(p.guaranteeSize,10)||11)+'px;font-weight:800}.vls-plan-guarantee-text{display:block;margin-top:3px;font-size:'+(parseInt(p.bodySize,10)||11)+'px;line-height:1.35;color:#397250}.vls-plan-cta{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;border-radius:8px;background:#0d2b66;color:#fff;text-decoration:none;padding:13px 14px;font-size:'+(parseInt(p.ctaSize,10)||14)+'px;font-weight:800;box-shadow:0 10px 20px rgba(13,43,102,.28)}.vls-plan-checkout{margin:10px 0 0;text-align:center;color:#6c7a92;font-size:10px;font-weight:500}@media(max-width:640px){.vls-plan-card{max-width:none}.vls-plan-option{grid-template-columns:18px 1fr}.vls-plan-price{grid-column:2;justify-items:start}}';root.innerHTML='<style>'+css+'</style><div class="vls-plan-card"><div class="vls-plan-inner">'+(p.eyebrow?'<div class="vls-plan-eyebrow">'+esc(p.eyebrow)+'</div>':'')+'<div class="vls-plan-heading">'+esc(p.title||"Choose your plan")+'</div><div class="vls-plan-list">'+option(p,1)+option(p,2)+'</div><div class="vls-plan-guarantee"><span class="vls-plan-shield">♡</span><span><span class="vls-plan-guarantee-title">'+esc(p.guaranteeTitle||"7-Day Money-Back Guarantee")+'</span><span class="vls-plan-guarantee-text">'+esc(p.guaranteeText||"Not the right fit? Get a full refund within 7 days of registration - no questions asked.")+'</span></span></div><a class="vls-plan-cta" href="'+esc(p.ctaUrl||"#")+'"><span>'+esc(p.ctaText||"Buy Now")+'</span><strong class="vls-plan-cta-price">'+curr+money(first.final)+'</strong><span>→</span></a><div class="vls-plan-checkout">'+esc(p.checkoutText||"Secure checkout - Instant access")+'</div></div></div>';root.querySelectorAll('input[name="vls-plan-choice-'+PID+'"]').forEach(function(input){input.addEventListener("change",function(){var final=input.closest(".vls-plan-option").querySelector(".vls-plan-final"),cta=root.querySelector(".vls-plan-cta-price");if(final&&cta)cta.textContent=final.textContent||"";});});}
-  fetch(API+"?t="+Date.now()).then(function(r){return r.json();}).then(function(data){render((data.prices||[]).find(function(x){return x.id===PID;}));}).catch(function(e){console.error("VLS Course Plan Card ["+PID+"]:",e.message||e);});
+  fetch(API+"?t="+Date.now()).then(function(r){return r.json();}).then(function(data){var rec=(data.prices||[]).find(function(x){return Number(x.courseId)===Number(BASE.courseId);});if(rec)render(dbCard(rec));}).catch(function(e){console.error("VLS Course Plan Card ["+PID+"]:",e.message||e);});
 })();
 </script>`;
   return `<script>
@@ -523,7 +529,6 @@ export default function CoursePriceScreen() {
   const [publishError, setPublishError] = useState('');
   const [syncingPrices, setSyncingPrices] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
-  const [syncFailures, setSyncFailures] = useState<ScrapedCoursePrice[]>([]);
   const [injectCode, setInjectCode] = useState('');
   const [activeTab, setActiveTab] = useState<'preview' | 'html'>('preview');
 
@@ -625,35 +630,28 @@ export default function CoursePriceScreen() {
     setSaved(false);
   }
 
-  async function syncPricesFromPages() {
+  async function updatePricesFromDatabase() {
     setSyncingPrices(true);
     setSyncMessage('');
-    setSyncFailures([]);
     setPublishError('');
     try {
-      const result = await api.post<{ scraped: ScrapedCoursePrice[]; prices: CoursePriceRecord[] }>('/courses/scrape-prices', {});
-      const scraped = result.scraped;
-      const stored = result.prices;
-      const matched = scraped.filter(item => item.matched && item.price != null);
-      const failures = scraped.filter(item => !item.matched || item.price == null);
+      const stored = await api.get<CoursePriceRecord[]>('/courses/prices');
       const nextPrices = mergeDbPricesIntoCards(prices, stored, courses);
-      const firstImportedId = nextPrices.find(price => matched.some(item => item.courseId === price.courseId))?.id ?? null;
+      const updatedMapped = nextPrices.filter(price => Number.isInteger(price.courseId) && stored.some(item => item.courseId === price.courseId)).length;
 
       setPrices(nextPrices);
       setPriceRecords(stored);
-      if (firstImportedId) setActiveId(firstImportedId);
       setSaved(false);
       setPublished(false);
       setInjectCode('');
       setActiveTab('preview');
-      setSyncFailures(failures);
       setSyncMessage(
-        matched.length
-          ? `Imported ${matched.length} price${matched.length === 1 ? '' : 's'} into draft cards. Review discounts, then save or publish.`
-          : 'No prices were found. The course pages may be rendering prices with JavaScript.',
+        updatedMapped
+          ? `Updated ${updatedMapped} mapped price card${updatedMapped === 1 ? '' : 's'} from the database. Save or publish to refresh the embed.`
+          : 'No mapped price cards were updated. Link a Zenler course in the card settings first.',
       );
     } catch (error: unknown) {
-      setSyncMessage(error instanceof Error ? error.message : 'Price sync failed. Please try again.');
+      setSyncMessage(error instanceof Error ? error.message : 'Could not update prices from the database. Please try again.');
     } finally {
       setSyncingPrices(false);
     }
@@ -679,10 +677,11 @@ export default function CoursePriceScreen() {
       const refreshed = await refreshMappedPricesFromDb(prices);
       setPrices(refreshed);
       await api.put('/content/vls-course-prices', { prices: refreshed });
+      const refreshedActive = refreshed.find(price => price.id === active.id) ?? active;
       setSaved(true);
       setPublished(false);
       setPublishError('');
-      setInjectCode(buildInjectCode(active));
+      setInjectCode(buildInjectCode(refreshedActive));
       setActiveTab('html');
     } finally {
       setSaving(false);
@@ -697,7 +696,8 @@ export default function CoursePriceScreen() {
       const refreshed = await refreshMappedPricesFromDb(prices);
       setPrices(refreshed);
       await api.put('/content/vls-course-prices', { prices: refreshed });
-      setInjectCode(buildInjectCode(active));
+      const refreshedActive = refreshed.find(price => price.id === active.id) ?? active;
+      setInjectCode(buildInjectCode(refreshedActive));
       setPublished(true);
       setSaved(true);
       setActiveTab('html');
@@ -726,44 +726,30 @@ export default function CoursePriceScreen() {
       <div className="w-[440px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
         <div className="sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4">
           <h1 className="text-base font-bold text-slate-900">Price Cards</h1>
-          <p className="mt-0.5 text-xs text-slate-400">Price cards — paste inject code once, publish updates live</p>
+          <p className="mt-0.5 text-xs text-slate-400">Course price card embeds with database-backed pricing</p>
         </div>
 
         <div className="space-y-2 border-b border-slate-100 bg-white px-5 py-3">
           <div className="grid grid-cols-2 gap-2">
             <button onClick={saveAndGenerate} disabled={saving || !active} className="btn-primary justify-center text-xs">
-              {saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save & Generate HTML'}
+              {saving ? 'Saving…' : saved ? 'Saved' : 'Save & Generate HTML'}
             </button>
             <button onClick={publish} disabled={publishing || !active} className="btn-success justify-center text-xs">
-              {publishing ? 'Publishing…' : published ? '✓ Published' : '🚀 Publish Price'}
+              {publishing ? 'Saving…' : published ? 'Saved' : 'Save Price Card'}
             </button>
           </div>
-          <button onClick={syncPricesFromPages} disabled={syncingPrices || courses.length === 0} className="btn-ghost w-full justify-center text-xs">
-            {syncingPrices ? 'Syncing course pages…' : 'Sync Prices From Course Pages'}
+          <button onClick={updatePricesFromDatabase} disabled={syncingPrices || courses.length === 0} className="btn-ghost w-full justify-center text-xs">
+            {syncingPrices ? 'Updating from database…' : 'Update Prices From Database'}
           </button>
           {publishError && <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">{publishError}</p>}
           {syncMessage && (
             <div className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
               <p>{syncMessage}</p>
-              {syncFailures.length > 0 && (
-                <details className="mt-2">
-                  <summary className="cursor-pointer font-semibold">{syncFailures.length} page{syncFailures.length === 1 ? '' : 's'} need review</summary>
-                  <div className="mt-2 max-h-32 space-y-1 overflow-auto">
-                    {syncFailures.slice(0, 20).map(item => (
-                      <div key={item.courseId} className="rounded bg-white/70 px-2 py-1">
-                        <span className="font-medium">{item.courseName}</span>
-                        <span className="text-blue-600"> — {item.error || 'No price found'}</span>
-                      </div>
-                    ))}
-                    {syncFailures.length > 20 && <p className="text-blue-600">Showing first 20 only.</p>}
-                  </div>
-                </details>
-              )}
             </div>
           )}
           <div className="space-y-1 rounded border border-slate-200 bg-slate-50 px-3 py-2">
             <p className="text-[11px] text-slate-500">
-              Add <span className="font-mono">data-vls-price-card="{active?.id || 'cp1'}"</span> to the live course card container.
+              Paste the generated HTML into a Custom HTML block once. Live prices are read from the database on page load.
             </p>
           </div>
         </div>
@@ -856,7 +842,7 @@ export default function CoursePriceScreen() {
               </button>
             )}
             <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-slate-300">
-              {injectCode || '// Click Save & Generate HTML to get the inject code'}
+              {injectCode || '// Click Save & Generate HTML to get the custom HTML block code'}
             </pre>
           </div>
         )}
