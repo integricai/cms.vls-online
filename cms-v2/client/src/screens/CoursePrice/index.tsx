@@ -22,10 +22,18 @@ function newCoursePrice(): CoursePrice {
     eyebrow: 'ACCA • APPLIED KNOWLEDGE',
     title: 'ACCA FA1 - Recording Financial Transactions',
     regularPrice: 279,
+    regularPrice2: 399,
     discountPercent: 72,
+    discountPercent2: 43,
     currency: '$',
-    priceLabel: 'YOUR PRICE',
+    priceLabel: 'CHOOSE YOUR PLAN',
     savingPrefix: 'You save',
+    plan1Title: 'Full Course',
+    plan1Subtitle: 'Complete FM syllabus, videos & notes',
+    plan1Badge: '',
+    plan2Title: 'Complete Package',
+    plan2Subtitle: 'Course + live sessions + mock & tutor support',
+    plan2Badge: 'BEST VALUE',
     includesLabel: 'THIS COURSE INCLUDES',
     includes: [
       '46 hours of HD syllabus topic videos',
@@ -36,9 +44,12 @@ function newCoursePrice(): CoursePrice {
       'Weekly live sessions + recordings',
       'Final mock exam with tutor feedback',
     ],
-    ctaText: 'Enrol Now →',
+    ctaText: 'Buy Now',
     ctaUrl: '#',
-    refundText: '🔒 3-day flexible refund policy applies',
+    guaranteeTitle: '7-Day Money-Back Guarantee',
+    guaranteeText: 'Not the right fit? Get a full refund within 7 days of registration - no questions asked.',
+    checkoutText: 'Secure checkout - Instant access',
+    refundText: '',
     bg: '#ffffff',
     border: '#e5e7eb',
     accent: '#204280',
@@ -50,10 +61,19 @@ function newCoursePrice(): CoursePrice {
     fontFamily: 'Poppins',
     eyebrowSize: 11,
     eyebrowWeight: 700,
-    titleSize: 15,
+    titleSize: 11,
     titleWeight: 700,
-    amountSize: 46,
-    bodySize: 13,
+    amountSize: 31,
+    regularPriceSize: 13,
+    discountSize: 11,
+    planTitleSize: 13,
+    planTitleWeight: 800,
+    planSubtitleSize: 10,
+    badgeSize: 9,
+    badgeWeight: 800,
+    guaranteeSize: 11,
+    guaranteeWeight: 800,
+    bodySize: 11,
     ctaSize: 14,
     ctaWeight: 800,
   };
@@ -67,19 +87,32 @@ function currencySymbol(currency: string): string {
   return '$';
 }
 
-function currencyCode(currency: string): string {
-  if (currency === '$') return 'USD';
-  if (currency === '€') return 'EUR';
-  if (currency === '£') return 'GBP';
-  const upper = currency.toUpperCase();
-  return ['GBP', 'USD', 'EUR'].includes(upper) ? upper : 'USD';
-}
-
 function courseCtaUrl(course: Course | undefined, scrapedUrl: string): string {
   if (scrapedUrl) return scrapedUrl;
   if (course?.zenlerUrl) return course.zenlerUrl.replace(/^https:\/\/[^/]+\.newzenler\.com/i, 'https://vls-online.com');
   if (course?.slug) return `https://vls-online.com/courses/${course.slug}`;
   return '#';
+}
+
+function applyRecordToCard(
+  card: CoursePrice,
+  record: CoursePriceRecord,
+  course: Course | undefined,
+  fillTitle = false,
+): CoursePrice {
+  const courseName = record.courseName || course?.name || 'Course price';
+  return {
+    ...card,
+    courseId: record.courseId,
+    name: card.name || `${courseName} plan card`,
+    title: fillTitle || !card.title ? courseName : card.title,
+    regularPrice: record.regularPrice,
+    regularPrice2: record.regularPrice2,
+    discountPercent: record.discountPercent,
+    discountPercent2: record.discountPercent2,
+    currency: currencySymbol(record.currency),
+    ctaUrl: card.ctaUrl && card.ctaUrl !== '#' ? card.ctaUrl : courseCtaUrl(course, record.sourceUrl || ''),
+  };
 }
 
 function baseImportedPriceCard(courseId: number, courseName: string, course: Course | undefined): CoursePrice {
@@ -98,13 +131,12 @@ function baseImportedPriceCard(courseId: number, courseName: string, course: Cou
 }
 
 function recordPriceCard(record: CoursePriceRecord, course: Course | undefined): CoursePrice {
-  return {
-    ...baseImportedPriceCard(record.courseId, record.courseName || course?.name || 'Course price', course),
-    regularPrice: record.regularPrice,
-    discountPercent: record.discountPercent,
-    currency: currencySymbol(record.currency),
-    ctaUrl: courseCtaUrl(course, record.sourceUrl || ''),
-  };
+  return applyRecordToCard(
+    baseImportedPriceCard(record.courseId, record.courseName || course?.name || 'Course price', course),
+    record,
+    course,
+    true,
+  );
 }
 
 function mergeDbPricesIntoCards(
@@ -121,15 +153,7 @@ function mergeDbPricesIntoCards(
     const course = courseMap.get(record.courseId);
     if (existingIndex >= 0) {
       const existing = next[existingIndex];
-      next[existingIndex] = {
-        ...existing,
-        regularPrice: record.regularPrice,
-        discountPercent: record.discountPercent,
-        currency: currencySymbol(record.currency),
-        ctaUrl: existing.ctaUrl && existing.ctaUrl !== '#' ? existing.ctaUrl : courseCtaUrl(course, record.sourceUrl || ''),
-        title: existing.title || record.courseName || course?.name || '',
-        name: existing.name || `${record.courseName || course?.name || 'Course'} price`,
-      };
+      next[existingIndex] = applyRecordToCard(existing, record, course);
     } else {
       next.push(recordPriceCard(record, course));
     }
@@ -139,6 +163,21 @@ function mergeDbPricesIntoCards(
 }
 
 function buildInjectCode(price: CoursePrice): string {
+  const rootId = `vls-plan-card-${price.id}`;
+  return `<div id="${rootId}" data-vls-price-card="${price.id}"></div>
+<script>
+(function(){
+  var PID=${JSON.stringify(price.id)}, ROOT=${JSON.stringify(rootId)}, API=${JSON.stringify(COURSE_PRICE_API_URL)};
+  function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+  function num(v,f){var n=Number(v);return isFinite(n)?n:f;}
+  function money(v){var n=Math.round(num(v,0)*100)/100;return Math.abs(n%1)<.001?String(Math.round(n)):n.toFixed(2);}
+  function hex(v,f){return /^#[0-9a-fA-F]{6}$/.test(String(v||"").trim())?String(v).trim():f;}
+  function calc(p,i){var r=Math.max(0,num(i===1?p.regularPrice:p.regularPrice2,0)),d=Math.max(0,Math.min(100,num(i===1?p.discountPercent:p.discountPercent2,0))),s=r*(d/100);return{regular:r,discount:d,saving:s,final:Math.max(0,r-s)};}
+  function option(p,i){var c=calc(p,i);if(c.regular<=0)return "";var curr=esc(p.currency||"$"),has=c.discount>0&&c.saving>0,title=i===1?(p.plan1Title||"Full Course"):(p.plan2Title||"Complete Package"),sub=i===1?(p.plan1Subtitle||"Complete syllabus, videos & notes"):(p.plan2Subtitle||"Course + live sessions + mock & tutor support"),badge=i===1?(p.plan1Badge||""):(p.plan2Badge||"BEST VALUE");return '<label class="vls-plan-option">'+(badge?'<span class="vls-plan-badge">'+esc(badge)+'</span>':'')+'<input type="radio" name="vls-plan-choice-'+PID+'" '+(i===1?'checked':'')+'><span class="vls-plan-radio"></span><span class="vls-plan-copy"><span class="vls-plan-title">'+esc(title)+'</span><span class="vls-plan-subtitle">'+esc(sub)+'</span></span><span class="vls-plan-price">'+(has?'<span class="vls-plan-regular">'+curr+money(c.regular)+'</span>':'')+'<span class="vls-plan-final">'+curr+money(c.final)+'</span>'+(has?'<span class="vls-plan-save">Save '+curr+money(c.saving)+' ('+money(c.discount)+'% off)</span>':'')+'</span></label>';}
+  function render(p){var root=document.getElementById(ROOT);if(!root)return;if(!p||!p.visible){root.style.display="none";return;}root.style.display="";var accent=hex(p.accent,"#204280"),border=hex(p.border,"#d8e0f0"),discountBg=hex(p.discountBg,"#12a85a"),discountTc=hex(p.discountTc,"#fff"),saveBg=hex(p.saveBg,"#ecfdf3"),saveBorder=hex(p.saveBorder,"#b7e4c7"),bg=hex(p.bg,"#fff"),radius=Math.max(0,Math.min(40,parseInt(p.radius,10)||14)),ff=String(p.fontFamily||"Poppins").replace(/['"<>]/g,""),curr=esc(p.currency||"$"),first=calc(p,1).regular>0?calc(p,1):calc(p,2);var css='.vls-plan-card{box-sizing:border-box;width:100%;max-width:300px;background:'+bg+';border:1px solid '+border+';border-top:4px solid '+accent+';border-radius:'+radius+'px;overflow:hidden;font-family:\\''+ff+'\\',Arial,sans-serif;color:#10213d;box-shadow:0 16px 40px rgba(15,23,42,.12)}.vls-plan-card *{box-sizing:border-box}.vls-plan-inner{padding:16px 17px 14px}.vls-plan-eyebrow{display:inline-flex;border-radius:999px;background:#eff6ff;color:#2454d6;padding:7px 11px;font-size:'+(parseInt(p.eyebrowSize,10)||10)+'px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.vls-plan-heading{margin:17px 0 9px;font-size:'+(parseInt(p.titleSize,10)||11)+'px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#23365d}.vls-plan-list{display:grid;gap:10px}.vls-plan-option{position:relative;display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;min-height:92px;border:1px solid #e3e9f4;border-radius:12px;padding:15px 13px;background:#fff;cursor:pointer}.vls-plan-option:has(input:checked){border-color:'+accent+';box-shadow:0 0 0 1px '+accent+',0 10px 24px rgba(32,66,128,.12)}.vls-plan-option input{position:absolute;opacity:0}.vls-plan-radio{width:15px;height:15px;border-radius:999px;border:1px solid #b8c7e1;box-shadow:inset 0 0 0 3px #fff}.vls-plan-option:has(input:checked) .vls-plan-radio{background:'+accent+';border-color:'+accent+'}.vls-plan-title{display:block;font-size:'+(parseInt(p.planTitleSize,10)||13)+'px;font-weight:800;color:#0d1f3c}.vls-plan-subtitle{display:block;font-size:'+(parseInt(p.planSubtitleSize,10)||10)+'px;color:#61708a}.vls-plan-price{display:grid;justify-items:end;gap:3px;min-width:88px}.vls-plan-regular{font-size:13px;font-weight:700;color:#718096;text-decoration:line-through}.vls-plan-final{font-size:'+(parseInt(p.amountSize,10)||31)+'px;font-weight:900;line-height:1;color:#0d2558}.vls-plan-save{border-radius:5px;background:'+discountBg+';color:'+discountTc+';padding:4px 7px;font-size:'+(parseInt(p.discountSize,10)||11)+'px;font-weight:800;white-space:nowrap}.vls-plan-badge{position:absolute;right:10px;top:-9px;border-radius:999px;background:#0d1f4f;color:#fff;padding:4px 8px;font-size:9px;font-weight:800}.vls-plan-guarantee{display:grid;grid-template-columns:28px 1fr;gap:10px;margin-top:24px;border:1px solid '+saveBorder+';background:'+saveBg+';border-radius:9px;padding:11px;color:#0c6b3f}.vls-plan-shield{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:#fff;border:1px solid #cdeed9}.vls-plan-guarantee-title{display:block;font-size:'+(parseInt(p.guaranteeSize,10)||11)+'px;font-weight:800}.vls-plan-guarantee-text{display:block;margin-top:3px;font-size:'+(parseInt(p.bodySize,10)||11)+'px;line-height:1.35;color:#397250}.vls-plan-cta{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;border-radius:8px;background:#0d2b66;color:#fff;text-decoration:none;padding:13px 14px;font-size:'+(parseInt(p.ctaSize,10)||14)+'px;font-weight:800;box-shadow:0 10px 20px rgba(13,43,102,.28)}.vls-plan-checkout{margin:10px 0 0;text-align:center;color:#6c7a92;font-size:10px;font-weight:500}@media(max-width:640px){.vls-plan-card{max-width:none}.vls-plan-option{grid-template-columns:18px 1fr}.vls-plan-price{grid-column:2;justify-items:start}}';root.innerHTML='<style>'+css+'</style><div class="vls-plan-card"><div class="vls-plan-inner">'+(p.eyebrow?'<div class="vls-plan-eyebrow">'+esc(p.eyebrow)+'</div>':'')+'<div class="vls-plan-heading">'+esc(p.title||"Choose your plan")+'</div><div class="vls-plan-list">'+option(p,1)+option(p,2)+'</div><div class="vls-plan-guarantee"><span class="vls-plan-shield">♡</span><span><span class="vls-plan-guarantee-title">'+esc(p.guaranteeTitle||"7-Day Money-Back Guarantee")+'</span><span class="vls-plan-guarantee-text">'+esc(p.guaranteeText||"Not the right fit? Get a full refund within 7 days of registration - no questions asked.")+'</span></span></div><a class="vls-plan-cta" href="'+esc(p.ctaUrl||"#")+'"><span>'+esc(p.ctaText||"Buy Now")+'</span><strong class="vls-plan-cta-price">'+curr+money(first.final)+'</strong><span>→</span></a><div class="vls-plan-checkout">'+esc(p.checkoutText||"Secure checkout - Instant access")+'</div></div></div>';root.querySelectorAll('input[name="vls-plan-choice-'+PID+'"]').forEach(function(input){input.addEventListener("change",function(){var final=input.closest(".vls-plan-option").querySelector(".vls-plan-final"),cta=root.querySelector(".vls-plan-cta-price");if(final&&cta)cta.textContent=final.textContent||"";});});}
+  fetch(API+"?t="+Date.now()).then(function(r){return r.json();}).then(function(data){render((data.prices||[]).find(function(x){return x.id===PID;}));}).catch(function(e){console.error("VLS Course Plan Card ["+PID+"]:",e.message||e);});
+})();
+</script>`;
   return `<script>
 (function(){
   var PID=${JSON.stringify(price.id)};
@@ -243,13 +282,16 @@ function WeightSelect({ label, value, onChange }: { label: string; value: number
 function CoursePriceForm({
   price,
   courses,
+  priceRecords,
   onChange,
 }: {
   price: CoursePrice;
   courses: Course[];
+  priceRecords: CoursePriceRecord[];
   onChange: (patch: Partial<CoursePrice>) => void;
 }) {
-  const calc = calculatedPrice(price);
+  const calc1 = calculatedPrice(price, 1);
+  const calc2 = calculatedPrice(price, 2);
 
   function updateInclude(index: number, value: string) {
     const next = [...price.includes];
@@ -259,10 +301,12 @@ function CoursePriceForm({
 
   function handleCourseSelect(courseId: number) {
     const course = courses.find(c => c.id === courseId);
-    onChange({
-      courseId,
-      ...(course && !price.title ? { title: course.name } : {}),
-    });
+    const record = priceRecords.find(item => item.courseId === courseId);
+    if (record) {
+      onChange(applyRecordToCard({ ...price, courseId }, record, course, !price.title));
+      return;
+    }
+    onChange({ courseId, ...(course && !price.title ? { title: course.name } : {}) });
   }
 
   return (
@@ -309,20 +353,53 @@ function CoursePriceForm({
         <input className="input" value={price.title} onChange={e => onChange({ title: e.target.value })} />
       </Field>
 
+      <p className="section-label">Plan Copy</p>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Plan 1 title">
+          <input className="input" value={price.plan1Title ?? 'Full Course'} onChange={e => onChange({ plan1Title: e.target.value })} />
+        </Field>
+        <Field label="Plan 1 subtitle">
+          <input className="input" value={price.plan1Subtitle ?? ''} onChange={e => onChange({ plan1Subtitle: e.target.value })} />
+        </Field>
+        <Field label="Plan 2 title">
+          <input className="input" value={price.plan2Title ?? 'Complete Package'} onChange={e => onChange({ plan2Title: e.target.value })} />
+        </Field>
+        <Field label="Plan 2 subtitle">
+          <input className="input" value={price.plan2Subtitle ?? ''} onChange={e => onChange({ plan2Subtitle: e.target.value })} />
+        </Field>
+        <Field label="Plan 1 badge">
+          <input className="input" value={price.plan1Badge ?? ''} onChange={e => onChange({ plan1Badge: e.target.value })} />
+        </Field>
+        <Field label="Plan 2 badge">
+          <input className="input" value={price.plan2Badge ?? 'BEST VALUE'} onChange={e => onChange({ plan2Badge: e.target.value })} />
+        </Field>
+      </div>
+
       <p className="section-label">Pricing</p>
       <div className="grid grid-cols-3 gap-2">
         <Field label="Currency">
-          <input className="input" value={price.currency} onChange={e => onChange({ currency: e.target.value })} />
+          <input className="input bg-slate-50 text-slate-500" value={price.currency} readOnly />
         </Field>
-        <Field label="Regular price">
-          <input type="number" min={0} step="0.01" className="input" value={price.regularPrice} onChange={e => onChange({ regularPrice: Number(e.target.value) })} />
+        <Field label="Price 1">
+          <input className="input bg-slate-50 text-slate-500" value={money(price.regularPrice)} readOnly />
         </Field>
-        <Field label="Discount %">
-          <input type="number" min={0} max={100} step="0.01" className="input" value={price.discountPercent} onChange={e => onChange({ discountPercent: Number(e.target.value) })} />
+        <Field label="Discount 1 %">
+          <input className="input bg-slate-50 text-slate-500" value={money(price.discountPercent)} readOnly />
+        </Field>
+        <Field label="Price 2">
+          <input className="input bg-slate-50 text-slate-500" value={money(price.regularPrice2 ?? 0)} readOnly />
+        </Field>
+        <Field label="Discount 2 %">
+          <input className="input bg-slate-50 text-slate-500" value={money(price.discountPercent2 ?? 0)} readOnly />
         </Field>
       </div>
+      <p className="mb-3 text-[11px] text-slate-400">Prices are pulled from Course Pricing and cannot be edited here.</p>
       <div className="mb-3 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-        Your Price: <span className="font-bold">{price.currency}{money(calc.yourPrice)}</span> · Saving: <span className="font-bold">{price.currency}{money(calc.saving)}</span>
+        Plan 1: <span className="font-bold">{price.currency}{money(calc1.yourPrice)}</span>
+        {calc1.discount > 0 && <> · Saving <span className="font-bold">{price.currency}{money(calc1.saving)}</span></>}
+        <span className="mx-2 text-emerald-300">|</span>
+        Plan 2: <span className="font-bold">{price.currency}{money(calc2.yourPrice)}</span>
+        {calc2.discount > 0 && <> · Saving <span className="font-bold">{price.currency}{money(calc2.saving)}</span></>}
       </div>
       <Field label="Price label">
         <input className="input" value={price.priceLabel} onChange={e => onChange({ priceLabel: e.target.value })} />
@@ -351,6 +428,15 @@ function CoursePriceForm({
       </Field>
       <Field label="Button URL">
         <input className="input" value={price.ctaUrl} onChange={e => onChange({ ctaUrl: e.target.value })} />
+      </Field>
+      <Field label="Guarantee title">
+        <input className="input" value={price.guaranteeTitle ?? ''} onChange={e => onChange({ guaranteeTitle: e.target.value })} />
+      </Field>
+      <Field label="Guarantee text">
+        <textarea className="input" rows={2} value={price.guaranteeText ?? ''} onChange={e => onChange({ guaranteeText: e.target.value })} />
+      </Field>
+      <Field label="Checkout note">
+        <input className="input" value={price.checkoutText ?? ''} onChange={e => onChange({ checkoutText: e.target.value })} />
       </Field>
       <Field label="Refund note">
         <input className="input" value={price.refundText} onChange={e => onChange({ refundText: e.target.value })} />
@@ -391,6 +477,27 @@ function CoursePriceForm({
         <Field label="Price amount size (px)">
           <input type="number" min={20} max={80} className="input" value={price.amountSize ?? 46} onChange={e => onChange({ amountSize: Number(e.target.value) })} />
         </Field>
+        <Field label="Regular price size (px)">
+          <input type="number" min={10} max={28} className="input" value={price.regularPriceSize ?? 13} onChange={e => onChange({ regularPriceSize: Number(e.target.value) })} />
+        </Field>
+        <Field label="Discount badge size (px)">
+          <input type="number" min={9} max={20} className="input" value={price.discountSize ?? 11} onChange={e => onChange({ discountSize: Number(e.target.value) })} />
+        </Field>
+        <Field label="Plan title size (px)">
+          <input type="number" min={10} max={24} className="input" value={price.planTitleSize ?? 13} onChange={e => onChange({ planTitleSize: Number(e.target.value) })} />
+        </Field>
+        <WeightSelect label="Plan title weight" value={price.planTitleWeight ?? 800} onChange={v => onChange({ planTitleWeight: v })} />
+        <Field label="Plan subtitle size (px)">
+          <input type="number" min={9} max={18} className="input" value={price.planSubtitleSize ?? 10} onChange={e => onChange({ planSubtitleSize: Number(e.target.value) })} />
+        </Field>
+        <Field label="Badge size (px)">
+          <input type="number" min={8} max={16} className="input" value={price.badgeSize ?? 9} onChange={e => onChange({ badgeSize: Number(e.target.value) })} />
+        </Field>
+        <WeightSelect label="Badge weight" value={price.badgeWeight ?? 800} onChange={v => onChange({ badgeWeight: v })} />
+        <Field label="Guarantee size (px)">
+          <input type="number" min={10} max={18} className="input" value={price.guaranteeSize ?? 11} onChange={e => onChange({ guaranteeSize: Number(e.target.value) })} />
+        </Field>
+        <WeightSelect label="Guarantee weight" value={price.guaranteeWeight ?? 800} onChange={v => onChange({ guaranteeWeight: v })} />
         <Field label="Body / includes size (px)">
           <input type="number" min={10} max={20} className="input" value={price.bodySize ?? 13} onChange={e => onChange({ bodySize: Number(e.target.value) })} />
         </Field>
@@ -406,6 +513,7 @@ function CoursePriceForm({
 export default function CoursePriceScreen() {
   const [prices, setPrices] = useState<CoursePrice[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [priceRecords, setPriceRecords] = useState<CoursePriceRecord[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -429,6 +537,7 @@ export default function CoursePriceScreen() {
     ]).then(([row, activeCourses, storedPrices]) => {
       const courseList = (activeCourses ?? []) as Course[];
       if (activeCourses) setCourses(courseList);
+      setPriceRecords((storedPrices ?? []) as CoursePriceRecord[]);
       const items = (row?.data as CoursePriceContent)?.prices ?? [];
       items.forEach(item => {
         const next = parseInt(item.id.replace('cp', ''), 10);
@@ -531,6 +640,7 @@ export default function CoursePriceScreen() {
       const firstImportedId = nextPrices.find(price => matched.some(item => item.courseId === price.courseId))?.id ?? null;
 
       setPrices(nextPrices);
+      setPriceRecords(stored);
       if (firstImportedId) setActiveId(firstImportedId);
       setSaved(false);
       setPublished(false);
@@ -549,23 +659,16 @@ export default function CoursePriceScreen() {
     }
   }
 
-  async function saveLinkedPricesToDb(priceList: CoursePrice[]) {
-    const linked = priceList
-      .filter(price => Number.isInteger(price.courseId))
-      .map(price => ({
-        courseId: price.courseId,
-        regularPrice: price.regularPrice,
-        regularPrice2: 0,
-        currency: currencyCode(price.currency),
-        discountPercent: price.discountPercent,
-        discountPercent2: 0,
-        sourceUrl: price.ctaUrl && price.ctaUrl !== '#' ? price.ctaUrl : null,
-        rawPriceText: null,
-      }));
-
-    if (linked.length > 0) {
-      await api.put('/courses/prices', { prices: linked });
-    }
+  async function refreshMappedPricesFromDb(priceList: CoursePrice[]): Promise<CoursePrice[]> {
+    const records = await api.get<CoursePriceRecord[]>('/courses/prices');
+    setPriceRecords(records || []);
+    return priceList.map(card => {
+      if (!Number.isInteger(card.courseId)) return card;
+      const record = (records || []).find(item => item.courseId === card.courseId);
+      if (!record) return card;
+      const course = courses.find(item => item.id === card.courseId);
+      return applyRecordToCard(card, record, course);
+    });
   }
 
   async function saveAndGenerate() {
@@ -573,8 +676,9 @@ export default function CoursePriceScreen() {
     setSaving(true);
     setSaved(false);
     try {
-      await saveLinkedPricesToDb(prices);
-      await api.put('/content/vls-course-prices', { prices });
+      const refreshed = await refreshMappedPricesFromDb(prices);
+      setPrices(refreshed);
+      await api.put('/content/vls-course-prices', { prices: refreshed });
       setSaved(true);
       setPublished(false);
       setPublishError('');
@@ -590,8 +694,9 @@ export default function CoursePriceScreen() {
     setPublishing(true);
     setPublishError('');
     try {
-      await saveLinkedPricesToDb(prices);
-      await api.put('/content/vls-course-prices', { prices });
+      const refreshed = await refreshMappedPricesFromDb(prices);
+      setPrices(refreshed);
+      await api.put('/content/vls-course-prices', { prices: refreshed });
       setInjectCode(buildInjectCode(active));
       setPublished(true);
       setSaved(true);
@@ -722,7 +827,7 @@ export default function CoursePriceScreen() {
             )}
           </div>
 
-          {active && <CoursePriceForm price={active} courses={courses} onChange={updateActive} />}
+          {active && <CoursePriceForm price={active} courses={courses} priceRecords={priceRecords} onChange={updateActive} />}
         </div>
       </div>
 
