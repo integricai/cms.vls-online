@@ -287,6 +287,7 @@ export interface CoursePrice {
   saveBg: string;
   saveBorder: string;
   radius: number;
+  boxSpacing?: number;
   fontFamily?: string;
   eyebrowSize?: number;
   eyebrowWeight?: number;

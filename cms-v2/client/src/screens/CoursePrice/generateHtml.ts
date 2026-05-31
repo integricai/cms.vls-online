@@ -76,6 +76,7 @@ export function generateCoursePriceHtml(price: CoursePrice): string {
   const saveBg = cssValue(price.saveBg, '#ecfdf3');
   const saveBorder = cssValue(price.saveBorder, '#b7e4c7');
   const radius = Math.max(0, Math.min(40, Number(price.radius) || 14));
+  const boxSpacing = Math.max(0, Math.min(80, Number(price.boxSpacing) || 10));
   const ff = (price.fontFamily || 'Poppins').replace(/['"<>]/g, '');
   const eyebrowSz = fs(price.eyebrowSize, 8, 24, 10);
   const eyebrowWt = fw(price.eyebrowWeight, 700);
@@ -111,7 +112,7 @@ export function generateCoursePriceHtml(price: CoursePrice): string {
 .vls-plan-inner{padding:16px 17px 14px}
 .vls-plan-eyebrow{display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:#eff6ff;color:#2454d6;padding:7px 11px;font-size:${eyebrowSz}px;font-weight:${eyebrowWt};letter-spacing:.12em;text-transform:uppercase}
 .vls-plan-heading{margin:17px 0 9px;font-size:${titleSz}px;font-weight:${titleWt};letter-spacing:.08em;text-transform:uppercase;color:#23365d}
-.vls-plan-list{display:grid;gap:10px}
+.vls-plan-list{display:grid;gap:${boxSpacing}px}
 .vls-plan-option{position:relative;display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;min-height:92px;border:1px solid #e3e9f4;border-radius:12px;padding:15px 13px;background:#fff;cursor:pointer;transition:border-color .15s,box-shadow .15s}
 .vls-plan-option:has(input:checked){border-color:${accent};box-shadow:0 0 0 1px ${accent},0 10px 24px rgba(32,66,128,.12)}
 .vls-plan-option input{position:absolute;opacity:0;pointer-events:none}
@@ -125,7 +126,7 @@ export function generateCoursePriceHtml(price: CoursePrice): string {
 .vls-plan-final{font-size:${amountSz}px;font-weight:900;line-height:1;color:#0d2558}
 .vls-plan-save{border-radius:5px;background:${discountBg};color:${discountTc};padding:4px 7px;font-size:${discountSz}px;font-weight:800;line-height:1.1;white-space:nowrap}
 .vls-plan-badge{position:absolute;right:10px;top:-9px;border-radius:999px;background:#0d1f4f;color:#fff;padding:4px 8px;font-size:${badgeSz}px;font-weight:${badgeWt};letter-spacing:.06em}
-.vls-plan-guarantee{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;margin-top:24px;border:1px solid ${saveBorder};background:${saveBg};border-radius:9px;padding:11px;color:#0c6b3f}
+.vls-plan-guarantee{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;margin-top:${boxSpacing}px;border:1px solid ${saveBorder};background:${saveBg};border-radius:9px;padding:11px;color:#0c6b3f}
 .vls-plan-shield{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:#fff;border:1px solid #cdeed9;font-size:16px}
 .vls-plan-guarantee-title{font-size:${guaranteeSz}px;font-weight:${guaranteeWt};line-height:1.2}
 .vls-plan-guarantee-text{margin-top:3px;font-size:${bodySz}px;line-height:1.35;color:#397250}

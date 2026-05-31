@@ -58,6 +58,7 @@ function newCoursePrice(): CoursePrice {
     saveBg: '#f0fbf4',
     saveBorder: '#b7e4c7',
     radius: 14,
+    boxSpacing: 10,
     fontFamily: 'Poppins',
     eyebrowSize: 11,
     eyebrowWeight: 700,
@@ -87,11 +88,25 @@ function currencySymbol(currency: string): string {
   return '$';
 }
 
-function courseCtaUrl(course: Course | undefined, scrapedUrl: string): string {
-  if (scrapedUrl) return scrapedUrl;
-  if (course?.zenlerUrl) return course.zenlerUrl.replace(/^https:\/\/[^/]+\.newzenler\.com/i, 'https://vls-online.com');
-  if (course?.slug) return `https://vls-online.com/courses/${course.slug}`;
+function withBuyPath(url: string): string {
+  const clean = url.replace(/\/+$/, '');
+  return clean.endsWith('/buy') ? clean : `${clean}/buy`;
+}
+
+function courseCtaUrl(course: Course | undefined): string {
+  if (course?.zenlerUrl) return withBuyPath(course.zenlerUrl.replace(/^https:\/\/[^/]+\.newzenler\.com/i, 'https://vls-online.com'));
+  if (course?.slug) return `https://vls-online.com/courses/${course.slug}/buy`;
   return '#';
+}
+
+function shouldReplaceDefaultCta(currentUrl: string, record: CoursePriceRecord, course: Course | undefined): boolean {
+  if (!currentUrl || currentUrl === '#') return true;
+  const clean = currentUrl.replace(/\/+$/, '');
+  const source = (record.sourceUrl || '').replace(/\/+$/, '');
+  const courseUrl = course?.zenlerUrl
+    ? course.zenlerUrl.replace(/^https:\/\/[^/]+\.newzenler\.com/i, 'https://vls-online.com').replace(/\/+$/, '')
+    : (course?.slug ? `https://vls-online.com/courses/${course.slug}` : '');
+  return clean === source || (!!courseUrl && clean === courseUrl);
 }
 
 function applyRecordToCard(
@@ -101,6 +116,7 @@ function applyRecordToCard(
   fillTitle = false,
 ): CoursePrice {
   const courseName = record.courseName || course?.name || 'Course price';
+  const defaultCtaUrl = courseCtaUrl(course);
   return {
     ...card,
     courseId: record.courseId,
@@ -111,7 +127,7 @@ function applyRecordToCard(
     discountPercent: record.discountPercent,
     discountPercent2: record.discountPercent2,
     currency: currencySymbol(record.currency),
-    ctaUrl: card.ctaUrl && card.ctaUrl !== '#' ? card.ctaUrl : courseCtaUrl(course, record.sourceUrl || ''),
+    ctaUrl: shouldReplaceDefaultCta(card.ctaUrl, record, course) ? defaultCtaUrl : card.ctaUrl,
   };
 }
 
@@ -126,7 +142,7 @@ function baseImportedPriceCard(courseId: number, courseName: string, course: Cou
     eyebrow: [qualification, level].filter(Boolean).join(' • ').toUpperCase(),
     title: courseName,
     discountPercent: 0,
-    ctaUrl: courseCtaUrl(course, ''),
+    ctaUrl: courseCtaUrl(course),
   };
 }
 
@@ -181,6 +197,7 @@ ${initialHtml}
   function calc(p,i){var r=Math.max(0,num(i===1?p.regularPrice:p.regularPrice2,0)),d=Math.max(0,Math.min(100,num(i===1?p.discountPercent:p.discountPercent2,0))),s=r*(d/100);return{regular:r,discount:d,saving:s,final:Math.max(0,r-s)};}
   function option(p,i){var c=calc(p,i);if(c.regular<=0)return "";var curr=esc(p.currency||"$"),has=c.discount>0&&c.saving>0,title=i===1?(p.plan1Title||"Full Course"):(p.plan2Title||"Complete Package"),sub=i===1?(p.plan1Subtitle||"Complete syllabus, videos & notes"):(p.plan2Subtitle||"Course + live sessions + mock & tutor support"),badge=i===1?(p.plan1Badge||""):(p.plan2Badge||"BEST VALUE");return '<label class="vls-plan-option">'+(badge?'<span class="vls-plan-badge">'+esc(badge)+'</span>':'')+'<input type="radio" name="vls-plan-choice-'+PID+'" '+(i===1?'checked':'')+'><span class="vls-plan-radio"></span><span class="vls-plan-copy"><span class="vls-plan-title">'+esc(title)+'</span><span class="vls-plan-subtitle">'+esc(sub)+'</span></span><span class="vls-plan-price">'+(has?'<span class="vls-plan-regular">'+curr+money(c.regular)+'</span>':'')+'<span class="vls-plan-final">'+curr+money(c.final)+'</span>'+(has?'<span class="vls-plan-save">Save '+curr+money(c.saving)+' ('+money(c.discount)+'% off)</span>':'')+'</span></label>';}
   function render(p){var root=document.getElementById(ROOT);if(!root)return;if(!p||!p.visible){root.style.display="none";return;}root.style.display="";var accent=hex(p.accent,"#204280"),border=hex(p.border,"#d8e0f0"),discountBg=hex(p.discountBg,"#12a85a"),discountTc=hex(p.discountTc,"#fff"),saveBg=hex(p.saveBg,"#ecfdf3"),saveBorder=hex(p.saveBorder,"#b7e4c7"),bg=hex(p.bg,"#fff"),radius=Math.max(0,Math.min(40,parseInt(p.radius,10)||14)),ff=String(p.fontFamily||"Poppins").replace(/['"<>]/g,""),curr=esc(p.currency||"$"),first=calc(p,1).regular>0?calc(p,1):calc(p,2);var css='.vls-plan-card{box-sizing:border-box;width:100%;max-width:300px;background:'+bg+';border:1px solid '+border+';border-top:4px solid '+accent+';border-radius:'+radius+'px;overflow:hidden;font-family:\\''+ff+'\\',Arial,sans-serif;color:#10213d;box-shadow:0 16px 40px rgba(15,23,42,.12)}.vls-plan-card *{box-sizing:border-box}.vls-plan-inner{padding:16px 17px 14px}.vls-plan-eyebrow{display:inline-flex;border-radius:999px;background:#eff6ff;color:#2454d6;padding:7px 11px;font-size:'+(parseInt(p.eyebrowSize,10)||10)+'px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.vls-plan-heading{margin:17px 0 9px;font-size:'+(parseInt(p.titleSize,10)||11)+'px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#23365d}.vls-plan-list{display:grid;gap:10px}.vls-plan-option{position:relative;display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;min-height:92px;border:1px solid #e3e9f4;border-radius:12px;padding:15px 13px;background:#fff;cursor:pointer}.vls-plan-option:has(input:checked){border-color:'+accent+';box-shadow:0 0 0 1px '+accent+',0 10px 24px rgba(32,66,128,.12)}.vls-plan-option input{position:absolute;opacity:0}.vls-plan-radio{width:15px;height:15px;border-radius:999px;border:1px solid #b8c7e1;box-shadow:inset 0 0 0 3px #fff}.vls-plan-option:has(input:checked) .vls-plan-radio{background:'+accent+';border-color:'+accent+'}.vls-plan-title{display:block;font-size:'+(parseInt(p.planTitleSize,10)||13)+'px;font-weight:800;color:#0d1f3c}.vls-plan-subtitle{display:block;font-size:'+(parseInt(p.planSubtitleSize,10)||10)+'px;color:#61708a}.vls-plan-price{display:grid;justify-items:end;gap:3px;min-width:88px}.vls-plan-regular{font-size:13px;font-weight:700;color:#718096;text-decoration:line-through}.vls-plan-final{font-size:'+(parseInt(p.amountSize,10)||31)+'px;font-weight:900;line-height:1;color:#0d2558}.vls-plan-save{border-radius:5px;background:'+discountBg+';color:'+discountTc+';padding:4px 7px;font-size:'+(parseInt(p.discountSize,10)||11)+'px;font-weight:800;white-space:nowrap}.vls-plan-badge{position:absolute;right:10px;top:-9px;border-radius:999px;background:#0d1f4f;color:#fff;padding:4px 8px;font-size:9px;font-weight:800}.vls-plan-guarantee{display:grid;grid-template-columns:28px 1fr;gap:10px;margin-top:24px;border:1px solid '+saveBorder+';background:'+saveBg+';border-radius:9px;padding:11px;color:#0c6b3f}.vls-plan-shield{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:#fff;border:1px solid #cdeed9}.vls-plan-guarantee-title{display:block;font-size:'+(parseInt(p.guaranteeSize,10)||11)+'px;font-weight:800}.vls-plan-guarantee-text{display:block;margin-top:3px;font-size:'+(parseInt(p.bodySize,10)||11)+'px;line-height:1.35;color:#397250}.vls-plan-cta{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;border-radius:8px;background:#0d2b66;color:#fff;text-decoration:none;padding:13px 14px;font-size:'+(parseInt(p.ctaSize,10)||14)+'px;font-weight:800;box-shadow:0 10px 20px rgba(13,43,102,.28)}.vls-plan-checkout{margin:10px 0 0;text-align:center;color:#6c7a92;font-size:10px;font-weight:500}@media(max-width:640px){.vls-plan-card{max-width:none}.vls-plan-option{grid-template-columns:18px 1fr}.vls-plan-price{grid-column:2;justify-items:start}}';root.innerHTML='<style>'+css+'</style><div class="vls-plan-card"><div class="vls-plan-inner">'+(p.eyebrow?'<div class="vls-plan-eyebrow">'+esc(p.eyebrow)+'</div>':'')+'<div class="vls-plan-heading">'+esc(p.title||"Choose your plan")+'</div><div class="vls-plan-list">'+option(p,1)+option(p,2)+'</div><div class="vls-plan-guarantee"><span class="vls-plan-shield">♡</span><span><span class="vls-plan-guarantee-title">'+esc(p.guaranteeTitle||"7-Day Money-Back Guarantee")+'</span><span class="vls-plan-guarantee-text">'+esc(p.guaranteeText||"Not the right fit? Get a full refund within 7 days of registration - no questions asked.")+'</span></span></div><a class="vls-plan-cta" href="'+esc(p.ctaUrl||"#")+'"><span>'+esc(p.ctaText||"Buy Now")+'</span><strong class="vls-plan-cta-price">'+curr+money(first.final)+'</strong><span>→</span></a><div class="vls-plan-checkout">'+esc(p.checkoutText||"Secure checkout - Instant access")+'</div></div></div>';root.querySelectorAll('input[name="vls-plan-choice-'+PID+'"]').forEach(function(input){input.addEventListener("change",function(){var final=input.closest(".vls-plan-option").querySelector(".vls-plan-final"),cta=root.querySelector(".vls-plan-cta-price");if(final&&cta)cta.textContent=final.textContent||"";});});}
+  function render(p){var root=document.getElementById(ROOT);if(!root)return;if(!p||!p.visible){root.style.display="none";return;}root.style.display="";var accent=hex(p.accent,"#204280"),border=hex(p.border,"#d8e0f0"),discountBg=hex(p.discountBg,"#12a85a"),discountTc=hex(p.discountTc,"#fff"),saveBg=hex(p.saveBg,"#ecfdf3"),saveBorder=hex(p.saveBorder,"#b7e4c7"),bg=hex(p.bg,"#fff"),radius=Math.max(0,Math.min(40,parseInt(p.radius,10)||14)),spacing=Math.max(0,Math.min(80,parseInt(p.boxSpacing,10)||10)),ff=String(p.fontFamily||"Poppins").replace(/['"<>]/g,""),curr=esc(p.currency||"$"),first=calc(p,1).regular>0?calc(p,1):calc(p,2);var css='.vls-plan-card{box-sizing:border-box;width:100%;max-width:300px;background:'+bg+';border:1px solid '+border+';border-top:4px solid '+accent+';border-radius:'+radius+'px;overflow:hidden;font-family:\\''+ff+'\\',Arial,sans-serif;color:#10213d;box-shadow:0 16px 40px rgba(15,23,42,.12)}.vls-plan-card *{box-sizing:border-box}.vls-plan-inner{padding:16px 17px 14px}.vls-plan-eyebrow{display:inline-flex;border-radius:999px;background:#eff6ff;color:#2454d6;padding:7px 11px;font-size:'+(parseInt(p.eyebrowSize,10)||10)+'px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.vls-plan-heading{margin:17px 0 9px;font-size:'+(parseInt(p.titleSize,10)||11)+'px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#23365d}.vls-plan-list{display:grid;gap:'+spacing+'px}.vls-plan-option{position:relative;display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;min-height:92px;border:1px solid #e3e9f4;border-radius:12px;padding:15px 13px;background:#fff;cursor:pointer}.vls-plan-option:has(input:checked){border-color:'+accent+';box-shadow:0 0 0 1px '+accent+',0 10px 24px rgba(32,66,128,.12)}.vls-plan-option input{position:absolute;opacity:0}.vls-plan-radio{width:15px;height:15px;border-radius:999px;border:1px solid #b8c7e1;box-shadow:inset 0 0 0 3px #fff}.vls-plan-option:has(input:checked) .vls-plan-radio{background:'+accent+';border-color:'+accent+'}.vls-plan-title{display:block;font-size:'+(parseInt(p.planTitleSize,10)||13)+'px;font-weight:800;color:#0d1f3c}.vls-plan-subtitle{display:block;font-size:'+(parseInt(p.planSubtitleSize,10)||10)+'px;color:#61708a}.vls-plan-price{display:grid;justify-items:end;gap:3px;min-width:88px}.vls-plan-regular{font-size:13px;font-weight:700;color:#718096;text-decoration:line-through}.vls-plan-final{font-size:'+(parseInt(p.amountSize,10)||31)+'px;font-weight:900;line-height:1;color:#0d2558}.vls-plan-save{border-radius:5px;background:'+discountBg+';color:'+discountTc+';padding:4px 7px;font-size:'+(parseInt(p.discountSize,10)||11)+'px;font-weight:800;white-space:nowrap}.vls-plan-badge{position:absolute;right:10px;top:-9px;border-radius:999px;background:#0d1f4f;color:#fff;padding:4px 8px;font-size:9px;font-weight:800}.vls-plan-guarantee{display:grid;grid-template-columns:28px 1fr;gap:10px;margin-top:'+spacing+'px;border:1px solid '+saveBorder+';background:'+saveBg+';border-radius:9px;padding:11px;color:#0c6b3f}.vls-plan-shield{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:#fff;border:1px solid #cdeed9}.vls-plan-guarantee-title{display:block;font-size:'+(parseInt(p.guaranteeSize,10)||11)+'px;font-weight:800}.vls-plan-guarantee-text{display:block;margin-top:3px;font-size:'+(parseInt(p.bodySize,10)||11)+'px;line-height:1.35;color:#397250}.vls-plan-cta{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;border-radius:8px;background:#0d2b66;color:#fff;text-decoration:none;padding:13px 14px;font-size:'+(parseInt(p.ctaSize,10)||14)+'px;font-weight:800;box-shadow:0 10px 20px rgba(13,43,102,.28)}.vls-plan-checkout{margin:10px 0 0;text-align:center;color:#6c7a92;font-size:10px;font-weight:500}@media(max-width:640px){.vls-plan-card{max-width:none}.vls-plan-option{grid-template-columns:18px 1fr}.vls-plan-price{grid-column:2;justify-items:start}}';root.innerHTML='<style>'+css+'</style><div class="vls-plan-card"><div class="vls-plan-inner">'+(p.eyebrow?'<div class="vls-plan-eyebrow">'+esc(p.eyebrow)+'</div>':'')+'<div class="vls-plan-heading">'+esc(p.title||"Choose your plan")+'</div><div class="vls-plan-list">'+option(p,1)+option(p,2)+'</div><div class="vls-plan-guarantee"><span class="vls-plan-shield">♡</span><span><span class="vls-plan-guarantee-title">'+esc(p.guaranteeTitle||"7-Day Money-Back Guarantee")+'</span><span class="vls-plan-guarantee-text">'+esc(p.guaranteeText||"Not the right fit? Get a full refund within 7 days of registration - no questions asked.")+'</span></span></div><a class="vls-plan-cta" href="'+esc(p.ctaUrl||"#")+'"><span>'+esc(p.ctaText||"Buy Now")+'</span><strong class="vls-plan-cta-price">'+curr+money(first.final)+'</strong><span>→</span></a><div class="vls-plan-checkout">'+esc(p.checkoutText||"Secure checkout - Instant access")+'</div></div></div>';root.querySelectorAll('input[name="vls-plan-choice-'+PID+'"]').forEach(function(input){input.addEventListener("change",function(){var final=input.closest(".vls-plan-option").querySelector(".vls-plan-final"),cta=root.querySelector(".vls-plan-cta-price");if(final&&cta)cta.textContent=final.textContent||"";});});}
   fetch(API+"?t="+Date.now()).then(function(r){return r.json();}).then(function(data){var rec=(data.prices||[]).find(function(x){return Number(x.courseId)===Number(BASE.courseId);});if(rec)render(dbCard(rec));}).catch(function(e){console.error("VLS Course Plan Card ["+PID+"]:",e.message||e);});
 })();
 </script>`;
@@ -312,7 +329,11 @@ function CoursePriceForm({
       onChange(applyRecordToCard({ ...price, courseId }, record, course, !price.title));
       return;
     }
-    onChange({ courseId, ...(course && !price.title ? { title: course.name } : {}) });
+    onChange({
+      courseId,
+      ctaUrl: price.ctaUrl && price.ctaUrl !== '#' ? price.ctaUrl : courseCtaUrl(course),
+      ...(course && !price.title ? { title: course.name } : {}),
+    });
   }
 
   return (
@@ -459,6 +480,16 @@ function CoursePriceForm({
       </div>
       <Field label="Border radius (px)">
         <input type="number" min={0} max={40} className="input" value={price.radius} onChange={e => onChange({ radius: Number(e.target.value) })} />
+      </Field>
+      <Field label="Vertical spacing between boxes (px)" hint="Controls the gap between both plan boxes and the guarantee box">
+        <input
+          type="number"
+          min={0}
+          max={80}
+          className="input"
+          value={price.boxSpacing ?? 10}
+          onChange={e => onChange({ boxSpacing: Number(e.target.value) })}
+        />
       </Field>
 
       <p className="section-label">Typography</p>
