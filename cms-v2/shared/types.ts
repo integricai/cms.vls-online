@@ -144,6 +144,38 @@ export interface CourseSyncResult {
   syncedAt: string;
 }
 
+export interface ScrapedCoursePrice {
+  courseId: number;
+  zenlerCourseId: string;
+  courseName: string;
+  url: string;
+  price: number | null;
+  currency: string;
+  rawPriceText: string | null;
+  matched: boolean;
+  error?: string;
+}
+
+export interface CoursePriceRecord {
+  id: number;
+  courseId: number;
+  courseName?: string;
+  zenlerCourseId?: string;
+  courseSlug?: string | null;
+  regularPrice: number;
+  currency: string;
+  discountPercent: number;
+  finalPrice: number;
+  sourceUrl: string | null;
+  rawPriceText: string | null;
+  lastScrapedPrice: number | null;
+  lastScrapedAt: Date | null;
+  lastScrapeStatus: string;
+  lastScrapeError: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ── API responses ─────────────────────────────────────────────────
 
 export interface ApiSuccess<T = unknown> {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import Field from '../../components/Field';
-import type { Course } from '../../../../shared/types';
+import type { Course, CoursePriceRecord, ScrapedCoursePrice } from '../../../../shared/types';
 import type { CoursePrice, CoursePriceContent } from '../../types/cms';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
 import { calculatedPrice, generateCoursePriceHtml, money } from './generateHtml';
@@ -57,6 +57,85 @@ function newCoursePrice(): CoursePrice {
     ctaSize: 14,
     ctaWeight: 800,
   };
+}
+
+function currencySymbol(currency: string): string {
+  const upper = currency.toUpperCase();
+  if (upper === 'USD') return '$';
+  if (upper === 'EUR') return '€';
+  if (currency === '$' || currency === '€' || currency === '£') return currency;
+  return '£';
+}
+
+function currencyCode(currency: string): string {
+  if (currency === '$') return 'USD';
+  if (currency === '€') return 'EUR';
+  if (currency === '£') return 'GBP';
+  const upper = currency.toUpperCase();
+  return ['GBP', 'USD', 'EUR'].includes(upper) ? upper : 'GBP';
+}
+
+function courseCtaUrl(course: Course | undefined, scrapedUrl: string): string {
+  if (scrapedUrl) return scrapedUrl;
+  if (course?.zenlerUrl) return course.zenlerUrl.replace(/^https:\/\/[^/]+\.newzenler\.com/i, 'https://vls-online.com');
+  if (course?.slug) return `https://vls-online.com/courses/${course.slug}`;
+  return '#';
+}
+
+function baseImportedPriceCard(courseId: number, courseName: string, course: Course | undefined): CoursePrice {
+  const card = newCoursePrice();
+  const level = course?.courseLevel || course?.level || 'Course';
+  const qualification = course?.qualification || course?.category || '';
+  return {
+    ...card,
+    name: `${courseName} price`,
+    courseId,
+    eyebrow: [qualification, level].filter(Boolean).join(' • ').toUpperCase(),
+    title: courseName,
+    discountPercent: 0,
+    ctaUrl: courseCtaUrl(course, ''),
+  };
+}
+
+function recordPriceCard(record: CoursePriceRecord, course: Course | undefined): CoursePrice {
+  return {
+    ...baseImportedPriceCard(record.courseId, record.courseName || course?.name || 'Course price', course),
+    regularPrice: record.regularPrice,
+    discountPercent: record.discountPercent,
+    currency: currencySymbol(record.currency),
+    ctaUrl: courseCtaUrl(course, record.sourceUrl || ''),
+  };
+}
+
+function mergeDbPricesIntoCards(
+  base: CoursePrice[],
+  records: CoursePriceRecord[],
+  courses: Course[],
+): CoursePrice[] {
+  const courseMap = new Map(courses.map(course => [course.id, course]));
+  const next = [...base];
+
+  for (const record of records) {
+    if (record.regularPrice <= 0 && record.lastScrapeStatus !== 'manual') continue;
+    const existingIndex = next.findIndex(price => price.courseId === record.courseId);
+    const course = courseMap.get(record.courseId);
+    if (existingIndex >= 0) {
+      const existing = next[existingIndex];
+      next[existingIndex] = {
+        ...existing,
+        regularPrice: record.regularPrice,
+        discountPercent: record.discountPercent,
+        currency: currencySymbol(record.currency),
+        ctaUrl: existing.ctaUrl && existing.ctaUrl !== '#' ? existing.ctaUrl : courseCtaUrl(course, record.sourceUrl || ''),
+        title: existing.title || record.courseName || course?.name || '',
+        name: existing.name || `${record.courseName || course?.name || 'Course'} price`,
+      };
+    } else {
+      next.push(recordPriceCard(record, course));
+    }
+  }
+
+  return next;
 }
 
 function buildInjectCode(price: CoursePrice): string {
@@ -334,6 +413,9 @@ export default function CoursePriceScreen() {
   const [publishing, setPublishing] = useState(false);
   const [published, setPublished] = useState(false);
   const [publishError, setPublishError] = useState('');
+  const [syncingPrices, setSyncingPrices] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
+  const [syncFailures, setSyncFailures] = useState<ScrapedCoursePrice[]>([]);
   const [injectCode, setInjectCode] = useState('');
   const [activeTab, setActiveTab] = useState<'preview' | 'html'>('preview');
 
@@ -343,16 +425,23 @@ export default function CoursePriceScreen() {
     Promise.all([
       api.get<{ data: CoursePriceContent }>('/content/vls-course-prices').catch(() => null),
       api.get<Course[]>('/courses/active').catch(() => []),
-    ]).then(([row, activeCourses]) => {
-      if (activeCourses) setCourses(activeCourses as Course[]);
+      api.get<CoursePriceRecord[]>('/courses/prices').catch(() => []),
+    ]).then(([row, activeCourses, storedPrices]) => {
+      const courseList = (activeCourses ?? []) as Course[];
+      if (activeCourses) setCourses(courseList);
       const items = (row?.data as CoursePriceContent)?.prices ?? [];
       items.forEach(item => {
         const next = parseInt(item.id.replace('cp', ''), 10);
         if (next > idCounter) idCounter = next;
       });
-      if (items.length > 0) {
-        setPrices(items);
-        setActiveId(items[0].id);
+      const merged = mergeDbPricesIntoCards(items, storedPrices as CoursePriceRecord[], courseList);
+      merged.forEach(item => {
+        const next = parseInt(item.id.replace('cp', ''), 10);
+        if (next > idCounter) idCounter = next;
+      });
+      if (merged.length > 0) {
+        setPrices(merged);
+        setActiveId(merged[0].id);
       }
     }).finally(() => setLoading(false));
   }, []);
@@ -427,11 +516,62 @@ export default function CoursePriceScreen() {
     setSaved(false);
   }
 
+  async function syncPricesFromPages() {
+    setSyncingPrices(true);
+    setSyncMessage('');
+    setSyncFailures([]);
+    setPublishError('');
+    try {
+      const result = await api.post<{ scraped: ScrapedCoursePrice[]; prices: CoursePriceRecord[] }>('/courses/scrape-prices', {});
+      const scraped = result.scraped;
+      const stored = result.prices;
+      const matched = scraped.filter(item => item.matched && item.price != null);
+      const failures = scraped.filter(item => !item.matched || item.price == null);
+      const nextPrices = mergeDbPricesIntoCards(prices, stored, courses);
+      const firstImportedId = nextPrices.find(price => matched.some(item => item.courseId === price.courseId))?.id ?? null;
+
+      setPrices(nextPrices);
+      if (firstImportedId) setActiveId(firstImportedId);
+      setSaved(false);
+      setPublished(false);
+      setInjectCode('');
+      setActiveTab('preview');
+      setSyncFailures(failures);
+      setSyncMessage(
+        matched.length
+          ? `Imported ${matched.length} price${matched.length === 1 ? '' : 's'} into draft cards. Review discounts, then save or publish.`
+          : 'No prices were found. The course pages may be rendering prices with JavaScript.',
+      );
+    } catch (error: unknown) {
+      setSyncMessage(error instanceof Error ? error.message : 'Price sync failed. Please try again.');
+    } finally {
+      setSyncingPrices(false);
+    }
+  }
+
+  async function saveLinkedPricesToDb(priceList: CoursePrice[]) {
+    const linked = priceList
+      .filter(price => Number.isInteger(price.courseId))
+      .map(price => ({
+        courseId: price.courseId,
+        regularPrice: price.regularPrice,
+        currency: currencyCode(price.currency),
+        discountPercent: price.discountPercent,
+        sourceUrl: price.ctaUrl && price.ctaUrl !== '#' ? price.ctaUrl : null,
+        rawPriceText: null,
+      }));
+
+    if (linked.length > 0) {
+      await api.put('/courses/prices', { prices: linked });
+    }
+  }
+
   async function saveAndGenerate() {
     if (!active) return;
     setSaving(true);
     setSaved(false);
     try {
+      await saveLinkedPricesToDb(prices);
       await api.put('/content/vls-course-prices', { prices });
       setSaved(true);
       setPublished(false);
@@ -448,6 +588,7 @@ export default function CoursePriceScreen() {
     setPublishing(true);
     setPublishError('');
     try {
+      await saveLinkedPricesToDb(prices);
       await api.put('/content/vls-course-prices', { prices });
       setInjectCode(buildInjectCode(active));
       setPublished(true);
@@ -490,7 +631,29 @@ export default function CoursePriceScreen() {
               {publishing ? 'Publishing…' : published ? '✓ Published' : '🚀 Publish Price'}
             </button>
           </div>
+          <button onClick={syncPricesFromPages} disabled={syncingPrices || courses.length === 0} className="btn-ghost w-full justify-center text-xs">
+            {syncingPrices ? 'Syncing course pages…' : 'Sync Prices From Course Pages'}
+          </button>
           {publishError && <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">{publishError}</p>}
+          {syncMessage && (
+            <div className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+              <p>{syncMessage}</p>
+              {syncFailures.length > 0 && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer font-semibold">{syncFailures.length} page{syncFailures.length === 1 ? '' : 's'} need review</summary>
+                  <div className="mt-2 max-h-32 space-y-1 overflow-auto">
+                    {syncFailures.slice(0, 20).map(item => (
+                      <div key={item.courseId} className="rounded bg-white/70 px-2 py-1">
+                        <span className="font-medium">{item.courseName}</span>
+                        <span className="text-blue-600"> — {item.error || 'No price found'}</span>
+                      </div>
+                    ))}
+                    {syncFailures.length > 20 && <p className="text-blue-600">Showing first 20 only.</p>}
+                  </div>
+                </details>
+              )}
+            </div>
+          )}
           <div className="space-y-1 rounded border border-slate-200 bg-slate-50 px-3 py-2">
             <p className="text-[11px] text-slate-500">
               Add <span className="font-mono">data-vls-price-card="{active?.id || 'cp1'}"</span> to the live course card container.

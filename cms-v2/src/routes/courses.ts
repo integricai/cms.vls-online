@@ -14,7 +14,9 @@ import {
   listPaymentCards,
   updatePaymentCard,
 } from '../models/coursePaymentCard';
+import { listCoursePrices, upsertCoursePrices, upsertScrapedCoursePrices } from '../models/coursePrice';
 import { syncCoursesFromZenler } from '../services/courseSyncService';
+import { scrapeActiveCoursePrices } from '../services/coursePriceScraper';
 
 const router = Router();
 
@@ -48,6 +50,55 @@ router.post('/sync', requireRole('admin'), async (_req: Request, res: Response) 
     const message = err instanceof Error ? err.message : 'Sync failed';
     console.error('[course-sync]', err);
     return res.status(502).json({ ok: false, error: message });
+  }
+});
+
+router.post('/scrape-prices', requireRole('admin', 'editor'), async (_req: Request, res: Response) => {
+  try {
+    const scraped = await scrapeActiveCoursePrices();
+    const prices = await upsertScrapedCoursePrices(scraped);
+    return res.json({ ok: true, data: { scraped, prices } });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Price scrape failed';
+    console.error('[course-price-scrape]', err);
+    return res.status(502).json({ ok: false, error: message });
+  }
+});
+
+router.get('/prices', requireRole('admin', 'editor'), async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const prices = await listCoursePrices();
+    return res.json({ ok: true, data: prices });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/prices', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const incoming = Array.isArray(req.body.prices) ? req.body.prices : [];
+    const prices = incoming
+      .map((price: {
+        courseId?: unknown;
+        regularPrice?: unknown;
+        currency?: unknown;
+        discountPercent?: unknown;
+        sourceUrl?: unknown;
+        rawPriceText?: unknown;
+      }) => ({
+        courseId: Number(price.courseId),
+        regularPrice: Number(price.regularPrice),
+        currency: String(price.currency || 'GBP'),
+        discountPercent: Number(price.discountPercent),
+        sourceUrl: typeof price.sourceUrl === 'string' ? price.sourceUrl : null,
+        rawPriceText: typeof price.rawPriceText === 'string' ? price.rawPriceText : null,
+      }))
+      .filter((price: { courseId: number }) => Number.isInteger(price.courseId));
+
+    const saved = await upsertCoursePrices(prices);
+    return res.json({ ok: true, data: saved });
+  } catch (err) {
+    next(err);
   }
 });
 
