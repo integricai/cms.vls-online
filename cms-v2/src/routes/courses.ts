@@ -80,16 +80,22 @@ router.put('/prices', requireRole('admin', 'editor'), async (req: Request, res: 
     const prices = incoming
       .map((price: {
         courseId?: unknown;
+        isEnabled?: unknown;
         regularPrice?: unknown;
+        regularPrice2?: unknown;
         currency?: unknown;
         discountPercent?: unknown;
+        discountPercent2?: unknown;
         sourceUrl?: unknown;
         rawPriceText?: unknown;
       }) => ({
         courseId: Number(price.courseId),
+        isEnabled: typeof price.isEnabled === 'boolean' ? price.isEnabled : undefined,
         regularPrice: Number(price.regularPrice),
-        currency: String(price.currency || 'GBP'),
+        regularPrice2: Number(price.regularPrice2),
+        currency: String(price.currency || 'USD'),
         discountPercent: Number(price.discountPercent),
+        discountPercent2: Number(price.discountPercent2),
         sourceUrl: typeof price.sourceUrl === 'string' ? price.sourceUrl : null,
         rawPriceText: typeof price.rawPriceText === 'string' ? price.rawPriceText : null,
       }))

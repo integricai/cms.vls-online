@@ -378,6 +378,12 @@ function finalPrice(regularPrice: number, discountPercent: number): number {
   return Math.round((regular - regular * (discount / 100)) * 100) / 100;
 }
 
+function formatScrapeDate(value: Date | string | null): string {
+  if (!value) return 'Never';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Never' : date.toLocaleString();
+}
+
 function CoursePricingTab() {
   const [prices, setPrices] = useState<CoursePriceRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -422,9 +428,12 @@ function CoursePricingTab() {
       const saved = await api.put<CoursePriceRecord[]>('/courses/prices', {
         prices: prices.map(price => ({
           courseId: price.courseId,
+          isEnabled: price.isEnabled,
           regularPrice: price.regularPrice,
+          regularPrice2: price.regularPrice2,
           currency: price.currency,
           discountPercent: price.discountPercent,
+          discountPercent2: price.discountPercent2,
           sourceUrl: price.sourceUrl,
           rawPriceText: price.rawPriceText,
         })),
@@ -484,23 +493,35 @@ function CoursePricingTab() {
         </div>
       ) : (
         <div className="overflow-auto rounded-lg border border-slate-200 bg-white">
-          <table className="min-w-[1060px] w-full text-xs">
+          <table className="min-w-[1320px] w-full text-xs">
             <thead className="bg-slate-50">
               <tr className="border-b border-slate-200 text-left text-slate-500">
+                <th className="px-3 py-2 font-semibold">Enabled</th>
                 <th className="px-3 py-2 font-semibold">Course</th>
                 <th className="px-3 py-2 font-semibold">Currency</th>
-                <th className="px-3 py-2 font-semibold">Regular Price</th>
-                <th className="px-3 py-2 font-semibold">Discount %</th>
-                <th className="px-3 py-2 font-semibold">Final Price</th>
-                <th className="px-3 py-2 font-semibold">Last Scrape</th>
+                <th className="px-3 py-2 font-semibold">Price 1</th>
+                <th className="px-3 py-2 font-semibold">Discount 1 %</th>
+                <th className="px-3 py-2 font-semibold">Final 1</th>
+                <th className="px-3 py-2 font-semibold">Price 2</th>
+                <th className="px-3 py-2 font-semibold">Discount 2 %</th>
+                <th className="px-3 py-2 font-semibold">Final 2</th>
+                <th className="px-3 py-2 font-semibold">Last Scraped</th>
                 <th className="px-3 py-2 font-semibold">Source</th>
               </tr>
             </thead>
             <tbody>
               {prices.map(price => {
                 const calculated = finalPrice(price.regularPrice, price.discountPercent);
+                const calculated2 = finalPrice(price.regularPrice2, price.discountPercent2);
                 return (
                   <tr key={price.courseId} className="border-b border-slate-100 last:border-0">
+                    <td className="px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={price.isEnabled}
+                        onChange={event => patchPrice(price.courseId, { isEnabled: event.target.checked })}
+                      />
+                    </td>
                     <td className="px-3 py-2">
                       <div className="font-medium text-slate-700">{price.courseName || `Course ${price.courseId}`}</div>
                       <div className="text-[11px] text-slate-400">{price.zenlerCourseId || '—'}</div>
@@ -511,8 +532,8 @@ function CoursePricingTab() {
                         value={price.currency}
                         onChange={event => patchPrice(price.courseId, { currency: event.target.value })}
                       >
-                        <option value="GBP">GBP</option>
                         <option value="USD">USD</option>
+                        <option value="GBP">GBP</option>
                         <option value="EUR">EUR</option>
                       </select>
                     </td>
@@ -538,11 +559,39 @@ function CoursePricingTab() {
                       />
                     </td>
                     <td className="px-3 py-2 font-bold text-emerald-700">{calculated.toFixed(2)}</td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        className="input h-8 min-w-28 text-xs"
+                        value={price.regularPrice2}
+                        onChange={event => patchPrice(price.courseId, { regularPrice2: Number(event.target.value) })}
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="0.01"
+                        className="input h-8 min-w-24 text-xs"
+                        value={price.discountPercent2}
+                        onChange={event => patchPrice(price.courseId, { discountPercent2: Number(event.target.value) })}
+                      />
+                    </td>
+                    <td className="px-3 py-2 font-bold text-emerald-700">{calculated2.toFixed(2)}</td>
                     <td className="px-3 py-2 text-slate-500">
                       <div>{price.lastScrapeStatus}</div>
                       <div className="text-[11px] text-slate-400">
-                        {price.lastScrapedAt ? new Date(price.lastScrapedAt).toLocaleString() : 'Manual'}
+                        {formatScrapeDate(price.lastScrapedAt)}
                       </div>
+                      {price.lastScrapedPrice != null && (
+                        <div className="text-[11px] text-slate-400">
+                          Last: {price.currency} {price.lastScrapedPrice.toFixed(2)}
+                          {price.lastScrapedPrice2 != null ? ` / ${price.lastScrapedPrice2.toFixed(2)}` : ''}
+                        </div>
+                      )}
                     </td>
                     <td className="max-w-[220px] px-3 py-2">
                       {price.sourceUrl ? (

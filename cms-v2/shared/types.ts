@@ -151,6 +151,7 @@ export interface ScrapedCoursePrice {
   courseName: string;
   url: string;
   price: number | null;
+  price2: number | null;
   currency: string;
   rawPriceText: string | null;
   matched: boolean;
@@ -163,13 +164,18 @@ export interface CoursePriceRecord {
   courseName?: string;
   zenlerCourseId?: string;
   courseSlug?: string | null;
+  isEnabled: boolean;
   regularPrice: number;
+  regularPrice2: number;
   currency: string;
   discountPercent: number;
+  discountPercent2: number;
   finalPrice: number;
+  finalPrice2: number;
   sourceUrl: string | null;
   rawPriceText: string | null;
   lastScrapedPrice: number | null;
+  lastScrapedPrice2: number | null;
   lastScrapedAt: Date | null;
   lastScrapeStatus: string;
   lastScrapeError: string | null;

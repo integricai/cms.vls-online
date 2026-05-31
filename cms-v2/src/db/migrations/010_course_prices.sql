@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS course_prices (
   id SERIAL PRIMARY KEY,
   course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
   regular_price NUMERIC(10,2) NOT NULL DEFAULT 0,
-  currency VARCHAR(8) NOT NULL DEFAULT 'GBP',
+  currency VARCHAR(8) NOT NULL DEFAULT 'USD',
   discount_percent NUMERIC(5,2) NOT NULL DEFAULT 0,
   final_price NUMERIC(10,2) NOT NULL DEFAULT 0,
   source_url TEXT,

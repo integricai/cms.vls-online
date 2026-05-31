@@ -23,7 +23,7 @@ function newCoursePrice(): CoursePrice {
     title: 'ACCA FA1 - Recording Financial Transactions',
     regularPrice: 279,
     discountPercent: 72,
-    currency: '£',
+    currency: '$',
     priceLabel: 'YOUR PRICE',
     savingPrefix: 'You save',
     includesLabel: 'THIS COURSE INCLUDES',
@@ -64,7 +64,7 @@ function currencySymbol(currency: string): string {
   if (upper === 'USD') return '$';
   if (upper === 'EUR') return '€';
   if (currency === '$' || currency === '€' || currency === '£') return currency;
-  return '£';
+  return '$';
 }
 
 function currencyCode(currency: string): string {
@@ -72,7 +72,7 @@ function currencyCode(currency: string): string {
   if (currency === '€') return 'EUR';
   if (currency === '£') return 'GBP';
   const upper = currency.toUpperCase();
-  return ['GBP', 'USD', 'EUR'].includes(upper) ? upper : 'GBP';
+  return ['GBP', 'USD', 'EUR'].includes(upper) ? upper : 'USD';
 }
 
 function courseCtaUrl(course: Course | undefined, scrapedUrl: string): string {
@@ -555,8 +555,10 @@ export default function CoursePriceScreen() {
       .map(price => ({
         courseId: price.courseId,
         regularPrice: price.regularPrice,
+        regularPrice2: 0,
         currency: currencyCode(price.currency),
         discountPercent: price.discountPercent,
+        discountPercent2: 0,
         sourceUrl: price.ctaUrl && price.ctaUrl !== '#' ? price.ctaUrl : null,
         rawPriceText: null,
       }));
