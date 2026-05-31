@@ -919,7 +919,8 @@ export interface Bv2Component { id: string; name: string; data: Bv2State; }
 export interface TestimonialCard {
   initials: string;
   name: string;
-  course: string;
+  title: string;
+  dateLabel: string;
   quote: string;
   rating: number;
 }
@@ -939,9 +940,10 @@ export interface TestimonialsState {
   eyebrowSize: number; eyebrowWeight: number; eyebrowColor: string;
   titleSize: number; titleWeight: number; titleColor: string; accentColor: string;
   subtitleSize: number; subtitleWeight: number; subtitleColor: string;
+  cardTitleSize: number; cardTitleWeight: number; cardTitleColor: string;
   quoteSize: number; quoteWeight: number; quoteColor: string;
   nameSize: number; nameWeight: number; nameColor: string;
-  courseSize: number; courseWeight: number; courseColor: string;
+  dateSize: number; dateWeight: number; dateColor: string;
   cardBg: string; cardBorder: string; cardRadius: number; cardShadow: string;
   starColor: string; quoteMarkColor: string; avatarBg: string; avatarColor: string;
   cards: TestimonialCard[];

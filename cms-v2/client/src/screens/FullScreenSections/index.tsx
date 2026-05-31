@@ -162,15 +162,16 @@ function makeTestimonials(): TestimonialsState {
     eyebrowSize: 11, eyebrowWeight: 800, eyebrowColor: '#2c67d8',
     titleSize: 34, titleWeight: 800, titleColor: '#0b2348', accentColor: '#2c67d8',
     subtitleSize: 13, subtitleWeight: 500, subtitleColor: '#6b7b94',
+    cardTitleSize: 15, cardTitleWeight: 800, cardTitleColor: '#10284f',
     quoteSize: 14, quoteWeight: 400, quoteColor: '#42526e',
     nameSize: 13, nameWeight: 800, nameColor: '#11244a',
-    courseSize: 11, courseWeight: 800, courseColor: '#2c67d8',
+    dateSize: 11, dateWeight: 700, dateColor: '#63728a',
     cardBg: '#ffffff', cardBorder: '#dfe8f6', cardRadius: 14, cardShadow: '0 10px 26px rgba(28,45,85,.08)',
     starColor: '#f6ad25', quoteMarkColor: '#eaf2ff', avatarBg: '#e8f0ff', avatarColor: '#2c67d8',
     cards: [
-      { initials: 'MR', name: 'Maria Rossi', course: 'ACCA - AA', rating: 5, quote: 'I tried self-study apps before and stalled. The structure here - videos, quizzes, then kit questions - kept momentum going and I passed AA on the first attempt.' },
-      { initials: 'JT', name: 'James Thompson', course: 'CMA - Part 2', rating: 5, quote: 'Syed explains the tricky CMA topics in a way that actually sticks. The notes are concise and exam-focused - no wading through 400 pages of theory.' },
-      { initials: 'FA', name: 'Fatima Ahmed', course: 'ACCA - SBL', rating: 5, quote: 'Booked the complete package and it paid for itself. The mock plus the pre-exam live session calmed my nerves and I walked in knowing exactly what to expect.' },
+      { initials: 'MR', name: 'Maria Rossi', title: 'Kept me on track when apps failed', dateLabel: 'December 2025', rating: 4.8, quote: 'I tried self-study apps before and stalled. The structure here - videos, quizzes, then kit questions - kept momentum going and I passed AA on the first attempt.' },
+      { initials: 'JT', name: 'James Thompson', title: 'Concise, exam-focused notes', dateLabel: 'March 2026', rating: 4.9, quote: 'Syed explains the tricky topics in a way that actually sticks. The notes are concise and exam-focused - no wading through 400 pages of theory.' },
+      { initials: 'FA', name: 'Fatima Ahmed', title: 'Worth every penny', dateLabel: 'February 2026', rating: 5, quote: 'Booked the complete package and it paid for itself. The mock plus the pre-exam live session calmed my nerves and I walked in knowing exactly what to expect.' },
     ],
   };
 }
@@ -354,14 +355,16 @@ function normTestimonials(raw: any): TestimonialsState {
     eyebrowSize: normalizeNum(d.eyebrowSize, 11), eyebrowWeight: normalizeNum(d.eyebrowWeight, 800),
     titleSize: normalizeNum(d.titleSize, 34), titleWeight: normalizeNum(d.titleWeight, 800),
     subtitleSize: normalizeNum(d.subtitleSize, 13), subtitleWeight: normalizeNum(d.subtitleWeight, 500),
+    cardTitleSize: normalizeNum(d.cardTitleSize, 15), cardTitleWeight: normalizeNum(d.cardTitleWeight, 800),
     quoteSize: normalizeNum(d.quoteSize, 14), quoteWeight: normalizeNum(d.quoteWeight, 400),
     nameSize: normalizeNum(d.nameSize, 13), nameWeight: normalizeNum(d.nameWeight, 800),
-    courseSize: normalizeNum(d.courseSize, 11), courseWeight: normalizeNum(d.courseWeight, 800),
+    dateSize: normalizeNum(d.dateSize ?? d.courseSize, 11), dateWeight: normalizeNum(d.dateWeight ?? d.courseWeight, 700),
     cardRadius: normalizeNum(d.cardRadius, 14),
     cards: Array.isArray(d.cards) ? d.cards.map((card: any) => ({
       initials: card.initials || '',
       name: card.name || '',
-      course: card.course || '',
+      title: card.title || '',
+      dateLabel: card.dateLabel || card.course || '',
       quote: card.quote || '',
       rating: normalizeNum(card.rating, 5),
     })) : [],
@@ -1858,9 +1861,10 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
           <ColorInput label="Title" value={state.titleColor} onChange={v => upd({ titleColor: v })} />
           <ColorInput label="Accent" value={state.accentColor} onChange={v => upd({ accentColor: v })} />
           <ColorInput label="Subtitle" value={state.subtitleColor} onChange={v => upd({ subtitleColor: v })} />
+          <ColorInput label="Card title" value={state.cardTitleColor} onChange={v => upd({ cardTitleColor: v })} />
           <ColorInput label="Quote text" value={state.quoteColor} onChange={v => upd({ quoteColor: v })} />
           <ColorInput label="Name" value={state.nameColor} onChange={v => upd({ nameColor: v })} />
-          <ColorInput label="Course" value={state.courseColor} onChange={v => upd({ courseColor: v })} />
+          <ColorInput label="Date" value={state.dateColor} onChange={v => upd({ dateColor: v })} />
           <ColorInput label="Stars" value={state.starColor} onChange={v => upd({ starColor: v })} />
           <ColorInput label="Card bg" value={state.cardBg} onChange={v => upd({ cardBg: v })} />
           <ColorInput label="Card border" value={state.cardBorder} onChange={v => upd({ cardBorder: v })} />
@@ -1883,9 +1887,10 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
               <span>Eyebrow</span><input type="number" className="input text-xs py-0.5" min={8} max={24} value={state.eyebrowSize} onChange={e => upd({ eyebrowSize: Number(e.target.value) })} /><WeightSel value={state.eyebrowWeight} def={800} onChange={w => upd({ eyebrowWeight: w })} />
               <span>Title</span><input type="number" className="input text-xs py-0.5" min={18} max={80} value={state.titleSize} onChange={e => upd({ titleSize: Number(e.target.value) })} /><WeightSel value={state.titleWeight} def={800} onChange={w => upd({ titleWeight: w })} />
               <span>Subtitle</span><input type="number" className="input text-xs py-0.5" min={8} max={24} value={state.subtitleSize} onChange={e => upd({ subtitleSize: Number(e.target.value) })} /><WeightSel value={state.subtitleWeight} def={500} onChange={w => upd({ subtitleWeight: w })} />
+              <span>Card title</span><input type="number" className="input text-xs py-0.5" min={10} max={28} value={state.cardTitleSize} onChange={e => upd({ cardTitleSize: Number(e.target.value) })} /><WeightSel value={state.cardTitleWeight} def={800} onChange={w => upd({ cardTitleWeight: w })} />
               <span>Quote</span><input type="number" className="input text-xs py-0.5" min={10} max={24} value={state.quoteSize} onChange={e => upd({ quoteSize: Number(e.target.value) })} /><WeightSel value={state.quoteWeight} def={400} onChange={w => upd({ quoteWeight: w })} />
               <span>Name</span><input type="number" className="input text-xs py-0.5" min={10} max={22} value={state.nameSize} onChange={e => upd({ nameSize: Number(e.target.value) })} /><WeightSel value={state.nameWeight} def={800} onChange={w => upd({ nameWeight: w })} />
-              <span>Course</span><input type="number" className="input text-xs py-0.5" min={8} max={18} value={state.courseSize} onChange={e => upd({ courseSize: Number(e.target.value) })} /><WeightSel value={state.courseWeight} def={800} onChange={w => upd({ courseWeight: w })} />
+              <span>Date</span><input type="number" className="input text-xs py-0.5" min={8} max={18} value={state.dateSize} onChange={e => upd({ dateSize: Number(e.target.value) })} /><WeightSel value={state.dateWeight} def={700} onChange={w => upd({ dateWeight: w })} />
             </div>
           </div>
         </details>
@@ -1899,14 +1904,15 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <Field label="Initials"><input className="input" value={card.initials} onChange={e => updCard(i, { initials: e.target.value })} /></Field>
-              <Field label="Rating"><input type="number" className="input" min={1} max={5} value={card.rating} onChange={e => updCard(i, { rating: Number(e.target.value) })} /></Field>
+              <Field label="Rating"><input type="number" className="input" min={1} max={5} step={0.1} value={card.rating} onChange={e => updCard(i, { rating: Number(e.target.value) })} /></Field>
               <Field label="Name"><input className="input" value={card.name} onChange={e => updCard(i, { name: e.target.value })} /></Field>
-              <Field label="Course"><input className="input" value={card.course} onChange={e => updCard(i, { course: e.target.value })} /></Field>
+              <Field label="Month and year"><input className="input" value={card.dateLabel} placeholder="March 2026" onChange={e => updCard(i, { dateLabel: e.target.value })} /></Field>
             </div>
+            <Field label="Title"><input className="input" value={card.title} onChange={e => updCard(i, { title: e.target.value })} /></Field>
             <Field label="Quote"><textarea className="input min-h-[92px]" value={card.quote} onChange={e => updCard(i, { quote: e.target.value })} /></Field>
           </div>
         ))}
-        <button onClick={() => upd({ cards: [...state.cards, { initials: '', name: '', course: '', rating: 5, quote: '' }] })} className="btn-ghost mb-4 w-full text-xs">+ Add testimonial</button>
+        <button onClick={() => upd({ cards: [...state.cards, { initials: '', name: '', title: '', dateLabel: '', rating: 5, quote: '' }] })} className="btn-ghost mb-4 w-full text-xs">+ Add testimonial</button>
       </div>
     </div>
   );
