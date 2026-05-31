@@ -31,6 +31,113 @@ type EmbeddedCourse = {
   courseOption: string;
 };
 
+export interface CourseFinderStyleConfig {
+  fontFamily: string;
+  eyebrowSize: number;
+  eyebrowWeight: number;
+  titleSize: number;
+  titleWeight: number;
+  subtitleSize: number;
+  subtitleWeight: number;
+  labelSize: number;
+  labelWeight: number;
+  buttonSize: number;
+  buttonWeight: number;
+}
+
+export interface CourseFinderTextConfig {
+  eyebrow: string;
+  title: string;
+  titleAccent: string;
+  subtitle: string;
+  qualificationLabel: string;
+  levelLabel: string;
+  courseLabel: string;
+  optionLabel: string;
+  qualificationPlaceholder: string;
+  levelPlaceholder: string;
+  coursePlaceholder: string;
+  optionPlaceholder: string;
+  findButtonText: string;
+  statCoursesLabel: string;
+  statQualificationsLabel: string;
+  statPapersLabel: string;
+  matchLabel: string;
+  messageText: string;
+  resetText: string;
+  matchLinkText: string;
+  defaultListTitle: string;
+  defaultListSub: string;
+  filteredPrefix: string;
+  noCoursesTitle: string;
+  noCoursesSub: string;
+  detailsText: string;
+  enrolText: string;
+  sortDefaultText: string;
+  sortAzText: string;
+  sortLevelText: string;
+  countSingular: string;
+  countPlural: string;
+  allPrefix: string;
+  showingText: string;
+  ofText: string;
+}
+
+export interface CourseFinderConfig extends CourseFinderTextConfig, CourseFinderStyleConfig {}
+
+export const defaultCourseFinderConfig: CourseFinderConfig = {
+  fontFamily: 'Poppins',
+  eyebrowSize: 10,
+  eyebrowWeight: 700,
+  titleSize: 20,
+  titleWeight: 800,
+  subtitleSize: 11,
+  subtitleWeight: 400,
+  labelSize: 9,
+  labelWeight: 700,
+  buttonSize: 12,
+  buttonWeight: 800,
+  eyebrow: 'Course Finder',
+  title: 'Find the right course for you.',
+  titleAccent: 'right course',
+  subtitle: 'Filter by qualification, level, and course type. Results update as you select.',
+  qualificationLabel: 'Qualification',
+  levelLabel: 'Level',
+  courseLabel: 'Course',
+  optionLabel: 'Course Option',
+  qualificationPlaceholder: 'All qualifications',
+  levelPlaceholder: 'All levels',
+  coursePlaceholder: 'All courses',
+  optionPlaceholder: 'All options',
+  findButtonText: 'View Course →',
+  statCoursesLabel: 'Courses',
+  statQualificationsLabel: 'Qualifications',
+  statPapersLabel: 'Papers',
+  matchLabel: 'Exact match found',
+  messageText: 'Please select a course and option first.',
+  resetText: 'Reset filters',
+  matchLinkText: 'Go to course →',
+  defaultListTitle: 'All VLS Courses',
+  defaultListSub: 'Browse the full course library',
+  filteredPrefix: 'Filtered by:',
+  noCoursesTitle: 'No courses found',
+  noCoursesSub: 'Try adjusting your filters above',
+  detailsText: 'Details',
+  enrolText: 'Enrol →',
+  sortDefaultText: 'Default order',
+  sortAzText: 'A - Z',
+  sortLevelText: 'By level',
+  countSingular: 'course',
+  countPlural: 'courses',
+  allPrefix: 'All',
+  showingText: 'Showing',
+  ofText: 'of',
+};
+
+export function normalizeCourseFinderConfig(config?: Partial<CourseFinderConfig> | null): CourseFinderConfig {
+  return { ...defaultCourseFinderConfig, ...(config || {}) };
+}
+
 function publicCourseUrl(course: CourseFinderCourse): string {
   const raw = course.zenlerUrl || (course.slug ? `/courses/${course.slug}` : '#');
   return raw.replace('https://vls.newzenler.com', 'https://vls-online.com');
@@ -40,7 +147,25 @@ function escapeScriptJson(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c').replace(/-->/g, '--\\u003e');
 }
 
-export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string {
+function escapeHtml(value: unknown): string {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch
+  ));
+}
+
+function titleHtml(title: string, accent: string): string {
+  const safeTitle = escapeHtml(title);
+  const safeAccent = escapeHtml(accent);
+  if (!accent || !title.includes(accent)) return safeTitle;
+  return safeTitle.replace(safeAccent, `<em>${safeAccent}</em>`);
+}
+
+function cssFontFamily(value: string): string {
+  return `'${String(value || 'Poppins').replace(/['"<>]/g, '').trim() || 'Poppins'}'`;
+}
+
+export function generateCourseFinderHtml(courses: CourseFinderCourse[], rawConfig?: Partial<CourseFinderConfig> | null): string {
+  const config = normalizeCourseFinderConfig(rawConfig);
   const uid = `vlscf-${Date.now().toString(36)}`;
   const embedded: EmbeddedCourse[] = courses
     .filter(course => course.isActive !== false && course.name)
@@ -62,23 +187,23 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
   return `
 <style>
 #${uid}, #${uid} * { box-sizing: border-box; }
-#${uid} { font-family: Poppins, Arial, sans-serif; color: #0f1e3c; width: 100%; }
+#${uid} { font-family: ${cssFontFamily(config.fontFamily)}, Arial, sans-serif; color: #0f1e3c; width: 100%; }
 #${uid} .cf-banner { background: #0f1e3c; border-radius: 16px; overflow: hidden; position: relative; margin: 0 0 20px; }
 #${uid} .cf-banner:before { content: ''; position: absolute; top: -60px; right: -60px; width: 260px; height: 260px; border-radius: 50%; background: rgba(78,168,222,.05); pointer-events: none; }
 #${uid} .cf-banner:after { content: ''; position: absolute; bottom: -40px; left: -40px; width: 180px; height: 180px; border-radius: 50%; background: rgba(78,168,222,.04); pointer-events: none; }
 #${uid} .cf-top { padding: 28px 32px 22px; display: flex; align-items: center; justify-content: space-between; gap: 24px; position: relative; z-index: 1; }
-#${uid} .cf-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #4ea8de; margin-bottom: 7px; display: flex; align-items: center; gap: 6px; }
+#${uid} .cf-eyebrow { font-size: ${config.eyebrowSize}px; font-weight: ${config.eyebrowWeight}; letter-spacing: 1.2px; text-transform: uppercase; color: #4ea8de; margin-bottom: 7px; display: flex; align-items: center; gap: 6px; }
 #${uid} .cf-eyebrow-dot { width: 4px; height: 4px; border-radius: 50%; background: #4ea8de; }
-#${uid} .cf-title { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 3px; line-height: 1.25; }
+#${uid} .cf-title { font-size: ${config.titleSize}px; font-weight: ${config.titleWeight}; color: #fff; margin-bottom: 3px; line-height: 1.25; }
 #${uid} .cf-title em { color: #4ea8de; font-style: normal; }
-#${uid} .cf-sub { font-size: 11px; color: rgba(255,255,255,.56); line-height: 1.6; }
+#${uid} .cf-sub { font-size: ${config.subtitleSize}px; font-weight: ${config.subtitleWeight}; color: rgba(255,255,255,.56); line-height: 1.6; }
 #${uid} .cf-stats { display: flex; gap: 10px; flex-shrink: 0; }
 #${uid} .cf-stat { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 10px; padding: 10px 16px; text-align: center; min-width: 80px; }
 #${uid} .cf-stat strong { display: block; font-size: 16px; font-weight: 800; color: #fff; line-height: 1.2; }
 #${uid} .cf-stat span { font-size: 9px; color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: .4px; }
 #${uid} .cf-dropdowns { background: rgba(255,255,255,.04); border-top: 1px solid rgba(255,255,255,.08); padding: 16px 32px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; align-items: end; position: relative; z-index: 1; }
 #${uid} .dd-group { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-#${uid} .dd-label { font-size: 9px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: rgba(255,255,255,.48); display: flex; align-items: center; gap: 5px; }
+#${uid} .dd-label { font-size: ${config.labelSize}px; font-weight: ${config.labelWeight}; letter-spacing: .8px; text-transform: uppercase; color: rgba(255,255,255,.48); display: flex; align-items: center; gap: 5px; }
 #${uid} .dd-step { width: 15px; height: 15px; border-radius: 50%; background: rgba(78,168,222,.15); border: 1px solid rgba(78,168,222,.25); display: inline-flex; align-items: center; justify-content: center; font-size: 7px; font-weight: 800; color: #4ea8de; flex-shrink: 0; }
 #${uid} .dd-step.active { background: #185fa5; border-color: #185fa5; color: #fff; }
 #${uid} .dd-step.done { background: #0a5c2e; border-color: #0a5c2e; color: #fff; }
@@ -87,7 +212,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
 #${uid} .dd-select:disabled { opacity: .3; cursor: not-allowed; }
 #${uid} .dd-select.selected { border-color: rgba(78,168,222,.55); background-color: rgba(24,95,165,.25); }
 #${uid} .dd-select option { background: #0f1e3c; color: #fff; }
-#${uid} .cf-find-btn { background: #4ea8de; color: #0f1e3c; font-size: 12px; font-weight: 800; padding: 9px 20px; border-radius: 8px; border: 0; cursor: pointer; font-family: inherit; white-space: nowrap; transition: background .15s; align-self: end; }
+#${uid} .cf-find-btn { background: #4ea8de; color: #0f1e3c; font-size: ${config.buttonSize}px; font-weight: ${config.buttonWeight}; padding: 9px 20px; border-radius: 8px; border: 0; cursor: pointer; font-family: inherit; white-space: nowrap; transition: background .15s; align-self: end; }
 #${uid} .cf-find-btn:hover:not(:disabled) { background: #7ec8f0; }
 #${uid} .cf-find-btn:disabled { opacity: .35; cursor: not-allowed; }
 #${uid} .cf-match { background: rgba(10,92,46,.2); border-top: 1px solid rgba(10,92,46,.35); padding: 12px 32px; display: none; align-items: center; justify-content: space-between; gap: 14px; position: relative; z-index: 1; }
@@ -173,47 +298,47 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
   <div class="cf-banner">
     <div class="cf-top">
       <div>
-        <div class="cf-eyebrow"><span class="cf-eyebrow-dot"></span> Course Finder</div>
-        <div class="cf-title">Find the <em>right course</em> for you.</div>
-        <div class="cf-sub">Filter by qualification, level, and course type. Results update as you select.</div>
+        <div class="cf-eyebrow"><span class="cf-eyebrow-dot"></span> ${escapeHtml(config.eyebrow)}</div>
+        <div class="cf-title">${titleHtml(config.title, config.titleAccent)}</div>
+        <div class="cf-sub">${escapeHtml(config.subtitle)}</div>
       </div>
       <div class="cf-stats">
-        <div class="cf-stat"><strong data-role="stat-courses">0</strong><span>Courses</span></div>
-        <div class="cf-stat"><strong data-role="stat-quals">0</strong><span>Qualifications</span></div>
-        <div class="cf-stat"><strong data-role="stat-papers">0</strong><span>Papers</span></div>
+        <div class="cf-stat"><strong data-role="stat-courses">0</strong><span>${escapeHtml(config.statCoursesLabel)}</span></div>
+        <div class="cf-stat"><strong data-role="stat-quals">0</strong><span>${escapeHtml(config.statQualificationsLabel)}</span></div>
+        <div class="cf-stat"><strong data-role="stat-papers">0</strong><span>${escapeHtml(config.statPapersLabel)}</span></div>
       </div>
     </div>
     <div class="cf-dropdowns">
       <div class="dd-group">
-        <div class="dd-label"><div class="dd-step active" data-step="1">1</div>Qualification</div>
-        <select class="dd-select" data-role="qual"><option value="">All qualifications</option></select>
+        <div class="dd-label"><div class="dd-step active" data-step="1">1</div>${escapeHtml(config.qualificationLabel)}</div>
+        <select class="dd-select" data-role="qual"><option value="">${escapeHtml(config.qualificationPlaceholder)}</option></select>
       </div>
       <div class="dd-group">
-        <div class="dd-label"><div class="dd-step" data-step="2">2</div>Level</div>
-        <select class="dd-select" data-role="level" disabled><option value="">All levels</option></select>
+        <div class="dd-label"><div class="dd-step" data-step="2">2</div>${escapeHtml(config.levelLabel)}</div>
+        <select class="dd-select" data-role="level" disabled><option value="">${escapeHtml(config.levelPlaceholder)}</option></select>
       </div>
       <div class="dd-group">
-        <div class="dd-label"><div class="dd-step" data-step="3">3</div>Course</div>
-        <select class="dd-select" data-role="course" disabled><option value="">All courses</option></select>
+        <div class="dd-label"><div class="dd-step" data-step="3">3</div>${escapeHtml(config.courseLabel)}</div>
+        <select class="dd-select" data-role="course" disabled><option value="">${escapeHtml(config.coursePlaceholder)}</option></select>
       </div>
       <div class="dd-group">
-        <div class="dd-label"><div class="dd-step" data-step="4">4</div>Course Option</div>
-        <select class="dd-select" data-role="option" disabled><option value="">All options</option></select>
+        <div class="dd-label"><div class="dd-step" data-step="4">4</div>${escapeHtml(config.optionLabel)}</div>
+        <select class="dd-select" data-role="option" disabled><option value="">${escapeHtml(config.optionPlaceholder)}</option></select>
       </div>
-      <button class="cf-find-btn" type="button" data-role="find">View Course &rarr;</button>
+      <button class="cf-find-btn" type="button" data-role="find">${escapeHtml(config.findButtonText)}</button>
     </div>
     <div class="cf-match" data-role="match">
       <div class="cm-left">
         <div class="cm-icon" data-role="match-icon">OK</div>
         <div>
-          <div class="cm-label">Exact match found</div>
+          <div class="cm-label">${escapeHtml(config.matchLabel)}</div>
           <div class="cm-name" data-role="match-name">-</div>
           <div class="cm-path" data-role="match-path">-</div>
         </div>
       </div>
       <div class="cm-btns">
-        <button class="cm-reset" type="button" data-role="reset">Reset filters</button>
-        <a class="cm-go" data-role="match-link" href="#">Go to course &rarr;</a>
+        <button class="cm-reset" type="button" data-role="reset">${escapeHtml(config.resetText)}</button>
+        <a class="cm-go" data-role="match-link" href="#">${escapeHtml(config.matchLinkText)}</a>
       </div>
     </div>
   </div>
@@ -222,16 +347,16 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
       <div class="cls-header-left">
         <div class="cls-icon" data-role="list-icon">CF</div>
         <div>
-          <div class="cls-title" data-role="list-title">All VLS Courses</div>
-          <div class="cls-sub" data-role="list-sub">Browse the full course library</div>
+          <div class="cls-title" data-role="list-title">${escapeHtml(config.defaultListTitle)}</div>
+          <div class="cls-sub" data-role="list-sub">${escapeHtml(config.defaultListSub)}</div>
         </div>
       </div>
       <div class="cls-right">
         <span class="cls-count" data-role="count">0 courses</span>
         <select class="cls-sort" data-role="sort">
-          <option value="default">Default order</option>
-          <option value="az">A - Z</option>
-          <option value="level">By level</option>
+          <option value="default">${escapeHtml(config.sortDefaultText)}</option>
+          <option value="az">${escapeHtml(config.sortAzText)}</option>
+          <option value="level">${escapeHtml(config.sortLevelText)}</option>
         </select>
       </div>
     </div>
@@ -247,6 +372,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
   var root = document.getElementById('${uid}');
   if (!root) return;
   var rawCourses = ${escapeScriptJson(embedded)};
+  var ui = ${escapeScriptJson(config)};
   var PAGE_SIZE = 10;
   var state = { qual: '', level: '', course: '', option: '', sort: 'default', page: 1 };
   var levelStyle = {
@@ -423,9 +549,9 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
     return output;
   }
   function resetFrom(stage){
-    if (stage <= 2) { $('level').innerHTML = '<option value="">All levels</option>'; $('level').disabled = true; $('level').classList.remove('selected'); }
-    if (stage <= 3) { $('course').innerHTML = '<option value="">All courses</option>'; $('course').disabled = true; $('course').classList.remove('selected'); }
-    if (stage <= 4) { $('option').innerHTML = '<option value="">All options</option>'; $('option').disabled = true; $('option').classList.remove('selected'); }
+    if (stage <= 2) { $('level').innerHTML = '<option value="">' + esc(ui.levelPlaceholder) + '</option>'; $('level').disabled = true; $('level').classList.remove('selected'); }
+    if (stage <= 3) { $('course').innerHTML = '<option value="">' + esc(ui.coursePlaceholder) + '</option>'; $('course').disabled = true; $('course').classList.remove('selected'); }
+    if (stage <= 4) { $('option').innerHTML = '<option value="">' + esc(ui.optionPlaceholder) + '</option>'; $('option').disabled = true; $('option').classList.remove('selected'); }
     $('match').classList.remove('visible');
   }
   function renderList(){
@@ -439,11 +565,11 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
     var currentLevel = state.level ? levelLabel(state.level) : '';
     var selectedCourse = state.course ? rows.filter(function(row){ return row.key === state.course; })[0] : null;
     $('list-icon').textContent = state.qual ? qualIcon(state.qual) : 'CF';
-    $('list-title').textContent = selectedCourse ? selectedCourse.label : currentLevel ? qd + ' - ' + currentLevel : qd ? 'All ' + qd + ' Courses' : 'All VLS Courses';
-    $('list-sub').textContent = state.qual ? 'Filtered by: ' + (currentLevel || qd) : 'Browse the full VLS course library';
-    $('count').textContent = total + ' course' + (total === 1 ? '' : 's');
+    $('list-title').textContent = selectedCourse ? selectedCourse.label : currentLevel ? qd + ' - ' + currentLevel : qd ? ui.allPrefix + ' ' + qd + ' ' + ui.countPlural : ui.defaultListTitle;
+    $('list-sub').textContent = state.qual ? ui.filteredPrefix + ' ' + (currentLevel || qd) : ui.defaultListSub;
+    $('count').textContent = total + ' ' + (total === 1 ? ui.countSingular : ui.countPlural);
     if (!slice.length) {
-      $('body').innerHTML = '<div class="cls-empty"><div class="cls-empty-icon">?</div><div class="cls-empty-title">No courses found</div><div class="cls-empty-sub">Try adjusting your filters above</div></div>';
+      $('body').innerHTML = '<div class="cls-empty"><div class="cls-empty-icon">?</div><div class="cls-empty-title">' + esc(ui.noCoursesTitle) + '</div><div class="cls-empty-sub">' + esc(ui.noCoursesSub) + '</div></div>';
     } else {
       $('body').innerHTML = slice.map(function(row, i){
         var optionHtml = row.options.slice().sort(optionSort).map(function(option){ return '<span class="opt-pill">' + esc(option) + '</span>'; }).join('');
@@ -452,11 +578,11 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
           '<div class="cr-thumb ' + thumbClass(row.level) + '">' + esc(thumbText(row.level)) + '</div>' +
           '<div class="cr-info"><div class="cr-title"><a href="' + esc(urlFor(row)) + '" target="_blank" rel="noopener">' + esc(row.label) + '</a></div>' +
           '<div class="cr-meta"><span class="level-badge ' + badgeClass(row.level) + '">' + esc(levelLabel(row.level)) + '</span><div class="opt-pills">' + optionHtml + '</div></div></div>' +
-          '<div class="cr-actions"><a class="cr-view" href="' + esc(urlFor(row)) + '" target="_blank" rel="noopener">Details</a><a class="cr-enrol" href="' + esc(urlFor(row)) + '" target="_blank" rel="noopener">Enrol &rarr;</a></div>' +
+          '<div class="cr-actions"><a class="cr-view" href="' + esc(urlFor(row)) + '" target="_blank" rel="noopener">' + esc(ui.detailsText) + '</a><a class="cr-enrol" href="' + esc(urlFor(row)) + '" target="_blank" rel="noopener">' + esc(ui.enrolText) + '</a></div>' +
           '</div>';
       }).join('');
     }
-    $('pg-info').innerHTML = total > 0 ? 'Showing <strong>' + (start + 1) + '-' + Math.min(start + PAGE_SIZE, total) + '</strong> of <strong>' + total + '</strong> courses' : '';
+    $('pg-info').innerHTML = total > 0 ? esc(ui.showingText) + ' <strong>' + (start + 1) + '-' + Math.min(start + PAGE_SIZE, total) + '</strong> ' + esc(ui.ofText) + ' <strong>' + total + '</strong> ' + esc(ui.countPlural) : '';
     if (pages <= 1) { $('pg-btns').innerHTML = ''; return; }
     var html = '<button class="pg-btn" type="button" data-page="' + (state.page - 1) + '"' + (state.page === 1 ? ' disabled' : '') + '>&lt;</button>';
     for (var p=1;p<=pages;p++) {
@@ -475,7 +601,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
   }
   function initDropdowns(){
     var qualItems = unique(rows, function(row){ return row.qual; }, function(row){ return row.qual; });
-    populate($('qual'), qualItems, 'All qualifications');
+    populate($('qual'), qualItems, ui.qualificationPlaceholder);
   }
   $('qual').addEventListener('change', function(){
     state.qual = $('qual').value; state.level = ''; state.course = ''; state.option = ''; state.page = 1;
@@ -484,7 +610,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
     if (!state.qual) { setStep(1,'active'); setStep(2,''); setStep(3,''); setStep(4,''); }
     else {
       setStep(1,'done'); setStep(2,'active');
-      populate($('level'), unique(filteredRows(), function(row){ return row.level; }, function(row){ return levelLabel(row.level); }), 'All levels');
+      populate($('level'), unique(filteredRows(), function(row){ return row.level; }, function(row){ return levelLabel(row.level); }), ui.levelPlaceholder);
       $('level').disabled = false;
     }
     renderList();
@@ -496,7 +622,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
     if (!state.level) { setStep(2,'active'); setStep(3,''); setStep(4,''); }
     else {
       setStep(2,'done'); setStep(3,'active');
-      populate($('course'), unique(filteredRows(), function(row){ return row.key; }, function(row){ return row.label; }), 'All courses');
+      populate($('course'), unique(filteredRows(), function(row){ return row.key; }, function(row){ return row.label; }), ui.coursePlaceholder);
       $('course').disabled = false;
     }
     renderList();
@@ -509,7 +635,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
     else {
       setStep(3,'done'); setStep(4,'active');
       var selected = rows.filter(function(row){ return row.key === state.course; })[0];
-      populate($('option'), (selected ? selected.options.slice().sort(optionSort) : []).map(function(option){ return { value: option, label: option }; }), 'All options');
+      populate($('option'), (selected ? selected.options.slice().sort(optionSort) : []).map(function(option){ return { value: option, label: option }; }), ui.optionPlaceholder);
       $('option').disabled = false;
     }
     renderList();

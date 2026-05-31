@@ -1,48 +1,61 @@
-import { useEffect, useMemo, useState } from 'react';
-import { api, getCurrentUser } from '../../api/client';
+import { useEffect, useState } from 'react';
+import { api } from '../../api/client';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
-import type { CourseFinderCourse } from '../CourseFinder/generateHtml';
-import { generateCourseFinderBannerHtml } from './generateHtml';
+import {
+  normalizeCourseFinderConfig,
+  type CourseFinderConfig,
+  type CourseFinderCourse,
+} from '../CourseFinder/generateHtml';
+import { defaultCourseFinderBannerConfig, generateCourseFinderBannerHtml } from './generateHtml';
 
 type ActiveTab = 'preview' | 'html';
+type ConfigKey = keyof CourseFinderConfig;
 
-function formatSyncDate(value: string | null | undefined): string {
-  if (!value) return 'Not synced yet';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+const CONTENT_KEY = 'vls-course-finder-banner-config';
+const FONT_FAMILIES = ['Poppins', 'Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Raleway', 'Oswald', 'Source Sans Pro', 'PT Sans', 'Arial', 'Georgia'];
+const FONT_WEIGHTS = [400, 500, 600, 700, 800, 900];
+const TEXT_FIELDS: Array<[ConfigKey, string]> = [
+  ['eyebrow', 'Eyebrow'],
+  ['title', 'Title'],
+  ['titleAccent', 'Title accent'],
+  ['subtitle', 'Subtitle'],
+  ['qualificationLabel', 'Qualification label'],
+  ['levelLabel', 'Level label'],
+  ['courseLabel', 'Course label'],
+  ['optionLabel', 'Option label'],
+  ['qualificationPlaceholder', 'Qualification placeholder'],
+  ['levelPlaceholder', 'Level placeholder'],
+  ['coursePlaceholder', 'Course placeholder'],
+  ['optionPlaceholder', 'Option placeholder'],
+  ['findButtonText', 'Find button text'],
+  ['messageText', 'Validation message'],
+  ['statCoursesLabel', 'Courses stat label'],
+  ['statQualificationsLabel', 'Qualifications stat label'],
+  ['statPapersLabel', 'Papers stat label'],
+];
 
 export default function CourseFinderBannerScreen() {
   const [courses, setCourses] = useState<CourseFinderCourse[]>([]);
+  const [config, setConfig] = useState<CourseFinderConfig>(defaultCourseFinderBannerConfig);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [savedConfig, setSavedConfig] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<ActiveTab>('preview');
   const [previewHtml, setPreviewHtml] = useState('');
 
-  const isAdmin = getCurrentUser()?.role === 'admin';
-  const lastSyncedAt = useMemo(() => {
-    const values = courses
-      .map(course => course.lastSyncedAt)
-      .filter(Boolean)
-      .sort();
-    return values.length > 0 ? values[values.length - 1] : null;
-  }, [courses]);
-
-  async function loadCourses() {
+  async function loadData() {
     setError('');
     setLoading(true);
     try {
-      const rows = await api.get<CourseFinderCourse[]>('/courses/active');
+      const [rows, configRow] = await Promise.all([
+        api.get<CourseFinderCourse[]>('/courses/active'),
+        api.get<{ data: Partial<CourseFinderConfig> }>(`/content/${CONTENT_KEY}`).catch(() => null),
+      ]);
+      const saved = normalizeCourseFinderConfig({ ...defaultCourseFinderBannerConfig, ...(configRow?.data || {}) });
       setCourses(rows);
-      setPreviewHtml(wrapGeneratedHtml('Course Finder Banner', generateCourseFinderBannerHtml(rows)));
+      setConfig(saved);
+      setPreviewHtml(wrapGeneratedHtml('Course Finder Banner', generateCourseFinderBannerHtml(rows, saved)));
       setActiveTab('preview');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load courses');
@@ -51,27 +64,31 @@ export default function CourseFinderBannerScreen() {
     }
   }
 
-  async function syncFromZenler() {
-    if (!isAdmin) return;
+  async function saveConfig() {
     setError('');
-    setSyncing(true);
+    setSavingConfig(true);
     try {
-      await api.post('/courses/sync', {});
-      await loadCourses();
+      await api.put(`/content/${CONTENT_KEY}`, config);
+      setSavedConfig(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to sync courses from Zenler');
+      setError(err instanceof Error ? err.message : 'Unable to save Course Finder Banner settings');
     } finally {
-      setSyncing(false);
+      setSavingConfig(false);
     }
   }
 
   function generateHtml() {
-    setPreviewHtml(wrapGeneratedHtml('Course Finder Banner', generateCourseFinderBannerHtml(courses)));
+    setPreviewHtml(wrapGeneratedHtml('Course Finder Banner', generateCourseFinderBannerHtml(courses, config)));
     setActiveTab('preview');
   }
 
+  function updateConfig(patch: Partial<CourseFinderConfig>) {
+    setConfig(prev => ({ ...prev, ...patch }));
+    setSavedConfig(false);
+  }
+
   useEffect(() => {
-    void loadCourses();
+    void loadData();
   }, []);
 
   if (loading) {
@@ -90,36 +107,23 @@ export default function CourseFinderBannerScreen() {
           <button onClick={generateHtml} className="btn-success flex-1 justify-center">
             Generate HTML
           </button>
-          <button onClick={loadCourses} className="btn-ghost flex-1 justify-center" disabled={loading || syncing}>
+          <button onClick={loadData} className="btn-ghost flex-1 justify-center" disabled={loading}>
             Refresh
           </button>
         </div>
 
         <div className="px-5 py-4">
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <p className="section-label mt-0">Zenler Course Data</p>
-            <div className="grid grid-cols-2 gap-2">
+            <p className="section-label mt-0">Local Course Table</p>
+            <div className="grid grid-cols-1 gap-2">
               <div className="rounded-md border border-slate-200 bg-white p-3">
                 <div className="text-2xl font-bold text-slate-900">{courses.length}</div>
                 <div className="text-xs text-slate-400">Active courses</div>
               </div>
-              <div className="rounded-md border border-slate-200 bg-white p-3">
-                <div className="text-sm font-semibold text-slate-900">{formatSyncDate(lastSyncedAt)}</div>
-                <div className="mt-1 text-xs text-slate-400">Last Zenler sync</div>
-              </div>
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-500">
-              This uses the same course grouping as the full Course Finder, but only outputs the banner. The Find button redirects the visitor to the selected course page.
+              This component reads from the local course table. Zenler sync is managed only from the course table workflow.
             </p>
-            {isAdmin ? (
-              <button onClick={syncFromZenler} disabled={syncing} className="btn-primary mt-3 w-full justify-center">
-                {syncing ? 'Syncing from Zenler...' : 'Sync Courses From Zenler'}
-              </button>
-            ) : (
-              <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                Admin access is required to run a fresh Zenler sync.
-              </p>
-            )}
           </div>
 
           {error && (
@@ -128,10 +132,53 @@ export default function CourseFinderBannerScreen() {
             </div>
           )}
 
-          <p className="section-label">Visitor Flow</p>
-          <div className="space-y-2 text-xs leading-5 text-slate-500">
-            <p>Only Qualification is enabled on load. Level, Course, and Course Option activate one by one.</p>
-            <p>Find Course stays disabled until the visitor chooses both a course and an option.</p>
+          <p className="section-label">Text Fields</p>
+          <div className="space-y-2">
+            {TEXT_FIELDS.map(([key, label]) => (
+              <label key={key} className="block">
+                <span className="mb-1 block text-xs font-semibold text-slate-500">{label}</span>
+                <input className="input" value={String(config[key] ?? '')} onChange={e => updateConfig({ [key]: e.target.value } as Partial<CourseFinderConfig>)} />
+              </label>
+            ))}
+          </div>
+
+          <p className="section-label">Typography</p>
+          <div className="space-y-2">
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-slate-500">Font family</span>
+              <select className="input" value={config.fontFamily} onChange={e => updateConfig({ fontFamily: e.target.value })}>
+                {FONT_FAMILIES.map(font => <option key={font} value={font}>{font}</option>)}
+              </select>
+            </label>
+            {([
+              ['eyebrow', 'Eyebrow'],
+              ['title', 'Title'],
+              ['subtitle', 'Subtitle'],
+              ['label', 'Dropdown labels'],
+              ['button', 'Buttons'],
+            ] as const).map(([prefix, label]) => (
+              <div key={prefix} className="grid grid-cols-2 gap-2">
+                <label>
+                  <span className="mb-1 block text-xs font-semibold text-slate-500">{label} size</span>
+                  <input type="number" className="input" min={8} max={80} value={Number(config[`${prefix}Size` as ConfigKey])} onChange={e => updateConfig({ [`${prefix}Size`]: Number(e.target.value) } as Partial<CourseFinderConfig>)} />
+                </label>
+                <label>
+                  <span className="mb-1 block text-xs font-semibold text-slate-500">{label} weight</span>
+                  <select className="input" value={String(config[`${prefix}Weight` as ConfigKey])} onChange={e => updateConfig({ [`${prefix}Weight`]: Number(e.target.value) } as Partial<CourseFinderConfig>)}>
+                    {FONT_WEIGHTS.map(weight => <option key={weight} value={weight}>{weight}</option>)}
+                  </select>
+                </label>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex gap-2">
+            <button onClick={saveConfig} disabled={savingConfig} className="btn-primary flex-1 justify-center">
+              {savingConfig ? 'Saving...' : savedConfig ? 'Saved' : 'Save Settings'}
+            </button>
+            <button onClick={() => updateConfig(defaultCourseFinderBannerConfig)} className="btn-ghost flex-1 justify-center">
+              Reset Defaults
+            </button>
           </div>
         </div>
       </div>

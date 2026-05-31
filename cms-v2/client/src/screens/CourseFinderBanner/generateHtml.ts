@@ -1,4 +1,9 @@
-import type { CourseFinderCourse } from '../CourseFinder/generateHtml';
+import {
+  defaultCourseFinderConfig,
+  normalizeCourseFinderConfig,
+  type CourseFinderConfig,
+  type CourseFinderCourse,
+} from '../CourseFinder/generateHtml';
 
 type EmbeddedCourse = {
   id: number;
@@ -24,7 +29,31 @@ function escapeScriptJson(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c').replace(/-->/g, '--\\u003e');
 }
 
-export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): string {
+function escapeHtml(value: unknown): string {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch
+  ));
+}
+
+function titleHtml(title: string, accent: string): string {
+  const safeTitle = escapeHtml(title);
+  const safeAccent = escapeHtml(accent);
+  if (!accent || !title.includes(accent)) return safeTitle;
+  return safeTitle.replace(safeAccent, `<em>${safeAccent}</em>`);
+}
+
+function cssFontFamily(value: string): string {
+  return `'${String(value || 'Poppins').replace(/['"<>]/g, '').trim() || 'Poppins'}'`;
+}
+
+export const defaultCourseFinderBannerConfig: CourseFinderConfig = {
+  ...defaultCourseFinderConfig,
+  subtitle: 'Choose your qualification, level, course, and option.',
+  findButtonText: 'Find Course →',
+};
+
+export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[], rawConfig?: Partial<CourseFinderConfig> | null): string {
+  const config = normalizeCourseFinderConfig({ ...defaultCourseFinderBannerConfig, ...(rawConfig || {}) });
   const uid = `vlscfb-${Date.now().toString(36)}`;
   const embedded: EmbeddedCourse[] = courses
     .filter(course => course.isActive !== false && course.name)
@@ -46,23 +75,23 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
   return `
 <style>
 #${uid}, #${uid} * { box-sizing: border-box; }
-#${uid} { font-family: Poppins, Arial, sans-serif; width: 100%; }
+#${uid} { font-family: ${cssFontFamily(config.fontFamily)}, Arial, sans-serif; width: 100%; }
 #${uid} .cfb-banner { background: #0f1e3c; border-radius: 16px; overflow: hidden; position: relative; }
 #${uid} .cfb-banner:before { content: ''; position: absolute; top: -60px; right: -60px; width: 260px; height: 260px; border-radius: 50%; background: rgba(78,168,222,.05); pointer-events: none; }
 #${uid} .cfb-banner:after { content: ''; position: absolute; bottom: -40px; left: -40px; width: 180px; height: 180px; border-radius: 50%; background: rgba(78,168,222,.04); pointer-events: none; }
 #${uid} .cfb-top { padding: 24px 32px 18px; display: flex; align-items: center; justify-content: space-between; gap: 24px; position: relative; z-index: 1; }
-#${uid} .cfb-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #4ea8de; margin-bottom: 7px; display: flex; align-items: center; gap: 6px; }
+#${uid} .cfb-eyebrow { font-size: ${config.eyebrowSize}px; font-weight: ${config.eyebrowWeight}; letter-spacing: 1.2px; text-transform: uppercase; color: #4ea8de; margin-bottom: 7px; display: flex; align-items: center; gap: 6px; }
 #${uid} .cfb-dot { width: 4px; height: 4px; border-radius: 50%; background: #4ea8de; }
-#${uid} .cfb-title { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 3px; line-height: 1.25; }
+#${uid} .cfb-title { font-size: ${config.titleSize}px; font-weight: ${config.titleWeight}; color: #fff; margin-bottom: 3px; line-height: 1.25; }
 #${uid} .cfb-title em { color: #4ea8de; font-style: normal; }
-#${uid} .cfb-sub { font-size: 11px; color: rgba(255,255,255,.56); line-height: 1.6; }
+#${uid} .cfb-sub { font-size: ${config.subtitleSize}px; font-weight: ${config.subtitleWeight}; color: rgba(255,255,255,.56); line-height: 1.6; }
 #${uid} .cfb-stats { display: flex; gap: 10px; flex-shrink: 0; }
 #${uid} .cfb-stat { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 10px; padding: 10px 16px; text-align: center; min-width: 80px; }
 #${uid} .cfb-stat strong { display: block; font-size: 16px; font-weight: 800; color: #fff; line-height: 1.2; }
 #${uid} .cfb-stat span { font-size: 9px; color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: .4px; }
 #${uid} .cfb-dropdowns { background: rgba(255,255,255,.04); border-top: 1px solid rgba(255,255,255,.08); padding: 16px 32px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; align-items: end; position: relative; z-index: 1; }
 #${uid} .dd-group { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-#${uid} .dd-label { font-size: 9px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: rgba(255,255,255,.48); display: flex; align-items: center; gap: 5px; }
+#${uid} .dd-label { font-size: ${config.labelSize}px; font-weight: ${config.labelWeight}; letter-spacing: .8px; text-transform: uppercase; color: rgba(255,255,255,.48); display: flex; align-items: center; gap: 5px; }
 #${uid} .dd-step { width: 15px; height: 15px; border-radius: 50%; background: rgba(78,168,222,.15); border: 1px solid rgba(78,168,222,.25); display: inline-flex; align-items: center; justify-content: center; font-size: 7px; font-weight: 800; color: #4ea8de; flex-shrink: 0; }
 #${uid} .dd-step.active { background: #185fa5; border-color: #185fa5; color: #fff; }
 #${uid} .dd-step.done { background: #0a5c2e; border-color: #0a5c2e; color: #fff; }
@@ -71,7 +100,7 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
 #${uid} .dd-select:disabled { opacity: .3; cursor: not-allowed; }
 #${uid} .dd-select.selected { border-color: rgba(78,168,222,.55); background-color: rgba(24,95,165,.25); }
 #${uid} .dd-select option { background: #0f1e3c; color: #fff; }
-#${uid} .cfb-find-btn { background: #4ea8de; color: #0f1e3c; font-size: 12px; font-weight: 800; padding: 9px 20px; border-radius: 8px; border: 0; cursor: pointer; font-family: inherit; white-space: nowrap; transition: background .15s; align-self: end; }
+#${uid} .cfb-find-btn { background: #4ea8de; color: #0f1e3c; font-size: ${config.buttonSize}px; font-weight: ${config.buttonWeight}; padding: 9px 20px; border-radius: 8px; border: 0; cursor: pointer; font-family: inherit; white-space: nowrap; transition: background .15s; align-self: end; }
 #${uid} .cfb-find-btn:hover:not(:disabled) { background: #7ec8f0; }
 #${uid} .cfb-find-btn:disabled { opacity: .35; cursor: not-allowed; }
 #${uid} .cfb-message { display: none; padding: 10px 32px 14px; color: #ffdf8a; font-size: 11px; position: relative; z-index: 1; }
@@ -93,36 +122,36 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
   <div class="cfb-banner">
     <div class="cfb-top">
       <div>
-        <div class="cfb-eyebrow"><span class="cfb-dot"></span> Course Finder</div>
-        <div class="cfb-title">Find the <em>right course</em> for you.</div>
-        <div class="cfb-sub">Choose your qualification, level, course, and option.</div>
+        <div class="cfb-eyebrow"><span class="cfb-dot"></span> ${escapeHtml(config.eyebrow)}</div>
+        <div class="cfb-title">${titleHtml(config.title, config.titleAccent)}</div>
+        <div class="cfb-sub">${escapeHtml(config.subtitle)}</div>
       </div>
       <div class="cfb-stats">
-        <div class="cfb-stat"><strong data-role="stat-courses">0</strong><span>Courses</span></div>
-        <div class="cfb-stat"><strong data-role="stat-quals">0</strong><span>Qualifications</span></div>
-        <div class="cfb-stat"><strong data-role="stat-papers">0</strong><span>Papers</span></div>
+        <div class="cfb-stat"><strong data-role="stat-courses">0</strong><span>${escapeHtml(config.statCoursesLabel)}</span></div>
+        <div class="cfb-stat"><strong data-role="stat-quals">0</strong><span>${escapeHtml(config.statQualificationsLabel)}</span></div>
+        <div class="cfb-stat"><strong data-role="stat-papers">0</strong><span>${escapeHtml(config.statPapersLabel)}</span></div>
       </div>
     </div>
     <div class="cfb-dropdowns">
       <div class="dd-group">
-        <div class="dd-label"><div class="dd-step active" data-step="1">1</div>Qualification</div>
-        <select class="dd-select" data-role="qual"><option value="">All qualifications</option></select>
+        <div class="dd-label"><div class="dd-step active" data-step="1">1</div>${escapeHtml(config.qualificationLabel)}</div>
+        <select class="dd-select" data-role="qual"><option value="">${escapeHtml(config.qualificationPlaceholder)}</option></select>
       </div>
       <div class="dd-group">
-        <div class="dd-label"><div class="dd-step" data-step="2">2</div>Level</div>
-        <select class="dd-select" data-role="level" disabled><option value="">All levels</option></select>
+        <div class="dd-label"><div class="dd-step" data-step="2">2</div>${escapeHtml(config.levelLabel)}</div>
+        <select class="dd-select" data-role="level" disabled><option value="">${escapeHtml(config.levelPlaceholder)}</option></select>
       </div>
       <div class="dd-group">
-        <div class="dd-label"><div class="dd-step" data-step="3">3</div>Course</div>
-        <select class="dd-select" data-role="course" disabled><option value="">All courses</option></select>
+        <div class="dd-label"><div class="dd-step" data-step="3">3</div>${escapeHtml(config.courseLabel)}</div>
+        <select class="dd-select" data-role="course" disabled><option value="">${escapeHtml(config.coursePlaceholder)}</option></select>
       </div>
       <div class="dd-group">
-        <div class="dd-label"><div class="dd-step" data-step="4">4</div>Course Option</div>
-        <select class="dd-select" data-role="option" disabled><option value="">All options</option></select>
+        <div class="dd-label"><div class="dd-step" data-step="4">4</div>${escapeHtml(config.optionLabel)}</div>
+        <select class="dd-select" data-role="option" disabled><option value="">${escapeHtml(config.optionPlaceholder)}</option></select>
       </div>
-      <button class="cfb-find-btn" type="button" data-role="find" disabled>Find Course &rarr;</button>
+      <button class="cfb-find-btn" type="button" data-role="find" disabled>${escapeHtml(config.findButtonText)}</button>
     </div>
-    <div class="cfb-message" data-role="message">Please select a course and option first.</div>
+    <div class="cfb-message" data-role="message">${escapeHtml(config.messageText)}</div>
   </div>
 </div>
 <script>
@@ -130,6 +159,7 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
   var root = document.getElementById('${uid}');
   if (!root) return;
   var rawCourses = ${escapeScriptJson(embedded)};
+  var ui = ${escapeScriptJson(config)};
   var state = { qual: '', level: '', course: '', option: '' };
   function $(role){ return root.querySelector('[data-role="' + role + '"]'); }
   function esc(value){
@@ -238,9 +268,9 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
     el.textContent = mode === 'done' ? 'OK' : String(n);
   }
   function resetFrom(stage){
-    if (stage <= 2) { $('level').innerHTML = '<option value="">All levels</option>'; $('level').disabled = true; $('level').classList.remove('selected'); }
-    if (stage <= 3) { $('course').innerHTML = '<option value="">All courses</option>'; $('course').disabled = true; $('course').classList.remove('selected'); }
-    if (stage <= 4) { $('option').innerHTML = '<option value="">All options</option>'; $('option').disabled = true; $('option').classList.remove('selected'); }
+    if (stage <= 2) { $('level').innerHTML = '<option value="">' + esc(ui.levelPlaceholder) + '</option>'; $('level').disabled = true; $('level').classList.remove('selected'); }
+    if (stage <= 3) { $('course').innerHTML = '<option value="">' + esc(ui.coursePlaceholder) + '</option>'; $('course').disabled = true; $('course').classList.remove('selected'); }
+    if (stage <= 4) { $('option').innerHTML = '<option value="">' + esc(ui.optionPlaceholder) + '</option>'; $('option').disabled = true; $('option').classList.remove('selected'); }
     $('message').classList.remove('visible');
     updateFindButton();
   }
@@ -254,7 +284,7 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
   }
   function initDropdowns(){
     var qualItems = unique(rows, function(row){ return row.qual; }, function(row){ return row.qual; });
-    populate($('qual'), qualItems, 'All qualifications');
+    populate($('qual'), qualItems, ui.qualificationPlaceholder);
   }
   $('qual').addEventListener('change', function(){
     state.qual = $('qual').value; state.level = ''; state.course = ''; state.option = '';
@@ -263,7 +293,7 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
     if (!state.qual) { setStep(1,'active'); setStep(2,''); setStep(3,''); setStep(4,''); }
     else {
       setStep(1,'done'); setStep(2,'active');
-      populate($('level'), unique(filteredRows(), function(row){ return row.level; }, function(row){ return row.level || 'Other Courses'; }), 'All levels');
+      populate($('level'), unique(filteredRows(), function(row){ return row.level; }, function(row){ return row.level || 'Other Courses'; }), ui.levelPlaceholder);
       $('level').disabled = false;
     }
   });
@@ -274,7 +304,7 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
     if (!state.level) { setStep(2,'active'); setStep(3,''); setStep(4,''); }
     else {
       setStep(2,'done'); setStep(3,'active');
-      populate($('course'), unique(filteredRows(), function(row){ return row.key; }, function(row){ return row.label; }), 'All courses');
+      populate($('course'), unique(filteredRows(), function(row){ return row.key; }, function(row){ return row.label; }), ui.coursePlaceholder);
       $('course').disabled = false;
     }
   });
@@ -286,7 +316,7 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[]): s
     else {
       setStep(3,'done'); setStep(4,'active');
       var selected = rows.filter(function(row){ return row.key === state.course; })[0];
-      populate($('option'), (selected ? selected.options.slice().sort(optionSort) : []).map(function(option){ return { value: option, label: option }; }), 'All options');
+      populate($('option'), (selected ? selected.options.slice().sort(optionSort) : []).map(function(option){ return { value: option, label: option }; }), ui.optionPlaceholder);
       $('option').disabled = false;
     }
     updateFindButton();
