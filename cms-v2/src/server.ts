@@ -76,6 +76,24 @@ app.get('/api/publish-course-prices', async (_req, res, next) => {
   }
 });
 
+app.options('/api/publish-testimonials-components', (_req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.status(204).end();
+});
+
+app.get('/api/publish-testimonials-components', async (_req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const row = await getContent('vls-testimonials-components');
+    const data = row?.data && typeof row.data === 'object' ? row.data as { components?: unknown[] } : {};
+    return res.json({ components: Array.isArray(data.components) ? data.components : [] });
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.get('/api/turnstile-site-key', (_req, res) => {
   const siteKey = process.env.TURNSTILE_SITE_KEY;
   if (!siteKey) {

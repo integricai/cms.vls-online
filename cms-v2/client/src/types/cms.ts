@@ -915,6 +915,39 @@ export interface Bv2State {
 }
 export interface Bv2Component { id: string; name: string; data: Bv2State; }
 
+// ── Testimonials (TST) — single-column auto-scrolling cards ─────────────────
+export interface TestimonialCard {
+  initials: string;
+  name: string;
+  course: string;
+  quote: string;
+  rating: number;
+}
+export interface TestimonialsState {
+  gradientStart: string;
+  gradientEnd: string;
+  padTop: number; padBot: number; padLeft: number; padRight: number;
+  maxWidth: number;
+  cardGap: number;
+  autoScrollMs: number;
+  url: string;
+  eyebrow: string;
+  titlePre: string;
+  titleAccent: string;
+  subtitle: string;
+  fontFamily: string;
+  eyebrowSize: number; eyebrowWeight: number; eyebrowColor: string;
+  titleSize: number; titleWeight: number; titleColor: string; accentColor: string;
+  subtitleSize: number; subtitleWeight: number; subtitleColor: string;
+  quoteSize: number; quoteWeight: number; quoteColor: string;
+  nameSize: number; nameWeight: number; nameColor: string;
+  courseSize: number; courseWeight: number; courseColor: string;
+  cardBg: string; cardBorder: string; cardRadius: number; cardShadow: string;
+  starColor: string; quoteMarkColor: string; avatarBg: string; avatarColor: string;
+  cards: TestimonialCard[];
+}
+export interface TestimonialsComponent { id: string; name: string; data: TestimonialsState; }
+
 // ── Payment Plans (PP) — component-owned live price cards ────────────────────
 export interface PaymentPlanCard {
   label: string;

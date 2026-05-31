@@ -12,13 +12,14 @@ import type {
   BmsState, BmsComponent, BmsCheckItem,
   CbState, CbComponent,
   Bv2State, Bv2Component, Bv2Step,
+  TestimonialsState, TestimonialsComponent, TestimonialCard,
   PaymentPlansState, PaymentPlansComponent, PaymentPlanCard, PaymentIncludedItem,
   TextValue,
 } from '../../types/cms';
 import { normalize } from '../../utils/text';
 import {
   generateDcsHtml, generateDcs2Html, generateDcs3Html, generateReachHtml,
-  generatePhbHtml, generatePhv2Html, generatePhv3Html, generateBmsHtml, generateCbHtml, generateBv2Html, generatePaymentPlansHtml,
+  generatePhbHtml, generatePhv2Html, generatePhv3Html, generateBmsHtml, generateCbHtml, generateBv2Html, generateTestimonialsHtml, generatePaymentPlansHtml,
 } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
@@ -144,6 +145,32 @@ function makeBv2(): Bv2State {
       { number: '2', title: 'Attempt under exam conditions', desc: normalize('Sit in a quiet room, set your timer, and attempt the full mock just as you would on exam day.', 'bmsDesc') },
       { number: '3', title: 'Get instant results', desc: normalize('Your score is displayed immediately after submission — no waiting for a tutor to mark your work.', 'bmsDesc') },
       { number: '4', title: 'Review & target weak areas', desc: normalize('Full solutions arrive in your email immediately. Use your score to focus your remaining revision.', 'bmsDesc') },
+    ],
+  };
+}
+
+function makeTestimonials(): TestimonialsState {
+  return {
+    gradientStart: '#f7fbff', gradientEnd: '#edf5ff',
+    padTop: 64, padBot: 64, padLeft: 32, padRight: 32,
+    maxWidth: 1180, cardGap: 18, autoScrollMs: 4500, url: '#',
+    eyebrow: 'STUDENT SUCCESS',
+    titlePre: 'Trusted by students who',
+    titleAccent: 'passed first time',
+    subtitle: '4.9/5 average from 600+ ACCA, CIMA & CMA students',
+    fontFamily: 'Poppins',
+    eyebrowSize: 11, eyebrowWeight: 800, eyebrowColor: '#2c67d8',
+    titleSize: 34, titleWeight: 800, titleColor: '#0b2348', accentColor: '#2c67d8',
+    subtitleSize: 13, subtitleWeight: 500, subtitleColor: '#6b7b94',
+    quoteSize: 14, quoteWeight: 400, quoteColor: '#42526e',
+    nameSize: 13, nameWeight: 800, nameColor: '#11244a',
+    courseSize: 11, courseWeight: 800, courseColor: '#2c67d8',
+    cardBg: '#ffffff', cardBorder: '#dfe8f6', cardRadius: 14, cardShadow: '0 10px 26px rgba(28,45,85,.08)',
+    starColor: '#f6ad25', quoteMarkColor: '#eaf2ff', avatarBg: '#e8f0ff', avatarColor: '#2c67d8',
+    cards: [
+      { initials: 'MR', name: 'Maria Rossi', course: 'ACCA - AA', rating: 5, quote: 'I tried self-study apps before and stalled. The structure here - videos, quizzes, then kit questions - kept momentum going and I passed AA on the first attempt.' },
+      { initials: 'JT', name: 'James Thompson', course: 'CMA - Part 2', rating: 5, quote: 'Syed explains the tricky CMA topics in a way that actually sticks. The notes are concise and exam-focused - no wading through 400 pages of theory.' },
+      { initials: 'FA', name: 'Fatima Ahmed', course: 'ACCA - SBL', rating: 5, quote: 'Booked the complete package and it paid for itself. The mock plus the pre-exam live session calmed my nerves and I walked in knowing exactly what to expect.' },
     ],
   };
 }
@@ -312,6 +339,32 @@ function normBv2(raw: any): Bv2State {
     gap: normalizeNum(d.gap, 42),
     desc: d.desc || normalize('', 'bmsDesc'),
     steps: d.steps || [],
+  };
+}
+
+function normTestimonials(raw: any): TestimonialsState {
+  const d = { ...makeTestimonials(), ...(raw || {}) };
+  return {
+    ...d,
+    padTop: normalizeNum(d.padTop, 64), padBot: normalizeNum(d.padBot, 64),
+    padLeft: normalizeNum(d.padLeft, 32), padRight: normalizeNum(d.padRight, 32),
+    maxWidth: normalizeNum(d.maxWidth, 1180),
+    cardGap: normalizeNum(d.cardGap, 18),
+    autoScrollMs: normalizeNum(d.autoScrollMs, 4500),
+    eyebrowSize: normalizeNum(d.eyebrowSize, 11), eyebrowWeight: normalizeNum(d.eyebrowWeight, 800),
+    titleSize: normalizeNum(d.titleSize, 34), titleWeight: normalizeNum(d.titleWeight, 800),
+    subtitleSize: normalizeNum(d.subtitleSize, 13), subtitleWeight: normalizeNum(d.subtitleWeight, 500),
+    quoteSize: normalizeNum(d.quoteSize, 14), quoteWeight: normalizeNum(d.quoteWeight, 400),
+    nameSize: normalizeNum(d.nameSize, 13), nameWeight: normalizeNum(d.nameWeight, 800),
+    courseSize: normalizeNum(d.courseSize, 11), courseWeight: normalizeNum(d.courseWeight, 800),
+    cardRadius: normalizeNum(d.cardRadius, 14),
+    cards: Array.isArray(d.cards) ? d.cards.map((card: any) => ({
+      initials: card.initials || '',
+      name: card.name || '',
+      course: card.course || '',
+      quote: card.quote || '',
+      rating: normalizeNum(card.rating, 5),
+    })) : [],
   };
 }
 
@@ -1688,6 +1741,177 @@ function WeightSel({ value, def, onChange }: { value: number | undefined; def: n
   );
 }
 
+function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
+  const [comps, setComps] = useState<TestimonialsComponent[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [state, setState] = useState<TestimonialsState>(makeTestimonials());
+  const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [published, setPublished] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    api.get<any>('/content/vls-testimonials-components').then(row => {
+      const raw = row?.data as any;
+      const cs: TestimonialsComponent[] = (raw?.components || []).map((c: any) => ({ ...c, data: normTestimonials(c.data || {}) }));
+      setComps(cs);
+      if (cs.length) { setActiveId(cs[0].id); setName(cs[0].name); setState(cs[0].data); }
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, []);
+
+  const upd = useCallback((p: Partial<TestimonialsState>) => { setState(prev => ({ ...prev, ...p })); setSaved(false); setPublished(false); }, []);
+
+  function load(id: string) {
+    if (!id) { setActiveId(null); setName(''); setState(makeTestimonials()); setSaved(false); return; }
+    const c = comps.find(c => c.id === id);
+    if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); setPublished(false); }
+  }
+
+  function duplicate() {
+    setActiveId(null);
+    setName(`Copy of ${name || 'Testimonials'}`);
+    setState(cloneState(state));
+    setSaved(false);
+    setPublished(false);
+  }
+
+  async function persist(): Promise<string | null> {
+    if (!name.trim()) { alert('Enter a component name.'); return null; }
+    const id = activeId || `tst-${Date.now().toString(36)}`;
+    const updated = activeId ? comps.map(c => c.id === id ? { id, name, data: state } : c) : [...comps, { id, name, data: state }];
+    await api.put('/content/vls-testimonials-components', { components: updated });
+    setComps(updated); setActiveId(id); setSaved(true);
+    return id;
+  }
+
+  async function save() {
+    setSaving(true);
+    try { await persist(); } finally { setSaving(false); }
+  }
+
+  async function publish() {
+    setPublishing(true);
+    try {
+      const id = await persist();
+      if (id) {
+        setPublished(true);
+        onHtml(wrapGeneratedHtml('Testimonials', generateTestimonialsHtml(state, id)));
+      }
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  async function del() {
+    if (!activeId || !confirm('Delete this component?')) return;
+    const updated = comps.filter(c => c.id !== activeId);
+    await api.put('/content/vls-testimonials-components', { components: updated });
+    setComps(updated); setActiveId(null); setName(''); setState(makeTestimonials());
+  }
+
+  function updCard(i: number, p: Partial<TestimonialCard>) {
+    const cards = [...state.cards];
+    cards[i] = { ...cards[i], ...p };
+    upd({ cards });
+  }
+
+  if (!loaded) return <div className="p-5 text-xs text-slate-400">Loading...</div>;
+
+  return (
+    <div className="flex flex-col">
+      <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
+        onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
+        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Testimonials', generateTestimonialsHtml(state, activeId || '')))} />
+      <div className="border-b border-slate-100 px-5 py-3">
+        <button onClick={publish} disabled={publishing} className="btn-success w-full justify-center text-xs">
+          {publishing ? 'Publishing...' : published ? 'Published live updates' : 'Publish Testimonials'}
+        </button>
+        <p className="mt-2 text-[11px] text-slate-400">
+          Publish saves this component and creates crawler-readable HTML that refreshes from the CMS on page load.
+        </p>
+      </div>
+
+      <div className="px-5 py-4 space-y-1 overflow-y-auto">
+        <p className="section-label">Layout</p>
+        <PaddingRow value={state} onChange={upd} />
+        <div className="grid grid-cols-2 gap-2">
+          <ColorInput label="Gradient start" value={state.gradientStart} onChange={v => upd({ gradientStart: v })} />
+          <ColorInput label="Gradient end" value={state.gradientEnd} onChange={v => upd({ gradientEnd: v })} />
+          <Field label="Max width"><input type="number" className="input" min={720} max={1800} value={state.maxWidth} onChange={e => upd({ maxWidth: Number(e.target.value) })} /></Field>
+          <Field label="Card gap"><input type="number" className="input" min={8} max={48} value={state.cardGap} onChange={e => upd({ cardGap: Number(e.target.value) })} /></Field>
+          <Field label="Auto-scroll interval (ms)"><input type="number" className="input" min={1000} step={250} value={state.autoScrollMs} onChange={e => upd({ autoScrollMs: Number(e.target.value) })} /></Field>
+          <Field label="Click URL"><input className="input" value={state.url} placeholder="https://..." onChange={e => upd({ url: e.target.value })} /></Field>
+        </div>
+
+        <p className="section-label mt-3">Header</p>
+        <Field label="Eyebrow"><input className="input" value={state.eyebrow} onChange={e => upd({ eyebrow: e.target.value })} /></Field>
+        <Field label="Title before accent"><input className="input" value={state.titlePre} onChange={e => upd({ titlePre: e.target.value })} /></Field>
+        <Field label="Title accent"><input className="input" value={state.titleAccent} onChange={e => upd({ titleAccent: e.target.value })} /></Field>
+        <Field label="Subtitle"><input className="input" value={state.subtitle} onChange={e => upd({ subtitle: e.target.value })} /></Field>
+
+        <p className="section-label mt-3">Colours</p>
+        <div className="grid grid-cols-2 gap-2">
+          <ColorInput label="Eyebrow" value={state.eyebrowColor} onChange={v => upd({ eyebrowColor: v })} />
+          <ColorInput label="Title" value={state.titleColor} onChange={v => upd({ titleColor: v })} />
+          <ColorInput label="Accent" value={state.accentColor} onChange={v => upd({ accentColor: v })} />
+          <ColorInput label="Subtitle" value={state.subtitleColor} onChange={v => upd({ subtitleColor: v })} />
+          <ColorInput label="Quote text" value={state.quoteColor} onChange={v => upd({ quoteColor: v })} />
+          <ColorInput label="Name" value={state.nameColor} onChange={v => upd({ nameColor: v })} />
+          <ColorInput label="Course" value={state.courseColor} onChange={v => upd({ courseColor: v })} />
+          <ColorInput label="Stars" value={state.starColor} onChange={v => upd({ starColor: v })} />
+          <ColorInput label="Card bg" value={state.cardBg} onChange={v => upd({ cardBg: v })} />
+          <ColorInput label="Card border" value={state.cardBorder} onChange={v => upd({ cardBorder: v })} />
+          <ColorInput label="Avatar bg" value={state.avatarBg} onChange={v => upd({ avatarBg: v })} />
+          <ColorInput label="Avatar text" value={state.avatarColor} onChange={v => upd({ avatarColor: v })} />
+        </div>
+        <Field label="Card shadow"><input className="input" value={state.cardShadow} onChange={e => upd({ cardShadow: e.target.value })} /></Field>
+        <Field label="Card radius"><input type="number" className="input" min={0} max={36} value={state.cardRadius} onChange={e => upd({ cardRadius: Number(e.target.value) })} /></Field>
+
+        <details className="mt-3 rounded border border-slate-200 bg-slate-50 p-3">
+          <summary className="cursor-pointer select-none text-xs font-semibold text-slate-500">Typography</summary>
+          <div className="mt-3 space-y-2">
+            <Field label="Font family">
+              <select className="input text-xs" value={state.fontFamily} onChange={e => upd({ fontFamily: e.target.value })}>
+                {PP_FONT_FAMILIES.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </Field>
+            <div className="grid grid-cols-3 gap-1 items-center text-[11px] text-slate-500">
+              <span className="font-semibold">Field</span><span className="font-semibold">Size</span><span className="font-semibold">Weight</span>
+              <span>Eyebrow</span><input type="number" className="input text-xs py-0.5" min={8} max={24} value={state.eyebrowSize} onChange={e => upd({ eyebrowSize: Number(e.target.value) })} /><WeightSel value={state.eyebrowWeight} def={800} onChange={w => upd({ eyebrowWeight: w })} />
+              <span>Title</span><input type="number" className="input text-xs py-0.5" min={18} max={80} value={state.titleSize} onChange={e => upd({ titleSize: Number(e.target.value) })} /><WeightSel value={state.titleWeight} def={800} onChange={w => upd({ titleWeight: w })} />
+              <span>Subtitle</span><input type="number" className="input text-xs py-0.5" min={8} max={24} value={state.subtitleSize} onChange={e => upd({ subtitleSize: Number(e.target.value) })} /><WeightSel value={state.subtitleWeight} def={500} onChange={w => upd({ subtitleWeight: w })} />
+              <span>Quote</span><input type="number" className="input text-xs py-0.5" min={10} max={24} value={state.quoteSize} onChange={e => upd({ quoteSize: Number(e.target.value) })} /><WeightSel value={state.quoteWeight} def={400} onChange={w => upd({ quoteWeight: w })} />
+              <span>Name</span><input type="number" className="input text-xs py-0.5" min={10} max={22} value={state.nameSize} onChange={e => upd({ nameSize: Number(e.target.value) })} /><WeightSel value={state.nameWeight} def={800} onChange={w => upd({ nameWeight: w })} />
+              <span>Course</span><input type="number" className="input text-xs py-0.5" min={8} max={18} value={state.courseSize} onChange={e => upd({ courseSize: Number(e.target.value) })} /><WeightSel value={state.courseWeight} def={800} onChange={w => upd({ courseWeight: w })} />
+            </div>
+          </div>
+        </details>
+
+        <p className="section-label mt-3">Cards</p>
+        {state.cards.map((card, i) => (
+          <div key={i} className="mb-2 rounded border border-slate-200 bg-slate-50 p-3">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="flex-1 text-xs font-semibold text-slate-500">Testimonial {i + 1}</span>
+              <button onClick={() => upd({ cards: state.cards.filter((_, idx) => idx !== i) })} className="btn-danger text-xs">Delete</button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Initials"><input className="input" value={card.initials} onChange={e => updCard(i, { initials: e.target.value })} /></Field>
+              <Field label="Rating"><input type="number" className="input" min={1} max={5} value={card.rating} onChange={e => updCard(i, { rating: Number(e.target.value) })} /></Field>
+              <Field label="Name"><input className="input" value={card.name} onChange={e => updCard(i, { name: e.target.value })} /></Field>
+              <Field label="Course"><input className="input" value={card.course} onChange={e => updCard(i, { course: e.target.value })} /></Field>
+            </div>
+            <Field label="Quote"><textarea className="input min-h-[92px]" value={card.quote} onChange={e => updCard(i, { quote: e.target.value })} /></Field>
+          </div>
+        ))}
+        <button onClick={() => upd({ cards: [...state.cards, { initials: '', name: '', course: '', rating: 5, quote: '' }] })} className="btn-ghost mb-4 w-full text-xs">+ Add testimonial</button>
+      </div>
+    </div>
+  );
+}
+
 function PaymentPlansTab({ onHtml }: { onHtml: (html: string) => void }) {
   const [comps, setComps] = useState<PaymentPlansComponent[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -1926,6 +2150,7 @@ const SECTION_TITLES: Record<string, { title: string; desc: string }> = {
   'hero-banner-v3': { title: 'Hero Banner v3',   desc: 'Mock exam hero with aligned format box + purchase card' },
   'book-meeting':   { title: 'Book a Meeting',   desc: 'Image left + eyebrow/heading/checklist/CTA right' },
   'payment-plans':  { title: 'Payment Plans',     desc: 'Component-owned course access cards with live published pricing' },
+  'testimonials':   { title: 'Testimonials',      desc: 'Single-column auto-scrolling testimonial cards' },
   'content-block':  { title: 'Content CTA Block', desc: 'Single column: eyebrow/heading/checklist/CTA' },
   'banner-v2':      { title: 'Banner v2',        desc: 'Single-column horizontal process banner' },
 };
@@ -1959,6 +2184,7 @@ export default function FullScreenSections() {
           {type === 'hero-banner-v3' && <Phv3Tab  onHtml={handleHtml} />}
           {type === 'book-meeting'   && <BmsTab   onHtml={handleHtml} />}
           {type === 'payment-plans'  && <PaymentPlansTab onHtml={handleHtml} />}
+          {type === 'testimonials'   && <TestimonialsTab onHtml={handleHtml} />}
           {type === 'content-block' && <CbTab    onHtml={handleHtml} />}
           {type === 'banner-v2' && <Bv2Tab    onHtml={handleHtml} />}
           {!type && <div className="p-6 text-sm text-slate-400">Select a section type from the sidebar.</div>}

@@ -1,4 +1,4 @@
-import type { DcsState, Dcs2State, Dcs3State, ReachState, PhbState, Phv2State, Phv3State, BmsState, CbState, Bv2State, PaymentPlansState, PaymentPlanCard } from '../../types/cms';
+import type { DcsState, Dcs2State, Dcs3State, ReachState, PhbState, Phv2State, Phv3State, BmsState, CbState, Bv2State, TestimonialsState, PaymentPlansState, PaymentPlanCard } from '../../types/cms';
 import { normalize, textStyle, escapeHtml } from '../../utils/text';
 
 const e = escapeHtml;
@@ -663,6 +663,97 @@ export function generateBv2Html(d: Bv2State): string {
   L.push(`    </div>`);
   L.push(`  </div>`);
   L.push(`</section>`);
+  return L.join('\n');
+}
+
+// ── Testimonials (TST) — single-column auto-scrolling cards ─────────────────
+
+function tstStars(rating: number): string {
+  const count = Math.max(1, Math.min(5, Math.round(Number(rating) || 5)));
+  return '★'.repeat(count);
+}
+
+function tstFontVars(d: TestimonialsState): string {
+  const ff = ((d.fontFamily || 'Poppins') + '').replace(/['"<>]/g, '').trim() || 'Poppins';
+  const sz = (v: number | undefined, def: number, max = 96) => `${Math.max(8, Math.min(max, Number.isFinite(Number(v)) ? Number(v) : def))}px`;
+  const wt = (v: number | undefined, def: number) => [400, 500, 600, 700, 800, 900].includes(Number(v)) ? String(Number(v)) : String(def);
+  return [
+    `--tst-ff:'${ff}'`,
+    `--tst-eyebrow-sz:${sz(d.eyebrowSize, 12)}`, `--tst-eyebrow-wt:${wt(d.eyebrowWeight, 800)}`,
+    `--tst-title-sz:${sz(d.titleSize, 34, 120)}`, `--tst-title-wt:${wt(d.titleWeight, 800)}`,
+    `--tst-sub-sz:${sz(d.subtitleSize, 13)}`, `--tst-sub-wt:${wt(d.subtitleWeight, 500)}`,
+    `--tst-quote-sz:${sz(d.quoteSize, 14)}`, `--tst-quote-wt:${wt(d.quoteWeight, 400)}`,
+    `--tst-name-sz:${sz(d.nameSize, 13)}`, `--tst-name-wt:${wt(d.nameWeight, 800)}`,
+    `--tst-course-sz:${sz(d.courseSize, 11)}`, `--tst-course-wt:${wt(d.courseWeight, 800)}`,
+  ].join(';');
+}
+
+export function generateTestimonialsHtml(d: TestimonialsState, componentId = ''): string {
+  const id = uid();
+  const cards = (d.cards || []).filter(card => card.quote || card.name || card.course);
+  const url = (d.url || '#').trim() || '#';
+  const gap = Math.max(8, Number(d.cardGap) || 18);
+  const interval = Math.max(1000, Number(d.autoScrollMs) || 4500);
+  const L: string[] = [];
+
+  if (!PP_SYSTEM_FONTS.has(d.fontFamily || 'Poppins')) {
+    L.push(`<link href="https://fonts.googleapis.com/css2?family=${(d.fontFamily || 'Poppins').replace(/\s+/g, '+')}:wght@400;500;600;700;800&display=swap" rel="stylesheet">`);
+  }
+  L.push('<style>');
+  L.push(`.${id}-outer{${tstFontVars(d)}background:linear-gradient(135deg,${e(d.gradientStart)},${e(d.gradientEnd)});box-sizing:border-box;padding:${d.padTop}px ${d.padRight}px ${d.padBot}px ${d.padLeft}px;font-family:var(--tst-ff),Arial,sans-serif;overflow:hidden;}`);
+  L.push(`.${id}-shell{max-width:${d.maxWidth}px;margin:0 auto;}`);
+  L.push(`.${id}-head{text-align:center;margin:0 auto 34px;}`);
+  L.push(`.${id}-eyebrow{display:flex;align-items:center;justify-content:center;gap:10px;color:${e(d.eyebrowColor)};font-size:var(--tst-eyebrow-sz);font-weight:var(--tst-eyebrow-wt);letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px;}`);
+  L.push(`.${id}-eyebrow:before,.${id}-eyebrow:after{content:"";width:18px;height:1px;background:currentColor;opacity:.42;}`);
+  L.push(`.${id}-title{font-size:var(--tst-title-sz);font-weight:var(--tst-title-wt);line-height:1.15;letter-spacing:0;color:${e(d.titleColor)};margin:0 0 8px;}`);
+  L.push(`.${id}-title em{font-style:italic;color:${e(d.accentColor)};}`);
+  L.push(`.${id}-sub{font-size:var(--tst-sub-sz);font-weight:var(--tst-sub-wt);color:${e(d.subtitleColor)};margin:0;}`);
+  L.push(`.${id}-viewport{overflow:hidden;padding:2px 2px 14px;}`);
+  L.push(`.${id}-track{display:flex;gap:${gap}px;transition:transform .45s ease;will-change:transform;}`);
+  L.push(`.${id}-card{flex:0 0 calc((100% - ${gap * 2}px) / 3);min-width:0;display:block;background:${e(d.cardBg)};border:1px solid ${e(d.cardBorder)};border-radius:${d.cardRadius}px;box-shadow:${e(d.cardShadow)};padding:24px 24px 18px;text-decoration:none!important;color:inherit;box-sizing:border-box;}`);
+  L.push(`.${id}-card:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(28,45,85,.12);}`);
+  L.push(`.${id}-stars{color:${e(d.starColor)};font-size:16px;letter-spacing:3px;line-height:1;margin-bottom:18px;}`);
+  L.push(`.${id}-quote{position:relative;min-height:96px;color:${e(d.quoteColor)};font-size:var(--tst-quote-sz);font-weight:var(--tst-quote-wt);line-height:1.65;margin:0 0 20px;}`);
+  L.push(`.${id}-quote:after{content:"\\201C";position:absolute;right:0;top:-28px;color:${e(d.quoteMarkColor)};font-size:58px;font-weight:800;line-height:1;opacity:.75;}`);
+  L.push(`.${id}-person{border-top:1px solid #e7edf7;padding-top:14px;display:flex;align-items:center;gap:11px;}`);
+  L.push(`.${id}-avatar{width:34px;height:34px;border-radius:999px;background:${e(d.avatarBg)};color:${e(d.avatarColor)};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;}`);
+  L.push(`.${id}-name{font-size:var(--tst-name-sz);font-weight:var(--tst-name-wt);line-height:1.2;color:${e(d.nameColor)};}`);
+  L.push(`.${id}-course{font-size:var(--tst-course-sz);font-weight:var(--tst-course-wt);line-height:1.2;color:${e(d.courseColor)};margin-top:2px;}`);
+  L.push(`.${id}-controls{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:18px;}`);
+  L.push(`.${id}-btn{width:38px;height:38px;border-radius:999px;border:1px solid #e1e9f6;background:#fff;color:#11244a;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 7px 18px rgba(28,45,85,.1);font-size:20px;line-height:1;}`);
+  L.push(`.${id}-dots{display:flex;align-items:center;gap:8px;}`);
+  L.push(`.${id}-dot{width:7px;height:7px;border-radius:999px;background:#cfd9e8;}`);
+  L.push(`.${id}-dot.is-active{width:22px;background:${e(d.accentColor)};}`);
+  L.push(`@media(max-width:900px){.${id}-card{flex-basis:calc((100% - ${gap}px) / 2);}}`);
+  L.push(`@media(max-width:640px){.${id}-outer{padding-left:18px!important;padding-right:18px!important;}.${id}-title{font-size:28px;}.${id}-card{flex-basis:100%;}.${id}-quote{min-height:110px;}}`);
+  L.push('</style>');
+  L.push(`<section id="${id}" class="${id}-outer" data-testimonials-component="${e(componentId)}">`);
+  L.push(`  <div class="${id}-shell">`);
+  L.push(`    <div class="${id}-head">`);
+  if (d.eyebrow) L.push(`      <div class="${id}-eyebrow">${e(d.eyebrow)}</div>`);
+  L.push(`      <h2 class="${id}-title">${e(d.titlePre)}${d.titleAccent ? ` <em>${e(d.titleAccent)}</em>` : ''}</h2>`);
+  if (d.subtitle) L.push(`      <p class="${id}-sub">${e(d.subtitle)}</p>`);
+  L.push(`    </div>`);
+  L.push(`    <div class="${id}-viewport">`);
+  L.push(`      <div class="${id}-track">`);
+  cards.forEach(card => {
+    L.push(`        <a class="${id}-card" href="${e(url)}" target="_blank" rel="noopener">`);
+    L.push(`          <div class="${id}-stars" aria-label="${e(String(card.rating || 5))} out of 5 stars">${e(tstStars(card.rating))}</div>`);
+    L.push(`          <p class="${id}-quote">${e(card.quote)}</p>`);
+    L.push(`          <div class="${id}-person"><div class="${id}-avatar">${e(card.initials || (card.name || 'ST').slice(0, 2).toUpperCase())}</div><div><div class="${id}-name">${e(card.name)}</div><div class="${id}-course">${e(card.course)}</div></div></div>`);
+    L.push(`        </a>`);
+  });
+  L.push(`      </div>`);
+  L.push(`    </div>`);
+  L.push(`    <div class="${id}-controls" aria-label="Testimonials controls">`);
+  L.push(`      <button class="${id}-btn" type="button" data-dir="-1" aria-label="Previous testimonial">&#8249;</button>`);
+  L.push(`      <div class="${id}-dots"></div>`);
+  L.push(`      <button class="${id}-btn" type="button" data-dir="1" aria-label="Next testimonial">&#8250;</button>`);
+  L.push(`    </div>`);
+  L.push(`  </div>`);
+  L.push(`</section>`);
+  L.push(`<script type="text/javascript">(function(){var root=document.getElementById(${JSON.stringify(id)});if(!root)return;var track=root.querySelector(".${id}-track"),dots=root.querySelector(".${id}-dots"),idx=0,timer=null,delay=${interval},CID=${JSON.stringify(componentId)},API="https://api.cms.vls-online.com/api/publish-testimonials-components";function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}function cards(){return [].slice.call(root.querySelectorAll(".${id}-card"));}function perView(){if(window.matchMedia("(max-width:640px)").matches)return 1;if(window.matchMedia("(max-width:900px)").matches)return 2;return 3;}function maxIdx(){return Math.max(0,cards().length-perView());}function render(){var list=cards();idx=Math.max(0,Math.min(idx,maxIdx()));if(list[0]){var left=list[idx].offsetLeft-list[0].offsetLeft;track.style.transform="translateX("+(-left)+"px)";}var pages=maxIdx()+1;dots.innerHTML="";for(var i=0;i<pages;i++){var dot=document.createElement("span");dot.className="${id}-dot"+(i===idx?" is-active":"");dot.addEventListener("click",(function(n){return function(){idx=n;render();restart();};})(i));dots.appendChild(dot);}}function move(n){idx=maxIdx()?((idx+n+maxIdx()+1)%(maxIdx()+1)):0;render();}function restart(){clearInterval(timer);if(cards().length>perView())timer=setInterval(function(){move(1);},delay);}function stars(n){var c=Math.max(1,Math.min(5,Math.round(Number(n)||5)));return Array(c+1).join("★");}function cardHtml(c,url){var initials=c.initials||String(c.name||"ST").slice(0,2).toUpperCase();return '<a class="${id}-card" href="'+esc(url||"#")+'" target="_blank" rel="noopener"><div class="${id}-stars" aria-label="'+esc(c.rating||5)+' out of 5 stars">'+esc(stars(c.rating))+'</div><p class="${id}-quote">'+esc(c.quote||"")+'</p><div class="${id}-person"><div class="${id}-avatar">'+esc(initials)+'</div><div><div class="${id}-name">'+esc(c.name||"")+'</div><div class="${id}-course">'+esc(c.course||"")+'</div></div></div></a>';}function setText(sel,value){var el=root.querySelector(sel);if(el)el.textContent=value||"";}function applyData(data){if(!data||!track)return;var nextCards=Array.isArray(data.cards)?data.cards.filter(function(c){return c&&(c.quote||c.name||c.course);}):[];var url=(data.url||"#").trim()||"#";if(data.gradientStart&&data.gradientEnd)root.style.background="linear-gradient(135deg,"+data.gradientStart+","+data.gradientEnd+")";setText(".${id}-eyebrow",data.eyebrow);var title=root.querySelector(".${id}-title");if(title)title.innerHTML=esc(data.titlePre||"")+(data.titleAccent?' <em>'+esc(data.titleAccent)+'</em>':"");setText(".${id}-sub",data.subtitle);if(nextCards.length){track.innerHTML=nextCards.map(function(c){return cardHtml(c,url);}).join("");idx=0;render();restart();}}root.querySelectorAll("[data-dir]").forEach(function(btn){btn.addEventListener("click",function(){move(Number(btn.getAttribute("data-dir"))||1);restart();});});root.addEventListener("mouseenter",function(){clearInterval(timer);});root.addEventListener("mouseleave",restart);window.addEventListener("resize",function(){render();restart();});render();restart();if(CID){fetch(API+"?t="+Date.now()).then(function(r){if(!r.ok)throw new Error("VLS Testimonials API returned "+r.status);return r.json();}).then(function(data){var cmp=(data.components||[]).find(function(x){return x.id===CID;});if(cmp&&cmp.data)applyData(cmp.data);}).catch(function(e){console.error("VLS Testimonials ["+CID+"]:",e.message||e);});}})();<\/script>`);
+
   return L.join('\n');
 }
 

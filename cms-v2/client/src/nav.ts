@@ -83,6 +83,7 @@ export const NAV: NavGroup[] = [
         children: [
           { to: '/page-desc-with-menu',        label: 'Banner with Menu' },
           { to: '/full-screen/payment-plans',  label: 'Payment Plans' },
+          { to: '/full-screen/testimonials',   label: 'Testimonials' },
           { to: '/full-screen/content-block',  label: 'Content CTA Block' },
           { to: '/full-screen/banner-v2',      label: 'Banner v2' },
           { to: '/gradient-banner-section',    label: 'Banner Section' },
