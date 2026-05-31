@@ -1,6 +1,8 @@
 import { sql } from '../db/client';
 import type { CoursePriceRecord, ScrapedCoursePrice } from '../../shared/types';
 
+let schemaReady: Promise<void> | null = null;
+
 interface DbRow {
   id: number;
   course_id: number;
@@ -32,6 +34,19 @@ function finalPrice(regularPrice: number, discountPercent: number): number {
   return Math.round((regular - regular * (discount / 100)) * 100) / 100;
 }
 
+async function ensureCoursePriceSchema(): Promise<void> {
+  schemaReady ??= (async () => {
+    await sql`ALTER TABLE course_prices ALTER COLUMN currency SET DEFAULT 'USD'`;
+    await sql`ALTER TABLE course_prices ADD COLUMN IF NOT EXISTS is_enabled BOOLEAN NOT NULL DEFAULT TRUE`;
+    await sql`ALTER TABLE course_prices ADD COLUMN IF NOT EXISTS regular_price_2 NUMERIC(10,2) NOT NULL DEFAULT 0`;
+    await sql`ALTER TABLE course_prices ADD COLUMN IF NOT EXISTS discount_percent_2 NUMERIC(5,2) NOT NULL DEFAULT 0`;
+    await sql`ALTER TABLE course_prices ADD COLUMN IF NOT EXISTS final_price_2 NUMERIC(10,2) NOT NULL DEFAULT 0`;
+    await sql`ALTER TABLE course_prices ADD COLUMN IF NOT EXISTS last_scraped_price_2 NUMERIC(10,2)`;
+    await sql`UPDATE course_prices SET currency = 'USD' WHERE currency IS NULL OR currency = 'GBP'`;
+  })();
+  return schemaReady;
+}
+
 function rowToCoursePrice(row: DbRow): CoursePriceRecord {
   return {
     id: row.id,
@@ -60,6 +75,7 @@ function rowToCoursePrice(row: DbRow): CoursePriceRecord {
 }
 
 export async function listCoursePrices(): Promise<CoursePriceRecord[]> {
+  await ensureCoursePriceSchema();
   const rows = await sql`
     SELECT
       COALESCE(cp.id, 0) AS id,
@@ -104,6 +120,7 @@ export async function upsertCoursePrices(
     rawPriceText?: string | null;
   }>,
 ): Promise<CoursePriceRecord[]> {
+  await ensureCoursePriceSchema();
   for (const price of prices) {
     const regularPrice = Math.max(0, Number(price.regularPrice) || 0);
     const regularPrice2 = Math.max(0, Number(price.regularPrice2) || 0);
@@ -143,6 +160,7 @@ export async function upsertCoursePrices(
 }
 
 export async function upsertScrapedCoursePrices(scraped: ScrapedCoursePrice[]): Promise<CoursePriceRecord[]> {
+  await ensureCoursePriceSchema();
   for (const item of scraped) {
     if (item.matched && item.price != null) {
       await sql`
