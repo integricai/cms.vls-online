@@ -82,6 +82,7 @@ export interface Course {
   sortOrder: number;
   qualification: string | null;
   courseLevel: string | null;
+  courseLevels: string[];
   courseOption: string | null;
   lastSyncedAt: Date | null;
   createdAt: Date;

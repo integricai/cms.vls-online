@@ -11,6 +11,7 @@ export interface CourseFinderCourse {
   sortOrder?: number;
   qualification?: string | null;
   courseLevel?: string | null;
+  courseLevels?: string[];
   courseOption?: string | null;
   lastSyncedAt: string | null;
 }
@@ -26,6 +27,7 @@ type EmbeddedCourse = {
   sortOrder: number;
   qualification: string;
   courseLevel: string;
+  courseLevels: string[];
   courseOption: string;
 };
 
@@ -53,6 +55,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
       sortOrder: course.sortOrder || 0,
       qualification: course.qualification || '',
       courseLevel: course.courseLevel || '',
+      courseLevels: course.courseLevels || (course.courseLevel ? [course.courseLevel] : []),
       courseOption: course.courseOption || '',
     }));
 
@@ -310,6 +313,12 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
     if (/\\bsbl\\b|\\bsbr\\b|\\bafm\\b|\\bapm\\b|\\batx\\b|\\baaa\\b|strategic professional|advanced/.test(t)) return 'professional';
     return 'skills';
   }
+  function classifyExplicitLevel(label, fallbackCourse, qual){
+    for (var levelKey in levelStyle) {
+      if (levelStyle[levelKey][0] === label) return levelKey;
+    }
+    return classifyLevel(fallbackCourse, qual);
+  }
   function inferOption(course){
     if (course.courseOption) return course.courseOption;
     var t = textKey(course);
@@ -339,19 +348,22 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[]): string 
     var map = {};
     rawCourses.forEach(function(course, index){
       var qual = classifyQual(course);
-      var level = classifyLevel(course, qual);
-      var key = courseKey(course, qual, level);
-      var option = inferOption(course);
-      if (!map[key]) {
-        map[key] = {
-          key: key, qual: qual, level: level, label: cleanLabel(course.name), order: course.sortOrder || index,
-          urls: {}, options: [], sourceNames: []
-        };
-      }
-      if (option === 'Full Course' || map[key].label.length > cleanLabel(course.name).length) map[key].label = cleanLabel(course.name);
-      map[key].urls[option] = course.url || '#';
-      if (map[key].options.indexOf(option) === -1) map[key].options.push(option);
-      map[key].sourceNames.push(cleanLabel(course.name));
+      var explicitLevels = Array.isArray(course.courseLevels) ? course.courseLevels.filter(Boolean) : [];
+      var levels = explicitLevels.length ? explicitLevels.map(function(label){ return classifyExplicitLevel(label, course, qual); }) : [classifyLevel(course, qual)];
+      levels.forEach(function(level){
+        var key = courseKey(course, qual, level);
+        var option = inferOption(course);
+        if (!map[key]) {
+          map[key] = {
+            key: key, qual: qual, level: level, label: cleanLabel(course.name), order: course.sortOrder || index,
+            urls: {}, options: [], sourceNames: []
+          };
+        }
+        if (option === 'Full Course' || map[key].label.length > cleanLabel(course.name).length) map[key].label = cleanLabel(course.name);
+        map[key].urls[option] = course.url || '#';
+        if (map[key].options.indexOf(option) === -1) map[key].options.push(option);
+        map[key].sourceNames.push(cleanLabel(course.name));
+      });
     });
     return Object.keys(map).map(function(key){ return map[key]; });
   }

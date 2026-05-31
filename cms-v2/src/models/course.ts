@@ -14,6 +14,7 @@ interface DbRow {
   sort_order: number;
   qualification: string | null;
   course_level: string | null;
+  course_levels?: string[];
   course_option: string | null;
   last_synced_at: Date | null;
   created_at: Date;
@@ -44,6 +45,7 @@ function rowToCourse(row: DbRow): Course {
     sortOrder: row.sort_order,
     qualification: row.qualification,
     courseLevel: row.course_level,
+    courseLevels: row.course_levels ?? (row.course_level ? [row.course_level] : []),
     courseOption: row.course_option,
     lastSyncedAt: row.last_synced_at,
     createdAt: row.created_at,
@@ -64,12 +66,27 @@ function rowToDropdownOption(row: DropdownOptionDbRow): CourseDropdownOption {
 }
 
 export async function listCourses(): Promise<Course[]> {
-  const rows = await sql`SELECT * FROM courses ORDER BY sort_order ASC, name ASC`;
+  const rows = await sql`
+    SELECT c.*,
+      COALESCE(array_remove(array_agg(cl.level ORDER BY cl.sort_order ASC, cl.level ASC), NULL), ARRAY[]::text[]) AS course_levels
+    FROM courses c
+    LEFT JOIN course_levels cl ON cl.course_id = c.id
+    GROUP BY c.id
+    ORDER BY c.sort_order ASC, c.name ASC
+  `;
   return (rows as DbRow[]).map(rowToCourse);
 }
 
 export async function listActiveCourses(): Promise<Course[]> {
-  const rows = await sql`SELECT * FROM courses WHERE is_active = true ORDER BY sort_order ASC, name ASC`;
+  const rows = await sql`
+    SELECT c.*,
+      COALESCE(array_remove(array_agg(cl.level ORDER BY cl.sort_order ASC, cl.level ASC), NULL), ARRAY[]::text[]) AS course_levels
+    FROM courses c
+    LEFT JOIN course_levels cl ON cl.course_id = c.id
+    WHERE c.is_active = true
+    GROUP BY c.id
+    ORDER BY c.sort_order ASC, c.name ASC
+  `;
   return (rows as DbRow[]).map(rowToCourse);
 }
 
@@ -127,6 +144,7 @@ export async function updateCourseAdminMetadata(
     sortOrder?: number;
     qualification?: string | null;
     courseLevel?: string | null;
+    courseLevels?: string[];
     courseOption?: string | null;
   },
 ): Promise<Course | null> {
@@ -145,7 +163,23 @@ export async function updateCourseAdminMetadata(
     WHERE id = ${id}
     RETURNING *
   `;
-  return rows[0] ? rowToCourse(rows[0] as DbRow) : null;
+  if (!rows[0]) return null;
+
+  if (data.courseLevels !== undefined) {
+    const cleanLevels = Array.from(new Set(data.courseLevels.map(level => level.trim()).filter(Boolean)));
+    await sql`DELETE FROM course_levels WHERE course_id = ${id}`;
+    for (let index = 0; index < cleanLevels.length; index++) {
+      await sql`
+        INSERT INTO course_levels (course_id, level, sort_order)
+        VALUES (${id}, ${cleanLevels[index]}, ${(index + 1) * 10})
+        ON CONFLICT (course_id, level) DO UPDATE
+          SET sort_order = EXCLUDED.sort_order
+      `;
+    }
+  }
+
+  const fresh = (await listCourses()).find(course => course.id === id);
+  return fresh ?? rowToCourse(rows[0] as DbRow);
 }
 
 export async function reorderCourses(ids: number[]): Promise<Course[]> {

@@ -15,6 +15,7 @@ type Course = {
   sortOrder: number;
   qualification: string | null;
   courseLevel: string | null;
+  courseLevels: string[];
   courseOption: string | null;
   lastSyncedAt: string | null;
 };
@@ -126,6 +127,7 @@ function CoursesTab() {
         sortOrder: course.sortOrder,
         qualification: course.qualification,
         courseLevel: course.courseLevel,
+        courseLevels: course.courseLevels || [],
         courseOption: course.courseOption,
       });
       patchCourse(course.id, saved);
@@ -185,6 +187,10 @@ function CoursesTab() {
 
   function cleanOptions(values: string[]): string[] {
     return Array.from(new Set(values.map(value => value.trim()).filter(Boolean)));
+  }
+
+  function selectedValues(select: HTMLSelectElement): string[] {
+    return Array.from(select.selectedOptions).map(option => option.value).filter(Boolean);
   }
 
   function renderOptionsEditor(kind: CourseDropdownKind, label: string) {
@@ -320,10 +326,18 @@ function CoursesTab() {
                     </select>
                   </td>
                   <td className="px-3 py-2">
-                    <select className="input h-8 min-w-44 text-xs" value={c.courseLevel || ''} onChange={event => patchCourse(c.id, { courseLevel: event.target.value || null })}>
-                      <option value="">Select...</option>
+                    <select
+                      multiple
+                      className="input min-h-20 min-w-52 py-1 text-xs"
+                      value={(c.courseLevels && c.courseLevels.length > 0) ? c.courseLevels : (c.courseLevel ? [c.courseLevel] : [])}
+                      onChange={event => {
+                        const levels = selectedValues(event.currentTarget);
+                        patchCourse(c.id, { courseLevels: levels, courseLevel: levels[0] || null });
+                      }}
+                    >
                       {options.level.map(value => <option key={value} value={value}>{value}</option>)}
                     </select>
+                    <p className="mt-1 text-[10px] text-slate-400">Hold Ctrl/Cmd to select multiple.</p>
                   </td>
                   <td className="px-3 py-2">
                     <select className="input h-8 min-w-40 text-xs" value={c.courseOption || ''} onChange={event => patchCourse(c.id, { courseOption: event.target.value || null })}>

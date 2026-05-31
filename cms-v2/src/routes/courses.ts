@@ -180,6 +180,11 @@ router.put('/:id', requireRole('admin', 'editor'), async (req: Request, res: Res
       sortOrder: Number.isInteger(req.body.sortOrder) ? req.body.sortOrder : undefined,
       qualification: req.body.qualification === undefined ? undefined : (req.body.qualification || null),
       courseLevel: req.body.courseLevel === undefined ? undefined : (req.body.courseLevel || null),
+      courseLevels: req.body.courseLevels === undefined
+        ? undefined
+        : (Array.isArray(req.body.courseLevels)
+          ? req.body.courseLevels.map((level: unknown) => String(level).trim()).filter(Boolean)
+          : []),
       courseOption: req.body.courseOption === undefined ? undefined : (req.body.courseOption || null),
     });
 
