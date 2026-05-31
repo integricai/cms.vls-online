@@ -128,7 +128,6 @@ export async function upsertCourse(data: {
           level          = EXCLUDED.level,
           status         = EXCLUDED.status,
           zenler_url     = EXCLUDED.zenler_url,
-          is_active      = true,
           last_synced_at = NOW(),
           updated_at     = NOW()
     RETURNING *, (xmax = 0) AS was_inserted
@@ -184,7 +183,7 @@ export async function updateCourseAdminMetadata(
 
 export async function reorderCourses(ids: number[]): Promise<Course[]> {
   if (ids.length === 0) return listCourses();
-  const rows = await sql`
+  await sql`
     WITH incoming AS (
       SELECT * FROM UNNEST(${ids}::int[]) WITH ORDINALITY AS t(id, ord)
     )
@@ -193,9 +192,8 @@ export async function reorderCourses(ids: number[]): Promise<Course[]> {
         updated_at = NOW()
     FROM incoming
     WHERE c.id = incoming.id
-    RETURNING c.*
   `;
-  return (rows as DbRow[]).map(rowToCourse);
+  return listCourses();
 }
 
 export async function listCourseDropdownOptions(): Promise<CourseDropdownOption[]> {

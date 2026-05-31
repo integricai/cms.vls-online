@@ -55,6 +55,7 @@ function CoursesTab() {
   const [debugData, setDebugData] = useState<string | null>(null);
   const [debugging, setDebugging] = useState(false);
   const [orderDirty, setOrderDirty] = useState(false);
+  const [draggingCourseId, setDraggingCourseId] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -118,6 +119,20 @@ function CoursesTab() {
     setOrderDirty(true);
   }
 
+  function moveCourseTo(fromId: number, toId: number) {
+    if (fromId === toId) return;
+    setCourses(prev => {
+      const fromIndex = prev.findIndex(course => course.id === fromId);
+      const toIndex = prev.findIndex(course => course.id === toId);
+      if (fromIndex < 0 || toIndex < 0) return prev;
+      const next = [...prev];
+      const [item] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, item);
+      return next.map((course, sortIndex) => ({ ...course, sortOrder: sortIndex + 1 }));
+    });
+    setOrderDirty(true);
+  }
+
   async function saveCourse(course: Course) {
     setSavingCourseId(course.id);
     setSyncError(null);
@@ -133,6 +148,28 @@ function CoursesTab() {
       patchCourse(course.id, saved);
     } catch (e) {
       setSyncError((e instanceof Error ? e.message : null) || 'Course save failed.');
+    } finally {
+      setSavingCourseId(null);
+    }
+  }
+
+  async function saveCourseActive(course: Course, isActive: boolean) {
+    patchCourse(course.id, { isActive });
+    setSavingCourseId(course.id);
+    setSyncError(null);
+    try {
+      const saved = await api.put<Course>(`/courses/${course.id}`, {
+        isActive,
+        sortOrder: course.sortOrder,
+        qualification: course.qualification,
+        courseLevel: course.courseLevel,
+        courseLevels: course.courseLevels || [],
+        courseOption: course.courseOption,
+      });
+      patchCourse(course.id, saved);
+    } catch (e) {
+      patchCourse(course.id, { isActive: course.isActive });
+      setSyncError((e instanceof Error ? e.message : null) || 'Course enabled state save failed.');
     } finally {
       setSavingCourseId(null);
     }
@@ -275,7 +312,7 @@ function CoursesTab() {
         {loading ? 'Loading courses…' : `${courses.length} Course${courses.length !== 1 ? 's' : ''}`}
       </h3>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-xs text-slate-500">Use arrows to sort. Save each row after changing dropdowns or active state.</p>
+        <p className="text-xs text-slate-500">Drag rows to sort. Enabled saves immediately; save each row after changing dropdowns.</p>
         <button onClick={saveOrder} disabled={!orderDirty || savingOrder} className="btn-primary">
           {savingOrder ? 'Saving...' : orderDirty ? 'Save Course Order' : 'Order Saved'}
         </button>
@@ -302,9 +339,30 @@ function CoursesTab() {
             </thead>
             <tbody>
               {courses.map((c, index) => (
-                <tr key={c.id} className="border-b border-slate-100 last:border-0">
+                <tr
+                  key={c.id}
+                  draggable
+                  onDragStart={event => {
+                    setDraggingCourseId(c.id);
+                    event.dataTransfer.effectAllowed = 'move';
+                    event.dataTransfer.setData('text/plain', String(c.id));
+                  }}
+                  onDragOver={event => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = 'move';
+                  }}
+                  onDrop={event => {
+                    event.preventDefault();
+                    const fromId = Number(event.dataTransfer.getData('text/plain')) || draggingCourseId;
+                    if (fromId) moveCourseTo(fromId, c.id);
+                    setDraggingCourseId(null);
+                  }}
+                  onDragEnd={() => setDraggingCourseId(null)}
+                  className={`border-b border-slate-100 last:border-0 ${draggingCourseId === c.id ? 'bg-blue-50 opacity-70' : 'bg-white'}`}
+                >
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-1">
+                      <span className="cursor-grab select-none rounded border border-slate-200 px-2 py-1 text-slate-400" title="Drag to reorder">⋮⋮</span>
                       <button onClick={() => moveCourse(index, -1)} disabled={index === 0} className="rounded border border-slate-200 px-2 py-1 text-slate-600 disabled:opacity-30">↑</button>
                       <button onClick={() => moveCourse(index, 1)} disabled={index === courses.length - 1} className="rounded border border-slate-200 px-2 py-1 text-slate-600 disabled:opacity-30">↓</button>
                     </div>
@@ -316,7 +374,8 @@ function CoursesTab() {
                     <input
                       type="checkbox"
                       checked={c.isActive}
-                      onChange={event => patchCourse(c.id, { isActive: event.target.checked })}
+                      disabled={savingCourseId === c.id}
+                      onChange={event => saveCourseActive(c, event.target.checked)}
                     />
                   </td>
                   <td className="px-3 py-2">
