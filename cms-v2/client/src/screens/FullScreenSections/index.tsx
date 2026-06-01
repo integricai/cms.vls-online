@@ -1760,6 +1760,9 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
   const [state, setState] = useState<TestimonialsState>(makeTestimonials());
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncCount, setSyncCount] = useState(12);
   const [saved, setSaved] = useState(false);
   const [published, setPublished] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -1838,6 +1841,20 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
     upd({ cards });
   }
 
+  async function syncTrustpilot() {
+    setSyncError(null);
+    if (!confirm('This will replace all current cards with up to 12 reviews pulled from Trustpilot. Continue?')) return;
+    setSyncing(true);
+    try {
+      const cards = await api.get<TestimonialCard[]>(`/trustpilot/sync?count=${syncCount}`);
+      upd({ cards });
+    } catch (err: any) {
+      setSyncError(err?.message ?? 'Failed to sync from Trustpilot.');
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   if (!loaded) return <div className="p-5 text-xs text-slate-400">Loading...</div>;
 
   return (
@@ -1852,6 +1869,17 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
         <p className="mt-2 text-[11px] text-slate-400">
           Publish saves this component and creates crawler-readable HTML that refreshes from the CMS on page load.
         </p>
+      </div>
+      <div className="border-b border-slate-100 px-5 py-3">
+        <div className="mb-2 flex items-center gap-2">
+          <label className="text-[11px] text-slate-500 whitespace-nowrap">Reviews to pull</label>
+          <input type="number" className="input w-20 text-xs" min={1} max={50} value={syncCount} onChange={e => setSyncCount(Math.min(50, Math.max(1, Number(e.target.value))))} />
+        </div>
+        <button onClick={syncTrustpilot} disabled={syncing} className="btn-ghost w-full justify-center text-xs flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6"/><path d="M2.5 22v-6h6"/><path d="M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+          {syncing ? 'Syncing from Trustpilot…' : 'Sync with Trustpilot'}
+        </button>
+        {syncError && <p className="mt-1.5 text-[11px] text-red-500">{syncError}</p>}
       </div>
 
       <div className="px-5 py-4 space-y-1 overflow-y-auto">
