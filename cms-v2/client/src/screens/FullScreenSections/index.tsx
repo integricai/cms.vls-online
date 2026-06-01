@@ -158,7 +158,7 @@ function makeTestimonials(): TestimonialsState {
   return {
     gradientStart: '#f7fbff', gradientEnd: '#edf5ff',
     padTop: 64, padBot: 64, padLeft: 32, padRight: 32,
-    maxWidth: 1180, cardGap: 18, cardHeight: 566, quoteCutoffChars: 250, autoScrollMs: 4500, url: '#',
+    maxWidth: 1180, cardGap: 18, cardHeight: 566, quoteCutoffChars: 250, readMoreText: 'Read more in Trustpilot', autoScrollMs: 4500, url: '#',
     eyebrow: 'STUDENT SUCCESS',
     titlePre: 'Trusted by students who',
     titleAccent: 'passed first time',
@@ -1857,8 +1857,9 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
           <Field label="Card height"><input type="number" className="input" min={300} max={900} value={state.cardHeight} onChange={e => upd({ cardHeight: Number(e.target.value) })} /></Field>
           <Field label="Text cutoff length"><input type="number" className="input" min={40} max={1000} value={state.quoteCutoffChars} onChange={e => upd({ quoteCutoffChars: Number(e.target.value) })} /></Field>
           <Field label="Auto-scroll interval (ms)"><input type="number" className="input" min={1000} step={250} value={state.autoScrollMs} onChange={e => upd({ autoScrollMs: Number(e.target.value) })} /></Field>
-          <Field label="Default card URL"><input className="input" value={state.url} placeholder="Used when a card URL is empty" onChange={e => upd({ url: e.target.value })} /></Field>
         </div>
+        <Field label="Read more text"><input className="input" value={state.readMoreText} placeholder="Read more in Trustpilot" onChange={e => upd({ readMoreText: e.target.value })} /></Field>
+        <Field label="Default card URL"><input className="input" value={state.url} placeholder="Used when a card URL is empty" onChange={e => upd({ url: e.target.value })} /></Field>
 
         <p className="section-label mt-3">Header</p>
         <Field label="Eyebrow"><input className="input" value={state.eyebrow} onChange={e => upd({ eyebrow: e.target.value })} /></Field>

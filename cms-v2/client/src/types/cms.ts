@@ -934,6 +934,7 @@ export interface TestimonialsState {
   cardGap: number;
   cardHeight: number;
   quoteCutoffChars: number;
+  readMoreText: string;
   autoScrollMs: number;
   url: string;
   eyebrow: string;
