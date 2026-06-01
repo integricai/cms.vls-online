@@ -91,6 +91,7 @@ export function generateHeaderHtml(cfg: HeaderConfig): string {
 .block.parrot.zenstyle.headers[data-zen="zen_header_dynamic"] .navbar-collapse{display:none!important;}
 .block.parrot.zenstyle.headers[data-zen="zen_header_dynamic"] .zl-navbar{background:transparent!important;min-height:0!important;padding:0!important;border:none!important;box-shadow:none!important;margin:0!important;width:100%!important;}
 .block.parrot.zenstyle.headers[data-zen="zen_header_dynamic"] .zl-navbar>.container{max-width:${containerW}px!important;margin:0 auto!important;padding:0 ${padR}px 0 ${padL}px!important;box-sizing:border-box!important;}
+.block.parrot.zenstyle.headers:has(#zen_cs_thankyou_dynamic){display:block!important;visibility:visible!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;}
 .navbar-buttons.jqLoginLogout,.navbar-buttons.navbar-mob{position:static!important;float:none!important;display:flex!important;align-items:center!important;background:transparent!important;}
 .navbar-buttons.jqLoginLogout .btn,.navbar-buttons.jqLoginLogout .dropdown-toggle,.navbar-buttons.jqLoginLogout [role="button"]{background:transparent!important;border:none!important;box-shadow:none!important;color:${menuTextColor}!important;padding:0!important;}
 .navbar-buttons.jqLoginLogout .caret,.navbar-buttons.jqLoginLogout .fa,.navbar-buttons.jqLoginLogout [class*="icon"]{color:${menuTextColor}!important;}
@@ -212,6 +213,7 @@ function buildZenNav(attempt){var zenUl=getZenlerMenuRoot();if(zenUl&&zenUl.quer
 var P="${uid}";
 var overflowCheck=null;
 function detectLoggedIn(){var root=document.querySelector(".navbar-buttons.jqLoginLogout");if(!root)return false;var summary=Array.from(root.querySelectorAll("a,button")).map(function(node){return((node.textContent||"")+" "+(node.getAttribute("href")||""));}).join(" ").toLowerCase();if(/logout|log out|my account|my settings|admin/.test(summary))return true;if(/login|log in|sign in/.test(summary))return false;return!!root.querySelector(".dropdown-menu li,.dropdown-menu a[href*=logout]");}
+function restoreZenlerDynamicBlocks(){document.querySelectorAll("#zen_cs_thankyou_dynamic").forEach(function(node){var block=node.closest(".block");if(!block)return;["display","visibility","height","min-height","max-height","overflow"].forEach(function(prop){block.style.removeProperty(prop);});block.style.setProperty("display","block","important");block.style.setProperty("visibility","visible","important");block.style.setProperty("height","auto","important");block.style.setProperty("max-height","none","important");block.style.setProperty("overflow","visible","important");});}
 function syncCoursesMenu(){var loggedIn=detectLoggedIn();document.querySelectorAll("."+P+"-ni[data-menu-key='my-courses']").forEach(function(li){li.setAttribute("data-auth-hidden",loggedIn?"0":"1");li.style.display=loggedIn?"":"none";});return loggedIn;}
 function moveLogin(){var src=document.querySelector(".navbar-buttons.jqLoginLogout");if(!src)return;var slot=document.getElementById(window.innerWidth<=768?P+"-login-menu":P+"-login-brand");if(slot&&!slot.contains(src)){slot.appendChild(src);}}
 window.addEventListener("resize",function(){moveLogin();});
@@ -220,7 +222,7 @@ window["${uid}_toggle"]=function(){var nav=document.getElementById(P+"-nav");var
 var _mdtTs=0;
 window["${uid}_mdt"]=function(el,ev){if(window.innerWidth>768)return;var now=Date.now();if(now-_mdtTs<350)return;_mdtTs=now;ev.preventDefault();ev.stopImmediatePropagation();var ni=el.parentElement;var dr=ni.querySelector("."+P+"-drop");if(!dr)return;var op=ni.classList.contains(P+"-ni-open");document.querySelectorAll("."+P+"-drop").forEach(function(d){d.classList.remove(P+"-mob-open");});document.querySelectorAll("."+P+"-ni").forEach(function(n){n.classList.remove(P+"-ni-open");});if(!op){dr.classList.add(P+"-mob-open");ni.classList.add(P+"-ni-open");}};
 document.addEventListener("click",function(e){var nav=document.getElementById(P+"-nav");var brg=document.getElementById(P+"-burger");if(nav&&brg&&!nav.contains(e.target)&&!brg.contains(e.target)){nav.classList.remove(P+"-open");brg.classList.remove(P+"-open");}});
-${zenReader}function init(){moveLogin();syncCoursesMenu();if(USE_ZEN){buildZenNav(0);}else{initOverflow();}}
+${zenReader}function init(){restoreZenlerDynamicBlocks();moveLogin();syncCoursesMenu();if(USE_ZEN){buildZenNav(0);}else{initOverflow();}}
 if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init);}else{init();}
 setTimeout(init,600);setTimeout(init,1500);setTimeout(init,3000);
 var _lo=new MutationObserver(function(){moveLogin();});_lo.observe(document.body,{childList:true,subtree:true});setTimeout(function(){_lo.disconnect();},10000);
