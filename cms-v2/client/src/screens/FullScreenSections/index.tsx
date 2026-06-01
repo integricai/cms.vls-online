@@ -1880,6 +1880,7 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
           {syncing ? 'Syncing from Trustpilot…' : 'Sync with Trustpilot'}
         </button>
         {syncError && <p className="mt-1.5 text-[11px] text-red-500">{syncError}</p>}
+        <p className="mt-1.5 text-[11px] text-slate-400">Requires <code className="font-mono">TRUSTPILOT_API_KEY</code> in .env.local — get a free key at developers.trustpilot.com.</p>
       </div>
 
       <div className="px-5 py-4 space-y-1 overflow-y-auto">

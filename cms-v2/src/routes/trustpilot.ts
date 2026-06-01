@@ -32,60 +32,64 @@ function toMonthYear(iso: string): string {
   }
 }
 
-// GET /api/trustpilot/sync
-// Fetches the VLS Online Trustpilot page, extracts up to 12 reviews from the
-// embedded __NEXT_DATA__ JSON blob, and returns them as TestimonialCard objects.
+// GET /api/trustpilot/sync?count=12
+// Uses the Trustpilot Public API (api.trustpilot.com/v1).
+// Requires TRUSTPILOT_API_KEY in the server environment.
 router.get('/sync', async (req: Request, res: Response) => {
   const count = Math.min(50, Math.max(1, Number(req.query.count) || 12));
+  const apiKey = process.env.TRUSTPILOT_API_KEY;
+
+  if (!apiKey) {
+    return res.status(500).json({
+      ok: false,
+      error: 'TRUSTPILOT_API_KEY is not set. Add it to .env.local and restart the server.',
+    });
+  }
 
   try {
-    const pageRes = await fetch('https://www.trustpilot.com/review/vls-online.com', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cache-Control': 'no-cache',
-      },
-    });
-
-    if (!pageRes.ok) {
-      return res.status(502).json({ ok: false, error: `Trustpilot returned HTTP ${pageRes.status}` });
+    // Step 1: resolve the business unit ID for vls-online.com
+    const buRes = await fetch(
+      `https://api.trustpilot.com/v1/business-units/find?name=vls-online.com&apikey=${encodeURIComponent(apiKey)}`
+    );
+    if (!buRes.ok) {
+      const text = await buRes.text().catch(() => '');
+      return res.status(502).json({ ok: false, error: `Trustpilot API returned ${buRes.status} looking up business unit. ${text}`.trim() });
+    }
+    const buData = await buRes.json() as any;
+    const businessUnitId: string = buData.id ?? '';
+    if (!businessUnitId) {
+      return res.status(502).json({ ok: false, error: 'Trustpilot API did not return a business unit ID for vls-online.com.' });
     }
 
-    const html = await pageRes.text();
+    // Step 2: fetch reviews
+    const reviewsRes = await fetch(
+      `https://api.trustpilot.com/v1/business-units/${encodeURIComponent(businessUnitId)}/reviews` +
+      `?apikey=${encodeURIComponent(apiKey)}&perPage=${count}&orderBy=createdat.desc&stars=4&stars=5`
+    );
+    if (!reviewsRes.ok) {
+      const text = await reviewsRes.text().catch(() => '');
+      return res.status(502).json({ ok: false, error: `Trustpilot API returned ${reviewsRes.status} fetching reviews. ${text}`.trim() });
+    }
+    const reviewsData = await reviewsRes.json() as any;
+    const rawReviews: any[] = reviewsData.reviews ?? [];
 
-    const match = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-    if (!match?.[1]) {
-      return res.status(502).json({ ok: false, error: 'Could not find __NEXT_DATA__ on the Trustpilot page — the page structure may have changed.' });
+    if (rawReviews.length === 0) {
+      return res.status(502).json({ ok: false, error: 'No reviews returned from Trustpilot API.' });
     }
 
-    let nextData: any;
-    try {
-      nextData = JSON.parse(match[1]);
-    } catch {
-      return res.status(502).json({ ok: false, error: 'Failed to parse Trustpilot page data.' });
-    }
-
-    const pageProps = nextData?.props?.pageProps ?? {};
-    const rawReviews: any[] = pageProps.reviews ?? pageProps.businessUnit?.reviews ?? [];
-
-    if (!Array.isArray(rawReviews) || rawReviews.length === 0) {
-      return res.status(502).json({ ok: false, error: 'No reviews found in Trustpilot page data. The page structure may have changed.' });
-    }
-
-    const cards: TrustpilotCard[] = rawReviews.slice(0, count).map((r: any) => {
-      const name: string = r.consumer?.displayName ?? r.consumer?.consumerName ?? '';
+    const cards: TrustpilotCard[] = rawReviews.map((r: any) => {
+      const name: string = r.consumer?.displayName ?? '';
       const reviewId: string = r.id ?? '';
       return {
         initials: toInitials(name),
         name,
         title: r.title ?? '',
-        dateLabel: toMonthYear(r.dates?.publishedDate ?? r.createdAt ?? ''),
+        dateLabel: toMonthYear(r.createdAt ?? ''),
         url: reviewId
           ? `https://www.trustpilot.com/reviews/${reviewId}`
           : 'https://www.trustpilot.com/review/vls-online.com',
         country: (r.consumer?.countryCode ?? '').toUpperCase(),
-        rating: Math.min(5, Math.max(1, Number(r.stars ?? r.rating ?? 5))),
+        rating: Math.min(5, Math.max(1, Number(r.stars ?? 5))),
         quote: r.text ?? '',
       };
     });
@@ -93,7 +97,7 @@ router.get('/sync', async (req: Request, res: Response) => {
     return res.json({ ok: true, data: cards });
   } catch (err: any) {
     console.error('[trustpilot sync]', err);
-    return res.status(500).json({ ok: false, error: err?.message ?? 'Unexpected error fetching from Trustpilot.' });
+    return res.status(500).json({ ok: false, error: err?.message ?? 'Unexpected error contacting Trustpilot API.' });
   }
 });
 
