@@ -932,6 +932,7 @@ export interface TestimonialsState {
   padTop: number; padBot: number; padLeft: number; padRight: number;
   maxWidth: number;
   cardGap: number;
+  cardHeight: number;
   autoScrollMs: number;
   url: string;
   eyebrow: string;

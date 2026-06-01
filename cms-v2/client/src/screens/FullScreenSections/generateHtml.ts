@@ -728,6 +728,8 @@ export function generateTestimonialsHtml(d: TestimonialsState, componentId = '')
   const cards = (d.cards || []).filter(card => card.quote || card.name || card.title || card.dateLabel || card.country);
   const url = (d.url || '#').trim() || '#';
   const gap = Math.max(8, Number(d.cardGap) || 18);
+  const cardHeight = Math.max(360, Math.min(900, Number(d.cardHeight) || 566));
+  const mobileCardHeight = Math.max(320, Math.min(900, cardHeight - 46));
   const interval = Math.max(1000, Number(d.autoScrollMs) || 4500);
   const L: string[] = [];
 
@@ -745,7 +747,7 @@ export function generateTestimonialsHtml(d: TestimonialsState, componentId = '')
   L.push(`.${id}-sub{font-size:var(--tst-sub-sz);font-weight:var(--tst-sub-wt);color:${e(d.subtitleColor)};margin:0;}`);
   L.push(`.${id}-viewport{overflow:hidden;padding:2px 2px 14px;}`);
   L.push(`.${id}-track{display:flex;gap:${gap}px;transition:transform .45s ease;will-change:transform;}`);
-  L.push(`.${id}-card{flex:0 0 calc((100% - ${gap * 2}px) / 3);height:566px;max-height:566px;min-width:0;display:flex;flex-direction:column;background:${e(d.cardBg)};border:1px solid ${e(d.cardBorder)};border-radius:${d.cardRadius}px;box-shadow:${e(d.cardShadow)};padding:24px 24px 18px;text-decoration:none!important;color:inherit;box-sizing:border-box;overflow:hidden;}`);
+  L.push(`.${id}-card{flex:0 0 calc((100% - ${gap * 2}px) / 3);height:${cardHeight}px;max-height:${cardHeight}px;min-width:0;display:flex;flex-direction:column;background:${e(d.cardBg)};border:1px solid ${e(d.cardBorder)};border-radius:${d.cardRadius}px;box-shadow:${e(d.cardShadow)};padding:24px 24px 18px;text-decoration:none!important;color:inherit;box-sizing:border-box;overflow:hidden;}`);
   L.push(`.${id}-card:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(28,45,85,.12);}`);
   L.push(`.${id}-stars{position:relative;display:inline-block;font-size:16px;letter-spacing:3px;line-height:1;margin-bottom:14px;color:#ffffff;}`);
   L.push(`.${id}-stars .tst-stars-base{display:block;color:#ffffff;-webkit-text-stroke:1px ${e(d.starColor)};text-stroke:1px ${e(d.starColor)};}`);
@@ -769,7 +771,7 @@ export function generateTestimonialsHtml(d: TestimonialsState, componentId = '')
   L.push(`.${id}-dot{width:7px;height:7px;border-radius:999px;background:#cfd9e8;}`);
   L.push(`.${id}-dot.is-active{width:22px;background:${e(d.accentColor)};}`);
   L.push(`@media(max-width:900px){.${id}-card{flex-basis:calc((100% - ${gap}px) / 2);}}`);
-  L.push(`@media(max-width:640px){.${id}-outer{padding-left:18px!important;padding-right:18px!important;}.${id}-title{font-size:28px;}.${id}-card{flex-basis:100%;height:520px;max-height:520px;}}`);
+  L.push(`@media(max-width:640px){.${id}-outer{padding-left:18px!important;padding-right:18px!important;}.${id}-title{font-size:28px;}.${id}-card{flex-basis:100%;height:${mobileCardHeight}px;max-height:${mobileCardHeight}px;}}`);
   L.push('</style>');
   L.push(`<section id="${id}" class="${id}-outer" data-testimonials-component="${e(componentId)}">`);
   L.push(`  <div class="${id}-shell">`);
