@@ -1853,7 +1853,7 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
           <ColorInput label="Gradient end" value={state.gradientEnd} onChange={v => upd({ gradientEnd: v })} />
           <Field label="Max width"><input type="number" className="input" min={720} max={1800} value={state.maxWidth} onChange={e => upd({ maxWidth: Number(e.target.value) })} /></Field>
           <Field label="Card gap"><input type="number" className="input" min={8} max={48} value={state.cardGap} onChange={e => upd({ cardGap: Number(e.target.value) })} /></Field>
-          <Field label="Card height"><input type="number" className="input" min={360} max={900} value={state.cardHeight} onChange={e => upd({ cardHeight: Number(e.target.value) })} /></Field>
+          <Field label="Card height"><input type="number" className="input" min={300} max={900} value={state.cardHeight} onChange={e => upd({ cardHeight: Number(e.target.value) })} /></Field>
           <Field label="Auto-scroll interval (ms)"><input type="number" className="input" min={1000} step={250} value={state.autoScrollMs} onChange={e => upd({ autoScrollMs: Number(e.target.value) })} /></Field>
           <Field label="Default card URL"><input className="input" value={state.url} placeholder="Used when a card URL is empty" onChange={e => upd({ url: e.target.value })} /></Field>
         </div>
