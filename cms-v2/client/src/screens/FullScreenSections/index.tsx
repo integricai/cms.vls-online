@@ -1830,6 +1830,14 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
     upd({ cards });
   }
 
+  function moveCard(i: number, dir: -1 | 1) {
+    const cards = [...state.cards];
+    const j = i + dir;
+    if (j < 0 || j >= cards.length) return;
+    [cards[i], cards[j]] = [cards[j], cards[i]];
+    upd({ cards });
+  }
+
   if (!loaded) return <div className="p-5 text-xs text-slate-400">Loading...</div>;
 
   return (
@@ -1912,6 +1920,8 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
           <div key={i} className="mb-2 rounded border border-slate-200 bg-slate-50 p-3">
             <div className="mb-2 flex items-center gap-2">
               <span className="flex-1 text-xs font-semibold text-slate-500">Testimonial {i + 1}</span>
+              <button onClick={() => moveCard(i, -1)} disabled={i === 0} className="btn-ghost px-1.5 py-0.5 text-xs disabled:opacity-30" title="Move up">▲</button>
+              <button onClick={() => moveCard(i, 1)} disabled={i === state.cards.length - 1} className="btn-ghost px-1.5 py-0.5 text-xs disabled:opacity-30" title="Move down">▼</button>
               <button onClick={() => upd({ cards: state.cards.filter((_, idx) => idx !== i) })} className="btn-danger text-xs">Delete</button>
             </div>
             <div className="grid grid-cols-2 gap-2">
