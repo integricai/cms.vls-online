@@ -1843,7 +1843,7 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
 
   async function syncTrustpilot() {
     setSyncError(null);
-    if (!confirm('This will replace all current cards with up to 12 reviews pulled from Trustpilot. Continue?')) return;
+    if (!confirm(`This will replace all current cards with up to ${syncCount} reviews pulled from Trustpilot's public page. Continue?`)) return;
     setSyncing(true);
     try {
       const cards = await api.get<TestimonialCard[]>(`/trustpilot/sync?count=${syncCount}`);
@@ -1880,7 +1880,7 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
           {syncing ? 'Syncing from Trustpilot…' : 'Sync with Trustpilot'}
         </button>
         {syncError && <p className="mt-1.5 text-[11px] text-red-500">{syncError}</p>}
-        <p className="mt-1.5 text-[11px] text-slate-400">Requires <code className="font-mono">TRUSTPILOT_API_KEY</code> in .env.local — get a free key at developers.trustpilot.com.</p>
+        <p className="mt-1.5 text-[11px] text-slate-400">Pulls from <code className="font-mono">trustpilot.com/review/vls-online.com</code>. If Trustpilot returns a Cloudflare block, try again later.</p>
       </div>
 
       <div className="px-5 py-4 space-y-1 overflow-y-auto">

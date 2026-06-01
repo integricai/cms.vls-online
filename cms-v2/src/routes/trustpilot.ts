@@ -6,6 +6,8 @@ import { authGuard } from '../middleware/authGuard';
 const router = Router();
 router.use(authGuard);
 
+const TRUSTPILOT_REVIEW_URL = 'https://www.trustpilot.com/review/vls-online.com';
+
 interface TrustpilotCard {
   initials: string;
   name: string;
@@ -73,66 +75,105 @@ function browserGet(url: string): Promise<{ status: number; body: string }> {
   });
 }
 
+function decodeHtml(value: string): string {
+  return value
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .trim();
+}
+
+function findReviewArrays(value: any, results: any[][] = []): any[][] {
+  if (!value || typeof value !== 'object') return results;
+  if (Array.isArray(value)) {
+    if (value.some(item => item && typeof item === 'object' && ('text' in item || 'stars' in item || 'rating' in item) && ('consumer' in item || 'title' in item))) {
+      results.push(value);
+    }
+    value.forEach(item => findReviewArrays(item, results));
+    return results;
+  }
+  Object.values(value).forEach(item => findReviewArrays(item, results));
+  return results;
+}
+
+function parseTrustpilotReviews(body: string): any[] {
+  const match = body.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+  if (!match?.[1]) return [];
+
+  const nextData = JSON.parse(decodeHtml(match[1]));
+  const direct = nextData?.props?.pageProps?.reviews ?? nextData?.props?.pageProps?.businessUnit?.reviews;
+  if (Array.isArray(direct) && direct.length) return direct;
+
+  const candidates = findReviewArrays(nextData).sort((a, b) => b.length - a.length);
+  return candidates[0] ?? [];
+}
+
+function trustpilotBlockedMessage(status?: number): string {
+  return status === 403
+    ? 'Trustpilot blocked the public-page sync with 403. This is Cloudflare protection on Trustpilot, not a CMS error. Wait a few minutes and try again, or manually add the testimonials if Trustpilot keeps blocking server requests.'
+    : 'Trustpilot is serving a Cloudflare challenge instead of review data. The CMS can sync public-page reviews only when Trustpilot allows the request.';
+}
+
+function mapReviewToCard(r: any): TrustpilotCard {
+  const name: string = r.consumer?.displayName ?? r.consumer?.consumerName ?? r.consumer?.name ?? '';
+  const reviewId: string = r.id ?? '';
+  return {
+    initials: toInitials(name),
+    name,
+    title: r.title ?? '',
+    dateLabel: toMonthYear(r.dates?.publishedDate ?? r.createdAt ?? r.date ?? ''),
+    url: reviewId
+      ? `https://www.trustpilot.com/reviews/${reviewId}`
+      : TRUSTPILOT_REVIEW_URL,
+    country: (r.consumer?.countryCode ?? r.consumer?.country ?? '').toUpperCase(),
+    rating: Math.min(5, Math.max(1, Number(r.stars ?? r.rating ?? 5))),
+    quote: r.text ?? r.content ?? '',
+  };
+}
+
 // GET /api/trustpilot/sync?count=12
 router.get('/sync', async (req: Request, res: Response) => {
   const count = Math.min(50, Math.max(1, Number(req.query.count) || 12));
 
   try {
-    const { status, body } = await browserGet('https://www.trustpilot.com/review/vls-online.com');
+    const reviews: any[] = [];
+    const seen = new Set<string>();
+    const pagesToTry = Math.max(1, Math.ceil(count / 20));
 
-    if (status === 403) {
-      return res.status(502).json({
-        ok: false,
-        error: 'Trustpilot returned 403 — Cloudflare is blocking the request. Try again in a few seconds, or use the official Trustpilot API (free key at developers.trustpilot.com).',
+    for (let page = 1; page <= pagesToTry && reviews.length < count; page += 1) {
+      const url = page === 1 ? TRUSTPILOT_REVIEW_URL : `${TRUSTPILOT_REVIEW_URL}?page=${page}`;
+      const { status, body } = await browserGet(url);
+
+      if (status === 403) {
+        return res.status(502).json({ ok: false, error: trustpilotBlockedMessage(status) });
+      }
+      if (status !== 200) {
+        return res.status(502).json({ ok: false, error: `Trustpilot returned HTTP ${status} while loading ${url}` });
+      }
+
+      if (body.includes('cf-browser-verification') || body.includes('_cf_chl_') || body.includes('Just a moment...')) {
+        return res.status(502).json({ ok: false, error: trustpilotBlockedMessage() });
+      }
+
+      const pageReviews = parseTrustpilotReviews(body);
+      if (!pageReviews.length) break;
+
+      pageReviews.forEach(review => {
+        const id = String(review?.id ?? `${review?.consumer?.displayName ?? ''}-${review?.createdAt ?? ''}-${review?.title ?? ''}`);
+        if (seen.has(id)) return;
+        seen.add(id);
+        reviews.push(review);
       });
     }
-    if (status !== 200) {
-      return res.status(502).json({ ok: false, error: `Trustpilot returned HTTP ${status}` });
-    }
 
-    // Detect Cloudflare JS challenge page (no actual content)
-    if (body.includes('cf-browser-verification') || body.includes('_cf_chl_')) {
-      return res.status(502).json({
-        ok: false,
-        error: 'Cloudflare is serving a JS challenge. The scraping approach cannot bypass this. Use the official Trustpilot API (free key at developers.trustpilot.com).',
-      });
-    }
-
-    const match = body.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-    if (!match?.[1]) {
-      return res.status(502).json({ ok: false, error: 'Could not find review data on the Trustpilot page — the page structure may have changed.' });
-    }
-
-    let nextData: any;
-    try {
-      nextData = JSON.parse(match[1]);
-    } catch {
-      return res.status(502).json({ ok: false, error: 'Failed to parse Trustpilot page data.' });
-    }
-
-    const pageProps = nextData?.props?.pageProps ?? {};
-    const rawReviews: any[] = pageProps.reviews ?? pageProps.businessUnit?.reviews ?? [];
-
-    if (!Array.isArray(rawReviews) || rawReviews.length === 0) {
+    if (!reviews.length) {
       return res.status(502).json({ ok: false, error: 'No reviews found in Trustpilot page data — the page structure may have changed.' });
     }
 
-    const cards: TrustpilotCard[] = rawReviews.slice(0, count).map((r: any) => {
-      const name: string = r.consumer?.displayName ?? r.consumer?.consumerName ?? '';
-      const reviewId: string = r.id ?? '';
-      return {
-        initials: toInitials(name),
-        name,
-        title: r.title ?? '',
-        dateLabel: toMonthYear(r.dates?.publishedDate ?? r.createdAt ?? ''),
-        url: reviewId
-          ? `https://www.trustpilot.com/reviews/${reviewId}`
-          : 'https://www.trustpilot.com/review/vls-online.com',
-        country: (r.consumer?.countryCode ?? '').toUpperCase(),
-        rating: Math.min(5, Math.max(1, Number(r.stars ?? r.rating ?? 5))),
-        quote: r.text ?? '',
-      };
-    });
+    const cards = reviews.slice(0, count).map(mapReviewToCard);
 
     return res.json({ ok: true, data: cards });
   } catch (err: any) {
