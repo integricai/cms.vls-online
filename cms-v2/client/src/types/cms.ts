@@ -933,6 +933,7 @@ export interface TestimonialsState {
   maxWidth: number;
   cardGap: number;
   cardHeight: number;
+  quoteCutoffChars: number;
   autoScrollMs: number;
   url: string;
   eyebrow: string;

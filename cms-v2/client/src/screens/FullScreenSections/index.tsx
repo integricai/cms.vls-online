@@ -158,7 +158,7 @@ function makeTestimonials(): TestimonialsState {
   return {
     gradientStart: '#f7fbff', gradientEnd: '#edf5ff',
     padTop: 64, padBot: 64, padLeft: 32, padRight: 32,
-    maxWidth: 1180, cardGap: 18, cardHeight: 566, autoScrollMs: 4500, url: '#',
+    maxWidth: 1180, cardGap: 18, cardHeight: 566, quoteCutoffChars: 250, autoScrollMs: 4500, url: '#',
     eyebrow: 'STUDENT SUCCESS',
     titlePre: 'Trusted by students who',
     titleAccent: 'passed first time',
@@ -357,6 +357,7 @@ function normTestimonials(raw: any): TestimonialsState {
     maxWidth: normalizeNum(d.maxWidth, 1180),
     cardGap: normalizeNum(d.cardGap, 18),
     cardHeight: normalizeNum(d.cardHeight, 566),
+    quoteCutoffChars: normalizeNum(d.quoteCutoffChars, 250),
     autoScrollMs: normalizeNum(d.autoScrollMs, 4500),
     eyebrowSize: normalizeNum(d.eyebrowSize, 11), eyebrowWeight: normalizeNum(d.eyebrowWeight, 800),
     titleSize: normalizeNum(d.titleSize, 34), titleWeight: normalizeNum(d.titleWeight, 800),
@@ -1854,6 +1855,7 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
           <Field label="Max width"><input type="number" className="input" min={720} max={1800} value={state.maxWidth} onChange={e => upd({ maxWidth: Number(e.target.value) })} /></Field>
           <Field label="Card gap"><input type="number" className="input" min={8} max={48} value={state.cardGap} onChange={e => upd({ cardGap: Number(e.target.value) })} /></Field>
           <Field label="Card height"><input type="number" className="input" min={300} max={900} value={state.cardHeight} onChange={e => upd({ cardHeight: Number(e.target.value) })} /></Field>
+          <Field label="Quote cutoff chars"><input type="number" className="input" min={40} max={1000} value={state.quoteCutoffChars} onChange={e => upd({ quoteCutoffChars: Number(e.target.value) })} /></Field>
           <Field label="Auto-scroll interval (ms)"><input type="number" className="input" min={1000} step={250} value={state.autoScrollMs} onChange={e => upd({ autoScrollMs: Number(e.target.value) })} /></Field>
           <Field label="Default card URL"><input className="input" value={state.url} placeholder="Used when a card URL is empty" onChange={e => upd({ url: e.target.value })} /></Field>
         </div>
