@@ -28,6 +28,11 @@ import { wrapGeneratedHtml } from '../../utils/htmlComments';
 function tv<K extends Parameters<typeof normalize>[1]>(v: TextValue, k: K) { return normalize(v as any, k); }
 function hex(v: string, fb = '#ffffff') { return /^#[0-9a-fA-F]{6}$/.test(v) ? v : fb; }
 function cloneState<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T; }
+function stripHtml(value: string): string { return String(value || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(); }
+function isQuoteWithinLimit(value: string): boolean {
+  const plain = stripHtml(value);
+  return plain.length <= 250 && plain.split(/\s+/).filter(Boolean).length <= 50;
+}
 
 // ── Default states ─────────────────────────────────────────────────────────────
 
@@ -169,9 +174,9 @@ function makeTestimonials(): TestimonialsState {
     cardBg: '#ffffff', cardBorder: '#dfe8f6', cardRadius: 14, cardShadow: '0 10px 26px rgba(28,45,85,.08)',
     starColor: '#f6ad25', quoteMarkColor: '#eaf2ff', avatarBg: '#e8f0ff', avatarColor: '#2c67d8',
     cards: [
-      { initials: 'MR', name: 'Maria Rossi', title: 'Kept me on track when apps failed', dateLabel: 'December 2025', url: '', rating: 4.8, quote: 'I tried self-study apps before and stalled. The structure here - videos, quizzes, then kit questions - kept momentum going and I passed AA on the first attempt.' },
-      { initials: 'JT', name: 'James Thompson', title: 'Concise, exam-focused notes', dateLabel: 'March 2026', url: '', rating: 4.9, quote: 'Syed explains the tricky topics in a way that actually sticks. The notes are concise and exam-focused - no wading through 400 pages of theory.' },
-      { initials: 'FA', name: 'Fatima Ahmed', title: 'Worth every penny', dateLabel: 'February 2026', url: '', rating: 5, quote: 'Booked the complete package and it paid for itself. The mock plus the pre-exam live session calmed my nerves and I walked in knowing exactly what to expect.' },
+      { initials: 'MR', name: 'Maria Rossi', title: 'Kept me on track when apps failed', dateLabel: 'December 2025', url: '', country: '', rating: 4.8, quote: 'I tried self-study apps before and stalled. The structure here - videos, quizzes, then kit questions - kept momentum going and I passed AA on the first attempt.' },
+      { initials: 'JT', name: 'James Thompson', title: 'Concise, exam-focused notes', dateLabel: 'March 2026', url: '', country: '', rating: 4.9, quote: 'Syed explains the tricky topics in a way that actually sticks. The notes are concise and exam-focused - no wading through 400 pages of theory.' },
+      { initials: 'FA', name: 'Fatima Ahmed', title: 'Worth every penny', dateLabel: 'February 2026', url: '', country: '', rating: 5, quote: 'Booked the complete package and it paid for itself. The mock plus the pre-exam live session calmed my nerves and I walked in knowing exactly what to expect.' },
     ],
   };
 }
@@ -366,6 +371,7 @@ function normTestimonials(raw: any): TestimonialsState {
       title: card.title || '',
       dateLabel: card.dateLabel || card.course || '',
       url: card.url || '',
+      country: (card.country || '').toUpperCase(),
       quote: card.quote || '',
       rating: normalizeNum(card.rating, 5),
     })) : [],
@@ -1908,13 +1914,16 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
               <Field label="Rating"><input type="number" className="input" min={1} max={5} step={0.1} value={card.rating} onChange={e => updCard(i, { rating: Number(e.target.value) })} /></Field>
               <Field label="Name"><input className="input" value={card.name} onChange={e => updCard(i, { name: e.target.value })} /></Field>
               <Field label="Month and year"><input className="input" value={card.dateLabel} placeholder="March 2026" onChange={e => updCard(i, { dateLabel: e.target.value })} /></Field>
+              <Field label="Country"><input className="input" value={card.country || ''} placeholder="SE" maxLength={3} onChange={e => updCard(i, { country: e.target.value.toUpperCase() })} /></Field>
             </div>
             <Field label="CTA URL"><input className="input" value={card.url || ''} placeholder="https://..." onChange={e => updCard(i, { url: e.target.value })} /></Field>
             <Field label="Title"><input className="input" value={card.title} onChange={e => updCard(i, { title: e.target.value })} /></Field>
-            <Field label="Quote"><textarea className="input min-h-[92px]" value={card.quote} onChange={e => updCard(i, { quote: e.target.value })} /></Field>
+            <Field label={`Quote HTML (${stripHtml(card.quote).length}/250 chars, ${stripHtml(card.quote).split(/\s+/).filter(Boolean).length}/50 words)`}>
+              <textarea className={`input min-h-[92px] ${isQuoteWithinLimit(card.quote) ? '' : 'border-amber-400'}`} value={card.quote} onChange={e => updCard(i, { quote: e.target.value })} />
+            </Field>
           </div>
         ))}
-        <button onClick={() => upd({ cards: [...state.cards, { initials: '', name: '', title: '', dateLabel: '', url: '', rating: 5, quote: '' }] })} className="btn-ghost mb-4 w-full text-xs">+ Add testimonial</button>
+        <button onClick={() => upd({ cards: [...state.cards, { initials: '', name: '', title: '', dateLabel: '', url: '', country: '', rating: 5, quote: '' }] })} className="btn-ghost mb-4 w-full text-xs">+ Add testimonial</button>
       </div>
     </div>
   );

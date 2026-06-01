@@ -678,6 +678,35 @@ function tstStars(rating: number): string {
   return `<span class="tst-stars-base">★★★★★</span><span class="tst-stars-fill" style="width:${width}%;">★★★★★</span>`;
 }
 
+function tstCleanHtml(value: string): string {
+  return String(value || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/\son\w+=(["']).*?\1/gi, '')
+    .replace(/\s(?:href|src)=(["'])javascript:[\s\S]*?\1/gi, '');
+}
+
+function tstPlainText(value: string): string {
+  return String(value || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function tstQuoteExcerpt(value: string): { text: string; truncated: boolean } {
+  const plain = tstPlainText(value);
+  const words = plain.split(/\s+/).filter(Boolean);
+  let text = words.slice(0, 50).join(' ');
+  if (text.length > 250) text = text.slice(0, 250).replace(/\s+\S*$/, '').trim();
+  return { text, truncated: text.length < plain.length };
+}
+
+function tstQuoteHtml(value: string, id: string): string {
+  const excerpt = tstQuoteExcerpt(value);
+  if (!excerpt.truncated) return tstCleanHtml(value);
+  return `${e(excerpt.text)}... <span class="${id}-readmore">Read More on Trustpilot</span>`;
+}
+
+function tstLocationIcon(): string {
+  return '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 14s4.5-4 4.5-8A4.5 4.5 0 0 0 3.5 6c0 4 4.5 8 4.5 8Z" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="6" r="1.5" stroke="currentColor" stroke-width="1.4"/></svg>';
+}
+
 function tstFontVars(d: TestimonialsState): string {
   const ff = ((d.fontFamily || 'Poppins') + '').replace(/['"<>]/g, '').trim() || 'Poppins';
   const sz = (v: number | undefined, def: number, max = 96) => `${Math.max(8, Math.min(max, Number.isFinite(Number(v)) ? Number(v) : def))}px`;
@@ -696,7 +725,7 @@ function tstFontVars(d: TestimonialsState): string {
 
 export function generateTestimonialsHtml(d: TestimonialsState, componentId = ''): string {
   const id = uid();
-  const cards = (d.cards || []).filter(card => card.quote || card.name || card.title || card.dateLabel);
+  const cards = (d.cards || []).filter(card => card.quote || card.name || card.title || card.dateLabel || card.country);
   const url = (d.url || '#').trim() || '#';
   const gap = Math.max(8, Number(d.cardGap) || 18);
   const interval = Math.max(1000, Number(d.autoScrollMs) || 4500);
@@ -716,26 +745,31 @@ export function generateTestimonialsHtml(d: TestimonialsState, componentId = '')
   L.push(`.${id}-sub{font-size:var(--tst-sub-sz);font-weight:var(--tst-sub-wt);color:${e(d.subtitleColor)};margin:0;}`);
   L.push(`.${id}-viewport{overflow:hidden;padding:2px 2px 14px;}`);
   L.push(`.${id}-track{display:flex;gap:${gap}px;transition:transform .45s ease;will-change:transform;}`);
-  L.push(`.${id}-card{flex:0 0 calc((100% - ${gap * 2}px) / 3);min-width:0;display:block;background:${e(d.cardBg)};border:1px solid ${e(d.cardBorder)};border-radius:${d.cardRadius}px;box-shadow:${e(d.cardShadow)};padding:24px 24px 18px;text-decoration:none!important;color:inherit;box-sizing:border-box;}`);
+  L.push(`.${id}-card{flex:0 0 calc((100% - ${gap * 2}px) / 3);height:566px;max-height:566px;min-width:0;display:flex;flex-direction:column;background:${e(d.cardBg)};border:1px solid ${e(d.cardBorder)};border-radius:${d.cardRadius}px;box-shadow:${e(d.cardShadow)};padding:24px 24px 18px;text-decoration:none!important;color:inherit;box-sizing:border-box;overflow:hidden;}`);
   L.push(`.${id}-card:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(28,45,85,.12);}`);
   L.push(`.${id}-stars{position:relative;display:inline-block;font-size:16px;letter-spacing:3px;line-height:1;margin-bottom:14px;color:#ffffff;}`);
   L.push(`.${id}-stars .tst-stars-base{display:block;color:#ffffff;-webkit-text-stroke:1px ${e(d.starColor)};text-stroke:1px ${e(d.starColor)};}`);
   L.push(`.${id}-stars .tst-stars-fill{position:absolute;left:0;top:0;overflow:hidden;white-space:nowrap;color:${e(d.starColor)};}`);
   L.push(`.${id}-card-title{font-size:var(--tst-card-title-sz);font-weight:var(--tst-card-title-wt);line-height:1.35;color:${e(d.cardTitleColor)};margin:0 0 10px;}`);
-  L.push(`.${id}-quote{position:relative;min-height:96px;color:${e(d.quoteColor)};font-size:var(--tst-quote-sz);font-weight:var(--tst-quote-wt);line-height:1.65;margin:0 0 20px;}`);
+  L.push(`.${id}-quote{position:relative;color:${e(d.quoteColor)};font-size:var(--tst-quote-sz);font-weight:var(--tst-quote-wt);line-height:1.65;margin:0 0 20px;}`);
+  L.push(`.${id}-quote p{margin:0 0 10px;}.${id}-quote p:last-child{margin-bottom:0;}.${id}-quote strong,.${id}-quote b{font-weight:800;}.${id}-quote em,.${id}-quote i{font-style:italic;}`);
   L.push(`.${id}-quote:after{content:"\\201C";position:absolute;right:0;top:-28px;color:${e(d.quoteMarkColor)};font-size:58px;font-weight:800;line-height:1;opacity:.75;}`);
-  L.push(`.${id}-person{border-top:1px solid #e7edf7;padding-top:14px;display:flex;align-items:center;gap:11px;}`);
+  L.push(`.${id}-readmore{display:inline-block;margin-top:8px;color:${e(d.accentColor)};font-weight:800;text-decoration:underline;text-underline-offset:2px;}`);
+  L.push(`.${id}-person{border-top:1px solid #e7edf7;padding-top:14px;margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;}`);
+  L.push(`.${id}-person-main{display:flex;align-items:center;gap:11px;min-width:0;}`);
   L.push(`.${id}-avatar{width:34px;height:34px;border-radius:999px;background:${e(d.avatarBg)};color:${e(d.avatarColor)};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;}`);
   L.push(`.${id}-name{font-size:var(--tst-name-sz);font-weight:var(--tst-name-wt);line-height:1.2;color:${e(d.nameColor)};}`);
   L.push(`.${id}-date{display:flex;align-items:center;gap:5px;font-size:var(--tst-date-sz);font-weight:var(--tst-date-wt);line-height:1.2;color:${e(d.dateColor)};margin-top:3px;}`);
   L.push(`.${id}-date svg{width:12px;height:12px;flex-shrink:0;}`);
+  L.push(`.${id}-country{display:flex;align-items:center;gap:4px;color:${e(d.dateColor)};font-size:var(--tst-date-sz);font-weight:800;line-height:1;text-transform:uppercase;white-space:nowrap;}`);
+  L.push(`.${id}-country svg{width:13px;height:13px;flex-shrink:0;}`);
   L.push(`.${id}-controls{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:18px;}`);
   L.push(`.${id}-btn{width:38px;height:38px;border-radius:999px;border:1px solid #e1e9f6;background:#fff;color:#11244a;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 7px 18px rgba(28,45,85,.1);font-size:20px;line-height:1;}`);
   L.push(`.${id}-dots{display:flex;align-items:center;gap:8px;}`);
   L.push(`.${id}-dot{width:7px;height:7px;border-radius:999px;background:#cfd9e8;}`);
   L.push(`.${id}-dot.is-active{width:22px;background:${e(d.accentColor)};}`);
   L.push(`@media(max-width:900px){.${id}-card{flex-basis:calc((100% - ${gap}px) / 2);}}`);
-  L.push(`@media(max-width:640px){.${id}-outer{padding-left:18px!important;padding-right:18px!important;}.${id}-title{font-size:28px;}.${id}-card{flex-basis:100%;}.${id}-quote{min-height:110px;}}`);
+  L.push(`@media(max-width:640px){.${id}-outer{padding-left:18px!important;padding-right:18px!important;}.${id}-title{font-size:28px;}.${id}-card{flex-basis:100%;height:520px;max-height:520px;}}`);
   L.push('</style>');
   L.push(`<section id="${id}" class="${id}-outer" data-testimonials-component="${e(componentId)}">`);
   L.push(`  <div class="${id}-shell">`);
@@ -751,8 +785,8 @@ export function generateTestimonialsHtml(d: TestimonialsState, componentId = '')
     L.push(`        <a class="${id}-card" href="${e(cardUrl)}" target="_blank" rel="nofollow noopener">`);
     L.push(`          <div class="${id}-stars" aria-label="${e(String(tstRating(card.rating)))} out of 5 stars">${tstStars(card.rating)}</div>`);
     if (card.title) L.push(`          <h3 class="${id}-card-title">${e(card.title)}</h3>`);
-    L.push(`          <p class="${id}-quote">${e(card.quote)}</p>`);
-    L.push(`          <div class="${id}-person"><div class="${id}-avatar">${e(card.initials || (card.name || 'ST').slice(0, 2).toUpperCase())}</div><div><div class="${id}-name">${e(card.name)}</div><div class="${id}-date"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="10" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M5 2v3M11 2v3M3 6.5h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>${e(card.dateLabel)}</div></div></div>`);
+    L.push(`          <div class="${id}-quote">${tstQuoteHtml(card.quote, id)}</div>`);
+    L.push(`          <div class="${id}-person"><div class="${id}-person-main"><div class="${id}-avatar">${e(card.initials || (card.name || 'ST').slice(0, 2).toUpperCase())}</div><div><div class="${id}-name">${e(card.name)}</div><div class="${id}-date"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="10" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M5 2v3M11 2v3M3 6.5h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>${e(card.dateLabel)}</div></div></div>${card.country ? `<div class="${id}-country">${tstLocationIcon()}${e(card.country)}</div>` : ''}</div>`);
     L.push(`        </a>`);
   });
   L.push(`      </div>`);
@@ -764,7 +798,7 @@ export function generateTestimonialsHtml(d: TestimonialsState, componentId = '')
   L.push(`    </div>`);
   L.push(`  </div>`);
   L.push(`</section>`);
-  L.push(`<script type="text/javascript">(function(){var root=document.getElementById(${JSON.stringify(id)});if(!root)return;var track=root.querySelector(".${id}-track"),dots=root.querySelector(".${id}-dots"),idx=0,timer=null,delay=${interval},CID=${JSON.stringify(componentId)},API="https://api.cms.vls-online.com/api/publish-testimonials-components";function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}function cards(){return [].slice.call(root.querySelectorAll(".${id}-card"));}function perView(){if(window.matchMedia("(max-width:640px)").matches)return 1;if(window.matchMedia("(max-width:900px)").matches)return 2;return 3;}function maxIdx(){return Math.max(0,cards().length-perView());}function render(){var list=cards();idx=Math.max(0,Math.min(idx,maxIdx()));if(list[0]){var left=list[idx].offsetLeft-list[0].offsetLeft;track.style.transform="translateX("+(-left)+"px)";}var pages=maxIdx()+1;dots.innerHTML="";for(var i=0;i<pages;i++){var dot=document.createElement("span");dot.className="${id}-dot"+(i===idx?" is-active":"");dot.addEventListener("click",(function(n){return function(){idx=n;render();restart();};})(i));dots.appendChild(dot);}}function move(n){idx=maxIdx()?((idx+n+maxIdx()+1)%(maxIdx()+1)):0;render();}function restart(){clearInterval(timer);if(cards().length>perView())timer=setInterval(function(){move(1);},delay);}function rating(n){return Math.max(0,Math.min(5,Number(n)||5));}function stars(n){var w=Math.round((rating(n)/5)*1000)/10;return '<span class="tst-stars-base">★★★★★</span><span class="tst-stars-fill" style="width:'+w+'%;">★★★★★</span>';}function calendar(){return '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="10" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M5 2v3M11 2v3M3 6.5h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';}function cardHtml(c,url){var initials=c.initials||String(c.name||"ST").slice(0,2).toUpperCase(),date=c.dateLabel||c.course||"",href=(c.url||url||"#");return '<a class="${id}-card" href="'+esc(href)+'" target="_blank" rel="nofollow noopener"><div class="${id}-stars" aria-label="'+esc(rating(c.rating))+' out of 5 stars">'+stars(c.rating)+'</div>'+(c.title?'<h3 class="${id}-card-title">'+esc(c.title)+'</h3>':'')+'<p class="${id}-quote">'+esc(c.quote||"")+'</p><div class="${id}-person"><div class="${id}-avatar">'+esc(initials)+'</div><div><div class="${id}-name">'+esc(c.name||"")+'</div><div class="${id}-date">'+calendar()+esc(date)+'</div></div></div></a>';}function setText(sel,value){var el=root.querySelector(sel);if(el)el.textContent=value||"";}function applyData(data){if(!data||!track)return;var nextCards=Array.isArray(data.cards)?data.cards.filter(function(c){return c&&(c.quote||c.name||c.title||c.dateLabel||c.course);}):[];var url=(data.url||"#").trim()||"#";if(data.gradientStart&&data.gradientEnd)root.style.background="linear-gradient(135deg,"+data.gradientStart+","+data.gradientEnd+")";setText(".${id}-eyebrow",data.eyebrow);var title=root.querySelector(".${id}-title");if(title)title.innerHTML=esc(data.titlePre||"")+(data.titleAccent?' <em>'+esc(data.titleAccent)+'</em>':"");setText(".${id}-sub",data.subtitle);if(nextCards.length){track.innerHTML=nextCards.map(function(c){return cardHtml(c,url);}).join("");idx=0;render();restart();}}root.querySelectorAll("[data-dir]").forEach(function(btn){btn.addEventListener("click",function(){move(Number(btn.getAttribute("data-dir"))||1);restart();});});root.addEventListener("mouseenter",function(){clearInterval(timer);});root.addEventListener("mouseleave",restart);window.addEventListener("resize",function(){render();restart();});render();restart();if(CID){fetch(API+"?t="+Date.now()).then(function(r){if(!r.ok)throw new Error("VLS Testimonials API returned "+r.status);return r.json();}).then(function(data){var cmp=(data.components||[]).find(function(x){return x.id===CID;});if(cmp&&cmp.data)applyData(cmp.data);}).catch(function(e){console.error("VLS Testimonials ["+CID+"]:",e.message||e);});}})();<\/script>`);
+  L.push(`<script type="text/javascript">(function(){var root=document.getElementById(${JSON.stringify(id)});if(!root)return;var track=root.querySelector(".${id}-track"),dots=root.querySelector(".${id}-dots"),idx=0,timer=null,delay=${interval},CID=${JSON.stringify(componentId)},API="https://api.cms.vls-online.com/api/publish-testimonials-components";function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}function cleanHtml(s){return String(s==null?"":s).replace(/<script[\\s\\S]*?<\\/script>/gi,"").replace(/\\son\\w+=(["']).*?\\1/gi,"").replace(/\\s(?:href|src)=(["'])javascript:[\\s\\S]*?\\1/gi,"");}function plain(s){var el=document.createElement("div");el.innerHTML=String(s||"");return (el.textContent||el.innerText||"").replace(/\\s+/g," ").trim();}function quoteHtml(s){var text=plain(s),words=text.split(/\\s+/).filter(Boolean),out=words.slice(0,50).join(" ");if(out.length>250)out=out.slice(0,250).replace(/\\s+\\S*$/,"").trim();if(out.length<text.length)return esc(out)+"... "+'<span class="${id}-readmore">Read More on Trustpilot</span>';return cleanHtml(s);}function loc(){return '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 14s4.5-4 4.5-8A4.5 4.5 0 0 0 3.5 6c0 4 4.5 8 4.5 8Z" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="6" r="1.5" stroke="currentColor" stroke-width="1.4"/></svg>';}function cards(){return [].slice.call(root.querySelectorAll(".${id}-card"));}function perView(){if(window.matchMedia("(max-width:640px)").matches)return 1;if(window.matchMedia("(max-width:900px)").matches)return 2;return 3;}function maxIdx(){return Math.max(0,cards().length-perView());}function render(){var list=cards();idx=Math.max(0,Math.min(idx,maxIdx()));if(list[0]){var left=list[idx].offsetLeft-list[0].offsetLeft;track.style.transform="translateX("+(-left)+"px)";}var pages=maxIdx()+1;dots.innerHTML="";for(var i=0;i<pages;i++){var dot=document.createElement("span");dot.className="${id}-dot"+(i===idx?" is-active":"");dot.addEventListener("click",(function(n){return function(){idx=n;render();restart();};})(i));dots.appendChild(dot);}}function move(n){idx=maxIdx()?((idx+n+maxIdx()+1)%(maxIdx()+1)):0;render();}function restart(){clearInterval(timer);if(cards().length>perView())timer=setInterval(function(){move(1);},delay);}function rating(n){return Math.max(0,Math.min(5,Number(n)||5));}function stars(n){var w=Math.round((rating(n)/5)*1000)/10;return '<span class="tst-stars-base">★★★★★</span><span class="tst-stars-fill" style="width:'+w+'%;">★★★★★</span>';}function calendar(){return '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="10" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M5 2v3M11 2v3M3 6.5h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';}function cardHtml(c,url){var initials=c.initials||String(c.name||"ST").slice(0,2).toUpperCase(),date=c.dateLabel||c.course||"",href=(c.url||url||"#"),country=String(c.country||"").toUpperCase();return '<a class="${id}-card" href="'+esc(href)+'" target="_blank" rel="nofollow noopener"><div class="${id}-stars" aria-label="'+esc(rating(c.rating))+' out of 5 stars">'+stars(c.rating)+'</div>'+(c.title?'<h3 class="${id}-card-title">'+esc(c.title)+'</h3>':'')+'<div class="${id}-quote">'+quoteHtml(c.quote||"")+'</div><div class="${id}-person"><div class="${id}-person-main"><div class="${id}-avatar">'+esc(initials)+'</div><div><div class="${id}-name">'+esc(c.name||"")+'</div><div class="${id}-date">'+calendar()+esc(date)+'</div></div></div>'+(country?'<div class="${id}-country">'+loc()+esc(country)+'</div>':'')+'</div></a>';}function setText(sel,value){var el=root.querySelector(sel);if(el)el.textContent=value||"";}function applyData(data){if(!data||!track)return;var nextCards=Array.isArray(data.cards)?data.cards.filter(function(c){return c&&(c.quote||c.name||c.title||c.dateLabel||c.course||c.country);}):[];var url=(data.url||"#").trim()||"#";if(data.gradientStart&&data.gradientEnd)root.style.background="linear-gradient(135deg,"+data.gradientStart+","+data.gradientEnd+")";setText(".${id}-eyebrow",data.eyebrow);var title=root.querySelector(".${id}-title");if(title)title.innerHTML=esc(data.titlePre||"")+(data.titleAccent?' <em>'+esc(data.titleAccent)+'</em>':"");setText(".${id}-sub",data.subtitle);if(nextCards.length){track.innerHTML=nextCards.map(function(c){return cardHtml(c,url);}).join("");idx=0;render();restart();}}root.querySelectorAll("[data-dir]").forEach(function(btn){btn.addEventListener("click",function(){move(Number(btn.getAttribute("data-dir"))||1);restart();});});root.addEventListener("mouseenter",function(){clearInterval(timer);});root.addEventListener("mouseleave",restart);window.addEventListener("resize",function(){render();restart();});render();restart();if(CID){fetch(API+"?t="+Date.now()).then(function(r){if(!r.ok)throw new Error("VLS Testimonials API returned "+r.status);return r.json();}).then(function(data){var cmp=(data.components||[]).find(function(x){return x.id===CID;});if(cmp&&cmp.data)applyData(cmp.data);}).catch(function(e){console.error("VLS Testimonials ["+CID+"]:",e.message||e);});}})();<\/script>`);
 
   return L.join('\n');
 }

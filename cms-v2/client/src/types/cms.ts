@@ -922,6 +922,7 @@ export interface TestimonialCard {
   title: string;
   dateLabel: string;
   url?: string;
+  country?: string;
   quote: string;
   rating: number;
 }
