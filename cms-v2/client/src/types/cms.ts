@@ -921,6 +921,7 @@ export interface TestimonialCard {
   name: string;
   title: string;
   dateLabel: string;
+  url?: string;
   quote: string;
   rating: number;
 }

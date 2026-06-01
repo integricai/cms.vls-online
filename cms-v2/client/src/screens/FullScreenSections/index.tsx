@@ -169,9 +169,9 @@ function makeTestimonials(): TestimonialsState {
     cardBg: '#ffffff', cardBorder: '#dfe8f6', cardRadius: 14, cardShadow: '0 10px 26px rgba(28,45,85,.08)',
     starColor: '#f6ad25', quoteMarkColor: '#eaf2ff', avatarBg: '#e8f0ff', avatarColor: '#2c67d8',
     cards: [
-      { initials: 'MR', name: 'Maria Rossi', title: 'Kept me on track when apps failed', dateLabel: 'December 2025', rating: 4.8, quote: 'I tried self-study apps before and stalled. The structure here - videos, quizzes, then kit questions - kept momentum going and I passed AA on the first attempt.' },
-      { initials: 'JT', name: 'James Thompson', title: 'Concise, exam-focused notes', dateLabel: 'March 2026', rating: 4.9, quote: 'Syed explains the tricky topics in a way that actually sticks. The notes are concise and exam-focused - no wading through 400 pages of theory.' },
-      { initials: 'FA', name: 'Fatima Ahmed', title: 'Worth every penny', dateLabel: 'February 2026', rating: 5, quote: 'Booked the complete package and it paid for itself. The mock plus the pre-exam live session calmed my nerves and I walked in knowing exactly what to expect.' },
+      { initials: 'MR', name: 'Maria Rossi', title: 'Kept me on track when apps failed', dateLabel: 'December 2025', url: '', rating: 4.8, quote: 'I tried self-study apps before and stalled. The structure here - videos, quizzes, then kit questions - kept momentum going and I passed AA on the first attempt.' },
+      { initials: 'JT', name: 'James Thompson', title: 'Concise, exam-focused notes', dateLabel: 'March 2026', url: '', rating: 4.9, quote: 'Syed explains the tricky topics in a way that actually sticks. The notes are concise and exam-focused - no wading through 400 pages of theory.' },
+      { initials: 'FA', name: 'Fatima Ahmed', title: 'Worth every penny', dateLabel: 'February 2026', url: '', rating: 5, quote: 'Booked the complete package and it paid for itself. The mock plus the pre-exam live session calmed my nerves and I walked in knowing exactly what to expect.' },
     ],
   };
 }
@@ -365,6 +365,7 @@ function normTestimonials(raw: any): TestimonialsState {
       name: card.name || '',
       title: card.title || '',
       dateLabel: card.dateLabel || card.course || '',
+      url: card.url || '',
       quote: card.quote || '',
       rating: normalizeNum(card.rating, 5),
     })) : [],
@@ -1846,7 +1847,7 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
           <Field label="Max width"><input type="number" className="input" min={720} max={1800} value={state.maxWidth} onChange={e => upd({ maxWidth: Number(e.target.value) })} /></Field>
           <Field label="Card gap"><input type="number" className="input" min={8} max={48} value={state.cardGap} onChange={e => upd({ cardGap: Number(e.target.value) })} /></Field>
           <Field label="Auto-scroll interval (ms)"><input type="number" className="input" min={1000} step={250} value={state.autoScrollMs} onChange={e => upd({ autoScrollMs: Number(e.target.value) })} /></Field>
-          <Field label="Click URL"><input className="input" value={state.url} placeholder="https://..." onChange={e => upd({ url: e.target.value })} /></Field>
+          <Field label="Default card URL"><input className="input" value={state.url} placeholder="Used when a card URL is empty" onChange={e => upd({ url: e.target.value })} /></Field>
         </div>
 
         <p className="section-label mt-3">Header</p>
@@ -1908,11 +1909,12 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
               <Field label="Name"><input className="input" value={card.name} onChange={e => updCard(i, { name: e.target.value })} /></Field>
               <Field label="Month and year"><input className="input" value={card.dateLabel} placeholder="March 2026" onChange={e => updCard(i, { dateLabel: e.target.value })} /></Field>
             </div>
+            <Field label="CTA URL"><input className="input" value={card.url || ''} placeholder="https://..." onChange={e => updCard(i, { url: e.target.value })} /></Field>
             <Field label="Title"><input className="input" value={card.title} onChange={e => updCard(i, { title: e.target.value })} /></Field>
             <Field label="Quote"><textarea className="input min-h-[92px]" value={card.quote} onChange={e => updCard(i, { quote: e.target.value })} /></Field>
           </div>
         ))}
-        <button onClick={() => upd({ cards: [...state.cards, { initials: '', name: '', title: '', dateLabel: '', rating: 5, quote: '' }] })} className="btn-ghost mb-4 w-full text-xs">+ Add testimonial</button>
+        <button onClick={() => upd({ cards: [...state.cards, { initials: '', name: '', title: '', dateLabel: '', url: '', rating: 5, quote: '' }] })} className="btn-ghost mb-4 w-full text-xs">+ Add testimonial</button>
       </div>
     </div>
   );
