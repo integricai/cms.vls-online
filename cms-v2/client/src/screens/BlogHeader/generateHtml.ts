@@ -4,6 +4,7 @@ import { generateHeaderHtml } from '../Header/generateHtml';
 export function generateBlogHeaderHtml(cfg: HeaderConfig): string {
   const base = generateHeaderHtml({ ...cfg, useZenMenu: true })
     .replace('.block.parrot.zenstyle.headers{display:none!important;}\n', '')
+    .replace('.block.parrot.zenstyle.headers[data-zen="zen_header_dynamic"]{display:none!important;}\n', '')
     .replace('<script type="module" data-cfasync="false">', '<script data-cfasync="false">')
     .replace(/class="(vlsh[^"]*-wrap)"/, 'class="$1 vls-blog-header-generated"');
   const cleanup = `<style>
@@ -65,7 +66,7 @@ function hideNode(el){
   el.style.setProperty('overflow','hidden','important');
 }
 function hideOldZenlerHeader(){
-  document.querySelectorAll('#header5,[data-zen="zen_header_dynamic"],.block.parrot.zenstyle.headers').forEach(function(el){
+  document.querySelectorAll('#header5,[data-zen="zen_header_dynamic"],.block.parrot.zenstyle.headers[data-zen="zen_header_dynamic"]').forEach(function(el){
     if(el.querySelector('.vls-blog-header-generated'))return;
     hideNode(el);
   });

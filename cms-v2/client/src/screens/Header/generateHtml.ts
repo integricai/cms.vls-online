@@ -86,11 +86,11 @@ export function generateHeaderHtml(cfg: HeaderConfig): string {
   }).join('');
 
   const css = `<style>
-.block.parrot.zenstyle.headers{display:none!important;}
-.zl-navbar-brand,.navbar-header{display:none!important;}
-.navbar-collapse{display:none!important;}
-.zl-navbar{background:transparent!important;min-height:0!important;padding:0!important;border:none!important;box-shadow:none!important;margin:0!important;width:100%!important;}
-.zl-navbar>.container{max-width:${containerW}px!important;margin:0 auto!important;padding:0 ${padR}px 0 ${padL}px!important;box-sizing:border-box!important;}
+.block.parrot.zenstyle.headers[data-zen="zen_header_dynamic"]{display:none!important;}
+.block.parrot.zenstyle.headers[data-zen="zen_header_dynamic"] .zl-navbar-brand,.block.parrot.zenstyle.headers[data-zen="zen_header_dynamic"] .navbar-header{display:none!important;}
+.block.parrot.zenstyle.headers[data-zen="zen_header_dynamic"] .navbar-collapse{display:none!important;}
+.block.parrot.zenstyle.headers[data-zen="zen_header_dynamic"] .zl-navbar{background:transparent!important;min-height:0!important;padding:0!important;border:none!important;box-shadow:none!important;margin:0!important;width:100%!important;}
+.block.parrot.zenstyle.headers[data-zen="zen_header_dynamic"] .zl-navbar>.container{max-width:${containerW}px!important;margin:0 auto!important;padding:0 ${padR}px 0 ${padL}px!important;box-sizing:border-box!important;}
 .navbar-buttons.jqLoginLogout,.navbar-buttons.navbar-mob{position:static!important;float:none!important;display:flex!important;align-items:center!important;background:transparent!important;}
 .navbar-buttons.jqLoginLogout .btn,.navbar-buttons.jqLoginLogout .dropdown-toggle,.navbar-buttons.jqLoginLogout [role="button"]{background:transparent!important;border:none!important;box-shadow:none!important;color:${menuTextColor}!important;padding:0!important;}
 .navbar-buttons.jqLoginLogout .caret,.navbar-buttons.jqLoginLogout .fa,.navbar-buttons.jqLoginLogout [class*="icon"]{color:${menuTextColor}!important;}
