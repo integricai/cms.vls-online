@@ -3,6 +3,7 @@ dotenv.config({ path: '.env.local' });
 
 import express from 'express';
 import cors from 'cors';
+import { authGuard, requireRole } from './middleware/authGuard';
 import authRouter from './routes/auth';
 import snippetsRouter from './routes/snippets';
 import contentRouter from './routes/content';
@@ -17,7 +18,7 @@ import paymentsRouter, { stripeWebhookHandler } from './routes/payments';
 import activityRouter from './routes/activity';
 import trustpilotRouter from './routes/trustpilot';
 import { sendErrorAlert } from './utils/errorAlert';
-import { getContent } from './models/content';
+import { getContent, upsertContent } from './models/content';
 import { listBlogPosts } from './models/blog';
 import { getBlogAsset } from './models/blogAsset';
 import { blogTopicSlug, renderBlogArticle, renderBlogLanding } from './services/blogRender';
@@ -58,6 +59,37 @@ app.get('/api/publish-banner', async (_req, res, next) => {
     const row = await getContent('vls-banners');
     const data = row?.data && typeof row.data === 'object' ? row.data as { banners?: unknown[] } : {};
     return res.json({ banners: Array.isArray(data.banners) ? data.banners : [] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/api/publish-header', (_req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.status(204).end();
+});
+
+app.get('/api/publish-header', async (_req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const row = await getContent('vls-header-config');
+    const data = row?.data && typeof row.data === 'object' ? row.data as { config?: unknown } : {};
+    return res.json({ config: data.config ?? null });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post('/api/publish-header', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const config = req.body?.config ?? null;
+    const row = await upsertContent('vls-header-config', { config }, req.user!.userId);
+    return res.json({ ok: true, data: row, config });
   } catch (err) {
     next(err);
   }

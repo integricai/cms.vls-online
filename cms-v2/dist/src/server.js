@@ -40,6 +40,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config({ path: '.env.local' });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+const authGuard_1 = require("./middleware/authGuard");
 const auth_1 = __importDefault(require("./routes/auth"));
 const snippets_1 = __importDefault(require("./routes/snippets"));
 const content_1 = __importDefault(require("./routes/content"));
@@ -86,6 +87,36 @@ app.get('/api/publish-banner', async (_req, res, next) => {
         const row = await (0, content_2.getContent)('vls-banners');
         const data = row?.data && typeof row.data === 'object' ? row.data : {};
         return res.json({ banners: Array.isArray(data.banners) ? data.banners : [] });
+    }
+    catch (err) {
+        next(err);
+    }
+});
+app.options('/api/publish-header', (_req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.status(204).end();
+});
+app.get('/api/publish-header', async (_req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+        const row = await (0, content_2.getContent)('vls-header-config');
+        const data = row?.data && typeof row.data === 'object' ? row.data : {};
+        return res.json({ config: data.config ?? null });
+    }
+    catch (err) {
+        next(err);
+    }
+});
+app.post('/api/publish-header', authGuard_1.authGuard, (0, authGuard_1.requireRole)('admin', 'editor'), async (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+        const config = req.body?.config ?? null;
+        const row = await (0, content_2.upsertContent)('vls-header-config', { config }, req.user.userId);
+        return res.json({ ok: true, data: row, config });
     }
     catch (err) {
         next(err);
