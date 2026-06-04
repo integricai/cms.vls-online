@@ -9,6 +9,7 @@ export default function BlogHeader() {
       contentKey="vls-blog-header-config"
       generateHtml={generateBlogHeaderHtml}
       commentName="Blog Header"
+      publicPublishPath={null}
     />
   );
 }

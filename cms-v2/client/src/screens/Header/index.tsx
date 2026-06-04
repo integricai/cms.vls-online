@@ -104,6 +104,7 @@ interface HeaderEditorProps {
   contentKey?: string;
   generateHtml?: (cfg: HeaderConfig) => string;
   commentName?: string;
+  publicPublishPath?: string | null;
 }
 
 export function HeaderEditor({
@@ -112,6 +113,7 @@ export function HeaderEditor({
   contentKey = 'vls-header-config',
   generateHtml = generateHeaderHtml,
   commentName = 'Header',
+  publicPublishPath = '/publish-header',
 }: HeaderEditorProps) {
   const [cfg, setCfg]         = useState<HeaderConfig>(makeDefault());
   const [loading, setLoading] = useState(true);
@@ -184,6 +186,9 @@ export function HeaderEditor({
     setSaving(true);
     try {
       await api.put(`/content/${contentKey}`, { config: cfg });
+      if (publicPublishPath) {
+        await api.post(publicPublishPath, { config: cfg });
+      }
       setSaved(true);
     } finally {
       setSaving(false);

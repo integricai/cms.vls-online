@@ -2,7 +2,7 @@ import type { HeaderConfig } from '../../types/cms';
 import { generateHeaderHtml } from '../Header/generateHtml';
 
 export function generateBlogHeaderHtml(cfg: HeaderConfig): string {
-  const base = generateHeaderHtml({ ...cfg, useZenMenu: true })
+  const base = generateHeaderHtml({ ...cfg, useZenMenu: true, liveApiUrl: false } as HeaderConfig & { liveApiUrl: false })
     .replace('.block.parrot.zenstyle.headers{display:none!important;}\n', '')
     .replace('.block.parrot.zenstyle.headers[data-zen="zen_header_dynamic"]{display:none!important;}\n', '')
     .replace('<script type="module" data-cfasync="false">', '<script data-cfasync="false">')

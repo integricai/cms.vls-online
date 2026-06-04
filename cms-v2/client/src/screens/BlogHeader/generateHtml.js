@@ -1,6 +1,6 @@
 import { generateHeaderHtml } from '../Header/generateHtml';
 export function generateBlogHeaderHtml(cfg) {
-    const base = generateHeaderHtml({ ...cfg, useZenMenu: true })
+    const base = generateHeaderHtml({ ...cfg, useZenMenu: true, liveApiUrl: false })
         .replace('.block.parrot.zenstyle.headers{display:none!important;}\n', '')
         .replace('<script type="module" data-cfasync="false">', '<script data-cfasync="false">')
         .replace(/class="(vlsh[^"]*-wrap)"/, 'class="$1 vls-blog-header-generated"');
