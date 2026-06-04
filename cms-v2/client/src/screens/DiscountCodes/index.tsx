@@ -285,25 +285,53 @@ export default function DiscountCodesScreen() {
   return (
     <div className="flex h-full flex-col overflow-hidden bg-slate-50">
       <div className="shrink-0 border-b border-slate-200 bg-white px-5 py-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-[280px] flex-1">
             <h1 className="text-base font-bold text-slate-900">Discount Codes</h1>
             <p className="mt-0.5 text-xs text-slate-400">
               Manage book-specific discount codes from the books database.
             </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                onClick={() => setViewMode('all')}
+                className={`rounded px-3 py-2 text-xs font-semibold ${
+                  viewMode === 'all'
+                    ? 'bg-brand text-white'
+                    : 'border border-slate-200 bg-white text-slate-600 hover:border-brand/40 hover:text-brand'
+                }`}
+              >
+                View all records
+              </button>
+              <button
+                onClick={() => setViewMode('single')}
+                className={`rounded px-3 py-2 text-xs font-semibold ${
+                  viewMode === 'single'
+                    ? 'bg-brand text-white'
+                    : 'border border-slate-200 bg-white text-slate-600 hover:border-brand/40 hover:text-brand'
+                }`}
+              >
+                Edit selected book
+              </button>
+              <button onClick={downloadCsv} disabled={books.length === 0} className="btn-ghost shrink-0 text-xs">
+                Download CSV
+              </button>
+              <label className={`btn-ghost shrink-0 cursor-pointer text-xs ${importing ? 'opacity-60' : ''}`}>
+                {importing ? 'Importing...' : 'Upload CSV'}
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  disabled={importing}
+                  onChange={event => {
+                    const file = event.target.files?.[0];
+                    if (file) importCsv(file);
+                    event.currentTarget.value = '';
+                  }}
+                />
+              </label>
+            </div>
           </div>
           <div className="flex items-end gap-2">
-            <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-              {(['single', 'all'] as const).map(mode => (
-                <button
-                  key={mode}
-                  onClick={() => setViewMode(mode)}
-                  className={`rounded px-3 py-2 text-xs font-semibold ${viewMode === mode ? 'bg-white text-brand shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-                >
-                  {mode === 'single' ? 'Selected book' : 'All books'}
-                </button>
-              ))}
-            </div>
             <label className="block">
               <span className="mb-1 block text-xs font-semibold uppercase tracking-widest text-slate-400">Book</span>
               <select
@@ -315,27 +343,6 @@ export default function DiscountCodesScreen() {
                 {books.map(book => <option key={book.id} value={book.id}>{book.title}</option>)}
               </select>
             </label>
-            {viewMode === 'all' && (
-              <>
-                <button onClick={downloadCsv} disabled={books.length === 0} className="btn-ghost shrink-0 text-xs">
-                  Download CSV
-                </button>
-                <label className={`btn-ghost shrink-0 cursor-pointer text-xs ${importing ? 'opacity-60' : ''}`}>
-                  {importing ? 'Importing...' : 'Upload CSV'}
-                  <input
-                    type="file"
-                    accept=".csv,text/csv"
-                    className="hidden"
-                    disabled={importing}
-                    onChange={event => {
-                      const file = event.target.files?.[0];
-                      if (file) importCsv(file);
-                      event.currentTarget.value = '';
-                    }}
-                  />
-                </label>
-              </>
-            )}
             {viewMode === 'single' && <button onClick={addRow} disabled={!selectedBookId} className="btn-ghost shrink-0 text-xs">
               + Add row
             </button>}
