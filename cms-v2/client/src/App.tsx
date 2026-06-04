@@ -37,6 +37,7 @@ import Events from './screens/Events';
 import Articles from './screens/Articles';
 import Blog from './screens/Blog';
 import BppBooks from './screens/BppBooks';
+import DiscountCodes from './screens/DiscountCodes';
 import BookAMeeting from './screens/BookAMeeting';
 import FullScreenSections from './screens/FullScreenSections';
 import SplitScreenSections from './screens/SplitScreenSections';
@@ -102,6 +103,7 @@ export default function App() {
           <Route path="/articles"              element={<Articles />} />
           <Route path="/blog"                  element={<Blog />} />
           <Route path="/bpp-books"             element={<BppBooks />} />
+          <Route path="/discount-codes"        element={<DiscountCodes />} />
           <Route path="/book-a-meeting"        element={<BookAMeeting />} />
           <Route path="/full-screen/:type"     element={<FullScreenSections />} />
           <Route path="/split-screen/:type"    element={<SplitScreenSections />} />

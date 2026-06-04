@@ -180,6 +180,20 @@ export interface BookSyncResult {
     books: BookRecord[];
     syncedAt: string;
 }
+export interface BookDiscountCode {
+    id: number;
+    bookId: number;
+    bookName?: string;
+    code: string;
+    insertDate: string;
+    issueDate: string | null;
+    customerEmail: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+export type BookDiscountCodeInput = Pick<BookDiscountCode, 'code' | 'insertDate' | 'issueDate' | 'customerEmail'> & {
+    id?: number;
+};
 export interface ApiSuccess<T = unknown> {
     ok: true;
     data: T;
