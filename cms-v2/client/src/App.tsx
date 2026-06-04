@@ -37,7 +37,6 @@ import Events from './screens/Events';
 import Articles from './screens/Articles';
 import Blog from './screens/Blog';
 import BookAMeeting from './screens/BookAMeeting';
-import Books from './screens/Books';
 import FullScreenSections from './screens/FullScreenSections';
 import SplitScreenSections from './screens/SplitScreenSections';
 import VerticalCards from './screens/VerticalCards';
@@ -101,7 +100,6 @@ export default function App() {
           <Route path="/events"                element={<Events />} />
           <Route path="/articles"              element={<Articles />} />
           <Route path="/blog"                  element={<Blog />} />
-          <Route path="/books"                 element={<Books />} />
           <Route path="/book-a-meeting"        element={<BookAMeeting />} />
           <Route path="/full-screen/:type"     element={<FullScreenSections />} />
           <Route path="/split-screen/:type"    element={<SplitScreenSections />} />

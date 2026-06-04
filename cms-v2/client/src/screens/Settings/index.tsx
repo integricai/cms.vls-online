@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import MenuManagement from '../MenuManagement';
 import UserManagement from '../UserManagement';
+import Books from '../Books';
 import type { CoursePriceRecord, ScrapedCoursePrice } from '../../../../shared/types';
 
-type Tab = 'menu' | 'courses' | 'coursePricing' | 'payments' | 'users';
+type Tab = 'menu' | 'courses' | 'coursePricing' | 'books' | 'payments' | 'users';
 
 type Course = {
   id: number;
@@ -676,6 +677,7 @@ const TAB_LABELS: Record<Tab, string> = {
   menu: 'Menu Settings',
   courses: 'Courses',
   coursePricing: 'Course Pricing',
+  books: 'Books',
   payments: 'Payments',
   users: 'Users',
 };
@@ -707,6 +709,7 @@ export default function Settings() {
         {tab === 'menu'     && <MenuManagement />}
         {tab === 'courses'  && <CoursesTab />}
         {tab === 'coursePricing' && <CoursePricingTab />}
+        {tab === 'books'    && <Books />}
         {tab === 'payments' && <PaymentsTab />}
         {tab === 'users'    && <UserManagement />}
       </div>
