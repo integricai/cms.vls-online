@@ -6,6 +6,7 @@ import { neon } from '@neondatabase/serverless';
 function rowToBook(row) {
   return {
     id: row.id,
+    sortOrder: row.sort_order ?? row.id,
     title: row.title,
     description: row.description,
     imageUrl: row.image_url,
@@ -40,7 +41,7 @@ export default async function handler(req, res) {
     const rows = await sql`
       SELECT *
       FROM books
-      ORDER BY title ASC
+      ORDER BY COALESCE(sort_order, 2147483647) ASC, title ASC, id ASC
     `;
     return res.status(200).json({ books: rows.map(rowToBook) });
   } catch (err) {

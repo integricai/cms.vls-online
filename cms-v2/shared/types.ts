@@ -187,6 +187,7 @@ export interface CoursePriceRecord {
 
 export interface BookRecord {
   id: number;
+  sortOrder: number;
   title: string;
   description: string;
   imageUrl: string;
@@ -201,7 +202,7 @@ export interface BookRecord {
   updatedAt: Date;
 }
 
-export type ScrapedBook = Omit<BookRecord, 'id' | 'lastSyncedAt' | 'createdAt' | 'updatedAt'>;
+export type ScrapedBook = Omit<BookRecord, 'id' | 'sortOrder' | 'lastSyncedAt' | 'createdAt' | 'updatedAt'>;
 
 export interface BookSyncResult {
   scraped: number;

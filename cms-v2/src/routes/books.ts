@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
-import { deleteBook, listBooks, updateBook, upsertScrapedBooks } from '../models/book';
+import { deleteBook, listBooks, reorderBooks, updateBook, upsertScrapedBooks } from '../models/book';
 import { scrapeBppBooks } from '../services/bookScraper';
 
 const router = Router();
@@ -32,6 +32,18 @@ router.post('/sync', requireRole('admin', 'editor'), async (_req: Request, res: 
     const message = err instanceof Error ? err.message : 'Book sync failed';
     console.error('[book-sync]', err);
     return res.status(502).json({ ok: false, error: message });
+  }
+});
+
+router.post('/reorder', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((id: unknown) => Number(id)) : [];
+    if (!ids.length || ids.some((id: number) => !Number.isInteger(id) || id <= 0)) {
+      return res.status(400).json({ ok: false, error: 'A valid ordered list of book ids is required' });
+    }
+    return res.json({ ok: true, data: await reorderBooks(ids) });
+  } catch (err) {
+    next(err);
   }
 });
 

@@ -5,6 +5,7 @@ let schemaReady: Promise<void> | null = null;
 
 interface DbRow {
   id: number;
+  sort_order: number | null;
   title: string;
   description: string;
   image_url: string;
@@ -33,13 +34,27 @@ async function ensureBookSchema(): Promise<void> {
         currency VARCHAR(8) NOT NULL DEFAULT 'GBP',
         stripe_url TEXT NOT NULL DEFAULT '',
         source_url TEXT NOT NULL DEFAULT 'https://vls-online.com/bppbooks',
+        sort_order INTEGER,
         last_synced_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `;
+    await sql`ALTER TABLE books ADD COLUMN IF NOT EXISTS sort_order INTEGER`;
+    await sql`
+      WITH ordered AS (
+        SELECT id, ROW_NUMBER() OVER (ORDER BY COALESCE(sort_order, 2147483647), title ASC, id ASC) AS next_order
+        FROM books
+      )
+      UPDATE books
+      SET sort_order = ordered.next_order
+      FROM ordered
+      WHERE books.id = ordered.id
+        AND books.sort_order IS NULL
+    `;
     await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_books_title_stripe_url_unique ON books(title, stripe_url)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_books_title ON books(title)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_books_sort_order ON books(sort_order ASC, title ASC)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_books_updated_at ON books(updated_at DESC)`;
   })();
   return schemaReady;
@@ -48,6 +63,7 @@ async function ensureBookSchema(): Promise<void> {
 function rowToBook(row: DbRow): BookRecord {
   return {
     id: row.id,
+    sortOrder: row.sort_order ?? row.id,
     title: row.title,
     description: row.description,
     imageUrl: row.image_url,
@@ -68,7 +84,7 @@ export async function listBooks(): Promise<BookRecord[]> {
   const rows = await sql`
     SELECT *
     FROM books
-    ORDER BY title ASC
+    ORDER BY COALESCE(sort_order, 2147483647) ASC, title ASC, id ASC
   `;
   return (rows as DbRow[]).map(rowToBook);
 }
@@ -88,10 +104,11 @@ export async function upsertScrapedBooks(books: ScrapedBook[]): Promise<BookReco
   for (const book of books) {
     await sql`
       INSERT INTO books
-        (title, description, image_url, image_alt_text, price, discounted_price, currency, stripe_url, source_url, last_synced_at)
+        (title, description, image_url, image_alt_text, price, discounted_price, currency, stripe_url, source_url, sort_order, last_synced_at)
       VALUES
         (${book.title}, ${book.description}, ${book.imageUrl}, ${book.imageAltText}, ${book.price},
-         ${book.discountedPrice}, ${book.currency}, ${book.stripeUrl}, ${book.sourceUrl}, NOW())
+         ${book.discountedPrice}, ${book.currency}, ${book.stripeUrl}, ${book.sourceUrl},
+         COALESCE((SELECT MAX(sort_order) + 1 FROM books), 1), NOW())
       ON CONFLICT (title, stripe_url) DO UPDATE
         SET description = EXCLUDED.description,
             image_url = EXCLUDED.image_url,
@@ -104,6 +121,36 @@ export async function upsertScrapedBooks(books: ScrapedBook[]): Promise<BookReco
             updated_at = NOW()
     `;
   }
+
+  return listBooks();
+}
+
+export async function reorderBooks(ids: number[]): Promise<BookRecord[]> {
+  await ensureBookSchema();
+  const uniqueIds = Array.from(new Set(ids.filter(id => Number.isInteger(id) && id > 0)));
+  if (!uniqueIds.length) return listBooks();
+
+  for (let index = 0; index < uniqueIds.length; index += 1) {
+    await sql`
+      UPDATE books
+      SET sort_order = ${index + 1},
+          updated_at = NOW()
+      WHERE id = ${uniqueIds[index]}
+    `;
+  }
+
+  await sql`
+    WITH tail AS (
+      SELECT id, ROW_NUMBER() OVER (ORDER BY COALESCE(sort_order, 2147483647), title ASC, id ASC) AS rn
+      FROM books
+      WHERE NOT (id = ANY(${uniqueIds}::int[]))
+    )
+    UPDATE books
+    SET sort_order = ${uniqueIds.length} + tail.rn,
+        updated_at = NOW()
+    FROM tail
+    WHERE books.id = tail.id
+  `;
 
   return listBooks();
 }

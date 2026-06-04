@@ -57,6 +57,9 @@ export default function BooksScreen() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [orderDirty, setOrderDirty] = useState(false);
+  const [draggedId, setDraggedId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [syncResult, setSyncResult] = useState<BookSyncResult | null>(null);
 
@@ -68,6 +71,7 @@ export default function BooksScreen() {
     try {
       const data = await api.get<BookRecord[]>('/books');
       setBooks(data);
+      setOrderDirty(false);
       if (data.length && selectedId == null) {
         setSelectedId(data[0].id);
         setForm(bookToForm(data[0]));
@@ -95,6 +99,7 @@ export default function BooksScreen() {
       const result = await api.post<BookSyncResult>('/books/sync', {});
       setSyncResult(result);
       setBooks(result.books);
+      setOrderDirty(false);
       if (result.books.length) {
         const current = selectedId ? result.books.find(book => book.id === selectedId) : null;
         const next = current ?? result.books[0];
@@ -151,6 +156,34 @@ export default function BooksScreen() {
     }
   }
 
+  function moveBook(sourceId: number, targetId: number) {
+    if (sourceId === targetId) return;
+    setBooks(prev => {
+      const from = prev.findIndex(book => book.id === sourceId);
+      const to = prev.findIndex(book => book.id === targetId);
+      if (from < 0 || to < 0) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+    setOrderDirty(true);
+  }
+
+  async function saveOrder() {
+    setSavingOrder(true);
+    setError('');
+    try {
+      const updated = await api.post<BookRecord[]>('/books/reorder', { ids: books.map(book => book.id) });
+      setBooks(updated);
+      setOrderDirty(false);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not save book order.');
+    } finally {
+      setSavingOrder(false);
+    }
+  }
+
   if (loading) {
     return <div className="flex h-full items-center justify-center text-sm text-slate-400">Loading…</div>;
   }
@@ -181,25 +214,62 @@ export default function BooksScreen() {
       <div className="flex flex-1 overflow-hidden">
         <div className="flex w-[430px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white">
           <div className="shrink-0 border-b border-slate-100 px-5 py-3">
-            <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-              Books ({books.length})
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                Books ({books.length})
+              </span>
+              <button
+                onClick={saveOrder}
+                disabled={!orderDirty || savingOrder}
+                className={`ml-auto rounded px-2 py-1 text-xs font-semibold ${
+                  orderDirty
+                    ? 'bg-brand text-white hover:bg-brand/90'
+                    : 'cursor-default bg-slate-100 text-slate-400'
+                }`}
+              >
+                {savingOrder ? 'Saving...' : orderDirty ? 'Save order' : 'Order saved'}
+              </button>
+            </div>
+            <p className="mt-1 text-[11px] text-slate-400">Drag rows to arrange the live BPP Books component order.</p>
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-3">
             {books.length === 0 ? (
               <p className="py-6 text-center text-sm text-slate-400">No books saved yet. Click Sync Books to import them.</p>
             ) : (
               <div className="space-y-2">
-                {books.map(book => (
-                  <button
+                {books.map((book, index) => (
+                  <div
                     key={book.id}
+                    draggable
+                    onDragStart={event => {
+                      setDraggedId(book.id);
+                      event.dataTransfer.effectAllowed = 'move';
+                      event.dataTransfer.setData('text/plain', String(book.id));
+                    }}
+                    onDragOver={event => {
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = 'move';
+                    }}
+                    onDrop={event => {
+                      event.preventDefault();
+                      const sourceId = Number(event.dataTransfer.getData('text/plain')) || draggedId;
+                      if (sourceId) moveBook(sourceId, book.id);
+                      setDraggedId(null);
+                    }}
+                    onDragEnd={() => setDraggedId(null)}
                     onClick={() => selectBook(book)}
-                    className={`grid w-full grid-cols-[56px_1fr] gap-3 rounded-lg border p-2 text-left transition ${
+                    className={`grid w-full cursor-grab grid-cols-[24px_56px_1fr] gap-3 rounded-lg border p-2 text-left transition active:cursor-grabbing ${
                       book.id === selectedId
                         ? 'border-brand bg-brand text-white'
+                        : draggedId === book.id
+                          ? 'border-brand/40 bg-blue-50 text-slate-700 opacity-70'
                         : 'border-slate-200 bg-white text-slate-700 hover:border-brand/40'
                     }`}
                   >
+                    <div className={`flex h-16 flex-col items-center justify-center rounded text-xs ${book.id === selectedId ? 'text-white/75' : 'text-slate-400'}`}>
+                      <span className="leading-none">≡</span>
+                      <span className="mt-1 text-[10px] font-semibold">{index + 1}</span>
+                    </div>
                     <div className="h-16 w-14 overflow-hidden rounded border border-white/30 bg-slate-100">
                       {book.imageUrl ? <img src={book.imageUrl} alt="" className="h-full w-full object-cover" /> : null}
                     </div>
@@ -212,7 +282,7 @@ export default function BooksScreen() {
                         {money(book)}
                       </p>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
