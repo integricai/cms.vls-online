@@ -700,6 +700,36 @@ export interface BookMeetingState {
 export interface BookMeetingComponent { id: string; name: string; data: BookMeetingState; }
 export interface BookMeetingContent { components: BookMeetingComponent[]; }
 
+// ── BPP Books Page Template ──────────────────────────────────────────────────
+export interface BppBooksState {
+  bg: string;
+  padTop: number;
+  padBot: number;
+  padLeft: number;
+  padRight: number;
+  maxWidth: number;
+  gap: number;
+  cardBg: string;
+  cardBorder: string;
+  topTintA: string;
+  topTintB: string;
+  imageBg: string;
+  filterActiveBg: string;
+  filterActiveText: string;
+  filterBorder: string;
+  searchPlaceholder: string;
+  ctaText: string;
+  badgeText: string;
+  filterStyle: TextValue;
+  metaStyle: TextValue;
+  titleStyle: TextValue;
+  descStyle: TextValue;
+  priceStyle: TextValue;
+  ctaStyle: TextValue;
+}
+export interface BppBooksComponent { id: string; name: string; data: BppBooksState; }
+export interface BppBooksContent { components: BppBooksComponent[]; }
+
 // ── Team ──────────────────────────────────────────────────────────
 export interface TeamFeature { value: string; label: string; }
 export interface TeamCard { id: string; eyebrow: TextValue; name: TextValue; designation: TextValue; imgUrl: string; features: TeamFeature[]; paras: string[]; tags: string[]; }

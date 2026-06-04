@@ -22,6 +22,7 @@ import { listBlogPosts } from './models/blog';
 import { getBlogAsset } from './models/blogAsset';
 import { blogTopicSlug, renderBlogArticle, renderBlogLanding } from './services/blogRender';
 import { listCoursePrices } from './models/coursePrice';
+import { listBooks } from './models/book';
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
@@ -73,6 +74,22 @@ app.get('/api/publish-course-prices', async (_req, res, next) => {
   res.setHeader('Cache-Control', 'no-store');
   try {
     return res.json({ prices: await listCoursePrices() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/api/publish-bpp-books', (_req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.status(204).end();
+});
+
+app.get('/api/publish-bpp-books', async (_req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    return res.json({ books: await listBooks() });
   } catch (err) {
     next(err);
   }

@@ -214,6 +214,13 @@ export const DEFAULTS = {
   bookMeetingTitle:  { size: 18, color: '#0f172a', weight: '700', letterSpacing: 0 },
   bookMeetingSub:    { size: 12, color: '#6b7280', weight: '400', letterSpacing: 0 },
   bookTag:           { size: 11, color: '#1d4ed8', weight: '700', letterSpacing: 0 },
+  // BPP Books
+  bppFilter:         { size: 13, color: '#17335f', weight: '600', letterSpacing: 0 },
+  bppMeta:           { size: 11, color: '#6d8fc4', weight: '700', letterSpacing: 0.02 },
+  bppTitle:          { size: 18, color: '#17335f', weight: '500', letterSpacing: 0 },
+  bppDesc:           { size: 13, color: '#6b83a6', weight: '400', letterSpacing: 0 },
+  bppPrice:          { size: 22, color: '#17335f', weight: '500', letterSpacing: 0 },
+  bppCta:            { size: 13, color: '#17335f', weight: '700', letterSpacing: 0 },
 } as const;
 
 export type DefaultKey = keyof typeof DEFAULTS;

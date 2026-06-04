@@ -59,6 +59,7 @@ const blog_2 = require("./models/blog");
 const blogAsset_1 = require("./models/blogAsset");
 const blogRender_1 = require("./services/blogRender");
 const coursePrice_1 = require("./models/coursePrice");
+const book_1 = require("./models/book");
 const app = (0, express_1.default)();
 const PORT = Number(process.env.PORT ?? 3001);
 // ── Middleware ────────────────────────────────────────────────────
@@ -100,6 +101,21 @@ app.get('/api/publish-course-prices', async (_req, res, next) => {
     res.setHeader('Cache-Control', 'no-store');
     try {
         return res.json({ prices: await (0, coursePrice_1.listCoursePrices)() });
+    }
+    catch (err) {
+        next(err);
+    }
+});
+app.options('/api/publish-bpp-books', (_req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.status(204).end();
+});
+app.get('/api/publish-bpp-books', async (_req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+        return res.json({ books: await (0, book_1.listBooks)() });
     }
     catch (err) {
         next(err);

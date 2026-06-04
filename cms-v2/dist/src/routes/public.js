@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const content_1 = require("../models/content");
+const book_1 = require("../models/book");
 const router = (0, express_1.Router)();
 // Allow cross-origin fetches from any domain (Zenler, course pages, etc.)
 function allowPublicCors(res) {
@@ -86,6 +87,21 @@ router.get('/blog', async (_req, res, next) => {
         allowPublicCors(res);
         res.setHeader('Cache-Control', 'no-store');
         return res.json({ posts });
+    }
+    catch (err) {
+        next(err);
+    }
+});
+router.options('/bpp-books', (_req, res) => {
+    allowPublicCors(res);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.status(204).end();
+});
+router.get('/bpp-books', async (_req, res, next) => {
+    try {
+        allowPublicCors(res);
+        res.setHeader('Cache-Control', 'no-store');
+        return res.json({ books: await (0, book_1.listBooks)() });
     }
     catch (err) {
         next(err);
