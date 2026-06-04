@@ -3,9 +3,10 @@ import { api } from '../../api/client';
 import MenuManagement from '../MenuManagement';
 import UserManagement from '../UserManagement';
 import Books from '../Books';
+import DiscountCodes from '../DiscountCodes';
 import type { CoursePriceRecord, ScrapedCoursePrice } from '../../../../shared/types';
 
-type Tab = 'menu' | 'courses' | 'coursePricing' | 'books' | 'payments' | 'users';
+type Tab = 'menu' | 'courses' | 'coursePricing' | 'books' | 'discountCodes' | 'payments' | 'users';
 
 type Course = {
   id: number;
@@ -678,6 +679,7 @@ const TAB_LABELS: Record<Tab, string> = {
   courses: 'Courses',
   coursePricing: 'Course Pricing',
   books: 'Books',
+  discountCodes: 'Discount Codes',
   payments: 'Payments',
   users: 'Users',
 };
@@ -710,6 +712,7 @@ export default function Settings() {
         {tab === 'courses'  && <CoursesTab />}
         {tab === 'coursePricing' && <CoursePricingTab />}
         {tab === 'books'    && <Books />}
+        {tab === 'discountCodes' && <DiscountCodes />}
         {tab === 'payments' && <PaymentsTab />}
         {tab === 'users'    && <UserManagement />}
       </div>
