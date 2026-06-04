@@ -89,15 +89,15 @@ export function generateBppBooksHtml(data: BppBooksState): string {
   const script = `<script data-cfasync="false">
 (function(){
 var API=${jsString(PUBLIC_BOOKS_URL)},PS=9,ROOT=${jsString(uid)},state={level:"all",q:"",page:1},BOOKS=[];
-var LEVELS=[{id:"all",label:"All papers"},{id:"knowledge",label:"Applied Knowledge"},{id:"skills",label:"Applied Skills"},{id:"strategic",label:"Strategic Professional"}];
-var AK=["BT","MA","FA"],AS=["LW","PM","TX","FR","AA","FM"],SP=["SBL","SBR","AFM","APM","ATX","AAA"];
+var LEVELS=[{id:"all",label:"All papers"},{id:"foundation",label:"Foundation"},{id:"knowledge",label:"Applied Knowledge"},{id:"skills",label:"Applied Skills"},{id:"strategic",label:"Strategic Professional"}];
+var FD=["FA1","MA1","FA2","MA2","FBT","FMA","FFA","FAB"],AK=["BT","MA","FA"],AS=["LW","PM","TX","FR","AA","FM"],SP=["SBL","SBR","AFM","APM","ATX","AAA"];
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function attr(s){return esc(s).replace(/"/g,"&quot;");}
 function money(b){var c=b.currency==="USD"?"$":b.currency==="EUR"?"€":"£",v=Number(b.discountedPrice!=null?b.discountedPrice:b.price)||0;return c+v.toFixed(2);}
 function was(b){var c=b.currency==="USD"?"$":b.currency==="EUR"?"€":"£";return c+(Number(b.price)||0).toFixed(2);}
-function code(title){var m=String(title||"").match(/\\b(BT|MA|FA|LW|PM|TX|FR|AA|FM|SBL|SBR|AFM|APM|ATX|AAA)\\b/i);return m?m[1].toUpperCase():"";}
-function level(b){var c=code(b.title);if(AK.indexOf(c)>=0)return"knowledge";if(AS.indexOf(c)>=0)return"skills";if(SP.indexOf(c)>=0)return"strategic";return"other";}
-function levelLabel(id){return id==="knowledge"?"Knowledge":id==="skills"?"Skills":id==="strategic"?"Strategic":"";}
+function code(title){var m=String(title||"").match(/\\b(FA1|MA1|FA2|MA2|FBT|FMA|FFA|FAB|SBL|SBR|AFM|APM|ATX|AAA|BT|MA|FA|LW|PM|TX|FR|AA|FM)\\b/i);return m?m[1].toUpperCase():"";}
+function level(b){var c=code(b.title);if(FD.indexOf(c)>=0)return"foundation";if(AK.indexOf(c)>=0)return"knowledge";if(AS.indexOf(c)>=0)return"skills";if(SP.indexOf(c)>=0)return"strategic";return"other";}
+function levelLabel(id){return id==="foundation"?"Foundation":id==="knowledge"?"Knowledge":id==="skills"?"Skills":id==="strategic"?"Strategic":"";}
 function paperName(title){return String(title||"").replace(/^ACCA\\s*[-–]?\\s*/i,"").trim();}
 function filtered(){var q=state.q.toLowerCase().trim();return BOOKS.filter(function(b){if(state.level!=="all"&&level(b)!==state.level)return false;if(!q)return true;return (String(b.title||"")+" "+String(b.description||"")+" "+String(b.imageAltText||"")+" "+code(b.title)).toLowerCase().indexOf(q)>=0;});}
 function renderFilters(){var el=document.getElementById(ROOT+"-filters");if(!el)return;el.innerHTML=LEVELS.map(function(l){var count=l.id==="all"?BOOKS.length:BOOKS.filter(function(b){return level(b)===l.id;}).length;return '<button type="button" class="'+ROOT+'-pill'+(state.level===l.id?' is-active':'')+'" data-level="'+l.id+'">'+esc(l.label)+(l.id==="all"?'':'')+'</button>';}).join("");el.querySelectorAll("button").forEach(function(btn){btn.onclick=function(){state.level=btn.getAttribute("data-level")||"all";state.page=1;render();};});}
