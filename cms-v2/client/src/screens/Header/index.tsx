@@ -118,7 +118,9 @@ export function HeaderEditor({
   const [cfg, setCfg]         = useState<HeaderConfig>(makeDefault());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [saved, setSaved]     = useState(false);
+  const [published, setPublished] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'html'>('preview');
   const [previewHtml, setPreviewHtml] = useState('');
 
@@ -135,6 +137,7 @@ export function HeaderEditor({
   const update = useCallback((patch: Partial<HeaderConfig>) => {
     setCfg(prev => ({ ...prev, ...patch }));
     setSaved(false);
+    setPublished(false);
   }, []);
 
   function addCta() {
@@ -186,12 +189,24 @@ export function HeaderEditor({
     setSaving(true);
     try {
       await api.put(`/content/${contentKey}`, { config: cfg });
+      setSaved(true);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function publish() {
+    if (!publicPublishPath) return;
+    setPublishing(true);
+    try {
+      await api.put(`/content/${contentKey}`, { config: cfg });
       if (publicPublishPath) {
         await api.post(publicPublishPath, { config: cfg });
       }
       setSaved(true);
+      setPublished(true);
     } finally {
-      setSaving(false);
+      setPublishing(false);
     }
   }
 
@@ -233,6 +248,11 @@ export function HeaderEditor({
           <button onClick={save} disabled={saving} className="btn-primary flex-1 justify-center">
             {saving ? 'Saving…' : saved ? '✓ Saved' : '💾 Save'}
           </button>
+          {publicPublishPath && (
+            <button onClick={publish} disabled={publishing} className="btn-primary flex-1 justify-center">
+              {publishing ? 'Publishing…' : published ? '✓ Published' : 'Publish Header'}
+            </button>
+          )}
           <button onClick={generate} className="btn-success flex-1 justify-center">⚡ Generate HTML</button>
         </div>
 
