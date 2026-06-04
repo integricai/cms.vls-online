@@ -228,6 +228,11 @@ export type BookDiscountCodeInput = Pick<BookDiscountCode, 'code' | 'insertDate'
   id?: number;
 };
 
+export interface BookDiscountCodeBulkInput {
+  bookId: number;
+  codes: BookDiscountCodeInput[];
+}
+
 // ── API responses ─────────────────────────────────────────────────
 
 export interface ApiSuccess<T = unknown> {

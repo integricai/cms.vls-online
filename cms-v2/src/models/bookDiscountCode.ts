@@ -1,5 +1,5 @@
 import { sql } from '../db/client';
-import type { BookDiscountCode, BookDiscountCodeInput } from '../../shared/types';
+import type { BookDiscountCode, BookDiscountCodeBulkInput, BookDiscountCodeInput } from '../../shared/types';
 
 let schemaReady: Promise<void> | null = null;
 
@@ -114,4 +114,13 @@ export async function replaceBookDiscountCodes(bookId: number, codes: BookDiscou
   }
 
   return listBookDiscountCodes(bookId);
+}
+
+export async function replaceBulkBookDiscountCodes(items: BookDiscountCodeBulkInput[]): Promise<BookDiscountCode[]> {
+  await ensureBookDiscountCodeSchema();
+  for (const item of items) {
+    if (!Number.isInteger(item.bookId) || item.bookId <= 0) continue;
+    await replaceBookDiscountCodes(item.bookId, Array.isArray(item.codes) ? item.codes : []);
+  }
+  return listBookDiscountCodes();
 }

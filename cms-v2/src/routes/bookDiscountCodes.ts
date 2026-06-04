@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
-import { listBookDiscountCodes, replaceBookDiscountCodes } from '../models/bookDiscountCode';
+import { listBookDiscountCodes, replaceBookDiscountCodes, replaceBulkBookDiscountCodes } from '../models/bookDiscountCode';
 
 const router = Router();
 
@@ -13,6 +13,15 @@ router.get('/', requireRole('admin', 'editor'), async (req: Request, res: Respon
       return res.status(400).json({ ok: false, error: 'Invalid book id' });
     }
     return res.json({ ok: true, data: await listBookDiscountCodes(bookId) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/bulk/all-books', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const books = Array.isArray(req.body?.books) ? req.body.books : [];
+    return res.json({ ok: true, data: await replaceBulkBookDiscountCodes(books) });
   } catch (err) {
     next(err);
   }

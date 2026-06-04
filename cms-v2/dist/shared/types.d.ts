@@ -195,6 +195,10 @@ export interface BookDiscountCode {
 export type BookDiscountCodeInput = Pick<BookDiscountCode, 'code' | 'insertDate' | 'issueDate' | 'customerEmail'> & {
     id?: number;
 };
+export interface BookDiscountCodeBulkInput {
+    bookId: number;
+    codes: BookDiscountCodeInput[];
+}
 export interface ApiSuccess<T = unknown> {
     ok: true;
     data: T;
