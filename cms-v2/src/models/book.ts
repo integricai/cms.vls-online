@@ -1,5 +1,5 @@
 import { sql } from '../db/client';
-import type { BookRecord, ScrapedBook } from '../../shared/types';
+import type { BookRecord } from '../../shared/types';
 
 let schemaReady: Promise<void> | null = null;
 
@@ -97,32 +97,6 @@ export async function getBook(id: number): Promise<BookRecord | null> {
     WHERE id = ${id}
   `;
   return rows[0] ? rowToBook(rows[0] as DbRow) : null;
-}
-
-export async function upsertScrapedBooks(books: ScrapedBook[]): Promise<BookRecord[]> {
-  await ensureBookSchema();
-  for (const book of books) {
-    await sql`
-      INSERT INTO books
-        (title, description, image_url, image_alt_text, price, discounted_price, currency, stripe_url, source_url, sort_order, last_synced_at)
-      VALUES
-        (${book.title}, ${book.description}, ${book.imageUrl}, ${book.imageAltText}, ${book.price},
-         ${book.discountedPrice}, ${book.currency}, ${book.stripeUrl}, ${book.sourceUrl},
-         COALESCE((SELECT MAX(sort_order) + 1 FROM books), 1), NOW())
-      ON CONFLICT (title, stripe_url) DO UPDATE
-        SET description = EXCLUDED.description,
-            image_url = EXCLUDED.image_url,
-            image_alt_text = EXCLUDED.image_alt_text,
-            price = EXCLUDED.price,
-            discounted_price = EXCLUDED.discounted_price,
-            currency = EXCLUDED.currency,
-            source_url = EXCLUDED.source_url,
-            last_synced_at = NOW(),
-            updated_at = NOW()
-    `;
-  }
-
-  return listBooks();
 }
 
 export async function reorderBooks(ids: number[]): Promise<BookRecord[]> {

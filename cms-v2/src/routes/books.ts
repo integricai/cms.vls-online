@@ -1,7 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
-import { deleteBook, listBooks, reorderBooks, updateBook, upsertScrapedBooks } from '../models/book';
-import { scrapeBppBooks } from '../services/bookScraper';
+import { deleteBook, listBooks, reorderBooks, updateBook } from '../models/book';
 
 const router = Router();
 
@@ -15,24 +14,11 @@ router.get('/', requireRole('admin', 'editor'), async (_req: Request, res: Respo
   }
 });
 
-router.post('/sync', requireRole('admin', 'editor'), async (_req: Request, res: Response) => {
-  try {
-    const scraped = await scrapeBppBooks();
-    const books = await upsertScrapedBooks(scraped);
-    return res.json({
-      ok: true,
-      data: {
-        scraped: scraped.length,
-        saved: books.length,
-        books,
-        syncedAt: new Date().toISOString(),
-      },
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Book sync failed';
-    console.error('[book-sync]', err);
-    return res.status(502).json({ ok: false, error: message });
-  }
+router.post('/sync', requireRole('admin', 'editor'), (_req: Request, res: Response) => {
+  return res.status(410).json({
+    ok: false,
+    error: 'Book sync has been disabled. The books table is the source of truth.',
+  });
 });
 
 router.post('/reorder', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, getCurrentUser } from '../../api/client';
 import Field from '../../components/Field';
-import type { BookRecord, BookSyncResult } from '../../../../shared/types';
+import type { BookRecord } from '../../../../shared/types';
 
 function emptyForm() {
   return {
@@ -55,13 +55,11 @@ export default function BooksScreen() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [form, setForm] = useState<BookForm>(emptyForm());
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
   const [orderDirty, setOrderDirty] = useState(false);
   const [draggedId, setDraggedId] = useState<number | null>(null);
   const [error, setError] = useState('');
-  const [syncResult, setSyncResult] = useState<BookSyncResult | null>(null);
 
   const isAdmin = getCurrentUser()?.role === 'admin';
   const selected = books.find(book => book.id === selectedId) ?? null;
@@ -89,28 +87,6 @@ export default function BooksScreen() {
     setSelectedId(book.id);
     setForm(bookToForm(book));
     setError('');
-  }
-
-  async function syncBooks() {
-    setSyncing(true);
-    setError('');
-    setSyncResult(null);
-    try {
-      const result = await api.post<BookSyncResult>('/books/sync', {});
-      setSyncResult(result);
-      setBooks(result.books);
-      setOrderDirty(false);
-      if (result.books.length) {
-        const current = selectedId ? result.books.find(book => book.id === selectedId) : null;
-        const next = current ?? result.books[0];
-        setSelectedId(next.id);
-        setForm(bookToForm(next));
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Book sync failed.');
-    } finally {
-      setSyncing(false);
-    }
   }
 
   async function saveBook() {
@@ -195,20 +171,11 @@ export default function BooksScreen() {
           <div>
             <h1 className="text-base font-bold text-slate-900">Books</h1>
             <p className="mt-0.5 text-xs text-slate-400">
-              BPP book data scraped from the rendered VLS books page and stored in the CMS database.
+              Books are managed directly in the CMS database. This table is the source of truth for the BPP Books component.
             </p>
           </div>
-          <button onClick={syncBooks} disabled={syncing} className="btn-primary shrink-0 text-xs">
-            {syncing ? 'Syncing…' : 'Sync Books'}
-          </button>
         </div>
         {error && <p className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
-        {syncResult && (
-          <div className="mt-3 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-            Synced {syncResult.scraped} scraped book{syncResult.scraped === 1 ? '' : 's'}.
-            Database now has {syncResult.saved} book{syncResult.saved === 1 ? '' : 's'}.
-          </div>
-        )}
       </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -234,7 +201,7 @@ export default function BooksScreen() {
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-3">
             {books.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-400">No books saved yet. Click Sync Books to import them.</p>
+              <p className="py-6 text-center text-sm text-slate-400">No books saved yet in the CMS database.</p>
             ) : (
               <div className="space-y-2">
                 {books.map((book, index) => (
@@ -318,11 +285,6 @@ export default function BooksScreen() {
                         <div className="flex aspect-[3/4] items-center justify-center text-xs text-slate-400">No image</div>
                       )}
                     </div>
-                    {selected.lastSyncedAt && (
-                      <p className="text-xs text-slate-400">
-                        Last synced: {new Date(selected.lastSyncedAt).toLocaleString()}
-                      </p>
-                    )}
                   </div>
 
                   <div className="space-y-0">
