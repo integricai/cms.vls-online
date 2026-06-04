@@ -93,48 +93,56 @@ function FontFormatter({ label, value, defaultKey, onChange }: {
   return (
     <div className="mb-3">
       <label className="field-label">{label}</label>
-      <div className="grid grid-cols-[70px_1fr_92px_84px] gap-1.5 rounded-lg border border-slate-100 bg-slate-50 p-2">
-        <input
-          type="number"
-          value={td.size}
-          min={8}
-          max={72}
-          onChange={event => patch({ size: Number(event.target.value) })}
-          className="input text-xs"
-          title="Font size"
-        />
-        <div className="flex min-w-0 gap-1.5">
+      <div className="rounded-lg border border-slate-100 bg-slate-50 p-2">
+        <div className="grid grid-cols-[70px_1fr_92px_84px] gap-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+          <span>Size</span>
+          <span>Color</span>
+          <span>Weight</span>
+          <span>Spacing</span>
+        </div>
+        <div className="grid grid-cols-[70px_1fr_92px_84px] gap-1.5">
           <input
-            type="color"
-            value={/^#[0-9a-fA-F]{6}$/.test(td.color) ? td.color : '#000000'}
-            onChange={event => patch({ color: event.target.value })}
-            className="h-8 w-9 shrink-0 cursor-pointer rounded border border-slate-200 p-0"
-            title="Text colour"
+            type="number"
+            value={td.size}
+            min={8}
+            max={72}
+            onChange={event => patch({ size: Number(event.target.value) })}
+            className="input text-xs"
+            title="Font size"
           />
+          <div className="flex min-w-0 gap-1.5">
+            <input
+              type="color"
+              value={/^#[0-9a-fA-F]{6}$/.test(td.color) ? td.color : '#000000'}
+              onChange={event => patch({ color: event.target.value })}
+              className="h-8 w-9 shrink-0 cursor-pointer rounded border border-slate-200 p-0"
+              title="Text colour"
+            />
+            <input
+              value={td.color}
+              maxLength={7}
+              onChange={event => patch({ color: event.target.value })}
+              className="input min-w-0 text-xs"
+            />
+          </div>
+          <select value={td.weight} onChange={event => patch({ weight: event.target.value })} className="input text-xs">
+            <option value="400">Regular</option>
+            <option value="500">Medium</option>
+            <option value="600">Semi</option>
+            <option value="700">Bold</option>
+            <option value="800">Extra</option>
+          </select>
           <input
-            value={td.color}
-            maxLength={7}
-            onChange={event => patch({ color: event.target.value })}
-            className="input min-w-0 text-xs"
+            type="number"
+            value={td.letterSpacing}
+            min={0}
+            max={0.3}
+            step={0.01}
+            onChange={event => patch({ letterSpacing: Number(event.target.value) })}
+            className="input text-xs"
+            title="Letter spacing"
           />
         </div>
-        <select value={td.weight} onChange={event => patch({ weight: event.target.value })} className="input text-xs">
-          <option value="400">Regular</option>
-          <option value="500">Medium</option>
-          <option value="600">Semi</option>
-          <option value="700">Bold</option>
-          <option value="800">Extra</option>
-        </select>
-        <input
-          type="number"
-          value={td.letterSpacing}
-          min={0}
-          max={0.3}
-          step={0.01}
-          onChange={event => patch({ letterSpacing: Number(event.target.value) })}
-          className="input text-xs"
-          title="Letter spacing"
-        />
       </div>
     </div>
   );

@@ -53,11 +53,11 @@ export function generateBppBooksHtml(data: BppBooksState): string {
 .${uid}-cover img{width:100%;height:100%;object-fit:cover;display:block;}
 .${uid}-placeholder{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;color:#7aa2ff;}
 .${uid}-placeholder svg{width:22px;height:22px;}
-.${uid}-placeholder strong{font-family:Georgia,serif;font-size:28px;font-weight:500;color:#17335f;line-height:1;}
+.${uid}-placeholder strong{font-family:Poppins,sans-serif;font-size:28px;font-weight:500;color:#17335f;line-height:1;}
 .${uid}-placeholder span{font-size:9px;font-weight:700;letter-spacing:.15em;color:#9bb0d0;text-transform:uppercase;}
 .${uid}-body{padding:20px 22px 22px;}
 .${uid}-meta{margin:0 0 5px;text-transform:uppercase;${textStyle(meta)}}
-.${uid}-title{margin:0 0 10px;line-height:1.35;font-family:Georgia,'Times New Roman',serif;${textStyle(title)}}
+.${uid}-title{margin:0 0 10px;line-height:1.35;font-family:Poppins,sans-serif;${textStyle(title)}}
 .${uid}-desc{margin:0 0 16px;line-height:1.65;min-height:42px;${textStyle(desc)}}
 .${uid}-price{display:flex;align-items:baseline;gap:8px;margin:0 0 16px;${textStyle(price)}}
 .${uid}-was{font-size:13px;color:#9aa9bd;text-decoration:line-through;}
