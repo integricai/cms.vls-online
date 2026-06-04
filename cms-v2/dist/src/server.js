@@ -147,7 +147,7 @@ app.get('/api/publish-bpp-books', async (_req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cache-Control', 'no-store');
     try {
-        return res.json({ books: await (0, book_1.listBooks)() });
+        return res.json({ books: await (0, book_1.listPublicBooks)() });
     }
     catch (err) {
         next(err);

@@ -101,7 +101,7 @@ router.get('/bpp-books', async (_req, res, next) => {
     try {
         allowPublicCors(res);
         res.setHeader('Cache-Control', 'no-store');
-        return res.json({ books: await (0, book_1.listBooks)() });
+        return res.json({ books: await (0, book_1.listPublicBooks)() });
     }
     catch (err) {
         next(err);

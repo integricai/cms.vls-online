@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { getContent } from '../models/content';
-import { listBooks } from '../models/book';
+import { listPublicBooks } from '../models/book';
 import type { BlogPost } from '../models/blog';
 
 const router = Router();
@@ -110,7 +110,7 @@ router.get('/bpp-books', async (_req: Request, res: Response, next: NextFunction
   try {
     allowPublicCors(res);
     res.setHeader('Cache-Control', 'no-store');
-    return res.json({ books: await listBooks() });
+    return res.json({ books: await listPublicBooks() });
   } catch (err) {
     next(err);
   }

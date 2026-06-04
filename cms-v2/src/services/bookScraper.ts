@@ -187,6 +187,7 @@ async function itemToBook(
     : '';
 
   return {
+    isActive: true,
     title,
     description: cleanDescription(descriptionText),
     imageUrl: blobImageUrl,

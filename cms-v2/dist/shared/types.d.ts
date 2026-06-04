@@ -160,6 +160,7 @@ export interface CoursePriceRecord {
 export interface BookRecord {
     id: number;
     sortOrder: number;
+    isActive: boolean;
     title: string;
     description: string;
     imageUrl: string;

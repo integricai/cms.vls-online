@@ -13,6 +13,7 @@ function emptyForm() {
     discountedPrice: '',
     currency: 'GBP',
     stripeUrl: '',
+    isActive: true,
   };
 }
 
@@ -28,6 +29,7 @@ function bookToForm(book: BookRecord): BookForm {
     discountedPrice: book.discountedPrice != null ? String(book.discountedPrice) : '',
     currency: book.currency,
     stripeUrl: book.stripeUrl,
+    isActive: book.isActive,
   };
 }
 
@@ -41,6 +43,7 @@ function formToPayload(form: BookForm) {
     discountedPrice: form.discountedPrice === '' ? null : Number(form.discountedPrice),
     currency: form.currency.trim() || 'GBP',
     stripeUrl: form.stripeUrl.trim(),
+    isActive: form.isActive,
   };
 }
 
@@ -54,8 +57,10 @@ export default function BooksScreen() {
   const [books, setBooks] = useState<BookRecord[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [form, setForm] = useState<BookForm>(emptyForm());
+  const [creating, setCreating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
   const [orderDirty, setOrderDirty] = useState(false);
   const [draggedId, setDraggedId] = useState<number | null>(null);
@@ -63,6 +68,7 @@ export default function BooksScreen() {
 
   const isAdmin = getCurrentUser()?.role === 'admin';
   const selected = books.find(book => book.id === selectedId) ?? null;
+  const showEditor = creating || selected;
 
   async function loadBooks() {
     setError('');
@@ -86,11 +92,18 @@ export default function BooksScreen() {
   function selectBook(book: BookRecord) {
     setSelectedId(book.id);
     setForm(bookToForm(book));
+    setCreating(false);
+    setError('');
+  }
+
+  function addBook() {
+    setSelectedId(null);
+    setForm(emptyForm());
+    setCreating(true);
     setError('');
   }
 
   async function saveBook() {
-    if (!selectedId) return;
     const payload = formToPayload(form);
     if (!payload.title) {
       setError('Title is required.');
@@ -108,13 +121,53 @@ export default function BooksScreen() {
     setSaving(true);
     setError('');
     try {
-      const updated = await api.put<BookRecord>(`/books/${selectedId}`, payload);
-      setBooks(prev => prev.map(book => book.id === selectedId ? updated : book));
-      setForm(bookToForm(updated));
+      if (creating) {
+        const created = await api.post<BookRecord>('/books', payload);
+        setBooks(prev => [...prev, created]);
+        setSelectedId(created.id);
+        setForm(bookToForm(created));
+        setCreating(false);
+      } else if (selectedId) {
+        const updated = await api.put<BookRecord>(`/books/${selectedId}`, payload);
+        setBooks(prev => prev.map(book => book.id === selectedId ? updated : book));
+        setForm(bookToForm(updated));
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Save failed.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function uploadImage(file: File) {
+    if (!file.type.startsWith('image/')) {
+      setError('Please choose an image file.');
+      return;
+    }
+    setUploadingImage(true);
+    setError('');
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Could not read image file.'));
+        reader.readAsDataURL(file);
+      });
+      const base64 = dataUrl.split(',')[1] || '';
+      const result = await api.post<{ url: string }>('/books/upload-image', {
+        filename: file.name,
+        contentType: file.type,
+        data: base64,
+      });
+      setForm(prev => ({
+        ...prev,
+        imageUrl: result.url,
+        imageAltText: prev.imageAltText || prev.title,
+      }));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Image upload failed.');
+    } finally {
+      setUploadingImage(false);
     }
   }
 
@@ -174,6 +227,7 @@ export default function BooksScreen() {
               Books are managed directly in the CMS database. This table is the source of truth for the BPP Books component.
             </p>
           </div>
+          <button onClick={addBook} className="btn-primary shrink-0 text-xs">+ New book</button>
         </div>
         {error && <p className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
       </div>
@@ -230,7 +284,9 @@ export default function BooksScreen() {
                         ? 'border-brand bg-brand text-white'
                         : draggedId === book.id
                           ? 'border-brand/40 bg-blue-50 text-slate-700 opacity-70'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-brand/40'
+                        : book.isActive
+                          ? 'border-slate-200 bg-white text-slate-700 hover:border-brand/40'
+                        : 'border-slate-200 bg-slate-50 text-slate-400 opacity-75 hover:border-brand/40'
                     }`}
                   >
                     <div className={`flex h-16 flex-col items-center justify-center rounded text-xs ${book.id === selectedId ? 'text-white/75' : 'text-slate-400'}`}>
@@ -241,7 +297,14 @@ export default function BooksScreen() {
                       {book.imageUrl ? <img src={book.imageUrl} alt="" className="h-full w-full object-cover" /> : null}
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{book.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-semibold">{book.title}</p>
+                        {!book.isActive && (
+                          <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${book.id === selectedId ? 'bg-white/15 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                            Archived
+                          </span>
+                        )}
+                      </div>
                       <p className={`mt-1 line-clamp-2 text-xs ${book.id === selectedId ? 'text-white/75' : 'text-slate-400'}`}>
                         {book.description || book.imageAltText || 'No description'}
                       </p>
@@ -257,19 +320,19 @@ export default function BooksScreen() {
         </div>
 
         <div className="flex flex-1 flex-col overflow-hidden">
-          {!selected ? (
+          {!showEditor ? (
             <div className="flex h-full items-center justify-center text-sm text-slate-400">
-              Select a book to edit its saved database fields.
+              Select a book to edit its saved database fields, or add a new book.
             </div>
           ) : (
             <>
               <div className="shrink-0 border-b border-slate-200 bg-white px-5 py-3">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-slate-900">Edit Book</h2>
+                  <h2 className="text-sm font-semibold text-slate-900">{creating ? 'New Book' : 'Edit Book'}</h2>
                   <div className="flex items-center gap-2">
-                    {isAdmin && <button onClick={deleteBook} className="btn-danger">Delete</button>}
+                    {!creating && isAdmin && <button onClick={deleteBook} className="btn-danger">Delete</button>}
                     <button onClick={saveBook} disabled={saving} className="btn-primary text-xs">
-                      {saving ? 'Saving…' : 'Save changes'}
+                      {saving ? 'Saving…' : creating ? 'Create book' : 'Save changes'}
                     </button>
                   </div>
                 </div>
@@ -285,10 +348,35 @@ export default function BooksScreen() {
                         <div className="flex aspect-[3/4] items-center justify-center text-xs text-slate-400">No image</div>
                       )}
                     </div>
+                    <label className={`btn-ghost flex cursor-pointer justify-center text-xs ${uploadingImage ? 'opacity-60' : ''}`}>
+                      {uploadingImage ? 'Uploading image...' : 'Upload image'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={uploadingImage}
+                        onChange={event => {
+                          const file = event.target.files?.[0];
+                          if (file) uploadImage(file);
+                          event.currentTarget.value = '';
+                        }}
+                      />
+                    </label>
                   </div>
 
                   <div className="space-y-0">
                     <p className="section-label">Content</p>
+                    <label className="mb-3 flex items-center gap-2 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={form.isActive}
+                        onChange={e => setForm(prev => ({ ...prev, isActive: e.target.checked }))}
+                      />
+                      <span>
+                        <strong>Display on website</strong>
+                        <span className="ml-2 text-xs text-slate-400">Turn off to archive/disable this book.</span>
+                      </span>
+                    </label>
                     <Field label="Title">
                       <input className="input" value={form.title} onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))} />
                     </Field>

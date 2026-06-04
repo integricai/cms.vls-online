@@ -7,6 +7,7 @@ function rowToBook(row) {
   return {
     id: row.id,
     sortOrder: row.sort_order ?? row.id,
+    isActive: row.is_active !== false,
     title: row.title,
     description: row.description,
     imageUrl: row.image_url,
@@ -38,9 +39,11 @@ export default async function handler(req, res) {
 
   try {
     const sql = neon(dbUrl);
+    await sql`ALTER TABLE books ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`;
     const rows = await sql`
       SELECT *
       FROM books
+      WHERE COALESCE(is_active, TRUE) = TRUE
       ORDER BY COALESCE(sort_order, 2147483647) ASC, title ASC, id ASC
     `;
     return res.status(200).json({ books: rows.map(rowToBook) });

@@ -6,6 +6,7 @@ let schemaReady: Promise<void> | null = null;
 interface DbRow {
   id: number;
   sort_order: number | null;
+  is_active: boolean;
   title: string;
   description: string;
   image_url: string;
@@ -35,12 +36,14 @@ async function ensureBookSchema(): Promise<void> {
         stripe_url TEXT NOT NULL DEFAULT '',
         source_url TEXT NOT NULL DEFAULT 'https://vls-online.com/bppbooks',
         sort_order INTEGER,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
         last_synced_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `;
     await sql`ALTER TABLE books ADD COLUMN IF NOT EXISTS sort_order INTEGER`;
+    await sql`ALTER TABLE books ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`;
     await sql`
       WITH ordered AS (
         SELECT id, ROW_NUMBER() OVER (ORDER BY COALESCE(sort_order, 2147483647), title ASC, id ASC) AS next_order
@@ -55,6 +58,7 @@ async function ensureBookSchema(): Promise<void> {
     await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_books_title_stripe_url_unique ON books(title, stripe_url)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_books_title ON books(title)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_books_sort_order ON books(sort_order ASC, title ASC)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_books_is_active_sort_order ON books(is_active, sort_order ASC, title ASC)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_books_updated_at ON books(updated_at DESC)`;
   })();
   return schemaReady;
@@ -64,6 +68,7 @@ function rowToBook(row: DbRow): BookRecord {
   return {
     id: row.id,
     sortOrder: row.sort_order ?? row.id,
+    isActive: row.is_active !== false,
     title: row.title,
     description: row.description,
     imageUrl: row.image_url,
@@ -84,6 +89,17 @@ export async function listBooks(): Promise<BookRecord[]> {
   const rows = await sql`
     SELECT *
     FROM books
+    ORDER BY COALESCE(sort_order, 2147483647) ASC, title ASC, id ASC
+  `;
+  return (rows as DbRow[]).map(rowToBook);
+}
+
+export async function listPublicBooks(): Promise<BookRecord[]> {
+  await ensureBookSchema();
+  const rows = await sql`
+    SELECT *
+    FROM books
+    WHERE is_active = TRUE
     ORDER BY COALESCE(sort_order, 2147483647) ASC, title ASC, id ASC
   `;
   return (rows as DbRow[]).map(rowToBook);
@@ -129,9 +145,25 @@ export async function reorderBooks(ids: number[]): Promise<BookRecord[]> {
   return listBooks();
 }
 
+export async function createBook(
+  data: Pick<BookRecord, 'title' | 'description' | 'imageUrl' | 'imageAltText' | 'price' | 'discountedPrice' | 'currency' | 'stripeUrl' | 'isActive'>,
+): Promise<BookRecord> {
+  await ensureBookSchema();
+  const rows = await sql`
+    INSERT INTO books
+      (title, description, image_url, image_alt_text, price, discounted_price, currency, stripe_url, source_url, sort_order, is_active)
+    VALUES
+      (${data.title}, ${data.description}, ${data.imageUrl}, ${data.imageAltText}, ${data.price},
+       ${data.discountedPrice}, ${data.currency}, ${data.stripeUrl}, 'manual',
+       COALESCE((SELECT MAX(sort_order) + 1 FROM books), 1), ${data.isActive})
+    RETURNING *
+  `;
+  return rowToBook(rows[0] as DbRow);
+}
+
 export async function updateBook(
   id: number,
-  data: Partial<Pick<BookRecord, 'title' | 'description' | 'imageUrl' | 'imageAltText' | 'price' | 'discountedPrice' | 'currency' | 'stripeUrl'>>,
+  data: Partial<Pick<BookRecord, 'title' | 'description' | 'imageUrl' | 'imageAltText' | 'price' | 'discountedPrice' | 'currency' | 'stripeUrl' | 'isActive'>>,
 ): Promise<BookRecord | null> {
   await ensureBookSchema();
   const existing = await getBook(id);
@@ -147,6 +179,7 @@ export async function updateBook(
         discounted_price = ${data.discountedPrice !== undefined ? data.discountedPrice : existing.discountedPrice},
         currency = ${data.currency ?? existing.currency},
         stripe_url = ${data.stripeUrl ?? existing.stripeUrl},
+        is_active = ${data.isActive ?? existing.isActive},
         updated_at = NOW()
     WHERE id = ${id}
   `;
