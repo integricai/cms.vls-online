@@ -20,6 +20,11 @@ function authGuard(req, res, next) {
     }
     try {
         const payload = jsonwebtoken_1.default.verify(token, secret);
+        const currentDeployId = process.env.VERCEL_DEPLOYMENT_ID ?? process.env.DEPLOY_ID ?? 'local';
+        if (currentDeployId !== 'local' && payload.deployId !== currentDeployId) {
+            res.status(401).json({ ok: false, error: 'Session invalidated by new deployment — please log in again' });
+            return;
+        }
         req.user = payload;
         next();
     }

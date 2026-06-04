@@ -42,6 +42,7 @@ export const NAV: NavGroup[] = [
       { to: '/events',     label: 'Events' },
       { to: '/articles',   label: 'Articles' },
       { to: '/blog',       label: 'Blog Import' },
+      { to: '/books',      label: 'Books' },
       { to: '/book-a-meeting', label: 'Book a Meeting' },
       { to: '/legal-page', label: 'Legal Page' },
       { to: '/team',       label: 'Team' },

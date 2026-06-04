@@ -183,6 +183,33 @@ export interface CoursePriceRecord {
   updatedAt: Date;
 }
 
+// ── Books ────────────────────────────────────────────────────────
+
+export interface BookRecord {
+  id: number;
+  title: string;
+  description: string;
+  imageUrl: string;
+  imageAltText: string;
+  price: number;
+  discountedPrice: number | null;
+  currency: string;
+  stripeUrl: string;
+  sourceUrl: string;
+  lastSyncedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type ScrapedBook = Omit<BookRecord, 'id' | 'lastSyncedAt' | 'createdAt' | 'updatedAt'>;
+
+export interface BookSyncResult {
+  scraped: number;
+  saved: number;
+  books: BookRecord[];
+  syncedAt: string;
+}
+
 // ── API responses ─────────────────────────────────────────────────
 
 export interface ApiSuccess<T = unknown> {

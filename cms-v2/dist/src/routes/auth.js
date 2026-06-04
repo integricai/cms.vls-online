@@ -82,7 +82,8 @@ router.post('/login', async (req, res, next) => {
             return res.status(401).json({ ok: false, error: 'Invalid credentials' });
         }
         const secret = getJwtSecret();
-        const token = jsonwebtoken_1.default.sign({ userId: user.id, email: user.email, username: user.username, role: user.role }, secret, { expiresIn: '8h' });
+        const deployId = process.env.VERCEL_DEPLOYMENT_ID ?? process.env.DEPLOY_ID ?? 'local';
+        const token = jsonwebtoken_1.default.sign({ userId: user.id, email: user.email, username: user.username, role: user.role, deployId }, secret, { expiresIn: '8h' });
         return res.json({ ok: true, data: { token, user: (0, user_1.toPublicUser)(user) } });
     }
     catch (err) {

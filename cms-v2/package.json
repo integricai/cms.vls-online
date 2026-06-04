@@ -12,6 +12,7 @@
     "seed-user": "ts-node src/db/seed-user.ts"
   },
   "dependencies": {
+    "@sparticuz/chromium": "^123.0.1",
     "@neondatabase/serverless": "^0.9.5",
     "@vercel/blob": "^2.3.3",
     "bcryptjs": "^2.4.3",
@@ -19,7 +20,8 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
-    "nodemailer": "^6.9.14"
+    "nodemailer": "^6.9.14",
+    "puppeteer-core": "^22.15.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
