@@ -1,197 +1,131 @@
 import type { ScrapedBook } from '../../shared/types';
-import fs from 'fs';
 
 const BOOKS_URL = 'https://vls-online.com/bppbooks';
+const COMMON_NINJA_BOOKS_WIDGET_ID = 'e48e2d3a-ef6d-4a10-818c-a0cfb38deb13';
+const COMMON_NINJA_EMBED_URL = `https://cdn.commoninja.com/api/v1/embed/${COMMON_NINJA_BOOKS_WIDGET_ID}`;
 
-type BrowserModule = typeof import('puppeteer-core');
-type Chromium = typeof import('@sparticuz/chromium');
+interface CommonNinjaCatalogItem {
+  title?: unknown;
+  description?: unknown;
+  mediaUrl?: unknown;
+  buttonUrl?: unknown;
+  hidden?: unknown;
+}
+
+interface CommonNinjaEmbedResponse {
+  success?: boolean;
+  message?: string;
+  data?: {
+    widgetData?: {
+      pluginData?: {
+        data?: {
+          content?: {
+            items?: CommonNinjaCatalogItem[];
+          };
+        };
+      };
+    };
+  };
+}
+
+function decodeEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#160;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
+}
+
+function textFromHtml(html: string): string {
+  return decodeEntities(html)
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/p>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 function normalizePrice(value: unknown): number {
   const amount = String(value ?? '').replace(/,/g, '').match(/\d+(?:\.\d{1,2})?/);
   return amount ? Number(amount[0]) : 0;
 }
 
-function normalizeBook(book: ScrapedBook): ScrapedBook | null {
-  const title = book.title.replace(/\s+/g, ' ').trim();
-  if (!title || title.length < 3) return null;
-  const price = normalizePrice(book.price);
-  if (!price) return null;
+function parseCurrency(text: string): string {
+  const upper = text.toUpperCase();
+  if (text.includes('$') || upper.includes('USD')) return 'USD';
+  if (text.includes('£') || upper.includes('GBP')) return 'GBP';
+  if (text.includes('€') || upper.includes('EUR')) return 'EUR';
+  return 'USD';
+}
 
-  const discounted = book.discountedPrice != null ? normalizePrice(book.discountedPrice) : null;
-  const description = book.description
-    .replace(/\b(Standard Price|Discounted Price|Now)\s*:?\s*/gi, ' ')
+function parseLabeledPrice(text: string, label: 'Standard Price' | 'Discounted Price'): number {
+  const pattern = new RegExp(`${label}\\s*:?\\s*(?:USD|GBP|EUR|[$£€])?\\s*(\\d+(?:\\.\\d{1,2})?)`, 'i');
+  const match = text.match(pattern);
+  return match ? normalizePrice(match[1]) : 0;
+}
+
+function cleanDescription(text: string): string {
+  return text
+    .replace(/\bStandard Price\s*:?\s*(?:USD|GBP|EUR|[$£€])?\s*\d+(?:\.\d{1,2})?/gi, ' ')
+    .replace(/\bDiscounted Price\s*:?\s*(?:USD|GBP|EUR|[$£€])?\s*\d+(?:\.\d{1,2})?/gi, ' ')
+    .replace(/\bNow\s*:?\s*/gi, ' ')
     .replace(/\s+([,.])/g, '$1')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function itemToBook(item: CommonNinjaCatalogItem): ScrapedBook | null {
+  if (item.hidden === true) return null;
+
+  const title = String(item.title ?? '').replace(/\s+/g, ' ').trim();
+  const descriptionHtml = String(item.description ?? '');
+  const descriptionText = textFromHtml(descriptionHtml);
+  const price = parseLabeledPrice(descriptionText, 'Standard Price');
+  const discountedPrice = parseLabeledPrice(descriptionText, 'Discounted Price');
+  const stripeUrl = String(item.buttonUrl ?? '').trim();
+  const imageUrl = String(item.mediaUrl ?? '').trim();
+
+  if (!title || !price || !stripeUrl) return null;
 
   return {
     title,
-    description,
-    imageUrl: book.imageUrl.trim(),
-    imageAltText: book.imageAltText.replace(/\s+/g, ' ').trim(),
+    description: cleanDescription(descriptionText),
+    imageUrl,
+    imageAltText: title,
     price,
-    discountedPrice: discounted && discounted > 0 ? discounted : null,
-    currency: book.currency || 'GBP',
-    stripeUrl: book.stripeUrl.trim(),
-    sourceUrl: book.sourceUrl || BOOKS_URL,
+    discountedPrice: discountedPrice || null,
+    currency: parseCurrency(descriptionText),
+    stripeUrl,
+    sourceUrl: BOOKS_URL,
   };
 }
 
-async function executablePath(chromium: Chromium): Promise<string | undefined> {
-  const candidates = [
-    process.env.PUPPETEER_EXECUTABLE_PATH,
-    process.platform === 'win32' ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' : '',
-    process.platform === 'win32' ? 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe' : '',
-    process.platform === 'win32' ? 'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe' : '',
-    process.platform === 'win32' ? 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe' : '',
-  ].filter(Boolean) as string[];
-
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
-  }
-
-  const path = await chromium.executablePath();
-  return path && fs.existsSync(path) ? path : undefined;
-}
-
 export async function scrapeBppBooks(): Promise<ScrapedBook[]> {
-  const [puppeteer, chromiumModule] = await Promise.all([
-    import('puppeteer-core') as Promise<BrowserModule>,
-    import('@sparticuz/chromium'),
-  ]);
-  const chromium = (
-    (chromiumModule as unknown as { default?: Chromium }).default
-    ?? (chromiumModule as unknown as Chromium)
-  );
-
-  const browser = await puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: { width: 1440, height: 1600 },
-    executablePath: await executablePath(chromium),
-    headless: true,
+  const response = await fetch(COMMON_NINJA_EMBED_URL, {
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': 'VLS-CMS-BookSync/1.0 (+https://vls-online.com)',
+    },
   });
 
-  try {
-    const page = await browser.newPage();
-    await page.setUserAgent('VLS-CMS-BookSync/1.0 (+https://vls-online.com)');
-    await page.goto(BOOKS_URL, { waitUntil: 'networkidle2', timeout: 45000 });
-    await page.waitForFunction(
-      () => document.body.innerText.includes('ACCA') && /(?:£|\$|€)\s?\d/.test(document.body.innerText),
-      { timeout: 30000 },
-    ).catch(() => undefined);
-
-    const scraped = await page.evaluate((sourceUrl) => {
-      type Candidate = {
-        title: string;
-        description: string;
-        imageUrl: string;
-        imageAltText: string;
-        price: number;
-        discountedPrice: number | null;
-        currency: string;
-        stripeUrl: string;
-        sourceUrl: string;
-      };
-
-      const priceRe = /(?:£|\$|€)\s?\d{1,5}(?:,\d{3})*(?:\.\d{1,2})?|\b(?:GBP|USD|EUR)\s?\d{1,5}(?:,\d{3})*(?:\.\d{1,2})?/gi;
-      const clean = (value: string | null | undefined) => String(value || '').replace(/\s+/g, ' ').trim();
-      const absolute = (value: string | null | undefined) => {
-        if (!value) return '';
-        try {
-          return new URL(value, window.location.href).href;
-        } catch {
-          return '';
-        }
-      };
-      const visible = (node: Element) => {
-        const rect = node.getBoundingClientRect();
-        const style = window.getComputedStyle(node);
-        return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
-      };
-      const parseAmount = (token: string) => {
-        const match = token.replace(/,/g, '').match(/\d+(?:\.\d{1,2})?/);
-        return match ? Number(match[0]) : 0;
-      };
-      const currencyFrom = (text: string) => {
-        const upper = text.toUpperCase();
-        if (text.includes('$') || upper.includes('USD')) return 'USD';
-        if (text.includes('€') || upper.includes('EUR')) return 'EUR';
-        return 'GBP';
-      };
-      const titleFrom = (root: Element, img: HTMLImageElement) => {
-        const heading = root.querySelector('h1,h2,h3,h4,h5,h6,[class*="title" i],[class*="name" i],strong,b');
-        const headingText = clean(heading?.textContent);
-        if (headingText && !priceRe.test(headingText)) return headingText;
-        priceRe.lastIndex = 0;
-        const imgText = clean(img.alt || img.title || img.getAttribute('aria-label'));
-        if (imgText) return imgText;
-        return clean(root.textContent).split(/(?:£|\$|€|\bGBP\b|\bUSD\b|\bEUR\b)/i)[0].trim();
-      };
-      const stripeFrom = (root: Element) => {
-        const links = Array.from(root.querySelectorAll<HTMLAnchorElement>('a[href]'));
-        const preferred = links.find(a => /stripe|checkout|payment|buy/i.test(a.href));
-        return absolute((preferred || links[0])?.getAttribute('href'));
-      };
-      const smallestBookRoot = (img: HTMLImageElement) => {
-        let current: Element | null = img;
-        let best: Element | null = null;
-        while (current && current !== document.body) {
-          const text = clean(current.textContent);
-          priceRe.lastIndex = 0;
-          if (text.length > 20 && text.length < 2500 && priceRe.test(text)) {
-            best = current;
-            if (/card|product|book|item|column|col-|pricing/i.test(current.className.toString())) break;
-          }
-          current = current.parentElement;
-        }
-        return best;
-      };
-
-      const results: Candidate[] = [];
-      for (const img of Array.from(document.querySelectorAll<HTMLImageElement>('img'))) {
-        if (!visible(img)) continue;
-        const root = smallestBookRoot(img);
-        if (!root || !visible(root)) continue;
-        const text = clean(root.textContent);
-        const tokens = text.match(priceRe) || [];
-        const amounts = Array.from(new Set(tokens.map(parseAmount).filter(amount => amount > 0 && amount < 10000))).sort((a, b) => b - a);
-        if (!amounts.length) continue;
-
-        const title = titleFrom(root, img);
-        const stripeUrl = stripeFrom(root);
-        const description = text
-          .replace(title, '')
-          .replace(/\b(Standard Price|Discounted Price|Now)\s*:?\s*/gi, ' ')
-          .replace(priceRe, ' ')
-          .replace(/\b(buy|purchase|checkout|add to cart|view|learn more)\b/gi, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-
-        results.push({
-          title,
-          description,
-          imageUrl: absolute(img.currentSrc || img.src || img.getAttribute('data-src')),
-          imageAltText: clean(img.alt || img.title || img.getAttribute('aria-label')),
-          price: amounts[0],
-          discountedPrice: amounts.length > 1 ? amounts[amounts.length - 1] : null,
-          currency: currencyFrom(tokens.join(' ')),
-          stripeUrl,
-          sourceUrl,
-        });
-      }
-
-      const unique = new Map<string, Candidate>();
-      for (const item of results) {
-        const key = `${item.title.toLowerCase()}|${item.stripeUrl || item.imageUrl}`;
-        if (!unique.has(key)) unique.set(key, item);
-      }
-      return Array.from(unique.values());
-    }, BOOKS_URL);
-
-    return scraped
-      .map(normalizeBook)
-      .filter((book): book is ScrapedBook => Boolean(book));
-  } finally {
-    await browser.close();
+  if (!response.ok) {
+    throw new Error(`Common Ninja returned HTTP ${response.status}`);
   }
+
+  const payload = await response.json() as CommonNinjaEmbedResponse;
+  if (!payload.success) {
+    throw new Error(payload.message || 'Common Ninja did not return a successful catalog response.');
+  }
+
+  const items = payload.data?.widgetData?.pluginData?.data?.content?.items;
+  if (!Array.isArray(items)) {
+    throw new Error('Common Ninja catalog response did not include book items.');
+  }
+
+  return items
+    .map(itemToBook)
+    .filter((book): book is ScrapedBook => Boolean(book));
 }
