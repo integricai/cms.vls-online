@@ -164,6 +164,7 @@ function makeTestimonials(): TestimonialsState {
     titleAccent: 'passed first time',
     subtitle: '4.9/5 average from 600+ ACCA, CIMA & CMA students',
     reviewsText: 'Based on 285 reviews',
+    trustpilotUrl: 'https://www.trustpilot.com/review/vls-online.com',
     fontFamily: 'Poppins',
     eyebrowSize: 11, eyebrowWeight: 800, eyebrowColor: '#2c67d8',
     titleSize: 34, titleWeight: 800, titleColor: '#0b2348', accentColor: '#2c67d8',
@@ -1905,6 +1906,7 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
         <Field label="Title accent"><input className="input" value={state.titleAccent} onChange={e => upd({ titleAccent: e.target.value })} /></Field>
         <Field label="Subtitle"><input className="input" value={state.subtitle} onChange={e => upd({ subtitle: e.target.value })} /></Field>
         <Field label="Reviews text (e.g. Based on 285 reviews)"><input className="input" value={state.reviewsText} placeholder="Based on 285 reviews" onChange={e => upd({ reviewsText: e.target.value })} /></Field>
+        <Field label="Trustpilot URL"><input className="input" value={state.trustpilotUrl} placeholder="https://www.trustpilot.com/review/vls-online.com" onChange={e => upd({ trustpilotUrl: e.target.value })} /></Field>
 
         <p className="section-label mt-3">Colours</p>
         <div className="grid grid-cols-2 gap-2">

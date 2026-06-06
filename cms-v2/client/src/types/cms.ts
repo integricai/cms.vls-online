@@ -972,6 +972,7 @@ export interface TestimonialsState {
   titleAccent: string;
   subtitle: string;
   reviewsText: string;
+  trustpilotUrl: string;
   fontFamily: string;
   eyebrowSize: number; eyebrowWeight: number; eyebrowColor: string;
   titleSize: number; titleWeight: number; titleColor: string; accentColor: string;
