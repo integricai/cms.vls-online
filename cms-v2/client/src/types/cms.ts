@@ -971,6 +971,7 @@ export interface TestimonialsState {
   titlePre: string;
   titleAccent: string;
   subtitle: string;
+  reviewsText: string;
   fontFamily: string;
   eyebrowSize: number; eyebrowWeight: number; eyebrowColor: string;
   titleSize: number; titleWeight: number; titleColor: string; accentColor: string;
