@@ -11,6 +11,11 @@ interface DbRow {
   insert_date: string | Date;
   issue_date: string | Date | null;
   customer_email: string;
+  stripe_session_id: string | null;
+  stripe_payment_intent_id: string | null;
+  issued_at: Date | null;
+  email_sent_at: Date | null;
+  used: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -25,12 +30,30 @@ async function ensureBookDiscountCodeSchema(): Promise<void> {
         insert_date DATE NOT NULL DEFAULT CURRENT_DATE,
         issue_date DATE,
         customer_email TEXT NOT NULL DEFAULT '',
+        stripe_session_id TEXT,
+        stripe_payment_intent_id TEXT,
+        issued_at TIMESTAMPTZ,
+        email_sent_at TIMESTAMPTZ,
+        used BOOLEAN NOT NULL DEFAULT FALSE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `;
+    await sql`ALTER TABLE book_discount_codes ADD COLUMN IF NOT EXISTS stripe_session_id TEXT`;
+    await sql`ALTER TABLE book_discount_codes ADD COLUMN IF NOT EXISTS stripe_payment_intent_id TEXT`;
+    await sql`ALTER TABLE book_discount_codes ADD COLUMN IF NOT EXISTS issued_at TIMESTAMPTZ`;
+    await sql`ALTER TABLE book_discount_codes ADD COLUMN IF NOT EXISTS email_sent_at TIMESTAMPTZ`;
+    await sql`ALTER TABLE book_discount_codes ADD COLUMN IF NOT EXISTS used BOOLEAN NOT NULL DEFAULT FALSE`;
+    await sql`
+      UPDATE book_discount_codes
+      SET used = TRUE
+      WHERE used = FALSE
+        AND (issue_date IS NOT NULL OR customer_email <> '')
+    `;
     await sql`CREATE INDEX IF NOT EXISTS idx_book_discount_codes_book_id ON book_discount_codes(book_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_book_discount_codes_issue_date ON book_discount_codes(issue_date)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_book_discount_codes_used_book_id ON book_discount_codes(book_id, used, insert_date ASC, id ASC)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_book_discount_codes_stripe_session_id ON book_discount_codes(stripe_session_id)`;
   })();
   return schemaReady;
 }
@@ -50,6 +73,11 @@ function rowToDiscountCode(row: DbRow): BookDiscountCode {
     insertDate: dateOnly(row.insert_date) ?? '',
     issueDate: dateOnly(row.issue_date),
     customerEmail: row.customer_email,
+    stripeSessionId: row.stripe_session_id,
+    stripePaymentIntentId: row.stripe_payment_intent_id,
+    issuedAt: row.issued_at,
+    emailSentAt: row.email_sent_at,
+    used: row.used === true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -93,6 +121,7 @@ export async function replaceBookDiscountCodes(bookId: number, codes: BookDiscou
     const insertDate = item.insertDate || new Date().toISOString().slice(0, 10);
     const issueDate = item.issueDate || null;
     const customerEmail = item.customerEmail.trim();
+    const used = Boolean(issueDate || customerEmail);
 
     if (item.id && Number.isInteger(item.id)) {
       await sql`
@@ -101,14 +130,20 @@ export async function replaceBookDiscountCodes(bookId: number, codes: BookDiscou
             insert_date = ${insertDate},
             issue_date = ${issueDate},
             customer_email = ${customerEmail},
+            used = ${used},
+            issued_at = CASE
+              WHEN ${used} AND issued_at IS NULL THEN NOW()
+              WHEN ${used} THEN issued_at
+              ELSE NULL
+            END,
             updated_at = NOW()
         WHERE id = ${item.id}
           AND book_id = ${bookId}
       `;
     } else {
       await sql`
-        INSERT INTO book_discount_codes (book_id, code, insert_date, issue_date, customer_email)
-        VALUES (${bookId}, ${code}, ${insertDate}, ${issueDate}, ${customerEmail})
+        INSERT INTO book_discount_codes (book_id, code, insert_date, issue_date, customer_email, used, issued_at)
+        VALUES (${bookId}, ${code}, ${insertDate}, ${issueDate}, ${customerEmail}, ${used}, ${used ? new Date() : null})
       `;
     }
   }

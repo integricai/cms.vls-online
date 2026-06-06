@@ -220,6 +220,11 @@ export interface BookDiscountCode {
   insertDate: string;
   issueDate: string | null;
   customerEmail: string;
+  stripeSessionId: string | null;
+  stripePaymentIntentId: string | null;
+  issuedAt: Date | null;
+  emailSentAt: Date | null;
+  used: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
