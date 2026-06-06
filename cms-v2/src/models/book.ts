@@ -8,6 +8,7 @@ interface DbRow {
   id: number;
   sort_order: number | null;
   is_active: boolean;
+  quantity: number | null;
   title: string;
   description: string;
   image_url: string;
@@ -38,6 +39,7 @@ async function ensureBookSchema(): Promise<void> {
         source_url TEXT NOT NULL DEFAULT 'https://vls-online.com/bppbooks',
         sort_order INTEGER,
         is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        quantity INTEGER NOT NULL DEFAULT 0,
         last_synced_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -45,6 +47,7 @@ async function ensureBookSchema(): Promise<void> {
     `;
     await sql`ALTER TABLE books ADD COLUMN IF NOT EXISTS sort_order INTEGER`;
     await sql`ALTER TABLE books ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`;
+    await sql`ALTER TABLE books ADD COLUMN IF NOT EXISTS quantity INTEGER NOT NULL DEFAULT 0`;
     await sql`
       WITH ordered AS (
         SELECT id, ROW_NUMBER() OVER (ORDER BY COALESCE(sort_order, 2147483647), title ASC, id ASC) AS next_order
@@ -124,6 +127,7 @@ function rowToBook(row: DbRow): BookRecord {
     id: row.id,
     sortOrder: row.sort_order ?? row.id,
     isActive: row.is_active !== false,
+    quantity: Number(row.quantity ?? 0),
     title: row.title,
     description: row.description,
     imageUrl: row.image_url,
@@ -137,6 +141,45 @@ function rowToBook(row: DbRow): BookRecord {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+export async function updateBookQuantities(bookIds?: number[]): Promise<void> {
+  await ensureBookSchema();
+  const ids = Array.isArray(bookIds)
+    ? Array.from(new Set(bookIds.filter(id => Number.isInteger(id) && id > 0)))
+    : [];
+
+  if (ids.length) {
+    await sql`
+      WITH counts AS (
+        SELECT books.id, COUNT(book_discount_codes.id)::int AS quantity
+        FROM books
+        LEFT JOIN book_discount_codes ON book_discount_codes.book_id = books.id
+        WHERE books.id = ANY(${ids}::int[])
+        GROUP BY books.id
+      )
+      UPDATE books
+      SET quantity = counts.quantity,
+          updated_at = NOW()
+      FROM counts
+      WHERE books.id = counts.id
+    `;
+    return;
+  }
+
+  await sql`
+    WITH counts AS (
+      SELECT books.id, COUNT(book_discount_codes.id)::int AS quantity
+      FROM books
+      LEFT JOIN book_discount_codes ON book_discount_codes.book_id = books.id
+      GROUP BY books.id
+    )
+    UPDATE books
+    SET quantity = counts.quantity,
+        updated_at = NOW()
+    FROM counts
+    WHERE books.id = counts.id
+  `;
 }
 
 export async function listBooks(): Promise<BookRecord[]> {

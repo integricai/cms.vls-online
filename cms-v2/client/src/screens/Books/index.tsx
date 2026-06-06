@@ -233,7 +233,7 @@ export default function BooksScreen() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="flex w-[430px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white">
+        <div className="flex w-[560px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white">
           <div className="shrink-0 border-b border-slate-100 px-5 py-3">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">
@@ -257,7 +257,14 @@ export default function BooksScreen() {
             {books.length === 0 ? (
               <p className="py-6 text-center text-sm text-slate-400">No books saved yet in the CMS database.</p>
             ) : (
-              <div className="space-y-2">
+              <div className="overflow-hidden rounded-lg border border-slate-200">
+                <div className="grid grid-cols-[32px_50px_1fr_58px_74px] gap-2 border-b border-slate-200 bg-slate-100 px-2 py-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                  <span>Order</span>
+                  <span>Image</span>
+                  <span>Book</span>
+                  <span>Qty</span>
+                  <span>Price</span>
+                </div>
                 {books.map((book, index) => (
                   <div
                     key={book.id}
@@ -279,21 +286,21 @@ export default function BooksScreen() {
                     }}
                     onDragEnd={() => setDraggedId(null)}
                     onClick={() => selectBook(book)}
-                    className={`grid w-full cursor-grab grid-cols-[24px_56px_1fr] gap-3 rounded-lg border p-2 text-left transition active:cursor-grabbing ${
+                    className={`grid w-full cursor-grab grid-cols-[32px_50px_1fr_58px_74px] gap-2 border-b px-2 py-2 text-left transition last:border-b-0 active:cursor-grabbing ${
                       book.id === selectedId
                         ? 'border-brand bg-brand text-white'
                         : draggedId === book.id
-                          ? 'border-brand/40 bg-blue-50 text-slate-700 opacity-70'
+                          ? 'border-slate-200 bg-blue-50 text-slate-700 opacity-70'
                         : book.isActive
-                          ? 'border-slate-200 bg-white text-slate-700 hover:border-brand/40'
-                        : 'border-slate-200 bg-slate-50 text-slate-400 opacity-75 hover:border-brand/40'
+                          ? 'border-slate-200 bg-white text-slate-700 hover:bg-blue-50/60'
+                        : 'border-slate-200 bg-slate-50 text-slate-400 opacity-75 hover:bg-blue-50/60'
                     }`}
                   >
-                    <div className={`flex h-16 flex-col items-center justify-center rounded text-xs ${book.id === selectedId ? 'text-white/75' : 'text-slate-400'}`}>
+                    <div className={`flex h-14 flex-col items-center justify-center rounded text-xs ${book.id === selectedId ? 'text-white/75' : 'text-slate-400'}`}>
                       <span className="leading-none">≡</span>
                       <span className="mt-1 text-[10px] font-semibold">{index + 1}</span>
                     </div>
-                    <div className="h-16 w-14 overflow-hidden rounded border border-white/30 bg-slate-100">
+                    <div className="h-14 w-12 overflow-hidden rounded border border-white/30 bg-slate-100">
                       {book.imageUrl ? <img src={book.imageUrl} alt="" className="h-full w-full object-cover" /> : null}
                     </div>
                     <div className="min-w-0">
@@ -308,9 +315,12 @@ export default function BooksScreen() {
                       <p className={`mt-1 line-clamp-2 text-xs ${book.id === selectedId ? 'text-white/75' : 'text-slate-400'}`}>
                         {book.description || book.imageAltText || 'No description'}
                       </p>
-                      <p className={`mt-1 text-xs font-semibold ${book.id === selectedId ? 'text-white' : 'text-slate-700'}`}>
-                        {money(book)}
-                      </p>
+                    </div>
+                    <div className={`flex h-14 items-center text-sm font-semibold ${book.id === selectedId ? 'text-white' : 'text-slate-700'}`}>
+                      {book.quantity}
+                    </div>
+                    <div className={`flex h-14 items-center text-xs font-semibold ${book.id === selectedId ? 'text-white' : 'text-slate-700'}`}>
+                      {money(book)}
                     </div>
                   </div>
                 ))}
@@ -389,6 +399,11 @@ export default function BooksScreen() {
                     <Field label="Image text">
                       <input className="input" value={form.imageAltText} onChange={e => setForm(prev => ({ ...prev, imageAltText: e.target.value }))} />
                     </Field>
+                    {!creating && selected && (
+                      <Field label="Quantity">
+                        <input className="input bg-slate-50 text-slate-500" value={selected.quantity} readOnly />
+                      </Field>
+                    )}
 
                     <p className="section-label">Pricing</p>
                     <div className="grid grid-cols-3 gap-2">
