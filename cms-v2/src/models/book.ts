@@ -2,6 +2,7 @@ import { sql } from '../db/client';
 import type { BookRecord } from '../../shared/types';
 
 let schemaReady: Promise<void> | null = null;
+let stripeReferenceBackfillReady: Promise<void> | null = null;
 
 interface DbRow {
   id: number;
@@ -64,6 +65,60 @@ async function ensureBookSchema(): Promise<void> {
   return schemaReady;
 }
 
+function slugForStripeReference(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 150) || 'book';
+}
+
+function stripeReferenceForBook(book: Pick<BookRecord, 'id' | 'title'>): string {
+  return `book_${book.id}_${slugForStripeReference(book.title)}`.slice(0, 200);
+}
+
+export function stripeUrlWithBookReference(
+  stripeUrl: string,
+  book: Pick<BookRecord, 'id' | 'title'>,
+): string {
+  const raw = stripeUrl.trim();
+  if (!raw || !book.id) return raw;
+  const reference = stripeReferenceForBook(book);
+
+  try {
+    const url = new URL(raw);
+    url.searchParams.set('client_reference_id', reference);
+    return url.toString();
+  } catch {
+    const separator = raw.includes('?') ? '&' : '?';
+    return `${raw}${separator}client_reference_id=${encodeURIComponent(reference)}`;
+  }
+}
+
+async function backfillStripeReferences(): Promise<void> {
+  stripeReferenceBackfillReady ??= (async () => {
+    await ensureBookSchema();
+    const rows = await sql`
+      SELECT id, title, stripe_url
+      FROM books
+      WHERE stripe_url <> ''
+    `;
+
+    for (const row of rows as Pick<DbRow, 'id' | 'title' | 'stripe_url'>[]) {
+      const nextUrl = stripeUrlWithBookReference(row.stripe_url, { id: row.id, title: row.title });
+      if (nextUrl !== row.stripe_url) {
+        await sql`
+          UPDATE books
+          SET stripe_url = ${nextUrl}
+          WHERE id = ${row.id}
+        `;
+      }
+    }
+  })();
+  return stripeReferenceBackfillReady;
+}
+
 function rowToBook(row: DbRow): BookRecord {
   return {
     id: row.id,
@@ -86,6 +141,7 @@ function rowToBook(row: DbRow): BookRecord {
 
 export async function listBooks(): Promise<BookRecord[]> {
   await ensureBookSchema();
+  await backfillStripeReferences();
   const rows = await sql`
     SELECT *
     FROM books
@@ -96,6 +152,7 @@ export async function listBooks(): Promise<BookRecord[]> {
 
 export async function listPublicBooks(): Promise<BookRecord[]> {
   await ensureBookSchema();
+  await backfillStripeReferences();
   const rows = await sql`
     SELECT *
     FROM books
@@ -107,6 +164,7 @@ export async function listPublicBooks(): Promise<BookRecord[]> {
 
 export async function getBook(id: number): Promise<BookRecord | null> {
   await ensureBookSchema();
+  await backfillStripeReferences();
   const rows = await sql`
     SELECT *
     FROM books
@@ -158,7 +216,16 @@ export async function createBook(
        COALESCE((SELECT MAX(sort_order) + 1 FROM books), 1), ${data.isActive})
     RETURNING *
   `;
-  return rowToBook(rows[0] as DbRow);
+  const inserted = rowToBook(rows[0] as DbRow);
+  const stripeUrl = stripeUrlWithBookReference(inserted.stripeUrl, inserted);
+  if (stripeUrl !== inserted.stripeUrl) {
+    await sql`
+      UPDATE books
+      SET stripe_url = ${stripeUrl}
+      WHERE id = ${inserted.id}
+    `;
+  }
+  return getBook(inserted.id) as Promise<BookRecord>;
 }
 
 export async function updateBook(
@@ -168,17 +235,22 @@ export async function updateBook(
   await ensureBookSchema();
   const existing = await getBook(id);
   if (!existing) return null;
+  const nextTitle = data.title ?? existing.title;
+  const nextStripeUrl = stripeUrlWithBookReference(data.stripeUrl ?? existing.stripeUrl, {
+    id,
+    title: nextTitle,
+  });
 
   await sql`
     UPDATE books
-    SET title = ${data.title ?? existing.title},
+    SET title = ${nextTitle},
         description = ${data.description ?? existing.description},
         image_url = ${data.imageUrl ?? existing.imageUrl},
         image_alt_text = ${data.imageAltText ?? existing.imageAltText},
         price = ${data.price ?? existing.price},
         discounted_price = ${data.discountedPrice !== undefined ? data.discountedPrice : existing.discountedPrice},
         currency = ${data.currency ?? existing.currency},
-        stripe_url = ${data.stripeUrl ?? existing.stripeUrl},
+        stripe_url = ${nextStripeUrl},
         is_active = ${data.isActive ?? existing.isActive},
         updated_at = NOW()
     WHERE id = ${id}

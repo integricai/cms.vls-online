@@ -199,6 +199,11 @@ export interface BookDiscountCode {
 }
 export type BookDiscountCodeInput = Pick<BookDiscountCode, 'code' | 'insertDate' | 'issueDate' | 'customerEmail'> & {
     id?: number;
+    stripeSessionId?: string | null;
+    stripePaymentIntentId?: string | null;
+    issuedAt?: Date | string | null;
+    emailSentAt?: Date | string | null;
+    used?: boolean;
 };
 export interface BookDiscountCodeBulkInput {
     bookId: number;

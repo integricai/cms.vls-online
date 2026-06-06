@@ -64,6 +64,19 @@ function dateOnly(value: string | Date | null): string | null {
   return value.toISOString().slice(0, 10);
 }
 
+function nullableText(value: unknown): string | null {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text || null;
+}
+
+function nullableDateTime(value: Date | string | null | undefined): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function rowToDiscountCode(row: DbRow): BookDiscountCode {
   return {
     id: row.id,
@@ -104,12 +117,13 @@ export async function listBookDiscountCodes(bookId?: number): Promise<BookDiscou
 
 export async function replaceBookDiscountCodes(bookId: number, codes: BookDiscountCodeInput[]): Promise<BookDiscountCode[]> {
   await ensureBookDiscountCodeSchema();
-  const existing = await sql`SELECT id FROM book_discount_codes WHERE book_id = ${bookId}`;
+  const existing = await sql`SELECT * FROM book_discount_codes WHERE book_id = ${bookId}`;
+  const existingById = new Map((existing as DbRow[]).map(row => [row.id, row]));
   const keepIds = codes
     .map(item => item.id)
     .filter((id): id is number => Number.isInteger(id) && Number(id) > 0);
 
-  for (const row of existing as { id: number }[]) {
+  for (const row of existing as DbRow[]) {
     if (!keepIds.includes(row.id)) {
       await sql`DELETE FROM book_discount_codes WHERE id = ${row.id} AND book_id = ${bookId}`;
     }
@@ -121,7 +135,17 @@ export async function replaceBookDiscountCodes(bookId: number, codes: BookDiscou
     const insertDate = item.insertDate || new Date().toISOString().slice(0, 10);
     const issueDate = item.issueDate || null;
     const customerEmail = item.customerEmail.trim();
-    const used = Boolean(issueDate || customerEmail);
+    const existingRow = item.id ? existingById.get(item.id) : null;
+    const stripeSessionId = item.stripeSessionId !== undefined
+      ? nullableText(item.stripeSessionId)
+      : existingRow?.stripe_session_id ?? null;
+    const stripePaymentIntentId = item.stripePaymentIntentId !== undefined
+      ? nullableText(item.stripePaymentIntentId)
+      : existingRow?.stripe_payment_intent_id ?? null;
+    const requestedIssuedAt = item.issuedAt !== undefined ? nullableDateTime(item.issuedAt) : existingRow?.issued_at ?? null;
+    const emailSentAt = item.emailSentAt !== undefined ? nullableDateTime(item.emailSentAt) : existingRow?.email_sent_at ?? null;
+    const used = item.used ?? Boolean(issueDate || customerEmail || stripeSessionId || stripePaymentIntentId || requestedIssuedAt);
+    const issuedAt = used ? (requestedIssuedAt ?? existingRow?.issued_at ?? new Date()) : null;
 
     if (item.id && Number.isInteger(item.id)) {
       await sql`
@@ -130,20 +154,21 @@ export async function replaceBookDiscountCodes(bookId: number, codes: BookDiscou
             insert_date = ${insertDate},
             issue_date = ${issueDate},
             customer_email = ${customerEmail},
+            stripe_session_id = ${stripeSessionId},
+            stripe_payment_intent_id = ${stripePaymentIntentId},
             used = ${used},
-            issued_at = CASE
-              WHEN ${used} AND issued_at IS NULL THEN NOW()
-              WHEN ${used} THEN issued_at
-              ELSE NULL
-            END,
+            issued_at = ${issuedAt},
+            email_sent_at = ${emailSentAt},
             updated_at = NOW()
         WHERE id = ${item.id}
           AND book_id = ${bookId}
       `;
     } else {
       await sql`
-        INSERT INTO book_discount_codes (book_id, code, insert_date, issue_date, customer_email, used, issued_at)
-        VALUES (${bookId}, ${code}, ${insertDate}, ${issueDate}, ${customerEmail}, ${used}, ${used ? new Date() : null})
+        INSERT INTO book_discount_codes
+          (book_id, code, insert_date, issue_date, customer_email, stripe_session_id, stripe_payment_intent_id, used, issued_at, email_sent_at)
+        VALUES
+          (${bookId}, ${code}, ${insertDate}, ${issueDate}, ${customerEmail}, ${stripeSessionId}, ${stripePaymentIntentId}, ${used}, ${issuedAt}, ${emailSentAt})
       `;
     }
   }

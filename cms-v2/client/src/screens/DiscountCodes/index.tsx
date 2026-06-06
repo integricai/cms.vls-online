@@ -33,6 +33,11 @@ function recordToDraft(record: BookDiscountCode): DraftCode {
     insertDate: record.insertDate || today(),
     issueDate: record.issueDate,
     customerEmail: record.customerEmail,
+    stripeSessionId: record.stripeSessionId,
+    stripePaymentIntentId: record.stripePaymentIntentId,
+    issuedAt: record.issuedAt,
+    emailSentAt: record.emailSentAt,
+    used: record.used,
   };
 }
 
@@ -44,8 +49,38 @@ function cleanDrafts(rows: DraftCode[]): BookDiscountCodeInput[] {
       insertDate: row.insertDate || today(),
       issueDate: row.issueDate || null,
       customerEmail: row.customerEmail.trim(),
+      stripeSessionId: row.stripeSessionId ?? undefined,
+      stripePaymentIntentId: row.stripePaymentIntentId ?? undefined,
+      issuedAt: row.issuedAt ?? undefined,
+      emailSentAt: row.emailSentAt ?? undefined,
+      used: row.used,
     }))
     .filter(row => row.code);
+}
+
+function formatDateTime(value: Date | string | null | undefined): string {
+  if (!value) return '-';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString('en-GB', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatBoolean(value: boolean | null | undefined): string {
+  return value ? 'Yes' : 'No';
+}
+
+function parseBoolean(value: string): boolean | undefined {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return undefined;
+  if (['1', 'true', 'yes', 'y', 'used'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'n', 'available'].includes(normalized)) return false;
+  return undefined;
 }
 
 function csvEscape(value: unknown): string {
@@ -198,7 +233,19 @@ export default function DiscountCodesScreen() {
   }
 
   function downloadCsv() {
-    const header = ['Book ID', 'Book Name', 'Code', 'Insert Date', 'Issue Date', 'Customer Email'];
+    const header = [
+      'Book ID',
+      'Book Name',
+      'Code',
+      'Insert Date',
+      'Issue Date',
+      'Customer Email',
+      'Used',
+      'Stripe Session ID',
+      'Stripe Payment Intent ID',
+      'Issued At',
+      'Email Sent At',
+    ];
     const lines = [
       header.map(csvEscape).join(','),
       ...allRows().map(({ book, code }) => [
@@ -208,6 +255,11 @@ export default function DiscountCodesScreen() {
         code?.insertDate ?? '',
         code?.issueDate ?? '',
         code?.customerEmail ?? '',
+        code ? formatBoolean(code.used) : '',
+        code?.stripeSessionId ?? '',
+        code?.stripePaymentIntentId ?? '',
+        code?.issuedAt ?? '',
+        code?.emailSentAt ?? '',
       ].map(csvEscape).join(',')),
     ];
     const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
@@ -238,6 +290,11 @@ export default function DiscountCodesScreen() {
       const insertDateIndex = headerMap.get('insertdate');
       const issueDateIndex = headerMap.get('issuedate');
       const emailIndex = headerMap.get('customeremail');
+      const usedIndex = headerMap.get('used');
+      const stripeSessionIndex = headerMap.get('stripesessionid');
+      const stripePaymentIntentIndex = headerMap.get('stripepaymentintentid');
+      const issuedAtIndex = headerMap.get('issuedat');
+      const emailSentAtIndex = headerMap.get('emailsentat');
       if (bookIdIndex == null && bookNameIndex == null) throw new Error('CSV must include Book ID or Book Name.');
 
       const bookById = new Map(books.map(book => [String(book.id), book]));
@@ -257,6 +314,11 @@ export default function DiscountCodesScreen() {
             insertDate: insertDateIndex == null ? today() : (row[insertDateIndex] || today()).trim(),
             issueDate: issueDateIndex == null ? null : ((row[issueDateIndex] || '').trim() || null),
             customerEmail: emailIndex == null ? '' : (row[emailIndex] || '').trim(),
+            used: usedIndex == null ? undefined : parseBoolean(row[usedIndex] || ''),
+            stripeSessionId: stripeSessionIndex == null ? undefined : ((row[stripeSessionIndex] || '').trim() || null),
+            stripePaymentIntentId: stripePaymentIntentIndex == null ? undefined : ((row[stripePaymentIntentIndex] || '').trim() || null),
+            issuedAt: issuedAtIndex == null ? undefined : ((row[issuedAtIndex] || '').trim() || null),
+            emailSentAt: emailSentAtIndex == null ? undefined : ((row[emailSentAtIndex] || '').trim() || null),
           });
         }
         grouped.set(book.id, existing);
@@ -367,27 +429,37 @@ export default function DiscountCodesScreen() {
               </div>
               <div className="text-xs text-slate-500">{books.length} books · {allCodes.length} codes</div>
             </div>
-            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-              <div className="grid min-w-[980px] grid-cols-[1.4fr_1fr_130px_130px_1.2fr] gap-3 border-b border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
+            <div className="overflow-auto rounded-lg border border-slate-200 bg-white">
+              <div className="grid min-w-[1700px] grid-cols-[1.35fr_1fr_120px_120px_1.1fr_80px_1.15fr_1.15fr_145px_145px] gap-3 border-b border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
                 <span>Book Name</span>
                 <span>Code</span>
                 <span>Insert Date</span>
                 <span>Issue Date</span>
                 <span>Customer Email</span>
+                <span>Used</span>
+                <span>Stripe Session ID</span>
+                <span>Stripe Payment Intent ID</span>
+                <span>Issued At</span>
+                <span>Email Sent At</span>
               </div>
               <div className="divide-y divide-slate-100">
                 {allRows().map(({ book, code }, index) => {
-                  const used = Boolean(code?.issueDate);
+                  const used = Boolean(code?.used || code?.issueDate);
                   return (
                     <div
                       key={`${book.id}-${code?.id ?? `empty-${index}`}`}
-                      className={`grid min-w-[980px] grid-cols-[1.4fr_1fr_130px_130px_1.2fr] gap-3 px-3 py-3 text-sm ${used ? 'bg-amber-50' : 'bg-white'}`}
+                      className={`grid min-w-[1700px] grid-cols-[1.35fr_1fr_120px_120px_1.1fr_80px_1.15fr_1.15fr_145px_145px] gap-3 px-3 py-3 text-sm ${used ? 'bg-amber-50' : 'bg-white'}`}
                     >
                       <span className="font-semibold text-slate-800">{book.title}</span>
                       <span className={code?.code ? 'text-slate-700' : 'text-slate-300'}>{code?.code || 'No code'}</span>
                       <span className="text-slate-500">{code?.insertDate || '-'}</span>
                       <span className="text-slate-500">{code?.issueDate || '-'}</span>
                       <span className="text-slate-500">{code?.customerEmail || '-'}</span>
+                      <span className="text-slate-500">{code ? formatBoolean(code.used) : '-'}</span>
+                      <span className="truncate text-slate-500" title={code?.stripeSessionId ?? ''}>{code?.stripeSessionId || '-'}</span>
+                      <span className="truncate text-slate-500" title={code?.stripePaymentIntentId ?? ''}>{code?.stripePaymentIntentId || '-'}</span>
+                      <span className="text-slate-500">{formatDateTime(code?.issuedAt)}</span>
+                      <span className="text-slate-500">{formatDateTime(code?.emailSentAt)}</span>
                     </div>
                   );
                 })}
@@ -415,12 +487,17 @@ export default function DiscountCodesScreen() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-          <div className="grid grid-cols-[1.2fr_150px_150px_1.4fr_80px] gap-3 border-b border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
+        <div className="overflow-auto rounded-lg border border-slate-200 bg-white">
+          <div className="grid min-w-[1600px] grid-cols-[1fr_125px_125px_1.1fr_70px_1fr_1fr_135px_135px_80px] gap-3 border-b border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
             <span>Code</span>
             <span>Insert Date</span>
             <span>Issue Date</span>
             <span>Customer Email</span>
+            <span>Used</span>
+            <span>Stripe Session ID</span>
+            <span>Stripe Payment Intent ID</span>
+            <span>Issued At</span>
+            <span>Email Sent At</span>
             <span className="text-right">Action</span>
           </div>
 
@@ -433,11 +510,11 @@ export default function DiscountCodesScreen() {
           ) : (
             <div className="divide-y divide-slate-100">
               {rows.map(row => {
-                const used = Boolean(row.issueDate);
+                const used = Boolean(row.used || row.issueDate);
                 return (
                   <div
                     key={row.clientId}
-                    className={`grid grid-cols-[1.2fr_150px_150px_1.4fr_80px] gap-3 px-3 py-3 transition ${
+                    className={`grid min-w-[1600px] grid-cols-[1fr_125px_125px_1.1fr_70px_1fr_1fr_135px_135px_80px] gap-3 px-3 py-3 transition ${
                       used ? 'bg-amber-50' : 'bg-white'
                     }`}
                   >
@@ -466,6 +543,11 @@ export default function DiscountCodesScreen() {
                       placeholder="customer@example.com"
                       onChange={event => updateRow(row.clientId, { customerEmail: event.target.value })}
                     />
+                    <span className="self-center text-sm text-slate-500">{formatBoolean(used)}</span>
+                    <span className="self-center truncate text-sm text-slate-500" title={row.stripeSessionId ?? ''}>{row.stripeSessionId || '-'}</span>
+                    <span className="self-center truncate text-sm text-slate-500" title={row.stripePaymentIntentId ?? ''}>{row.stripePaymentIntentId || '-'}</span>
+                    <span className="self-center text-sm text-slate-500">{formatDateTime(row.issuedAt)}</span>
+                    <span className="self-center text-sm text-slate-500">{formatDateTime(row.emailSentAt)}</span>
                     <button
                       onClick={() => removeRow(row.clientId)}
                       className="justify-self-end rounded border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
