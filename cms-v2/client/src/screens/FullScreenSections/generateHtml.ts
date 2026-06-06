@@ -764,7 +764,6 @@ export function generateTestimonialsHtml(d: TestimonialsState, componentId = '')
   L.push(`.${id}-viewport{display:grid;grid-template-columns:190px 28px minmax(0,1fr) 28px;gap:14px;align-items:center;overflow-x:hidden;overflow-y:visible;padding:0;}`);
   L.push(`.${id}-summary{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#1f2933;align-self:center;}`);
   L.push(`.${id}-summary-link{display:flex;flex-direction:column;align-items:center;text-decoration:none;color:inherit;}`);
-  L.push(`.${id}-summary-link:hover{opacity:0.82;}`);
   L.push(`.${id}-summary-title{font-size:24px;font-weight:400;line-height:1.1;margin:0 0 10px;}`);
   L.push(`.${id}-summary-stars{display:flex;gap:3px;margin:0 0 10px;}`);
   L.push(`.${id}-summary-star{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:#00b67a;color:#fff;font-size:22px;font-weight:700;line-height:1;}`);
