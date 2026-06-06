@@ -777,12 +777,12 @@ export function generateTestimonialsHtml(d: TestimonialsState, componentId = '')
   L.push(`.${id}-track{display:flex;gap:${gap}px;transition:transform .45s ease;will-change:transform;}`);
   L.push(`.${id}-card{flex:0 0 calc((100% - ${gap * 2}px) / 3);height:${cardHeight}px;max-height:${cardHeight}px;min-width:0;display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:transparent;border:0;border-radius:0;box-shadow:none;padding:0 12px 0 0;text-decoration:none!important;color:inherit;box-sizing:border-box;overflow:hidden;}`);
   L.push(`.${id}-card:hover{box-shadow:none;}`);
-  L.push(`.${id}-stars{display:flex;align-items:center;gap:2px;height:20px;margin:0 0 8px;color:#fff;}`);
+  L.push(`.${id}-stars{display:flex;align-items:center;gap:2px;height:20px;margin:0 0 12px;color:#fff;}`);
   L.push(`.${id}-stars .tst-star-box{width:18px;height:18px;display:flex;align-items:center;justify-content:center;background:#d1d5db;color:#fff;font-size:13px;font-weight:800;line-height:1;}`);
   L.push(`.${id}-stars .tst-star-box.is-filled{background:#00b67a;}`);
   L.push(`.${id}-stars .tst-stars-base{display:none;}`);
   L.push(`.${id}-stars .tst-stars-fill{display:block;height:18px;overflow:hidden;white-space:nowrap;background:repeating-linear-gradient(90deg,#00b67a 0,#00b67a 18px,transparent 18px,transparent 20px);color:#fff;font-size:13px;font-weight:800;letter-spacing:3px;line-height:18px;padding-left:3px;box-sizing:border-box;}`);
-  L.push(`.${id}-card-title{font-size:14px;font-weight:700;line-height:1.2;color:#1f2933;margin:0 0 8px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;}`);
+  L.push(`.${id}-card-title{font-size:14px;font-weight:700;line-height:1.2;color:#1f2933;margin:0 0 10px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;}`);
   L.push(`.${id}-quote{position:relative;flex:0 1 auto;min-height:0;max-height:38px;overflow:hidden;color:#30353e;font-size:13px;font-weight:400;line-height:1.32;margin:0 0 10px;text-align:left;}`);
   L.push(`.${id}-quote p{margin:0;}.${id}-quote strong,.${id}-quote b{font-weight:700;}.${id}-quote em,.${id}-quote i{font-style:normal;}`);
   L.push(`.${id}-quote:after{display:none;}`);
