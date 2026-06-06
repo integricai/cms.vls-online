@@ -955,6 +955,7 @@ export interface TestimonialCard {
   country?: string;
   quote: string;
   rating: number;
+  enabled: boolean;
 }
 export interface TestimonialsState {
   gradientStart: string;

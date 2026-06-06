@@ -176,9 +176,9 @@ function makeTestimonials(): TestimonialsState {
     cardBg: '#ffffff', cardBorder: '#dfe8f6', cardRadius: 14, cardShadow: '0 10px 26px rgba(28,45,85,.08)',
     starColor: '#f6ad25', quoteMarkColor: '#eaf2ff', avatarBg: '#e8f0ff', avatarColor: '#2c67d8',
     cards: [
-      { initials: 'MR', name: 'Maria Rossi', title: 'Kept me on track when apps failed', dateLabel: 'December 2025', url: '', country: '', rating: 4.8, quote: 'I tried self-study apps before and stalled. The structure here - videos, quizzes, then kit questions - kept momentum going and I passed AA on the first attempt.' },
-      { initials: 'JT', name: 'James Thompson', title: 'Concise, exam-focused notes', dateLabel: 'March 2026', url: '', country: '', rating: 4.9, quote: 'Syed explains the tricky topics in a way that actually sticks. The notes are concise and exam-focused - no wading through 400 pages of theory.' },
-      { initials: 'FA', name: 'Fatima Ahmed', title: 'Worth every penny', dateLabel: 'February 2026', url: '', country: '', rating: 5, quote: 'Booked the complete package and it paid for itself. The mock plus the pre-exam live session calmed my nerves and I walked in knowing exactly what to expect.' },
+      { initials: 'MR', name: 'Maria Rossi', title: 'Kept me on track when apps failed', dateLabel: 'December 2025', url: '', country: '', rating: 4.8, quote: 'I tried self-study apps before and stalled. The structure here - videos, quizzes, then kit questions - kept momentum going and I passed AA on the first attempt.', enabled: true },
+      { initials: 'JT', name: 'James Thompson', title: 'Concise, exam-focused notes', dateLabel: 'March 2026', url: '', country: '', rating: 4.9, quote: 'Syed explains the tricky topics in a way that actually sticks. The notes are concise and exam-focused - no wading through 400 pages of theory.', enabled: true },
+      { initials: 'FA', name: 'Fatima Ahmed', title: 'Worth every penny', dateLabel: 'February 2026', url: '', country: '', rating: 5, quote: 'Booked the complete package and it paid for itself. The mock plus the pre-exam live session calmed my nerves and I walked in knowing exactly what to expect.', enabled: true },
     ],
   };
 }
@@ -378,6 +378,7 @@ function normTestimonials(raw: any): TestimonialsState {
       country: (card.country || '').toUpperCase(),
       quote: card.quote || '',
       rating: normalizeNum(card.rating, 5),
+      enabled: card.enabled !== false,
     })) : [],
   };
 }
@@ -1848,7 +1849,8 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
     if (!confirm(`This will replace all current cards with up to ${syncCount} reviews pulled from Trustpilot's public page. Continue?`)) return;
     setSyncing(true);
     try {
-      const cards = await api.get<TestimonialCard[]>(`/trustpilot/sync?count=${syncCount}`);
+      const raw = await api.get<TestimonialCard[]>(`/trustpilot/sync?count=${syncCount}`);
+      const cards = (raw || []).map(c => ({ ...c, enabled: true }));
       upd({ cards });
     } catch (err: any) {
       setSyncError(err?.message ?? 'Failed to sync from Trustpilot.');
@@ -1950,9 +1952,13 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
 
         <p className="section-label mt-3">Cards</p>
         {state.cards.map((card, i) => (
-          <div key={i} className="mb-2 rounded border border-slate-200 bg-slate-50 p-3">
+          <div key={i} className={`mb-2 rounded border p-3 ${card.enabled !== false ? 'border-slate-200 bg-slate-50' : 'border-slate-200 bg-slate-100 opacity-50'}`}>
             <div className="mb-2 flex items-center gap-2">
-              <span className="flex-1 text-xs font-semibold text-slate-500">Testimonial {i + 1}</span>
+              <label className="flex items-center gap-1.5 cursor-pointer select-none" title={card.enabled !== false ? 'Disable this testimonial' : 'Enable this testimonial'}>
+                <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer" checked={card.enabled !== false} onChange={e => updCard(i, { enabled: e.target.checked })} />
+                <span className="text-xs font-semibold text-slate-500">Testimonial {i + 1}</span>
+              </label>
+              <span className="flex-1" />
               <button onClick={() => moveCard(i, -1)} disabled={i === 0} className="btn-ghost px-1.5 py-0.5 text-xs disabled:opacity-30" title="Move up">▲</button>
               <button onClick={() => moveCard(i, 1)} disabled={i === state.cards.length - 1} className="btn-ghost px-1.5 py-0.5 text-xs disabled:opacity-30" title="Move down">▼</button>
               <button onClick={() => upd({ cards: state.cards.filter((_, idx) => idx !== i) })} className="btn-danger text-xs">Delete</button>
@@ -1971,7 +1977,7 @@ function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
             </Field>
           </div>
         ))}
-        <button onClick={() => upd({ cards: [...state.cards, { initials: '', name: '', title: '', dateLabel: '', url: '', country: '', rating: 5, quote: '' }] })} className="btn-ghost mb-4 w-full text-xs">+ Add testimonial</button>
+        <button onClick={() => upd({ cards: [{ initials: '', name: '', title: '', dateLabel: '', url: '', country: '', rating: 5, quote: '', enabled: true }, ...state.cards] })} className="btn-ghost mb-4 w-full text-xs">+ Add testimonial</button>
       </div>
     </div>
   );
