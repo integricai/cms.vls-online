@@ -755,21 +755,21 @@ export function generateTestimonialsHtml(d: TestimonialsState, componentId = '')
   L.push('<style>');
   L.push(`.${id}-outer{${tstFontVars(d)}background:#f2faff!important;box-sizing:border-box;padding:30px 12px 28px;font-family:var(--tst-ff),Arial,sans-serif;overflow:hidden;color:#1f2933;}`);
   L.push(`.${id}-shell{max-width:${d.maxWidth}px;margin:0 auto;}`);
-  L.push(`.${id}-head{text-align:left;margin:0 0 18px;}`);
+  L.push(`.${id}-head{text-align:left;margin:0 0 24px;}`);
   L.push(`.${id}-eyebrow{display:none;}`);
-  L.push(`.${id}-title{font-size:24px;font-weight:700;line-height:1.18;letter-spacing:0;color:#30353e;margin:0 0 6px;}`);
+  L.push(`.${id}-title{font-size:24px;font-weight:700;line-height:1.18;letter-spacing:0;color:#30353e;margin:0 0 10px;}`);
   L.push(`.${id}-title em{font-style:normal;color:#30353e;}`);
   L.push(`.${id}-sub{font-size:18px;font-weight:700;color:#30353e;margin:0;line-height:1.25;}`);
-  L.push(`.${id}-viewport{display:grid;grid-template-columns:190px 28px minmax(0,1fr) 28px;gap:14px;align-items:center;overflow:hidden;padding:0;}`);
-  L.push(`.${id}-summary{height:${cardHeight}px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#1f2933;}`);
+  L.push(`.${id}-viewport{display:grid;grid-template-columns:190px 28px minmax(0,1fr) 28px;gap:14px;align-items:center;overflow-x:hidden;overflow-y:visible;padding:0;}`);
+  L.push(`.${id}-summary{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#1f2933;align-self:center;}`);
   L.push(`.${id}-summary-title{font-size:24px;font-weight:400;line-height:1.1;margin:0 0 10px;}`);
   L.push(`.${id}-summary-stars{display:flex;gap:3px;margin:0 0 10px;}`);
   L.push(`.${id}-summary-star{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:#00b67a;color:#fff;font-size:22px;font-weight:700;line-height:1;}`);
   L.push(`.${id}-summary-reviews{font-size:13px;line-height:1.3;color:#30353e;margin:0 0 8px;text-decoration:underline;text-underline-offset:2px;}`);
-  L.push(`.${id}-trustpilot{display:flex;align-items:center;justify-content:center;gap:5px;margin:0 0 5px;}`);
+  L.push(`.${id}-trustpilot{display:flex;align-items:center;justify-content:center;gap:5px;margin:0;}`);
   L.push(`.${id}-trustpilot-star{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:#00b67a;color:#fff;font-size:14px;line-height:1;}`);
   L.push(`.${id}-trustpilot-name{font-size:15px;font-weight:700;color:#1f2933;letter-spacing:-0.2px;}`);
-  L.push(`.${id}-latest{font-size:11px;color:#6b6f76;margin:0;line-height:1.3;}`);
+  L.push(`.${id}-latest{font-size:11px;color:#6b6f76;margin:10px 0 0;line-height:1.3;text-align:left;}`);
   L.push(`.${id}-clip{overflow:hidden;min-width:0;}`);
   L.push(`.${id}-track{display:flex;gap:${gap}px;transition:transform .45s ease;will-change:transform;}`);
   L.push(`.${id}-card{flex:0 0 calc((100% - ${gap * 2}px) / 3);height:${cardHeight}px;max-height:${cardHeight}px;min-width:0;display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:transparent;border:0;border-radius:0;box-shadow:none;padding:0 12px 0 0;text-decoration:none!important;color:inherit;box-sizing:border-box;overflow:hidden;}`);
@@ -807,7 +807,7 @@ export function generateTestimonialsHtml(d: TestimonialsState, componentId = '')
   if (d.subtitle) L.push(`      <p class="${id}-sub">${e(d.subtitle)}</p>`);
   L.push(`    </div>`);
   L.push(`    <div class="${id}-viewport">`);
-  L.push(`      <div class="${id}-summary" aria-hidden="true"><div class="${id}-summary-title">Excellent</div><div class="${id}-summary-stars"><span class="${id}-summary-star">★</span><span class="${id}-summary-star">★</span><span class="${id}-summary-star">★</span><span class="${id}-summary-star">★</span><span class="${id}-summary-star">★</span></div><p class="${id}-summary-reviews">${e(reviewsText)}</p><div class="${id}-trustpilot"><span class="${id}-trustpilot-star">★</span><span class="${id}-trustpilot-name">Trustpilot</span></div><p class="${id}-latest">Showing our latest reviews</p></div>`);
+  L.push(`      <div class="${id}-summary" aria-hidden="true"><div class="${id}-summary-title">Excellent</div><div class="${id}-summary-stars"><span class="${id}-summary-star">★</span><span class="${id}-summary-star">★</span><span class="${id}-summary-star">★</span><span class="${id}-summary-star">★</span><span class="${id}-summary-star">★</span></div><p class="${id}-summary-reviews">${e(reviewsText)}</p><div class="${id}-trustpilot"><span class="${id}-trustpilot-star">★</span><span class="${id}-trustpilot-name">Trustpilot</span></div></div>`);
   L.push(`      <button class="${id}-btn" type="button" data-dir="-1" aria-label="Previous testimonial">&#8249;</button>`);
   L.push(`      <div class="${id}-clip"><div class="${id}-track">`);
   cards.forEach(card => {
@@ -824,6 +824,7 @@ export function generateTestimonialsHtml(d: TestimonialsState, componentId = '')
   L.push(`      </div></div>`);
   L.push(`      <button class="${id}-btn" type="button" data-dir="1" aria-label="Next testimonial">&#8250;</button>`);
   L.push(`    </div>`);
+  L.push(`    <p class="${id}-latest">Showing our latest reviews</p>`);
   L.push(`    <div class="${id}-controls" aria-label="Testimonials controls">`);
   L.push(`      <div class="${id}-dots"></div>`);
   L.push(`    </div>`);
