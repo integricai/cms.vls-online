@@ -1,4 +1,4 @@
-import type { DcsState, Dcs2State, Dcs3State, ReachState, PhbState, Phv2State, Phv3State, BmsState, CbState, Bv2State, TestimonialsState, PaymentPlansState, PaymentPlanCard } from '../../types/cms';
+import type { DcsState, Dcs2State, Dcs3State, ReachState, PhbState, Phv2State, Phv3State, Phv4State, BmsState, CbState, Bv2State, TestimonialsState, PaymentPlansState, PaymentPlanCard } from '../../types/cms';
 import { normalize, textStyle, escapeHtml } from '../../utils/text';
 
 const e = escapeHtml;
@@ -483,6 +483,78 @@ export function generatePhv3Html(d: Phv3State): string {
   L.push(`        </div>`);
   L.push(`      </aside>`);
   L.push(`    </div>`);
+  L.push(`  </div>`);
+  L.push(`</section>`);
+  return L.join('\n');
+}
+
+// ── Page Hero Banner V4 (PHV4) ────────────────────────────────────────────────
+
+export function generatePhv4Html(d: Phv4State): string {
+  const id = uid();
+  const L: string[] = [];
+  const groups = Array.isArray(d.groups) ? d.groups : [];
+  const eyebrow = n(d.eyebrow, 'phv4Eyebrow');
+  const title = n(d.title, 'phv4Title');
+  const chip = n(d.chip, 'phv4Chip');
+  const note = n(d.note, 'phv4Note');
+
+  L.push('<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">');
+  L.push('<style>');
+  L.push(`.${id},.${id} *{box-sizing:border-box;}`);
+  L.push(`.${id}{font-family:Poppins,sans-serif;background:${e(d.bg)};color:${e(d.ink)};padding:${d.padTop}px ${d.padRight}px ${d.padBot}px ${d.padLeft}px;-webkit-font-smoothing:antialiased;}`);
+  L.push(`.${id}-card{max-width:${d.maxWidth}px;margin:0 auto;background:${e(d.cardBg)};border:1px solid ${e(d.cardBorder)};border-radius:${d.radius}px;overflow:hidden;box-shadow:0 10px 30px -20px rgba(15,30,60,.4);}`);
+  L.push(`.${id}-head{background:${e(d.headerBg)};padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;position:relative;overflow:hidden;}`);
+  L.push(`.${id}-head:after{content:"";position:absolute;top:-50px;right:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,${e(d.headerAccent)}22,transparent 70%);}`);
+  L.push(`.${id}-head-left{position:relative;z-index:1;min-width:0;}`);
+  L.push(`.${id}-eyebrow{text-transform:uppercase;margin-bottom:5px;}`);
+  L.push(`.${id}-title{line-height:1.1;margin:0;}`);
+  L.push(`.${id}-chip{position:relative;z-index:1;text-transform:uppercase;background:${e(d.chipBg)};border:1px solid ${e(d.chipBorder)};border-radius:20px;padding:5px 11px;white-space:nowrap;}`);
+  L.push(`.${id}-group{text-transform:uppercase;padding:13px 22px 7px;background:${e(d.groupBg)};border-bottom:1px solid ${e(d.lineColor)};}`);
+  L.push(`.${id}-row{display:flex;align-items:center;gap:12px;padding:11px 22px;border-bottom:1px solid ${e(d.lineColor)};transition:background .12s;}`);
+  L.push(`.${id}-row:hover{background:rgba(248,250,253,.8);}`);
+  L.push(`.${id}-row:last-child{border-bottom:none;}`);
+  L.push(`.${id}-name{flex:1;min-width:0;}`);
+  L.push(`.${id}-name strong{display:block;line-height:1.3;}`);
+  L.push(`.${id}-name span{line-height:1.45;}`);
+  L.push(`.${id}-badge{padding:2px 7px;border-radius:20px;white-space:nowrap;flex-shrink:0;}`);
+  L.push(`.${id}-badge-blue{background:${e(d.blueBg)};color:${e(d.blueText)};border:1px solid ${e(d.blueBorder)};}`);
+  L.push(`.${id}-badge-skills{background:${e(d.skillBg)};color:${e(d.skillText)};border:1px solid ${e(d.skillBorder)};}`);
+  L.push(`.${id}-badge-professional{background:${e(d.proBg)};color:${e(d.proText)};border:1px solid ${e(d.proBorder)};}`);
+  L.push(`.${id}-amount{white-space:nowrap;flex-shrink:0;}`);
+  L.push(`.${id}-foot{padding:12px 22px;background:${e(d.groupBg)};border-top:1px solid ${e(d.lineColor)};line-height:1.5;}`);
+  L.push(`.${id}-foot b{color:${e(d.ink)};font-weight:700;}`);
+  L.push(`@media(max-width:560px){.${id}{padding-left:14px!important;padding-right:14px!important;}.${id}-head{align-items:flex-start;flex-direction:column;}.${id}-row{align-items:flex-start;gap:8px;flex-wrap:wrap;}.${id}-amount{margin-left:auto;}.${id}-badge{margin-top:1px;}}`);
+  L.push('</style>');
+
+  L.push(`<section class="${id}">`);
+  L.push(`  <div class="${id}-card">`);
+  L.push(`    <div class="${id}-head">`);
+  L.push(`      <div class="${id}-head-left">`);
+  if (eyebrow.text) L.push(`        <div class="${id}-eyebrow" style="${textStyle(eyebrow)}">${e(eyebrow.text)}</div>`);
+  L.push(`        <h2 class="${id}-title" style="${textStyle(title)}">${e(title.text)}</h2>`);
+  L.push(`      </div>`);
+  if (chip.text) L.push(`      <div class="${id}-chip" style="${textStyle(chip)}">${e(chip.text)}</div>`);
+  L.push(`    </div>`);
+
+  for (const group of groups) {
+    const label = n(group.label, 'phv4Group');
+    if (label.text) L.push(`    <div class="${id}-group" style="${textStyle(label)}">${e(label.text)}</div>`);
+    for (const row of group.rows || []) {
+      const tone = row.badgeTone === 'skills' || row.badgeTone === 'professional' ? row.badgeTone : 'blue';
+      const badge = n(row.badge, 'phv4Badge');
+      const rowTitle = n(row.title, 'phv4RowTitle');
+      const subtitle = n(row.subtitle, 'phv4RowSub');
+      const amount = n(row.amount, 'phv4Amount');
+      L.push(`    <div class="${id}-row">`);
+      if (badge.text) L.push(`      <span class="${id}-badge ${id}-badge-${tone}" style="${textStyle(badge)}">${e(badge.text)}</span>`);
+      L.push(`      <div class="${id}-name"><strong style="${textStyle(rowTitle)}">${e(rowTitle.text)}</strong>${subtitle.text ? `<span style="${textStyle(subtitle)}">${e(subtitle.text)}</span>` : ''}</div>`);
+      if (amount.text) L.push(`      <div class="${id}-amount" style="${textStyle(amount)}">${e(amount.text)}</div>`);
+      L.push(`    </div>`);
+    }
+  }
+
+  if (note.text) L.push(`    <div class="${id}-foot" style="${textStyle(note)}">${e(note.text).replace(/^Note:/, '<b>Note:</b>')}</div>`);
   L.push(`  </div>`);
   L.push(`</section>`);
   return L.join('\n');

@@ -166,6 +166,16 @@ export const DEFAULTS = {
   // Page Hero Banner V2
   phv2Heading:   { size: 38, color: '#ffffff', weight: '700', letterSpacing: 0 },
   phv2Desc:      { size: 15, color: '#cbd5e1', weight: '400', letterSpacing: 0 },
+  // Page Hero Banner V4
+  phv4Eyebrow:   { size: 9,  color: '#4ea8de', weight: '800', letterSpacing: 0.12 },
+  phv4Title:     { size: 19, color: '#ffffff', weight: '800', letterSpacing: 0 },
+  phv4Chip:      { size: 9,  color: '#ffffff', weight: '800', letterSpacing: 0.04 },
+  phv4Group:     { size: 9,  color: '#6b7689', weight: '800', letterSpacing: 0.07 },
+  phv4RowTitle:  { size: 13, color: '#1a2438', weight: '700', letterSpacing: 0 },
+  phv4RowSub:    { size: 11, color: '#6b7689', weight: '400', letterSpacing: 0 },
+  phv4Amount:    { size: 18, color: '#0f1e3c', weight: '800', letterSpacing: 0 },
+  phv4Badge:     { size: 8,  color: '#0c447c', weight: '800', letterSpacing: 0 },
+  phv4Note:      { size: 11, color: '#6b7689', weight: '400', letterSpacing: 0 },
   // Hero Section V2
   h2Eyebrow:   { size: 11, color: '#4a90d9', weight: '600', letterSpacing: 0.12 },
   h2Heading:   { size: 44, color: '#ffffff', weight: '700', letterSpacing: 0    },

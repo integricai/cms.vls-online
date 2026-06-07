@@ -9,6 +9,7 @@ import type {
   PhbState, PhbComponent,
   Phv2State, Phv2Component, Phv2TrustItem, Phv2Card,
   Phv3State, Phv3Component, Phv3Feature, Phv3Stat, Phv3Include,
+  Phv4State, Phv4Component, Phv4FeeGroup, Phv4FeeRow, Phv4BadgeTone,
   BmsState, BmsComponent, BmsCheckItem,
   CbState, CbComponent,
   Bv2State, Bv2Component, Bv2Step,
@@ -19,7 +20,7 @@ import type {
 import { normalize } from '../../utils/text';
 import {
   generateDcsHtml, generateDcs2Html, generateDcs3Html, generateReachHtml,
-  generatePhbHtml, generatePhv2Html, generatePhv3Html, generateBmsHtml, generateCbHtml, generateBv2Html, generateTestimonialsHtml, generatePaymentPlansHtml,
+  generatePhbHtml, generatePhv2Html, generatePhv3Html, generatePhv4Html, generateBmsHtml, generateCbHtml, generateBv2Html, generateTestimonialsHtml, generatePaymentPlansHtml,
 } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
@@ -89,6 +90,57 @@ function makePhv3(): Phv3State {
       { icon: '💻', title: 'Online · any device', desc: '' },
     ],
     refundText: '🔒 3-day refund policy — not satisfied? Request a full refund within 3 days.',
+  };
+}
+
+function makePhv4(): Phv4State {
+  return {
+    bg: '#f4f6fb', cardBg: '#ffffff', cardBorder: '#e6ebf3', lineColor: '#eef2f7',
+    padTop: 24, padBot: 24, padLeft: 24, padRight: 24,
+    maxWidth: 560, radius: 16,
+    headerBg: '#0f1e3c', headerAccent: '#4ea8de', headerText: '#ffffff',
+    chipBg: '#263654', chipText: '#d5dbe6', chipBorder: '#4b5870',
+    groupBg: '#f8fafd', ink: '#1a2438', muted: '#6b7689',
+    skillBg: '#f0ecfb', skillText: '#5b3fc8', skillBorder: '#c5b9f4',
+    blueBg: '#e6f1fb', blueText: '#0c447c', blueBorder: '#b5d4f4',
+    proBg: '#fff7e9', proText: '#a05020', proBorder: '#f0d49a',
+    eyebrow: normalize('Payable to ACCA', 'phv4Eyebrow'),
+    title: normalize('ACCA Fee Structure', 'phv4Title'),
+    chip: normalize('Standard Entry', 'phv4Chip'),
+    note: normalize('Note: Standard entry rates shown. Early entry is discounted and late entry carries a surcharge - confirm current fees on ACCA Global before booking.', 'phv4Note'),
+    groups: [
+      {
+        id: 'registration',
+        label: normalize('Registration & Subscription', 'phv4Group'),
+        rows: [
+          { id: 'initial-registration', badge: normalize('', 'phv4Badge'), badgeTone: 'blue', title: normalize('Initial Registration', 'phv4RowTitle'), subtitle: normalize('One-off fee to join ACCA', 'phv4RowSub'), amount: normalize('£45', 'phv4Amount') },
+          { id: 'annual-subscription', badge: normalize('', 'phv4Badge'), badgeTone: 'blue', title: normalize('Annual Subscription 2025', 'phv4RowTitle'), subtitle: normalize('Payable each year', 'phv4RowSub'), amount: normalize('£137', 'phv4Amount') },
+        ],
+      },
+      {
+        id: 'skills-ethics',
+        label: normalize('Applied Skills & Ethics', 'phv4Group'),
+        rows: [
+          { id: 'skills-exam', badge: normalize('Skills', 'phv4Badge'), badgeTone: 'skills', title: normalize('Skills Exam - per paper', 'phv4RowTitle'), subtitle: normalize('PM · TX · FR · AA · FM', 'phv4RowSub'), amount: normalize('£139', 'phv4Amount') },
+          { id: 'ethics-module', badge: normalize('Module', 'phv4Badge'), badgeTone: 'blue', title: normalize('Ethics & Professional Skills', 'phv4RowTitle'), subtitle: normalize('Required module', 'phv4RowSub'), amount: normalize('£81', 'phv4Amount') },
+        ],
+      },
+      {
+        id: 'strategic-essentials',
+        label: normalize('Strategic Professional - Essentials', 'phv4Group'),
+        rows: [
+          { id: 'sbl', badge: normalize('Essentials', 'phv4Badge'), badgeTone: 'professional', title: normalize('Strategic Business Leader (SBL)', 'phv4RowTitle'), subtitle: normalize('', 'phv4RowSub'), amount: normalize('£245', 'phv4Amount') },
+          { id: 'sbr', badge: normalize('Essentials', 'phv4Badge'), badgeTone: 'professional', title: normalize('Strategic Business Reporting (SBR)', 'phv4RowTitle'), subtitle: normalize('', 'phv4RowSub'), amount: normalize('£175', 'phv4Amount') },
+        ],
+      },
+      {
+        id: 'strategic-options',
+        label: normalize('Strategic Professional - Options', 'phv4Group'),
+        rows: [
+          { id: 'options', badge: normalize('Options', 'phv4Badge'), badgeTone: 'professional', title: normalize('AFM · APM · AAA · ATX', 'phv4RowTitle'), subtitle: normalize('per paper · choose any two', 'phv4RowSub'), amount: normalize('£175', 'phv4Amount') },
+        ],
+      },
+    ],
   };
 }
 
@@ -439,6 +491,36 @@ function normPhv3(raw: any): Phv3State {
     features: d.features || [],
     stats: d.stats || [],
     includes: d.includes || [],
+  };
+}
+
+function normPhv4(raw: any): Phv4State {
+  const defaults = makePhv4();
+  const d = { ...defaults, ...(raw || {}) };
+  return {
+    ...d,
+    padTop: normalizeNum(d.padTop, defaults.padTop),
+    padBot: normalizeNum(d.padBot, defaults.padBot),
+    padLeft: normalizeNum(d.padLeft, defaults.padLeft),
+    padRight: normalizeNum(d.padRight, defaults.padRight),
+    maxWidth: normalizeNum(d.maxWidth, defaults.maxWidth),
+    radius: normalizeNum(d.radius, defaults.radius),
+    eyebrow: normalize(d.eyebrow, 'phv4Eyebrow'),
+    title: normalize(d.title, 'phv4Title'),
+    chip: normalize(d.chip, 'phv4Chip'),
+    note: normalize(d.note, 'phv4Note'),
+    groups: Array.isArray(d.groups) ? d.groups.map((group: any, groupIndex: number) => ({
+      id: group?.id || `group-${groupIndex + 1}`,
+      label: normalize(group?.label, 'phv4Group'),
+      rows: Array.isArray(group?.rows) ? group.rows.map((row: any, rowIndex: number) => ({
+        id: row?.id || `row-${groupIndex + 1}-${rowIndex + 1}`,
+        badge: normalize(row?.badge, 'phv4Badge'),
+        badgeTone: (['blue', 'skills', 'professional'].includes(row?.badgeTone) ? row.badgeTone : 'blue') as Phv4BadgeTone,
+        title: normalize(row?.title, 'phv4RowTitle'),
+        subtitle: normalize(row?.subtitle, 'phv4RowSub'),
+        amount: normalize(row?.amount, 'phv4Amount'),
+      })) : [],
+    })) : defaults.groups,
   };
 }
 
@@ -1388,6 +1470,182 @@ function Phv3Tab({ onHtml }: { onHtml: (html: string) => void }) {
   );
 }
 
+function Phv4Tab({ onHtml }: { onHtml: (html: string) => void }) {
+  const [comps, setComps]       = useState<Phv4Component[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [name, setName]         = useState('');
+  const [state, setState]       = useState<Phv4State>(makePhv4());
+  const [saving, setSaving]     = useState(false);
+  const [saved, setSaved]       = useState(false);
+  const [loaded, setLoaded]     = useState(false);
+
+  useEffect(() => {
+    api.get<any>('/content/vls-phv4-components').then(row => {
+      const raw = row?.data as any;
+      const cs: Phv4Component[] = (raw?.components || []).map((c: any) => ({ ...c, data: normPhv4(c.data || {}) }));
+      setComps(cs);
+      if (cs.length) { setActiveId(cs[0].id); setName(cs[0].name); setState(cs[0].data); }
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, []);
+
+  const upd = useCallback((p: Partial<Phv4State>) => { setState(prev => ({ ...prev, ...p })); setSaved(false); }, []);
+
+  function load(id: string) {
+    if (!id) { setActiveId(null); setName(''); setState(makePhv4()); setSaved(false); return; }
+    const c = comps.find(c => c.id === id);
+    if (c) { setActiveId(c.id); setName(c.name); setState(c.data); setSaved(false); }
+  }
+
+  function duplicate() {
+    setActiveId(null);
+    setName(`Copy of ${name || 'Hero Banner v4'}`);
+    setState(cloneState(state));
+    setSaved(false);
+  }
+
+  async function save() {
+    if (!name.trim()) { alert('Enter a component name.'); return; }
+    setSaving(true);
+    const id = activeId || `phv4-${Date.now().toString(36)}`;
+    const updated = activeId ? comps.map(c => c.id === id ? { id, name, data: state } : c) : [...comps, { id, name, data: state }];
+    await api.put('/content/vls-phv4-components', { components: updated });
+    setComps(updated); setActiveId(id); setSaved(true); setSaving(false);
+  }
+
+  async function del() {
+    if (!activeId || !confirm('Delete this component?')) return;
+    const updated = comps.filter(c => c.id !== activeId);
+    await api.put('/content/vls-phv4-components', { components: updated });
+    setComps(updated); setActiveId(null); setName(''); setState(makePhv4());
+  }
+
+  function updGroup(index: number, patch: Partial<Phv4FeeGroup>) {
+    const groups = [...state.groups];
+    groups[index] = { ...groups[index], ...patch };
+    upd({ groups });
+  }
+
+  function updRow(groupIndex: number, rowIndex: number, patch: Partial<Phv4FeeRow>) {
+    const groups = [...state.groups];
+    const rows = [...groups[groupIndex].rows];
+    rows[rowIndex] = { ...rows[rowIndex], ...patch };
+    groups[groupIndex] = { ...groups[groupIndex], rows };
+    upd({ groups });
+  }
+
+  function addGroup() {
+    upd({
+      groups: [...state.groups, {
+        id: `group-${Date.now().toString(36)}`,
+        label: normalize('New Group', 'phv4Group'),
+        rows: [],
+      }],
+    });
+  }
+
+  function addRow(groupIndex: number) {
+    const groups = [...state.groups];
+    groups[groupIndex] = {
+      ...groups[groupIndex],
+      rows: [...groups[groupIndex].rows, {
+        id: `row-${Date.now().toString(36)}`,
+        badge: normalize('', 'phv4Badge'),
+        badgeTone: 'blue',
+        title: normalize('New fee item', 'phv4RowTitle'),
+        subtitle: normalize('', 'phv4RowSub'),
+        amount: normalize('£0', 'phv4Amount'),
+      }],
+    };
+    upd({ groups });
+  }
+
+  if (!loaded) return <div className="p-5 text-xs text-slate-400">Loading…</div>;
+
+  return (
+    <div className="flex flex-col">
+      <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
+        onSelect={load} onNew={() => load('')} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
+        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Hero Banner V4', generatePhv4Html(state)))} />
+      <div className="px-5 py-4 space-y-1 overflow-y-auto">
+        <p className="section-label">Layout</p>
+        <PaddingRow value={state} onChange={upd} />
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Max width"><input type="number" className="input" min={320} max={980} value={state.maxWidth} onChange={e => upd({ maxWidth: Number(e.target.value) })} /></Field>
+          <Field label="Card radius"><input type="number" className="input" min={0} max={40} value={state.radius} onChange={e => upd({ radius: Number(e.target.value) })} /></Field>
+        </div>
+
+        <p className="section-label mt-3">Header</p>
+        <RichTextField label="Eyebrow" value={tv(state.eyebrow, 'phv4Eyebrow')} defaultKey="phv4Eyebrow" onChange={v => upd({ eyebrow: v })} />
+        <RichTextField label="Title" value={tv(state.title, 'phv4Title')} defaultKey="phv4Title" onChange={v => upd({ title: v })} />
+        <RichTextField label="Chip" value={tv(state.chip, 'phv4Chip')} defaultKey="phv4Chip" onChange={v => upd({ chip: v })} />
+
+        <p className="section-label mt-3">Colours</p>
+        <div className="grid grid-cols-2 gap-2">
+          <ColorInput label="Section bg" value={state.bg} onChange={v => upd({ bg: v })} />
+          <ColorInput label="Card bg" value={state.cardBg} onChange={v => upd({ cardBg: v })} />
+          <ColorInput label="Card border" value={state.cardBorder} onChange={v => upd({ cardBorder: v })} />
+          <ColorInput label="Line colour" value={state.lineColor} onChange={v => upd({ lineColor: v })} />
+          <ColorInput label="Header bg" value={state.headerBg} onChange={v => upd({ headerBg: v })} />
+          <ColorInput label="Header accent" value={state.headerAccent} onChange={v => upd({ headerAccent: v })} />
+          <ColorInput label="Header text" value={state.headerText} onChange={v => upd({ headerText: v })} />
+          <ColorInput label="Group bg" value={state.groupBg} onChange={v => upd({ groupBg: v })} />
+          <ColorInput label="Main text" value={state.ink} onChange={v => upd({ ink: v })} />
+          <ColorInput label="Muted text" value={state.muted} onChange={v => upd({ muted: v })} />
+        </div>
+
+        <p className="section-label mt-3">Badge Colours</p>
+        <div className="grid grid-cols-3 gap-2">
+          <ColorInput label="Blue bg" value={state.blueBg} onChange={v => upd({ blueBg: v })} />
+          <ColorInput label="Blue text" value={state.blueText} onChange={v => upd({ blueText: v })} />
+          <ColorInput label="Blue border" value={state.blueBorder} onChange={v => upd({ blueBorder: v })} />
+          <ColorInput label="Skills bg" value={state.skillBg} onChange={v => upd({ skillBg: v })} />
+          <ColorInput label="Skills text" value={state.skillText} onChange={v => upd({ skillText: v })} />
+          <ColorInput label="Skills border" value={state.skillBorder} onChange={v => upd({ skillBorder: v })} />
+          <ColorInput label="Professional bg" value={state.proBg} onChange={v => upd({ proBg: v })} />
+          <ColorInput label="Professional text" value={state.proText} onChange={v => upd({ proText: v })} />
+          <ColorInput label="Professional border" value={state.proBorder} onChange={v => upd({ proBorder: v })} />
+        </div>
+
+        <p className="section-label mt-3">Fee Groups</p>
+        {state.groups.map((group, groupIndex) => (
+          <div key={group.id} className="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
+              <RichTextField label="Group label" value={tv(group.label, 'phv4Group')} defaultKey="phv4Group" onChange={v => updGroup(groupIndex, { label: v })} />
+              <button onClick={() => upd({ groups: state.groups.filter((_, i) => i !== groupIndex) })} className="btn-danger mb-0.5 text-xs">Delete group</button>
+            </div>
+            {group.rows.map((row, rowIndex) => (
+              <div key={row.id} className="mt-2 rounded border border-slate-200 bg-white p-2">
+                <div className="grid grid-cols-[1fr_1fr_110px_auto] gap-2 items-end">
+                  <RichTextField label="Title" value={tv(row.title, 'phv4RowTitle')} defaultKey="phv4RowTitle" onChange={v => updRow(groupIndex, rowIndex, { title: v })} />
+                  <RichTextField label="Subtitle" value={tv(row.subtitle, 'phv4RowSub')} defaultKey="phv4RowSub" onChange={v => updRow(groupIndex, rowIndex, { subtitle: v })} />
+                  <RichTextField label="Amount" value={tv(row.amount, 'phv4Amount')} defaultKey="phv4Amount" onChange={v => updRow(groupIndex, rowIndex, { amount: v })} />
+                  <button onClick={() => updGroup(groupIndex, { rows: group.rows.filter((_, i) => i !== rowIndex) })} className="btn-danger mb-0.5 text-xs">✕</button>
+                </div>
+                <div className="mt-2 grid grid-cols-[1fr_150px] gap-2">
+                  <RichTextField label="Badge text" value={tv(row.badge, 'phv4Badge')} defaultKey="phv4Badge" onChange={v => updRow(groupIndex, rowIndex, { badge: v })} />
+                  <Field label="Badge tone">
+                    <select className="input" value={row.badgeTone} onChange={e => updRow(groupIndex, rowIndex, { badgeTone: e.target.value as Phv4BadgeTone })}>
+                      <option value="blue">Blue</option>
+                      <option value="skills">Skills</option>
+                      <option value="professional">Professional</option>
+                    </select>
+                  </Field>
+                </div>
+              </div>
+            ))}
+            <button onClick={() => addRow(groupIndex)} className="btn-ghost mt-2 w-full text-xs">+ Add row</button>
+          </div>
+        ))}
+        <button onClick={addGroup} className="btn-ghost w-full text-xs">+ Add group</button>
+
+        <p className="section-label mt-3">Footer Note</p>
+        <RichTextField label="Note" value={tv(state.note, 'phv4Note')} defaultKey="phv4Note" multiline onChange={v => upd({ note: v })} />
+      </div>
+    </div>
+  );
+}
+
 function BmsTab({ onHtml }: { onHtml: (html: string) => void }) {
   const [comps, setComps]       = useState<BmsComponent[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -2219,6 +2477,7 @@ const SECTION_TITLES: Record<string, { title: string; desc: string }> = {
   'hero-banner':    { title: 'Hero Banner',      desc: 'Eyebrow + heading + bullets + badge card' },
   'hero-banner-v2': { title: 'Hero Banner v2',   desc: 'Two-column: text left + info cards right' },
   'hero-banner-v3': { title: 'Hero Banner v3',   desc: 'Mock exam hero with aligned format box + purchase card' },
+  'hero-banner-v4': { title: 'Hero Banner v4',   desc: 'Compact fee structure card with editable groups and rows' },
   'book-meeting':   { title: 'Book a Meeting',   desc: 'Image left + eyebrow/heading/checklist/CTA right' },
   'payment-plans':  { title: 'Payment Plans',     desc: 'Component-owned course access cards with live published pricing' },
   'testimonials':   { title: 'Testimonials',      desc: 'Single-column auto-scrolling testimonial cards' },
@@ -2253,6 +2512,7 @@ export default function FullScreenSections() {
           {type === 'hero-banner'    && <PhbTab   onHtml={handleHtml} />}
           {type === 'hero-banner-v2' && <Phv2Tab  onHtml={handleHtml} />}
           {type === 'hero-banner-v3' && <Phv3Tab  onHtml={handleHtml} />}
+          {type === 'hero-banner-v4' && <Phv4Tab  onHtml={handleHtml} />}
           {type === 'book-meeting'   && <BmsTab   onHtml={handleHtml} />}
           {type === 'payment-plans'  && <PaymentPlansTab onHtml={handleHtml} />}
           {type === 'testimonials'   && <TestimonialsTab onHtml={handleHtml} />}

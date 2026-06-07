@@ -855,6 +855,35 @@ export interface Phv3State {
 }
 export interface Phv3Component { id: string; name: string; data: Phv3State; }
 
+// Page Hero Banner V4 (PHV4) - compact fee structure card
+export type Phv4BadgeTone = 'blue' | 'skills' | 'professional';
+export interface Phv4FeeRow {
+  id: string;
+  badge: TextValue;
+  badgeTone: Phv4BadgeTone;
+  title: TextValue;
+  subtitle: TextValue;
+  amount: TextValue;
+}
+export interface Phv4FeeGroup {
+  id: string;
+  label: TextValue;
+  rows: Phv4FeeRow[];
+}
+export interface Phv4State {
+  bg: string; cardBg: string; cardBorder: string; lineColor: string;
+  padTop: number; padBot: number; padLeft: number; padRight: number;
+  maxWidth: number; radius: number;
+  headerBg: string; headerAccent: string; headerText: string; chipBg: string; chipText: string; chipBorder: string;
+  groupBg: string; ink: string; muted: string;
+  skillBg: string; skillText: string; skillBorder: string;
+  blueBg: string; blueText: string; blueBorder: string;
+  proBg: string; proText: string; proBorder: string;
+  eyebrow: TextValue; title: TextValue; chip: TextValue; note: TextValue;
+  groups: Phv4FeeGroup[];
+}
+export interface Phv4Component { id: string; name: string; data: Phv4State; }
+
 // Hero Section V2
 export interface HeroV2Cta { text: string; url: string; scroll: string; style: 'solid' | 'outlined'; bg: string; tc: string; bc: string; }
 export interface HeroV2Stat { value: string; label: string; }
