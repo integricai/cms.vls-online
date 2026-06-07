@@ -11,39 +11,6 @@ function textContent(value: TextValue | undefined) {
   return typeof value === 'string' ? value : value.text || '';
 }
 
-function stripHtml(value: string) {
-  return value.replace(/<[^>]*>/g, '');
-}
-
-function safeJsonLd(value: unknown) {
-  return JSON.stringify(value, null, 2)
-    .replace(/</g, '\\u003c')
-    .replace(/>/g, '\\u003e')
-    .replace(/&/g, '\\u0026');
-}
-
-function faqJsonLdScript(schema: unknown) {
-  const json = safeJsonLd(schema);
-  return [
-    '<script type="text/javascript">',
-    '(function () {',
-    `  var schema = ${json};`,
-    '',
-    '  var script = document.createElement("script");',
-    '  script.type = "application/ld+json";',
-    '  script.text = JSON.stringify(schema);',
-    '  document.head.appendChild(script);',
-    '})();',
-    '</script>',
-  ].join('\n');
-}
-
-function schemaQuestionName(value: TextValue | undefined) {
-  return textContent(value)
-    .replace(/^\s*(?:\d+[\).\:-]|\(\d+\)|Q\d+[\).\:-]?)\s*/i, '')
-    .trim();
-}
-
 function answerInnerHtml(item: FaqItem) {
   const heading = normalize(item.heading, 'faqHeading');
   const para = normalize(item.para, 'faq');
@@ -71,16 +38,6 @@ function answerInnerHtml(item: FaqItem) {
   return lines.join('\n');
 }
 
-function answerPlainText(item: FaqItem) {
-  const parts: string[] = [];
-  const heading = textContent(item.heading);
-  const para = textContent(item.para);
-  if (heading) parts.push(heading);
-  if (para) parts.push(stripHtml(para));
-  if (item.items?.length) parts.push(item.items.map(textContent).filter(Boolean).join('. '));
-  return parts.join(' ');
-}
-
 function sectionItems(sectionOrItems: FaqSection | FaqItem[]) {
   return Array.isArray(sectionOrItems) ? sectionOrItems : sectionOrItems.items;
 }
@@ -91,16 +48,6 @@ export function generateFaqHtml(sectionOrItems: FaqSection | FaqItem[]) {
   const valid = items.filter(item => textContent(item.question).trim());
   if (!valid.length) return '<!-- Add FAQ items and generate HTML -->';
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    ...(section?.schemaId?.trim() ? { '@id': section.schemaId.trim() } : {}),
-    mainEntity: valid.map(item => ({
-      '@type': 'Question',
-      name: schemaQuestionName(item.question),
-      acceptedAnswer: { '@type': 'Answer', text: answerPlainText(item) },
-    })),
-  };
   const uid = `vlsfaq${Math.random().toString(36).slice(2, 7)}`;
   const lines: string[] = [];
 
@@ -149,8 +96,6 @@ export function generateFaqHtml(sectionOrItems: FaqSection | FaqItem[]) {
     lines.push('  </div>');
   });
   lines.push('</div>');
-  lines.push('');
-  lines.push(faqJsonLdScript(jsonLd));
   lines.push('');
   lines.push('<script>');
   lines.push('(function(){');

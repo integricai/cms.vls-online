@@ -1,17 +1,19 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../../api/client';
-import type { CourseHeroState, CourseHeroComponent, CourseHeroContent, CourseHeroPill, CourseHeroLearnItem, CourseHeroBreadcrumbItem, TextValue } from '../../types/cms';
+import type { CourseHeroState, CourseHeroComponent, CourseHeroContent, CourseHeroPill, CourseHeroLearnItem, CourseHeroBreadcrumbItem, FaqItem, FaqSection, TextValue } from '../../types/cms';
 import { normalize } from '../../utils/text';
-import { generateCourseHeroHtml } from './generateHtml';
+import { generateCourseHeroHtml, type CourseHeroFaqSchema } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
+import type { Course } from '../../../../shared/types';
 
 function makeDefault(): CourseHeroState {
   return {
     bg: '#0d1f3c',
     padTop: 48, padBot: 56, padLeft: 60, padRight: 60,
     breadcrumb: '',
+    courseId: null,
     eyebrowTc: '#4a90d9', eyebrowDot: '#4a90d9',
     heading: normalize('', 'chHeading'),
     desc:    normalize('', 'chDesc'),
@@ -32,6 +34,7 @@ function makeDefault(): CourseHeroState {
     schemaPriceCurrency: 'USD',
     schemaAvailability: 'https://schema.org/InStock',
     schemaBreadcrumbId: 'https://vls-online.com/courses/sbr/#breadcrumb',
+    schemaFaqSectionId: '',
     schemaBreadcrumbs: [
       { name: 'Home', item: 'https://vls-online.com/' },
       { name: 'ACCA', item: 'https://vls-online.com/accacourses' },
@@ -47,11 +50,13 @@ function normalizeState(raw: Partial<CourseHeroState> | undefined): CourseHeroSt
     ...data,
     heading: normalize(data.heading, 'chHeading'),
     desc: normalize(data.desc, 'chDesc'),
+    courseId: Number.isInteger(Number(data.courseId)) ? Number(data.courseId) : null,
     tags: Array.isArray(data.tags) ? data.tags : [],
     pills: Array.isArray(data.pills) ? data.pills : [],
     learnItems: Array.isArray(data.learnItems) ? data.learnItems : [],
     schemaEnabled: data.schemaEnabled !== false,
     schemaBreadcrumbs: Array.isArray(data.schemaBreadcrumbs) ? data.schemaBreadcrumbs : defaults.schemaBreadcrumbs,
+    schemaFaqSectionId: data.schemaFaqSectionId || '',
   };
 }
 
@@ -72,6 +77,27 @@ function ColorRow({ label, value, onChange }: { label: string; value: string; on
   );
 }
 
+function textOf(value: TextValue | undefined) {
+  if (!value) return '';
+  return typeof value === 'string' ? value : value.text || '';
+}
+
+function stripHtml(value: string) {
+  return value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function faqAnswerText(item: FaqItem) {
+  const parts: string[] = [];
+  const heading = textOf(item.heading);
+  const para = textOf(item.para);
+  if (heading && (item.type === 'heading-para' || item.type === 'heading-bullets')) parts.push(heading);
+  if (para && (item.type === 'paragraph' || item.type === 'heading-para')) parts.push(stripHtml(para));
+  if ((item.type === 'bullets' || item.type === 'heading-bullets') && item.items?.length) {
+    parts.push(item.items.map(textOf).filter(Boolean).join('. '));
+  }
+  return parts.filter(Boolean).join(' ');
+}
+
 export default function CourseHeroScreen() {
   const [components, setComponents] = useState<CourseHeroComponent[]>([]);
   const [activeId, setActiveId]     = useState<string | null>(null);
@@ -82,13 +108,23 @@ export default function CourseHeroScreen() {
   const [saved, setSaved]           = useState(false);
   const [activeTab, setActiveTab]   = useState<'preview' | 'html'>('preview');
   const [previewHtml, setPreviewHtml] = useState('');
+  const [faqSections, setFaqSections] = useState<FaqSection[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
 
   useEffect(() => {
-    api.get<{ data: CourseHeroContent }>('/content/vls-course-hero-components')
-      .then(row => {
+    Promise.all([
+      api.get<{ data: CourseHeroContent }>('/content/vls-course-hero-components'),
+      api.get<any>('/content/vls-faq').catch(() => null),
+      api.get<Course[]>('/courses/active').catch(() => []),
+    ])
+      .then(([row, faqRow, courseRows]) => {
         const comps = (row?.data as CourseHeroContent)?.components ?? [];
         setComponents(comps);
         if (comps.length > 0) { setActiveId(comps[0].id); setName(comps[0].name); setState(normalizeState(comps[0].data)); }
+        const faqs = ((faqRow?.data?.sections || []) as FaqSection[])
+          .filter(section => section?.id && Array.isArray(section.items));
+        setFaqSections(faqs);
+        setCourses(courseRows || []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -140,7 +176,45 @@ export default function CourseHeroScreen() {
     setComponents(comps); newComponent();
   }
 
-  function generate() { setPreviewHtml(wrapGeneratedHtml('Left Hero', generateCourseHeroHtml(state))); setActiveTab('preview'); }
+  function matchedFaqSection() {
+    if (!faqSections.length) return null;
+    const explicit = faqSections.find(section => section.id === state.schemaFaqSectionId);
+    if (explicit) return explicit;
+    const byCourse = state.courseId ? faqSections.find(section => section.courseId === state.courseId) : null;
+    if (byCourse) return byCourse;
+    const courseUrl = state.schemaUrl.replace(/\/$/, '').toLowerCase();
+    const courseName = state.schemaCourseName.trim().toLowerCase();
+    return faqSections.find(section => {
+      const schemaId = String(section.schemaId || '').toLowerCase();
+      const name = String(section.name || '').toLowerCase();
+      const title = textOf(section.title).toLowerCase();
+      return Boolean(
+        (courseUrl && schemaId.includes(courseUrl))
+        || (courseName && (name.includes(courseName) || title.includes(courseName))),
+      );
+    }) ?? null;
+  }
+
+  function faqSchemaForGenerate(): CourseHeroFaqSchema | undefined {
+    const section = matchedFaqSection();
+    if (!section) return undefined;
+    const items = section.items
+      .map(item => ({
+        question: textOf(item.question),
+        answer: faqAnswerText(item),
+      }))
+      .filter(item => item.question.trim() && item.answer.trim());
+    return items.length ? { id: section.schemaId || undefined, items } : undefined;
+  }
+
+  function courseName(courseId: number | null | undefined) {
+    return courses.find(course => course.id === courseId)?.name || '';
+  }
+
+  function generate() {
+    setPreviewHtml(wrapGeneratedHtml('Left Hero', generateCourseHeroHtml(state, faqSchemaForGenerate())));
+    setActiveTab('preview');
+  }
 
   if (loading) return <div className="flex h-full items-center justify-center text-sm text-slate-400">Loading…</div>;
 
@@ -218,6 +292,18 @@ export default function CourseHeroScreen() {
           </div>
 
           <p className="section-label">Breadcrumb</p>
+          <Field label="Course" hint="Used to link this hero to its FAQ section without guessing.">
+            <select
+              className="input"
+              value={state.courseId ?? ''}
+              onChange={e => upd({ courseId: e.target.value ? Number(e.target.value) : null })}
+            >
+              <option value="">No course selected</option>
+              {courses.map(course => (
+                <option key={course.id} value={course.id}>{course.name}</option>
+              ))}
+            </select>
+          </Field>
           <Field label="Breadcrumb trail" hint="optional">
             <input className="input" value={state.breadcrumb} placeholder="Home › ACCA Courses › FA1"
               onChange={e => upd({ breadcrumb: e.target.value })} />
@@ -309,8 +395,8 @@ export default function CourseHeroScreen() {
           <label className="mb-3 flex cursor-pointer items-center gap-2 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
             <input type="checkbox" checked={state.schemaEnabled} onChange={e => upd({ schemaEnabled: e.target.checked })} />
             <span>
-              <strong>Embed Course + Breadcrumb schema</strong>
-              <span className="ml-2 text-xs text-slate-400">Uses Zenler-safe runtime JSON-LD injection.</span>
+              <strong>Embed Course + Breadcrumb + FAQ schema</strong>
+              <span className="ml-2 text-xs text-slate-400">Uses one Zenler-safe runtime JSON-LD graph.</span>
             </span>
           </label>
           <Field label="Course @id">
@@ -357,6 +443,24 @@ export default function CourseHeroScreen() {
             ))}
           </div>
           <button onClick={addSchemaBreadcrumb} className="btn-ghost text-xs w-full mb-4">+ Add breadcrumb</button>
+          <p className="section-label">FAQPage Schema</p>
+          <Field label="FAQ section" hint="Choose the course FAQ section, or leave on Auto match to use schema URL/name.">
+            <select className="input" value={state.schemaFaqSectionId} onChange={e => upd({ schemaFaqSectionId: e.target.value })}>
+              <option value="">Auto match FAQ section</option>
+              {faqSections.map(section => (
+                <option key={section.id} value={section.id}>
+                  {section.name || textOf(section.title) || 'Untitled FAQ'}
+                  {section.courseId ? ` - ${courseName(section.courseId) || `Course ${section.courseId}`}` : ''}
+                  {` (${section.items.length})`}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <p className="mb-4 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+            {matchedFaqSection()
+              ? `FAQ schema will use "${matchedFaqSection()?.name || textOf(matchedFaqSection()?.title) || 'Untitled FAQ'}" with ${matchedFaqSection()?.items.length || 0} question${(matchedFaqSection()?.items.length || 0) === 1 ? '' : 's'}.`
+              : 'No matching FAQ section found yet. Select a FAQ section to include FAQPage schema in the same graph.'}
+          </p>
         </div>
       </div>
 

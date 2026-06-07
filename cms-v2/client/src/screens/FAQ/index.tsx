@@ -6,6 +6,7 @@ import type { FaqAnswerType, FaqItem, FaqSection, TextData, TextValue } from '..
 import { normalize } from '../../utils/text';
 import { generateFaqHtml } from './generateHtml';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
+import type { Course } from '../../../../shared/types';
 
 type Tab = 'preview' | 'html';
 
@@ -28,6 +29,7 @@ function makeSection(): FaqSection {
   return {
     id: id('fqs'),
     name: 'FAQ Section',
+    courseId: null,
     icon: '❔',
     title: normalize('Frequently Asked Questions', 'faqTitle'),
     titleGap: 8,
@@ -57,6 +59,7 @@ function normalizeSection(section: any): FaqSection {
   return {
     id: section?.id || id('fqs'),
     name: section?.name || '',
+    courseId: Number.isInteger(Number(section?.courseId)) ? Number(section.courseId) : null,
     icon: section?.icon ?? '❔',
     title: normalize(section?.title || 'Frequently Asked Questions', 'faqTitle'),
     titleGap: Number.isFinite(Number(section?.titleGap)) ? Number(section.titleGap) : 8,
@@ -165,13 +168,18 @@ export default function FAQ() {
   const [saved, setSaved] = useState(false);
   const [html, setHtml] = useState('');
   const [tab, setTab] = useState<Tab>('preview');
+  const [courses, setCourses] = useState<Course[]>([]);
 
   useEffect(() => {
-    api.get<any>('/content/vls-faq')
-      .then(row => {
+    Promise.all([
+      api.get<any>('/content/vls-faq'),
+      api.get<Course[]>('/courses/active').catch(() => []),
+    ])
+      .then(([row, courseRows]) => {
         const next = ((row?.data?.sections || []) as any[]).map(normalizeSection);
         setSections(next);
         if (next[0]) setActiveId(next[0].id);
+        setCourses(courseRows || []);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -196,6 +204,7 @@ export default function FAQ() {
     const copy: FaqSection = {
       id: id('fqs'),
       name: `NEW_${active.name || 'FAQ Section'}`,
+      courseId: active.courseId,
       icon: active.icon,
       title: structuredClone(normalize(active.title, 'faqTitle')),
       titleGap: active.titleGap,
@@ -284,6 +293,18 @@ export default function FAQ() {
           <div className="px-5 py-4">
             <Field label="Section name">
               <input className="input" value={active.name} onChange={e => updateSection({ ...active, name: e.target.value })} />
+            </Field>
+            <Field label="Course" hint="Links this FAQ section to a course for structured data injection.">
+              <select
+                className="input"
+                value={active.courseId ?? ''}
+                onChange={e => updateSection({ ...active, courseId: e.target.value ? Number(e.target.value) : null })}
+              >
+                <option value="">No course selected</option>
+                {courses.map(course => (
+                  <option key={course.id} value={course.id}>{course.name}</option>
+                ))}
+              </select>
             </Field>
             <p className="section-label">Section Title</p>
             <div className="grid grid-cols-[88px_1fr] gap-3">

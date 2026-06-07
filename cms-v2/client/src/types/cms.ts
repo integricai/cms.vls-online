@@ -107,6 +107,7 @@ export interface FaqItem {
 export interface FaqSection {
   id: string;
   name: string;
+  courseId: number | null;
   icon: string;
   title: TextValue;
   titleGap: number;
@@ -511,6 +512,7 @@ export interface CourseHeroState {
   bg: string;
   padTop: number; padBot: number; padLeft: number; padRight: number;
   breadcrumb: string;
+  courseId: number | null;
   eyebrowTc: string; eyebrowDot: string;
   heading: TextValue;
   desc: TextValue;
@@ -525,6 +527,7 @@ export interface CourseHeroState {
   schemaCourseId: string; schemaCourseName: string; schemaDescription: string; schemaUrl: string;
   schemaProviderId: string; schemaPrice: string; schemaPriceCurrency: string; schemaAvailability: string;
   schemaBreadcrumbId: string; schemaBreadcrumbs: CourseHeroBreadcrumbItem[];
+  schemaFaqSectionId: string;
 }
 export interface CourseHeroComponent { id: string; name: string; data: CourseHeroState; }
 export interface CourseHeroContent { components: CourseHeroComponent[]; }

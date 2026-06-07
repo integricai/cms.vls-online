@@ -1,6 +1,11 @@
 import type { CourseHeroState } from '../../types/cms';
 import { normalize, textStyle, escapeHtml } from '../../utils/text';
 
+export interface CourseHeroFaqSchema {
+  id?: string;
+  items: Array<{ question: string; answer: string }>;
+}
+
 function safeHex(v: string | undefined, fallback: string): string {
   return /^#[0-9a-fA-F]{6}$/.test(v ?? '') ? v! : fallback;
 }
@@ -16,7 +21,13 @@ function safeJson(value: unknown): string {
     .replace(/&/g, '\\u0026');
 }
 
-function schemaScript(d: CourseHeroState): string {
+function schemaQuestionName(value: string) {
+  return value
+    .replace(/^\s*(?:\d+[\).\:-]|\(\d+\)|Q\d+[\).\:-]?)\s*/i, '')
+    .trim();
+}
+
+function schemaScript(d: CourseHeroState, faq?: CourseHeroFaqSchema): string {
   if (d.schemaEnabled === false) return '';
   const courseName = String(d.schemaCourseName || '').trim();
   const courseUrl = String(d.schemaUrl || '').trim();
@@ -62,6 +73,29 @@ function schemaScript(d: CourseHeroState): string {
     });
   }
 
+  const faqEntities = (faq?.items || [])
+    .map(item => ({
+      question: schemaQuestionName(String(item.question || '')),
+      answer: String(item.answer || '').trim(),
+    }))
+    .filter(item => item.question && item.answer)
+    .map(item => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer,
+      },
+    }));
+
+  if (faqEntities.length) {
+    graph['@graph'].push({
+      '@type': 'FAQPage',
+      '@id': String(faq?.id || `${courseUrl.replace(/\/$/, '')}/#faq`).trim(),
+      mainEntity: faqEntities,
+    });
+  }
+
   return `<script type="text/javascript">
 (function () {
   var graph = ${safeJson(graph)};
@@ -74,7 +108,7 @@ function schemaScript(d: CourseHeroState): string {
 </script>`;
 }
 
-export function generateCourseHeroHtml(d: CourseHeroState): string {
+export function generateCourseHeroHtml(d: CourseHeroState, faq?: CourseHeroFaqSchema): string {
   const uid = 'ch-' + Date.now().toString(36);
   const bg  = safeHex(d.bg, '#0d1f3c');
   const pT  = clamp(d.padTop,  48, 0, 300);
@@ -160,7 +194,7 @@ export function generateCourseHeroHtml(d: CourseHeroState): string {
 }
 </style>`;
 
-  const schema = schemaScript(d);
+  const schema = schemaScript(d, faq);
 
   return css + `\n<div id="${uid}" style="background:${bg};padding:${pT}px ${pR}px ${pB}px ${pL}px;">\n`
     + parts.join('\n') + '\n</div>' + (schema ? `\n${schema}` : '');
