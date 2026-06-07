@@ -22,6 +22,14 @@ function safeJsonLd(value: unknown) {
     .replace(/&/g, '\\u0026');
 }
 
+function faqJsonLdScript(schema: unknown) {
+  return [
+    '<script type="application/ld+json" data-vls-schema="FAQPage">',
+    safeJsonLd(schema),
+    '</script>',
+  ].join('\n');
+}
+
 function answerInnerHtml(item: FaqItem) {
   const heading = normalize(item.heading, 'faqHeading');
   const para = normalize(item.para, 'faq');
@@ -82,10 +90,6 @@ export function generateFaqHtml(sectionOrItems: FaqSection | FaqItem[]) {
   const uid = `vlsfaq${Math.random().toString(36).slice(2, 7)}`;
   const lines: string[] = [];
 
-  lines.push('<script type="application/ld+json">');
-  lines.push(safeJsonLd(jsonLd));
-  lines.push('</script>');
-  lines.push('');
   lines.push('<style>');
   lines.push(`.${uid}{font-family:Poppins,sans-serif;width:100%;text-align:left !important;}`);
   lines.push(`.${uid},.${uid} *{text-align:left !important;}`);
@@ -131,6 +135,8 @@ export function generateFaqHtml(sectionOrItems: FaqSection | FaqItem[]) {
     lines.push('  </div>');
   });
   lines.push('</div>');
+  lines.push('');
+  lines.push(faqJsonLdScript(jsonLd));
   lines.push('');
   lines.push('<script>');
   lines.push('(function(){');
