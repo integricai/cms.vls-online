@@ -280,6 +280,20 @@ export default function FAQ() {
               {active && <button onClick={duplicateSection} className="btn-ghost text-xs">Duplicate</button>}
               {active && <button onClick={deleteSection} className="btn-danger text-xs">Delete</button>}
             </div>
+            {active && (
+              <Field label="Course" hint="Links this FAQ section to a course for the combined Course Hero schema.">
+                <select
+                  className="input"
+                  value={active.courseId ?? ''}
+                  onChange={e => updateSection({ ...active, courseId: e.target.value ? Number(e.target.value) : null })}
+                >
+                  <option value="">No course selected</option>
+                  {courses.map(course => (
+                    <option key={course.id} value={course.id}>{course.name}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
             <div className="flex gap-2">
               <button onClick={save} disabled={saving} className="btn-primary flex-1 justify-center">{saving ? 'Saving...' : saved ? 'Saved' : 'Save All'}</button>
               <button onClick={() => { setHtml(wrapGeneratedHtml('FAQ', generateFaqHtml(active || []))); setTab('preview'); }} disabled={!active} className="btn-success flex-1 justify-center">Generate HTML</button>
@@ -293,18 +307,6 @@ export default function FAQ() {
           <div className="px-5 py-4">
             <Field label="Section name">
               <input className="input" value={active.name} onChange={e => updateSection({ ...active, name: e.target.value })} />
-            </Field>
-            <Field label="Course" hint="Links this FAQ section to a course for structured data injection.">
-              <select
-                className="input"
-                value={active.courseId ?? ''}
-                onChange={e => updateSection({ ...active, courseId: e.target.value ? Number(e.target.value) : null })}
-              >
-                <option value="">No course selected</option>
-                {courses.map(course => (
-                  <option key={course.id} value={course.id}>{course.name}</option>
-                ))}
-              </select>
             </Field>
             <p className="section-label">Section Title</p>
             <div className="grid grid-cols-[88px_1fr] gap-3">

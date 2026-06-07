@@ -278,6 +278,18 @@ export default function CourseHeroScreen() {
               <input className="input" value={name} placeholder="e.g. FA1 Course Hero"
                 onChange={e => setName(e.target.value)} />
             </Field>
+            <Field label="Course" hint="Links this hero to its course FAQ section for schema.">
+              <select
+                className="input"
+                value={state.courseId ?? ''}
+                onChange={e => upd({ courseId: e.target.value ? Number(e.target.value) : null })}
+              >
+                <option value="">No course selected</option>
+                {courses.map(course => (
+                  <option key={course.id} value={course.id}>{course.name}</option>
+                ))}
+              </select>
+            </Field>
           </div>
 
           <p className="section-label">Background & Layout</p>
@@ -292,18 +304,6 @@ export default function CourseHeroScreen() {
           </div>
 
           <p className="section-label">Breadcrumb</p>
-          <Field label="Course" hint="Used to link this hero to its FAQ section without guessing.">
-            <select
-              className="input"
-              value={state.courseId ?? ''}
-              onChange={e => upd({ courseId: e.target.value ? Number(e.target.value) : null })}
-            >
-              <option value="">No course selected</option>
-              {courses.map(course => (
-                <option key={course.id} value={course.id}>{course.name}</option>
-              ))}
-            </select>
-          </Field>
           <Field label="Breadcrumb trail" hint="optional">
             <input className="input" value={state.breadcrumb} placeholder="Home › ACCA Courses › FA1"
               onChange={e => upd({ breadcrumb: e.target.value })} />
