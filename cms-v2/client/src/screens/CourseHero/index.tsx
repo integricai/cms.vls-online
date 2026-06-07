@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../../api/client';
-import type { CourseHeroState, CourseHeroComponent, CourseHeroContent, CourseHeroPill, CourseHeroLearnItem, TextValue } from '../../types/cms';
+import type { CourseHeroState, CourseHeroComponent, CourseHeroContent, CourseHeroPill, CourseHeroLearnItem, CourseHeroBreadcrumbItem, TextValue } from '../../types/cms';
 import { normalize } from '../../utils/text';
 import { generateCourseHeroHtml } from './generateHtml';
 import Field from '../../components/Field';
@@ -22,6 +22,36 @@ function makeDefault(): CourseHeroState {
     learnLabelTc: '#4a90d9', learnBg: '#132343', learnBorder: '#1e3a5f',
     learnCc: '#4a90d9', learnTitleTc: '#ffffff', learnSubTc: '#f97316',
     learnItems: [],
+    schemaEnabled: true,
+    schemaCourseId: 'https://vls-online.com/courses/sbr/#course',
+    schemaCourseName: 'ACCA SBR Strategic Business Reporting',
+    schemaDescription: 'Prepare for ACCA SBR online with VLS. Study strategic reporting, IFRS application and exam technique with tutor support, live sessions, study notes, quizzes and mock exam practice where included.',
+    schemaUrl: 'https://vls-online.com/courses/sbr',
+    schemaProviderId: 'https://vls-online.com/#organization',
+    schemaPrice: '180',
+    schemaPriceCurrency: 'USD',
+    schemaAvailability: 'https://schema.org/InStock',
+    schemaBreadcrumbId: 'https://vls-online.com/courses/sbr/#breadcrumb',
+    schemaBreadcrumbs: [
+      { name: 'Home', item: 'https://vls-online.com/' },
+      { name: 'ACCA', item: 'https://vls-online.com/accacourses' },
+      { name: 'ACCA SBR Strategic Business Reporting', item: 'https://vls-online.com/courses/sbr' },
+    ],
+  };
+}
+
+function normalizeState(raw: Partial<CourseHeroState> | undefined): CourseHeroState {
+  const defaults = makeDefault();
+  const data = { ...defaults, ...(raw || {}) };
+  return {
+    ...data,
+    heading: normalize(data.heading, 'chHeading'),
+    desc: normalize(data.desc, 'chDesc'),
+    tags: Array.isArray(data.tags) ? data.tags : [],
+    pills: Array.isArray(data.pills) ? data.pills : [],
+    learnItems: Array.isArray(data.learnItems) ? data.learnItems : [],
+    schemaEnabled: data.schemaEnabled !== false,
+    schemaBreadcrumbs: Array.isArray(data.schemaBreadcrumbs) ? data.schemaBreadcrumbs : defaults.schemaBreadcrumbs,
   };
 }
 
@@ -58,7 +88,7 @@ export default function CourseHeroScreen() {
       .then(row => {
         const comps = (row?.data as CourseHeroContent)?.components ?? [];
         setComponents(comps);
-        if (comps.length > 0) { setActiveId(comps[0].id); setName(comps[0].name); setState(comps[0].data || makeDefault()); }
+        if (comps.length > 0) { setActiveId(comps[0].id); setName(comps[0].name); setState(normalizeState(comps[0].data)); }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -73,7 +103,7 @@ export default function CourseHeroScreen() {
     if (!id) { newComponent(); return; }
     const c = components.find(c => c.id === id);
     if (!c) return;
-    setActiveId(c.id); setName(c.name); setState(c.data || makeDefault()); setSaved(false);
+    setActiveId(c.id); setName(c.name); setState(normalizeState(c.data)); setSaved(false);
   }
 
   function newComponent() { setActiveId(null); setName(''); setState(makeDefault()); setSaved(false); }
@@ -133,6 +163,14 @@ export default function CourseHeroScreen() {
   }
   function addLearn() { upd({ learnItems: [...state.learnItems, { title: '', subtitle: '', fullWidth: false }] }); }
   function removeLearn(i: number) { upd({ learnItems: state.learnItems.filter((_, idx) => idx !== i) }); }
+
+  function updateSchemaBreadcrumb(i: number, patch: Partial<CourseHeroBreadcrumbItem>) {
+    const items = [...state.schemaBreadcrumbs];
+    items[i] = { ...items[i], ...patch };
+    upd({ schemaBreadcrumbs: items });
+  }
+  function addSchemaBreadcrumb() { upd({ schemaBreadcrumbs: [...state.schemaBreadcrumbs, { name: '', item: '' }] }); }
+  function removeSchemaBreadcrumb(i: number) { upd({ schemaBreadcrumbs: state.schemaBreadcrumbs.filter((_, idx) => idx !== i) }); }
 
   return (
     <div className="flex h-full">
@@ -266,6 +304,59 @@ export default function CourseHeroScreen() {
             ))}
           </div>
           <button onClick={addLearn} className="btn-ghost text-xs w-full mb-4">+ Add learn item</button>
+
+          <p className="section-label">Structured Data Schema</p>
+          <label className="mb-3 flex cursor-pointer items-center gap-2 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            <input type="checkbox" checked={state.schemaEnabled} onChange={e => upd({ schemaEnabled: e.target.checked })} />
+            <span>
+              <strong>Embed Course + Breadcrumb schema</strong>
+              <span className="ml-2 text-xs text-slate-400">Uses Zenler-safe runtime JSON-LD injection.</span>
+            </span>
+          </label>
+          <Field label="Course @id">
+            <input className="input" value={state.schemaCourseId} onChange={e => upd({ schemaCourseId: e.target.value })} />
+          </Field>
+          <Field label="Course name">
+            <input className="input" value={state.schemaCourseName} onChange={e => upd({ schemaCourseName: e.target.value })} />
+          </Field>
+          <Field label="Course description">
+            <textarea className="input min-h-[100px] resize-y" value={state.schemaDescription} onChange={e => upd({ schemaDescription: e.target.value })} />
+          </Field>
+          <Field label="Course URL">
+            <input className="input" value={state.schemaUrl} onChange={e => upd({ schemaUrl: e.target.value })} />
+          </Field>
+          <Field label="Provider @id">
+            <input className="input" value={state.schemaProviderId} onChange={e => upd({ schemaProviderId: e.target.value })} />
+          </Field>
+          <div className="grid grid-cols-3 gap-2">
+            <Field label="Price">
+              <input className="input" value={state.schemaPrice} onChange={e => upd({ schemaPrice: e.target.value })} />
+            </Field>
+            <Field label="Currency">
+              <input className="input" value={state.schemaPriceCurrency} onChange={e => upd({ schemaPriceCurrency: e.target.value })} />
+            </Field>
+            <Field label="Availability">
+              <input className="input" value={state.schemaAvailability} onChange={e => upd({ schemaAvailability: e.target.value })} />
+            </Field>
+          </div>
+          <Field label="Breadcrumb @id">
+            <input className="input" value={state.schemaBreadcrumbId} onChange={e => upd({ schemaBreadcrumbId: e.target.value })} />
+          </Field>
+          <p className="section-label">Schema Breadcrumbs</p>
+          <div className="space-y-2 mb-2">
+            {state.schemaBreadcrumbs.map((item, i) => (
+              <div key={i} className="grid grid-cols-[1fr_1.5fr_auto] gap-2 items-end rounded border border-slate-200 bg-slate-50 p-2">
+                <Field label={`Name ${i + 1}`}>
+                  <input className="input" value={item.name} onChange={e => updateSchemaBreadcrumb(i, { name: e.target.value })} />
+                </Field>
+                <Field label="Item URL">
+                  <input className="input" value={item.item} onChange={e => updateSchemaBreadcrumb(i, { item: e.target.value })} />
+                </Field>
+                <button onClick={() => removeSchemaBreadcrumb(i)} className="btn-danger mb-0.5">✕</button>
+              </div>
+            ))}
+          </div>
+          <button onClick={addSchemaBreadcrumb} className="btn-ghost text-xs w-full mb-4">+ Add breadcrumb</button>
         </div>
       </div>
 

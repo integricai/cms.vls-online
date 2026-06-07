@@ -9,6 +9,71 @@ function clamp(v: number | undefined, def: number, min: number, max: number): nu
   return isNaN(n) ? def : Math.min(max, Math.max(min, n));
 }
 
+function safeJson(value: unknown): string {
+  return JSON.stringify(value, null, 2)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+}
+
+function schemaScript(d: CourseHeroState): string {
+  if (d.schemaEnabled === false) return '';
+  const courseName = String(d.schemaCourseName || '').trim();
+  const courseUrl = String(d.schemaUrl || '').trim();
+  if (!courseName || !courseUrl) return '';
+
+  const graph: any = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Course',
+        '@id': String(d.schemaCourseId || `${courseUrl.replace(/\/$/, '')}/#course`).trim(),
+        name: courseName,
+        description: String(d.schemaDescription || '').trim(),
+        url: courseUrl,
+        provider: {
+          '@id': String(d.schemaProviderId || 'https://vls-online.com/#organization').trim(),
+        },
+        offers: {
+          '@type': 'Offer',
+          url: courseUrl,
+          price: String(d.schemaPrice || '').trim(),
+          priceCurrency: String(d.schemaPriceCurrency || 'USD').trim(),
+          availability: String(d.schemaAvailability || 'https://schema.org/InStock').trim(),
+        },
+      },
+    ],
+  };
+
+  const breadcrumbs = (d.schemaBreadcrumbs || [])
+    .filter(item => String(item.name || '').trim() && String(item.item || '').trim())
+    .map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: String(item.name || '').trim(),
+      item: String(item.item || '').trim(),
+    }));
+
+  if (breadcrumbs.length) {
+    graph['@graph'].push({
+      '@type': 'BreadcrumbList',
+      '@id': String(d.schemaBreadcrumbId || `${courseUrl.replace(/\/$/, '')}/#breadcrumb`).trim(),
+      itemListElement: breadcrumbs,
+    });
+  }
+
+  return `<script type="text/javascript">
+(function () {
+  var graph = ${safeJson(graph)};
+
+  var script = document.createElement("script");
+  script.type = "application/ld+json";
+  script.text = JSON.stringify(graph);
+  document.head.appendChild(script);
+})();
+</script>`;
+}
+
 export function generateCourseHeroHtml(d: CourseHeroState): string {
   const uid = 'ch-' + Date.now().toString(36);
   const bg  = safeHex(d.bg, '#0d1f3c');
@@ -95,6 +160,8 @@ export function generateCourseHeroHtml(d: CourseHeroState): string {
 }
 </style>`;
 
+  const schema = schemaScript(d);
+
   return css + `\n<div id="${uid}" style="background:${bg};padding:${pT}px ${pR}px ${pB}px ${pL}px;">\n`
-    + parts.join('\n') + '\n</div>';
+    + parts.join('\n') + '\n</div>' + (schema ? `\n${schema}` : '');
 }

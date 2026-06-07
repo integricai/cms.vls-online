@@ -505,6 +505,7 @@ export interface GenericSectionContent { components: GenericSectionComponent[]; 
 
 export interface CourseHeroPill { icon: string; value: string; label: string; }
 export interface CourseHeroLearnItem { title: string; subtitle: string; fullWidth: boolean; }
+export interface CourseHeroBreadcrumbItem { name: string; item: string; }
 
 export interface CourseHeroState {
   bg: string;
@@ -520,6 +521,10 @@ export interface CourseHeroState {
   learnLabelTc: string; learnBg: string; learnBorder: string;
   learnCc: string; learnTitleTc: string; learnSubTc: string;
   learnItems: CourseHeroLearnItem[];
+  schemaEnabled: boolean;
+  schemaCourseId: string; schemaCourseName: string; schemaDescription: string; schemaUrl: string;
+  schemaProviderId: string; schemaPrice: string; schemaPriceCurrency: string; schemaAvailability: string;
+  schemaBreadcrumbId: string; schemaBreadcrumbs: CourseHeroBreadcrumbItem[];
 }
 export interface CourseHeroComponent { id: string; name: string; data: CourseHeroState; }
 export interface CourseHeroContent { components: CourseHeroComponent[]; }
