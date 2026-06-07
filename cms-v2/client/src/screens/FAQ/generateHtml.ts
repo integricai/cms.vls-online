@@ -23,9 +23,17 @@ function safeJsonLd(value: unknown) {
 }
 
 function faqJsonLdScript(schema: unknown) {
+  const json = safeJsonLd(schema);
   return [
-    '<script type="application/ld+json">',
-    safeJsonLd(schema),
+    '<script type="text/javascript">',
+    '(function () {',
+    `  var schema = ${json};`,
+    '',
+    '  var script = document.createElement("script");',
+    '  script.type = "application/ld+json";',
+    '  script.text = JSON.stringify(schema);',
+    '  document.head.appendChild(script);',
+    '})();',
     '</script>',
   ].join('\n');
 }
