@@ -24,10 +24,16 @@ function safeJsonLd(value: unknown) {
 
 function faqJsonLdScript(schema: unknown) {
   return [
-    '<script type="application/ld+json" data-vls-schema="FAQPage">',
+    '<script type="application/ld+json">',
     safeJsonLd(schema),
     '</script>',
   ].join('\n');
+}
+
+function schemaQuestionName(value: TextValue | undefined) {
+  return textContent(value)
+    .replace(/^\s*(?:\d+[\).\:-]|\(\d+\)|Q\d+[\).\:-]?)\s*/i, '')
+    .trim();
 }
 
 function answerInnerHtml(item: FaqItem) {
@@ -83,7 +89,7 @@ export function generateFaqHtml(sectionOrItems: FaqSection | FaqItem[]) {
     ...(section?.schemaId?.trim() ? { '@id': section.schemaId.trim() } : {}),
     mainEntity: valid.map(item => ({
       '@type': 'Question',
-      name: textContent(item.question),
+      name: schemaQuestionName(item.question),
       acceptedAnswer: { '@type': 'Answer', text: answerPlainText(item) },
     })),
   };
