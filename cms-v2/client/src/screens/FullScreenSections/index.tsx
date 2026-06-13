@@ -13,6 +13,7 @@ import type {
   BmsState, BmsComponent, BmsCheckItem,
   CbState, CbComponent,
   Bv2State, Bv2Component, Bv2Step,
+  TableState, TableComponent, TableCell,
   TestimonialsState, TestimonialsComponent, TestimonialCard,
   PaymentPlansState, PaymentPlansComponent, PaymentPlanCard, PaymentIncludedItem,
   TextValue,
@@ -20,7 +21,7 @@ import type {
 import { normalize } from '../../utils/text';
 import {
   generateDcsHtml, generateDcs2Html, generateDcs3Html, generateReachHtml,
-  generatePhbHtml, generatePhv2Html, generatePhv3Html, generatePhv4Html, generateBmsHtml, generateCbHtml, generateBv2Html, generateTestimonialsHtml, generatePaymentPlansHtml,
+  generatePhbHtml, generatePhv2Html, generatePhv3Html, generatePhv4Html, generateBmsHtml, generateCbHtml, generateBv2Html, generateTableHtml, generateTestimonialsHtml, generatePaymentPlansHtml,
 } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
@@ -203,6 +204,25 @@ function makeBv2(): Bv2State {
       { number: '3', title: 'Get instant results', desc: normalize('Your score is displayed immediately after submission — no waiting for a tutor to mark your work.', 'bmsDesc') },
       { number: '4', title: 'Review & target weak areas', desc: normalize('Full solutions arrive in your email immediately. Use your score to focus your remaining revision.', 'bmsDesc') },
     ],
+  };
+}
+
+function makeTable(rows = 4, cols = 5, showHeader = true): TableState {
+  const clampedRows = Math.max(1, Math.min(30, Math.round(rows) || 4));
+  const clampedCols = Math.max(1, Math.min(12, Math.round(cols) || 5));
+  const makeCell = (r: number, c: number): TableCell => ({
+    title: r === 0 && showHeader ? `Column ${c + 1}` : '',
+    text: '',
+    accent: '#185fa5',
+    button: { text: '', url: '' },
+  });
+  return {
+    bg: '#f4f6fb', padTop: 24, padBot: 24, padLeft: 24, padRight: 24,
+    maxWidth: 1060, cardBg: '#ffffff', border: '#e6ebf3', radius: 18,
+    showHeader, headerBg: '#0f1e3c', headerText: '#ffffff',
+    textColor: '#1a2438', mutedColor: '#6b7689', buttonBg: '#0f1e3c', buttonText: '#ffffff',
+    columnWidths: Array.from({ length: clampedCols }, () => Math.round(100 / clampedCols)),
+    rows: Array.from({ length: clampedRows }, (_, r) => Array.from({ length: clampedCols }, (_, c) => makeCell(r, c))),
   };
 }
 
@@ -399,6 +419,39 @@ function normBv2(raw: any): Bv2State {
     gap: normalizeNum(d.gap, 42),
     desc: d.desc || normalize('', 'bmsDesc'),
     steps: d.steps || [],
+  };
+}
+
+function normTable(raw: any): TableState {
+  const defaults = makeTable();
+  const d = { ...defaults, ...(raw || {}) };
+  const rows = Array.isArray(d.rows) && d.rows.length ? d.rows : defaults.rows;
+  const colCount = Math.max(1, Math.min(12, Math.max(d.columnWidths?.length || 0, ...rows.map((row: any[]) => Array.isArray(row) ? row.length : 0))));
+  const normalizeCell = (cell: any): TableCell => ({
+    title: cell?.title || '',
+    text: cell?.text || '',
+    accent: cell?.accent || '#185fa5',
+    button: {
+      text: cell?.button?.text || '',
+      url: cell?.button?.url || '',
+    },
+  });
+  const normalizedRows = rows.map((row: any[]) => {
+    const next = Array.isArray(row) ? row.map(normalizeCell) : [];
+    while (next.length < colCount) next.push(normalizeCell({}));
+    return next.slice(0, colCount);
+  });
+  const widths = Array.isArray(d.columnWidths) ? d.columnWidths.slice(0, colCount).map((w: any) => normalizeNum(w, 100 / colCount)) : [];
+  while (widths.length < colCount) widths.push(100 / colCount);
+  return {
+    ...d,
+    padTop: normalizeNum(d.padTop, defaults.padTop), padBot: normalizeNum(d.padBot, defaults.padBot),
+    padLeft: normalizeNum(d.padLeft, defaults.padLeft), padRight: normalizeNum(d.padRight, defaults.padRight),
+    maxWidth: normalizeNum(d.maxWidth, defaults.maxWidth),
+    radius: normalizeNum(d.radius, defaults.radius),
+    showHeader: d.showHeader !== false,
+    columnWidths: widths,
+    rows: normalizedRows,
   };
 }
 
@@ -2014,6 +2067,210 @@ function WeightSel({ value, def, onChange }: { value: number | undefined; def: n
   );
 }
 
+function TableTab({ onHtml }: { onHtml: (html: string) => void }) {
+  const [comps, setComps] = useState<TableComponent[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [state, setState] = useState<TableState>(makeTable());
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    api.get<any>('/content/vls-table-components').then(row => {
+      const raw = row?.data as any;
+      const cs: TableComponent[] = (raw?.components || []).map((c: any) => ({ ...c, data: normTable(c.data || {}) }));
+      setComps(cs);
+      if (cs.length) { setActiveId(cs[0].id); setName(cs[0].name); setState(cs[0].data); }
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, []);
+
+  const upd = useCallback((p: Partial<TableState>) => { setState(prev => ({ ...prev, ...p })); setSaved(false); }, []);
+  const colCount = Math.max(1, state.columnWidths.length);
+
+  function createNew() {
+    const rowCount = Number(prompt('How many rows?', '4')) || 4;
+    const colCount = Number(prompt('How many columns?', '5')) || 5;
+    const showHeader = confirm('Add a table header row?');
+    setActiveId(null);
+    setName('');
+    setState(makeTable(rowCount, colCount, showHeader));
+    setSaved(false);
+  }
+
+  function load(id: string) {
+    const c = comps.find(x => x.id === id);
+    if (!c) { createNew(); return; }
+    setActiveId(c.id); setName(c.name); setState(cloneState(c.data)); setSaved(true);
+  }
+
+  async function save() {
+    if (!name.trim()) { alert('Enter a component name.'); return; }
+    setSaving(true);
+    try {
+      const id = activeId || `tbl-${Date.now().toString(36)}`;
+      const updated = activeId ? comps.map(c => c.id === id ? { id, name, data: state } : c) : [...comps, { id, name, data: state }];
+      await api.put('/content/vls-table-components', { components: updated });
+      setComps(updated); setActiveId(id); setSaved(true);
+    } finally { setSaving(false); }
+  }
+
+  async function del() {
+    if (!activeId || !confirm('Delete this component?')) return;
+    const updated = comps.filter(c => c.id !== activeId);
+    await api.put('/content/vls-table-components', { components: updated });
+    setComps(updated); setActiveId(null); setName(''); setState(makeTable());
+  }
+
+  function duplicate() {
+    setActiveId(null);
+    setName(`Copy of ${name || 'Table'}`);
+    setState(cloneState(state));
+    setSaved(false);
+  }
+
+  function setCell(rowIndex: number, colIndex: number, patch: Partial<TableCell>) {
+    const rows = cloneState(state.rows);
+    rows[rowIndex][colIndex] = { ...rows[rowIndex][colIndex], ...patch };
+    upd({ rows });
+  }
+
+  function setCellButton(rowIndex: number, colIndex: number, patch: Partial<TableCell['button']>) {
+    const cell = state.rows[rowIndex][colIndex];
+    setCell(rowIndex, colIndex, { button: { ...cell.button, ...patch } });
+  }
+
+  function addRow(index: number, where: 'above' | 'below') {
+    const rows = cloneState(state.rows);
+    const blank = Array.from({ length: colCount }, () => ({ title: '', text: '', accent: '#185fa5', button: { text: '', url: '' } }));
+    rows.splice(where === 'above' ? index : index + 1, 0, blank);
+    upd({ rows });
+  }
+
+  function addColumn(index: number, where: 'left' | 'right') {
+    const insertAt = where === 'left' ? index : index + 1;
+    const rows = cloneState(state.rows).map(row => {
+      row.splice(insertAt, 0, { title: '', text: '', accent: '#185fa5', button: { text: '', url: '' } });
+      return row;
+    });
+    const widths = [...state.columnWidths];
+    widths.splice(insertAt, 0, Math.max(8, Math.round(100 / (colCount + 1))));
+    upd({ rows, columnWidths: widths });
+  }
+
+  function removeRow(index: number) {
+    if (state.rows.length <= 1) return;
+    upd({ rows: state.rows.filter((_, i) => i !== index) });
+  }
+
+  function removeColumn(index: number) {
+    if (colCount <= 1) return;
+    upd({
+      rows: state.rows.map(row => row.filter((_, i) => i !== index)),
+      columnWidths: state.columnWidths.filter((_, i) => i !== index),
+    });
+  }
+
+  function dragWidth(index: number, event: any) {
+    if (index >= colCount - 1) return;
+    const startX = event.clientX;
+    const start = [...state.columnWidths];
+    const total = start.reduce((sum, w) => sum + w, 0) || 100;
+    const onMove = (ev: MouseEvent) => {
+      const delta = (ev.clientX - startX) / 5;
+      const widths = [...start];
+      widths[index] = Math.max(8, start[index] + delta);
+      widths[index + 1] = Math.max(8, start[index + 1] - delta);
+      const nextTotal = widths.reduce((sum, w) => sum + w, 0) || total;
+      setState(prev => ({ ...prev, columnWidths: widths.map(w => (w / nextTotal) * total) }));
+      setSaved(false);
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    event.preventDefault();
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  if (!loaded) return <div className="p-5 text-xs text-slate-400">Loading...</div>;
+
+  return (
+    <div className="flex flex-col">
+      <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
+        onSelect={load} onNew={createNew} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
+        onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Table', generateTableHtml(state)))} />
+      <div className="px-5 py-4 space-y-3 overflow-y-auto">
+        <p className="section-label">Layout</p>
+        <PaddingRow value={state} onChange={upd} />
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Max width"><input type="number" className="input" min={420} max={1800} value={state.maxWidth} onChange={e => upd({ maxWidth: Number(e.target.value) })} /></Field>
+          <Field label="Radius"><input type="number" className="input" min={0} max={36} value={state.radius} onChange={e => upd({ radius: Number(e.target.value) })} /></Field>
+          <ColorInput label="Page background" value={state.bg} onChange={v => upd({ bg: v })} />
+          <ColorInput label="Card background" value={state.cardBg} onChange={v => upd({ cardBg: v })} />
+          <ColorInput label="Border" value={state.border} onChange={v => upd({ border: v })} />
+          <ColorInput label="Button background" value={state.buttonBg} onChange={v => upd({ buttonBg: v })} />
+        </div>
+
+        <p className="section-label">Header</p>
+        <div className="flex gap-4 rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+          <label className="flex items-center gap-2"><input type="radio" checked={state.showHeader} onChange={() => upd({ showHeader: true })} /> With header</label>
+          <label className="flex items-center gap-2"><input type="radio" checked={!state.showHeader} onChange={() => upd({ showHeader: false })} /> No header</label>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <ColorInput label="Header background" value={state.headerBg} onChange={v => upd({ headerBg: v })} />
+          <ColorInput label="Header text" value={state.headerText} onChange={v => upd({ headerText: v })} />
+        </div>
+
+        <p className="section-label">Column Widths</p>
+        <div className="overflow-x-auto rounded border border-slate-200 bg-white">
+          <div className="grid min-w-[460px]" style={{ gridTemplateColumns: state.columnWidths.map(w => `${w}fr`).join(' ') }}>
+            {state.columnWidths.map((w, i) => (
+              <div key={i} className="relative border-r border-slate-200 p-2 text-center text-[11px] font-semibold text-slate-500 last:border-r-0">
+                Column {i + 1} - {Math.round(w)}%
+                {i < colCount - 1 && <span onMouseDown={e => dragWidth(i, e)} className="absolute -right-1 top-0 h-full w-2 cursor-col-resize bg-transparent hover:bg-brand/20" />}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="section-label">Cells</p>
+        {state.rows.map((row, ri) => (
+          <div key={ri} className="rounded border border-slate-200 bg-slate-50 p-3">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <span className="mr-auto text-xs font-semibold text-slate-600">Row {ri + 1}{state.showHeader && ri === 0 ? ' (header)' : ''}</span>
+              <button onClick={() => addRow(ri, 'above')} className="btn-ghost text-xs">+ Row above</button>
+              <button onClick={() => addRow(ri, 'below')} className="btn-ghost text-xs">+ Row below</button>
+              <button onClick={() => removeRow(ri)} className="btn-danger text-xs">Remove row</button>
+            </div>
+            {row.map((cell, ci) => (
+              <details key={ci} className="mb-2 rounded border border-slate-200 bg-white p-2" open={ri === 0 && ci === 0}>
+                <summary className="cursor-pointer select-none text-xs font-semibold text-slate-500">Cell {ri + 1}.{ci + 1} {cell.title ? `- ${cell.title}` : ''}</summary>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <Field label="Title"><input className="input" value={cell.title} onChange={e => setCell(ri, ci, { title: e.target.value })} /></Field>
+                  <ColorInput label="Accent" value={cell.accent} onChange={v => setCell(ri, ci, { accent: v })} />
+                  <Field label="Text"><textarea className="input min-h-[76px]" value={cell.text} onChange={e => setCell(ri, ci, { text: e.target.value })} /></Field>
+                  <div className="space-y-2">
+                    <Field label="Button text"><input className="input" value={cell.button.text} onChange={e => setCellButton(ri, ci, { text: e.target.value })} /></Field>
+                    <Field label="Button URL"><input className="input" value={cell.button.url} onChange={e => setCellButton(ri, ci, { url: e.target.value })} /></Field>
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button onClick={() => addColumn(ci, 'left')} className="btn-ghost text-xs">+ Column left</button>
+                  <button onClick={() => addColumn(ci, 'right')} className="btn-ghost text-xs">+ Column right</button>
+                  <button onClick={() => removeColumn(ci)} className="btn-danger text-xs">Remove column</button>
+                </div>
+              </details>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TestimonialsTab({ onHtml }: { onHtml: (html: string) => void }) {
   const [comps, setComps] = useState<TestimonialsComponent[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -2481,6 +2738,7 @@ const SECTION_TITLES: Record<string, { title: string; desc: string }> = {
   'book-meeting':   { title: 'Book a Meeting',   desc: 'Image left + eyebrow/heading/checklist/CTA right' },
   'payment-plans':  { title: 'Payment Plans',     desc: 'Component-owned course access cards with live published pricing' },
   'testimonials':   { title: 'Testimonials',      desc: 'Single-column auto-scrolling testimonial cards' },
+  'table':          { title: 'Table',             desc: 'Single-column table with editable cells and draggable column widths' },
   'content-block':  { title: 'Content CTA Block', desc: 'Single column: eyebrow/heading/checklist/CTA' },
   'banner-v2':      { title: 'Banner v2',        desc: 'Single-column horizontal process banner' },
 };
@@ -2516,6 +2774,7 @@ export default function FullScreenSections() {
           {type === 'book-meeting'   && <BmsTab   onHtml={handleHtml} />}
           {type === 'payment-plans'  && <PaymentPlansTab onHtml={handleHtml} />}
           {type === 'testimonials'   && <TestimonialsTab onHtml={handleHtml} />}
+          {type === 'table'          && <TableTab onHtml={handleHtml} />}
           {type === 'content-block' && <CbTab    onHtml={handleHtml} />}
           {type === 'banner-v2' && <Bv2Tab    onHtml={handleHtml} />}
           {!type && <div className="p-6 text-sm text-slate-400">Select a section type from the sidebar.</div>}

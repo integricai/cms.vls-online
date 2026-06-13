@@ -1,4 +1,4 @@
-import type { DcsState, Dcs2State, Dcs3State, ReachState, PhbState, Phv2State, Phv3State, Phv4State, BmsState, CbState, Bv2State, TestimonialsState, PaymentPlansState, PaymentPlanCard } from '../../types/cms';
+import type { DcsState, Dcs2State, Dcs3State, ReachState, PhbState, Phv2State, Phv3State, Phv4State, BmsState, CbState, Bv2State, TableState, TestimonialsState, PaymentPlansState, PaymentPlanCard } from '../../types/cms';
 import { normalize, textStyle, escapeHtml } from '../../utils/text';
 
 const e = escapeHtml;
@@ -735,6 +735,60 @@ export function generateBv2Html(d: Bv2State): string {
   L.push(`    </div>`);
   L.push(`  </div>`);
   L.push(`</section>`);
+  return L.join('\n');
+}
+
+// ── Table (TBL) - single-column responsive table ─────────────────────────────
+
+export function generateTableHtml(d: TableState): string {
+  const id = uid();
+  const rows = Array.isArray(d.rows) ? d.rows : [];
+  const colCount = Math.max(d.columnWidths?.length || 0, ...rows.map(row => row.length), 1);
+  const rawWidths = [...(d.columnWidths || [])];
+  while (rawWidths.length < colCount) rawWidths.push(100 / colCount);
+  const safeWidths = rawWidths.slice(0, colCount).map(w => Math.max(8, Math.min(80, Number(w) || 0)));
+  const total = safeWidths.reduce((sum, w) => sum + w, 0) || 100;
+  const cols = safeWidths.map(w => `${(w / total * 100).toFixed(3)}%`).join(' ');
+  const L: string[] = [];
+
+  L.push('<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">');
+  L.push('<style>');
+  L.push(`.${id}-root *{box-sizing:border-box;}`);
+  L.push(`.${id}-root{background:${e(d.bg)};padding:${d.padTop}px ${d.padRight}px ${d.padBot}px ${d.padLeft}px;font-family:'Plus Jakarta Sans',Arial,sans-serif;color:${e(d.textColor)};-webkit-font-smoothing:antialiased;}`);
+  L.push(`.${id}-card{max-width:${d.maxWidth}px;margin:0 auto;background:${e(d.cardBg)};border:1px solid ${e(d.border)};border-radius:${d.radius}px;overflow:auto;box-shadow:0 14px 34px rgba(15,30,60,.06);}`);
+  L.push(`.${id}-table{min-width:${Math.max(560, colCount * 170)}px;}`);
+  L.push(`.${id}-row{display:grid;grid-template-columns:${cols};border-bottom:1px solid ${e(d.border)};}`);
+  L.push(`.${id}-row:last-child{border-bottom:0;}`);
+  L.push(`.${id}-row.is-head{background:${e(d.headerBg)};}`);
+  L.push(`.${id}-cell{position:relative;min-height:96px;padding:16px 18px;border-right:1px solid ${e(d.border)};}`);
+  L.push(`.${id}-cell:last-child{border-right:0;}`);
+  L.push(`.${id}-accent{width:34px;height:3px;border-radius:999px;background:var(--tbl-accent,#185fa5);margin-bottom:10px;}`);
+  L.push(`.${id}-title{font-size:13.5px;font-weight:800;line-height:1.25;color:${e(d.textColor)};margin:0 0 6px;}`);
+  L.push(`.${id}-row.is-head .${id}-title{color:${e(d.headerText)};}`);
+  L.push(`.${id}-text{font-size:12px;line-height:1.6;color:${e(d.mutedColor)};margin:0;}`);
+  L.push(`.${id}-row.is-head .${id}-text{color:${e(d.headerText)};opacity:.84;}`);
+  L.push(`.${id}-btn{display:inline-flex;align-items:center;justify-content:center;margin-top:12px;border-radius:8px;background:${e(d.buttonBg)};color:${e(d.buttonText)};padding:8px 12px;font-size:11px;font-weight:800;text-decoration:none;}`);
+  L.push(`.${id}-resize{position:absolute;right:-4px;top:0;width:8px;height:100%;cursor:col-resize;z-index:2;}`);
+  L.push(`.${id}-cell:last-child .${id}-resize{display:none;}`);
+  L.push(`@media(max-width:720px){.${id}-root{padding-left:12px!important;padding-right:12px!important;}.${id}-card{border-radius:${Math.min(d.radius, 12)}px;}.${id}-table{min-width:${Math.max(520, colCount * 150)}px;}.${id}-cell{padding:14px 15px;}}`);
+  L.push('</style>');
+  L.push(`<div class="${id}-root"><div class="${id}-card"><div class="${id}-table" data-table="${id}" data-cols="${cols}">`);
+  rows.forEach((row, ri) => {
+    L.push(`  <div class="${id}-row${d.showHeader && ri === 0 ? ' is-head' : ''}">`);
+    for (let ci = 0; ci < colCount; ci += 1) {
+      const cell = row[ci] || { title: '', text: '', accent: '#185fa5', button: { text: '', url: '' } };
+      L.push(`    <div class="${id}-cell" style="--tbl-accent:${e(cell.accent || '#185fa5')}">`);
+      if (cell.accent) L.push(`      <div class="${id}-accent"></div>`);
+      if (cell.title) L.push(`      <h3 class="${id}-title">${e(cell.title)}</h3>`);
+      if (cell.text) L.push(`      <p class="${id}-text">${e(cell.text)}</p>`);
+      if (cell.button?.text) L.push(`      <a class="${id}-btn" href="${e(cell.button.url || '#')}">${e(cell.button.text)}</a>`);
+      L.push(`      <span class="${id}-resize" data-col="${ci}" aria-hidden="true"></span>`);
+      L.push(`    </div>`);
+    }
+    L.push(`  </div>`);
+  });
+  L.push('</div></div></div>');
+  L.push(`<script>(function(){var table=document.querySelector('[data-table="${id}"]');if(!table)return;var cols=(table.getAttribute('data-cols')||'').split(' ');function apply(){table.querySelectorAll('.${id}-row').forEach(function(r){r.style.gridTemplateColumns=cols.join(' ');});}table.addEventListener('mousedown',function(ev){var h=ev.target.closest('.${id}-resize');if(!h)return;var idx=Number(h.getAttribute('data-col'));if(idx>=cols.length-1)return;var start=ev.clientX;var box=table.getBoundingClientRect();var a=parseFloat(cols[idx]),b=parseFloat(cols[idx+1]);function move(e){var delta=(e.clientX-start)/box.width*100;var na=Math.max(8,a+delta),nb=Math.max(8,b-delta);cols[idx]=na+'%';cols[idx+1]=nb+'%';apply();}function up(){document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);}ev.preventDefault();document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);});apply();})();<\/script>`);
   return L.join('\n');
 }
 

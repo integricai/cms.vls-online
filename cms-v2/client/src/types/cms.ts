@@ -982,6 +982,30 @@ export interface Bv2State {
 }
 export interface Bv2Component { id: string; name: string; data: Bv2State; }
 
+// Table (TBL) - single-column editable table
+export interface TableCellButton {
+  text: string;
+  url: string;
+}
+export interface TableCell {
+  title: string;
+  text: string;
+  accent: string;
+  button: TableCellButton;
+}
+export interface TableState {
+  bg: string;
+  padTop: number; padBot: number; padLeft: number; padRight: number;
+  maxWidth: number;
+  cardBg: string; border: string; radius: number;
+  showHeader: boolean;
+  headerBg: string; headerText: string;
+  textColor: string; mutedColor: string; buttonBg: string; buttonText: string;
+  columnWidths: number[];
+  rows: TableCell[][];
+}
+export interface TableComponent { id: string; name: string; data: TableState; }
+
 // ── Testimonials (TST) — single-column auto-scrolling cards ─────────────────
 export interface TestimonialCard {
   initials: string;
