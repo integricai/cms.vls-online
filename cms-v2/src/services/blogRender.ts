@@ -15,6 +15,26 @@ function rewriteArticleLinks(html: string): string {
   });
 }
 
+function normalizeText(value: string): string {
+  return (value || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function stripLeadingDuplicateTitle(html: string, title: string): string {
+  const titleText = normalizeText(title);
+  if (!titleText) return html || '';
+  return (html || '').replace(/^(\s|<!--[\s\S]*?-->)*(<h[1-2]\b[^>]*>[\s\S]*?<\/h[1-2]>)/i, (match, _prefix: string, heading: string) => {
+    return normalizeText(heading) === titleText ? '' : match;
+  });
+}
+
 function formatDate(value: string): string {
   if (!value) return '';
   const date = new Date(value);
@@ -56,6 +76,7 @@ function layout(title: string, description: string, body: string, canonical: str
 export function renderBlogArticle(post: BlogPost): string {
   const description = post.metaDescription || post.summary;
   const tags = post.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('');
+  const articleHtml = stripLeadingDuplicateTitle(rewriteArticleLinks(post.bodyHtml), post.title);
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -72,7 +93,7 @@ export function renderBlogArticle(post: BlogPost): string {
     <h1>${escapeHtml(post.title)}</h1>
     <div class="meta">${post.author ? `<span>${escapeHtml(post.author)}</span>` : ''}${post.publishDate ? `<span>${escapeHtml(formatDate(post.publishDate))}</span>` : ''}</div>
     <div class="layout">
-      <article class="article">${rewriteArticleLinks(post.bodyHtml)}</article>
+      <article class="article">${articleHtml}</article>
       <aside class="side"><strong>Topic</strong><div class="tags"><span class="tag">${escapeHtml(post.topic)}</span></div>${tags ? `<strong style="display:block;margin-top:18px">Tags</strong><div class="tags">${tags}</div>` : ''}</aside>
     </div>
     <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}<\/script>

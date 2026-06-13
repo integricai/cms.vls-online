@@ -24,6 +24,26 @@ function bodyWithAbsoluteAssets(html: string): string {
     });
 }
 
+function normalizeText(value: string): string {
+  return (value || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function stripLeadingDuplicateTitle(html: string, title: string): string {
+  const titleText = normalizeText(title);
+  if (!titleText) return html || '';
+  return (html || '').replace(/^(\s|<!--[\s\S]*?-->)*(<h[1-2]\b[^>]*>[\s\S]*?<\/h[1-2]>)/i, (match, _prefix: string, heading: string) => {
+    return normalizeText(heading) === titleText ? '' : match;
+  });
+}
+
 function topicSlug(topic: string): string {
   return (topic || 'blog').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'blog';
 }
@@ -102,6 +122,7 @@ export function generateBlogArticleHtml(post: BlogPost): string {
   const metaDescription = post.metaDescription || post.summary;
   const featuredImage = absoluteAssetUrl(post.featuredImagePath);
   const tags = post.tags.map(tag => `<span class="vls-blog-tag">${escapeHtml(tag)}</span>`).join('');
+  const bodyHtml = stripLeadingDuplicateTitle(bodyWithAbsoluteAssets(post.bodyHtml), post.title);
   return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>${escapeHtml(post.metaTitle || post.title)}</title>
 <meta name="description" content="${attr(metaDescription)}">
@@ -116,7 +137,7 @@ ${baseCss}
     <h1 style="color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;">${escapeHtml(post.title)}</h1>
     <div class="vls-blog-meta">${post.author ? `<span>${escapeHtml(post.author)}</span>` : ''}${post.publishDate ? `<span>${escapeHtml(formatDate(post.publishDate))}</span>` : ''}<span>${escapeHtml(post.status)}</span></div>
     <div class="vls-blog-layout">
-      <article class="vls-blog-article">${bodyWithAbsoluteAssets(post.bodyHtml)}</article>
+      <article class="vls-blog-article">${bodyHtml}</article>
       <aside class="vls-blog-side">
         <strong>Topic</strong>
         <div class="vls-blog-tags"><span class="vls-blog-tag">${escapeHtml(post.topic)}</span></div>
