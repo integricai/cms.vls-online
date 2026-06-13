@@ -64,6 +64,20 @@ function stripImportedSourceHero(html: string, title: string): string {
   return next;
 }
 
+function stripAutoSeoPromo(html: string): string {
+  let next = html || '';
+  for (let i = 0; i < 4; i += 1) {
+    const previous = next;
+    next = next
+      .replace(/<(section|div|aside|blockquote)\b[^>]*>[\s\S]*?(?:Want to create content like this\?|AutoSEO|Get Started Free)[\s\S]*?<\/\1>/gi, '')
+      .replace(/<h[2-4]\b[^>]*>\s*Want to create content like this\?\s*<\/h[2-4]>\s*(?:<p\b[^>]*>[\s\S]*?<\/p>\s*)?(?:<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>\s*)?/gi, '')
+      .replace(/<p\b[^>]*>[\s\S]*?AutoSEO[\s\S]*?<\/p>/gi, '')
+      .replace(/<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>/gi, '');
+    if (next === previous) break;
+  }
+  return next;
+}
+
 function headingId(text: string, index: number): string {
   const slug = normalizeText(text).replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   return slug || `section-${index + 1}`;
@@ -120,7 +134,7 @@ function wrapRelatedArticles(html: string): string {
 }
 
 function prepareArticleBody(html: string, title: string): string {
-  return wrapRelatedArticles(addHeadingIdsAndTocLinks(stripImportedSourceHero(html, title)));
+  return wrapRelatedArticles(addHeadingIdsAndTocLinks(stripAutoSeoPromo(stripImportedSourceHero(html, title))));
 }
 
 function shareLinks(post: BlogPost): string {

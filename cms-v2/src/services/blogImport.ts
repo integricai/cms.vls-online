@@ -272,6 +272,20 @@ function sanitizeHtml(html: string): string {
     .trim();
 }
 
+function stripAutoSeoPromo(html: string): string {
+  let next = html || '';
+  for (let i = 0; i < 4; i += 1) {
+    const previous = next;
+    next = next
+      .replace(/<(section|div|aside|blockquote)\b[^>]*>[\s\S]*?(?:Want to create content like this\?|AutoSEO|Get Started Free)[\s\S]*?<\/\1>/gi, '')
+      .replace(/<h[2-4]\b[^>]*>\s*Want to create content like this\?\s*<\/h[2-4]>\s*(?:<p\b[^>]*>[\s\S]*?<\/p>\s*)?(?:<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>\s*)?/gi, '')
+      .replace(/<p\b[^>]*>[\s\S]*?AutoSEO[\s\S]*?<\/p>/gi, '')
+      .replace(/<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>/gi, '');
+    if (next === previous) break;
+  }
+  return next;
+}
+
 function normalizeBlogLinks(html: string): string {
   return html.replace(/(<a\b[^>]*\shref=["'])(?:https?:\/\/(?:blog\.)?vls-online\.com)?\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
     return `${start}/blog/${slug}/${end}`;
@@ -352,7 +366,7 @@ function wrapRelatedArticles(html: string): string {
 }
 
 function prepareImportedBlogBody(html: string, title: string): string {
-  return wrapRelatedArticles(addHeadingIdsAndTocLinks(stripImportedSourceHero(html, title)));
+  return wrapRelatedArticles(addHeadingIdsAndTocLinks(stripAutoSeoPromo(stripImportedSourceHero(html, title))));
 }
 
 function escapeHtml(value: string): string {
@@ -410,7 +424,7 @@ function scrapeHtml(html: string, baseUrl: URL): ScrapedPost {
   if (!title) throw new BlogImportError('Missing title');
 
   const articleHtml = chooseArticleHtml(html);
-  const sanitized = sanitizeHtml(articleHtml);
+  const sanitized = stripAutoSeoPromo(sanitizeHtml(articleHtml));
   const bodyText = stripTags(sanitized);
   if (bodyText.length < 180) throw new BlogImportError('Missing body content');
 
@@ -539,7 +553,7 @@ export async function importBlogPost(request: ImportRequest): Promise<ImportResu
   const { topic, tags } = inferTopicAndTags(scraped, sourceUrl, request.topicOverride);
   const now = new Date().toISOString();
   const replacedBody = replaceImageSources(scraped.bodyHtml, replacements, baseUrl);
-  const cleanBody = prepareImportedBlogBody(normalizeBlogLinks(sanitizeHtml(replacedBody)), scraped.title);
+  const cleanBody = prepareImportedBlogBody(normalizeBlogLinks(stripAutoSeoPromo(sanitizeHtml(replacedBody))), scraped.title);
   const existingPost = request.replacePostId
     ? request.existingPosts.find(post => post.id === request.replacePostId)
     : undefined;
