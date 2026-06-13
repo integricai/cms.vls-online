@@ -121,9 +121,9 @@ function addHeadingIdsAndTocLinks(html: string): string {
       : start.replace(/<ul\b/i, '<ul class="toc"');
     const linked = items.replace(/<li>\s*([\s\S]*?)\s*<\/li>/gi, (_item, label: string) => {
       const match = label.match(/<a\b[^>]*>([\s\S]*?)<\/a>/i);
-      const text = normalizeText(match ? match[1] : label);
-      if (!text || text === 'table of contents') return '';
-      const id = headingIds.get(text);
+      const labelText = normalizeText(match ? match[1] : label);
+      if (!labelText || labelText === 'table of contents') return '';
+      const id = headingIds.get(labelText) || Array.from(headingIds.entries()).find(([key]) => key.includes(labelText))?.[1];
       return id ? `<li><a href="#${attr(id)}">${escapeHtml(stripTags(match ? match[1] : label))}</a></li>` : `<li>${escapeHtml(stripTags(label))}</li>`;
     });
     return `${tocStart}${linked}${end}`;
@@ -215,7 +215,7 @@ const baseCss = `<style>
 .vls-blog-kicker{display:inline-flex;align-items:center;border-radius:999px;background:#e8f3fc;color:#1f73b7;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:7px 12px;}
 .vls-blog-hero-banner{background-size:cover;background-position:center;min-height:390px;display:flex;align-items:end;}
 .vls-blog-hero-banner .vls-blog-shell{width:100%;padding-top:86px;padding-bottom:70px;}
-.vls-blog-hero-banner .vls-blog-kicker{background:rgba(114,205,244,.18);color:#72cdf4;border:1px solid rgba(114,205,244,.35);}
+.vls-blog-hero-banner .vls-blog-kicker{background:#14345f!important;color:#ffffff!important;border:1px solid rgba(255,255,255,.28)!important;}
 html body .vls-blog .vls-blog-hero-banner h1{font-size:clamp(34px,5vw,58px);line-height:1.05;margin:18px 0 14px;letter-spacing:0;color:#fff!important;-webkit-text-fill-color:#fff!important;max-width:920px;text-shadow:0 2px 18px rgba(0,0,0,.22);}
 .vls-blog h2{font-size:28px;line-height:1.2;margin:34px 0 12px;color:#0d1f3c;}
 .vls-blog h3{font-size:22px;line-height:1.3;margin:28px 0 10px;color:#14345f;}

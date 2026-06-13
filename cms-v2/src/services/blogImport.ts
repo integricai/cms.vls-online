@@ -349,11 +349,12 @@ function addHeadingIdsAndTocLinks(html: string): string {
   });
 
   next = next.replace(/(<h[2-4]\b[^>]*>\s*(?:<a\b[^>]*>\s*<\/a>\s*)?Table of Contents\s*<\/h[2-4]>\s*<ul>)([\s\S]*?)(<\/ul>)/i, (_match, start: string, items: string, end: string) => {
-    const linked = items.replace(/<li>\s*<a\b[^>]*>([\s\S]*?)<\/a>\s*<\/li>/gi, (_item, label: string) => {
-      const text = normalizeText(label);
-      if (!text || text === 'table of contents') return '';
-      const id = headingIds.get(text);
-      return id ? `<li><a href="#${escapeHtml(id)}">${escapeHtml(stripTags(label))}</a></li>` : `<li>${escapeHtml(stripTags(label))}</li>`;
+    const linked = items.replace(/<li>\s*([\s\S]*?)\s*<\/li>/gi, (_item, label: string) => {
+      const match = label.match(/<a\b[^>]*>([\s\S]*?)<\/a>/i);
+      const labelText = normalizeText(match ? match[1] : label);
+      if (!labelText || labelText === 'table of contents') return '';
+      const id = headingIds.get(labelText) || Array.from(headingIds.entries()).find(([key]) => key.includes(labelText))?.[1];
+      return id ? `<li><a href="#${escapeHtml(id)}">${escapeHtml(stripTags(match ? match[1] : label))}</a></li>` : `<li>${escapeHtml(stripTags(label))}</li>`;
     });
     return `${start}${linked}${end}`;
   });
