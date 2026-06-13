@@ -36,6 +36,18 @@ function isQuoteWithinLimit(value: string): boolean {
   return plain.length <= 250 && plain.split(/\s+/).filter(Boolean).length <= 50;
 }
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      resolve(result.includes(',') ? result.split(',')[1] : result);
+    };
+    reader.onerror = () => reject(reader.error || new Error('Could not read image file'));
+    reader.readAsDataURL(file);
+  });
+}
+
 // ── Default states ─────────────────────────────────────────────────────────────
 
 function makeDcs(): DcsState {
@@ -2095,6 +2107,8 @@ function TableTab({ onHtml }: { onHtml: (html: string) => void }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [extractError, setExtractError] = useState('');
 
   useEffect(() => {
     api.get<any>('/content/vls-table-components').then(row => {
@@ -2148,6 +2162,29 @@ function TableTab({ onHtml }: { onHtml: (html: string) => void }) {
     setName(`Copy of ${name || 'Table'}`);
     setState(cloneState(state));
     setSaved(false);
+  }
+
+  async function autofillFromImage(file: File | null) {
+    if (!file) return;
+    setExtractError('');
+    setExtracting(true);
+    try {
+      if (!file.type.startsWith('image/')) throw new Error('Please choose an image file.');
+      if (file.size > 6 * 1024 * 1024) throw new Error('Image is too large. Please use a screenshot under 6 MB.');
+      const data = await fileToBase64(file);
+      const extracted = await api.post<Partial<TableState>>('/table/extract-image', {
+        filename: file.name,
+        contentType: file.type,
+        data,
+      });
+      setState(prev => normTable({ ...prev, ...extracted, rows: extracted.rows, columnWidths: extracted.columnWidths }));
+      setSaved(false);
+      onHtml(wrapGeneratedHtml('Table', generateTableHtml(normTable({ ...state, ...extracted, rows: extracted.rows, columnWidths: extracted.columnWidths }))));
+    } catch (err) {
+      setExtractError(err instanceof Error ? err.message : 'Could not extract table from image');
+    } finally {
+      setExtracting(false);
+    }
   }
 
   function setCell(rowIndex: number, colIndex: number, patch: Partial<TableCell>) {
@@ -2239,6 +2276,23 @@ function TableTab({ onHtml }: { onHtml: (html: string) => void }) {
       <CmpMgr components={comps} activeId={activeId} name={name} saving={saving} saved={saved}
         onSelect={load} onNew={createNew} onDelete={del} onDuplicate={duplicate} onNameChange={setName}
         onSave={save} onGenerate={() => onHtml(wrapGeneratedHtml('Table', generateTableHtml(state)))} />
+      <div className="border-b border-slate-100 px-5 py-3">
+        <label className={`btn-success w-full cursor-pointer justify-center text-xs ${extracting ? 'pointer-events-none opacity-70' : ''}`}>
+          {extracting ? 'Reading table from image...' : 'Autofill from image'}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={extracting}
+            onChange={e => {
+              void autofillFromImage(e.target.files?.[0] || null);
+              e.currentTarget.value = '';
+            }}
+          />
+        </label>
+        <p className="mt-2 text-[11px] text-slate-400">Upload a screenshot of a table. The CMS will replace the current draft with extracted rows, columns, tags, and approximate colours.</p>
+        {extractError && <p className="mt-2 rounded bg-red-50 px-3 py-2 text-xs text-red-600">{extractError}</p>}
+      </div>
       <div className="px-5 py-4 space-y-3 overflow-y-auto">
         <p className="section-label">Layout</p>
         <PaddingRow value={state} onChange={upd} />

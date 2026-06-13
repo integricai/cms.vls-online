@@ -18,6 +18,7 @@ import paymentOptionsRouter from './routes/paymentOptions';
 import paymentsRouter, { stripeWebhookHandler } from './routes/payments';
 import activityRouter from './routes/activity';
 import trustpilotRouter from './routes/trustpilot';
+import tableRouter from './routes/table';
 import { sendErrorAlert } from './utils/errorAlert';
 import { getContent, upsertContent } from './models/content';
 import { listBlogPosts } from './models/blog';
@@ -169,6 +170,7 @@ app.use('/api/payment-options', paymentOptionsRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/activity', activityRouter);
 app.use('/api/trustpilot', trustpilotRouter);
+app.use('/api/table', tableRouter);
 app.use('/api/public', publicRouter);
 
 app.get('/blog', async (_req, res, next) => {
