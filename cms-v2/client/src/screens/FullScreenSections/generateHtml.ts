@@ -749,25 +749,30 @@ export function generateTableHtml(d: TableState): string {
   const safeWidths = rawWidths.slice(0, colCount).map(w => Math.max(8, Math.min(80, Number(w) || 0)));
   const total = safeWidths.reduce((sum, w) => sum + w, 0) || 100;
   const cols = safeWidths.map(w => `${(w / total * 100).toFixed(3)}%`).join(' ');
+  const fontFamily = String(d.fontFamily || 'Plus Jakarta Sans').replace(/['"<>]/g, '').trim() || 'Plus Jakarta Sans';
+  const fontHref = fontFamily.replace(/\s+/g, '+');
   const L: string[] = [];
 
-  L.push('<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">');
+  L.push(`<link href="https://fonts.googleapis.com/css2?family=${fontHref}:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">`);
   L.push('<style>');
   L.push(`.${id}-root *{box-sizing:border-box;}`);
-  L.push(`.${id}-root{background:${e(d.bg)};padding:${d.padTop}px ${d.padRight}px ${d.padBot}px ${d.padLeft}px;font-family:'Plus Jakarta Sans',Arial,sans-serif;color:${e(d.textColor)};-webkit-font-smoothing:antialiased;}`);
+  L.push(`.${id}-root{background:${e(d.bg)};padding:${d.padTop}px ${d.padRight}px ${d.padBot}px ${d.padLeft}px;font-family:'${e(fontFamily)}',Arial,sans-serif;color:${e(d.textColor)};-webkit-font-smoothing:antialiased;}`);
   L.push(`.${id}-card{max-width:${d.maxWidth}px;margin:0 auto;background:${e(d.cardBg)};border:1px solid ${e(d.border)};border-radius:${d.radius}px;overflow:auto;box-shadow:0 14px 34px rgba(15,30,60,.06);}`);
   L.push(`.${id}-table{min-width:${Math.max(560, colCount * 170)}px;}`);
   L.push(`.${id}-row{display:grid;grid-template-columns:${cols};border-bottom:1px solid ${e(d.border)};}`);
   L.push(`.${id}-row:last-child{border-bottom:0;}`);
   L.push(`.${id}-row.is-head{background:${e(d.headerBg)};}`);
-  L.push(`.${id}-cell{position:relative;min-height:96px;padding:16px 18px;border-right:1px solid ${e(d.border)};}`);
+  L.push(`.${id}-cell{position:relative;min-height:72px;padding:14px 18px;border-right:1px solid ${e(d.border)};}`);
   L.push(`.${id}-cell:last-child{border-right:0;}`);
-  L.push(`.${id}-accent{width:34px;height:3px;border-radius:999px;background:var(--tbl-accent,#185fa5);margin-bottom:10px;}`);
-  L.push(`.${id}-title{font-size:13.5px;font-weight:800;line-height:1.25;color:${e(d.textColor)};margin:0 0 6px;}`);
+  L.push(`.${id}-row.is-head .${id}-cell{min-height:0;padding-top:11px;padding-bottom:11px;}`);
+  L.push(`.${id}-title{font-size:${d.titleSize}px;font-weight:${d.titleWeight};line-height:1.25;color:${e(d.textColor)};margin:0 0 4px;}`);
   L.push(`.${id}-row.is-head .${id}-title{color:${e(d.headerText)};}`);
-  L.push(`.${id}-text{font-size:12px;line-height:1.6;color:${e(d.mutedColor)};margin:0;}`);
+  L.push(`.${id}-row.is-head .${id}-title,.${id}-row.is-head .${id}-text{font-size:${d.headerSize}px;font-weight:${d.headerWeight};letter-spacing:${d.headerLetterSpacing}px;text-transform:uppercase;}`);
+  L.push(`.${id}-text{font-size:${d.textSize}px;font-weight:${d.textWeight};line-height:1.55;color:${e(d.mutedColor)};margin:0;}`);
   L.push(`.${id}-row.is-head .${id}-text{color:${e(d.headerText)};opacity:.84;}`);
-  L.push(`.${id}-btn{display:inline-flex;align-items:center;justify-content:center;margin-top:12px;border-radius:8px;background:${e(d.buttonBg)};color:${e(d.buttonText)};padding:8px 12px;font-size:11px;font-weight:800;text-decoration:none;}`);
+  L.push(`.${id}-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}`);
+  L.push(`.${id}-tag{display:inline-flex;align-items:center;border:1px solid var(--tag-border,#c5b9f4);background:var(--tag-bg,#f0ecfb);color:var(--tag-color,#5b3fc8);border-radius:999px;padding:2px 8px;font-size:${d.tagSize}px;font-weight:${d.tagWeight};letter-spacing:.2px;line-height:1.25;}`);
+  L.push(`.${id}-btn{display:inline-flex;align-items:center;justify-content:center;margin-top:10px;border-radius:8px;background:${e(d.buttonBg)};color:${e(d.buttonText)};padding:8px 12px;font-size:${d.buttonSize}px;font-weight:${d.buttonWeight};text-decoration:none;}`);
   L.push(`.${id}-resize{position:absolute;right:-4px;top:0;width:8px;height:100%;cursor:col-resize;z-index:2;}`);
   L.push(`.${id}-cell:last-child .${id}-resize{display:none;}`);
   L.push(`@media(max-width:720px){.${id}-root{padding-left:12px!important;padding-right:12px!important;}.${id}-card{border-radius:${Math.min(d.radius, 12)}px;}.${id}-table{min-width:${Math.max(520, colCount * 150)}px;}.${id}-cell{padding:14px 15px;}}`);
@@ -776,11 +781,19 @@ export function generateTableHtml(d: TableState): string {
   rows.forEach((row, ri) => {
     L.push(`  <div class="${id}-row${d.showHeader && ri === 0 ? ' is-head' : ''}">`);
     for (let ci = 0; ci < colCount; ci += 1) {
-      const cell = row[ci] || { title: '', text: '', accent: '#185fa5', button: { text: '', url: '' } };
-      L.push(`    <div class="${id}-cell" style="--tbl-accent:${e(cell.accent || '#185fa5')}">`);
-      if (cell.accent) L.push(`      <div class="${id}-accent"></div>`);
+      const cell = row[ci] || { title: '', text: '', tags: [], button: { text: '', url: '' } };
+      const tags = Array.isArray(cell.tags) ? cell.tags.filter(tag => tag?.text) : [];
+      L.push(`    <div class="${id}-cell">`);
       if (cell.title) L.push(`      <h3 class="${id}-title">${e(cell.title)}</h3>`);
       if (cell.text) L.push(`      <p class="${id}-text">${e(cell.text)}</p>`);
+      if (tags.length) {
+        L.push(`      <div class="${id}-tags">`);
+        tags.forEach(tag => {
+          const color = tag.color || '#5b3fc8';
+          L.push(`        <span class="${id}-tag" style="--tag-color:${e(color)};--tag-bg:${e(color)}18;--tag-border:${e(color)}55;">${e(tag.text)}</span>`);
+        });
+        L.push(`      </div>`);
+      }
       if (cell.button?.text) L.push(`      <a class="${id}-btn" href="${e(cell.button.url || '#')}">${e(cell.button.text)}</a>`);
       L.push(`      <span class="${id}-resize" data-col="${ci}" aria-hidden="true"></span>`);
       L.push(`    </div>`);

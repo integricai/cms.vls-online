@@ -213,7 +213,7 @@ function makeTable(rows = 4, cols = 5, showHeader = true): TableState {
   const makeCell = (r: number, c: number): TableCell => ({
     title: r === 0 && showHeader ? `Column ${c + 1}` : '',
     text: '',
-    accent: '#185fa5',
+    tags: [],
     button: { text: '', url: '' },
   });
   return {
@@ -221,6 +221,12 @@ function makeTable(rows = 4, cols = 5, showHeader = true): TableState {
     maxWidth: 1060, cardBg: '#ffffff', border: '#e6ebf3', radius: 18,
     showHeader, headerBg: '#0f1e3c', headerText: '#ffffff',
     textColor: '#1a2438', mutedColor: '#6b7689', buttonBg: '#0f1e3c', buttonText: '#ffffff',
+    fontFamily: 'Plus Jakarta Sans',
+    headerSize: 9, headerWeight: 800, headerLetterSpacing: 0.6,
+    titleSize: 13.5, titleWeight: 800,
+    textSize: 11, textWeight: 500,
+    tagSize: 8.5, tagWeight: 800,
+    buttonSize: 10.5, buttonWeight: 800,
     columnWidths: Array.from({ length: clampedCols }, () => Math.round(100 / clampedCols)),
     rows: Array.from({ length: clampedRows }, (_, r) => Array.from({ length: clampedCols }, (_, c) => makeCell(r, c))),
   };
@@ -430,7 +436,9 @@ function normTable(raw: any): TableState {
   const normalizeCell = (cell: any): TableCell => ({
     title: cell?.title || '',
     text: cell?.text || '',
-    accent: cell?.accent || '#185fa5',
+    tags: Array.isArray(cell?.tags)
+      ? cell.tags.map((tag: any) => ({ text: tag?.text || '', color: tag?.color || '#5b3fc8' }))
+      : cell?.accent ? [{ text: '', color: cell.accent }] : [],
     button: {
       text: cell?.button?.text || '',
       url: cell?.button?.url || '',
@@ -450,6 +458,18 @@ function normTable(raw: any): TableState {
     maxWidth: normalizeNum(d.maxWidth, defaults.maxWidth),
     radius: normalizeNum(d.radius, defaults.radius),
     showHeader: d.showHeader !== false,
+    fontFamily: d.fontFamily || defaults.fontFamily,
+    headerSize: normalizeNum(d.headerSize, defaults.headerSize),
+    headerWeight: normalizeNum(d.headerWeight, defaults.headerWeight),
+    headerLetterSpacing: normalizeNum(d.headerLetterSpacing, defaults.headerLetterSpacing),
+    titleSize: normalizeNum(d.titleSize, defaults.titleSize),
+    titleWeight: normalizeNum(d.titleWeight, defaults.titleWeight),
+    textSize: normalizeNum(d.textSize, defaults.textSize),
+    textWeight: normalizeNum(d.textWeight, defaults.textWeight),
+    tagSize: normalizeNum(d.tagSize, defaults.tagSize),
+    tagWeight: normalizeNum(d.tagWeight, defaults.tagWeight),
+    buttonSize: normalizeNum(d.buttonSize, defaults.buttonSize),
+    buttonWeight: normalizeNum(d.buttonWeight, defaults.buttonWeight),
     columnWidths: widths,
     rows: normalizedRows,
   };
@@ -2141,9 +2161,26 @@ function TableTab({ onHtml }: { onHtml: (html: string) => void }) {
     setCell(rowIndex, colIndex, { button: { ...cell.button, ...patch } });
   }
 
+  function setCellTag(rowIndex: number, colIndex: number, tagIndex: number, patch: Partial<TableCell['tags'][number]>) {
+    const cell = state.rows[rowIndex][colIndex];
+    const tags = [...(cell.tags || [])];
+    tags[tagIndex] = { ...tags[tagIndex], ...patch };
+    setCell(rowIndex, colIndex, { tags });
+  }
+
+  function addCellTag(rowIndex: number, colIndex: number) {
+    const cell = state.rows[rowIndex][colIndex];
+    setCell(rowIndex, colIndex, { tags: [...(cell.tags || []), { text: '', color: '#5b3fc8' }] });
+  }
+
+  function removeCellTag(rowIndex: number, colIndex: number, tagIndex: number) {
+    const cell = state.rows[rowIndex][colIndex];
+    setCell(rowIndex, colIndex, { tags: (cell.tags || []).filter((_, i) => i !== tagIndex) });
+  }
+
   function addRow(index: number, where: 'above' | 'below') {
     const rows = cloneState(state.rows);
-    const blank = Array.from({ length: colCount }, () => ({ title: '', text: '', accent: '#185fa5', button: { text: '', url: '' } }));
+    const blank: TableCell[] = Array.from({ length: colCount }, () => ({ title: '', text: '', tags: [], button: { text: '', url: '' } }));
     rows.splice(where === 'above' ? index : index + 1, 0, blank);
     upd({ rows });
   }
@@ -2151,7 +2188,7 @@ function TableTab({ onHtml }: { onHtml: (html: string) => void }) {
   function addColumn(index: number, where: 'left' | 'right') {
     const insertAt = where === 'left' ? index : index + 1;
     const rows = cloneState(state.rows).map(row => {
-      row.splice(insertAt, 0, { title: '', text: '', accent: '#185fa5', button: { text: '', url: '' } });
+      row.splice(insertAt, 0, { title: '', text: '', tags: [], button: { text: '', url: '' } });
       return row;
     });
     const widths = [...state.columnWidths];
@@ -2212,6 +2249,7 @@ function TableTab({ onHtml }: { onHtml: (html: string) => void }) {
           <ColorInput label="Card background" value={state.cardBg} onChange={v => upd({ cardBg: v })} />
           <ColorInput label="Border" value={state.border} onChange={v => upd({ border: v })} />
           <ColorInput label="Button background" value={state.buttonBg} onChange={v => upd({ buttonBg: v })} />
+          <ColorInput label="Button text" value={state.buttonText} onChange={v => upd({ buttonText: v })} />
         </div>
 
         <p className="section-label">Header</p>
@@ -2223,6 +2261,41 @@ function TableTab({ onHtml }: { onHtml: (html: string) => void }) {
           <ColorInput label="Header background" value={state.headerBg} onChange={v => upd({ headerBg: v })} />
           <ColorInput label="Header text" value={state.headerText} onChange={v => upd({ headerText: v })} />
         </div>
+
+        <p className="section-label">Font Formatter</p>
+        <Field label="Font family">
+          <select className="input text-xs" value={state.fontFamily} onChange={e => upd({ fontFamily: e.target.value })}>
+            {PP_FONT_FAMILIES.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+        </Field>
+        <div className="grid grid-cols-3 gap-1 items-center text-[11px] text-slate-500">
+          <span className="font-semibold">Element</span>
+          <span className="font-semibold">Size</span>
+          <span className="font-semibold">Weight</span>
+
+          <span className="flex items-center">Header</span>
+          <input type="number" min={7} max={28} step="0.5" className="input text-xs py-0.5" value={state.headerSize} onChange={e => upd({ headerSize: Number(e.target.value) })} />
+          <WeightSel value={state.headerWeight} def={800} onChange={w => upd({ headerWeight: w })} />
+
+          <span className="flex items-center">Cell title</span>
+          <input type="number" min={8} max={36} step="0.5" className="input text-xs py-0.5" value={state.titleSize} onChange={e => upd({ titleSize: Number(e.target.value) })} />
+          <WeightSel value={state.titleWeight} def={800} onChange={w => upd({ titleWeight: w })} />
+
+          <span className="flex items-center">Cell text</span>
+          <input type="number" min={8} max={28} step="0.5" className="input text-xs py-0.5" value={state.textSize} onChange={e => upd({ textSize: Number(e.target.value) })} />
+          <WeightSel value={state.textWeight} def={500} onChange={w => upd({ textWeight: w })} />
+
+          <span className="flex items-center">Tags</span>
+          <input type="number" min={7} max={22} step="0.5" className="input text-xs py-0.5" value={state.tagSize} onChange={e => upd({ tagSize: Number(e.target.value) })} />
+          <WeightSel value={state.tagWeight} def={800} onChange={w => upd({ tagWeight: w })} />
+
+          <span className="flex items-center">Button</span>
+          <input type="number" min={8} max={24} step="0.5" className="input text-xs py-0.5" value={state.buttonSize} onChange={e => upd({ buttonSize: Number(e.target.value) })} />
+          <WeightSel value={state.buttonWeight} def={800} onChange={w => upd({ buttonWeight: w })} />
+        </div>
+        <Field label="Header letter spacing">
+          <input type="number" min={0} max={4} step="0.1" className="input" value={state.headerLetterSpacing} onChange={e => upd({ headerLetterSpacing: Number(e.target.value) })} />
+        </Field>
 
         <p className="section-label">Column Widths</p>
         <div className="overflow-x-auto rounded border border-slate-200 bg-white">
@@ -2250,11 +2323,27 @@ function TableTab({ onHtml }: { onHtml: (html: string) => void }) {
                 <summary className="cursor-pointer select-none text-xs font-semibold text-slate-500">Cell {ri + 1}.{ci + 1} {cell.title ? `- ${cell.title}` : ''}</summary>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <Field label="Title"><input className="input" value={cell.title} onChange={e => setCell(ri, ci, { title: e.target.value })} /></Field>
-                  <ColorInput label="Accent" value={cell.accent} onChange={v => setCell(ri, ci, { accent: v })} />
                   <Field label="Text"><textarea className="input min-h-[76px]" value={cell.text} onChange={e => setCell(ri, ci, { text: e.target.value })} /></Field>
                   <div className="space-y-2">
                     <Field label="Button text"><input className="input" value={cell.button.text} onChange={e => setCellButton(ri, ci, { text: e.target.value })} /></Field>
                     <Field label="Button URL"><input className="input" value={cell.button.url} onChange={e => setCellButton(ri, ci, { url: e.target.value })} /></Field>
+                  </div>
+                  <div className="col-span-2 rounded border border-slate-200 bg-slate-50 p-2">
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="flex-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Tags</span>
+                      <button onClick={() => addCellTag(ri, ci)} className="btn-ghost text-xs">+ Add tag</button>
+                    </div>
+                    {(cell.tags || []).map((tag, ti) => (
+                      <div key={ti} className="mb-2 grid grid-cols-[1fr_132px_auto] gap-2 last:mb-0">
+                        <input className="input" placeholder="Applied Skills" value={tag.text} onChange={e => setCellTag(ri, ci, ti, { text: e.target.value })} />
+                        <div className="flex gap-1">
+                          <input type="color" value={hex(tag.color, '#5b3fc8')} onChange={e => setCellTag(ri, ci, ti, { color: e.target.value })} className="h-9 w-10 shrink-0 cursor-pointer rounded border border-slate-300 p-0.5" />
+                          <input className="input" value={tag.color} onChange={e => setCellTag(ri, ci, ti, { color: e.target.value })} />
+                        </div>
+                        <button onClick={() => removeCellTag(ri, ci, ti)} className="btn-danger text-xs">Remove</button>
+                      </div>
+                    ))}
+                    {!cell.tags?.length && <p className="text-xs text-slate-400">No tags yet.</p>}
                   </div>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">

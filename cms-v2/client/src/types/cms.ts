@@ -987,10 +987,14 @@ export interface TableCellButton {
   text: string;
   url: string;
 }
+export interface TableCellTag {
+  text: string;
+  color: string;
+}
 export interface TableCell {
   title: string;
   text: string;
-  accent: string;
+  tags: TableCellTag[];
   button: TableCellButton;
 }
 export interface TableState {
@@ -1001,6 +1005,12 @@ export interface TableState {
   showHeader: boolean;
   headerBg: string; headerText: string;
   textColor: string; mutedColor: string; buttonBg: string; buttonText: string;
+  fontFamily: string;
+  headerSize: number; headerWeight: number; headerLetterSpacing: number;
+  titleSize: number; titleWeight: number;
+  textSize: number; textWeight: number;
+  tagSize: number; tagWeight: number;
+  buttonSize: number; buttonWeight: number;
   columnWidths: number[];
   rows: TableCell[][];
 }
