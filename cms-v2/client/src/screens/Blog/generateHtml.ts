@@ -18,6 +18,43 @@ function featuredImage(post: BlogPost): string {
   return absoluteAssetUrl(post.featuredImagePath || post.images?.[0]?.localPath || '');
 }
 
+function getRandomRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[], count = 3): BlogPost[] {
+  const published = allPosts.filter(
+    post => post.status === 'published' && post.id !== currentPost.id
+  );
+
+  if (published.length <= count) return published;
+
+  const currentTags = currentPost.tags || [];
+  const scored = published.map(post => {
+    let score = 0;
+
+    if (post.topic === currentPost.topic) score += 10;
+    const sharedTags = (post.tags || []).filter(tag => currentTags.includes(tag)).length;
+    score += sharedTags * 5;
+
+    return { post, score };
+  });
+
+  const related = scored.filter(item => item.score > 0);
+  const pool = related.length >= count ? related : scored;
+  const candidates = pool
+    .sort((a, b) => {
+      if (a.score !== b.score) return b.score - a.score;
+      return Math.random() - 0.5;
+    })
+    .slice(0, Math.min(count * 3, pool.length));
+  const selected: BlogPost[] = [];
+
+  for (let i = 0; i < count && candidates.length > 0; i += 1) {
+    const idx = Math.floor(Math.random() * candidates.length);
+    selected.push(candidates[idx].post);
+    candidates.splice(idx, 1);
+  }
+
+  return selected;
+}
+
 function safeHex(value: string | undefined, fallback = '#0d1f3c'): string {
   return /^#[0-9a-fA-F]{6}$/.test(String(value || '').trim()) ? String(value).trim() : fallback;
 }
@@ -173,6 +210,21 @@ function wrapRelatedArticles(html: string): string {
   });
 }
 
+function renderRelatedArticles(posts: BlogPost[]): string {
+  if (!posts || posts.length === 0) return '';
+
+  const cards = posts.map(post => {
+    const image = featuredImage(post);
+    return `<a href="${attr(blogUrl(post))}" class="vls-blog-related-card">
+    ${image ? `<img src="${attr(image)}" alt="${attr(post.title)}" loading="lazy">` : ''}
+    <h3>${escapeHtml(post.title)}</h3>
+    <span class="vls-blog-related-meta">${escapeHtml(formatDate(post.publishDate || ''))}</span>
+  </a>`;
+  }).join('');
+
+  return `<section class="vls-blog-related vls-blog-related-suggestions"><h2>More Articles</h2><div class="vls-blog-related-grid">${cards}</div></section>`;
+}
+
 function prepareArticleBody(html: string, title: string): string {
   return wrapRelatedArticles(addHeadingIdsAndTocLinks(stripAutoSeoPromo(stripImportedSourceHero(html, title))));
 }
@@ -284,7 +336,7 @@ html body .vls-blog .vls-blog-hero-banner h1{font-size:clamp(34px,5vw,58px);line
 @media(max-width:620px){.vls-blog{margin-top:28px}.vls-blog-shell{padding:28px 16px}.vls-blog-grid{grid-template-columns:1fr}.vls-blog-hero-banner{min-height:340px}.vls-blog-hero-banner .vls-blog-shell{padding-top:58px;padding-bottom:48px}.vls-blog h1{font-size:34px}.vls-blog-article{padding:18px}}
 </style>`;
 
-export function generateBlogArticleHtml(post: BlogPost, settings: Partial<BlogSettings> = {}): string {
+export function generateBlogArticleHtml(post: BlogPost, settings: Partial<BlogSettings> = {}, allPosts: BlogPost[] = []): string {
   const metaDescription = post.metaDescription || post.summary;
   const image = featuredImage(post);
   const gradientColor = safeHex(settings.heroGradientColor);
@@ -292,6 +344,8 @@ export function generateBlogArticleHtml(post: BlogPost, settings: Partial<BlogSe
   const background = heroBackground(image, gradientColor);
   const tags = post.tags.map(tag => `<span class="vls-blog-tag">${escapeHtml(tag)}</span>`).join('');
   const bodyHtml = prepareArticleBody(bodyWithAbsoluteAssets(post.bodyHtml), post.title);
+  const relatedArticles = allPosts.length > 0 ? getRandomRelatedPosts(post, allPosts, 3) : [];
+  const relatedHtml = relatedArticles.length > 0 ? renderRelatedArticles(relatedArticles) : '';
   return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>${escapeHtml(post.metaTitle || post.title)}</title>
 <meta name="description" content="${attr(metaDescription)}">
@@ -310,7 +364,7 @@ ${baseCss}
   </section>
   <div class="vls-blog-shell" style="--toc-link-color:${attr(tocLinkColor)}">
     <div class="vls-blog-layout">
-      <article class="vls-blog-article">${bodyHtml}</article>
+      <article class="vls-blog-article">${bodyHtml}${relatedHtml}</article>
       <aside class="vls-blog-side">
         ${shareLinks(post)}
         <strong>Topic</strong>

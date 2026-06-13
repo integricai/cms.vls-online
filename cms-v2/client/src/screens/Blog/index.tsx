@@ -106,7 +106,7 @@ export default function Blog() {
     return topicOk && (!query.trim() || haystack.includes(query.toLowerCase()));
   });
   const landingHtml = wrapGeneratedHtml('Blog Landing', generateBlogLandingHtml(posts));
-  const articleBodyHtml = selected ? generateBlogArticleHtml(selected, blogSettings) : '';
+  const articleBodyHtml = selected ? generateBlogArticleHtml(selected, blogSettings, posts) : '';
   const articleHtml = selected ? wrapGeneratedHtml('Blog Article', articleBodyHtml) : '';
   const fullArticleHtml = selected
     ? minifyHtml([

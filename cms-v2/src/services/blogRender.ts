@@ -13,30 +13,28 @@ function getRandomRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[], coun
 
   if (published.length <= count) return published;
 
-  // Score posts by relevance
+  const currentTags = currentPost.tags || [];
   const scored = published.map(post => {
     let score = 0;
-    
-    // Same topic gets higher priority
+
     if (post.topic === currentPost.topic) score += 10;
-    
-    // Shared tags
     const sharedTags = (post.tags || []).filter(tag => 
-      (currentPost.tags || []).includes(tag)
+      currentTags.includes(tag)
     ).length;
     score += sharedTags * 5;
-    
+
     return { post, score };
   });
 
-  // Sort by score (descending) then randomize within score groups
-  scored.sort((a, b) => {
-    if (a.score !== b.score) return b.score - a.score;
-    return Math.random() - 0.5;
-  });
+  const related = scored.filter(item => item.score > 0);
+  const pool = related.length >= count ? related : scored;
 
-  // Take top candidates and shuffle them for variety
-  const candidates = scored.slice(0, Math.min(count * 3, scored.length));
+  const candidates = pool
+    .sort((a, b) => {
+      if (a.score !== b.score) return b.score - a.score;
+      return Math.random() - 0.5;
+    })
+    .slice(0, Math.min(count * 3, pool.length));
   const selected: BlogPost[] = [];
   
   for (let i = 0; i < count && candidates.length > 0; i++) {
