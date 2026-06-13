@@ -762,7 +762,7 @@ export function generateTableHtml(d: TableState): string {
   L.push(`.${id}-row{display:grid;grid-template-columns:${cols};border-bottom:1px solid ${e(d.border)};}`);
   L.push(`.${id}-row:last-child{border-bottom:0;}`);
   L.push(`.${id}-row.is-head{background:${e(d.headerBg)};}`);
-  L.push(`.${id}-cell{position:relative;min-height:72px;padding:14px 18px;border-right:1px solid ${e(d.border)};}`);
+  L.push(`.${id}-cell{position:relative;min-height:72px;padding:14px 18px;border-right:1px solid ${e(d.border)};display:flex;flex-direction:column;justify-content:center;align-items:flex-start;text-align:left;}`);
   L.push(`.${id}-cell:last-child{border-right:0;}`);
   L.push(`.${id}-row.is-head .${id}-cell{min-height:0;padding-top:11px;padding-bottom:11px;}`);
   L.push(`.${id}-title{font-size:${d.titleSize}px;font-weight:${d.titleWeight};line-height:1.25;color:${e(d.textColor)};margin:0 0 4px;}`);
