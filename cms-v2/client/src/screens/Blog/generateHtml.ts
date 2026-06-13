@@ -14,6 +14,10 @@ function absoluteAssetUrl(value: string): string {
   return value;
 }
 
+function featuredImage(post: BlogPost): string {
+  return absoluteAssetUrl(post.featuredImagePath || post.images?.[0]?.localPath || '');
+}
+
 function bodyWithAbsoluteAssets(html: string): string {
   return html
     .replace(/(<img\b[^>]*\ssrc=["'])(\/blog-assets\/[^"']+)(["'][^>]*>)/gi, (_match, start: string, src: string, end: string) => {
@@ -103,9 +107,20 @@ function stripTags(value: string): string {
   return (value || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function normalizeRelatedCards(anchors: string): string {
+  return anchors.replace(/(<a\b[^>]*>)([\s\S]*?)(<\/a>)/gi, (match, start: string, inner: string, end: string) => {
+    if (/\b(?:vls-blog-related-meta|related-meta)\b/.test(inner)) return match;
+    const next = inner.replace(/(<\/h3>\s*)([^<]+)\s*$/i, (_metaMatch, headingEnd: string, meta: string) => {
+      const text = meta.replace(/\s+/g, ' ').trim();
+      return text ? `${headingEnd}<span class="vls-blog-related-meta">${escapeHtml(text)}</span>` : headingEnd;
+    });
+    return `${start}${next}${end}`;
+  });
+}
+
 function wrapRelatedArticles(html: string): string {
   return html.replace(/<h2\b[^>]*>\s*More Articles\s*<\/h2>\s*((?:\s*<a\b[\s\S]*?<\/a>\s*)+)/i, (_match, anchors: string) => {
-    return `<section class="vls-blog-related"><h2>More Articles</h2><div class="vls-blog-related-grid">${anchors}</div></section>`;
+    return `<section class="vls-blog-related"><h2>More Articles</h2><div class="vls-blog-related-grid">${normalizeRelatedCards(anchors)}</div></section>`;
   });
 }
 
@@ -144,13 +159,13 @@ function formatDate(value: string): string {
 }
 
 function articleSchema(post: BlogPost): string {
-  const featuredImage = absoluteAssetUrl(post.featuredImagePath);
+  const image = featuredImage(post);
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title,
     description: post.metaDescription || post.summary,
-    image: featuredImage ? [featuredImage] : undefined,
+    image: image ? [image] : undefined,
     author: post.author ? { '@type': 'Person', name: post.author } : undefined,
     datePublished: post.publishDate || post.createdDate,
     dateModified: post.updatedDate,
@@ -186,7 +201,7 @@ html body .vls-blog .vls-blog-shell>h1{font-size:clamp(34px,5vw,58px);line-heigh
 .vls-blog-related-grid>a,.related-grid>a{display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid #e1e8f1;border-radius:8px;overflow:hidden;box-shadow:0 10px 24px rgba(13,31,60,.06);color:#667085!important;font-size:12px;font-weight:500;line-height:1.5;text-decoration:none;}
 .vls-blog-related-grid>a img,.related-grid>a img{width:100%;height:112px;object-fit:cover;border:0;border-radius:0;margin:0;background:#dbe5f1;}
 .vls-blog-related-grid>a h3,.related-grid>a h3{font-size:15px;line-height:1.35;margin:12px 14px 6px;color:#0d1f3c;}
-.vls-blog-related-grid>a>:not(img):not(h3),.related-grid>a>:not(img):not(h3){margin:0 14px 14px;}
+.vls-blog-related-grid>a>:not(img):not(h3),.related-grid>a>:not(img):not(h3),.vls-blog-related-meta,.related-meta{display:block;margin:0 14px 14px;}
 .vls-blog-side{position:sticky;top:24px;background:#fff;border:1px solid #e1e8f1;border-radius:8px;padding:18px;box-shadow:0 12px 30px rgba(13,31,60,.06);}
 .vls-blog-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
 .vls-blog-tag{border-radius:999px;background:#f1f6fc;color:#24466f;padding:6px 10px;font-size:12px;font-weight:700;}
@@ -216,7 +231,7 @@ html body .vls-blog .vls-blog-shell>h1{font-size:clamp(34px,5vw,58px);line-heigh
 
 export function generateBlogArticleHtml(post: BlogPost): string {
   const metaDescription = post.metaDescription || post.summary;
-  const featuredImage = absoluteAssetUrl(post.featuredImagePath);
+  const image = featuredImage(post);
   const tags = post.tags.map(tag => `<span class="vls-blog-tag">${escapeHtml(tag)}</span>`).join('');
   const bodyHtml = prepareArticleBody(bodyWithAbsoluteAssets(post.bodyHtml), post.title);
   return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -225,13 +240,14 @@ export function generateBlogArticleHtml(post: BlogPost): string {
 <link rel="canonical" href="${attr(post.canonicalUrl || blogUrl(post))}">
 <meta property="og:title" content="${attr(post.metaTitle || post.title)}">
 <meta property="og:description" content="${attr(metaDescription)}">
-${featuredImage ? `<meta property="og:image" content="${attr(featuredImage)}">` : ''}
+${image ? `<meta property="og:image" content="${attr(image)}">` : ''}
 ${baseCss}
 <main class="vls-blog">
   <div class="vls-blog-shell">
     <span class="vls-blog-kicker">${escapeHtml(post.topic)}</span>
     <h1 style="color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;">${escapeHtml(post.title)}</h1>
     <div class="vls-blog-meta">${post.publishDate ? `<span>${escapeHtml(formatDate(post.publishDate))}</span>` : ''}<span>${escapeHtml(post.status)}</span></div>
+    ${image ? `<img class="vls-blog-hero" src="${attr(image)}" alt="${attr(post.title)}">` : ''}
     <div class="vls-blog-layout">
       <article class="vls-blog-article">${bodyHtml}</article>
       <aside class="vls-blog-side">
@@ -251,7 +267,7 @@ export function generateBlogLandingHtml(posts: BlogPost[]): string {
   const topics = ['All', ...Array.from(new Set(published.map(post => post.topic))).sort()];
   const filters = topics.map(topic => `<button type="button" class="vls-blog-filter${topic === 'All' ? ' is-active' : ''}" data-topic="${attr(topic)}">${escapeHtml(topic)}</button>`).join('');
   const cards = published.map(post => `<article class="vls-blog-card" data-topic="${attr(post.topic)}" data-search="${attr(`${post.title} ${post.summary} ${post.topic} ${post.tags.join(' ')}`.toLowerCase())}">
-    ${post.featuredImagePath ? `<img src="${attr(absoluteAssetUrl(post.featuredImagePath))}" alt="${attr(post.title)}">` : ''}
+    ${featuredImage(post) ? `<img src="${attr(featuredImage(post))}" alt="${attr(post.title)}">` : ''}
     <div class="vls-blog-card-body">
       <span class="vls-blog-kicker">${escapeHtml(post.topic)}</span>
       <h2>${escapeHtml(post.title)}</h2>

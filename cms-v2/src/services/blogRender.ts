@@ -94,9 +94,20 @@ function addHeadingIdsAndTocLinks(html: string): string {
   return next;
 }
 
+function normalizeRelatedCards(anchors: string): string {
+  return anchors.replace(/(<a\b[^>]*>)([\s\S]*?)(<\/a>)/gi, (match, start: string, inner: string, end: string) => {
+    if (/\b(?:related-meta|vls-blog-related-meta)\b/.test(inner)) return match;
+    const next = inner.replace(/(<\/h3>\s*)([^<]+)\s*$/i, (_metaMatch, headingEnd: string, meta: string) => {
+      const text = meta.replace(/\s+/g, ' ').trim();
+      return text ? `${headingEnd}<span class="related-meta">${escapeHtml(text)}</span>` : headingEnd;
+    });
+    return `${start}${next}${end}`;
+  });
+}
+
 function wrapRelatedArticles(html: string): string {
   return html.replace(/<h2\b[^>]*>\s*More Articles\s*<\/h2>\s*((?:\s*<a\b[\s\S]*?<\/a>\s*)+)/i, (_match, anchors: string) => {
-    return `<section class="related"><h2>More Articles</h2><div class="related-grid">${anchors}</div></section>`;
+    return `<section class="related"><h2>More Articles</h2><div class="related-grid">${normalizeRelatedCards(anchors)}</div></section>`;
   });
 }
 
@@ -126,6 +137,10 @@ export function blogUrl(post: BlogPost): string {
   return `/blog/${blogTopicSlug(post.topic)}/${post.slug}`;
 }
 
+function featuredImage(post: BlogPost): string {
+  return post.featuredImagePath || post.images?.[0]?.localPath || '';
+}
+
 function layout(title: string, description: string, body: string, canonical: string, image = ''): string {
   return `<!doctype html>
 <html lang="en">
@@ -140,7 +155,7 @@ function layout(title: string, description: string, body: string, canonical: str
   ${image ? `<meta property="og:image" content="${attr(image)}">` : ''}
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body{margin:0;font-family:Poppins,Arial,sans-serif;background:linear-gradient(180deg,#0d1f3c 0,#0d1f3c 430px,#f5f8fc 430px,#f5f8fc 100%);color:#0d1f3c;scroll-behavior:smooth}*{box-sizing:border-box}a{color:#1f73b7;text-decoration:none;font-weight:700}.wrap{max-width:1160px;margin:0 auto;padding:46px 24px}.top{background:#0d1f3c;border-bottom:1px solid rgba(255,255,255,.12)}.top .wrap{padding-top:18px;padding-bottom:18px}.brand{font-weight:800;color:#fff}.kicker{display:inline-flex;border-radius:999px;background:#14345f;color:#72cdf4;border:1px solid rgba(114,205,244,.28);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:7px 12px}.wrap>h1{font-size:clamp(34px,5vw,58px);line-height:1.05;margin:18px 0 14px;letter-spacing:0;color:#fff!important;max-width:920px}.wrap>p{color:#dbeafe}.meta{display:flex;flex-wrap:wrap;gap:10px;color:#dbeafe;font-size:13px;margin:0 0 24px}.hero{width:100%;max-height:520px;object-fit:cover;border-radius:8px;border:1px solid #dbe5f1;background:#dbe5f1;margin:18px 0 30px;box-shadow:0 20px 45px rgba(13,31,60,.18)}.layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:34px;align-items:start}.article{background:#fff;border:1px solid #e1e8f1;border-radius:8px;padding:38px;box-shadow:0 18px 45px rgba(13,31,60,.08)}.article h2{font-size:28px;line-height:1.2;margin:34px 0 12px;color:#0d1f3c}.article h3{font-size:22px;line-height:1.3;margin:28px 0 10px;color:#14345f}.article p,.article li{font-size:16px;line-height:1.75;color:#42526b}.article img{display:block;width:100%;height:auto;border-radius:8px;margin:24px 0;border:1px solid #e1e8f1}.article table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14px}.article th,.article td{border:1px solid #dbe5f1;padding:10px;text-align:left;vertical-align:top}.article th{background:#f1f6fc}.related,.vls-blog-related{margin-top:34px}.related h2,.vls-blog-related h2{margin-top:0}.related-grid,.vls-blog-related-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.related-grid>a,.vls-blog-related-grid>a{display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid #e1e8f1;border-radius:8px;overflow:hidden;box-shadow:0 10px 24px rgba(13,31,60,.06);color:#667085!important;font-size:12px;font-weight:500;line-height:1.5;text-decoration:none}.related-grid>a img,.vls-blog-related-grid>a img{width:100%;height:112px;object-fit:cover;border:0;border-radius:0;margin:0;background:#dbe5f1}.related-grid>a h3,.vls-blog-related-grid>a h3{font-size:15px;line-height:1.35;margin:12px 14px 6px;color:#0d1f3c}.related-grid>a>:not(img):not(h3),.vls-blog-related-grid>a>:not(img):not(h3){margin:0 14px 14px}.side{position:sticky;top:24px;background:#fff;border:1px solid #e1e8f1;border-radius:8px;padding:18px;box-shadow:0 12px 30px rgba(13,31,60,.06)}.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.tag{border-radius:999px;background:#f1f6fc;color:#24466f;padding:6px 10px;font-size:12px;font-weight:700}.share{margin-bottom:20px}.share strong{display:block;margin-bottom:10px;color:#0d1f3c}.share-links{display:flex;gap:8px}.share-links a{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;background:#f1f6fc;color:#0d1f3c;text-decoration:none;font-size:13px;font-weight:800}.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:24px}.filter,.search{border:1px solid #d6e0eb;background:#fff;border-radius:999px;padding:9px 14px;font:600 13px Poppins,Arial,sans-serif;color:#334155}.filter.is-active{background:#1f73b7;color:#fff;border-color:#1f73b7}.search{margin-left:auto;min-width:260px;border-radius:8px;font-weight:500}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:24px}.card{display:flex;flex-direction:column;background:#fff;border:1px solid #e1e8f1;border-radius:8px;overflow:hidden;box-shadow:0 14px 34px rgba(13,31,60,.07)}.card .kicker{background:#e8f3fc;color:#1f73b7;border:0}.card img{width:100%;height:180px;object-fit:cover;background:#dbe5f1}.card-body{padding:18px;display:flex;flex-direction:column;gap:10px;flex:1}.card h2{font-size:18px;line-height:1.3;margin:0;color:#0d1f3c}.card p{font-size:14px;line-height:1.6;margin:0;color:#42526b}.card .meta{color:#667085;margin:0}.pagination{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;margin-top:28px}.page-btn{border:1px solid #d6e0eb;background:#fff;border-radius:8px;padding:8px 12px;font:700 13px Poppins,Arial,sans-serif;color:#24466f;cursor:pointer}.page-btn.is-active{background:#1f73b7;border-color:#1f73b7;color:#fff}.page-btn:disabled{opacity:.45;cursor:not-allowed}.page-status{font-size:13px;color:#64748b;margin-left:8px}@media(max-width:900px){.layout{grid-template-columns:1fr}.side{position:static}.grid{grid-template-columns:1fr 1fr}.article{padding:24px}.search{margin-left:0;width:100%}}@media(max-width:720px){.related-grid,.vls-blog-related-grid{grid-template-columns:1fr}.related-grid>a img,.vls-blog-related-grid>a img{height:150px}}@media(max-width:620px){.wrap{padding:28px 16px}.grid{grid-template-columns:1fr}.wrap>h1{font-size:34px}.article{padding:18px}}
+    body{margin:0;font-family:Poppins,Arial,sans-serif;background:linear-gradient(180deg,#0d1f3c 0,#0d1f3c 430px,#f5f8fc 430px,#f5f8fc 100%);color:#0d1f3c;scroll-behavior:smooth}*{box-sizing:border-box}a{color:#1f73b7;text-decoration:none;font-weight:700}.wrap{max-width:1160px;margin:0 auto;padding:46px 24px}.top{background:#0d1f3c;border-bottom:1px solid rgba(255,255,255,.12)}.top .wrap{padding-top:18px;padding-bottom:18px}.brand{font-weight:800;color:#fff}.kicker{display:inline-flex;border-radius:999px;background:#14345f;color:#72cdf4;border:1px solid rgba(114,205,244,.28);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:7px 12px}.wrap>h1{font-size:clamp(34px,5vw,58px);line-height:1.05;margin:18px 0 14px;letter-spacing:0;color:#fff!important;max-width:920px}.wrap>p{color:#dbeafe}.meta{display:flex;flex-wrap:wrap;gap:10px;color:#dbeafe;font-size:13px;margin:0 0 24px}.hero{width:100%;max-height:520px;object-fit:cover;border-radius:8px;border:1px solid #dbe5f1;background:#dbe5f1;margin:18px 0 30px;box-shadow:0 20px 45px rgba(13,31,60,.18)}.layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:34px;align-items:start}.article{background:#fff;border:1px solid #e1e8f1;border-radius:8px;padding:38px;box-shadow:0 18px 45px rgba(13,31,60,.08)}.article h2{font-size:28px;line-height:1.2;margin:34px 0 12px;color:#0d1f3c}.article h3{font-size:22px;line-height:1.3;margin:28px 0 10px;color:#14345f}.article p,.article li{font-size:16px;line-height:1.75;color:#42526b}.article img{display:block;width:100%;height:auto;border-radius:8px;margin:24px 0;border:1px solid #e1e8f1}.article table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14px}.article th,.article td{border:1px solid #dbe5f1;padding:10px;text-align:left;vertical-align:top}.article th{background:#f1f6fc}.related,.vls-blog-related{margin-top:34px}.related h2,.vls-blog-related h2{margin-top:0}.related-grid,.vls-blog-related-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.related-grid>a,.vls-blog-related-grid>a{display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid #e1e8f1;border-radius:8px;overflow:hidden;box-shadow:0 10px 24px rgba(13,31,60,.06);color:#667085!important;font-size:12px;font-weight:500;line-height:1.5;text-decoration:none}.related-grid>a img,.vls-blog-related-grid>a img{width:100%;height:112px;object-fit:cover;border:0;border-radius:0;margin:0;background:#dbe5f1}.related-grid>a h3,.vls-blog-related-grid>a h3{font-size:15px;line-height:1.35;margin:12px 14px 6px;color:#0d1f3c}.related-grid>a>:not(img):not(h3),.vls-blog-related-grid>a>:not(img):not(h3),.related-meta,.vls-blog-related-meta{display:block;margin:0 14px 14px}.side{position:sticky;top:24px;background:#fff;border:1px solid #e1e8f1;border-radius:8px;padding:18px;box-shadow:0 12px 30px rgba(13,31,60,.06)}.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.tag{border-radius:999px;background:#f1f6fc;color:#24466f;padding:6px 10px;font-size:12px;font-weight:700}.share{margin-bottom:20px}.share strong{display:block;margin-bottom:10px;color:#0d1f3c}.share-links{display:flex;gap:8px}.share-links a{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;background:#f1f6fc;color:#0d1f3c;text-decoration:none;font-size:13px;font-weight:800}.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:24px}.filter,.search{border:1px solid #d6e0eb;background:#fff;border-radius:999px;padding:9px 14px;font:600 13px Poppins,Arial,sans-serif;color:#334155}.filter.is-active{background:#1f73b7;color:#fff;border-color:#1f73b7}.search{margin-left:auto;min-width:260px;border-radius:8px;font-weight:500}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:24px}.card{display:flex;flex-direction:column;background:#fff;border:1px solid #e1e8f1;border-radius:8px;overflow:hidden;box-shadow:0 14px 34px rgba(13,31,60,.07)}.card .kicker{background:#e8f3fc;color:#1f73b7;border:0}.card img{width:100%;height:180px;object-fit:cover;background:#dbe5f1}.card-body{padding:18px;display:flex;flex-direction:column;gap:10px;flex:1}.card h2{font-size:18px;line-height:1.3;margin:0;color:#0d1f3c}.card p{font-size:14px;line-height:1.6;margin:0;color:#42526b}.card .meta{color:#667085;margin:0}.pagination{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;margin-top:28px}.page-btn{border:1px solid #d6e0eb;background:#fff;border-radius:8px;padding:8px 12px;font:700 13px Poppins,Arial,sans-serif;color:#24466f;cursor:pointer}.page-btn.is-active{background:#1f73b7;border-color:#1f73b7;color:#fff}.page-btn:disabled{opacity:.45;cursor:not-allowed}.page-status{font-size:13px;color:#64748b;margin-left:8px}@media(max-width:900px){.layout{grid-template-columns:1fr}.side{position:static}.grid{grid-template-columns:1fr 1fr}.article{padding:24px}.search{margin-left:0;width:100%}}@media(max-width:720px){.related-grid,.vls-blog-related-grid{grid-template-columns:1fr}.related-grid>a img,.vls-blog-related-grid>a img{height:150px}}@media(max-width:620px){.wrap{padding:28px 16px}.grid{grid-template-columns:1fr}.wrap>h1{font-size:34px}.article{padding:18px}}
   </style>
 </head>
 <body>
@@ -154,13 +169,14 @@ export function renderBlogArticle(post: BlogPost): string {
   const description = post.metaDescription || post.summary;
   const tags = post.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('');
   const articleHtml = prepareArticleBody(rewriteArticleLinks(post.bodyHtml), post.title);
-  const hero = post.featuredImagePath ? `<img class="hero" src="${attr(post.featuredImagePath)}" alt="${attr(post.title)}">` : '';
+  const image = featuredImage(post);
+  const hero = image ? `<img class="hero" src="${attr(image)}" alt="${attr(post.title)}">` : '';
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title,
     description,
-    image: post.featuredImagePath ? [post.featuredImagePath] : undefined,
+    image: image ? [image] : undefined,
     author: post.author ? { '@type': 'Person', name: post.author } : undefined,
     datePublished: post.publishDate || post.createdDate,
     dateModified: post.updatedDate,
@@ -177,7 +193,7 @@ export function renderBlogArticle(post: BlogPost): string {
     </div>
     <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}<\/script>
   </main>`;
-  return layout(post.metaTitle || post.title, description, body, post.canonicalUrl || blogUrl(post), post.featuredImagePath);
+  return layout(post.metaTitle || post.title, description, body, post.canonicalUrl || blogUrl(post), image);
 }
 
 export function renderBlogLanding(posts: BlogPost[]): string {
@@ -185,7 +201,7 @@ export function renderBlogLanding(posts: BlogPost[]): string {
   const topics = ['All', ...Array.from(new Set(published.map(post => post.topic))).sort()];
   const filters = topics.map(topic => `<button type="button" class="filter${topic === 'All' ? ' is-active' : ''}" data-topic="${attr(topic)}">${escapeHtml(topic)}</button>`).join('');
   const cards = published.map(post => `<article class="card" data-topic="${attr(post.topic)}" data-search="${attr(`${post.title} ${post.summary} ${post.topic} ${post.tags.join(' ')}`.toLowerCase())}">
-    ${post.featuredImagePath ? `<img src="${attr(post.featuredImagePath)}" alt="${attr(post.title)}">` : ''}
+    ${featuredImage(post) ? `<img src="${attr(featuredImage(post))}" alt="${attr(post.title)}">` : ''}
     <div class="card-body"><span class="kicker">${escapeHtml(post.topic)}</span><h2>${escapeHtml(post.title)}</h2><div class="meta">${post.publishDate ? `<span>${escapeHtml(formatDate(post.publishDate))}</span>` : ''}</div><p>${escapeHtml(post.summary)}</p><a href="${attr(blogUrl(post))}">Read more</a></div>
   </article>`).join('');
   const body = `<main class="wrap">
