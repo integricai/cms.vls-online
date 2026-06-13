@@ -11,7 +11,7 @@ type ImportResponse = { post: BlogPost; warnings: string[] };
 
 const TOPICS = ['ACCA', 'Accounting', 'Finance', 'Tax', 'Audit', 'Study Tips', 'Exam Preparation', 'Career Advice'];
 const API_ORIGIN = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/api\/?$/, '').replace(/\/$/, '');
-const DEFAULT_BLOG_SETTINGS: BlogSettings = { heroGradientColor: '#0d1f3c' };
+const DEFAULT_BLOG_SETTINGS: BlogSettings = { heroGradientColor: '#0d1f3c', tocLinkColor: '#1f73b7' };
 
 function statusClass(type: 'success' | 'error' | 'warning' | 'info'): string {
   return {
@@ -192,6 +192,7 @@ export default function Blog() {
       const settings = {
         ...blogSettings,
         heroGradientColor: /^#[0-9a-fA-F]{6}$/.test(blogSettings.heroGradientColor) ? blogSettings.heroGradientColor : DEFAULT_BLOG_SETTINGS.heroGradientColor,
+        tocLinkColor: /^#[0-9a-fA-F]{6}$/.test(blogSettings.tocLinkColor) ? blogSettings.tocLinkColor : DEFAULT_BLOG_SETTINGS.tocLinkColor,
       };
       await api.put('/content/vls-blog-settings', settings);
       setBlogSettings(settings);
@@ -264,6 +265,22 @@ export default function Blog() {
                 value={blogSettings.heroGradientColor}
                 onChange={event => setBlogSettings(settings => ({ ...settings, heroGradientColor: event.target.value }))}
                 placeholder="#0d1f3c"
+              />
+            </div>
+          </Field>
+          <Field label="Table of Contents link colour" hint="applies to all blog article TOC links">
+            <div className="flex gap-2">
+              <input
+                type="color"
+                value={/^#[0-9a-fA-F]{6}$/.test(blogSettings.tocLinkColor) ? blogSettings.tocLinkColor : DEFAULT_BLOG_SETTINGS.tocLinkColor}
+                onChange={event => setBlogSettings(settings => ({ ...settings, tocLinkColor: event.target.value }))}
+                className="h-10 w-12 shrink-0 cursor-pointer rounded border border-slate-200 p-1"
+              />
+              <input
+                className="input"
+                value={blogSettings.tocLinkColor}
+                onChange={event => setBlogSettings(settings => ({ ...settings, tocLinkColor: event.target.value }))}
+                placeholder="#1f73b7"
               />
             </div>
           </Field>

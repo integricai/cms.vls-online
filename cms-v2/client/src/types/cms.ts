@@ -184,6 +184,7 @@ export interface BlogPost {
 
 export interface BlogSettings {
   heroGradientColor: string;
+  tocLinkColor: string;
 }
 
 // ── Promotion Section ─────────────────────────────────────────────────────────

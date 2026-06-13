@@ -100,13 +100,16 @@ function addHeadingIdsAndTocLinks(html: string): string {
   });
 
   next = next.replace(/(<h[2-4]\b[^>]*>\s*(?:<a\b[^>]*>\s*<\/a>\s*)?Table of Contents\s*<\/h[2-4]>\s*<ul>)([\s\S]*?)(<\/ul>)/i, (_match, start: string, items: string, end: string) => {
+    const tocStart = /\bclass=/.test(start)
+      ? start.replace(/(<ul\b[^>]*class=["'])([^"']*)(["'])/i, '$1$2 toc$3')
+      : start.replace(/<ul\b/i, '<ul class="toc"');
     const linked = items.replace(/<li>\s*<a\b[^>]*>([\s\S]*?)<\/a>\s*<\/li>/gi, (_item, label: string) => {
       const text = normalizeText(label);
       if (!text || text === 'table of contents') return '';
       const id = headingIds.get(text);
       return id ? `<li><a href="#${attr(id)}">${escapeHtml(stripTags(label))}</a></li>` : `<li>${escapeHtml(stripTags(label))}</li>`;
     });
-    return `${start}${linked}${end}`;
+    return `${tocStart}${linked}${end}`;
   });
 
   return next;
@@ -199,6 +202,7 @@ html body .vls-blog .vls-blog-hero-banner h1{font-size:clamp(34px,5vw,58px);line
 .vls-blog>.vls-blog-shell>p{color:#dbeafe;}
 .vls-blog-meta{display:flex;flex-wrap:wrap;gap:10px;color:#dbeafe;font-size:13px;margin:0 0 24px;}
 .vls-blog-card .vls-blog-meta,.vls-blog-side .vls-blog-meta{color:#667085;}
+.vls-blog-article .toc a{color:var(--toc-link-color,#1f73b7)!important;}
 .vls-blog-layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:34px;align-items:start;}
 .vls-blog-article{background:#fff;border:1px solid #e1e8f1;border-radius:8px;padding:38px;box-shadow:0 18px 45px rgba(13,31,60,.08);}
 .vls-blog-article img{display:block;width:100%;height:auto;border-radius:8px;margin:24px 0;border:1px solid #e1e8f1;}
@@ -243,6 +247,7 @@ export function generateBlogArticleHtml(post: BlogPost, settings: Partial<BlogSe
   const metaDescription = post.metaDescription || post.summary;
   const image = featuredImage(post);
   const gradientColor = safeHex(settings.heroGradientColor);
+  const tocLinkColor = safeHex(settings.tocLinkColor, '#1f73b7');
   const background = heroBackground(image, gradientColor);
   const tags = post.tags.map(tag => `<span class="vls-blog-tag">${escapeHtml(tag)}</span>`).join('');
   const bodyHtml = prepareArticleBody(bodyWithAbsoluteAssets(post.bodyHtml), post.title);
@@ -262,7 +267,7 @@ ${baseCss}
       <div class="vls-blog-meta">${post.publishDate ? `<span>${escapeHtml(formatDate(post.publishDate))}</span>` : ''}<span>${escapeHtml(post.status)}</span></div>
     </div>
   </section>
-  <div class="vls-blog-shell">
+  <div class="vls-blog-shell" style="--toc-link-color:${attr(tocLinkColor)}">
     <div class="vls-blog-layout">
       <article class="vls-blog-article">${bodyHtml}</article>
       <aside class="vls-blog-side">
