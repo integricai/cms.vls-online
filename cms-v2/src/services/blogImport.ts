@@ -278,6 +278,83 @@ function normalizeBlogLinks(html: string): string {
   });
 }
 
+function normalizeText(value: string): string {
+  return stripTags(value).toLowerCase();
+}
+
+function firstIndexOf(html: string, pattern: RegExp): number {
+  const match = html.match(pattern);
+  return match?.index ?? -1;
+}
+
+function stripLeadingDuplicateTitle(html: string, title: string): string {
+  const titleText = normalizeText(title);
+  if (!titleText) return html || '';
+  return (html || '').replace(/^(\s|<!--[\s\S]*?-->)*(<h[1-2]\b[^>]*>[\s\S]*?<\/h[1-2]>)/i, (match, _prefix: string, heading: string) => {
+    return normalizeText(heading) === titleText ? '' : match;
+  });
+}
+
+function stripImportedSourceHero(html: string, title: string): string {
+  let next = stripLeadingDuplicateTitle(html, title).trimStart();
+  const firstParagraph = firstIndexOf(next, /<p\b/i);
+  const firstToc = firstIndexOf(next, /<h[2-4]\b[^>]*>\s*(?:<a\b[^>]*>\s*<\/a>\s*)?Table of Contents\s*<\/h[2-4]>/i);
+  const candidates = [firstParagraph, firstToc].filter(index => index >= 0);
+  const boundary = candidates.length ? Math.min(...candidates) : -1;
+  if (boundary > 0 && boundary < 4000) {
+    const prefix = next.slice(0, boundary);
+    if (/<(?:img|figure)\b|Search term:|Word Count:|Created:|min read|words|author/i.test(prefix)) {
+      next = next.slice(boundary).trimStart();
+    }
+  }
+  return next;
+}
+
+function headingId(text: string, index: number): string {
+  const slug = normalizeText(text).replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return slug || `section-${index + 1}`;
+}
+
+function addHeadingIdsAndTocLinks(html: string): string {
+  const headingIds = new Map<string, string>();
+  const used = new Map<string, number>();
+  let count = 0;
+  let next = html.replace(/<h([2-4])\b([^>]*)>([\s\S]*?)<\/h\1>/gi, (match, level: string, attrs: string, inner: string) => {
+    const text = normalizeText(inner);
+    if (!text || text === 'table of contents') return match;
+    const base = headingId(inner, count);
+    const seen = used.get(base) || 0;
+    used.set(base, seen + 1);
+    const id = seen ? `${base}-${seen + 1}` : base;
+    headingIds.set(text, id);
+    count += 1;
+    const cleanAttrs = attrs.replace(/\s+id=(["']).*?\1/i, '').trim();
+    return `<h${level}${cleanAttrs ? ` ${cleanAttrs}` : ''} id="${escapeHtml(id)}">${inner}</h${level}>`;
+  });
+
+  next = next.replace(/(<h[2-4]\b[^>]*>\s*(?:<a\b[^>]*>\s*<\/a>\s*)?Table of Contents\s*<\/h[2-4]>\s*<ul>)([\s\S]*?)(<\/ul>)/i, (_match, start: string, items: string, end: string) => {
+    const linked = items.replace(/<li>\s*<a\b[^>]*>([\s\S]*?)<\/a>\s*<\/li>/gi, (_item, label: string) => {
+      const text = normalizeText(label);
+      if (!text || text === 'table of contents') return '';
+      const id = headingIds.get(text);
+      return id ? `<li><a href="#${escapeHtml(id)}">${escapeHtml(stripTags(label))}</a></li>` : `<li>${escapeHtml(stripTags(label))}</li>`;
+    });
+    return `${start}${linked}${end}`;
+  });
+
+  return next;
+}
+
+function wrapRelatedArticles(html: string): string {
+  return html.replace(/<h2\b[^>]*>\s*More Articles\s*<\/h2>\s*((?:\s*<a\b[\s\S]*?<\/a>\s*)+)/i, (_match, anchors: string) => {
+    return `<section class="related"><h2>More Articles</h2><div class="related-grid">${anchors}</div></section>`;
+  });
+}
+
+function prepareImportedBlogBody(html: string, title: string): string {
+  return wrapRelatedArticles(addHeadingIdsAndTocLinks(stripImportedSourceHero(html, title)));
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -462,7 +539,7 @@ export async function importBlogPost(request: ImportRequest): Promise<ImportResu
   const { topic, tags } = inferTopicAndTags(scraped, sourceUrl, request.topicOverride);
   const now = new Date().toISOString();
   const replacedBody = replaceImageSources(scraped.bodyHtml, replacements, baseUrl);
-  const cleanBody = normalizeBlogLinks(sanitizeHtml(replacedBody));
+  const cleanBody = prepareImportedBlogBody(normalizeBlogLinks(sanitizeHtml(replacedBody)), scraped.title);
   const existingPost = request.replacePostId
     ? request.existingPosts.find(post => post.id === request.replacePostId)
     : undefined;
@@ -487,7 +564,7 @@ export async function importBlogPost(request: ImportRequest): Promise<ImportResu
       canonicalUrl: scraped.canonicalUrl,
       metaTitle: scraped.metaTitle,
       metaDescription: scraped.metaDescription,
-      author: scraped.author,
+      author: '',
       publishDate: scraped.publishDate,
       createdDate: existingPost?.createdDate || now,
       updatedDate: now,
