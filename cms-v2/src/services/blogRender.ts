@@ -196,6 +196,19 @@ function wrapRelatedArticles(html: string): string {
   });
 }
 
+function stripImportedRelatedArticles(html: string): string {
+  let next = html || '';
+  for (let i = 0; i < 4; i += 1) {
+    const previous = next;
+    next = next
+      .replace(/<section\b[^>]*\bclass=["'][^"']*(?:vls-blog-related|related)[^"']*["'][^>]*>[\s\S]*?<\/section>/gi, '')
+      .replace(/<h2\b[^>]*>\s*More Articles\s*<\/h2>\s*<div\b[^>]*\bclass=["'][^"']*(?:vls-blog-related-grid|related-grid)[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '')
+      .replace(/<h2\b[^>]*>\s*More Articles\s*<\/h2>\s*(?:\s*<a\b[\s\S]*?<\/a>\s*)+/gi, '');
+    if (next === previous) break;
+  }
+  return next;
+}
+
 function renderRelatedArticles(posts: BlogPost[]): string {
   if (!posts || posts.length === 0) return '';
   
@@ -212,7 +225,7 @@ function renderRelatedArticles(posts: BlogPost[]): string {
 }
 
 function prepareArticleBody(html: string, title: string): string {
-  return wrapRelatedArticles(addHeadingIdsAndTocLinks(stripAutoSeoPromo(stripImportedSourceHero(html, title))));
+  return stripImportedRelatedArticles(wrapRelatedArticles(addHeadingIdsAndTocLinks(stripAutoSeoPromo(stripImportedSourceHero(html, title)))));
 }
 
 function shareLinks(post: BlogPost): string {
