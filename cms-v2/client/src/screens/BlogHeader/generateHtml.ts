@@ -9,7 +9,13 @@ export function generateBlogHeaderHtml(cfg: HeaderConfig): string {
     .replace(/class="(vlsh[^"]*-wrap)"/, 'class="$1 vls-blog-header-generated"');
   const cleanup = `<style>
 html body .vls-zen-hidden{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;}
-html body .vls-blog-header-generated{background:#fff!important;}
+html body .vls-zen-hidden,html body .vls-zen-hidden *{pointer-events:none!important;}
+html body .vls-blog-header-generated{background:#fff!important;position:relative!important;z-index:100000!important;pointer-events:auto!important;}
+html body .vls-blog-header-generated a,
+html body .vls-blog-header-generated button,
+html body .vls-blog-header-generated nav,
+html body .vls-blog-header-generated ul,
+html body .vls-blog-header-generated li{pointer-events:auto!important;}
 html body .vls-blog-header-generated [class$="-brand"]{padding-top:0!important;padding-bottom:4px!important;}
 html body .vls-blog-header-generated [class$="-brand-inner"],
 html body .vls-blog-header-generated [class$="-menu-inner"]{max-width:1120px!important;}
@@ -64,6 +70,7 @@ function hideNode(el){
   el.style.setProperty('padding','0','important');
   el.style.setProperty('border','0','important');
   el.style.setProperty('overflow','hidden','important');
+  el.style.setProperty('pointer-events','none','important');
 }
 function hideOldZenlerHeader(){
   document.querySelectorAll('#header5,[data-zen="zen_header_dynamic"],.block.parrot.zenstyle.headers[data-zen="zen_header_dynamic"]').forEach(function(el){

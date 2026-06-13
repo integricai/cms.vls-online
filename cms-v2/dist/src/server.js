@@ -212,9 +212,11 @@ app.get('/blog/:topic/:slug', async (req, res, next) => {
             && (0, blogRender_1.blogTopicSlug)(item.topic) === req.params.topic);
         if (!post)
             return res.status(404).send('Blog post not found');
+        const settingsRow = await (0, content_2.getContent)('vls-blog-settings');
+        const settings = settingsRow?.data && typeof settingsRow.data === 'object' ? settingsRow.data : {};
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         res.setHeader('Cache-Control', 'no-store');
-        return res.send((0, blogRender_1.renderBlogArticle)(post));
+        return res.send((0, blogRender_1.renderBlogArticle)(post, settings));
     }
     catch (err) {
         next(err);

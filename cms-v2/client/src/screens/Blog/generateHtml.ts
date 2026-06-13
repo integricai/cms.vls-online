@@ -1,4 +1,4 @@
-import type { BlogPost } from '../../types/cms';
+import type { BlogPost, BlogSettings } from '../../types/cms';
 import { escapeHtml } from '../../utils/text';
 
 const ASSET_ORIGIN = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/api\/?$/, '').replace(/\/$/, '');
@@ -16,6 +16,15 @@ function absoluteAssetUrl(value: string): string {
 
 function featuredImage(post: BlogPost): string {
   return absoluteAssetUrl(post.featuredImagePath || post.images?.[0]?.localPath || '');
+}
+
+function safeHex(value: string | undefined, fallback = '#0d1f3c'): string {
+  return /^#[0-9a-fA-F]{6}$/.test(String(value || '').trim()) ? String(value).trim() : fallback;
+}
+
+function heroBackground(image: string, color: string): string {
+  const overlay = `linear-gradient(90deg, ${color}f2 0%, ${color}cc 42%, ${color}73 100%)`;
+  return image ? `${overlay}, url('${attr(image)}')` : `linear-gradient(135deg, ${color} 0%, #14345f 100%)`;
 }
 
 function bodyWithAbsoluteAssets(html: string): string {
@@ -175,20 +184,21 @@ function articleSchema(post: BlogPost): string {
 }
 
 const baseCss = `<style>
-.vls-blog{font-family:Poppins,Arial,sans-serif;color:#0d1f3c;background:linear-gradient(180deg,#0d1f3c 0,#0d1f3c 430px,#f5f8fc 430px,#f5f8fc 100%);margin-top:34px;scroll-behavior:smooth;}
+.vls-blog{font-family:Poppins,Arial,sans-serif;color:#0d1f3c;background:#f5f8fc;margin-top:34px;scroll-behavior:smooth;}
 .vls-blog *{box-sizing:border-box;}
 .vls-blog a{color:#1f73b7;text-decoration:none;font-weight:700;}
 .vls-blog-shell{max-width:1160px;margin:0 auto;padding:46px 24px;}
 .vls-blog-kicker{display:inline-flex;align-items:center;border-radius:999px;background:#e8f3fc;color:#1f73b7;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:7px 12px;}
-.vls-blog>.vls-blog-shell>.vls-blog-kicker{background:#14345f;color:#72cdf4;border:1px solid rgba(114,205,244,.28);}
-html body .vls-blog .vls-blog-shell>h1{font-size:clamp(34px,5vw,58px);line-height:1.05;margin:18px 0 14px;letter-spacing:0;color:#fff!important;-webkit-text-fill-color:#fff!important;max-width:920px;}
+.vls-blog-hero-banner{background-size:cover;background-position:center;min-height:390px;display:flex;align-items:end;}
+.vls-blog-hero-banner .vls-blog-shell{width:100%;padding-top:86px;padding-bottom:70px;}
+.vls-blog-hero-banner .vls-blog-kicker{background:rgba(114,205,244,.18);color:#72cdf4;border:1px solid rgba(114,205,244,.35);}
+html body .vls-blog .vls-blog-hero-banner h1{font-size:clamp(34px,5vw,58px);line-height:1.05;margin:18px 0 14px;letter-spacing:0;color:#fff!important;-webkit-text-fill-color:#fff!important;max-width:920px;text-shadow:0 2px 18px rgba(0,0,0,.22);}
 .vls-blog h2{font-size:28px;line-height:1.2;margin:34px 0 12px;color:#0d1f3c;}
 .vls-blog h3{font-size:22px;line-height:1.3;margin:28px 0 10px;color:#14345f;}
 .vls-blog p,.vls-blog li{font-size:16px;line-height:1.75;color:#42526b;}
 .vls-blog>.vls-blog-shell>p{color:#dbeafe;}
 .vls-blog-meta{display:flex;flex-wrap:wrap;gap:10px;color:#dbeafe;font-size:13px;margin:0 0 24px;}
 .vls-blog-card .vls-blog-meta,.vls-blog-side .vls-blog-meta{color:#667085;}
-.vls-blog-hero{width:100%;max-height:520px;object-fit:cover;border-radius:8px;border:1px solid #dbe5f1;background:#dbe5f1;margin:18px 0 30px;box-shadow:0 20px 45px rgba(13,31,60,.18);}
 .vls-blog-layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:34px;align-items:start;}
 .vls-blog-article{background:#fff;border:1px solid #e1e8f1;border-radius:8px;padding:38px;box-shadow:0 18px 45px rgba(13,31,60,.08);}
 .vls-blog-article img{display:block;width:100%;height:auto;border-radius:8px;margin:24px 0;border:1px solid #e1e8f1;}
@@ -226,12 +236,14 @@ html body .vls-blog .vls-blog-shell>h1{font-size:clamp(34px,5vw,58px);line-heigh
 .vls-blog-page-status{font-size:13px;color:#64748b;margin-left:8px;}
 @media(max-width:900px){.vls-blog-layout{grid-template-columns:1fr}.vls-blog-side{position:static}.vls-blog-grid{grid-template-columns:1fr 1fr}.vls-blog-article{padding:24px}.vls-blog-search{margin-left:0;width:100%;}}
 @media(max-width:720px){.vls-blog-related-grid,.related-grid{grid-template-columns:1fr}.vls-blog-related-grid>a img,.related-grid>a img{height:150px;}}
-@media(max-width:620px){.vls-blog{margin-top:28px}.vls-blog-shell{padding:28px 16px}.vls-blog-grid{grid-template-columns:1fr}.vls-blog h1{font-size:34px}.vls-blog-article{padding:18px}}
+@media(max-width:620px){.vls-blog{margin-top:28px}.vls-blog-shell{padding:28px 16px}.vls-blog-grid{grid-template-columns:1fr}.vls-blog-hero-banner{min-height:340px}.vls-blog-hero-banner .vls-blog-shell{padding-top:58px;padding-bottom:48px}.vls-blog h1{font-size:34px}.vls-blog-article{padding:18px}}
 </style>`;
 
-export function generateBlogArticleHtml(post: BlogPost): string {
+export function generateBlogArticleHtml(post: BlogPost, settings: Partial<BlogSettings> = {}): string {
   const metaDescription = post.metaDescription || post.summary;
   const image = featuredImage(post);
+  const gradientColor = safeHex(settings.heroGradientColor);
+  const background = heroBackground(image, gradientColor);
   const tags = post.tags.map(tag => `<span class="vls-blog-tag">${escapeHtml(tag)}</span>`).join('');
   const bodyHtml = prepareArticleBody(bodyWithAbsoluteAssets(post.bodyHtml), post.title);
   return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -243,11 +255,14 @@ export function generateBlogArticleHtml(post: BlogPost): string {
 ${image ? `<meta property="og:image" content="${attr(image)}">` : ''}
 ${baseCss}
 <main class="vls-blog">
+  <section class="vls-blog-hero-banner" style="background-image:${attr(background)}">
+    <div class="vls-blog-shell">
+      <span class="vls-blog-kicker">${escapeHtml(post.topic)}</span>
+      <h1 style="color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;">${escapeHtml(post.title)}</h1>
+      <div class="vls-blog-meta">${post.publishDate ? `<span>${escapeHtml(formatDate(post.publishDate))}</span>` : ''}<span>${escapeHtml(post.status)}</span></div>
+    </div>
+  </section>
   <div class="vls-blog-shell">
-    <span class="vls-blog-kicker">${escapeHtml(post.topic)}</span>
-    <h1 style="color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;">${escapeHtml(post.title)}</h1>
-    <div class="vls-blog-meta">${post.publishDate ? `<span>${escapeHtml(formatDate(post.publishDate))}</span>` : ''}<span>${escapeHtml(post.status)}</span></div>
-    ${image ? `<img class="vls-blog-hero" src="${attr(image)}" alt="${attr(post.title)}">` : ''}
     <div class="vls-blog-layout">
       <article class="vls-blog-article">${bodyHtml}</article>
       <aside class="vls-blog-side">

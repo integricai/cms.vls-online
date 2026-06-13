@@ -182,6 +182,10 @@ export interface BlogPost {
   url?: string;
 }
 
+export interface BlogSettings {
+  heroGradientColor: string;
+}
+
 // ── Promotion Section ─────────────────────────────────────────────────────────
 
 export interface PromoSection {

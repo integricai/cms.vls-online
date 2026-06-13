@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import Field from '../../components/Field';
-import type { BlogPost, BlogStatus, FooterData, HeaderConfig } from '../../types/cms';
+import type { BlogPost, BlogSettings, BlogStatus, FooterData, HeaderConfig } from '../../types/cms';
 import { generateBlogArticleHtml, generateBlogLandingHtml, blogUrl } from './generateHtml';
 import { generateBlogHeaderHtml } from '../BlogHeader/generateHtml';
 import { generateFooterHtml } from '../Footer/generateHtml';
@@ -11,6 +11,7 @@ type ImportResponse = { post: BlogPost; warnings: string[] };
 
 const TOPICS = ['ACCA', 'Accounting', 'Finance', 'Tax', 'Audit', 'Study Tips', 'Exam Preparation', 'Career Advice'];
 const API_ORIGIN = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/api\/?$/, '').replace(/\/$/, '');
+const DEFAULT_BLOG_SETTINGS: BlogSettings = { heroGradientColor: '#0d1f3c' };
 
 function statusClass(type: 'success' | 'error' | 'warning' | 'info'): string {
   return {
@@ -68,6 +69,8 @@ export default function Blog() {
   const [includeChrome, setIncludeChrome] = useState(false);
   const [blogHeaderConfig, setBlogHeaderConfig] = useState<HeaderConfig | null>(null);
   const [footerData, setFooterData] = useState<FooterData | null>(null);
+  const [blogSettings, setBlogSettings] = useState<BlogSettings>(DEFAULT_BLOG_SETTINGS);
+  const [savingSettings, setSavingSettings] = useState(false);
   const [topicFilter, setTopicFilter] = useState('All');
   const [query, setQuery] = useState('');
 
@@ -89,6 +92,10 @@ export default function Blog() {
     api.get<{ data: FooterData & { footer?: FooterData } }>('/content/vls-footer')
       .then(row => setFooterData(unwrapFooterData(row?.data)))
       .catch(() => setFooterData(null));
+
+    api.get<{ data: Partial<BlogSettings> }>('/content/vls-blog-settings')
+      .then(row => setBlogSettings({ ...DEFAULT_BLOG_SETTINGS, ...(row?.data || {}) }))
+      .catch(() => setBlogSettings(DEFAULT_BLOG_SETTINGS));
   }, []);
 
   const selected = posts.find(post => post.id === selectedId) || posts[0] || null;
@@ -99,7 +106,7 @@ export default function Blog() {
     return topicOk && (!query.trim() || haystack.includes(query.toLowerCase()));
   });
   const landingHtml = wrapGeneratedHtml('Blog Landing', generateBlogLandingHtml(posts));
-  const articleBodyHtml = selected ? generateBlogArticleHtml(selected) : '';
+  const articleBodyHtml = selected ? generateBlogArticleHtml(selected, blogSettings) : '';
   const articleHtml = selected ? wrapGeneratedHtml('Blog Article', articleBodyHtml) : '';
   const fullArticleHtml = selected
     ? minifyHtml([
@@ -179,6 +186,23 @@ export default function Blog() {
     }
   }
 
+  async function saveBlogSettings() {
+    setSavingSettings(true);
+    try {
+      const settings = {
+        ...blogSettings,
+        heroGradientColor: /^#[0-9a-fA-F]{6}$/.test(blogSettings.heroGradientColor) ? blogSettings.heroGradientColor : DEFAULT_BLOG_SETTINGS.heroGradientColor,
+      };
+      await api.put('/content/vls-blog-settings', settings);
+      setBlogSettings(settings);
+      setMessage({ type: 'success', text: 'Blog hero settings saved' });
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save blog settings' });
+    } finally {
+      setSavingSettings(false);
+    }
+  }
+
   if (loading) return <div className="flex h-full items-center justify-center text-sm text-slate-400">Loading blog posts...</div>;
 
   return (
@@ -223,6 +247,29 @@ export default function Blog() {
           </div>
           {message && <div className={`mt-3 rounded-lg border p-3 text-xs leading-relaxed ${statusClass(message.type)}`}>{message.text}</div>}
           {duplicate && <div className="mt-2 text-xs text-slate-500">Duplicate: {duplicate.title} ({duplicate.url || blogUrl(duplicate)})</div>}
+        </div>
+
+        <div className="border-b border-slate-100 px-5 py-4">
+          <p className="section-label mt-0">Global Blog Hero</p>
+          <Field label="Gradient overlay colour" hint="applies to all blog article banners">
+            <div className="flex gap-2">
+              <input
+                type="color"
+                value={/^#[0-9a-fA-F]{6}$/.test(blogSettings.heroGradientColor) ? blogSettings.heroGradientColor : DEFAULT_BLOG_SETTINGS.heroGradientColor}
+                onChange={event => setBlogSettings(settings => ({ ...settings, heroGradientColor: event.target.value }))}
+                className="h-10 w-12 shrink-0 cursor-pointer rounded border border-slate-200 p-1"
+              />
+              <input
+                className="input"
+                value={blogSettings.heroGradientColor}
+                onChange={event => setBlogSettings(settings => ({ ...settings, heroGradientColor: event.target.value }))}
+                placeholder="#0d1f3c"
+              />
+            </div>
+          </Field>
+          <button disabled={savingSettings} className="btn-success w-full justify-center py-2 text-sm" onClick={saveBlogSettings}>
+            {savingSettings ? 'Saving...' : 'Save blog hero settings'}
+          </button>
         </div>
 
         <div className="px-5 py-4">
