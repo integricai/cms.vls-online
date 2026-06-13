@@ -262,7 +262,7 @@ ${baseCss}
 <main class="vls-blog">
   <section class="vls-blog-hero-banner" style="background-image:${attr(background)}">
     <div class="vls-blog-shell">
-      <span class="vls-blog-kicker">${escapeHtml(post.topic)}</span>
+      <a class="vls-blog-kicker" href="/blog">See all blogs</a>
       <h1 style="color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;">${escapeHtml(post.title)}</h1>
       <div class="vls-blog-meta">${post.publishDate ? `<span>${escapeHtml(formatDate(post.publishDate))}</span>` : ''}<span>${escapeHtml(post.status)}</span></div>
     </div>

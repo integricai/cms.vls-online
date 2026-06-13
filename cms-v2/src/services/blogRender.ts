@@ -203,7 +203,7 @@ export function renderBlogArticle(post: BlogPost, settings: BlogSettings = {}): 
   };
   const body = `<section class="hero-banner" style="background-image:${attr(background)}">
     <div class="wrap">
-      <span class="kicker">${escapeHtml(post.topic)}</span>
+      <a class="kicker" href="/blog">See all blogs</a>
       <h1>${escapeHtml(post.title)}</h1>
       <div class="meta">${post.publishDate ? `<span>${escapeHtml(formatDate(post.publishDate))}</span>` : ''}</div>
     </div>
