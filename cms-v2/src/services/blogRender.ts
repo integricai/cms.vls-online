@@ -218,6 +218,10 @@ export function blogUrl(post: BlogPost): string {
   return `/blog/${blogTopicSlug(post.topic)}/${post.slug}`;
 }
 
+function absoluteBlogUrl(post: BlogPost): string {
+  return `https://vls-online.com${blogUrl(post)}`;
+}
+
 function featuredImage(post: BlogPost): string {
   return post.featuredImagePath || post.images?.[0]?.localPath || '';
 }
@@ -293,7 +297,7 @@ export function renderBlogArticle(post: BlogPost, settings: BlogSettings = {}, a
     </div>
     <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}<\/script>
   </main>`;
-  return layout(post.metaTitle || post.title, description, body, blogUrl(post), image);
+  return layout(post.metaTitle || post.title, description, body, absoluteBlogUrl(post), image);
 }
 
 export function renderBlogLanding(posts: BlogPost[]): string {
