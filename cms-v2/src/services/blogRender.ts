@@ -6,6 +6,48 @@ export interface BlogSettings {
   tocLinkColor?: string;
 }
 
+function getRandomRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[], count = 3): BlogPost[] {
+  const published = allPosts.filter(
+    post => post.status === 'published' && post.id !== currentPost.id
+  );
+
+  if (published.length <= count) return published;
+
+  // Score posts by relevance
+  const scored = published.map(post => {
+    let score = 0;
+    
+    // Same topic gets higher priority
+    if (post.topic === currentPost.topic) score += 10;
+    
+    // Shared tags
+    const sharedTags = (post.tags || []).filter(tag => 
+      (currentPost.tags || []).includes(tag)
+    ).length;
+    score += sharedTags * 5;
+    
+    return { post, score };
+  });
+
+  // Sort by score (descending) then randomize within score groups
+  scored.sort((a, b) => {
+    if (a.score !== b.score) return b.score - a.score;
+    return Math.random() - 0.5;
+  });
+
+  // Take top candidates and shuffle them for variety
+  const candidates = scored.slice(0, Math.min(count * 3, scored.length));
+  const selected: BlogPost[] = [];
+  
+  for (let i = 0; i < count && candidates.length > 0; i++) {
+    const idx = Math.floor(Math.random() * candidates.length);
+    selected.push(candidates[idx].post);
+    candidates.splice(idx, 1);
+  }
+
+  return selected;
+}
+
 function escapeHtml(value: string): string {
   return (value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -135,6 +177,21 @@ function wrapRelatedArticles(html: string): string {
   });
 }
 
+function renderRelatedArticles(posts: BlogPost[]): string {
+  if (!posts || posts.length === 0) return '';
+  
+  const cards = posts.map(post => {
+    const image = featuredImage(post);
+    return `<a href="${attr(blogUrl(post))}" class="related-card">
+    ${image ? `<img src="${attr(image)}" alt="${attr(post.title)}" loading="lazy">` : ''}
+    <h3>${escapeHtml(post.title)}</h3>
+    <span class="related-meta">${escapeHtml(formatDate(post.publishDate || ''))}</span>
+  </a>`;
+  }).join('');
+
+  return `<section class="related related-suggestions"><h2>More Articles</h2><div class="related-grid">${cards}</div></section>`;
+}
+
 function prepareArticleBody(html: string, title: string): string {
   return wrapRelatedArticles(addHeadingIdsAndTocLinks(stripAutoSeoPromo(stripImportedSourceHero(html, title))));
 }
@@ -198,7 +255,7 @@ function layout(title: string, description: string, body: string, canonical: str
 </html>`;
 }
 
-export function renderBlogArticle(post: BlogPost, settings: BlogSettings = {}): string {
+export function renderBlogArticle(post: BlogPost, settings: BlogSettings = {}, allPosts: BlogPost[] = []): string {
   const description = post.metaDescription || post.summary;
   const tags = post.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('');
   const articleHtml = prepareArticleBody(rewriteArticleLinks(post.bodyHtml), post.title);
@@ -206,6 +263,11 @@ export function renderBlogArticle(post: BlogPost, settings: BlogSettings = {}): 
   const gradientColor = safeHex(settings.heroGradientColor);
   const tocLinkColor = safeHex(settings.tocLinkColor, '#1f73b7');
   const background = heroBackground(image, gradientColor);
+  
+  // Get related articles if allPosts is provided
+  const relatedArticles = allPosts.length > 0 ? getRandomRelatedPosts(post, allPosts, 3) : [];
+  const relatedHtml = relatedArticles.length > 0 ? renderRelatedArticles(relatedArticles) : '';
+  
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -226,7 +288,7 @@ export function renderBlogArticle(post: BlogPost, settings: BlogSettings = {}): 
   </section>
   <main class="wrap" style="--toc-link-color:${attr(tocLinkColor)}">
     <div class="layout">
-      <article class="article">${articleHtml}</article>
+      <article class="article">${articleHtml}${relatedHtml}</article>
       <aside class="side">${shareLinks(post)}<strong>Topic</strong><div class="tags"><span class="tag">${escapeHtml(post.topic)}</span></div>${tags ? `<strong style="display:block;margin-top:18px">Tags</strong><div class="tags">${tags}</div>` : ''}</aside>
     </div>
     <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}<\/script>

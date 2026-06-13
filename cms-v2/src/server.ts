@@ -196,7 +196,7 @@ app.get('/blog/:topic/:slug', async (req, res, next) => {
     const settings = settingsRow?.data && typeof settingsRow.data === 'object' ? settingsRow.data : {};
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
-    return res.send(renderBlogArticle(post, settings));
+    return res.send(renderBlogArticle(post, settings, posts));
   } catch (err) {
     next(err);
   }
