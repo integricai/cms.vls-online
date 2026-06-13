@@ -96,6 +96,10 @@ html body .vls-blog .vls-blog-shell>h1{font-size:clamp(34px,5vw,58px);line-heigh
 .vls-blog-article table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14px;}
 .vls-blog-article th,.vls-blog-article td{border:1px solid #dbe5f1;padding:10px;text-align:left;vertical-align:top;}
 .vls-blog-article th{background:#f1f6fc;color:#0d1f3c;}
+.vls-blog-article>a:has(img){display:inline-flex;vertical-align:top;flex-direction:column;width:calc(33.333% - 14px);min-height:100%;margin:10px 14px 10px 0;background:#fff;border:1px solid #e1e8f1;border-radius:8px;overflow:hidden;box-shadow:0 10px 24px rgba(13,31,60,.06);color:#667085!important;font-size:12px;font-weight:500;line-height:1.5;text-decoration:none;}
+.vls-blog-article>a:has(img) img{width:100%;height:112px;object-fit:cover;border:0;border-radius:0;margin:0;background:#dbe5f1;}
+.vls-blog-article>a:has(img) h3{font-size:15px;line-height:1.35;margin:12px 14px 6px;color:#0d1f3c;}
+.vls-blog-article>a:has(img)>:not(img):not(h3){margin-left:14px;margin-right:14px;}
 .vls-blog-side{position:sticky;top:24px;background:#fff;border:1px solid #e1e8f1;border-radius:8px;padding:18px;box-shadow:0 12px 30px rgba(13,31,60,.06);}
 .vls-blog-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
 .vls-blog-tag{border-radius:999px;background:#f1f6fc;color:#24466f;padding:6px 10px;font-size:12px;font-weight:700;}
@@ -115,6 +119,7 @@ html body .vls-blog .vls-blog-shell>h1{font-size:clamp(34px,5vw,58px);line-heigh
 .vls-blog-page-btn:disabled{opacity:.45;cursor:not-allowed;}
 .vls-blog-page-status{font-size:13px;color:#64748b;margin-left:8px;}
 @media(max-width:900px){.vls-blog-layout{grid-template-columns:1fr}.vls-blog-side{position:static}.vls-blog-grid{grid-template-columns:1fr 1fr}.vls-blog-article{padding:24px}.vls-blog-search{margin-left:0;width:100%;}}
+@media(max-width:720px){.vls-blog-article>a:has(img){width:100%;margin-right:0}.vls-blog-article>a:has(img) img{height:150px;}}
 @media(max-width:620px){.vls-blog{margin-top:28px}.vls-blog-shell{padding:28px 16px}.vls-blog-grid{grid-template-columns:1fr}.vls-blog h1{font-size:34px}.vls-blog-article{padding:18px}}
 </style>`;
 
