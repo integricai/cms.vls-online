@@ -179,6 +179,10 @@ export function blogUrl(post: BlogPost): string {
   return `/blog/${topicSlug(post.topic)}/${post.slug}`;
 }
 
+function absoluteBlogUrl(post: BlogPost): string {
+  return `https://vls-online.com${blogUrl(post)}`;
+}
+
 function formatDate(value: string): string {
   if (!value) return '';
   const date = new Date(value);
@@ -197,7 +201,7 @@ function articleSchema(post: BlogPost): string {
     author: post.author ? { '@type': 'Person', name: post.author } : undefined,
     datePublished: post.publishDate || post.createdDate,
     dateModified: post.updatedDate,
-    mainEntityOfPage: post.canonicalUrl || blogUrl(post),
+    mainEntityOfPage: absoluteBlogUrl(post),
   };
   return `<script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}<\/script>`;
 }
@@ -270,7 +274,7 @@ export function generateBlogArticleHtml(post: BlogPost, settings: Partial<BlogSe
   return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>${escapeHtml(post.metaTitle || post.title)}</title>
 <meta name="description" content="${attr(metaDescription)}">
-<link rel="canonical" href="${attr(post.canonicalUrl || blogUrl(post))}">
+<link rel="canonical" href="${attr(absoluteBlogUrl(post))}">
 <meta property="og:title" content="${attr(post.metaTitle || post.title)}">
 <meta property="og:description" content="${attr(metaDescription)}">
 ${image ? `<meta property="og:image" content="${attr(image)}">` : ''}

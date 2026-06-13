@@ -8,6 +8,9 @@ function topicSlug(topic) {
 export function blogUrl(post) {
     return `/blog/${topicSlug(post.topic)}/${post.slug}`;
 }
+function absoluteBlogUrl(post) {
+    return `https://vls-online.com${blogUrl(post)}`;
+}
 function formatDate(value) {
     if (!value)
         return '';
@@ -76,7 +79,7 @@ export function generateBlogArticleHtml(post) {
     return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>${escapeHtml(post.metaTitle || post.title)}</title>
 <meta name="description" content="${attr(metaDescription)}">
-<link rel="canonical" href="${attr(post.canonicalUrl || blogUrl(post))}">
+<link rel="canonical" href="${attr(absoluteBlogUrl(post))}">
 <meta property="og:title" content="${attr(post.metaTitle || post.title)}">
 <meta property="og:description" content="${attr(metaDescription)}">
 ${post.featuredImagePath ? `<meta property="og:image" content="${attr(post.featuredImagePath)}">` : ''}
