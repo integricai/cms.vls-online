@@ -186,7 +186,7 @@ html body .vls-blog .vls-blog-shell>h1{font-size:clamp(34px,5vw,58px);line-heigh
 .vls-blog-related-grid>a,.related-grid>a{display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid #e1e8f1;border-radius:8px;overflow:hidden;box-shadow:0 10px 24px rgba(13,31,60,.06);color:#667085!important;font-size:12px;font-weight:500;line-height:1.5;text-decoration:none;}
 .vls-blog-related-grid>a img,.related-grid>a img{width:100%;height:112px;object-fit:cover;border:0;border-radius:0;margin:0;background:#dbe5f1;}
 .vls-blog-related-grid>a h3,.related-grid>a h3{font-size:15px;line-height:1.35;margin:12px 14px 6px;color:#0d1f3c;}
-.vls-blog-related-grid>a>:not(img):not(h3),.related-grid>a>:not(img):not(h3){margin-left:14px;margin-right:14px;}
+.vls-blog-related-grid>a>:not(img):not(h3),.related-grid>a>:not(img):not(h3){margin:0 14px 14px;}
 .vls-blog-side{position:sticky;top:24px;background:#fff;border:1px solid #e1e8f1;border-radius:8px;padding:18px;box-shadow:0 12px 30px rgba(13,31,60,.06);}
 .vls-blog-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
 .vls-blog-tag{border-radius:999px;background:#f1f6fc;color:#24466f;padding:6px 10px;font-size:12px;font-weight:700;}
