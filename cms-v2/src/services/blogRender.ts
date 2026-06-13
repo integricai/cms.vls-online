@@ -293,7 +293,7 @@ export function renderBlogArticle(post: BlogPost, settings: BlogSettings = {}, a
     </div>
     <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}<\/script>
   </main>`;
-  return layout(post.metaTitle || post.title, description, body, post.canonicalUrl || blogUrl(post), image);
+  return layout(post.metaTitle || post.title, description, body, blogUrl(post), image);
 }
 
 export function renderBlogLanding(posts: BlogPost[]): string {
