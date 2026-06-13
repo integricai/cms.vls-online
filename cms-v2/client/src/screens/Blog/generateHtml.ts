@@ -119,11 +119,12 @@ function addHeadingIdsAndTocLinks(html: string): string {
     const tocStart = /\bclass=/.test(start)
       ? start.replace(/(<ul\b[^>]*class=["'])([^"']*)(["'])/i, '$1$2 toc$3')
       : start.replace(/<ul\b/i, '<ul class="toc"');
-    const linked = items.replace(/<li>\s*<a\b[^>]*>([\s\S]*?)<\/a>\s*<\/li>/gi, (_item, label: string) => {
-      const text = normalizeText(label);
+    const linked = items.replace(/<li>\s*([\s\S]*?)\s*<\/li>/gi, (_item, label: string) => {
+      const match = label.match(/<a\b[^>]*>([\s\S]*?)<\/a>/i);
+      const text = normalizeText(match ? match[1] : label);
       if (!text || text === 'table of contents') return '';
       const id = headingIds.get(text);
-      return id ? `<li><a href="#${attr(id)}">${escapeHtml(stripTags(label))}</a></li>` : `<li>${escapeHtml(stripTags(label))}</li>`;
+      return id ? `<li><a href="#${attr(id)}">${escapeHtml(stripTags(match ? match[1] : label))}</a></li>` : `<li>${escapeHtml(stripTags(label))}</li>`;
     });
     return `${tocStart}${linked}${end}`;
   });
