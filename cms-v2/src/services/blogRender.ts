@@ -74,6 +74,14 @@ function normalizeText(value: string): string {
     .toLowerCase();
 }
 
+function normalizeLookupText(value: string): string {
+  return normalizeText(value)
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function stripLeadingDuplicateTitle(html: string, title: string): string {
   const titleText = normalizeText(title);
   if (!titleText) return html || '';
@@ -129,7 +137,9 @@ function headingId(text: string, index: number): string {
 
 function addHeadingIdsAndTocLinks(html: string): string {
   const headingIds = new Map<string, string>();
+  const looseHeadingIds = new Map<string, string>();
   const used = new Map<string, number>();
+  const headingOrder: string[] = [];
   let count = 0;
   let next = html.replace(/<h([2-4])\b([^>]*)>([\s\S]*?)<\/h\1>/gi, (match, level: string, attrs: string, inner: string) => {
     const text = normalizeText(inner);
@@ -139,6 +149,9 @@ function addHeadingIdsAndTocLinks(html: string): string {
     used.set(base, seen + 1);
     const id = seen ? `${base}-${seen + 1}` : base;
     headingIds.set(text, id);
+    const lookupText = normalizeLookupText(inner);
+    if (lookupText) looseHeadingIds.set(lookupText, id);
+    headingOrder.push(id);
     count += 1;
     const cleanAttrs = attrs.replace(/\s+id=(["']).*?\1/i, '').trim();
     return `<h${level}${cleanAttrs ? ` ${cleanAttrs}` : ''} id="${attr(id)}">${inner}</h${level}>`;
@@ -148,12 +161,19 @@ function addHeadingIdsAndTocLinks(html: string): string {
     const tocStart = /\bclass=/.test(start)
       ? start.replace(/(<ul\b[^>]*class=["'])([^"']*)(["'])/i, '$1$2 toc$3')
       : start.replace(/<ul\b/i, '<ul class="toc"');
+    let itemIndex = 0;
     const linked = items.replace(/<li>\s*([\s\S]*?)\s*<\/li>/gi, (_item, label: string) => {
       const match = label.match(/<a\b[^>]*>([\s\S]*?)<\/a>/i);
       const labelText = normalizeText(match ? match[1] : label);
+      const lookupText = normalizeLookupText(match ? match[1] : label);
       if (!labelText || labelText === 'table of contents') return '';
-      const id = headingIds.get(labelText) || Array.from(headingIds.entries()).find(([key]) => key.includes(labelText))?.[1];
-      return id ? `<li><a href="#${attr(id)}">${escapeHtml(stripTags(match ? match[1] : label))}</a></li>` : `<li>${escapeHtml(stripTags(label))}</li>`;
+      const id = headingIds.get(labelText)
+        || looseHeadingIds.get(lookupText)
+        || Array.from(looseHeadingIds.entries()).find(([key]) => key.includes(lookupText) || lookupText.includes(key))?.[1]
+        || headingOrder[itemIndex]
+        || headingId(match ? match[1] : label, itemIndex);
+      itemIndex += 1;
+      return `<li><a href="#${attr(id)}">${escapeHtml(stripTags(match ? match[1] : label))}</a></li>`;
     });
     return `${tocStart}${linked}${end}`;
   });
