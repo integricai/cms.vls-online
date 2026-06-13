@@ -763,6 +763,7 @@ export function generateTableHtml(d: TableState): string {
   L.push(`.${id}-row:last-child{border-bottom:0;}`);
   L.push(`.${id}-row.is-head{background:${e(d.headerBg)};}`);
   L.push(`.${id}-cell{position:relative;min-height:72px;padding:14px 18px;border-right:1px solid ${e(d.border)};display:flex;flex-direction:column;justify-content:center;align-items:flex-start;text-align:left;}`);
+  L.push(`.${id}-cell.has-btn{align-items:stretch;}`);
   L.push(`.${id}-cell:last-child{border-right:0;}`);
   L.push(`.${id}-row.is-head .${id}-cell{min-height:0;padding-top:11px;padding-bottom:11px;}`);
   L.push(`.${id}-title{font-size:${d.titleSize}px;font-weight:${d.titleWeight};line-height:1.25;color:${e(d.textColor)};margin:0 0 4px;}`);
@@ -772,7 +773,8 @@ export function generateTableHtml(d: TableState): string {
   L.push(`.${id}-row.is-head .${id}-text{color:${e(d.headerText)};opacity:.84;}`);
   L.push(`.${id}-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}`);
   L.push(`.${id}-tag{display:inline-flex;align-items:center;border:1px solid var(--tag-border,#c5b9f4);background:var(--tag-bg,#f0ecfb);color:var(--tag-color,#5b3fc8);border-radius:999px;padding:2px 8px;font-size:${d.tagSize}px;font-weight:${d.tagWeight};letter-spacing:.2px;line-height:1.25;}`);
-  L.push(`.${id}-btn{display:inline-flex;align-items:center;justify-content:center;margin-top:10px;border-radius:8px;background:${e(d.buttonBg)};color:${e(d.buttonText)};padding:8px 12px;font-size:${d.buttonSize}px;font-weight:${d.buttonWeight};text-decoration:none;}`);
+  L.push(`.${id}-btn{display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:36px;margin-top:10px;border-radius:8px;background:${e(d.buttonBg)};color:${e(d.buttonText)}!important;padding:8px 12px;font-size:${d.buttonSize}px;font-weight:${d.buttonWeight};line-height:1.2;text-align:center;text-decoration:none;white-space:nowrap;}`);
+  L.push(`.${id}-btn:first-child{margin-top:0;}`);
   L.push(`.${id}-resize{position:absolute;right:-4px;top:0;width:8px;height:100%;cursor:col-resize;z-index:2;}`);
   L.push(`.${id}-cell:last-child .${id}-resize{display:none;}`);
   L.push(`@media(max-width:720px){.${id}-root{padding-left:12px!important;padding-right:12px!important;}.${id}-card{border-radius:${Math.min(d.radius, 12)}px;}.${id}-table{min-width:${Math.max(520, colCount * 150)}px;}.${id}-cell{padding:14px 15px;}}`);
@@ -783,7 +785,8 @@ export function generateTableHtml(d: TableState): string {
     for (let ci = 0; ci < colCount; ci += 1) {
       const cell = row[ci] || { title: '', text: '', tags: [], button: { text: '', url: '' } };
       const tags = Array.isArray(cell.tags) ? cell.tags.filter(tag => tag?.text) : [];
-      L.push(`    <div class="${id}-cell">`);
+      const hasButton = Boolean(cell.button?.text);
+      L.push(`    <div class="${id}-cell${hasButton ? ' has-btn' : ''}">`);
       if (cell.title) L.push(`      <h3 class="${id}-title">${e(cell.title)}</h3>`);
       if (cell.text) L.push(`      <p class="${id}-text">${e(cell.text)}</p>`);
       if (tags.length) {
