@@ -88,13 +88,13 @@ export function generateHeaderHtml(cfg) {
 .${uid}-brand-right{display:flex;align-items:center;gap:16px;flex-shrink:1;align-self:center;min-width:0;}
 .${uid}-login-brand{display:flex;align-items:center;align-self:center;flex-shrink:0;}
 .${uid}-login-brand .navbar-buttons{margin:0!important;padding:0!important;align-items:center!important;}
-.${uid}-login-menu{display:none;align-items:center;align-self:center;flex-shrink:0;padding-right:12px;}
+.${uid}-login-menu{display:none;align-items:center;align-self:center;flex-shrink:0;padding-right:12px;position:relative;z-index:10000;}
 .${uid}-login-menu .navbar-buttons{margin:0!important;padding:0!important;align-items:center!important;}
 .${uid}-ctas{display:flex;flex-direction:row;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;min-width:0;max-width:min(48vw,520px);}
 .${uid}-cta{display:inline-block;max-width:240px;overflow:hidden;text-overflow:ellipsis;padding:8px 20px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;white-space:nowrap;transition:opacity .2s;}
 .${uid}-cta:hover{opacity:.85;}
-.${uid}-menubar{background:${q(cfg.menuBg, '#ffffff')};position:relative;width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);border-bottom:3px solid ${q(siteTitle.color, '#204280')};}
-.${uid}-menu-inner{max-width:${containerW}px;margin:0 auto;padding:0 ${padR}px 0 ${padL}px;display:flex;align-items:center;}
+.${uid}-menubar{background:${q(cfg.menuBg, '#ffffff')};position:relative;z-index:9999;width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);border-bottom:3px solid ${q(siteTitle.color, '#204280')};}
+.${uid}-menu-inner{max-width:${containerW}px;margin:0 auto;padding:0 ${padR}px 0 ${padL}px;display:flex;align-items:center;position:relative;}
 .${uid}-nav{flex:1;}
 .${uid}-ul{list-style:none;margin:0;padding:0;display:flex;align-items:center;}
 .${uid}-ni{position:relative;}
@@ -109,7 +109,7 @@ export function generateHeaderHtml(cfg) {
 .${uid}-drop .${uid}-nl:hover{background:#f3f4f6;}
 .${uid}-sub-ni{position:relative;}
 .${uid}-more{position:relative;}
-.${uid}-burger{display:none;flex-direction:column;justify-content:center;gap:5px;width:36px;height:36px;background:none;border:none;cursor:pointer;padding:4px;margin-left:auto;}
+.${uid}-burger{display:none;flex-direction:column;justify-content:center;gap:5px;width:36px;height:36px;background:none;border:none;cursor:pointer;padding:4px;margin-left:auto;position:relative;z-index:10000;}
 .${uid}-burger span{display:block;height:2px;width:100%;background:${q(cfg.menuText, '#204280')};border-radius:2px;transition:all .25s;}
 .${uid}-burger.${uid}-open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
 .${uid}-burger.${uid}-open span:nth-child(2){opacity:0;}
@@ -140,7 +140,7 @@ export function generateHeaderHtml(cfg) {
 .${uid}-mobile-cta{flex:1 0 auto;max-width:none;min-width:max-content;padding:9px 14px;font-size:13px;line-height:1.2;}
 .${uid}-login-brand{display:none!important;}
 .${uid}-login-menu{display:flex!important;}
-.${uid}-login-menu,.${uid}-login-menu *{color:#ffffff!important;font-size:14px!important;}
+.${uid}-login-menu,.${uid}-login-menu *{color:${q(cfg.menuText, '#204280')}!important;font-size:14px!important;}
 }
 </style>`;
     const staticMenuItems = cfg.useZenMenu ? '' : buildMenuItems(cfg.menuItems || [], 1);
