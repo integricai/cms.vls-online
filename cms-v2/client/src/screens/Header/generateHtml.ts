@@ -65,8 +65,15 @@ export function generateHeaderHtml(cfg: HeaderConfig): string {
     }).join('');
   }
 
+  function isSystemFallbackMenuItem(item: HeaderMenuItem): boolean {
+    const label = normalize(item.label, 'headerMenu').text.trim().toLowerCase();
+    const url = q(item.url, '#').trim().toLowerCase();
+    return label === 'my courses' || label === 'community' || /\/(mycourses|new-community)(\/|$|\?)/.test(url);
+  }
+
   function buildPlainMenuItems(items: HeaderMenuItem[]): Array<{ label: string; url: string; newTab: boolean; children: ReturnType<typeof buildPlainMenuItems> }> {
     return (items || [])
+      .filter(item => !isSystemFallbackMenuItem(item))
       .map(item => ({
         label: normalize(item.label, 'headerMenu').text,
         url: q(item.url, '#'),
