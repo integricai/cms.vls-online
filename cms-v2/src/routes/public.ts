@@ -5,16 +5,109 @@ import type { BlogPost } from '../models/blog';
 
 const router = Router();
 
+const PUBLIC_CONTENT_TTL_MS = 60_000;
+const PUBLIC_CONTENT_STALE_MS = 30 * 60_000;
+
+interface PublicContentCacheEntry {
+  data?: unknown | null;
+  expiresAt: number;
+  staleUntil: number;
+  inFlight?: Promise<unknown | null>;
+}
+
+const publicContentCache = new Map<string, PublicContentCacheEntry>();
+
 // Allow cross-origin fetches from any domain (Zenler, course pages, etc.)
 function allowPublicCors(res: Response) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.removeHeader('Access-Control-Allow-Credentials');
 }
 
+function setPublicJsonCache(res: Response) {
+  res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
+}
+
+function isRetryableDbError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return message.includes('"neon:retryable":true')
+    || message.includes('Failed to acquire permit to connect to the database');
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchContentData(key: string): Promise<unknown | null> {
+  try {
+    const row = await getContent(key);
+    return row?.data && typeof row.data === 'object' ? row.data : null;
+  } catch (err) {
+    if (!isRetryableDbError(err)) throw err;
+    await sleep(250);
+    const row = await getContent(key);
+    return row?.data && typeof row.data === 'object' ? row.data : null;
+  }
+}
+
+async function getPublicContentData(key: string): Promise<unknown | null> {
+  const now = Date.now();
+  const existing = publicContentCache.get(key);
+
+  if (existing && existing.data !== undefined && existing.expiresAt > now) {
+    return existing.data;
+  }
+
+  if (existing?.inFlight) {
+    try {
+      return await existing.inFlight;
+    } catch (err) {
+      if (existing.data !== undefined && existing.staleUntil > now) return existing.data;
+      throw err;
+    }
+  }
+
+  const entry = existing ?? { expiresAt: 0, staleUntil: 0 };
+  const inFlight = fetchContentData(key)
+    .then(data => {
+      publicContentCache.set(key, {
+        data,
+        expiresAt: Date.now() + PUBLIC_CONTENT_TTL_MS,
+        staleUntil: Date.now() + PUBLIC_CONTENT_STALE_MS,
+      });
+      return data;
+    })
+    .catch(err => {
+      if (entry.data !== undefined && entry.staleUntil > Date.now()) {
+        publicContentCache.set(key, {
+          data: entry.data,
+          expiresAt: Date.now() + 5_000,
+          staleUntil: entry.staleUntil,
+        });
+        return entry.data;
+      }
+      publicContentCache.set(key, {
+        data: entry.data,
+        expiresAt: 0,
+        staleUntil: entry.staleUntil,
+      });
+      throw err;
+    });
+
+  publicContentCache.set(key, {
+    data: entry.data,
+    expiresAt: entry.expiresAt,
+    staleUntil: entry.staleUntil,
+    inFlight,
+  });
+
+  return inFlight;
+}
+
 const FOOTER_UPDATER_SCRIPT = String.raw`(function(){
 var script=document.currentScript;
 var ENDPOINT=(script&&script.getAttribute('data-vls-footer-endpoint'))||'';
 var ROOT_ID=(script&&script.getAttribute('data-vls-footer-id'))||'';
+var refreshed=false;
 function getRoot(){var el=ROOT_ID?document.getElementById(ROOT_ID):null;if(el)return el;if(script)el=script.previousElementSibling;if(!el||!el.matches||!el.matches('[data-vls-footer="1"]'))el=document.querySelector('[data-vls-footer="1"][data-vls-footer-version="hybrid-2"]')||document.querySelector('[data-vls-footer="1"]');return el;}
 if(!ENDPOINT)return;
 function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -25,11 +118,8 @@ var ICONS={facebook:'<svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"
 function col(titleVal,bodyHtml,key){var title=norm(titleVal,key||'footerTitle');return '<div class="vlsft-col"><div class="vlsft-hdr" onclick="vlsFtTog(this)"><span style="font-family:Poppins,sans-serif;font-size:13px;font-weight:700;color:#fff;margin:0;text-transform:uppercase;letter-spacing:.07em;text-align:left;'+sty(title)+'">'+esc(title.text)+'</span><span class="vlsft-arrow">&#9660;</span></div><div class="vlsft-body">'+bodyHtml+'</div></div>';}
 function render(data){data=data||{};var sections=Array.isArray(data.sections)?data.sections:[];var contact=data.contact||{};var copyright=data.copyright||{links:[]};var css='.vlsft-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:40px;padding-bottom:32px;}.vlsft-hdr{margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;cursor:default;}.vlsft-arrow{display:none;font-size:18px;color:rgba(255,255,255,.7);line-height:1;}.vlsft-body{display:block;}@media(max-width:768px){.vlsft-grid{display:block;}.vlsft-col{border-bottom:1px solid rgba(255,255,255,.12);}.vlsft-col:first-child{border-top:1px solid rgba(255,255,255,.12);margin-top:8px;}.vlsft-hdr{cursor:pointer;padding:14px 0;margin-bottom:0;}.vlsft-arrow{display:inline-block;transition:transform .25s;}.vlsft-body{display:none;padding-bottom:14px;}.vlsft-col.open .vlsft-body{display:block;}.vlsft-col.open .vlsft-arrow{transform:rotate(180deg);}}';var ls='color:rgba(255,255,255,.8);text-decoration:none;font-size:13px;font-family:Poppins,sans-serif;display:block;margin-bottom:9px;line-height:1.4;text-align:left;';var h='<footer id="'+esc(ROOT_ID)+'" class="vlsft-generated" data-vls-footer="1" data-vls-footer-endpoint="'+esc(ENDPOINT)+'" data-vls-footer-version="hybrid-3" style="background:#0f2155;color:#fff;font-family:Poppins,sans-serif;"><style>'+css+'</style><div style="padding:52px 40px 0;"><div class="vlsft-grid">';sections.forEach(function(sec){var body=(sec.links||[]).filter(function(l){return l.label;}).map(function(l){var label=norm(l.label,'footerLink');return '<a href="'+esc(l.url||'#')+'" style="'+ls+sty(label)+'">'+esc(label.text)+'</a>';}).join('');h+=col(sec.title,body,'footerTitle');});var addr=norm(contact.address,'footerLink'),email=norm(contact.email,'footerLink'),wa=norm(contact.whatsapp,'footerLink'),body='';if(addr.text)body+='<div style="line-height:1.75;margin-bottom:12px;font-family:Poppins,sans-serif;text-align:left;'+sty(addr)+'">'+esc(addr.text).replace(/\n/g,'<br>')+'</div>';if(email.text)body+='<a href="mailto:'+esc(email.text)+'" style="'+ls+sty(email)+'">'+esc(email.text)+'</a>';if(wa.text){var waNum=wa.text.replace(/[\s\-()]/g,'').replace(/^\+/,'');body+='<a href="https://wa.me/'+waNum+'" style="'+ls+sty(wa)+'">'+esc(wa.text)+'</a>';}h+=col(contact.title,body,'footerContactTitle')+'</div>';var socials=(data.socials||[]).filter(function(s){return s.url;});h+='<div style="display:flex;justify-content:flex-end;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.12);">';if(socials.length){h+='<div style="display:flex;gap:18px;align-items:center;">';socials.forEach(function(s){h+='<a href="'+esc(s.url)+'" target="_blank" rel="noopener" style="display:inline-flex;opacity:.85;line-height:0;">'+(ICONS[s.platform]||'')+'</a>';});h+='</div>';}h+='</div><div style="padding:18px 0;text-align:left;">';var cpLinks=(copyright.links||[]).filter(function(l){return l.label;});if(cpLinks.length){h+='<div style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:8px;text-align:left;">';cpLinks.forEach(function(l){var label=norm(l.label,'footerCopyrightLink');h+='<a href="'+esc(l.url||'#')+'" style="font-family:Poppins,sans-serif;text-decoration:none;white-space:nowrap;text-align:left;'+sty(label)+'">'+esc(label.text)+'</a>';});h+='</div>';}var cp=norm(copyright.text,'footerCopyright');if(cp.text)h+='<div style="font-family:Poppins,sans-serif;text-align:left;'+sty(cp)+'">'+esc(cp.text)+'</div>';return h+'</div></div></footer>';}
 window.vlsFtTog=window.vlsFtTog||function(h){if(window.innerWidth>768)return;var c=h.parentElement,o=c.classList.contains('open');document.querySelectorAll('.vlsft-col').forEach(function(x){x.classList.remove('open');});if(!o)c.classList.add('open');};
-function refresh(){var root=getRoot();if(!root)return;fetch(ENDPOINT+(ENDPOINT.indexOf('?')>-1?'&':'?')+'t='+Date.now(),{cache:'no-store',mode:'cors'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(function(payload){var data=payload&&(payload.footer||payload);if(data&&data.sections){root.outerHTML=render(data);}}).catch(function(error){if(window.console&&console.warn)console.warn('VLS footer update failed:',error);});}
-refresh();
-if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',refresh);}else{setTimeout(refresh,0);}
-setTimeout(refresh,800);
-setTimeout(refresh,2500);
+function refresh(){if(refreshed)return;refreshed=true;var root=getRoot();if(!root)return;fetch(ENDPOINT,{cache:'default',mode:'cors'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(function(payload){var data=payload&&(payload.footer||payload);if(data&&data.sections){root.outerHTML=render(data);}}).catch(function(error){if(window.console&&console.warn)console.warn('VLS footer update failed:',error);});}
+if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',refresh,{once:true});}else{refresh();}
 })();`;
 
 router.options('/footer-updater.js', (_req, res) => {
@@ -53,10 +143,9 @@ router.options('/events', (_req, res) => {
 
 router.get('/events', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const row = await getContent('vls-events');
-    const data = row?.data && typeof row.data === 'object' ? row.data as { events?: unknown[] } : {};
+    const data = ((await getPublicContentData('vls-events')) as { events?: unknown[] } | null) ?? {};
     allowPublicCors(res);
-    res.setHeader('Cache-Control', 'no-store');
+    setPublicJsonCache(res);
     return res.json({ events: Array.isArray(data.events) ? data.events : [] });
   } catch (err) {
     next(err);
@@ -71,10 +160,9 @@ router.options('/footer', (_req, res) => {
 
 router.get('/footer', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const row = await getContent('vls-footer');
-    const data = row?.data && typeof row.data === 'object' ? row.data : null;
+    const data = await getPublicContentData('vls-footer');
     allowPublicCors(res);
-    res.setHeader('Cache-Control', 'no-store');
+    setPublicJsonCache(res);
     return res.json({ footer: data });
   } catch (err) {
     next(err);
@@ -89,11 +177,10 @@ router.options('/blog', (_req, res) => {
 
 router.get('/blog', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const row = await getContent('vls-blog-posts');
-    const data = row?.data && typeof row.data === 'object' ? row.data as { posts?: BlogPost[] } : {};
+    const data = ((await getPublicContentData('vls-blog-posts')) as { posts?: BlogPost[] } | null) ?? {};
     const posts = Array.isArray(data.posts) ? data.posts.filter(post => post.status === 'published') : [];
     allowPublicCors(res);
-    res.setHeader('Cache-Control', 'no-store');
+    setPublicJsonCache(res);
     return res.json({ posts });
   } catch (err) {
     next(err);
@@ -109,7 +196,7 @@ router.options('/bpp-books', (_req, res) => {
 router.get('/bpp-books', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     allowPublicCors(res);
-    res.setHeader('Cache-Control', 'no-store');
+    setPublicJsonCache(res);
     return res.json({ books: await listPublicBooks() });
   } catch (err) {
     next(err);
