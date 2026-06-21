@@ -93,6 +93,29 @@ function splitBreadcrumbTrail(value: string) {
     .filter(Boolean);
 }
 
+function canonicalVlsUrl(value: string) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('/')) return `https://vls-online.com${raw}`;
+
+  try {
+    const parsed = new URL(raw);
+    if (parsed.pathname.startsWith('/courses/')) {
+      return `https://vls-online.com${parsed.pathname.replace(/\/$/, '')}`;
+    }
+    if (parsed.hostname === 'vls.newzenler.com') {
+      return `https://vls-online.com${parsed.pathname.replace(/\/$/, '')}`;
+    }
+    if (parsed.hostname === 'vls-online.com' || parsed.hostname === 'www.vls-online.com') {
+      return `https://vls-online.com${parsed.pathname.replace(/\/$/, '')}${parsed.search}`;
+    }
+    return raw;
+  } catch {
+    const slug = raw.replace(/^\/+|\/+$/g, '');
+    return slug ? `https://vls-online.com/courses/${slug}` : '';
+  }
+}
+
 function faqAnswerText(item: FaqItem) {
   const parts: string[] = [];
   const heading = textOf(item.heading);
@@ -165,14 +188,15 @@ export default function CourseHeroScreen() {
     try {
       let id = activeId;
       let comps = [...components];
+      const data = derivedSchemaState();
       if (id) {
-        comps = comps.map(c => c.id === id ? { id, name, data: state } : c);
-        if (!comps.find(c => c.id === id)) { id = `ch-${Date.now().toString(36)}`; comps.push({ id, name, data: state }); }
+        comps = comps.map(c => c.id === id ? { id, name, data } : c);
+        if (!comps.find(c => c.id === id)) { id = `ch-${Date.now().toString(36)}`; comps.push({ id, name, data }); }
       } else {
-        id = `ch-${Date.now().toString(36)}`; comps.push({ id, name, data: state });
+        id = `ch-${Date.now().toString(36)}`; comps.push({ id, name, data });
       }
       await api.put('/content/vls-course-hero-components', { components: comps });
-      setComponents(comps); setActiveId(id!); setSaved(true);
+      setComponents(comps); setActiveId(id!); setState(data); setSaved(true);
     } finally { setSaving(false); }
   }
 
@@ -223,10 +247,10 @@ export default function CourseHeroScreen() {
   function derivedCourseUrl() {
     const course = selectedCourse();
     const slug = String(course?.slug || '').trim().replace(/^\/+|\/+$/g, '');
-    if (slug) return `https://vls-online.com/courses/${slug}`;
+    if (slug) return canonicalVlsUrl(`/courses/${slug}`);
     const zenlerUrl = String(course?.zenlerUrl || '').trim();
-    if (zenlerUrl) return zenlerUrl;
-    return String(state.schemaUrl || '').trim();
+    if (zenlerUrl) return canonicalVlsUrl(zenlerUrl);
+    return canonicalVlsUrl(String(state.schemaUrl || '').trim());
   }
 
   function breadcrumbUrlForLabel(label: string, index: number, lastIndex: number, courseUrl: string) {

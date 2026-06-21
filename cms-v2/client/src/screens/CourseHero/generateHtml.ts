@@ -27,18 +27,48 @@ function schemaQuestionName(value: string) {
     .trim();
 }
 
+function canonicalVlsUrl(value: string) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('/')) return `https://vls-online.com${raw}`;
+
+  try {
+    const parsed = new URL(raw);
+    if (parsed.pathname.startsWith('/courses/')) {
+      return `https://vls-online.com${parsed.pathname.replace(/\/$/, '')}`;
+    }
+    if (parsed.hostname === 'vls.newzenler.com') {
+      return `https://vls-online.com${parsed.pathname.replace(/\/$/, '')}`;
+    }
+    if (parsed.hostname === 'vls-online.com' || parsed.hostname === 'www.vls-online.com') {
+      return `https://vls-online.com${parsed.pathname.replace(/\/$/, '')}${parsed.search}`;
+    }
+    return raw;
+  } catch {
+    return raw;
+  }
+}
+
+function canonicalVlsId(value: string, fallback: string) {
+  const raw = String(value || '').trim() || fallback;
+  const [base, fragment] = raw.split('#');
+  const url = canonicalVlsUrl(base);
+  return fragment ? `${url}/#${fragment}`.replace(/\/+\/#/g, '/#') : url;
+}
+
 export function generateCourseHeroSchema(d: CourseHeroState, faq?: CourseHeroFaqSchema): string {
   if (d.schemaEnabled === false) return '';
   const courseName = String(d.schemaCourseName || '').trim();
-  const courseUrl = String(d.schemaUrl || '').trim();
+  const courseUrl = canonicalVlsUrl(String(d.schemaUrl || '').trim());
   if (!courseName || !courseUrl) return '';
+  const baseCourseUrl = courseUrl.replace(/\/$/, '');
 
   const graph: any = {
     '@context': 'https://schema.org',
     '@graph': [
       {
         '@type': 'Course',
-        '@id': String(d.schemaCourseId || `${courseUrl.replace(/\/$/, '')}/#course`).trim(),
+        '@id': canonicalVlsId(d.schemaCourseId, `${baseCourseUrl}/#course`),
         name: courseName,
         description: String(d.schemaDescription || '').trim(),
         url: courseUrl,
@@ -62,13 +92,13 @@ export function generateCourseHeroSchema(d: CourseHeroState, faq?: CourseHeroFaq
       '@type': 'ListItem',
       position: index + 1,
       name: String(item.name || '').trim(),
-      item: String(item.item || '').trim(),
+      item: canonicalVlsUrl(String(item.item || '').trim()),
     }));
 
   if (breadcrumbs.length) {
     graph['@graph'].push({
       '@type': 'BreadcrumbList',
-      '@id': String(d.schemaBreadcrumbId || `${courseUrl.replace(/\/$/, '')}/#breadcrumb`).trim(),
+      '@id': canonicalVlsId(d.schemaBreadcrumbId, `${baseCourseUrl}/#breadcrumb`),
       itemListElement: breadcrumbs,
     });
   }
@@ -91,7 +121,7 @@ export function generateCourseHeroSchema(d: CourseHeroState, faq?: CourseHeroFaq
   if (faqEntities.length) {
     graph['@graph'].push({
       '@type': 'FAQPage',
-      '@id': String(faq?.id || `${courseUrl.replace(/\/$/, '')}/#faq`).trim(),
+      '@id': canonicalVlsId(faq?.id || '', `${baseCourseUrl}/#faq`),
       mainEntity: faqEntities,
     });
   }
