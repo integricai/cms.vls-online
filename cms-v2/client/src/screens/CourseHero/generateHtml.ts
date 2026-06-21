@@ -56,6 +56,11 @@ function canonicalVlsId(value: string, fallback: string) {
   return fragment ? `${url}/#${fragment}`.replace(/\/+\/#/g, '/#') : url;
 }
 
+function canonicalFaqId(value: string, fallback: string) {
+  const id = canonicalVlsId(value, fallback);
+  return id.includes('#') ? id : `${id.replace(/\/$/, '')}/#faq`;
+}
+
 export function generateCourseHeroSchema(d: CourseHeroState, faq?: CourseHeroFaqSchema): string {
   if (d.schemaEnabled === false) return '';
   const courseName = String(d.schemaCourseName || '').trim();
@@ -121,7 +126,7 @@ export function generateCourseHeroSchema(d: CourseHeroState, faq?: CourseHeroFaq
   if (faqEntities.length) {
     graph['@graph'].push({
       '@type': 'FAQPage',
-      '@id': canonicalVlsId(faq?.id || '', `${baseCourseUrl}/#faq`),
+      '@id': canonicalFaqId(faq?.id || '', `${baseCourseUrl}/#faq`),
       mainEntity: faqEntities,
     });
   }
