@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { api } from '../../api/client';
 import type { CourseHeroState, CourseHeroComponent, CourseHeroContent, CourseHeroPill, CourseHeroLearnItem, CourseHeroBreadcrumbItem, FaqItem, FaqSection, TextValue } from '../../types/cms';
 import { normalize } from '../../utils/text';
-import { generateCourseHeroHtml, type CourseHeroFaqSchema } from './generateHtml';
+import { generateCourseHeroHtml, generateCourseHeroSchema, type CourseHeroFaqSchema } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
 import { wrapGeneratedHtml } from '../../utils/htmlComments';
@@ -25,21 +25,17 @@ function makeDefault(): CourseHeroState {
     learnCc: '#4a90d9', learnTitleTc: '#ffffff', learnSubTc: '#f97316',
     learnItems: [],
     schemaEnabled: true,
-    schemaCourseId: 'https://vls-online.com/courses/sbr/#course',
-    schemaCourseName: 'ACCA SBR Strategic Business Reporting',
-    schemaDescription: 'Prepare for ACCA SBR online with VLS. Study strategic reporting, IFRS application and exam technique with tutor support, live sessions, study notes, quizzes and mock exam practice where included.',
-    schemaUrl: 'https://vls-online.com/courses/sbr',
+    schemaCourseId: '',
+    schemaCourseName: '',
+    schemaDescription: '',
+    schemaUrl: '',
     schemaProviderId: 'https://vls-online.com/#organization',
-    schemaPrice: '180',
+    schemaPrice: '150',
     schemaPriceCurrency: 'USD',
     schemaAvailability: 'https://schema.org/InStock',
-    schemaBreadcrumbId: 'https://vls-online.com/courses/sbr/#breadcrumb',
+    schemaBreadcrumbId: '',
     schemaFaqSectionId: '',
-    schemaBreadcrumbs: [
-      { name: 'Home', item: 'https://vls-online.com/' },
-      { name: 'ACCA', item: 'https://vls-online.com/accacourses' },
-      { name: 'ACCA SBR Strategic Business Reporting', item: 'https://vls-online.com/courses/sbr' },
-    ],
+    schemaBreadcrumbs: [],
   };
 }
 
@@ -86,6 +82,17 @@ function stripHtml(value: string) {
   return value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function cleanText(value: string) {
+  return stripHtml(value).replace(/\s+/g, ' ').trim();
+}
+
+function splitBreadcrumbTrail(value: string) {
+  return value
+    .split(/\s*(?:>|›|»)\s*/g)
+    .map(cleanText)
+    .filter(Boolean);
+}
+
 function faqAnswerText(item: FaqItem) {
   const parts: string[] = [];
   const heading = textOf(item.heading);
@@ -106,8 +113,9 @@ export default function CourseHeroScreen() {
   const [loading, setLoading]       = useState(true);
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
-  const [activeTab, setActiveTab]   = useState<'preview' | 'html'>('preview');
+  const [activeTab, setActiveTab]   = useState<'preview' | 'html' | 'schema'>('preview');
   const [previewHtml, setPreviewHtml] = useState('');
+  const [schemaHtml, setSchemaHtml] = useState('');
   const [faqSections, setFaqSections] = useState<FaqSection[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
 
@@ -182,8 +190,9 @@ export default function CourseHeroScreen() {
     if (explicit) return explicit;
     const byCourse = state.courseId ? faqSections.find(section => section.courseId === state.courseId) : null;
     if (byCourse) return byCourse;
-    const courseUrl = state.schemaUrl.replace(/\/$/, '').toLowerCase();
-    const courseName = state.schemaCourseName.trim().toLowerCase();
+    const schemaState = derivedSchemaState();
+    const courseUrl = schemaState.schemaUrl.replace(/\/$/, '').toLowerCase();
+    const courseName = schemaState.schemaCourseName.trim().toLowerCase();
     return faqSections.find(section => {
       const schemaId = String(section.schemaId || '').toLowerCase();
       const name = String(section.name || '').toLowerCase();
@@ -207,12 +216,66 @@ export default function CourseHeroScreen() {
     return items.length ? { id: section.schemaId || undefined, items } : undefined;
   }
 
-  function courseName(courseId: number | null | undefined) {
+  function selectedCourse() {
+    return courses.find(course => course.id === state.courseId) || null;
+  }
+
+  function derivedCourseUrl() {
+    const course = selectedCourse();
+    const slug = String(course?.slug || '').trim().replace(/^\/+|\/+$/g, '');
+    if (slug) return `https://vls-online.com/courses/${slug}`;
+    const zenlerUrl = String(course?.zenlerUrl || '').trim();
+    if (zenlerUrl) return zenlerUrl;
+    return String(state.schemaUrl || '').trim();
+  }
+
+  function breadcrumbUrlForLabel(label: string, index: number, lastIndex: number, courseUrl: string) {
+    const normalizedLabel = label.toLowerCase();
+    if (index === 0 && normalizedLabel === 'home') return 'https://vls-online.com/';
+    if (index === lastIndex) return courseUrl;
+    if (normalizedLabel.includes('acca')) return 'https://vls-online.com/accacourses';
+    if (normalizedLabel.includes('cima')) return 'https://vls-online.com/cimacourses';
+    if (normalizedLabel.includes('cma')) return 'https://vls-online.com/cma';
+    if (normalizedLabel.includes('cia')) return 'https://vls-online.com/cia';
+    return courseUrl || 'https://vls-online.com/';
+  }
+
+  function derivedSchemaBreadcrumbs(courseName: string, courseUrl: string): CourseHeroBreadcrumbItem[] {
+    const names = splitBreadcrumbTrail(state.breadcrumb);
+    const breadcrumbNames = names.length ? names : ['Home', courseName].filter(Boolean);
+    const lastIndex = breadcrumbNames.length - 1;
+    return breadcrumbNames.map((name, index) => ({
+      name,
+      item: breadcrumbUrlForLabel(name, index, lastIndex, courseUrl),
+    }));
+  }
+
+  function derivedSchemaState(): CourseHeroState {
+    const courseName = cleanText(textOf(state.heading)) || cleanText(selectedCourse()?.name || '') || cleanText(state.schemaCourseName);
+    const courseDescription = cleanText(textOf(state.desc)) || cleanText(state.schemaDescription);
+    const courseUrl = derivedCourseUrl();
+    const baseUrl = courseUrl.replace(/\/$/, '');
+
+    return {
+      ...state,
+      schemaCourseId: baseUrl ? `${baseUrl}/#course` : '',
+      schemaCourseName: courseName,
+      schemaDescription: courseDescription,
+      schemaUrl: courseUrl,
+      schemaBreadcrumbId: baseUrl ? `${baseUrl}/#breadcrumb` : '',
+      schemaBreadcrumbs: derivedSchemaBreadcrumbs(courseName, courseUrl),
+    };
+  }
+
+  function courseDisplayName(courseId: number | null | undefined) {
     return courses.find(course => course.id === courseId)?.name || '';
   }
 
   function generate() {
-    setPreviewHtml(wrapGeneratedHtml('Left Hero', generateCourseHeroHtml(state, faqSchemaForGenerate())));
+    const faq = faqSchemaForGenerate();
+    const schemaState = derivedSchemaState();
+    setPreviewHtml(wrapGeneratedHtml('Left Hero', generateCourseHeroHtml(state, faq)));
+    setSchemaHtml(generateCourseHeroSchema(schemaState, faq));
     setActiveTab('preview');
   }
 
@@ -238,13 +301,7 @@ export default function CourseHeroScreen() {
   function addLearn() { upd({ learnItems: [...state.learnItems, { title: '', subtitle: '', fullWidth: false }] }); }
   function removeLearn(i: number) { upd({ learnItems: state.learnItems.filter((_, idx) => idx !== i) }); }
 
-  function updateSchemaBreadcrumb(i: number, patch: Partial<CourseHeroBreadcrumbItem>) {
-    const items = [...state.schemaBreadcrumbs];
-    items[i] = { ...items[i], ...patch };
-    upd({ schemaBreadcrumbs: items });
-  }
-  function addSchemaBreadcrumb() { upd({ schemaBreadcrumbs: [...state.schemaBreadcrumbs, { name: '', item: '' }] }); }
-  function removeSchemaBreadcrumb(i: number) { upd({ schemaBreadcrumbs: state.schemaBreadcrumbs.filter((_, idx) => idx !== i) }); }
+  const schemaPreview = derivedSchemaState();
 
   return (
     <div className="flex h-full">
@@ -395,22 +452,47 @@ export default function CourseHeroScreen() {
           <label className="mb-3 flex cursor-pointer items-center gap-2 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
             <input type="checkbox" checked={state.schemaEnabled} onChange={e => upd({ schemaEnabled: e.target.checked })} />
             <span>
-              <strong>Embed Course + Breadcrumb + FAQ schema</strong>
-              <span className="ml-2 text-xs text-slate-400">Uses one Zenler-safe runtime JSON-LD graph.</span>
+              <strong>Generate Course + Breadcrumb + FAQ schema</strong>
+              <span className="ml-2 text-xs text-slate-400">Creates a separate JSON-LD block for the Schema tab.</span>
             </span>
           </label>
-          <Field label="Course @id">
-            <input className="input" value={state.schemaCourseId} onChange={e => upd({ schemaCourseId: e.target.value })} />
-          </Field>
-          <Field label="Course name">
-            <input className="input" value={state.schemaCourseName} onChange={e => upd({ schemaCourseName: e.target.value })} />
-          </Field>
-          <Field label="Course description">
-            <textarea className="input min-h-[100px] resize-y" value={state.schemaDescription} onChange={e => upd({ schemaDescription: e.target.value })} />
-          </Field>
-          <Field label="Course URL">
-            <input className="input" value={state.schemaUrl} onChange={e => upd({ schemaUrl: e.target.value })} />
-          </Field>
+          <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+            <p className="mb-2 font-semibold text-slate-700">Auto-filled from this hero banner</p>
+            <dl className="space-y-2">
+              <div>
+                <dt className="font-medium text-slate-500">Course @id</dt>
+                <dd className="break-all text-slate-700">{schemaPreview.schemaCourseId || 'Select a course or enter a heading first.'}</dd>
+              </div>
+              <div>
+                <dt className="font-medium text-slate-500">Course name</dt>
+                <dd className="text-slate-700">{schemaPreview.schemaCourseName || 'Uses the hero heading.'}</dd>
+              </div>
+              <div>
+                <dt className="font-medium text-slate-500">Course description</dt>
+                <dd className="text-slate-700">{schemaPreview.schemaDescription || 'Uses the hero description.'}</dd>
+              </div>
+              <div>
+                <dt className="font-medium text-slate-500">Course URL</dt>
+                <dd className="break-all text-slate-700">{schemaPreview.schemaUrl || 'Select the course above to derive its URL.'}</dd>
+              </div>
+              <div>
+                <dt className="font-medium text-slate-500">Breadcrumb @id</dt>
+                <dd className="break-all text-slate-700">{schemaPreview.schemaBreadcrumbId || 'Derived from the course URL.'}</dd>
+              </div>
+              <div>
+                <dt className="font-medium text-slate-500">Breadcrumbs</dt>
+                <dd className="space-y-1 text-slate-700">
+                  {schemaPreview.schemaBreadcrumbs.length
+                    ? schemaPreview.schemaBreadcrumbs.map((item, i) => (
+                      <div key={`${item.name}-${i}`} className="break-all">
+                        {i + 1}. {item.name} → {item.item}
+                      </div>
+                    ))
+                    : 'Uses the hero breadcrumb trail.'}
+                </dd>
+              </div>
+            </dl>
+          </div>
           <Field label="Provider @id">
             <input className="input" value={state.schemaProviderId} onChange={e => upd({ schemaProviderId: e.target.value })} />
           </Field>
@@ -425,24 +507,6 @@ export default function CourseHeroScreen() {
               <input className="input" value={state.schemaAvailability} onChange={e => upd({ schemaAvailability: e.target.value })} />
             </Field>
           </div>
-          <Field label="Breadcrumb @id">
-            <input className="input" value={state.schemaBreadcrumbId} onChange={e => upd({ schemaBreadcrumbId: e.target.value })} />
-          </Field>
-          <p className="section-label">Schema Breadcrumbs</p>
-          <div className="space-y-2 mb-2">
-            {state.schemaBreadcrumbs.map((item, i) => (
-              <div key={i} className="grid grid-cols-[1fr_1.5fr_auto] gap-2 items-end rounded border border-slate-200 bg-slate-50 p-2">
-                <Field label={`Name ${i + 1}`}>
-                  <input className="input" value={item.name} onChange={e => updateSchemaBreadcrumb(i, { name: e.target.value })} />
-                </Field>
-                <Field label="Item URL">
-                  <input className="input" value={item.item} onChange={e => updateSchemaBreadcrumb(i, { item: e.target.value })} />
-                </Field>
-                <button onClick={() => removeSchemaBreadcrumb(i)} className="btn-danger mb-0.5">✕</button>
-              </div>
-            ))}
-          </div>
-          <button onClick={addSchemaBreadcrumb} className="btn-ghost text-xs w-full mb-4">+ Add breadcrumb</button>
           <p className="section-label">FAQPage Schema</p>
           <Field label="FAQ section" hint="Choose the course FAQ section, or leave on Auto match to use schema URL/name.">
             <select className="input" value={state.schemaFaqSectionId} onChange={e => upd({ schemaFaqSectionId: e.target.value })}>
@@ -450,7 +514,7 @@ export default function CourseHeroScreen() {
               {faqSections.map(section => (
                 <option key={section.id} value={section.id}>
                   {section.name || textOf(section.title) || 'Untitled FAQ'}
-                  {section.courseId ? ` - ${courseName(section.courseId) || `Course ${section.courseId}`}` : ''}
+                  {section.courseId ? ` - ${courseDisplayName(section.courseId) || `Course ${section.courseId}`}` : ''}
                   {` (${section.items.length})`}
                 </option>
               ))}
@@ -466,10 +530,10 @@ export default function CourseHeroScreen() {
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <div className="flex border-b border-slate-200 bg-white px-4">
-          {(['preview', 'html'] as const).map(tab => (
+          {(['preview', 'html', 'schema'] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-4 py-3 text-sm font-medium transition border-b-2 -mb-px ${activeTab === tab ? 'border-brand text-brand' : 'border-transparent text-slate-400 hover:text-slate-700'}`}>
-              {tab === 'html' ? 'HTML' : 'Preview'}
+              {tab === 'html' ? 'HTML' : tab === 'schema' ? 'Schema' : 'Preview'}
             </button>
           ))}
         </div>
@@ -481,10 +545,12 @@ export default function CourseHeroScreen() {
             className="flex-1 w-full border-0 bg-slate-50" sandbox="allow-same-origin allow-scripts" />
         ) : (
           <div className="relative flex-1 overflow-auto bg-slate-900 p-4">
-            <button onClick={() => navigator.clipboard.writeText(previewHtml)}
+            <button onClick={() => navigator.clipboard.writeText(activeTab === 'schema' ? schemaHtml : previewHtml)}
               className="absolute right-4 top-4 rounded bg-slate-700 px-3 py-1 text-xs text-slate-300 hover:bg-slate-600">Copy</button>
             <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">
-              {previewHtml || '// Click ⚡ Generate HTML first'}
+              {activeTab === 'schema'
+                ? schemaHtml || '// Click ⚡ Generate HTML first. If this stays empty, enable schema and fill course name + URL.'
+                : previewHtml || '// Click ⚡ Generate HTML first'}
             </pre>
           </div>
         )}

@@ -27,7 +27,7 @@ function schemaQuestionName(value: string) {
     .trim();
 }
 
-function schemaScript(d: CourseHeroState, faq?: CourseHeroFaqSchema): string {
+export function generateCourseHeroSchema(d: CourseHeroState, faq?: CourseHeroFaqSchema): string {
   if (d.schemaEnabled === false) return '';
   const courseName = String(d.schemaCourseName || '').trim();
   const courseUrl = String(d.schemaUrl || '').trim();
@@ -96,19 +96,12 @@ function schemaScript(d: CourseHeroState, faq?: CourseHeroFaqSchema): string {
     });
   }
 
-  return `<script type="text/javascript">
-(function () {
-  var graph = ${safeJson(graph)};
-
-  var script = document.createElement("script");
-  script.type = "application/ld+json";
-  script.text = JSON.stringify(graph);
-  document.head.appendChild(script);
-})();
+  return `<script type="application/ld+json">
+${safeJson(graph)}
 </script>`;
 }
 
-export function generateCourseHeroHtml(d: CourseHeroState, faq?: CourseHeroFaqSchema): string {
+export function generateCourseHeroHtml(d: CourseHeroState, _faq?: CourseHeroFaqSchema): string {
   const uid = 'ch-' + Date.now().toString(36);
   const bg  = safeHex(d.bg, '#0d1f3c');
   const pT  = clamp(d.padTop,  48, 0, 300);
@@ -194,8 +187,6 @@ export function generateCourseHeroHtml(d: CourseHeroState, faq?: CourseHeroFaqSc
 }
 </style>`;
 
-  const schema = schemaScript(d, faq);
-
   return css + `\n<div id="${uid}" style="background:${bg};padding:${pT}px ${pR}px ${pB}px ${pL}px;">\n`
-    + parts.join('\n') + '\n</div>' + (schema ? `\n${schema}` : '');
+    + parts.join('\n') + '\n</div>';
 }
