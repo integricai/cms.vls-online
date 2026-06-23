@@ -225,6 +225,24 @@ function removeLayout(html: string): string {
     .replace(/<[^>]+(?:cookie|share|social|related|advert|sidebar)[^>]*>[\s\S]*?<\/[^>]+>/gi, '');
 }
 
+const ARTICLE_BODY_PATTERNS = [
+  /<div\b[^>]*class=["'][^"']*article-content[^"']*["'][^>]*>/i,
+  /<div\b[^>]*class=["'][^"']*(?:post-content|entry-content|markdown)[^"']*["'][^>]*>/i,
+  /<div\b[^>]*itemprop=["']articleBody["'][^>]*>/i,
+];
+
+function extractArticleBody(html: string): string {
+  for (const pattern of ARTICLE_BODY_PATTERNS) {
+    const match = html.match(pattern);
+    if (!match || match.index === undefined) continue;
+    const block = extractBalancedElement(html, match.index, 'div');
+    if (!block) continue;
+    const inner = block.replace(/^<div[^>]*>/i, '').replace(/<\/div>\s*$/i, '').trim();
+    if (stripTags(inner).length >= 180) return inner;
+  }
+  return html;
+}
+
 function chooseArticleHtml(html: string): string {
   const cleaned = removeLayout(html);
   const candidates: Array<{ html: string; priority: number }> = [];
@@ -338,13 +356,21 @@ function stripAutoSeoPromo(html: string): string {
     const previous = next;
     next = next
       .replace(/<h[2-4]\b[^>]*>\s*Want to create content like this\?\s*<\/h[2-4]>\s*(?:<p\b[^>]*>[\s\S]*?<\/p>\s*)?(?:<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>\s*)?/gi, '')
-      .replace(/<p\b[^>]*>[\s\S]*?AutoSEO[\s\S]*?<\/p>/gi, '')
+      .replace(/<p\b[^>]*>\s*AutoSEO helps you[\s\S]*?<\/p>/gi, '')
+      .replace(/<p\b[^>]*>\s*This article was shared from AutoSEO[\s\S]*?<\/p>/gi, '')
+      .replace(/<p\b[^>]*>\s*Powered by AutoSEO[\s\S]*?<\/p>/gi, '')
       .replace(/<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>/gi, '')
       .replace(/<a\b[^>]*>\s*Get Started Free\s*<\/a>/gi, '')
       .replace(/<(?:button|span)\b[^>]*>\s*Get Started Free\s*<\/(?:button|span)>/gi, '');
     if (next === previous) break;
   }
   return next;
+}
+
+function stripAutoSeoToolbar(html: string): string {
+  return html
+    .replace(/<div\b[^>]*>\s*(?:Download|Feedback(?:\s*&amp;?\s*Recreate)?|Recreate|Delete)(?:\s*(?:Download|Feedback(?:\s*&amp;?\s*Recreate)?|Recreate|Delete))+\s*<\/div>/gi, '')
+    .replace(/<p\b[^>]*>\s*(?:Download|Feedback(?:\s*&amp;?\s*Recreate)?|Recreate|Delete)(?:\s*(?:Download|Feedback(?:\s*&amp;?\s*Recreate)?|Recreate|Delete))+\s*<\/p>/gi, '');
 }
 
 function publicBlogUrl(topic: string, slug: string): string {
@@ -365,9 +391,10 @@ function normalizeBlogLinks(html: string, articleUrl: string): string {
       if (host === 'vls-online.com' || host === 'blog.vls-online.com') {
         return `${start}${VLS_ORIGIN}${parsed.pathname}${parsed.search}${parsed.hash}${end}`;
       }
-      return `${start}${VLS_ORIGIN}/${end}`;
+      return `${start}${href}${end}`;
     } catch {
-      return `${start}${VLS_ORIGIN}/${end}`;
+      if (href.startsWith('/')) return `${start}${VLS_ORIGIN}${href}${end}`;
+      return `${start}${href}${end}`;
     }
   });
 }
@@ -431,7 +458,20 @@ function wrapRelatedArticles(html: string): string {
 }
 
 function prepareImportedBlogBody(html: string, title: string): string {
-  return wrapRelatedArticles(addHeadingIdsAndTocLinks(stripAutoSeoPromo(stripImportedSourceHero(html, title))));
+  return wrapRelatedArticles(addHeadingIdsAndTocLinks(stripAutoSeoPromo(stripAutoSeoToolbar(stripImportedSourceHero(html, title)))));
+}
+
+function mergeImages(...groups: ScrapedImage[][]): ScrapedImage[] {
+  const images = new Map<string, ScrapedImage>();
+  for (const group of groups) {
+    for (const image of group) images.set(image.sourceUrl, image);
+  }
+  return [...images.values()];
+}
+
+function firstParagraphSummary(html: string): string {
+  const match = html.match(/<p\b[^>]*>([\s\S]*?)<\/p>/i);
+  return match ? stripTags(match[1]).slice(0, 160) : stripTags(html).slice(0, 160);
 }
 
 function escapeHtml(value: string): string {
@@ -490,6 +530,11 @@ function replaceImageSources(html: string, replacements: Map<string, string>, ba
 function extractPublishedDate(html: string): string {
   const metaDate = meta(html, /<meta\b[^>]*(?:property|name)=["'](?:article:published_time|publishdate|date|datePublished)["'][^>]*>/i);
   if (metaDate) return metaDate;
+  const created = html.match(/<strong>\s*Created\s*:?\s*<\/strong>\s*([^<]+)/i);
+  if (created) {
+    const parsed = new Date(created[1].trim());
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  }
   const time = html.match(/<time\b[^>]*>/i);
   return time ? attr(time[0], 'datetime') : '';
 }
@@ -500,13 +545,14 @@ function scrapeHtml(html: string, baseUrl: URL): ScrapedPost {
     || stripTags(html.match(/<title\b[^>]*>[\s\S]*?<\/title>/i)?.[0] || '');
   if (!title) throw new BlogImportError('Missing title');
 
-  const articleHtml = chooseArticleHtml(html);
-  const sanitized = stripAutoSeoPromo(sanitizeHtml(articleHtml));
+  const articleShell = chooseArticleHtml(html);
+  const articleHtml = extractArticleBody(articleShell);
+  const sanitized = sanitizeHtml(articleHtml);
   const bodyText = stripTags(sanitized);
   if (bodyText.length < 180) throw new BlogImportError('Missing body content');
 
   const canonical = html.match(/<link\b[^>]*rel=["']canonical["'][^>]*>/i);
-  const images = extractImages(articleHtml, baseUrl);
+  const images = mergeImages(extractImages(articleHtml, baseUrl), extractImages(articleShell, baseUrl));
   const featuredImageUrl = meta(html, /<meta\b[^>]*property=["']og:image["'][^>]*>/i)
     || meta(html, /<meta\b[^>]*name=["']twitter:image["'][^>]*>/i)
     || images[0]?.sourceUrl
@@ -517,7 +563,7 @@ function scrapeHtml(html: string, baseUrl: URL): ScrapedPost {
     metaTitle: meta(html, /<meta\b[^>]*property=["']og:title["'][^>]*>/i) || title,
     metaDescription: meta(html, /<meta\b[^>]*name=["']description["'][^>]*>/i)
       || meta(html, /<meta\b[^>]*property=["']og:description["'][^>]*>/i)
-      || bodyText.slice(0, 160),
+      || firstParagraphSummary(sanitized),
     bodyHtml: sanitized,
     summary: bodyText.slice(0, 220),
     featuredImageUrl,
@@ -631,7 +677,7 @@ export async function importBlogPost(request: ImportRequest): Promise<ImportResu
   const now = new Date().toISOString();
   const replacedBody = replaceImageSources(scraped.bodyHtml, replacements, baseUrl);
   const canonicalUrl = publicBlogUrl(topic, slug);
-  const cleanBody = prepareImportedBlogBody(normalizeBlogLinks(stripAutoSeoPromo(sanitizeHtml(replacedBody)), canonicalUrl), scraped.title);
+  const cleanBody = prepareImportedBlogBody(normalizeBlogLinks(replacedBody, canonicalUrl), scraped.title);
   const existingPost = request.replacePostId
     ? request.existingPosts.find(post => post.id === request.replacePostId)
     : undefined;

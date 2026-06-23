@@ -68,9 +68,10 @@ function rewriteArticleLinks(html: string, articleUrl: string): string {
       if (host === 'vls-online.com' || host === 'blog.vls-online.com') {
         return `${start}https://vls-online.com${parsed.pathname}${parsed.search}${parsed.hash}${end}`;
       }
-      return `${start}https://vls-online.com/${end}`;
+      return `${start}${href}${end}`;
     } catch {
-      return `${start}https://vls-online.com/${end}`;
+      if (href.startsWith('/')) return `${start}https://vls-online.com${href}${end}`;
+      return `${start}${href}${end}`;
     }
   });
 }
@@ -117,7 +118,9 @@ function stripAutoSeoPromo(html: string): string {
     const previous = next;
     next = next
       .replace(/<h[2-4]\b[^>]*>\s*Want to create content like this\?\s*<\/h[2-4]>\s*(?:<p\b[^>]*>[\s\S]*?<\/p>\s*)?(?:<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>\s*)?/gi, '')
-      .replace(/<p\b[^>]*>[\s\S]*?AutoSEO[\s\S]*?<\/p>/gi, '')
+      .replace(/<p\b[^>]*>\s*AutoSEO helps you[\s\S]*?<\/p>/gi, '')
+      .replace(/<p\b[^>]*>\s*This article was shared from AutoSEO[\s\S]*?<\/p>/gi, '')
+      .replace(/<p\b[^>]*>\s*Powered by AutoSEO[\s\S]*?<\/p>/gi, '')
       .replace(/<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>/gi, '')
       .replace(/<a\b[^>]*>\s*Get Started Free\s*<\/a>/gi, '')
       .replace(/<(?:button|span)\b[^>]*>\s*Get Started Free\s*<\/(?:button|span)>/gi, '');
