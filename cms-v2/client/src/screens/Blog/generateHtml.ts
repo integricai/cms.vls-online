@@ -14,8 +14,14 @@ function absoluteAssetUrl(value: string): string {
   return value;
 }
 
+function isScreenshotImageUrl(value: string): boolean {
+  return /\/screenshots?\//i.test(value || '');
+}
+
 function featuredImage(post: BlogPost): string {
-  return absoluteAssetUrl(post.featuredImagePath || post.images?.[0]?.localPath || '');
+  if (post.featuredImagePath) return absoluteAssetUrl(post.featuredImagePath);
+  const fallback = post.images?.find(image => image.localPath && !isScreenshotImageUrl(image.sourceUrl));
+  return fallback ? absoluteAssetUrl(fallback.localPath) : '';
 }
 
 function getRandomRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[], count = 3): BlogPost[] {
@@ -60,7 +66,7 @@ function safeHex(value: string | undefined, fallback = '#0d1f3c'): string {
 }
 
 function heroBackground(image: string, color: string): string {
-  const overlay = `linear-gradient(90deg, ${color}f2 0%, ${color}cc 42%, ${color}73 100%)`;
+  const overlay = `linear-gradient(90deg, ${color}fa 0%, ${color}e8 42%, ${color}c0 100%)`;
   return image ? `${overlay}, url('${attr(image)}')` : `linear-gradient(135deg, ${color} 0%, #14345f 100%)`;
 }
 
@@ -299,7 +305,7 @@ const baseCss = `<style>
 .vls-blog a{color:#1f73b7;text-decoration:none;font-weight:700;}
 .vls-blog-shell{max-width:1160px;margin:0 auto;padding:46px 24px;}
 .vls-blog-kicker{display:inline-flex;align-items:center;border-radius:999px;background:#e8f3fc;color:#1f73b7;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:7px 12px;}
-.vls-blog-hero-banner{background-size:cover;background-position:center;min-height:390px;display:flex;align-items:end;}
+.vls-blog-hero-banner{background-color:#0d1f3c;background-size:cover;background-position:center;background-repeat:no-repeat;min-height:390px;display:flex;align-items:end;position:relative;overflow:hidden;}
 .vls-blog-hero-banner .vls-blog-shell{width:100%;padding-top:86px;padding-bottom:70px;}
 .vls-blog-hero-banner .vls-blog-kicker{background:#14345f!important;color:#ffffff!important;border:1px solid rgba(255,255,255,.28)!important;}
 html body .vls-blog .vls-blog-hero-banner h1{font-size:clamp(34px,5vw,58px);line-height:1.05;margin:18px 0 14px;letter-spacing:0;color:#fff!important;-webkit-text-fill-color:#fff!important;max-width:920px;text-shadow:0 2px 18px rgba(0,0,0,.22);}

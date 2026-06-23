@@ -461,10 +461,78 @@ function prepareImportedBlogBody(html: string, title: string): string {
   return wrapRelatedArticles(addHeadingIdsAndTocLinks(stripAutoSeoPromo(stripAutoSeoToolbar(stripImportedSourceHero(html, title)))));
 }
 
+function canonicalImageUrl(raw: string, baseUrl: URL): string {
+  try {
+    return new URL(raw, baseUrl).href;
+  } catch {
+    return raw.trim();
+  }
+}
+
+function isScreenshotImageUrl(url: string): boolean {
+  return /\/screenshots?\//i.test(url);
+}
+
+function isHeroImageUrl(url: string): boolean {
+  return /\/hero_images?\//i.test(url) || /\/storage\/hero/i.test(url);
+}
+
+function resolveFeaturedImageUrl(
+  html: string,
+  articleShell: string,
+  articleHtml: string,
+  baseUrl: URL,
+  images: ScrapedImage[],
+): string {
+  const metaImage = meta(html, /<meta\b[^>]*property=["']og:image["'][^>]*>/i)
+    || meta(html, /<meta\b[^>]*name=["']twitter:image["'][^>]*>/i);
+  if (metaImage && !isScreenshotImageUrl(metaImage)) return canonicalImageUrl(metaImage, baseUrl);
+
+  const shellImages = extractImages(articleShell, baseUrl);
+  const bodyImageUrls = new Set(extractImages(articleHtml, baseUrl).map(image => canonicalImageUrl(image.sourceUrl, baseUrl)));
+
+  const heroFromMeta = shellImages.find(image => isHeroImageUrl(image.sourceUrl));
+  if (heroFromMeta) return canonicalImageUrl(heroFromMeta.sourceUrl, baseUrl);
+
+  const heroFromShell = shellImages.find(image => {
+    const canonical = canonicalImageUrl(image.sourceUrl, baseUrl);
+    return !bodyImageUrls.has(canonical) && !isScreenshotImageUrl(canonical);
+  });
+  if (heroFromShell) return canonicalImageUrl(heroFromShell.sourceUrl, baseUrl);
+
+  const nonScreenshot = images.find(image => !isScreenshotImageUrl(image.sourceUrl));
+  return nonScreenshot ? canonicalImageUrl(nonScreenshot.sourceUrl, baseUrl) : '';
+}
+
+function lookupReplacement(replacements: Map<string, string>, sourceUrl: string, baseUrl: URL): string {
+  const canonical = canonicalImageUrl(sourceUrl, baseUrl);
+  return replacements.get(canonical) || replacements.get(sourceUrl) || '';
+}
+
+function resolveFeaturedImagePath(
+  featuredImageUrl: string,
+  storedImages: BlogImage[],
+  replacements: Map<string, string>,
+  baseUrl: URL,
+): string {
+  if (featuredImageUrl) {
+    const featuredPath = lookupReplacement(replacements, featuredImageUrl, baseUrl);
+    if (featuredPath) return featuredPath;
+  }
+
+  const heroStored = storedImages.find(image => isHeroImageUrl(image.sourceUrl));
+  if (heroStored) return heroStored.localPath;
+
+  const nonScreenshot = storedImages.find(image => !isScreenshotImageUrl(image.sourceUrl));
+  return nonScreenshot?.localPath || '';
+}
+
 function mergeImages(...groups: ScrapedImage[][]): ScrapedImage[] {
   const images = new Map<string, ScrapedImage>();
   for (const group of groups) {
-    for (const image of group) images.set(image.sourceUrl, image);
+    for (const image of group) {
+      images.set(image.sourceUrl, image);
+    }
   }
   return [...images.values()];
 }
@@ -520,7 +588,7 @@ function replaceImageSources(html: string, replacements: Map<string, string>, ba
     } catch {
       return tag;
     }
-    const local = replacements.get(absolute);
+    const local = lookupReplacement(replacements, absolute, baseUrl);
     if (!local) return '';
     const alt = attr(tag, 'alt');
     return `<img src="${escapeHtml(local)}" alt="${escapeHtml(alt)}">`;
@@ -553,10 +621,7 @@ function scrapeHtml(html: string, baseUrl: URL): ScrapedPost {
 
   const canonical = html.match(/<link\b[^>]*rel=["']canonical["'][^>]*>/i);
   const images = mergeImages(extractImages(articleHtml, baseUrl), extractImages(articleShell, baseUrl));
-  const featuredImageUrl = meta(html, /<meta\b[^>]*property=["']og:image["'][^>]*>/i)
-    || meta(html, /<meta\b[^>]*name=["']twitter:image["'][^>]*>/i)
-    || images[0]?.sourceUrl
-    || '';
+  const featuredImageUrl = resolveFeaturedImageUrl(html, articleShell, articleHtml, baseUrl, images);
 
   return {
     title,
@@ -653,20 +718,33 @@ export async function importBlogPost(request: ImportRequest): Promise<ImportResu
     for (const image of post.images || []) existingImages.set(image.sourceUrl, image);
   }
 
-  const imageInputs = new Map(scraped.images.map(image => [image.sourceUrl, image]));
-  if (scraped.featuredImageUrl && !imageInputs.has(scraped.featuredImageUrl)) {
-    imageInputs.set(scraped.featuredImageUrl, { sourceUrl: scraped.featuredImageUrl, alt: scraped.title });
+  const imageInputs = new Map<string, ScrapedImage>();
+  for (const image of scraped.images) {
+    imageInputs.set(canonicalImageUrl(image.sourceUrl, baseUrl), image);
   }
+  if (scraped.featuredImageUrl) {
+    const featuredKey = canonicalImageUrl(scraped.featuredImageUrl, baseUrl);
+    if (!imageInputs.has(featuredKey)) {
+      imageInputs.set(featuredKey, { sourceUrl: featuredKey, alt: scraped.title });
+    }
+  }
+
+  const downloadOrder = [
+    ...(scraped.featuredImageUrl ? [canonicalImageUrl(scraped.featuredImageUrl, baseUrl)] : []),
+    ...[...imageInputs.keys()].filter(url => url !== canonicalImageUrl(scraped.featuredImageUrl || '', baseUrl)),
+  ];
 
   const storedImages: BlogImage[] = [];
   const replacements = new Map<string, string>();
   const warnings: string[] = [];
   let imageIndex = 0;
-  for (const image of imageInputs.values()) {
+  for (const sourceUrl of downloadOrder) {
+    const image = imageInputs.get(sourceUrl);
+    if (!image) continue;
     try {
-      const stored = await storeImage(image, slug, imageIndex, existingImages);
+      const stored = await storeImage({ ...image, sourceUrl }, slug, imageIndex, existingImages);
       storedImages.push(stored);
-      replacements.set(image.sourceUrl, stored.localPath);
+      replacements.set(canonicalImageUrl(image.sourceUrl, baseUrl), stored.localPath);
       imageIndex += 1;
     } catch (err) {
       warnings.push(err instanceof Error ? err.message : `Image download failed: ${image.sourceUrl}`);
@@ -682,9 +760,10 @@ export async function importBlogPost(request: ImportRequest): Promise<ImportResu
     ? request.existingPosts.find(post => post.id === request.replacePostId)
     : undefined;
 
-  const featuredImagePath = scraped.featuredImageUrl
-    ? replacements.get(scraped.featuredImageUrl) || ''
-    : storedImages[0]?.localPath || '';
+  const featuredImagePath = resolveFeaturedImagePath(scraped.featuredImageUrl, storedImages, replacements, baseUrl);
+  if (scraped.featuredImageUrl && !featuredImagePath) {
+    warnings.push(`Featured hero image could not be stored: ${scraped.featuredImageUrl}`);
+  }
 
   return {
     warnings,
