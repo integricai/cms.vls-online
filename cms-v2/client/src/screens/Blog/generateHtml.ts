@@ -354,6 +354,10 @@ html body .vls-blog .vls-blog-hero-banner h1{font-size:clamp(34px,5vw,58px);line
 @media(max-width:900px){.vls-blog-layout{grid-template-columns:1fr}.vls-blog-side{position:static}.vls-blog-grid{grid-template-columns:1fr 1fr}.vls-blog-article{padding:24px}.vls-blog-search{margin-left:0;width:100%;}}
 @media(max-width:720px){.vls-blog-related-grid,.related-grid{grid-template-columns:1fr}.vls-blog-related-grid>a img,.related-grid>a img{height:150px;}}
 @media(max-width:620px){.vls-blog{margin-top:28px}.vls-blog-shell{padding:28px 16px}.vls-blog-grid{grid-template-columns:1fr}.vls-blog-hero-banner{min-height:340px}.vls-blog-hero-banner .vls-blog-shell{padding-top:58px;padding-bottom:48px}.vls-blog h1{font-size:34px}.vls-blog-article{padding:18px}}
+html body #zen_blog_post:has(.vls-blog)>nav,html body #zen_blog_post:has(.vls-blog)>ol.breadcrumb,html body #zen_blog_post:has(.vls-blog)>h1,html body #zen_blog_post:has(.vls-blog)>.blog-heading,html body #zen_blog_post:has(.vls-blog)>.zbv-blog-05-user,html body #zen_blog_post:has(.vls-blog)>img,html body #zen_blog_post:has(.vls-blog)>.zbv-blog-05-img,html body #zen_blog_post:has(.vls-blog)>p.zbv-blog-05-tag,html body #zen_blog_post:has(.vls-blog)>p.dynamic-text:not(.blog-content),html body .blog-content:has(.vls-blog)>p.dynamic-text:not(:has(.vls-blog-header-generated)),html body .blog-content:has(.vls-blog)>p.dynamic-text:has(style),html body .blog-content:has(.vls-blog)>p:empty,html body .blog-content:has(.vls-blog)>p.zbv-blog-05-tag{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;pointer-events:none!important;}
+html body .zbv-blog-05:has(.vls-blog){min-height:0!important;padding-top:0!important;background-image:none!important;background-color:transparent!important;}
+html body .zbv-blog-05:has(.vls-blog)>.overly,html body .zbv-blog-05:has(.vls-blog) .overly{display:none!important;}
+html body #zen_blog_post:has(.vls-blog){padding-top:0!important;margin-top:0!important;}
 </style>`;
 
 export function generateBlogArticleHtml(post: BlogPost, settings: Partial<BlogSettings> = {}, allPosts: BlogPost[] = []): string {
@@ -367,7 +371,6 @@ export function generateBlogArticleHtml(post: BlogPost, settings: Partial<BlogSe
   const relatedArticles = allPosts.length > 0 ? getRandomRelatedPosts(post, allPosts, 3) : [];
   const relatedHtml = relatedArticles.length > 0 ? renderRelatedArticles(relatedArticles) : '';
   return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<title>${escapeHtml(post.metaTitle || post.title)}</title>
 <meta name="description" content="${attr(metaDescription)}">
 <link rel="canonical" href="${attr(absoluteBlogUrl(post))}">
 <meta property="og:title" content="${attr(post.metaTitle || post.title)}">
