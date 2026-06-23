@@ -102,24 +102,8 @@ function stripLeadingDuplicateTitle(html: string, title: string): string {
   });
 }
 
-function firstIndexOf(html: string, pattern: RegExp): number {
-  const match = html.match(pattern);
-  return match?.index ?? -1;
-}
-
 function stripImportedSourceHero(html: string, title: string): string {
-  let next = stripLeadingDuplicateTitle(html, title).trimStart();
-  const firstParagraph = firstIndexOf(next, /<p\b/i);
-  const firstToc = firstIndexOf(next, /<h[2-4]\b[^>]*>\s*(?:<a\b[^>]*>\s*<\/a>\s*)?Table of Contents\s*<\/h[2-4]>/i);
-  const candidates = [firstParagraph, firstToc].filter(index => index >= 0);
-  const boundary = candidates.length ? Math.min(...candidates) : -1;
-  if (boundary > 0 && boundary < 4000) {
-    const prefix = next.slice(0, boundary);
-    if (/<(?:img|figure)\b|Search term:|Word Count:|Created:|min read|words|author/i.test(prefix)) {
-      next = next.slice(boundary).trimStart();
-    }
-  }
-  return next;
+  return stripLeadingDuplicateTitle(html, title).trimStart();
 }
 
 function stripAutoSeoPromo(html: string): string {
@@ -372,7 +356,7 @@ ${baseCss}
     <div class="vls-blog-shell">
       <a class="vls-blog-kicker" href="/blog">See all blogs</a>
       <h1 style="color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;">${escapeHtml(post.title)}</h1>
-      <div class="vls-blog-meta">${post.publishDate ? `<span>${escapeHtml(formatDate(post.publishDate))}</span>` : ''}<span>${escapeHtml(post.status)}</span></div>
+      <div class="vls-blog-meta">${post.publishDate ? `<span>${escapeHtml(formatDate(post.publishDate))}</span>` : ''}</div>
     </div>
   </section>
   <div class="vls-blog-shell" style="--toc-link-color:${attr(tocLinkColor)}">

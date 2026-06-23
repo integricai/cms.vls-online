@@ -228,20 +228,76 @@ function chooseArticleHtml(html: string): string {
   const cleaned = removeLayout(html);
   const candidates: string[] = [];
   const patterns = [
-    /<article\b[\s\S]*?<\/article>/gi,
-    /<main\b[\s\S]*?<\/main>/gi,
-    /<(?:section|div)\b[^>]*(?:class|id)=["'][^"']*(?:post|article|blog|content|entry)[^"']*["'][^>]*>[\s\S]*?<\/(?:section|div)>/gi,
+    /<article\b[^>]*>/gi,
+    /<main\b[^>]*>/gi,
+    /<(?:section|div)\b[^>]*(?:class|id)=["'][^"']*(?:post|article|blog|content|entry)[^"']*["'][^>]*>/gi,
   ];
   for (const pattern of patterns) {
-    const matches = cleaned.match(pattern);
-    if (matches) candidates.push(...matches);
+    for (const match of cleaned.matchAll(pattern)) {
+      const tagName = match[0].match(/^<([a-z0-9-]+)/i)?.[1];
+      const start = match.index ?? -1;
+      if (!tagName || start < 0) continue;
+      const candidate = extractBalancedElement(cleaned, start, tagName);
+      if (candidate) candidates.push(candidate);
+    }
   }
   if (!candidates.length) return cleaned;
   return candidates.sort((a, b) => stripTags(b).length - stripTags(a).length)[0] ?? cleaned;
 }
 
+function extractBalancedElement(html: string, start: number, tagName: string): string {
+  const pattern = new RegExp(`<\\/?${escapeRegExp(tagName)}\\b[^>]*>`, 'gi');
+  pattern.lastIndex = start;
+  let depth = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(html))) {
+    const tag = match[0];
+    const isClosing = /^<\//.test(tag);
+    const isSelfClosing = /\/>$/.test(tag);
+    if (isClosing) {
+      depth -= 1;
+      if (depth === 0) return html.slice(start, pattern.lastIndex);
+    } else if (!isSelfClosing) {
+      depth += 1;
+    }
+  }
+  return '';
+}
+
+function sanitizeStyle(value: string): string {
+  const decoded = decodeEntities(value).replace(/[\u0000-\u001F\u007F]/g, ' ').trim();
+  if (!decoded || /(?:expression|javascript:|vbscript:|@import|behavior\s*:|-moz-binding|url\s*\()/i.test(decoded)) {
+    return '';
+  }
+  return decoded
+    .split(';')
+    .map(part => part.trim())
+    .filter(part => /^-?[_a-zA-Z][\w-]*\s*:\s*[^:]+$/.test(part))
+    .join('; ')
+    .slice(0, 1000);
+}
+
+function safeTokenAttr(tag: string, name: string): string {
+  const value = attr(tag, name)
+    .replace(/[^\w\s:.-]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 300);
+  return value ? ` ${name}="${escapeHtml(value)}"` : '';
+}
+
+function commonSafeAttrs(tag: string): string {
+  const style = sanitizeStyle(attr(tag, 'style'));
+  return `${safeTokenAttr(tag, 'class')}${safeTokenAttr(tag, 'id')}${style ? ` style="${escapeHtml(style)}"` : ''}`;
+}
+
+function numericAttr(tag: string, name: string): string {
+  const value = attr(tag, name).replace(/[^0-9]/g, '').slice(0, 5);
+  return value ? ` ${name}="${value}"` : '';
+}
+
 function sanitizeHtml(html: string): string {
-  const allowed = new Set(['h2', 'h3', 'h4', 'p', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'strong', 'em', 'b', 'i', 'a', 'img', 'blockquote', 'br', 'figure', 'figcaption']);
+  const allowed = new Set(['section', 'div', 'span', 'h2', 'h3', 'h4', 'p', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'strong', 'em', 'b', 'i', 'a', 'img', 'blockquote', 'br', 'figure', 'figcaption', 'hr', 'pre', 'code']);
   return html
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi, '<h2>$1</h2>')
@@ -249,26 +305,26 @@ function sanitizeHtml(html: string): string {
       const name = rawName.toLowerCase();
       if (!allowed.has(name)) return '';
       if (tag.startsWith('</')) return `</${name}>`;
-      if (name === 'br') return '<br>';
+      if (name === 'br' || name === 'hr') return `<${name}${commonSafeAttrs(tag)}>`;
       if (name === 'a') {
         const href = attr(tag, 'href');
         if (!/^https?:\/\//i.test(href) && !href.startsWith('/')) return '<a>';
-        return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener">`;
+        return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener"${commonSafeAttrs(tag)}>`;
       }
       if (name === 'img') {
-        const src = attr(tag, 'src');
+        const src = imageSource(tag);
         if (!src) return '';
-        return `<img src="${escapeHtml(src)}" alt="${escapeHtml(attr(tag, 'alt'))}">`;
+        const loading = attr(tag, 'loading').toLowerCase() === 'eager' ? 'eager' : 'lazy';
+        return `<img src="${escapeHtml(src)}" alt="${escapeHtml(attr(tag, 'alt'))}" loading="${loading}"${numericAttr(tag, 'width')}${numericAttr(tag, 'height')}${commonSafeAttrs(tag)}>`;
       }
       if (['td', 'th'].includes(name)) {
         const colspan = attr(`<x ${rawAttrs}>`, 'colspan').replace(/[^0-9]/g, '');
         const rowspan = attr(`<x ${rawAttrs}>`, 'rowspan').replace(/[^0-9]/g, '');
-        return `<${name}${colspan ? ` colspan="${colspan}"` : ''}${rowspan ? ` rowspan="${rowspan}"` : ''}>`;
+        return `<${name}${colspan ? ` colspan="${colspan}"` : ''}${rowspan ? ` rowspan="${rowspan}"` : ''}${commonSafeAttrs(tag)}>`;
       }
-      return `<${name}>`;
+      return `<${name}${commonSafeAttrs(tag)}>`;
     })
     .replace(/\son[a-z]+\s*=\s*(["']).*?\1/gi, '')
-    .replace(/\sstyle\s*=\s*(["']).*?\1/gi, '')
     .trim();
 }
 
@@ -298,11 +354,6 @@ function normalizeText(value: string): string {
   return stripTags(value).toLowerCase();
 }
 
-function firstIndexOf(html: string, pattern: RegExp): number {
-  const match = html.match(pattern);
-  return match?.index ?? -1;
-}
-
 function stripLeadingDuplicateTitle(html: string, title: string): string {
   const titleText = normalizeText(title);
   if (!titleText) return html || '';
@@ -312,18 +363,7 @@ function stripLeadingDuplicateTitle(html: string, title: string): string {
 }
 
 function stripImportedSourceHero(html: string, title: string): string {
-  let next = stripLeadingDuplicateTitle(html, title).trimStart();
-  const firstParagraph = firstIndexOf(next, /<p\b/i);
-  const firstToc = firstIndexOf(next, /<h[2-4]\b[^>]*>\s*(?:<a\b[^>]*>\s*<\/a>\s*)?Table of Contents\s*<\/h[2-4]>/i);
-  const candidates = [firstParagraph, firstToc].filter(index => index >= 0);
-  const boundary = candidates.length ? Math.min(...candidates) : -1;
-  if (boundary > 0 && boundary < 4000) {
-    const prefix = next.slice(0, boundary);
-    if (/<(?:img|figure)\b|Search term:|Word Count:|Created:|min read|words|author/i.test(prefix)) {
-      next = next.slice(boundary).trimStart();
-    }
-  }
-  return next;
+  return stripLeadingDuplicateTitle(html, title).trimStart();
 }
 
 function headingId(text: string, index: number): string {
@@ -384,7 +424,7 @@ function extractImages(html: string, baseUrl: URL): ScrapedImage[] {
   const images = new Map<string, ScrapedImage>();
   for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
     const tag = match[0];
-    const raw = attr(tag, 'src') || attr(tag, 'data-src') || attr(tag, 'data-lazy-src');
+    const raw = imageSource(tag);
     if (!raw || raw.startsWith('data:')) continue;
     try {
       const sourceUrl = new URL(raw, baseUrl).toString();
@@ -396,9 +436,21 @@ function extractImages(html: string, baseUrl: URL): ScrapedImage[] {
   return [...images.values()];
 }
 
+function firstSrcsetUrl(value: string): string {
+  return value.split(',')[0]?.trim().split(/\s+/)[0] || '';
+}
+
+function imageSource(tag: string): string {
+  return attr(tag, 'src')
+    || attr(tag, 'data-src')
+    || attr(tag, 'data-lazy-src')
+    || firstSrcsetUrl(attr(tag, 'srcset'))
+    || firstSrcsetUrl(attr(tag, 'data-srcset'));
+}
+
 function replaceImageSources(html: string, replacements: Map<string, string>, baseUrl: URL): string {
   return html.replace(/<img\b[^>]*>/gi, tag => {
-    const raw = attr(tag, 'src') || attr(tag, 'data-src') || attr(tag, 'data-lazy-src');
+    const raw = imageSource(tag);
     if (!raw) return tag;
     let absolute = '';
     try {
