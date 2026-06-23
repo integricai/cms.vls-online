@@ -64,13 +64,28 @@ function heroBackground(image: string, color: string): string {
   return image ? `${overlay}, url('${attr(image)}')` : `linear-gradient(135deg, ${color} 0%, #14345f 100%)`;
 }
 
-function bodyWithAbsoluteAssets(html: string): string {
-  return html
+function bodyWithAbsoluteAssets(html: string, articleUrl: string): string {
+  const withAssets = html
     .replace(/(<img\b[^>]*\ssrc=["'])(\/blog-assets\/[^"']+)(["'][^>]*>)/gi, (_match, start: string, src: string, end: string) => {
       return `${start}${absoluteAssetUrl(src)}${end}`;
     })
     .replace(/(<a\b[^>]*\shref=["'])(?:https?:\/\/(?:blog\.)?vls-online\.com)?\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
-      return `${start}/blog/${slug}/${end}`;
+      return `${start}https://vls-online.com/blog/${slug}/${end}`;
+    });
+
+  return withAssets.replace(/(<a\b[^>]*\shref=["'])([^"']+)(["'][^>]*>)/gi, (_match, start: string, href: string, end: string) => {
+    if (href.startsWith('#')) return `${start}${href}${end}`;
+    try {
+      const parsed = new URL(href, articleUrl);
+      const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+      if (host === 'getautoseo.com') return `${start}${articleUrl}${end}`;
+      if (host === 'vls-online.com' || host === 'blog.vls-online.com') {
+        return `${start}https://vls-online.com${parsed.pathname}${parsed.search}${parsed.hash}${end}`;
+      }
+      return `${start}https://vls-online.com/${end}`;
+    } catch {
+      return `${start}https://vls-online.com/${end}`;
+    }
     });
 }
 
@@ -111,7 +126,6 @@ function stripAutoSeoPromo(html: string): string {
   for (let i = 0; i < 4; i += 1) {
     const previous = next;
     next = next
-      .replace(/<(section|div|aside|blockquote)\b[^>]*>[\s\S]*?(?:Want to create content like this\?|AutoSEO|Get Started Free)[\s\S]*?<\/\1>/gi, '')
       .replace(/<h[2-4]\b[^>]*>\s*Want to create content like this\?\s*<\/h[2-4]>\s*(?:<p\b[^>]*>[\s\S]*?<\/p>\s*)?(?:<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>\s*)?/gi, '')
       .replace(/<p\b[^>]*>[\s\S]*?AutoSEO[\s\S]*?<\/p>/gi, '')
       .replace(/<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>/gi, '')
@@ -340,7 +354,7 @@ export function generateBlogArticleHtml(post: BlogPost, settings: Partial<BlogSe
   const tocLinkColor = safeHex(settings.tocLinkColor, '#1f73b7');
   const background = heroBackground(image, gradientColor);
   const tags = post.tags.map(tag => `<span class="vls-blog-tag">${escapeHtml(tag)}</span>`).join('');
-  const bodyHtml = prepareArticleBody(bodyWithAbsoluteAssets(post.bodyHtml), post.title);
+  const bodyHtml = prepareArticleBody(bodyWithAbsoluteAssets(post.bodyHtml, absoluteBlogUrl(post)), post.title);
   const relatedArticles = allPosts.length > 0 ? getRandomRelatedPosts(post, allPosts, 3) : [];
   const relatedHtml = relatedArticles.length > 0 ? renderRelatedArticles(relatedArticles) : '';
   return `<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">

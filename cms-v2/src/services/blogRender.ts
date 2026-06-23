@@ -54,9 +54,24 @@ function attr(value: string): string {
   return escapeHtml(value).replace(/"/g, '&quot;');
 }
 
-function rewriteArticleLinks(html: string): string {
-  return html.replace(/(<a\b[^>]*\shref=["'])(?:https?:\/\/(?:blog\.)?vls-online\.com)?\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
-    return `${start}/blog/${slug}/${end}`;
+function rewriteArticleLinks(html: string, articleUrl: string): string {
+  const withBlogRoutes = html.replace(/(<a\b[^>]*\shref=["'])(?:https?:\/\/(?:blog\.)?vls-online\.com)?\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
+    return `${start}https://vls-online.com/blog/${slug}/${end}`;
+  });
+
+  return withBlogRoutes.replace(/(<a\b[^>]*\shref=["'])([^"']+)(["'][^>]*>)/gi, (_match, start: string, href: string, end: string) => {
+    if (href.startsWith('#')) return `${start}${href}${end}`;
+    try {
+      const parsed = new URL(href, articleUrl);
+      const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+      if (host === 'getautoseo.com') return `${start}${articleUrl}${end}`;
+      if (host === 'vls-online.com' || host === 'blog.vls-online.com') {
+        return `${start}https://vls-online.com${parsed.pathname}${parsed.search}${parsed.hash}${end}`;
+      }
+      return `${start}https://vls-online.com/${end}`;
+    } catch {
+      return `${start}https://vls-online.com/${end}`;
+    }
   });
 }
 
@@ -101,7 +116,6 @@ function stripAutoSeoPromo(html: string): string {
   for (let i = 0; i < 4; i += 1) {
     const previous = next;
     next = next
-      .replace(/<(section|div|aside|blockquote)\b[^>]*>[\s\S]*?(?:Want to create content like this\?|AutoSEO|Get Started Free)[\s\S]*?<\/\1>/gi, '')
       .replace(/<h[2-4]\b[^>]*>\s*Want to create content like this\?\s*<\/h[2-4]>\s*(?:<p\b[^>]*>[\s\S]*?<\/p>\s*)?(?:<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>\s*)?/gi, '')
       .replace(/<p\b[^>]*>[\s\S]*?AutoSEO[\s\S]*?<\/p>/gi, '')
       .replace(/<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>/gi, '')
@@ -278,7 +292,8 @@ function layout(title: string, description: string, body: string, canonical: str
 export function renderBlogArticle(post: BlogPost, settings: BlogSettings = {}, allPosts: BlogPost[] = []): string {
   const description = post.metaDescription || post.summary;
   const tags = post.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('');
-  const articleHtml = prepareArticleBody(rewriteArticleLinks(post.bodyHtml), post.title);
+  const articleUrl = absoluteBlogUrl(post);
+  const articleHtml = prepareArticleBody(rewriteArticleLinks(post.bodyHtml, articleUrl), post.title);
   const image = featuredImage(post);
   const gradientColor = safeHex(settings.heroGradientColor);
   const tocLinkColor = safeHex(settings.tocLinkColor, '#1f73b7');
@@ -297,7 +312,7 @@ export function renderBlogArticle(post: BlogPost, settings: BlogSettings = {}, a
     author: post.author ? { '@type': 'Person', name: post.author } : undefined,
     datePublished: post.publishDate || post.createdDate,
     dateModified: post.updatedDate,
-    mainEntityOfPage: post.canonicalUrl || blogUrl(post),
+    mainEntityOfPage: articleUrl,
   };
   const body = `<section class="hero-banner" style="background-image:${attr(background)}">
     <div class="wrap">
@@ -313,7 +328,7 @@ export function renderBlogArticle(post: BlogPost, settings: BlogSettings = {}, a
     </div>
     <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}<\/script>
   </main>`;
-  return layout(post.metaTitle || post.title, description, body, absoluteBlogUrl(post), image);
+  return layout(post.metaTitle || post.title, description, body, articleUrl, image);
 }
 
 export function renderBlogLanding(posts: BlogPost[]): string {

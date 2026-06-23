@@ -7,6 +7,7 @@ import { saveBlogAsset } from '../models/blogAsset';
 const MAX_PAGE_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 12000;
+const VLS_ORIGIN = 'https://vls-online.com';
 const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'svg']);
 const IMAGE_TYPES = new Map([
   ['image/jpeg', 'jpg'],
@@ -226,23 +227,26 @@ function removeLayout(html: string): string {
 
 function chooseArticleHtml(html: string): string {
   const cleaned = removeLayout(html);
-  const candidates: string[] = [];
-  const patterns = [
-    /<article\b[^>]*>/gi,
-    /<main\b[^>]*>/gi,
-    /<(?:section|div)\b[^>]*(?:class|id)=["'][^"']*(?:post|article|blog|content|entry)[^"']*["'][^>]*>/gi,
+  const candidates: Array<{ html: string; priority: number }> = [];
+  const patterns: Array<{ regex: RegExp; priority: number }> = [
+    { regex: /<article\b[^>]*>/gi, priority: 3 },
+    { regex: /<(?:section|div)\b[^>]*(?:class|id)=["'][^"']*(?:post|article|blog|content|entry)[^"']*["'][^>]*>/gi, priority: 2 },
+    { regex: /<main\b[^>]*>/gi, priority: 1 },
   ];
   for (const pattern of patterns) {
-    for (const match of cleaned.matchAll(pattern)) {
+    for (const match of cleaned.matchAll(pattern.regex)) {
       const tagName = match[0].match(/^<([a-z0-9-]+)/i)?.[1];
       const start = match.index ?? -1;
       if (!tagName || start < 0) continue;
       const candidate = extractBalancedElement(cleaned, start, tagName);
-      if (candidate) candidates.push(candidate);
+      if (candidate) candidates.push({ html: candidate, priority: pattern.priority });
     }
   }
   if (!candidates.length) return cleaned;
-  return candidates.sort((a, b) => stripTags(b).length - stripTags(a).length)[0] ?? cleaned;
+  return candidates.sort((a, b) => {
+    if (a.priority !== b.priority) return b.priority - a.priority;
+    return stripTags(b.html).length - stripTags(a.html).length;
+  })[0]?.html ?? cleaned;
 }
 
 function extractBalancedElement(html: string, start: number, tagName: string): string {
@@ -333,7 +337,6 @@ function stripAutoSeoPromo(html: string): string {
   for (let i = 0; i < 4; i += 1) {
     const previous = next;
     next = next
-      .replace(/<(section|div|aside|blockquote)\b[^>]*>[\s\S]*?(?:Want to create content like this\?|AutoSEO|Get Started Free)[\s\S]*?<\/\1>/gi, '')
       .replace(/<h[2-4]\b[^>]*>\s*Want to create content like this\?\s*<\/h[2-4]>\s*(?:<p\b[^>]*>[\s\S]*?<\/p>\s*)?(?:<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>\s*)?/gi, '')
       .replace(/<p\b[^>]*>[\s\S]*?AutoSEO[\s\S]*?<\/p>/gi, '')
       .replace(/<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>/gi, '')
@@ -344,9 +347,28 @@ function stripAutoSeoPromo(html: string): string {
   return next;
 }
 
-function normalizeBlogLinks(html: string): string {
-  return html.replace(/(<a\b[^>]*\shref=["'])(?:https?:\/\/(?:blog\.)?vls-online\.com)?\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
-    return `${start}/blog/${slug}/${end}`;
+function publicBlogUrl(topic: string, slug: string): string {
+  return `${VLS_ORIGIN}/blog/${slugify(topic || 'blog')}/${slug}`;
+}
+
+function normalizeBlogLinks(html: string, articleUrl: string): string {
+  const withBlogRoutes = html.replace(/(<a\b[^>]*\shref=["'])(?:https?:\/\/(?:blog\.)?vls-online\.com)?\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
+    return `${start}${VLS_ORIGIN}/blog/${slug}/${end}`;
+  });
+
+  return withBlogRoutes.replace(/(<a\b[^>]*\shref=["'])([^"']+)(["'][^>]*>)/gi, (_match, start: string, href: string, end: string) => {
+    if (href.startsWith('#')) return `${start}${href}${end}`;
+    try {
+      const parsed = new URL(decodeEntities(href), articleUrl);
+      const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+      if (host === 'getautoseo.com') return `${start}${articleUrl}${end}`;
+      if (host === 'vls-online.com' || host === 'blog.vls-online.com') {
+        return `${start}${VLS_ORIGIN}${parsed.pathname}${parsed.search}${parsed.hash}${end}`;
+      }
+      return `${start}${VLS_ORIGIN}/${end}`;
+    } catch {
+      return `${start}${VLS_ORIGIN}/${end}`;
+    }
   });
 }
 
@@ -608,7 +630,8 @@ export async function importBlogPost(request: ImportRequest): Promise<ImportResu
   const { topic, tags } = inferTopicAndTags(scraped, sourceUrl, request.topicOverride);
   const now = new Date().toISOString();
   const replacedBody = replaceImageSources(scraped.bodyHtml, replacements, baseUrl);
-  const cleanBody = prepareImportedBlogBody(normalizeBlogLinks(stripAutoSeoPromo(sanitizeHtml(replacedBody))), scraped.title);
+  const canonicalUrl = publicBlogUrl(topic, slug);
+  const cleanBody = prepareImportedBlogBody(normalizeBlogLinks(stripAutoSeoPromo(sanitizeHtml(replacedBody)), canonicalUrl), scraped.title);
   const existingPost = request.replacePostId
     ? request.existingPosts.find(post => post.id === request.replacePostId)
     : undefined;
@@ -630,7 +653,7 @@ export async function importBlogPost(request: ImportRequest): Promise<ImportResu
       featuredImagePath,
       images: storedImages,
       originalSourceUrl: sourceUrl,
-      canonicalUrl: scraped.canonicalUrl,
+      canonicalUrl,
       metaTitle: scraped.metaTitle,
       metaDescription: scraped.metaDescription,
       author: '',
