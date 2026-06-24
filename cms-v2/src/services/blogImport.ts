@@ -3,6 +3,7 @@ import net from 'net';
 import path from 'path';
 import type { BlogImage, BlogPost } from '../models/blog';
 import { saveBlogAsset } from '../models/blogAsset';
+import { rewriteTopicBlogLinks } from '../../shared/blogUrls';
 
 const MAX_PAGE_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
@@ -373,16 +374,16 @@ function stripAutoSeoToolbar(html: string): string {
     .replace(/<p\b[^>]*>\s*(?:Download|Feedback(?:\s*&amp;?\s*Recreate)?|Recreate|Delete)(?:\s*(?:Download|Feedback(?:\s*&amp;?\s*Recreate)?|Recreate|Delete))+\s*<\/p>/gi, '');
 }
 
-function publicBlogUrl(topic: string, slug: string): string {
-  return `${VLS_ORIGIN}/blog/${slugify(topic || 'blog')}/${slug}`;
+function publicBlogUrl(_topic: string, slug: string): string {
+  return `${VLS_ORIGIN}/blog/${slug}`;
 }
 
 function normalizeBlogLinks(html: string, articleUrl: string): string {
   const withBlogRoutes = html.replace(/(<a\b[^>]*\shref=["'])(?:https?:\/\/(?:blog\.)?vls-online\.com)?\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
-    return `${start}${VLS_ORIGIN}/blog/${slug}/${end}`;
+    return `${start}${VLS_ORIGIN}/blog/${slug}${end}`;
   });
 
-  return withBlogRoutes.replace(/(<a\b[^>]*\shref=["'])([^"']+)(["'][^>]*>)/gi, (_match, start: string, href: string, end: string) => {
+  const withLinks = withBlogRoutes.replace(/(<a\b[^>]*\shref=["'])([^"']+)(["'][^>]*>)/gi, (_match, start: string, href: string, end: string) => {
     if (href.startsWith('#')) return `${start}${href}${end}`;
     try {
       const parsed = new URL(decodeEntities(href), articleUrl);
@@ -397,6 +398,8 @@ function normalizeBlogLinks(html: string, articleUrl: string): string {
       return `${start}${href}${end}`;
     }
   });
+
+  return rewriteTopicBlogLinks(withLinks);
 }
 
 function normalizeText(value: string): string {

@@ -202,6 +202,21 @@ app.get('/blog/:topic/:slug', async (req, res, next) => {
   }
 });
 
+app.get('/blog/:slug', async (req, res, next) => {
+  try {
+    const posts = await listBlogPosts();
+    const post = posts.find(item => item.status === 'published' && item.slug === req.params.slug);
+    if (!post) return res.status(404).send('Blog post not found');
+    const settingsRow = await getContent('vls-blog-settings');
+    const settings = settingsRow?.data && typeof settingsRow.data === 'object' ? settingsRow.data : {};
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    return res.send(renderBlogArticle(post, settings, posts));
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.get('/blog-assets/:id/:filename', async (req, res, next) => {
   try {
     const asset = await getBlogAsset(req.params.id);

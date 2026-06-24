@@ -1,5 +1,8 @@
 import type { BlogPost, BlogSettings } from '../../types/cms';
+import { absoluteBlogUrl, blogUrl, rewriteTopicBlogLinks } from '../../../../shared/blogUrls';
 import { escapeHtml } from '../../utils/text';
+
+export { blogUrl } from '../../../../shared/blogUrls';
 
 const ASSET_ORIGIN = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/api\/?$/, '').replace(/\/$/, '');
 
@@ -76,10 +79,10 @@ function bodyWithAbsoluteAssets(html: string, articleUrl: string): string {
       return `${start}${absoluteAssetUrl(src)}${end}`;
     })
     .replace(/(<a\b[^>]*\shref=["'])(?:https?:\/\/(?:blog\.)?vls-online\.com)?\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
-      return `${start}https://vls-online.com/blog/${slug}/${end}`;
+      return `${start}https://vls-online.com/blog/${slug}${end}`;
     });
 
-  return withAssets.replace(/(<a\b[^>]*\shref=["'])([^"']+)(["'][^>]*>)/gi, (_match, start: string, href: string, end: string) => {
+  const withLinks = withAssets.replace(/(<a\b[^>]*\shref=["'])([^"']+)(["'][^>]*>)/gi, (_match, start: string, href: string, end: string) => {
     if (href.startsWith('#')) return `${start}${href}${end}`;
     try {
       const parsed = new URL(href, articleUrl);
@@ -94,6 +97,8 @@ function bodyWithAbsoluteAssets(html: string, articleUrl: string): string {
       return `${start}${href}${end}`;
     }
   });
+
+  return rewriteTopicBlogLinks(withLinks);
 }
 
 function normalizeText(value: string): string {
@@ -262,18 +267,6 @@ function shareLinks(post: BlogPost): string {
       <a href="https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}" target="_blank" rel="noopener" aria-label="Share on X">X</a>
     </div>
   </div>`;
-}
-
-function topicSlug(topic: string): string {
-  return (topic || 'blog').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'blog';
-}
-
-export function blogUrl(post: BlogPost): string {
-  return `/blog/${topicSlug(post.topic)}/${post.slug}`;
-}
-
-function absoluteBlogUrl(post: BlogPost): string {
-  return `https://vls-online.com${blogUrl(post)}`;
 }
 
 function formatDate(value: string): string {

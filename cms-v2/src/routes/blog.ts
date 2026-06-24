@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
 import { listBlogPosts, saveBlogPosts, type BlogPost, type BlogStatus } from '../models/blog';
 import { deleteBlogAssets } from '../models/blogAsset';
+import { blogUrl } from '../../shared/blogUrls';
 import { BlogImportError, importBlogPost, slugify } from '../services/blogImport';
 
 const router = Router();
@@ -12,12 +13,8 @@ function isStatus(value: unknown): value is BlogStatus {
   return value === 'draft' || value === 'published';
 }
 
-function topicSlug(topic: string): string {
-  return slugify(topic || 'blog');
-}
-
 function withUrl(post: BlogPost): BlogPost & { url: string } {
-  return { ...post, url: `/blog/${topicSlug(post.topic)}/${post.slug}` };
+  return { ...post, url: blogUrl(post) };
 }
 
 router.get('/posts', async (_req: Request, res: Response, next: NextFunction) => {

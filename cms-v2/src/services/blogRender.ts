@@ -1,5 +1,8 @@
 import type { BlogPost } from '../models/blog';
+import { absoluteBlogUrl, blogUrl, rewriteTopicBlogLinks } from '../../shared/blogUrls';
 import { slugify } from './blogImport';
+
+export { blogUrl } from '../../shared/blogUrls';
 
 export interface BlogSettings {
   heroGradientColor?: string;
@@ -56,10 +59,10 @@ function attr(value: string): string {
 
 function rewriteArticleLinks(html: string, articleUrl: string): string {
   const withBlogRoutes = html.replace(/(<a\b[^>]*\shref=["'])(?:https?:\/\/(?:blog\.)?vls-online\.com)?\/post\/([^"'?#/]+)[^"']*(["'][^>]*>)/gi, (_match, start: string, slug: string, end: string) => {
-    return `${start}https://vls-online.com/blog/${slug}/${end}`;
+    return `${start}https://vls-online.com/blog/${slug}${end}`;
   });
 
-  return withBlogRoutes.replace(/(<a\b[^>]*\shref=["'])([^"']+)(["'][^>]*>)/gi, (_match, start: string, href: string, end: string) => {
+  const withLinks = withBlogRoutes.replace(/(<a\b[^>]*\shref=["'])([^"']+)(["'][^>]*>)/gi, (_match, start: string, href: string, end: string) => {
     if (href.startsWith('#')) return `${start}${href}${end}`;
     try {
       const parsed = new URL(href, articleUrl);
@@ -74,6 +77,8 @@ function rewriteArticleLinks(html: string, articleUrl: string): string {
       return `${start}${href}${end}`;
     }
   });
+
+  return rewriteTopicBlogLinks(withLinks);
 }
 
 function normalizeText(value: string): string {
@@ -245,14 +250,6 @@ function formatDate(value: string): string {
 
 export function blogTopicSlug(topic: string): string {
   return slugify(topic || 'blog');
-}
-
-export function blogUrl(post: BlogPost): string {
-  return `/blog/${blogTopicSlug(post.topic)}/${post.slug}`;
-}
-
-function absoluteBlogUrl(post: BlogPost): string {
-  return `https://vls-online.com${blogUrl(post)}`;
 }
 
 function isScreenshotImageUrl(value: string): boolean {

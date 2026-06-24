@@ -1,3 +1,4 @@
+import { normalizeBlogPostUrls } from '../../shared/blogUrls';
 import { getContent, upsertContent } from './content';
 
 export const BLOG_CONTENT_KEY = 'vls-blog-posts';
@@ -44,7 +45,13 @@ function normalizeContent(value: unknown): BlogContent {
 
 export async function listBlogPosts(): Promise<BlogPost[]> {
   const row = await getContent(BLOG_CONTENT_KEY);
-  return normalizeContent(row?.data).posts;
+  const posts = normalizeContent(row?.data).posts;
+  const normalized = posts.map(normalizeBlogPostUrls);
+  const changed = normalized.some((post, index) => post !== posts[index]);
+  if (changed) {
+    await upsertContent(BLOG_CONTENT_KEY, { posts: normalized }, row?.updated_by ?? undefined);
+  }
+  return normalized;
 }
 
 export async function saveBlogPosts(posts: BlogPost[], updatedBy?: number): Promise<BlogContent> {
