@@ -26,6 +26,15 @@ router.get('/posts', async (_req: Request, res: Response, next: NextFunction) =>
   }
 });
 
+router.post('/migrate-urls', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const posts = await listBlogPosts();
+    return res.json({ ok: true, data: { total: posts.length, migrated: true } });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/import', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const body = req.body as {

@@ -1,15 +1,10 @@
 import { escapeHtml } from '../../utils/text';
+import { blogUrl, absoluteBlogUrl } from '../../../../shared/blogUrls';
+
+export { blogUrl } from '../../../../shared/blogUrls';
+
 function attr(value) {
     return escapeHtml(value || '').replace(/"/g, '&quot;');
-}
-function topicSlug(topic) {
-    return (topic || 'blog').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'blog';
-}
-export function blogUrl(post) {
-    return `/blog/${topicSlug(post.topic)}/${post.slug}`;
-}
-function absoluteBlogUrl(post) {
-    return `https://vls-online.com${blogUrl(post)}`;
 }
 function formatDate(value) {
     if (!value)

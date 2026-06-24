@@ -47,7 +47,11 @@ export async function listBlogPosts(): Promise<BlogPost[]> {
   const row = await getContent(BLOG_CONTENT_KEY);
   const posts = normalizeContent(row?.data).posts;
   const normalized = posts.map(normalizeBlogPostUrls);
-  const changed = normalized.some((post, index) => post !== posts[index]);
+  const changed = normalized.some((post, index) =>
+    post.canonicalUrl !== posts[index].canonicalUrl
+    || post.bodyHtml !== posts[index].bodyHtml
+    || post.summary !== posts[index].summary
+  );
   if (changed) {
     await upsertContent(BLOG_CONTENT_KEY, { posts: normalized }, row?.updated_by ?? undefined);
   }
@@ -55,7 +59,7 @@ export async function listBlogPosts(): Promise<BlogPost[]> {
 }
 
 export async function saveBlogPosts(posts: BlogPost[], updatedBy?: number): Promise<BlogContent> {
-  const data = { posts };
-  await upsertContent(BLOG_CONTENT_KEY, data, updatedBy);
-  return data;
+  const normalized = posts.map(normalizeBlogPostUrls);
+  await upsertContent(BLOG_CONTENT_KEY, { posts: normalized }, updatedBy);
+  return { posts: normalized };
 }
