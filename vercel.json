@@ -26,6 +26,10 @@
       "use": "@vercel/node"
     },
     {
+      "src": "api/course-finder-banner-runtime.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "api/turnstile-site-key.js",
       "use": "@vercel/node"
     }
@@ -36,6 +40,8 @@
     { "src": "/api/publish-banner",      "dest": "api/publish-banner.js"      },
     { "src": "/api/publish-course-prices", "dest": "api/publish-course-prices.js" },
     { "src": "/api/publish-course-finder-banner", "dest": "api/publish-course-finder-banner.js" },
+    { "src": "/api/public/course-finder-banner.js", "dest": "api/course-finder-banner-runtime.js" },
+    { "src": "/api/course-finder-banner-runtime", "dest": "api/course-finder-banner-runtime.js" },
     { "src": "/api/turnstile-site-key",  "dest": "api/turnstile-site-key.js"  },
     { "src": "/(.*)",                    "dest": "cms-v2/src/server.ts"       }
   ]

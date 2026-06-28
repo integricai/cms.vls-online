@@ -1,9 +1,16 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { getContent } from '../models/content';
 import { listPublicBooks } from '../models/book';
 import type { BlogPost } from '../models/blog';
 
 const router = Router();
+
+const COURSE_FINDER_BANNER_RUNTIME = readFileSync(
+  join(process.cwd(), 'cms-v2/src/assets/course-finder-banner.runtime.js'),
+  'utf8',
+);
 
 const PUBLIC_CONTENT_TTL_MS = 60_000;
 const PUBLIC_CONTENT_STALE_MS = 30 * 60_000;
@@ -133,6 +140,19 @@ router.get('/footer-updater.js', (_req: Request, res: Response) => {
   res.setHeader('Cache-Control', 'no-store');
   res.type('application/javascript');
   res.send(FOOTER_UPDATER_SCRIPT);
+});
+
+router.options('/course-finder-banner.js', (_req, res) => {
+  allowPublicCors(res);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.status(204).end();
+});
+
+router.get('/course-finder-banner.js', (_req: Request, res: Response) => {
+  allowPublicCors(res);
+  res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+  res.type('application/javascript');
+  res.send(COURSE_FINDER_BANNER_RUNTIME);
 });
 
 router.options('/events', (_req, res) => {

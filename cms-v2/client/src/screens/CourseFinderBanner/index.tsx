@@ -127,7 +127,7 @@ export default function CourseFinderBannerScreen() {
               </div>
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-500">
-              Paste the generated HTML into a Zenler custom HTML block. Filters fetch active courses from the CMS API on page load, so course updates apply without re-pasting.
+              Paste the full generated HTML into a Zenler custom HTML block. The banner loads an external script from the CMS API (required for Zenler). After updating this component, click Save &amp; Generate HTML and replace the old paste on your page.
             </p>
           </div>
 

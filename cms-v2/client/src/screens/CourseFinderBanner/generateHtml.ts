@@ -8,6 +8,27 @@ import {
 export const COURSE_FINDER_BANNER_API_URL = 'https://api.cms.vls-online.com/api/publish-course-finder-banner';
 export const COURSE_FINDER_BANNER_ROOT_ID = 'vls-course-finder-banner';
 
+function runtimeScriptUrl(apiUrl: string): string {
+  try {
+    const parsed = new URL(apiUrl);
+    return `${parsed.origin}/api/public/course-finder-banner.js`;
+  } catch {
+    return '/api/public/course-finder-banner.js';
+  }
+}
+
+function buildStaticQualOptions(courses: EmbeddedCourse[], placeholder: string): string {
+  const seen = new Set<string>();
+  const options = [`<option value="">${escapeHtml(placeholder)}</option>`];
+  for (const course of courses) {
+    const qual = String(course.qualification || 'Other').trim() || 'Other';
+    if (seen.has(qual)) continue;
+    seen.add(qual);
+    options.push(`<option value="${escapeHtml(qual)}">${escapeHtml(qual)}</option>`);
+  }
+  return options.join('');
+}
+
 type EmbeddedCourse = {
   id: number;
   name: string;
@@ -135,7 +156,7 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[], ra
         <div class="cfb-sub">${escapeHtml(config.subtitle)}</div>
       </div>
       <div class="cfb-stats">
-        <div class="cfb-stat"><strong data-role="stat-courses">0</strong><span>${escapeHtml(config.statCoursesLabel)}</span></div>
+        <div class="cfb-stat"><strong data-role="stat-courses">${embedded.length}</strong><span>${escapeHtml(config.statCoursesLabel)}</span></div>
         <div class="cfb-stat"><strong data-role="stat-quals">0</strong><span>${escapeHtml(config.statQualificationsLabel)}</span></div>
         <div class="cfb-stat"><strong data-role="stat-papers">0</strong><span>${escapeHtml(config.statPapersLabel)}</span></div>
       </div>
@@ -143,7 +164,7 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[], ra
     <div class="cfb-dropdowns">
       <div class="dd-group">
         <div class="dd-label"><div class="dd-step active" data-step="1">1</div>${escapeHtml(config.qualificationLabel)}</div>
-        <select class="dd-select" data-role="qual"><option value="">${escapeHtml(config.qualificationPlaceholder)}</option></select>
+        <select class="dd-select" data-role="qual">${buildStaticQualOptions(embedded, config.qualificationPlaceholder)}</select>
       </div>
       <div class="dd-group">
         <div class="dd-label"><div class="dd-step" data-step="2">2</div>${escapeHtml(config.levelLabel)}</div>
@@ -162,258 +183,6 @@ export function generateCourseFinderBannerHtml(courses: CourseFinderCourse[], ra
     <div class="cfb-message" data-role="message">${escapeHtml(config.messageText)}</div>
   </div>
 </div>
-<script type="text/javascript">
-(function(){
-  var ROOT_ID = ${JSON.stringify(rootId)};
-  var API = ${JSON.stringify(COURSE_FINDER_BANNER_API_URL)};
-  var FALLBACK = ${escapeScriptJson(fallback)};
-  var booted = false;
-
-  function mergeConfig(config){
-    var base = FALLBACK.config || {};
-    var patch = config && typeof config === 'object' ? config : {};
-    var merged = {};
-    for (var key in base) { if (Object.prototype.hasOwnProperty.call(base, key)) merged[key] = base[key]; }
-    for (var patchKey in patch) { if (Object.prototype.hasOwnProperty.call(patch, patchKey)) merged[patchKey] = patch[patchKey]; }
-    return merged;
-  }
-
-  function init(root, rawCourses, ui){
-    var state = { qual: '', level: '', course: '', option: '' };
-    var rows = [];
-
-    function $(role){ return root.querySelector('[data-role="' + role + '"]'); }
-    function esc(value){
-      return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch){
-        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch];
-      });
-    }
-    function textKey(course){ return (course.name + ' ' + course.slug + ' ' + course.category + ' ' + course.level).toLowerCase(); }
-    function hasWord(text, word){ return new RegExp('(^|[^a-z0-9])' + word + '([^a-z0-9]|$)', 'i').test(text); }
-    function cleanValue(value, fallback){
-      var text = String(value || '').replace(/\\s+/g, ' ').trim();
-      return text || fallback;
-    }
-    function getQualification(course){ return cleanValue(course.qualification, 'Other'); }
-    function getCourseLevels(course){
-      var levels = Array.isArray(course.courseLevels) ? course.courseLevels.map(function(level){ return cleanValue(level, ''); }).filter(Boolean) : [];
-      if (!levels.length && course.courseLevel) levels = [cleanValue(course.courseLevel, '')].filter(Boolean);
-      return levels.length ? levels : [inferLevelLabel(course)];
-    }
-    function inferLevelLabel(course){
-      var t = textKey(course);
-      if (/subscription|bundle|fullaccess|full access|annual/.test(t)) return 'Bundles & Subscriptions';
-      if (/revision|mock/.test(t)) return 'Revision Courses';
-      if (/\\bba[1-4]\\b|certificate/.test(t)) return 'Certificate Level';
-      if (/\\be1\\b|\\bp1\\b|\\bf1\\b|operational|digital world/.test(t)) return 'Operational Level';
-      if (/\\be2\\b|\\bp2\\b|\\bf2\\b|management level|managing performance|advanced management accounting|advanced financial reporting/.test(t)) return 'Management Level';
-      if (/\\be3\\b|\\bp3\\b|\\bf3\\b|strategic level|financial strategy/.test(t)) return 'Strategic Level';
-      if (/\\bfa1\\b|\\bma1\\b|\\bfa2\\b|\\bma2\\b|foundation/.test(t)) return 'Foundation Diploma';
-      if (hasWord(t,'bt') || hasWord(t,'ma') || hasWord(t,'fa') || /applied knowledge|business and technology|management accounting|financial accounting/.test(t)) return 'Applied Knowledge';
-      if (hasWord(t,'lw') || hasWord(t,'pm') || hasWord(t,'tx') || hasWord(t,'fr') || hasWord(t,'aa') || hasWord(t,'fm') || /applied skills|corporate and business law|taxation/.test(t)) return 'Applied Skills';
-      if (/\\bsbl\\b|\\bsbr\\b|\\bafm\\b|\\bapm\\b|\\batx\\b|\\baaa\\b|strategic professional|advanced/.test(t)) return 'Strategic Professional';
-      return 'Other Courses';
-    }
-    function inferOption(course){
-      if (course.courseOption) return course.courseOption;
-      var t = textKey(course);
-      if (/coming soon/.test(t)) return 'Coming Soon';
-      if (/annual|subscription|fullaccess|full access/.test(t)) return 'Annual Plan';
-      if (/bundle/.test(t)) return 'Bundle';
-      if (/mock/.test(t)) return 'Mock Exam';
-      if (/revision/.test(t)) return 'Revision Course';
-      if (/note|study material/.test(t)) return 'Study Notes';
-      return 'Full Course';
-    }
-    function cleanLabel(name){
-      return String(name || '').replace(/\\s+-\\s+Draft$/i, '').replace(/\\s+Draft$/i, '').replace(/\\s+-\\s+Backup$/i, '').replace(/\\s+Backup$/i, '').trim();
-    }
-    function courseKey(course, qual, level){
-      var t = textKey(course);
-      var codes = ['fa1','ma1','fa2','ma2','fbt','fab','fma','ffa','sbl','sbr','afm','apm','atx','aaa','ba1','ba2','ba3','ba4','e1','p1','f1','e2','p2','f2','e3','p3','f3','cma1','cma2','cia1','cia2','cia3','dipifr','certifr','bt','ma','fa','lw','pm','tx','fr','aa','fm'];
-      var prefix = (qual + '-' + level).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-      for (var i=0;i<codes.length;i++){ if (hasWord(t, codes[i])) return prefix + '-' + codes[i]; }
-      return prefix + '-' + cleanLabel(course.name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-    }
-    function buildGroups(courses){
-      var map = {};
-      courses.forEach(function(course, index){
-        var qual = getQualification(course);
-        var levels = getCourseLevels(course);
-        levels.forEach(function(level){
-          var key = courseKey(course, qual, level);
-          var option = inferOption(course);
-          if (!map[key]) map[key] = { key: key, qual: qual, level: level, label: cleanLabel(course.name), order: course.sortOrder || index, urls: {}, options: [] };
-          if (option === 'Full Course' || map[key].label.length > cleanLabel(course.name).length) map[key].label = cleanLabel(course.name);
-          map[key].urls[option] = course.url || '#';
-          if (map[key].options.indexOf(option) === -1) map[key].options.push(option);
-        });
-      });
-      return Object.keys(map).map(function(key){ return map[key]; });
-    }
-    function optionSort(a,b){
-      var order = ['Full Course','Revision Course','Mock Exam','Study Notes','Bundle','Annual Plan','Coming Soon'];
-      return (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b));
-    }
-    function urlFor(row){ return row.urls[state.option] || row.urls['Full Course'] || row.urls[row.options[0]] || '#'; }
-    function filteredRows(){
-      return rows.filter(function(row){
-        return (!state.qual || row.qual === state.qual) && (!state.level || row.level === state.level) && (!state.course || row.key === state.course);
-      });
-    }
-    function unique(items, getValue, getLabel){
-      var seen = {};
-      var output = [];
-      items.forEach(function(item){
-        var value = getValue(item);
-        if (!value || seen[value]) return;
-        seen[value] = true;
-        output.push({ value: value, label: getLabel(item) });
-      });
-      return output;
-    }
-    function populate(select, items, placeholder){
-      if (!select) return;
-      select.innerHTML = '<option value="">' + esc(placeholder) + '</option>';
-      items.forEach(function(item){
-        var opt = document.createElement('option');
-        opt.value = item.value;
-        opt.textContent = item.label;
-        select.appendChild(opt);
-      });
-    }
-    function setStep(n, mode){
-      var el = root.querySelector('[data-step="' + n + '"]');
-      if (!el) return;
-      el.className = 'dd-step' + (mode === 'active' ? ' active' : mode === 'done' ? ' done' : '');
-      el.textContent = mode === 'done' ? 'OK' : String(n);
-    }
-    function resetFrom(stage){
-      if (stage <= 2) { populate($('level'), [], ui.levelPlaceholder); if ($('level')) { $('level').disabled = true; $('level').classList.remove('selected'); } }
-      if (stage <= 3) { populate($('course'), [], ui.coursePlaceholder); if ($('course')) { $('course').disabled = true; $('course').classList.remove('selected'); } }
-      if (stage <= 4) { populate($('option'), [], ui.optionPlaceholder); if ($('option')) { $('option').disabled = true; $('option').classList.remove('selected'); } }
-      if ($('message')) $('message').classList.remove('visible');
-      updateFindButton();
-    }
-    function updateFindButton(){ if ($('find')) $('find').disabled = !(state.course && state.option); }
-    function updateStats(){
-      var quals = {};
-      rows.forEach(function(row){ quals[row.qual] = true; });
-      if ($('stat-courses')) $('stat-courses').textContent = String(rawCourses.length);
-      if ($('stat-quals')) $('stat-quals').textContent = String(Object.keys(quals).length);
-      if ($('stat-papers')) $('stat-papers').textContent = String(rows.length);
-    }
-    function initDropdowns(){
-      populate($('qual'), unique(rows, function(row){ return row.qual; }, function(row){ return row.qual; }), ui.qualificationPlaceholder);
-    }
-    function onQualChange(){
-      state.qual = $('qual') ? $('qual').value : '';
-      state.level = ''; state.course = ''; state.option = '';
-      resetFrom(2);
-      if ($('qual')) $('qual').classList.toggle('selected', !!state.qual);
-      if (!state.qual) { setStep(1,'active'); setStep(2,''); setStep(3,''); setStep(4,''); }
-      else {
-        setStep(1,'done'); setStep(2,'active');
-        populate($('level'), unique(filteredRows(), function(row){ return row.level; }, function(row){ return row.level || 'Other Courses'; }), ui.levelPlaceholder);
-        if ($('level')) $('level').disabled = false;
-      }
-    }
-    function onLevelChange(){
-      state.level = $('level') ? $('level').value : '';
-      state.course = ''; state.option = '';
-      resetFrom(3);
-      if ($('level')) $('level').classList.toggle('selected', !!state.level);
-      if (!state.level) { setStep(2,'active'); setStep(3,''); setStep(4,''); }
-      else {
-        setStep(2,'done'); setStep(3,'active');
-        populate($('course'), unique(filteredRows(), function(row){ return row.key; }, function(row){ return row.label; }), ui.coursePlaceholder);
-        if ($('course')) $('course').disabled = false;
-      }
-    }
-    function onCourseChange(){
-      state.course = $('course') ? $('course').value : '';
-      state.option = '';
-      resetFrom(4);
-      if ($('course')) $('course').classList.toggle('selected', !!state.course);
-      if (!state.course) { setStep(3,'active'); setStep(4,''); }
-      else {
-        setStep(3,'done'); setStep(4,'active');
-        var selected = rows.filter(function(row){ return row.key === state.course; })[0];
-        populate($('option'), (selected ? selected.options.slice().sort(optionSort) : []).map(function(option){ return { value: option, label: option }; }), ui.optionPlaceholder);
-        if ($('option')) $('option').disabled = false;
-      }
-      updateFindButton();
-    }
-    function onOptionChange(){
-      state.option = $('option') ? $('option').value : '';
-      if ($('option')) $('option').classList.toggle('selected', !!state.option);
-      setStep(4, state.option ? 'done' : 'active');
-      if ($('message')) $('message').classList.remove('visible');
-      updateFindButton();
-    }
-    function onFindClick(){
-      var selected = rows.filter(function(row){ return row.key === state.course; })[0];
-      if (!selected || !state.option) {
-        if ($('message')) $('message').classList.add('visible');
-        return;
-      }
-      window.location.href = urlFor(selected);
-    }
-
-    rows = buildGroups(Array.isArray(rawCourses) ? rawCourses : []);
-    if (!rows.length) {
-      if ($('message')) {
-        $('message').textContent = 'Unable to load courses right now.';
-        $('message').classList.add('visible');
-      }
-      return;
-    }
-
-    root.addEventListener('change', function(e){
-      var target = e.target;
-      if (!target || !target.getAttribute) return;
-      var role = target.getAttribute('data-role');
-      if (role === 'qual') onQualChange();
-      else if (role === 'level') onLevelChange();
-      else if (role === 'course') onCourseChange();
-      else if (role === 'option') onOptionChange();
-    });
-    root.addEventListener('click', function(e){
-      var target = e.target;
-      if (!target || !target.closest) return;
-      if (target.closest('[data-role="find"]')) onFindClick();
-    });
-
-    updateStats();
-    initDropdowns();
-  }
-
-  function boot(){
-    if (booted) return;
-    booted = true;
-    var root = document.getElementById(ROOT_ID);
-    if (!root) return;
-
-    function start(rawCourses, config){
-      init(root, rawCourses || [], mergeConfig(config));
-    }
-
-    fetch(API + '?t=' + Date.now(), { mode: 'cors', cache: 'no-store' })
-      .then(function(r){
-        if (!r.ok) throw new Error('VLS Course Finder Banner API returned ' + r.status);
-        return r.json();
-      })
-      .then(function(data){
-        start(data.courses || [], data.config);
-      })
-      .catch(function(err){
-        if (window.console && console.warn) console.warn('VLS Course Finder Banner:', err.message || err);
-        start(FALLBACK.courses || [], FALLBACK.config);
-      });
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
-})();
-</script>`;
+<script type="application/json" id="vls-cfb-fallback">${escapeScriptJson(fallback)}</script>
+<script data-cfasync="false" type="text/javascript" src="${escapeHtml(runtimeScriptUrl(COURSE_FINDER_BANNER_API_URL))}" data-vls-cfb-api="${escapeHtml(COURSE_FINDER_BANNER_API_URL)}"><\/script>`;
 }
