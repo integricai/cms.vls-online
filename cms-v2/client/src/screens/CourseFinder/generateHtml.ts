@@ -578,6 +578,21 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[], rawConfi
     });
     return output;
   }
+  function qualificationSortRank(name){
+    var order = ['ACCA', 'CIMA', 'CMA', 'Other'];
+    var upper = String(name || '').trim().toUpperCase();
+    for (var i = 0; i < order.length; i++) {
+      if (order[i].toUpperCase() === upper) return i;
+    }
+    return 100;
+  }
+  function sortQualificationItems(items){
+    return items.slice().sort(function(a, b){
+      var diff = qualificationSortRank(a.value) - qualificationSortRank(b.value);
+      if (diff !== 0) return diff;
+      return String(a.label).localeCompare(String(b.label));
+    });
+  }
   function resetFrom(stage){
     if (stage <= 2) { $('level').innerHTML = '<option value="">' + esc(ui.levelPlaceholder) + '</option>'; $('level').disabled = true; $('level').classList.remove('selected'); }
     if (stage <= 3) { $('course').innerHTML = '<option value="">' + esc(ui.coursePlaceholder) + '</option>'; $('course').disabled = true; $('course').classList.remove('selected'); }
@@ -630,7 +645,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[], rawConfi
     $('stat-papers').textContent = String(rows.length);
   }
   function initDropdowns(){
-    var qualItems = unique(rows, function(row){ return row.qual; }, function(row){ return row.qual; });
+    var qualItems = sortQualificationItems(unique(rows, function(row){ return row.qual; }, function(row){ return row.qual; }));
     populate($('qual'), qualItems, ui.qualificationPlaceholder);
   }
   $('qual').addEventListener('change', function(){

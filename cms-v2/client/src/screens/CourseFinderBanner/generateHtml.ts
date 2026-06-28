@@ -17,13 +17,32 @@ function runtimeScriptUrl(apiUrl: string): string {
   }
 }
 
+function qualificationSortRank(name: string): number {
+  const order = ['ACCA', 'CIMA', 'CMA', 'Other'];
+  const upper = String(name || '').trim().toUpperCase();
+  const index = order.findIndex(q => q.toUpperCase() === upper);
+  if (index >= 0) return index;
+  return 100;
+}
+
+function sortQualifications(values: string[]): string[] {
+  return values.slice().sort((a, b) => {
+    const diff = qualificationSortRank(a) - qualificationSortRank(b);
+    return diff !== 0 ? diff : a.localeCompare(b);
+  });
+}
+
 function buildStaticQualOptions(courses: EmbeddedCourse[], placeholder: string): string {
   const seen = new Set<string>();
-  const options = [`<option value="">${escapeHtml(placeholder)}</option>`];
+  const quals: string[] = [];
   for (const course of courses) {
     const qual = String(course.qualification || 'Other').trim() || 'Other';
     if (seen.has(qual)) continue;
     seen.add(qual);
+    quals.push(qual);
+  }
+  const options = [`<option value="">${escapeHtml(placeholder)}</option>`];
+  for (const qual of sortQualifications(quals)) {
     options.push(`<option value="${escapeHtml(qual)}">${escapeHtml(qual)}</option>`);
   }
   return options.join('');

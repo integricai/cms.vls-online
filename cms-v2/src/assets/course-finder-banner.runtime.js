@@ -164,6 +164,21 @@
       });
       return output;
     }
+    function qualificationSortRank(name){
+      var order = ['ACCA', 'CIMA', 'CMA', 'Other'];
+      var upper = String(name || '').trim().toUpperCase();
+      for (var i = 0; i < order.length; i++) {
+        if (order[i].toUpperCase() === upper) return i;
+      }
+      return 100;
+    }
+    function sortQualificationItems(items){
+      return items.slice().sort(function(a, b){
+        var diff = qualificationSortRank(a.value) - qualificationSortRank(b.value);
+        if (diff !== 0) return diff;
+        return String(a.label).localeCompare(String(b.label));
+      });
+    }
     function populate(select, items, placeholder){
       if (!select) return;
       select.innerHTML = '<option value="">' + esc(placeholder) + '</option>';
@@ -196,7 +211,7 @@
       if ($('stat-papers')) $('stat-papers').textContent = String(rows.length);
     }
     function initDropdowns(){
-      populate($('qual'), unique(rows, function(row){ return row.qual; }, function(row){ return row.qual; }), ui.qualificationPlaceholder);
+      populate($('qual'), sortQualificationItems(unique(rows, function(row){ return row.qual; }, function(row){ return row.qual; })), ui.qualificationPlaceholder);
     }
     function onQualChange(){
       state.qual = $('qual') ? $('qual').value : '';
