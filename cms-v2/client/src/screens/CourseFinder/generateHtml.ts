@@ -443,6 +443,30 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[], rawConfi
       .replace(/\\s+Backup$/i, '')
       .trim();
   }
+  function isAlternateLanguage(course){
+    var t = textKey(course);
+    if (/urdu|hindi/.test(t)) return true;
+    var url = String(course.url || course.slug || '').toLowerCase();
+    return /urdu|hindi/.test(url);
+  }
+  function languageKeySuffix(course){
+    return isAlternateLanguage(course) ? '-urdu-hindi' : '';
+  }
+  function preferCourseLabel(current, candidate, course){
+    var cur = cleanLabel(current);
+    var next = cleanLabel(candidate);
+    var curAlt = /urdu|hindi/i.test(cur);
+    var nextAlt = isAlternateLanguage(course);
+    if (curAlt && !nextAlt) return next;
+    if (!curAlt && nextAlt) return cur;
+    return next.length < cur.length ? next : cur;
+  }
+  function compareCourseRows(a, b){
+    var aAlt = /urdu|hindi/i.test(a.label) ? 1 : 0;
+    var bAlt = /urdu|hindi/i.test(b.label) ? 1 : 0;
+    if (aAlt !== bAlt) return aAlt - bAlt;
+    return (a.order || 0) - (b.order || 0);
+  }
   function levelStyleKey(label){
     var clean = cleanValue(label, '').toLowerCase();
     for (var levelKey in levelStyle) {
@@ -472,7 +496,8 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[], rawConfi
     var t = textKey(course);
     var codes = ['fa1','ma1','fa2','ma2','fbt','fab','fma','ffa','sbl','sbr','afm','apm','atx','aaa','ba1','ba2','ba3','ba4','e1','p1','f1','e2','p2','f2','e3','p3','f3','cma1','cma2','cia1','cia2','cia3','dipifr','certifr','bt','ma','fa','lw','pm','tx','fr','aa','fm'];
     var prefix = (qual + '-' + level).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-    for (var i=0;i<codes.length;i++){ if (hasWord(t, codes[i])) return prefix + '-' + codes[i]; }
+    var langSuffix = languageKeySuffix(course);
+    for (var i=0;i<codes.length;i++){ if (hasWord(t, codes[i])) return prefix + '-' + codes[i] + langSuffix; }
     return prefix + '-' + cleanLabel(course.name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   }
   function buildGroups(){
@@ -489,7 +514,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[], rawConfi
             urls: {}, options: [], sourceNames: []
           };
         }
-        if (option === 'Full Course' || map[key].label.length > cleanLabel(course.name).length) map[key].label = cleanLabel(course.name);
+        map[key].label = preferCourseLabel(map[key].label, course.name, course);
         map[key].urls[option] = course.url || '#';
         if (map[key].options.indexOf(option) === -1) map[key].options.push(option);
         map[key].sourceNames.push(cleanLabel(course.name));
@@ -534,7 +559,12 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[], rawConfi
     var copy = items.slice();
     if (state.sort === 'az') copy.sort(function(a,b){ return a.label.localeCompare(b.label); });
     else if (state.sort === 'level') copy.sort(function(a,b){ return (a.qual + levelLabel(a.level) + a.label).localeCompare(b.qual + levelLabel(b.level) + b.label); });
-    else copy.sort(function(a,b){ return a.order - b.order; });
+    else copy.sort(function(a,b){
+      var aAlt = /urdu|hindi/i.test(a.label) ? 1 : 0;
+      var bAlt = /urdu|hindi/i.test(b.label) ? 1 : 0;
+      if (aAlt !== bAlt) return aAlt - bAlt;
+      return a.order - b.order;
+    });
     return copy;
   }
   function unique(items, getValue, getLabel){
@@ -622,7 +652,7 @@ export function generateCourseFinderHtml(courses: CourseFinderCourse[], rawConfi
     if (!state.level) { setStep(2,'active'); setStep(3,''); setStep(4,''); }
     else {
       setStep(2,'done'); setStep(3,'active');
-      populate($('course'), unique(filteredRows(), function(row){ return row.key; }, function(row){ return row.label; }), ui.coursePlaceholder);
+      populate($('course'), unique(filteredRows().slice().sort(compareCourseRows), function(row){ return row.key; }, function(row){ return row.label; }), ui.coursePlaceholder);
       $('course').disabled = false;
     }
     renderList();
