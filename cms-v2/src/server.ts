@@ -24,8 +24,10 @@ import { getContent, upsertContent } from './models/content';
 import { listBlogPosts } from './models/blog';
 import { getBlogAsset } from './models/blogAsset';
 import { blogTopicSlug, renderBlogArticle, renderBlogLanding } from './services/blogRender';
+import { listActiveCourses } from './models/course';
 import { listCoursePrices } from './models/coursePrice';
 import { listPublicBooks } from './models/book';
+import { mapActiveCoursesForFinder } from './services/courseFinderPublish';
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
@@ -92,6 +94,30 @@ app.post('/api/publish-header', authGuard, requireRole('admin', 'editor'), async
     const config = req.body?.config ?? null;
     const row = await upsertContent('vls-header-config', { config }, req.user!.userId);
     return res.json({ ok: true, data: row, config });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/api/publish-course-finder-banner', (_req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.status(204).end();
+});
+
+app.get('/api/publish-course-finder-banner', async (_req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const [courses, configRow] = await Promise.all([
+      listActiveCourses(),
+      getContent('vls-course-finder-banner-config'),
+    ]);
+    const config = configRow?.data && typeof configRow.data === 'object' ? configRow.data : null;
+    return res.json({
+      courses: mapActiveCoursesForFinder(courses),
+      config,
+    });
   } catch (err) {
     next(err);
   }

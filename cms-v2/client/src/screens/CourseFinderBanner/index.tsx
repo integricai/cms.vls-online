@@ -70,14 +70,19 @@ export default function CourseFinderBannerScreen() {
     try {
       await api.put(`/content/${CONTENT_KEY}`, config);
       setSavedConfig(true);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to save Course Finder Banner settings');
+      return false;
     } finally {
       setSavingConfig(false);
     }
   }
 
-  function generateHtml() {
+  async function generateHtml() {
+    setError('');
+    const saved = await saveConfig();
+    if (!saved) return;
     setPreviewHtml(wrapGeneratedHtml('Course Finder Banner', generateCourseFinderBannerHtml(courses, config)));
     setActiveTab('preview');
   }
@@ -100,12 +105,12 @@ export default function CourseFinderBannerScreen() {
       <div className="w-[480px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
         <div className="sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4">
           <h1 className="text-base font-bold text-slate-900">Course Finder Banner</h1>
-          <p className="mt-0.5 text-xs text-slate-400">Dropdown-only banner for reusable page inserts</p>
+          <p className="mt-0.5 text-xs text-slate-400">Dropdown banner for Zenler — paste once, course data loads live from the CMS API</p>
         </div>
 
         <div className="flex gap-2 border-b border-slate-100 bg-white px-5 py-3">
-          <button onClick={generateHtml} className="btn-success flex-1 justify-center">
-            Generate HTML
+          <button onClick={() => void generateHtml()} className="btn-success flex-1 justify-center" disabled={savingConfig}>
+            {savingConfig ? 'Saving...' : 'Save & Generate HTML'}
           </button>
           <button onClick={loadData} className="btn-ghost flex-1 justify-center" disabled={loading}>
             Refresh
@@ -122,7 +127,7 @@ export default function CourseFinderBannerScreen() {
               </div>
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-500">
-              This component reads from the local course table. Zenler sync is managed only from the course table workflow.
+              Paste the generated HTML into a Zenler custom HTML block. Filters fetch active courses from the CMS API on page load, so course updates apply without re-pasting.
             </p>
           </div>
 
@@ -193,7 +198,7 @@ export default function CourseFinderBannerScreen() {
                 activeTab === tab ? 'border-brand text-brand' : 'border-transparent text-slate-400 hover:text-slate-700'
               }`}
             >
-              {tab === 'html' ? 'HTML' : 'Preview'}
+              {tab === 'html' ? 'HTML (Zenler Paste)' : 'Preview'}
             </button>
           ))}
         </div>
