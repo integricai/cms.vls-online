@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
 import {
   listActiveCourses,
+  listBannerCourses,
   listCourseDropdownOptions,
   listCourses,
   reorderCourses,
@@ -128,6 +129,15 @@ router.get('/active', async (_req: Request, res: Response, next: NextFunction) =
   }
 });
 
+router.get('/banner', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const courses = await listBannerCourses();
+    return res.json({ ok: true, data: courses });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/dropdown-options', requireRole('admin', 'editor'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const options = await listCourseDropdownOptions();
@@ -183,6 +193,7 @@ router.put('/:id', requireRole('admin', 'editor'), async (req: Request, res: Res
 
     const course = await updateCourseAdminMetadata(id, {
       isActive: typeof req.body.isActive === 'boolean' ? req.body.isActive : undefined,
+      enableInBanner: typeof req.body.enableInBanner === 'boolean' ? req.body.enableInBanner : undefined,
       sortOrder: Number.isInteger(req.body.sortOrder) ? req.body.sortOrder : undefined,
       qualification: req.body.qualification === undefined ? undefined : (req.body.qualification || null),
       courseLevel: req.body.courseLevel === undefined ? undefined : (req.body.courseLevel || null),

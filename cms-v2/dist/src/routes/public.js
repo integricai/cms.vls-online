@@ -1,9 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const fs_1 = require("fs");
+const path_1 = require("path");
 const content_1 = require("../models/content");
 const book_1 = require("../models/book");
 const router = (0, express_1.Router)();
+const COURSE_FINDER_BANNER_RUNTIME = (0, fs_1.readFileSync)((0, path_1.join)(process.cwd(), 'cms-v2/src/assets/course-finder-banner.runtime.js'), 'utf8');
 const PUBLIC_CONTENT_TTL_MS = 60000;
 const PUBLIC_CONTENT_STALE_MS = 30 * 60000;
 const publicContentCache = new Map();
@@ -114,6 +117,17 @@ router.get('/footer-updater.js', (_req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.type('application/javascript');
     res.send(FOOTER_UPDATER_SCRIPT);
+});
+router.options('/course-finder-banner.js', (_req, res) => {
+    allowPublicCors(res);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.status(204).end();
+});
+router.get('/course-finder-banner.js', (_req, res) => {
+    allowPublicCors(res);
+    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    res.type('application/javascript');
+    res.send(COURSE_FINDER_BANNER_RUNTIME);
 });
 router.options('/events', (_req, res) => {
     allowPublicCors(res);

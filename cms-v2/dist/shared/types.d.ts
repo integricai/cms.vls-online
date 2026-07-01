@@ -61,6 +61,7 @@ export interface Course {
     status: string | null;
     zenlerUrl: string | null;
     isActive: boolean;
+    enableInBanner: boolean;
     sortOrder: number;
     qualification: string | null;
     courseLevel: string | null;

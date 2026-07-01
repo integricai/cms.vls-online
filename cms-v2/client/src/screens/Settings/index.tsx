@@ -14,6 +14,7 @@ type Course = {
   name: string;
   status: string | null;
   isActive: boolean;
+  enableInBanner: boolean;
   sortOrder: number;
   qualification: string | null;
   courseLevel: string | null;
@@ -141,6 +142,7 @@ function CoursesTab() {
     try {
       const saved = await api.put<Course>(`/courses/${course.id}`, {
         isActive: course.isActive,
+        enableInBanner: course.enableInBanner,
         sortOrder: course.sortOrder,
         qualification: course.qualification,
         courseLevel: course.courseLevel,
@@ -162,6 +164,7 @@ function CoursesTab() {
     try {
       const saved = await api.put<Course>(`/courses/${course.id}`, {
         isActive,
+        enableInBanner: course.enableInBanner,
         sortOrder: course.sortOrder,
         qualification: course.qualification,
         courseLevel: course.courseLevel,
@@ -172,6 +175,29 @@ function CoursesTab() {
     } catch (e) {
       patchCourse(course.id, { isActive: course.isActive });
       setSyncError((e instanceof Error ? e.message : null) || 'Course enabled state save failed.');
+    } finally {
+      setSavingCourseId(null);
+    }
+  }
+
+  async function saveCourseBannerEnabled(course: Course, enableInBanner: boolean) {
+    patchCourse(course.id, { enableInBanner });
+    setSavingCourseId(course.id);
+    setSyncError(null);
+    try {
+      const saved = await api.put<Course>(`/courses/${course.id}`, {
+        isActive: course.isActive,
+        enableInBanner,
+        sortOrder: course.sortOrder,
+        qualification: course.qualification,
+        courseLevel: course.courseLevel,
+        courseLevels: course.courseLevels || [],
+        courseOption: course.courseOption,
+      });
+      patchCourse(course.id, saved);
+    } catch (e) {
+      patchCourse(course.id, { enableInBanner: course.enableInBanner });
+      setSyncError((e instanceof Error ? e.message : null) || 'Banner enabled state save failed.');
     } finally {
       setSavingCourseId(null);
     }
@@ -314,7 +340,7 @@ function CoursesTab() {
         {loading ? 'Loading courses…' : `${courses.length} Course${courses.length !== 1 ? 's' : ''}`}
       </h3>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-xs text-slate-500">Drag rows to sort. Enabled saves immediately; save each row after changing dropdowns.</p>
+        <p className="text-xs text-slate-500">Drag rows to sort. Enabled and Enable in Banner save immediately; save each row after changing dropdowns.</p>
         <button onClick={saveOrder} disabled={!orderDirty || savingOrder} className="btn-primary">
           {savingOrder ? 'Saving...' : orderDirty ? 'Save Course Order' : 'Order Saved'}
         </button>
@@ -324,7 +350,7 @@ function CoursesTab() {
       )}
       {!loading && courses.length > 0 && (
         <div className="overflow-auto rounded-lg border border-slate-200 bg-white">
-          <table className="min-w-[1180px] w-full text-xs">
+          <table className="min-w-[1280px] w-full text-xs">
             <thead className="bg-slate-50">
               <tr className="border-b border-slate-200 text-left text-slate-500">
                 <th className="px-3 py-2 font-semibold">Sort</th>
@@ -332,6 +358,7 @@ function CoursesTab() {
                 <th className="px-3 py-2 font-semibold">Zenler ID</th>
                 <th className="px-3 py-2 font-semibold">Status</th>
                 <th className="px-3 py-2 font-semibold">Enabled</th>
+                <th className="px-3 py-2 font-semibold">Enable in Banner</th>
                 <th className="px-3 py-2 font-semibold">Qualification</th>
                 <th className="px-3 py-2 font-semibold">Level</th>
                 <th className="px-3 py-2 font-semibold">Course Option</th>
@@ -378,6 +405,15 @@ function CoursesTab() {
                       checked={c.isActive}
                       disabled={savingCourseId === c.id}
                       onChange={event => saveCourseActive(c, event.target.checked)}
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={c.enableInBanner}
+                      disabled={savingCourseId === c.id || !c.isActive}
+                      title={c.isActive ? undefined : 'Enable the course first'}
+                      onChange={event => saveCourseBannerEnabled(c, event.target.checked)}
                     />
                   </td>
                   <td className="px-3 py-2">

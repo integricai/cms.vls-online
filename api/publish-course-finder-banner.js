@@ -57,7 +57,7 @@ export default async function handler(req, res) {
                ) AS course_levels
         FROM courses c
         LEFT JOIN course_levels cl ON cl.course_id = c.id
-        WHERE c.is_active = true
+        WHERE c.is_active = true AND c.enable_in_banner = true
         GROUP BY c.id
         ORDER BY c.sort_order ASC, c.name ASC
       `,

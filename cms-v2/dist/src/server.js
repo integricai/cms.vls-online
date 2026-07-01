@@ -61,8 +61,10 @@ const content_2 = require("./models/content");
 const blog_2 = require("./models/blog");
 const blogAsset_1 = require("./models/blogAsset");
 const blogRender_1 = require("./services/blogRender");
+const course_1 = require("./models/course");
 const coursePrice_1 = require("./models/coursePrice");
 const book_1 = require("./models/book");
+const courseFinderPublish_1 = require("./services/courseFinderPublish");
 const app = (0, express_1.default)();
 const PORT = Number(process.env.PORT ?? 3001);
 // ── Middleware ────────────────────────────────────────────────────
@@ -119,6 +121,29 @@ app.post('/api/publish-header', authGuard_1.authGuard, (0, authGuard_1.requireRo
         const config = req.body?.config ?? null;
         const row = await (0, content_2.upsertContent)('vls-header-config', { config }, req.user.userId);
         return res.json({ ok: true, data: row, config });
+    }
+    catch (err) {
+        next(err);
+    }
+});
+app.options('/api/publish-course-finder-banner', (_req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.status(204).end();
+});
+app.get('/api/publish-course-finder-banner', async (_req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+        const [courses, configRow] = await Promise.all([
+            (0, course_1.listBannerCourses)(),
+            (0, content_2.getContent)('vls-course-finder-banner-config'),
+        ]);
+        const config = configRow?.data && typeof configRow.data === 'object' ? configRow.data : null;
+        return res.json({
+            courses: (0, courseFinderPublish_1.mapActiveCoursesForFinder)(courses),
+            config,
+        });
     }
     catch (err) {
         next(err);
@@ -210,6 +235,22 @@ app.get('/blog/:topic/:slug', async (req, res, next) => {
         const post = posts.find(item => item.status === 'published'
             && item.slug === req.params.slug
             && (0, blogRender_1.blogTopicSlug)(item.topic) === req.params.topic);
+        if (!post)
+            return res.status(404).send('Blog post not found');
+        const settingsRow = await (0, content_2.getContent)('vls-blog-settings');
+        const settings = settingsRow?.data && typeof settingsRow.data === 'object' ? settingsRow.data : {};
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-store');
+        return res.send((0, blogRender_1.renderBlogArticle)(post, settings, posts));
+    }
+    catch (err) {
+        next(err);
+    }
+});
+app.get('/blog/:slug', async (req, res, next) => {
+    try {
+        const posts = await (0, blog_2.listBlogPosts)();
+        const post = posts.find(item => item.status === 'published' && item.slug === req.params.slug);
         if (!post)
             return res.status(404).send('Blog post not found');
         const settingsRow = await (0, content_2.getContent)('vls-blog-settings');

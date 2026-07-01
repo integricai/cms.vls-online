@@ -49,7 +49,7 @@ export default function CourseFinderBannerScreen() {
     setLoading(true);
     try {
       const [rows, configRow] = await Promise.all([
-        api.get<CourseFinderCourse[]>('/courses/active'),
+        api.get<CourseFinderCourse[]>('/courses/banner'),
         api.get<{ data: Partial<CourseFinderConfig> }>(`/content/${CONTENT_KEY}`).catch(() => null),
       ]);
       const saved = normalizeCourseFinderConfig({ ...defaultCourseFinderBannerConfig, ...(configRow?.data || {}) });
@@ -123,7 +123,7 @@ export default function CourseFinderBannerScreen() {
             <div className="grid grid-cols-1 gap-2">
               <div className="rounded-md border border-slate-200 bg-white p-3">
                 <div className="text-2xl font-bold text-slate-900">{courses.length}</div>
-                <div className="text-xs text-slate-400">Active courses</div>
+                <div className="text-xs text-slate-400">Banner courses</div>
               </div>
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-500">
