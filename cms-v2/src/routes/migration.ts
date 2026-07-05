@@ -66,12 +66,25 @@ router.post('/storyblok/verify', async (req: Request, res: Response, next: NextF
   }
 });
 
+function storyblokErrorStatus(status: number): number {
+  // Never forward Storyblok 401/403 — the CMS client treats any 401 as a session logout.
+  if (status === 401 || status === 403) return 400;
+  if (status >= 500) return 502;
+  return 400;
+}
+
 router.use((err: Error, _req: Request, res: Response, next: NextFunction) => {
   if (err instanceof CourseMigrationError || err instanceof CoursePageScrapeError) {
     return res.status(err.status).json({ ok: false, error: err.message });
   }
   if (err instanceof StoryblokApiError) {
-    return res.status(err.status).json({ ok: false, error: err.message, data: err.details });
+    return res.status(storyblokErrorStatus(err.status)).json({
+      ok: false,
+      error: err.status === 401
+        ? 'Storyblok rejected the access token. Check the token and region, then try again.'
+        : err.message,
+      data: err.details,
+    });
   }
   return next(err);
 });

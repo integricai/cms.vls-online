@@ -7,6 +7,7 @@ const STORAGE_KEY = 'vls-content-migration-config';
 
 type SavedConfig = {
   storyblokSpaceId: string;
+  storyblokAccessToken: string;
   storyblokRegion: StoryblokRegion;
 };
 
@@ -27,14 +28,17 @@ function statusClass(type: StatusMessage['type']): string {
 function loadSavedConfig(): SavedConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { storyblokSpaceId: '', storyblokRegion: 'eu' };
+    if (!raw) {
+      return { storyblokSpaceId: '', storyblokAccessToken: '', storyblokRegion: 'eu' };
+    }
     const parsed = JSON.parse(raw) as SavedConfig;
     return {
       storyblokSpaceId: parsed.storyblokSpaceId ?? '',
+      storyblokAccessToken: parsed.storyblokAccessToken ?? '',
       storyblokRegion: parsed.storyblokRegion === 'us' ? 'us' : 'eu',
     };
   } catch {
-    return { storyblokSpaceId: '', storyblokRegion: 'eu' };
+    return { storyblokSpaceId: '', storyblokAccessToken: '', storyblokRegion: 'eu' };
   }
 }
 
@@ -42,7 +46,7 @@ export default function ContentMigrationTab() {
   const saved = loadSavedConfig();
   const [pageUrl, setPageUrl] = useState('');
   const [storyblokSpaceId, setStoryblokSpaceId] = useState(saved.storyblokSpaceId);
-  const [storyblokAccessToken, setStoryblokAccessToken] = useState('');
+  const [storyblokAccessToken, setStoryblokAccessToken] = useState(saved.storyblokAccessToken);
   const [storyblokRegion, setStoryblokRegion] = useState<StoryblokRegion>(saved.storyblokRegion);
   const [publish, setPublish] = useState(false);
   const [previewing, setPreviewing] = useState(false);
@@ -52,8 +56,12 @@ export default function ContentMigrationTab() {
   const [result, setResult] = useState<CourseMigrationResult | null>(null);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ storyblokSpaceId, storyblokRegion }));
-  }, [storyblokSpaceId, storyblokRegion]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      storyblokSpaceId,
+      storyblokAccessToken,
+      storyblokRegion,
+    }));
+  }, [storyblokSpaceId, storyblokAccessToken, storyblokRegion]);
 
   function buildPayload(dryRun = false) {
     return {
