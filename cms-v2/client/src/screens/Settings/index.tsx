@@ -4,9 +4,10 @@ import MenuManagement from '../MenuManagement';
 import UserManagement from '../UserManagement';
 import Books from '../Books';
 import DiscountCodes from '../DiscountCodes';
+import ContentMigrationTab from '../ContentMigration';
 import type { CoursePriceRecord, ScrapedCoursePrice } from '../../../../shared/types';
 
-type Tab = 'menu' | 'courses' | 'coursePricing' | 'books' | 'discountCodes' | 'payments' | 'users';
+type Tab = 'menu' | 'courses' | 'coursePricing' | 'contentMigration' | 'books' | 'discountCodes' | 'payments' | 'users';
 
 type Course = {
   id: number;
@@ -714,6 +715,7 @@ const TAB_LABELS: Record<Tab, string> = {
   menu: 'Menu Settings',
   courses: 'Courses',
   coursePricing: 'Course Pricing',
+  contentMigration: 'Content Migration',
   books: 'Books',
   discountCodes: 'Discount Codes',
   payments: 'Payments',
@@ -747,6 +749,7 @@ export default function Settings() {
         {tab === 'menu'     && <MenuManagement />}
         {tab === 'courses'  && <CoursesTab />}
         {tab === 'coursePricing' && <CoursePricingTab />}
+        {tab === 'contentMigration' && <ContentMigrationTab />}
         {tab === 'books'    && <Books />}
         {tab === 'discountCodes' && <DiscountCodes />}
         {tab === 'payments' && <PaymentsTab />}

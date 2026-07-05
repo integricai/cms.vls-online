@@ -56,6 +56,7 @@ const payments_1 = __importStar(require("./routes/payments"));
 const activity_1 = __importDefault(require("./routes/activity"));
 const trustpilot_1 = __importDefault(require("./routes/trustpilot"));
 const table_1 = __importDefault(require("./routes/table"));
+const migration_1 = __importDefault(require("./routes/migration"));
 const errorAlert_1 = require("./utils/errorAlert");
 const content_2 = require("./models/content");
 const blog_2 = require("./models/blog");
@@ -218,6 +219,7 @@ app.use('/api/payments', payments_1.default);
 app.use('/api/activity', activity_1.default);
 app.use('/api/trustpilot', trustpilot_1.default);
 app.use('/api/table', table_1.default);
+app.use('/api/migration', migration_1.default);
 app.use('/api/public', public_1.default);
 app.get('/blog', async (_req, res, next) => {
     try {
