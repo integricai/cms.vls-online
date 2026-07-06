@@ -13,120 +13,188 @@ function blokUid(): string {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 12);
 }
 
-function richTextParagraph(text: string): string {
-  return `<p>${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`;
+function storyblokLink(url: string | undefined): Record<string, string> | undefined {
+  const trimmed = url?.trim();
+  if (!trimmed) return undefined;
+  return { linktype: 'url', url: trimmed, cached_url: trimmed };
 }
 
-function buildHeroRightRichtext(scraped: ScrapedCoursePage): string {
-  if (!scraped.heroRight?.items.length) return '';
-  const lines = scraped.heroRight.items.map(item => {
-    const parts = [`<strong>${item.title}</strong>`];
-    if (item.description) parts.push(item.description);
-    if (item.badge) parts.push(`(${item.badge})`);
-    return `<li>${parts.join(' — ')}</li>`;
-  });
-  const heading = scraped.heroRight.label || 'This course includes';
-  return `<h3>${heading}</h3><ul>${lines.join('')}</ul>`;
+function normalizeFaqQuestion(question: string): string {
+  return question.replace(/^\d+\.\s*/, '').trim();
 }
 
-function buildTabRichtext(scraped: ScrapedCoursePage): string {
-  if (!scraped.tabs.length) return '';
-  return scraped.tabs.map(tab => {
-    const heading = tab.icon ? `${tab.icon} ${tab.label}` : tab.label;
-    const body = tab.contentHtml || richTextParagraph(tab.contentText);
-    return `<h3>${heading}</h3>${body}`;
-  }).join('');
+function buildHeroLayoutBlok(
+  scraped: ScrapedCoursePage,
+  zenlerCourseId: string,
+  sourceUrl: string,
+): Record<string, unknown> | null {
+  if (!scraped.hero && !scraped.heroRight) return null;
+
+  const left = scraped.hero
+    ? [{
+        _uid: blokUid(),
+        component: 'course_hero',
+        breadcrumb: scraped.hero.breadcrumb,
+        zenler_course_id: zenlerCourseId,
+        heading: scraped.hero.heading,
+        description: scraped.hero.description,
+        learn_section_label: scraped.hero.learnLabel || "WHAT YOU'LL LEARN",
+        learn_items: scraped.hero.learnItems.map(item => ({
+          _uid: blokUid(),
+          component: 'course_hero_learn_item',
+          title: item.title,
+          subtitle: item.subtitle,
+        })),
+        schema_faq_section_id: `${sourceUrl}#faq`,
+      }]
+    : [{
+        _uid: blokUid(),
+        component: 'course_hero',
+        zenler_course_id: zenlerCourseId,
+        heading: scraped.title,
+        description: scraped.metaDescription,
+      }];
+
+  const right = scraped.heroRight
+    ? [{
+        _uid: blokUid(),
+        component: 'course_hero_right',
+        section_label: scraped.heroRight.label || 'THIS COURSE INCLUDES',
+        cta_text: scraped.heroRight.ctaText || 'Enrol Now →',
+        cta_link: storyblokLink(scraped.heroRight.ctaUrl),
+        items: scraped.heroRight.items.map(item => ({
+          _uid: blokUid(),
+          component: 'course_hero_right_item',
+          icon: item.icon,
+          title: item.title,
+          description: item.description,
+        })),
+      }]
+    : [{
+        _uid: blokUid(),
+        component: 'course_hero_right',
+        section_label: 'THIS COURSE INCLUDES',
+        items: [],
+      }];
+
+  return {
+    _uid: blokUid(),
+    component: 'course_hero_layout',
+    left,
+    right,
+  };
 }
 
-function buildLearnRichtext(scraped: ScrapedCoursePage): string {
-  if (!scraped.hero?.learnItems.length) return '';
-  const label = scraped.hero.learnLabel || "What you'll learn";
-  const items = scraped.hero.learnItems.map(item => {
-    const subtitle = item.subtitle ? ` — ${item.subtitle}` : '';
-    return `<li><strong>${item.title}</strong>${subtitle}</li>`;
-  });
-  return `<h3>${label}</h3><ul>${items.join('')}</ul>`;
+function buildIntroductionBlok(scraped: ScrapedCoursePage): Record<string, unknown> | null {
+  if (!scraped.courseDescription) return null;
+
+  const desc = scraped.courseDescription;
+  return {
+    _uid: blokUid(),
+    component: 'course_introduction',
+    title: desc.title,
+    paragraph_1: desc.introP1 || desc.introBold || desc.bodyText,
+    paragraph_2: desc.introP2 || undefined,
+  };
+}
+
+function buildTabsBlok(scraped: ScrapedCoursePage): Record<string, unknown> | null {
+  if (!scraped.tabs.length) return null;
+
+  return {
+    _uid: blokUid(),
+    component: 'course_tabs',
+    tabs: scraped.tabs.map(tab => ({
+      _uid: blokUid(),
+      component: 'course_tab',
+      icon: tab.icon,
+      label: tab.label,
+      blocks: [{
+        _uid: blokUid(),
+        component: 'course_tab_block',
+        block_type: 'heading-para',
+        heading: tab.label,
+        paragraph: tab.contentText || tab.label,
+      }],
+    })),
+  };
+}
+
+function buildFaqBlok(
+  scraped: ScrapedCoursePage,
+  zenlerCourseId: string,
+  sourceUrl: string,
+): Record<string, unknown> | null {
+  if (!scraped.faq?.items.length) return null;
+
+  return {
+    _uid: blokUid(),
+    component: 'faq_section',
+    title: scraped.faq.title || 'Frequently Asked Questions',
+    icon: scraped.faq.icon || '❔',
+    zenler_course_id: zenlerCourseId,
+    schema_id: `${sourceUrl}#faq`,
+    items: scraped.faq.items.map(item => ({
+      _uid: blokUid(),
+      component: 'faq_item',
+      answer_type: 'paragraph',
+      question: normalizeFaqQuestion(item.question),
+      answer_paragraph: item.answerText,
+    })),
+  };
+}
+
+function buildPricingBlok(
+  scraped: ScrapedCoursePage,
+  zenlerCourseId: string,
+): Record<string, unknown> | null {
+  if (!zenlerCourseId) return null;
+
+  return {
+    _uid: blokUid(),
+    component: 'course_pricing',
+    title: 'Course Pricing',
+    zenler_course_id: zenlerCourseId,
+    cta_text: scraped.heroRight?.ctaText?.replace(/\s*→\s*$/, '') || 'Enrol Now',
+    cta_link: storyblokLink(scraped.heroRight?.ctaUrl),
+  };
 }
 
 function buildStoryblokContent(scraped: ScrapedCoursePage, zenlerCourseId: string): Record<string, unknown> {
-  const heroBlok = scraped.hero ? [{
-    _uid: blokUid(),
-    component: 'section_hero',
-    eyebrow: scraped.hero.eyebrow || scraped.hero.tags.join(' · '),
-    headline: scraped.hero.heading,
-    subheadline: scraped.hero.description,
-    breadcrumb: scraped.hero.breadcrumb,
-    cta_label: scraped.heroRight?.ctaText ?? '',
-    cta_link: scraped.heroRight?.ctaUrl ?? '',
-  }] : [];
+  const sourceUrl = scraped.sourceUrl || `https://vls-online.com/courses/${scraped.slug}`;
+  const body: Record<string, unknown>[] = [];
 
-  const outcomeParts = [
-    buildLearnRichtext(scraped),
-    buildHeroRightRichtext(scraped),
-  ].filter(Boolean);
+  const heroLayout = buildHeroLayoutBlok(scraped, zenlerCourseId, sourceUrl);
+  if (heroLayout) body.push(heroLayout);
 
-  const outcomes = outcomeParts.length ? [{
-    _uid: blokUid(),
-    component: 'section_richtext',
-    content: { type: 'doc', content: [] },
-    body: outcomeParts.join('\n'),
-  }] : [];
+  const introduction = buildIntroductionBlok(scraped);
+  if (introduction) body.push(introduction);
 
-  const curriculumSummary = scraped.tabs.length ? [{
-    _uid: blokUid(),
-    component: 'section_richtext',
-    content: { type: 'doc', content: [] },
-    body: buildTabRichtext(scraped),
-  }] : [];
+  const tabs = buildTabsBlok(scraped);
+  if (tabs) body.push(tabs);
 
-  const courseDescription = scraped.courseDescription ? [{
-    _uid: blokUid(),
-    component: 'course_description',
-    icon: scraped.courseDescription.icon,
-    title: scraped.courseDescription.title,
-    intro_bold: scraped.courseDescription.introBold,
-    intro_paragraph_1: scraped.courseDescription.introP1,
-    intro_paragraph_2: scraped.courseDescription.introP2,
-    body: scraped.courseDescription.bodyHtml,
-  }] : [];
+  const faq = buildFaqBlok(scraped, zenlerCourseId, sourceUrl);
+  if (faq) body.push(faq);
 
-  const faqItems = scraped.faq?.items.map(item => ({
-    _uid: blokUid(),
-    component: 'faq_item',
-    question: item.question,
-    answer: item.answerHtml || richTextParagraph(item.answerText),
-  })) ?? [];
+  const pricing = buildPricingBlok(scraped, zenlerCourseId);
+  if (pricing) body.push(pricing);
 
-  const faq = faqItems.length ? [{
-    _uid: blokUid(),
-    component: 'section_faq',
-    title: scraped.faq?.title ?? 'Frequently Asked Questions',
-    icon: scraped.faq?.icon ?? '❔',
-    items: faqItems,
-  }] : [];
-
-  const pricing = zenlerCourseId ? [{
-    _uid: blokUid(),
-    component: 'course_price_block',
-    zenler_course_id: zenlerCourseId,
-    layout_variant: 'default',
-    show_compare: true,
-  }] : [];
+  const seo = (scraped.title || scraped.metaDescription)
+    ? [{
+        _uid: blokUid(),
+        component: 'seo',
+        title: scraped.title,
+        description: scraped.metaDescription,
+        canonical_url: sourceUrl,
+      }]
+    : [];
 
   return {
     component: 'course_page',
     title: scraped.title,
-    slug: scraped.slug,
     zenler_course_id: zenlerCourseId,
-    course_code: scraped.courseCode,
-    seo_title: scraped.title,
-    seo_description: scraped.metaDescription,
-    hero: heroBlok,
-    course_description: courseDescription,
-    outcomes,
-    curriculum_summary: curriculumSummary,
-    pricing,
-    faq,
+    seo,
+    body,
   };
 }
 
