@@ -459,17 +459,29 @@ function parseTabs(html: string): ScrapedTabPanel[] {
 }
 
 function parseFaqFromJsonLd(html: string): ScrapedCoursePage['faq'] | null {
-  const scripts = html.match(/<script[^>]*>[\s\S]*?<\/script>/gi) ?? [];
+  const scripts = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi)
+    ?? html.match(/<script[^>]*>[\s\S]*?<\/script>/gi)
+    ?? [];
+
   for (const script of scripts) {
     const jsonText = script.replace(/<\/?script[^>]*>/gi, '').trim();
     if (!jsonText.includes('FAQPage') || !jsonText.includes('mainEntity')) continue;
     try {
       const data = JSON.parse(jsonText) as {
         '@type'?: string;
+        '@graph'?: Array<{
+          '@type'?: string;
+          mainEntity?: Array<{ name?: string; acceptedAnswer?: { text?: string } }>;
+        }>;
         mainEntity?: Array<{ name?: string; acceptedAnswer?: { text?: string } }>;
       };
-      if (data['@type'] !== 'FAQPage' || !Array.isArray(data.mainEntity)) continue;
-      const items = data.mainEntity
+
+      const nodes = Array.isArray(data['@graph']) ? data['@graph'] : [data];
+      const faqNode = nodes.find(node => node['@type'] === 'FAQPage');
+      const mainEntity = faqNode?.mainEntity ?? (data['@type'] === 'FAQPage' ? data.mainEntity : undefined);
+      if (!Array.isArray(mainEntity)) continue;
+
+      const items = mainEntity
         .map(entity => ({
           question: String(entity.name ?? '').trim(),
           answerHtml: richTextParagraph(String(entity.acceptedAnswer?.text ?? '').trim()),
@@ -493,7 +505,7 @@ function parseFaq(html: string): ScrapedCoursePage['faq'] {
   const fromJson = parseFaqFromJsonLd(html);
   if (fromJson) return fromJson;
 
-  const uidMatch = html.match(/<div class="(vlsfaq[a-z0-9]+)"/i);
+  const uidMatch = html.match(/<div class="(vlsfaq[a-z0-9]+)"(?=[\s>])/i);
   if (!uidMatch) return null;
 
   const uid = uidMatch[1];
@@ -504,7 +516,7 @@ function parseFaq(html: string): ScrapedCoursePage['faq'] {
 
   const items: ScrapedFaqItem[] = [];
   const itemPattern = new RegExp(
-    `<div class="${uid}-item"[\\s\\S]*?<span class="${uid}-q"[^>]*>([\\s\\S]*?)<\\/span>[\\s\\S]*?<div itemprop="text">([\\s\\S]*?)<\\/div>`,
+    `<div[^>]*class="${uid}-item"[^>]*>[\\s\\S]*?<span[^>]*class="${uid}-q"[^>]*>([\\s\\S]*?)<\\/span>[\\s\\S]*?<div[^>]*itemprop=["']text["'][^>]*>([\\s\\S]*?)<\\/div>`,
     'gi',
   );
   for (const match of faqHtml.matchAll(itemPattern)) {
