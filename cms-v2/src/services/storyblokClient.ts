@@ -25,10 +25,49 @@ export class StoryblokApiError extends Error {
   }
 }
 
+export function normalizeStoryblokToken(token: string): string {
+  return token.trim().replace(/^Bearer\s+/i, '');
+}
+
+export function normalizeStoryblokSpaceId(spaceId: string): string {
+  const trimmed = spaceId.trim();
+  const match = trimmed.match(/(\d{4,})/);
+  return match?.[1] ?? trimmed;
+}
+
 function managementBase(region: StoryblokRegion): string {
   return region === 'us'
     ? 'https://api-us.storyblok.com/v1'
     : 'https://mapi.storyblok.com/v1';
+}
+
+function formatStoryblokError(status: number, payload: unknown): string {
+  if (status === 401) {
+    return [
+      'Storyblok authentication failed.',
+      'Use a Personal access token from My account → Account settings → Personal access tokens.',
+      'Do not use the Preview/Public token from Space settings → Access tokens.',
+      'The token needs Stories (read + write) scope and access to this space.',
+      'Also confirm the region matches your space (EU vs US).',
+    ].join(' ');
+  }
+
+  if (status === 404) {
+    return 'Storyblok space not found. Check the numeric space ID in Space settings → General.';
+  }
+
+  if (payload && typeof payload === 'object') {
+    const record = payload as Record<string, unknown>;
+    if (typeof record.error === 'string' && record.error.trim()) return record.error;
+    if (Array.isArray(record.errors)) {
+      const messages = record.errors
+        .map(item => (typeof item === 'string' ? item : JSON.stringify(item)))
+        .filter(Boolean);
+      if (messages.length) return messages.join('; ');
+    }
+  }
+
+  return `Storyblok API returned HTTP ${status}`;
 }
 
 function previewBase(region: StoryblokRegion): string {
@@ -37,12 +76,21 @@ function previewBase(region: StoryblokRegion): string {
     : 'https://api.storyblok.com/v2/cdn';
 }
 
+function buildConfig(config: StoryblokConfig): StoryblokConfig {
+  return {
+    ...config,
+    spaceId: normalizeStoryblokSpaceId(config.spaceId),
+    accessToken: normalizeStoryblokToken(config.accessToken),
+  };
+}
+
 async function storyblokRequest<T>(
-  config: StoryblokConfig,
+  rawConfig: StoryblokConfig,
   method: string,
   path: string,
   body?: unknown,
 ): Promise<T> {
+  const config = buildConfig(rawConfig);
   const response = await fetch(`${managementBase(config.region)}/spaces/${config.spaceId}${path}`, {
     method,
     headers: {
@@ -60,17 +108,20 @@ async function storyblokRequest<T>(
   }
 
   if (!response.ok) {
-    const message = typeof payload?.error === 'string'
-      ? payload.error
-      : `Storyblok API returned HTTP ${response.status}`;
-    throw new StoryblokApiError(message, response.status, payload);
+    throw new StoryblokApiError(
+      formatStoryblokError(response.status, payload),
+      response.status,
+      payload,
+    );
   }
 
   return payload as T;
 }
 
 export async function verifyStoryblokAccess(config: StoryblokConfig): Promise<{ spaceName: string }> {
-  const data = await storyblokRequest<{ space?: { name?: string } }>(config, 'GET', '');
+  const normalized = buildConfig(config);
+  await storyblokRequest<{ stories?: unknown[] }>(normalized, 'GET', '/stories?per_page=1');
+  const data = await storyblokRequest<{ space?: { name?: string } }>(normalized, 'GET', '');
   return { spaceName: data.space?.name ?? 'Storyblok space' };
 }
 
@@ -110,8 +161,9 @@ export async function upsertCourseStory(
   config: StoryblokConfig,
   input: UpsertStoryInput,
 ): Promise<{ story: StoryblokStoryRef; created: boolean; previewUrl: string }> {
+  const normalized = buildConfig(config);
   const fullSlug = input.parentId ? `courses/${input.slug}` : input.slug;
-  const existing = await findStoryBySlug(config, fullSlug);
+  const existing = await findStoryBySlug(normalized, fullSlug);
 
   const payload = {
     story: {
@@ -125,7 +177,7 @@ export async function upsertCourseStory(
 
   if (existing) {
     const data = await storyblokRequest<{ story: StoryblokStoryRef }>(
-      config,
+      normalized,
       'PUT',
       `/stories/${existing.id}`,
       payload,
@@ -133,12 +185,12 @@ export async function upsertCourseStory(
     return {
       story: data.story,
       created: false,
-      previewUrl: `${previewBase(config.region)}/stories/${data.story.full_slug}?token=${encodeURIComponent(config.accessToken)}`,
+      previewUrl: `${previewBase(normalized.region)}/stories/${data.story.full_slug}?token=${encodeURIComponent(normalized.accessToken)}`,
     };
   }
 
   const data = await storyblokRequest<{ story: StoryblokStoryRef }>(
-    config,
+    normalized,
     'POST',
     '/stories',
     payload,
@@ -146,6 +198,6 @@ export async function upsertCourseStory(
   return {
     story: data.story,
     created: true,
-    previewUrl: `${previewBase(config.region)}/stories/${data.story.full_slug}?token=${encodeURIComponent(config.accessToken)}`,
+    previewUrl: `${previewBase(normalized.region)}/stories/${data.story.full_slug}?token=${encodeURIComponent(normalized.accessToken)}`,
   };
 }

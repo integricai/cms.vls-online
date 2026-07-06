@@ -11,8 +11,19 @@ import type {
 } from '../../shared/migrationTypes';
 
 const MAX_PAGE_BYTES = 4 * 1024 * 1024;
-const REQUEST_TIMEOUT_MS = 15000;
+const REQUEST_TIMEOUT_MS = 45_000;
+const FETCH_ATTEMPTS = 3;
 const ALLOWED_HOSTS = new Set(['vls-online.com', 'www.vls-online.com', 'vls.newzenler.com']);
+
+/** Zenler origin — faster and more reliable than vls-online.com via Cloudflare from serverless. */
+function fetchOriginUrl(url: URL): URL {
+  const fetchUrl = new URL(url.toString());
+  const host = fetchUrl.hostname.toLowerCase();
+  if (host === 'vls-online.com' || host === 'www.vls-online.com') {
+    fetchUrl.hostname = 'vls.newzenler.com';
+  }
+  return fetchUrl;
+}
 
 export class CoursePageScrapeError extends Error {
   status: number;
@@ -104,7 +115,7 @@ async function validateCourseUrl(raw: string): Promise<URL> {
   return parsed;
 }
 
-async function fetchCourseHtml(url: URL): Promise<string> {
+async function fetchCourseHtmlOnce(url: URL): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -113,10 +124,12 @@ async function fetchCourseHtml(url: URL): Promise<string> {
       signal: controller.signal,
       headers: {
         Accept: 'text/html,application/xhtml+xml',
-        'User-Agent': 'VLS-CMS-CourseMigration/1.0 (+https://vls-online.com)',
+        'User-Agent': 'Mozilla/5.0 (compatible; VLS-CMS-CourseMigration/1.1; +https://vls-online.com)',
       },
     });
-    if (!response.ok) throw new CoursePageScrapeError(`Page returned HTTP ${response.status}`, 502);
+    if (!response.ok) {
+      throw new CoursePageScrapeError(`Page returned HTTP ${response.status}`, 502);
+    }
 
     const reader = response.body?.getReader();
     if (!reader) return await response.text();
@@ -135,10 +148,40 @@ async function fetchCourseHtml(url: URL): Promise<string> {
     return Buffer.concat(chunks).toString('utf8');
   } catch (error) {
     if (error instanceof CoursePageScrapeError) throw error;
-    throw new CoursePageScrapeError(error instanceof Error ? error.message : 'Could not fetch course page', 502);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new CoursePageScrapeError(
+        `Page fetch timed out after ${REQUEST_TIMEOUT_MS / 1000} seconds`,
+        504,
+      );
+    }
+    throw new CoursePageScrapeError(
+      error instanceof Error ? error.message : 'Could not fetch course page',
+      502,
+    );
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function fetchCourseHtml(url: URL): Promise<string> {
+  const fetchUrl = fetchOriginUrl(url);
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
+    try {
+      return await fetchCourseHtmlOnce(fetchUrl);
+    } catch (error) {
+      lastError = error;
+      const retryable = error instanceof CoursePageScrapeError
+        && (error.status === 502 || error.status === 504);
+      if (!retryable || attempt >= FETCH_ATTEMPTS) break;
+      await new Promise(resolve => setTimeout(resolve, attempt * 1500));
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new CoursePageScrapeError('Could not fetch course page', 502);
 }
 
 function extractDivByIdPrefix(html: string, idPrefix: string): string {

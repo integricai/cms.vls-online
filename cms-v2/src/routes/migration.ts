@@ -80,9 +80,7 @@ router.use((err: Error, _req: Request, res: Response, next: NextFunction) => {
   if (err instanceof StoryblokApiError) {
     return res.status(storyblokErrorStatus(err.status)).json({
       ok: false,
-      error: err.status === 401
-        ? 'Storyblok rejected the access token. Check the token and region, then try again.'
-        : err.message,
+      error: err.message,
       data: err.details,
     });
   }

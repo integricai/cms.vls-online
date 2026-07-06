@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "migrate": "ts-node src/db/migrate.ts",
     "import-blob": "ts-node src/db/import-blob.ts",
-    "seed-user": "ts-node src/db/seed-user.ts"
+    "seed-user": "ts-node src/db/seed-user.ts",
+    "migrate-course": "ts-node scripts/migrate-course-local.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.9.5",

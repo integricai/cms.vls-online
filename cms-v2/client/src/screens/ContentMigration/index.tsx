@@ -169,16 +169,23 @@ export default function ContentMigrationTab() {
               value={storyblokSpaceId}
               onChange={event => setStoryblokSpaceId(event.target.value)}
             />
+            <p className="mt-1 text-[11px] text-slate-400">
+              Numeric ID from Storyblok → Space settings → General.
+            </p>
           </Field>
 
-          <Field label="Storyblok access token">
+          <Field label="Storyblok personal access token">
             <input
               className="input"
               type="password"
-              placeholder="Management API token"
+              placeholder="Personal access token (Management API)"
               value={storyblokAccessToken}
               onChange={event => setStoryblokAccessToken(event.target.value)}
             />
+            <p className="mt-1 text-[11px] text-slate-400">
+              Create at My account → Account settings → Personal access tokens.
+              Enable Stories read/write for this space. Do not use the Preview/Public token from Space settings.
+            </p>
           </Field>
 
           <Field label="Storyblok region">
@@ -190,6 +197,9 @@ export default function ContentMigrationTab() {
               <option value="eu">EU (mapi.storyblok.com)</option>
               <option value="us">US (api-us.storyblok.com)</option>
             </select>
+            <p className="mt-1 text-[11px] text-slate-400">
+              Must match your space server region in Space settings → General.
+            </p>
           </Field>
 
           <label className="flex items-center gap-2 text-xs text-slate-600">
