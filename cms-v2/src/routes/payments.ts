@@ -112,6 +112,10 @@ async function createGeoPriceCheckout(req: Request, res: Response) {
   const region = String(req.body?.region ?? '').trim() || null;
   const geoGroup = String(req.body?.geoGroup ?? '').trim() || null;
   const campaignCode = String(req.body?.campaignCode ?? '').trim() || null;
+  const durationRaw = Number(req.body?.durationMonths);
+  const durationMonths = Number.isInteger(durationRaw) && durationRaw >= 1 && durationRaw <= 6
+    ? durationRaw
+    : null;
 
   let resolved;
   try {
@@ -135,6 +139,7 @@ async function createGeoPriceCheckout(req: Request, res: Response) {
         region,
         geoGroup,
         campaignCode,
+        durationMonths,
       });
     }
   } catch (err) {

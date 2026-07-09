@@ -76,6 +76,11 @@ export function validateGeoPriceInput(
     issues.push({ field: 'priority', message: 'priority must be a number' });
   }
 
+  const durationMonths = Number(input.durationMonths ?? 6);
+  if (!Number.isInteger(durationMonths) || durationMonths < 1 || durationMonths > 6) {
+    issues.push({ field: 'durationMonths', message: 'duration must be between 1 and 6 months' });
+  }
+
   return issues;
 }
 
@@ -98,5 +103,8 @@ export function normalizeGeoPriceInput(input: CourseGeoPriceInput): CourseGeoPri
     validFrom: input.validFrom ?? null,
     validUntil: input.validUntil ?? null,
     priority: Number.isFinite(Number(input.priority)) ? Number(input.priority) : 0,
+    durationMonths: Number.isFinite(Number(input.durationMonths))
+      ? Math.min(6, Math.max(1, Number(input.durationMonths)))
+      : 6,
   };
 }

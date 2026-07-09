@@ -205,6 +205,7 @@ export interface CourseGeoPrice {
   validFrom: Date | string | null;
   validUntil: Date | string | null;
   priority: number;
+  durationMonths: number;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -225,6 +226,7 @@ export type CourseGeoPriceInput = {
   validFrom?: Date | string | null;
   validUntil?: Date | string | null;
   priority?: number;
+  durationMonths?: number;
 };
 
 export interface CoursePricingSummary {
@@ -240,6 +242,7 @@ export interface CoursePricingSummary {
     amount: number;
     currency: string;
     compareAtAmount: number | null;
+    durationMonths: number;
   } | null;
   activePriceCount: number;
   countriesCovered: number;
@@ -271,6 +274,7 @@ export interface CoursePriceImportRow {
   validFrom?: string | null;
   validUntil?: string | null;
   priority?: number;
+  durationMonths?: number;
 }
 
 export interface CoursePriceImportRowError {
@@ -301,6 +305,35 @@ export interface CoursePriceImportResult {
   skipped: number;
   errors: CoursePriceImportRowError[];
 }
+
+// ── Tutors ────────────────────────────────────────────────────────
+
+export interface Tutor {
+  id: number;
+  name: string;
+  email: string | null;
+  role: string | null;
+  bio: string | null;
+  photoUrl: string | null;
+  initials: string | null;
+  isActive: boolean;
+  courseIds: number[];
+  courseNames?: string[];
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export type TutorInput = {
+  id?: number;
+  name: string;
+  email?: string | null;
+  role?: string | null;
+  bio?: string | null;
+  photoUrl?: string | null;
+  initials?: string | null;
+  isActive?: boolean;
+  courseIds?: number[];
+};
 
 // ── Books ────────────────────────────────────────────────────────
 

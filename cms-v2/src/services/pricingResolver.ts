@@ -22,6 +22,11 @@ function pickHighestPriority(prices: CourseGeoPrice[]): CourseGeoPrice | null {
   })[0] ?? null;
 }
 
+function filterByDuration(prices: CourseGeoPrice[], durationMonths?: number | null): CourseGeoPrice[] {
+  if (durationMonths == null || !Number.isInteger(durationMonths)) return prices;
+  return prices.filter(p => p.durationMonths === durationMonths);
+}
+
 /**
  * Resolve the best matching active geo price for a course.
  *
@@ -38,15 +43,21 @@ export function resolvePriceFromCandidates(
     currency?: string | null;
     region?: string | null;
     geoGroup?: string | null;
+    durationMonths?: number | null;
   },
 ): ResolvedCoursePrice {
+  const candidates = filterByDuration(prices, input.durationMonths);
+  if (candidates.length === 0) {
+    throw new PricingResolutionError('No active price found for the selected duration');
+  }
+
   const countryCode = normalizeCountryCode(input.countryCode);
   const currency = String(input.currency ?? '').trim().toUpperCase() || null;
   const region = normalizeText(input.region);
   const geoGroup = normalizeText(input.geoGroup);
 
   const byCountry = countryCode
-    ? prices.filter(p => normalizeCountryCode(p.countryCode) === countryCode)
+    ? candidates.filter(p => normalizeCountryCode(p.countryCode) === countryCode)
     : [];
   const countryMatch = pickHighestPriority(byCountry);
   if (countryMatch) {
@@ -58,7 +69,7 @@ export function resolvePriceFromCandidates(
     };
   }
 
-  const byRegionOrGroup = prices.filter(p => {
+  const byRegionOrGroup = candidates.filter(p => {
     const priceRegion = normalizeText(p.region);
     const priceGroup = normalizeText(p.geoGroup);
     return (
@@ -77,7 +88,7 @@ export function resolvePriceFromCandidates(
   }
 
   const byCurrency = currency
-    ? prices.filter(p => p.currency.toUpperCase() === currency)
+    ? candidates.filter(p => p.currency.toUpperCase() === currency)
     : [];
   const currencyMatch = pickHighestPriority(byCurrency);
   if (currencyMatch) {
@@ -89,7 +100,7 @@ export function resolvePriceFromCandidates(
     };
   }
 
-  const defaults = prices.filter(p => p.isDefault);
+  const defaults = candidates.filter(p => p.isDefault);
   const defaultMatch = pickHighestPriority(defaults);
   if (defaultMatch) {
     return {
@@ -109,6 +120,7 @@ export async function resolveCoursePrice(input: {
   currency?: string | null;
   region?: string | null;
   geoGroup?: string | null;
+  durationMonths?: number | null;
   /** Reserved for future campaign/discount code matching. */
   campaignCode?: string | null;
 }): Promise<ResolvedCoursePrice> {

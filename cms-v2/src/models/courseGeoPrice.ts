@@ -24,6 +24,7 @@ interface DbRow {
   valid_from: Date | null;
   valid_until: Date | null;
   priority: number;
+  duration_months: number;
   created_at: Date;
   updated_at: Date;
 }
@@ -40,6 +41,7 @@ interface SummaryDbRow {
   default_amount: string | null;
   default_currency: string | null;
   default_compare_at_amount: string | null;
+  default_duration_months: number | null;
   active_price_count: string;
   countries_covered: string;
   has_active_default: boolean;
@@ -72,6 +74,7 @@ export function rowToCourseGeoPrice(row: DbRow): CourseGeoPrice {
     validFrom: row.valid_from,
     validUntil: row.valid_until,
     priority: row.priority,
+    durationMonths: row.duration_months,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -95,13 +98,14 @@ export async function listCoursePricingSummaries(search?: string): Promise<Cours
           dp.amount AS default_amount,
           dp.currency AS default_currency,
           dp.compare_at_amount AS default_compare_at_amount,
+          dp.duration_months AS default_duration_months,
           COALESCE(stats.active_price_count, 0) AS active_price_count,
           COALESCE(stats.countries_covered, 0) AS countries_covered,
           (dp.id IS NOT NULL) AS has_active_default,
           COALESCE(stats.updated_at, c.updated_at) AS updated_at
         FROM courses c
         LEFT JOIN LATERAL (
-          SELECT id, name, amount, currency, compare_at_amount
+          SELECT id, name, amount, currency, compare_at_amount, duration_months
           FROM course_geo_prices
           WHERE course_id = c.id AND is_default = true AND is_active = true
           ORDER BY priority DESC, id ASC
@@ -133,13 +137,14 @@ export async function listCoursePricingSummaries(search?: string): Promise<Cours
           dp.amount AS default_amount,
           dp.currency AS default_currency,
           dp.compare_at_amount AS default_compare_at_amount,
+          dp.duration_months AS default_duration_months,
           COALESCE(stats.active_price_count, 0) AS active_price_count,
           COALESCE(stats.countries_covered, 0) AS countries_covered,
           (dp.id IS NOT NULL) AS has_active_default,
           COALESCE(stats.updated_at, c.updated_at) AS updated_at
         FROM courses c
         LEFT JOIN LATERAL (
-          SELECT id, name, amount, currency, compare_at_amount
+          SELECT id, name, amount, currency, compare_at_amount, duration_months
           FROM course_geo_prices
           WHERE course_id = c.id AND is_default = true AND is_active = true
           ORDER BY priority DESC, id ASC
@@ -172,6 +177,7 @@ export async function listCoursePricingSummaries(search?: string): Promise<Cours
           compareAtAmount: row.default_compare_at_amount != null
             ? Number(row.default_compare_at_amount)
             : null,
+          durationMonths: row.default_duration_months ?? 6,
         }
       : null,
     activePriceCount: Number(row.active_price_count),
@@ -234,6 +240,7 @@ export async function findGeoPriceByUpsertKey(data: {
   countryCode: string | null;
   currency: string;
   name: string;
+  durationMonths: number;
 }): Promise<CourseGeoPrice | null> {
   const country = data.countryCode ?? '';
   const rows = await sql`
@@ -248,6 +255,7 @@ export async function findGeoPriceByUpsertKey(data: {
       AND COALESCE(p.country_code, '') = ${country}
       AND UPPER(p.currency) = ${data.currency.toUpperCase()}
       AND LOWER(p.name) = ${data.name.toLowerCase()}
+      AND p.duration_months = ${data.durationMonths}
     LIMIT 1
   `;
   return rows[0] ? rowToCourseGeoPrice(rows[0] as DbRow) : null;
@@ -285,7 +293,7 @@ export async function createGeoPrice(input: CourseGeoPriceInput): Promise<Course
   const rows = await sql`
     INSERT INTO course_geo_prices (
       course_id, name, currency, amount, compare_at_amount, country_code, region, geo_group,
-      is_default, is_active, stripe_price_id, valid_from, valid_until, priority
+      is_default, is_active, stripe_price_id, valid_from, valid_until, priority, duration_months
     ) VALUES (
       ${input.courseId},
       ${input.name.trim()},
@@ -300,7 +308,8 @@ export async function createGeoPrice(input: CourseGeoPriceInput): Promise<Course
       ${input.stripePriceId?.trim() || null},
       ${toDateOrNull(input.validFrom)},
       ${toDateOrNull(input.validUntil)},
-      ${Number.isFinite(input.priority) ? Number(input.priority) : 0}
+      ${Number.isFinite(input.priority) ? Number(input.priority) : 0},
+      ${input.durationMonths ?? 6}
     )
     RETURNING *
   `;
@@ -332,6 +341,9 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
     priority: input.priority !== undefined
       ? (Number.isFinite(input.priority) ? Number(input.priority) : 0)
       : existing.priority,
+    durationMonths: input.durationMonths !== undefined
+      ? Number(input.durationMonths)
+      : existing.durationMonths,
   };
 
   if (next.isDefault && next.isActive) {
@@ -353,6 +365,7 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
         valid_from = ${next.validFrom},
         valid_until = ${next.validUntil},
         priority = ${next.priority},
+        duration_months = ${next.durationMonths},
         updated_at = NOW()
     WHERE id = ${id}
     RETURNING *
@@ -377,6 +390,7 @@ export async function upsertGeoPriceByKey(input: CourseGeoPriceInput): Promise<{
     countryCode: input.countryCode ?? null,
     currency: input.currency,
     name: input.name,
+    durationMonths: input.durationMonths ?? 6,
   });
 
   if (existing) {

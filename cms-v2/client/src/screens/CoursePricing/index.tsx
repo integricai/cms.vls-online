@@ -9,6 +9,8 @@ import type {
 
 type View = 'list' | 'manage' | 'import';
 
+const DURATION_OPTIONS = [1, 2, 3, 4, 5, 6];
+
 type PriceDraft = {
   id?: number;
   name: string;
@@ -18,6 +20,7 @@ type PriceDraft = {
   currency: string;
   amount: string;
   compareAtAmount: string;
+  durationMonths: string;
   isActive: boolean;
   isDefault: boolean;
   validFrom: string;
@@ -35,6 +38,7 @@ function emptyDraft(): PriceDraft {
     currency: 'GBP',
     amount: '',
     compareAtAmount: '',
+    durationMonths: '6',
     isActive: true,
     isDefault: false,
     validFrom: '',
@@ -54,6 +58,7 @@ function priceToDraft(price: CourseGeoPrice): PriceDraft {
     currency: price.currency,
     amount: String(price.amount),
     compareAtAmount: price.compareAtAmount != null ? String(price.compareAtAmount) : '',
+    durationMonths: String(price.durationMonths ?? 6),
     isActive: price.isActive,
     isDefault: price.isDefault,
     validFrom: price.validFrom ? String(price.validFrom).slice(0, 10) : '',
@@ -106,7 +111,7 @@ async function downloadTemplate(): Promise<void> {
   downloadText('course-pricing-template.csv', text);
 }
 
-export default function CoursePricing() {
+export default function CoursePricing({ embedded = false }: { embedded?: boolean }) {
   const [view, setView] = useState<View>('list');
   const [search, setSearch] = useState('');
   const [summaries, setSummaries] = useState<CoursePricingSummary[]>([]);
@@ -195,6 +200,7 @@ export default function CoursePricing() {
         validFrom: draft.validFrom || null,
         validUntil: draft.validUntil || null,
         priority: Number(draft.priority) || 0,
+        durationMonths: Number(draft.durationMonths) || 6,
         stripePriceId: draft.stripePriceId.trim() || null,
       };
 
@@ -291,9 +297,11 @@ export default function CoursePricing() {
 
   const filteredCount = useMemo(() => summaries.length, [summaries]);
 
+  const shellClass = embedded ? 'space-y-4 p-6' : 'mx-auto max-w-6xl space-y-4 p-6';
+
   if (view === 'import') {
     return (
-      <div className="mx-auto max-w-6xl space-y-4 p-6">
+      <div className={shellClass}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold text-slate-900">Bulk Upload Prices</h1>
@@ -412,6 +420,7 @@ export default function CoursePricing() {
                           <td className="py-1 pr-2">{row.price.priceName}</td>
                           <td className="py-1 pr-2">{row.price.countryCode || '—'}</td>
                           <td className="py-1 pr-2">{formatMoney(row.price.amount, row.price.currency)}</td>
+                          <td className="py-1 pr-2">{row.price.durationMonths ?? 6} mo</td>
                           <td className="py-1">{row.price.isDefault ? 'Yes' : 'No'}</td>
                         </tr>
                       ))}
@@ -453,7 +462,7 @@ export default function CoursePricing() {
 
   if (view === 'manage' && selectedCourseId) {
     return (
-      <div className="mx-auto max-w-6xl space-y-4 p-6">
+      <div className={shellClass}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold text-slate-900">Manage Prices</h1>
@@ -497,6 +506,18 @@ export default function CoursePricing() {
             <label className="text-xs text-slate-600">
               Compare-at amount
               <input className="input mt-1" type="number" min="0" step="0.01" value={draft.compareAtAmount} onChange={e => setDraft(d => ({ ...d, compareAtAmount: e.target.value }))} />
+            </label>
+            <label className="text-xs text-slate-600">
+              Duration (months)
+              <select
+                className="input mt-1"
+                value={draft.durationMonths}
+                onChange={e => setDraft(d => ({ ...d, durationMonths: e.target.value }))}
+              >
+                {DURATION_OPTIONS.map(months => (
+                  <option key={months} value={months}>{months} month{months === 1 ? '' : 's'}</option>
+                ))}
+              </select>
             </label>
             <label className="text-xs text-slate-600">
               Priority
@@ -549,6 +570,7 @@ export default function CoursePricing() {
                 <th className="px-3 py-2">Region / geo</th>
                 <th className="px-3 py-2">Currency</th>
                 <th className="px-3 py-2">Amount</th>
+                <th className="px-3 py-2">Duration</th>
                 <th className="px-3 py-2">Compare-at</th>
                 <th className="px-3 py-2">Active</th>
                 <th className="px-3 py-2">Default</th>
@@ -560,7 +582,7 @@ export default function CoursePricing() {
             <tbody>
               {prices.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-3 py-6 text-center text-slate-500">No prices yet. Add a default price to start.</td>
+                  <td colSpan={12} className="px-3 py-6 text-center text-slate-500">No prices yet. Add a default price to start.</td>
                 </tr>
               )}
               {prices.map(price => (
@@ -570,6 +592,7 @@ export default function CoursePricing() {
                   <td className="px-3 py-2">{[price.region, price.geoGroup].filter(Boolean).join(' / ') || '—'}</td>
                   <td className="px-3 py-2">{price.currency}</td>
                   <td className="px-3 py-2">{formatMoney(price.amount, price.currency)}</td>
+                  <td className="px-3 py-2">{price.durationMonths} mo</td>
                   <td className="px-3 py-2">{formatMoney(price.compareAtAmount, price.currency)}</td>
                   <td className="px-3 py-2">{price.isActive ? 'Yes' : 'No'}</td>
                   <td className="px-3 py-2">{price.isDefault ? 'Yes' : 'No'}</td>
@@ -600,12 +623,13 @@ export default function CoursePricing() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4 p-6">
+    <div className={shellClass}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Course Pricing</h1>
+          {!embedded && <h1 className="text-xl font-semibold text-slate-900">Course Pricing</h1>}
+          {embedded && <h2 className="text-sm font-bold text-slate-700">Course Pricing</h2>}
           <p className="text-sm text-slate-500">
-            Manage geo/location-based prices per course. Uses existing Zenler-synced courses.
+            Manage geo/location-based prices per course with duration in months.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

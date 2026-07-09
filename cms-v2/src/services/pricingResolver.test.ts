@@ -17,6 +17,7 @@ function price(partial: Partial<CourseGeoPrice> & Pick<CourseGeoPrice, 'id' | 'n
     validFrom: null,
     validUntil: null,
     priority: 0,
+    durationMonths: 6,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...partial,
@@ -140,6 +141,25 @@ run('parses CSV import rows', () => {
   assert.strictEqual(parsed.amount, 299);
   assert.strictEqual(parsed.isDefault, true);
   assert.strictEqual(parsed.priority, 100);
+});
+
+run('filters by duration when provided', () => {
+  const resolved = resolvePriceFromCandidates([
+    price({ id: 1, name: '6 months', amount: 349, currency: 'USD', durationMonths: 6, isDefault: true }),
+    price({ id: 2, name: '3 months', amount: 199, currency: 'USD', durationMonths: 3, isDefault: true, priority: 20 }),
+  ], { durationMonths: 3 });
+  assert.strictEqual(resolved.price.id, 2);
+});
+
+run('validates duration months range', () => {
+  const issues = validateGeoPriceInput({
+    courseId: 1,
+    name: 'Bad duration',
+    currency: 'GBP',
+    amount: 100,
+    durationMonths: 9,
+  });
+  assert.ok(issues.some(i => i.field === 'durationMonths'));
 });
 
 console.log('All tests passed.');

@@ -56,6 +56,7 @@ export function parseImportRow(raw: Record<string, unknown>, rowNumber: number):
     validFrom: String(cell(raw, 'valid_from', 'validFrom') ?? '').trim() || null,
     validUntil: String(cell(raw, 'valid_until', 'validUntil') ?? '').trim() || null,
     priority: parseNumber(cell(raw, 'priority')) ?? 0,
+    durationMonths: parseNumber(cell(raw, 'duration_months', 'durationMonths')) ?? 6,
   };
 }
 
@@ -134,6 +135,7 @@ export async function previewCoursePriceImport(
       validFrom: parsed.validFrom,
       validUntil: parsed.validUntil,
       priority: parsed.priority,
+      durationMonths: parsed.durationMonths,
     });
 
     const issues = validateGeoPriceInput(input);
@@ -155,6 +157,7 @@ export async function previewCoursePriceImport(
       countryCode: input.countryCode ?? null,
       currency: input.currency,
       name: input.name,
+      durationMonths: input.durationMonths ?? 6,
     });
 
     validRows.push({
@@ -173,6 +176,7 @@ export async function previewCoursePriceImport(
         isDefault: input.isDefault,
         isActive: input.isActive,
         priority: input.priority,
+        durationMonths: input.durationMonths,
       },
     });
   }
@@ -223,6 +227,7 @@ export async function commitCoursePriceImport(
         validFrom: row.price.validFrom,
         validUntil: row.price.validUntil,
         priority: row.price.priority,
+        durationMonths: row.price.durationMonths,
       });
       const result = await upsertGeoPriceByKey(input);
       if (result.created) created += 1;
@@ -259,14 +264,15 @@ export const PRICING_TEMPLATE_HEADERS = [
   'valid_from',
   'valid_until',
   'priority',
+  'duration_months',
 ] as const;
 
 export const PRICING_TEMPLATE_EXAMPLE_ROWS: string[][] = [
-  ['101', 'acca-fa1', 'ACCA FA1', 'UK Standard Price', 'GB', 'Europe', 'uk_eu', 'GBP', '299.00', '349.00', 'true', 'true', '', '', '100'],
-  ['101', 'acca-fa1', 'ACCA FA1', 'EU Promo Price', 'DE', 'Europe', 'uk_eu', 'EUR', '279.00', '329.00', 'false', 'true', '', '', '90'],
-  ['101', 'acca-fa1', 'ACCA FA1', 'Pakistan Discount Price', 'PK', 'South Asia', 'low_income_markets', 'PKR', '45000.00', '55000.00', 'false', 'true', '', '', '80'],
-  ['101', 'acca-fa1', 'ACCA FA1', 'UAE AED Price', 'AE', 'Middle East', 'gcc', 'AED', '1299.00', '1499.00', 'false', 'true', '', '', '70'],
-  ['101', 'acca-fa1', 'ACCA FA1', 'Global Fallback USD', '', '', '', 'USD', '349.00', '', 'false', 'true', '', '', '10'],
+  ['101', 'acca-fa1', 'ACCA FA1', 'UK Standard Price', 'GB', 'Europe', 'uk_eu', 'GBP', '299.00', '349.00', 'true', 'true', '', '', '100', '6'],
+  ['101', 'acca-fa1', 'ACCA FA1', 'EU Promo Price', 'DE', 'Europe', 'uk_eu', 'EUR', '279.00', '329.00', 'false', 'true', '', '', '90', '4'],
+  ['101', 'acca-fa1', 'ACCA FA1', 'Pakistan Discount Price', 'PK', 'South Asia', 'low_income_markets', 'PKR', '45000.00', '55000.00', 'false', 'true', '', '', '80', '3'],
+  ['101', 'acca-fa1', 'ACCA FA1', 'UAE AED Price', 'AE', 'Middle East', 'gcc', 'AED', '1299.00', '1499.00', 'false', 'true', '', '', '70', '6'],
+  ['101', 'acca-fa1', 'ACCA FA1', 'Global Fallback USD', '', '', '', 'USD', '349.00', '', 'false', 'true', '', '', '10', '6'],
 ];
 
 export function buildPricingTemplateCsv(): string {

@@ -27,6 +27,11 @@ import { PricingResolutionError, resolveCoursePrice } from '../services/pricingR
 
 const router = Router();
 
+function parseDurationMonths(value: unknown): number | null {
+  const months = Number(value);
+  return Number.isInteger(months) && months >= 1 && months <= 6 ? months : null;
+}
+
 function parseCourseId(value: unknown): number | null {
   const id = Number(value);
   return Number.isInteger(id) && id > 0 ? id : null;
@@ -54,6 +59,7 @@ function parseBodyInput(body: Record<string, unknown>, courseId: number): Course
     validFrom: body.validFrom == null || body.validFrom === '' ? null : String(body.validFrom),
     validUntil: body.validUntil == null || body.validUntil === '' ? null : String(body.validUntil),
     priority: body.priority == null || body.priority === '' ? 0 : Number(body.priority),
+    durationMonths: body.durationMonths == null || body.durationMonths === '' ? 6 : Number(body.durationMonths),
   });
 }
 
@@ -69,6 +75,7 @@ router.get('/resolve', async (req: Request, res: Response, next: NextFunction) =
     const region = String(req.query.region ?? '').trim() || null;
     const geoGroup = String(req.query.geoGroup ?? '').trim() || null;
     const campaignCode = String(req.query.campaignCode ?? '').trim() || null;
+    const durationMonths = parseDurationMonths(req.query.durationMonths);
 
     const resolved = await resolveCoursePrice({
       courseId,
@@ -77,6 +84,7 @@ router.get('/resolve', async (req: Request, res: Response, next: NextFunction) =
       region,
       geoGroup,
       campaignCode,
+      durationMonths,
     });
 
     return res.json({
