@@ -1,11 +1,13 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { getPaymentCard } from '../models/coursePaymentCard';
+import { getCourseById, getGeoPriceById } from '../models/courseGeoPrice';
 import {
   attachStripeCheckoutSession,
   createPaymentOrder,
   getPaymentOrderByCheckoutSession,
   markOrderEmailsSent,
   markPaymentOrderPaid,
+  updateZenlerEnrollment,
 } from '../models/paymentOrder';
 import {
   createStripeCheckoutSession,
@@ -15,6 +17,9 @@ import {
   sendAdminPaymentNotification,
   sendStudentPaymentConfirmation,
 } from '../services/paymentEmails';
+import { detectCountryFromRequest } from '../services/geoDetection';
+import { PricingResolutionError, resolveCoursePrice } from '../services/pricingResolver';
+import { enrollStudentInZenlerCourse } from '../services/zenlerEnrollment';
 
 const router = Router();
 
@@ -25,8 +30,21 @@ function parsePaymentOptionId(value: unknown): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
+function parsePositiveInt(value: unknown): number | null {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+/** Legacy payment-card checkout (course_payment_cards). */
 router.post('/create-checkout-session', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    // New geo-price checkout path
+    const courseId = parsePositiveInt(req.body?.courseId);
+    const coursePriceId = parsePositiveInt(req.body?.coursePriceId);
+    if (courseId || coursePriceId) {
+      return createGeoPriceCheckout(req, res);
+    }
+
     const paymentOptionId = parsePaymentOptionId(req.body?.paymentOptionId);
     if (!paymentOptionId) return res.status(400).json({ ok: false, error: 'paymentOptionId is required' });
 
@@ -49,6 +67,7 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
     const studentName = String(req.body?.studentName ?? '').trim() || null;
     const order = await createPaymentOrder({
       paymentOptionId: option.id,
+      courseId: option.courseId,
       zenlerCourseId: option.zenlerCourseId,
       courseTitle: option.courseName ?? option.title,
       optionType: option.optionType,
@@ -61,6 +80,7 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
     const session = await createStripeCheckoutSession({
       orderId: order.id,
       paymentOptionId: option.id,
+      courseId: option.courseId,
       zenlerCourseId: option.zenlerCourseId,
       courseTitle: option.courseName ?? option.title,
       paymentCardTitle: option.title,
@@ -76,6 +96,96 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
   }
 });
 
+async function createGeoPriceCheckout(req: Request, res: Response) {
+  const courseId = parsePositiveInt(req.body?.courseId);
+  if (!courseId) {
+    return res.status(400).json({ ok: false, error: 'courseId is required' });
+  }
+
+  const course = await getCourseById(courseId);
+  if (!course || !course.isActive) {
+    return res.status(404).json({ ok: false, error: 'Course not found or inactive' });
+  }
+
+  const geo = detectCountryFromRequest(req, req.body?.countryCode);
+  const currency = String(req.body?.currency ?? '').trim().toUpperCase() || null;
+  const region = String(req.body?.region ?? '').trim() || null;
+  const geoGroup = String(req.body?.geoGroup ?? '').trim() || null;
+  const campaignCode = String(req.body?.campaignCode ?? '').trim() || null;
+
+  let resolved;
+  try {
+    const explicitPriceId = parsePositiveInt(req.body?.coursePriceId);
+    if (explicitPriceId) {
+      const price = await getGeoPriceById(explicitPriceId);
+      if (!price || price.courseId !== courseId || !price.isActive) {
+        return res.status(404).json({ ok: false, error: 'Course price not found or inactive' });
+      }
+      resolved = {
+        price,
+        matchReason: 'country' as const,
+        detectedCountryCode: geo.countryCode,
+        requestedCurrency: currency,
+      };
+    } else {
+      resolved = await resolveCoursePrice({
+        courseId,
+        countryCode: geo.countryCode,
+        currency,
+        region,
+        geoGroup,
+        campaignCode,
+      });
+    }
+  } catch (err) {
+    if (err instanceof PricingResolutionError) {
+      return res.status(404).json({ ok: false, error: err.message });
+    }
+    throw err;
+  }
+
+  const studentEmail = String(req.body?.studentEmail ?? '').trim() || null;
+  const studentName = String(req.body?.studentName ?? '').trim() || null;
+
+  const order = await createPaymentOrder({
+    paymentOptionId: null,
+    courseId: course.id,
+    coursePriceId: resolved.price.id,
+    zenlerCourseId: course.zenlerCourseId,
+    courseTitle: course.name,
+    optionType: resolved.price.name,
+    studentName,
+    studentEmail,
+    countryCode: geo.countryCode,
+    amount: resolved.price.amount,
+    currency: resolved.price.currency,
+  });
+
+  const session = await createStripeCheckoutSession({
+    orderId: order.id,
+    courseId: course.id,
+    coursePriceId: resolved.price.id,
+    zenlerCourseId: course.zenlerCourseId,
+    courseTitle: course.name,
+    paymentCardTitle: `${course.name} — ${resolved.price.name}`,
+    amount: resolved.price.amount,
+    currency: resolved.price.currency,
+    studentEmail,
+    countryCode: geo.countryCode,
+  });
+  await attachStripeCheckoutSession(order.id, session.id);
+
+  return res.json({
+    checkoutUrl: session.url,
+    orderId: order.id,
+    coursePriceId: resolved.price.id,
+    amount: resolved.price.amount,
+    currency: resolved.price.currency,
+    countryCode: geo.countryCode,
+    matchReason: resolved.matchReason,
+  });
+}
+
 router.get('/status', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const sessionId = String(req.query.session_id ?? '').trim();
@@ -90,7 +200,10 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
       optionType: order.optionType,
       amount: order.amount,
       currency: order.currency,
+      countryCode: order.countryCode,
+      coursePriceId: order.coursePriceId,
       studentEmail: order.studentEmail ?? order.stripeCustomerEmail,
+      zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
     });
   } catch (err) {
     next(err);
@@ -130,6 +243,19 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
     });
 
     if (!wasAlreadyPaid) {
+      const email = order.studentEmail ?? order.stripeCustomerEmail;
+      if (email && order.zenlerCourseId) {
+        const enrollment = await enrollStudentInZenlerCourse({
+          email,
+          name: order.studentName,
+          zenlerCourseId: order.zenlerCourseId,
+        });
+        await updateZenlerEnrollment(order.id, {
+          zenlerUserId: enrollment.zenlerUserId,
+          zenlerEnrollmentStatus: enrollment.status,
+        });
+      }
+
       const studentSent = await sendStudentPaymentConfirmation(order);
       const adminSent = await sendAdminPaymentNotification(order);
       await markOrderEmailsSent(order.id, { student: studentSent, admin: adminSent });

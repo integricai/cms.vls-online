@@ -11,13 +11,16 @@ function appendParam(params: URLSearchParams, key: string, value: string | numbe
 
 export async function createStripeCheckoutSession(input: {
   orderId: number;
-  paymentOptionId: number;
+  paymentOptionId?: number | null;
+  courseId?: number | null;
+  coursePriceId?: number | null;
   zenlerCourseId: string;
   courseTitle: string;
   paymentCardTitle: string;
   amount: number;
   currency: string;
   studentEmail: string | null;
+  countryCode?: string | null;
 }): Promise<StripeCheckoutSession> {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not configured');
@@ -39,10 +42,13 @@ export async function createStripeCheckoutSession(input: {
   params.append('line_items[0][quantity]', '1');
   appendParam(params, 'customer_email', input.studentEmail);
   params.append('metadata[orderId]', String(input.orderId));
-  params.append('metadata[paymentOptionId]', String(input.paymentOptionId));
+  appendParam(params, 'metadata[paymentOptionId]', input.paymentOptionId);
+  appendParam(params, 'metadata[courseId]', input.courseId);
+  appendParam(params, 'metadata[coursePriceId]', input.coursePriceId);
   params.append('metadata[zenlerCourseId]', input.zenlerCourseId);
   params.append('metadata[courseTitle]', input.courseTitle);
   appendParam(params, 'metadata[studentEmail]', input.studentEmail);
+  appendParam(params, 'metadata[countryCode]', input.countryCode);
 
   const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
     method: 'POST',

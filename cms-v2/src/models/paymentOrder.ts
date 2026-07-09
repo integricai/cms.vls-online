@@ -4,18 +4,23 @@ export type PaymentOrderStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled';
 
 export interface PaymentOrder {
   id: number;
-  paymentOptionId: number;
+  paymentOptionId: number | null;
+  courseId: number | null;
+  coursePriceId: number | null;
   zenlerCourseId: string;
   courseTitle: string;
   optionType: string | null;
   studentName: string | null;
   studentEmail: string | null;
+  countryCode: string | null;
   amount: number;
   currency: string;
   status: PaymentOrderStatus;
   stripeCheckoutSessionId: string | null;
   stripePaymentIntentId: string | null;
   stripeCustomerEmail: string | null;
+  zenlerUserId: string | null;
+  zenlerEnrollmentStatus: string | null;
   confirmationEmailSentAt: Date | null;
   adminEmailSentAt: Date | null;
   createdAt: Date;
@@ -24,18 +29,23 @@ export interface PaymentOrder {
 
 interface DbRow {
   id: number;
-  payment_option_id: number;
+  payment_option_id: number | null;
+  course_id: number | null;
+  course_price_id: number | null;
   zenler_course_id: string;
   course_title: string;
   option_type: string | null;
   student_name: string | null;
   student_email: string | null;
+  country_code: string | null;
   amount: string;
   currency: string;
   status: PaymentOrderStatus;
   stripe_checkout_session_id: string | null;
   stripe_payment_intent_id: string | null;
   stripe_customer_email: string | null;
+  zenler_user_id: string | null;
+  zenler_enrollment_status: string | null;
   confirmation_email_sent_at: Date | null;
   admin_email_sent_at: Date | null;
   created_at: Date;
@@ -46,17 +56,22 @@ function rowToOrder(row: DbRow): PaymentOrder {
   return {
     id: row.id,
     paymentOptionId: row.payment_option_id,
+    courseId: row.course_id ?? null,
+    coursePriceId: row.course_price_id ?? null,
     zenlerCourseId: row.zenler_course_id,
     courseTitle: row.course_title,
     optionType: row.option_type,
     studentName: row.student_name,
     studentEmail: row.student_email,
+    countryCode: row.country_code ?? null,
     amount: Number(row.amount),
     currency: row.currency,
     status: row.status,
     stripeCheckoutSessionId: row.stripe_checkout_session_id,
     stripePaymentIntentId: row.stripe_payment_intent_id,
     stripeCustomerEmail: row.stripe_customer_email,
+    zenlerUserId: row.zenler_user_id ?? null,
+    zenlerEnrollmentStatus: row.zenler_enrollment_status ?? null,
     confirmationEmailSentAt: row.confirmation_email_sent_at,
     adminEmailSentAt: row.admin_email_sent_at,
     createdAt: row.created_at,
@@ -65,21 +80,27 @@ function rowToOrder(row: DbRow): PaymentOrder {
 }
 
 export async function createPaymentOrder(data: {
-  paymentOptionId: number;
+  paymentOptionId?: number | null;
+  courseId?: number | null;
+  coursePriceId?: number | null;
   zenlerCourseId: string;
   courseTitle: string;
   optionType: string | null;
   studentName: string | null;
   studentEmail: string | null;
+  countryCode?: string | null;
   amount: number;
   currency: string;
 }): Promise<PaymentOrder> {
   const rows = await sql`
     INSERT INTO payment_orders
-      (payment_option_id, zenler_course_id, course_title, option_type, student_name, student_email, amount, currency)
+      (payment_option_id, course_id, course_price_id, zenler_course_id, course_title, option_type,
+       student_name, student_email, country_code, amount, currency)
     VALUES
-      (${data.paymentOptionId}, ${data.zenlerCourseId}, ${data.courseTitle}, ${data.optionType},
-       ${data.studentName}, ${data.studentEmail}, ${data.amount}, ${data.currency})
+      (${data.paymentOptionId ?? null}, ${data.courseId ?? null}, ${data.coursePriceId ?? null},
+       ${data.zenlerCourseId}, ${data.courseTitle}, ${data.optionType},
+       ${data.studentName}, ${data.studentEmail}, ${data.countryCode ?? null},
+       ${data.amount}, ${data.currency})
     RETURNING *
   `;
   return rowToOrder(rows[0] as DbRow);
@@ -118,6 +139,21 @@ export async function markPaymentOrderPaid(data: {
   const amount = data.amountTotal != null ? data.amountTotal / 100 : existing.amount;
   const currency = data.currency?.toUpperCase() ?? existing.currency;
 
+  // Verify paid amount/currency against the stored order (resolved course price).
+  if (data.amountTotal != null) {
+    const expectedCents = Math.round(existing.amount * 100);
+    if (expectedCents !== data.amountTotal) {
+      throw new Error(
+        `Payment amount mismatch: expected ${expectedCents} cents, got ${data.amountTotal}`,
+      );
+    }
+  }
+  if (data.currency && data.currency.toUpperCase() !== existing.currency.toUpperCase()) {
+    throw new Error(
+      `Payment currency mismatch: expected ${existing.currency}, got ${data.currency}`,
+    );
+  }
+
   const rows = await sql`
     UPDATE payment_orders
     SET status = 'Paid',
@@ -131,6 +167,18 @@ export async function markPaymentOrderPaid(data: {
     RETURNING *
   `;
   return { order: rowToOrder(rows[0] as DbRow), wasAlreadyPaid: false };
+}
+
+export async function updateZenlerEnrollment(
+  orderId: number,
+  data: { zenlerUserId: string | null; zenlerEnrollmentStatus: string },
+): Promise<void> {
+  await sql`
+    UPDATE payment_orders
+    SET zenler_user_id = ${data.zenlerUserId},
+        zenler_enrollment_status = ${data.zenlerEnrollmentStatus}
+    WHERE id = ${orderId}
+  `;
 }
 
 export async function markOrderEmailsSent(orderId: number, sent: { student?: boolean; admin?: boolean }): Promise<void> {

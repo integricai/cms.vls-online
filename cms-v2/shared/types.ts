@@ -184,6 +184,124 @@ export interface CoursePriceRecord {
   updatedAt: Date;
 }
 
+// ── Geo / multi-location course pricing ───────────────────────────
+
+export interface CourseGeoPrice {
+  id: number;
+  courseId: number;
+  courseName?: string;
+  zenlerCourseId?: string;
+  courseSlug?: string | null;
+  name: string;
+  currency: string;
+  amount: number;
+  compareAtAmount: number | null;
+  countryCode: string | null;
+  region: string | null;
+  geoGroup: string | null;
+  isDefault: boolean;
+  isActive: boolean;
+  stripePriceId: string | null;
+  validFrom: Date | string | null;
+  validUntil: Date | string | null;
+  priority: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export type CourseGeoPriceInput = {
+  id?: number;
+  courseId: number;
+  name: string;
+  currency: string;
+  amount: number;
+  compareAtAmount?: number | null;
+  countryCode?: string | null;
+  region?: string | null;
+  geoGroup?: string | null;
+  isDefault?: boolean;
+  isActive?: boolean;
+  stripePriceId?: string | null;
+  validFrom?: Date | string | null;
+  validUntil?: Date | string | null;
+  priority?: number;
+};
+
+export interface CoursePricingSummary {
+  courseId: number;
+  courseTitle: string;
+  zenlerCourseId: string;
+  courseSlug: string | null;
+  status: string | null;
+  isActive: boolean;
+  defaultPrice: {
+    id: number;
+    name: string;
+    amount: number;
+    currency: string;
+    compareAtAmount: number | null;
+  } | null;
+  activePriceCount: number;
+  countriesCovered: number;
+  hasActiveDefault: boolean;
+  updatedAt: Date | string | null;
+}
+
+export interface ResolvedCoursePrice {
+  price: CourseGeoPrice;
+  matchReason: 'country' | 'region_or_geo_group' | 'currency' | 'default';
+  detectedCountryCode: string | null;
+  requestedCurrency: string | null;
+}
+
+export interface CoursePriceImportRow {
+  rowNumber: number;
+  zenlerCourseId?: string;
+  courseSlug?: string;
+  courseTitle?: string;
+  priceName: string;
+  countryCode?: string | null;
+  region?: string | null;
+  geoGroup?: string | null;
+  currency: string;
+  amount: number;
+  compareAtAmount?: number | null;
+  isDefault?: boolean;
+  isActive?: boolean;
+  validFrom?: string | null;
+  validUntil?: string | null;
+  priority?: number;
+}
+
+export interface CoursePriceImportRowError {
+  rowNumber: number;
+  field?: string;
+  message: string;
+}
+
+export interface CoursePriceImportPreviewRow {
+  rowNumber: number;
+  action: 'create' | 'update';
+  courseId: number;
+  courseTitle: string;
+  zenlerCourseId: string;
+  price: CoursePriceImportRow;
+  existingPriceId?: number;
+}
+
+export interface CoursePriceImportPreview {
+  validRows: CoursePriceImportPreviewRow[];
+  errors: CoursePriceImportRowError[];
+  warnings: CoursePriceImportRowError[];
+}
+
+export interface CoursePriceImportResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: CoursePriceImportRowError[];
+}
+
 // ── Books ────────────────────────────────────────────────────────
 
 export interface BookRecord {
