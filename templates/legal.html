@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Privacy Policy — Vertex Learning Solutions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --navy:#0E2A57; --ink:#15233D; --slate:#3D4A63;
+    --blue:#1E50C8; --blue-strong:#1A45B0; --blue-bright:#3B73F0;
+    --blue-50:#F2F6FF; --blue-100:#E7EEFD; --blue-200:#D6E2FB;
+    --green:#1E9E6A; --green-bg:#E3F4EC; --amber:#F5A623;
+    --white:#FFF; --line:#E5EBF6; --line-soft:#EEF2FA;
+    --shadow-sm:0 1px 2px rgba(14,42,87,.05),0 1px 3px rgba(14,42,87,.04);
+    --shadow-md:0 6px 18px rgba(14,42,87,.07),0 2px 6px rgba(14,42,87,.05);
+    --shadow-lg:0 18px 48px rgba(14,42,87,.12),0 6px 16px rgba(14,42,87,.07);
+    --radius:16px; --radius-lg:22px; --maxw:1200px; --gutter:40px;
+  }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+  body{ margin:0; font-family:'Poppins',system-ui,-apple-system,sans-serif; color:var(--ink);
+    background:var(--white); font-size:16.5px; line-height:1.7; font-weight:400;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  h1,h2,h3,h4{ margin:0; color:var(--navy); font-weight:600; line-height:1.18; letter-spacing:-.01em; }
+  p{ margin:0; } a{ color:inherit; text-decoration:none; } img,svg{ display:block; }
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 var(--gutter); }
+  .accent{ color:var(--blue); font-style:italic; font-weight:600; }
+  .eyebrow{ font-size:12.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--blue); }
+  .stars{ color:var(--amber); letter-spacing:1px; }
+  .inline-link{ color:var(--blue); font-weight:500; text-decoration:underline; text-decoration-color:var(--blue-200); text-underline-offset:3px; }
+  .inline-link:hover{ text-decoration-color:var(--blue); }
+
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:9px; font-family:inherit;
+    font-size:15.5px; font-weight:500; padding:14px 26px; border-radius:12px; cursor:pointer;
+    border:1px solid transparent; transition:.18s ease; white-space:nowrap; }
+  .btn svg{ width:17px; height:17px; }
+  .btn-primary{ background:var(--blue); color:#fff; box-shadow:0 4px 14px rgba(30,80,200,.28); }
+  .btn-primary:hover{ background:var(--blue-strong); transform:translateY(-1px); box-shadow:0 8px 22px rgba(30,80,200,.32); }
+  .btn-ghost{ background:#fff; color:var(--navy); border-color:var(--line); }
+  .btn-ghost:hover{ border-color:var(--blue-200); background:var(--blue-50); }
+  .btn-outline-blue{ background:transparent; color:var(--navy); border-color:var(--blue-200); }
+  .btn-outline-blue:hover{ background:#fff; }
+
+  /* HEADER */
+  header{ position:sticky; top:0; z-index:50; background:rgba(255,255,255,.88); backdrop-filter:blur(12px); border-bottom:1px solid var(--line-soft); }
+  .nav{ display:flex; align-items:center; justify-content:space-between; height:74px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{ width:38px; height:38px; border-radius:10px; background:var(--blue); display:grid; place-items:center; color:#fff; font-weight:700; font-size:19px; box-shadow:0 4px 12px rgba(30,80,200,.3); }
+  .brand-name{ display:block; font-weight:700; font-size:18px; color:var(--navy); line-height:1; letter-spacing:-.01em; }
+  .brand-sub{ display:block; font-size:9.5px; font-weight:600; letter-spacing:.18em; color:var(--slate); text-transform:uppercase; margin-top:4px; }
+  .nav-links{ display:flex; gap:34px; }
+  .nav-links a{ font-size:15px; font-weight:500; color:var(--slate); transition:color .15s; }
+  .nav-links a:hover{ color:var(--blue); }
+  .nav-right{ display:flex; align-items:center; gap:22px; }
+  .nav-right .signin{ font-size:15px; font-weight:500; color:var(--navy); }
+  .nav-right .signin:hover{ color:var(--blue); }
+  .menu-btn{ display:none; background:none; border:none; cursor:pointer; padding:6px; }
+
+  /* LEGAL HERO (light band) */
+  .legal-hero{ background:
+      radial-gradient(900px 460px at 92% -20%, var(--blue-100) 0%, rgba(231,238,253,0) 62%),
+      var(--blue-50);
+    border-bottom:1px solid var(--line-soft); padding:34px 0 0; }
+  .crumb ol{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; align-items:center; gap:9px; font-size:13px; color:var(--slate); margin-bottom:26px; }
+  .crumb a:hover{ color:var(--blue); } .crumb .sep{ color:var(--blue-200); }
+  .crumb [aria-current]{ color:var(--navy); font-weight:500; }
+  .legal-hero h1{ font-size:46px; font-weight:600; letter-spacing:-.025em; margin:14px 0 18px; }
+  .legal-hero .lead{ font-size:18px; color:var(--slate); max-width:620px; line-height:1.6; }
+  .meta-row{ display:flex; align-items:center; gap:8px 26px; flex-wrap:wrap; margin-top:24px; }
+  .meta-item{ display:inline-flex; align-items:center; gap:8px; font-size:14px; color:var(--slate); }
+  .meta-item b{ color:var(--navy); font-weight:600; }
+  .meta-item svg{ width:16px; height:16px; color:var(--blue); }
+
+  .tabs{ display:flex; gap:34px; margin-top:30px; }
+  .tabs a{ font-size:15.5px; font-weight:500; color:var(--slate); padding:14px 2px; border-bottom:2.5px solid transparent; transition:.15s; }
+  .tabs a:hover{ color:var(--navy); }
+  .tabs a.active{ color:var(--blue); border-color:var(--blue); font-weight:600; }
+
+  /* LAYOUT */
+  .layout{ display:grid; grid-template-columns:264px 1fr; gap:64px; padding:64px 0 84px; align-items:start; }
+
+  /* TOC */
+  .toc{ position:sticky; top:96px; }
+  .toc-title{ font-size:11.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--slate); margin-bottom:18px; padding-left:18px; }
+  .toc ul{ list-style:none; margin:0; padding:0; border-left:2px solid var(--line); }
+  .toc li a{ display:flex; gap:12px; align-items:baseline; padding:9px 0 9px 18px; margin-left:-2px; border-left:2px solid transparent; font-size:14.5px; color:var(--slate); transition:.15s; }
+  .toc li a:hover{ color:var(--navy); }
+  .toc li a .n{ font-size:12.5px; font-weight:600; color:var(--blue-200); width:16px; flex:none; }
+  .toc li a.active{ color:var(--blue); font-weight:600; border-color:var(--blue); }
+  .toc li a.active .n{ color:var(--blue); }
+
+  .copy-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:22px; margin-top:28px; }
+  .copy-card h4{ font-size:15px; font-weight:600; color:var(--navy); margin-bottom:7px; }
+  .copy-card p{ font-size:13.5px; color:var(--slate); line-height:1.55; margin-bottom:16px; }
+  .copy-card a{ display:inline-flex; align-items:center; gap:9px; font-size:14px; font-weight:600; color:var(--blue); }
+  .copy-card a svg{ width:16px; height:16px; }
+
+  /* ARTICLE */
+  .article{ max-width:760px; }
+  .intro{ font-size:18px; color:var(--ink); line-height:1.75; margin-bottom:34px; }
+  .sec{ scroll-margin-top:96px; padding-top:34px; }
+  .sec + .sec{ border-top:1px solid var(--line); }
+  .sec-h{ display:flex; align-items:baseline; gap:16px; margin-bottom:20px; }
+  .sec-h .num{ font-size:17px; font-weight:700; color:var(--blue); flex:none; }
+  .sec-h h2{ font-size:27px; font-weight:600; letter-spacing:-.015em; }
+  .article p{ font-size:16.5px; color:var(--slate); line-height:1.75; margin-bottom:18px; }
+  .article p strong{ color:var(--navy); font-weight:600; }
+  .article ul.bullets{ list-style:none; margin:0 0 18px; padding:0; display:flex; flex-direction:column; gap:13px; }
+  .article ul.bullets li{ display:flex; gap:14px; font-size:16.5px; color:var(--slate); line-height:1.6; }
+  .article ul.bullets li::before{ content:""; width:7px; height:7px; border-radius:50%; background:var(--blue); flex:none; margin-top:11px; }
+
+  /* SHORT VERSION CALLOUT */
+  .callout{ background:var(--blue-50); border:1px solid var(--blue-100); border-radius:var(--radius); padding:26px 28px; margin-bottom:8px; }
+  .callout-h{ display:flex; align-items:center; gap:10px; font-size:15px; font-weight:600; color:var(--blue); margin-bottom:18px; }
+  .callout-h svg{ width:18px; height:18px; }
+  .callout ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px; }
+  .callout li{ display:flex; gap:13px; align-items:flex-start; font-size:16px; color:var(--ink); line-height:1.5; }
+  .callout li .ck{ width:22px; height:22px; flex:none; color:var(--blue); margin-top:1px; }
+
+  /* DATA TABLE */
+  .data-table{ width:100%; border-collapse:separate; border-spacing:0; margin-bottom:8px; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+  .data-table th{ text-align:left; font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--slate); background:var(--blue-50); padding:15px 22px; border-bottom:1px solid var(--line); }
+  .data-table td{ padding:18px 22px; vertical-align:top; border-bottom:1px solid var(--line-soft); font-size:15.5px; color:var(--slate); line-height:1.55; }
+  .data-table tr:last-child td{ border-bottom:none; }
+  .data-table td.cat{ font-weight:600; color:var(--navy); width:36%; white-space:nowrap; }
+  @media (max-width:520px){ .data-table td.cat{ white-space:normal; } }
+
+  /* RIGHTS BOX */
+  .rights-box{ border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:26px 28px; margin-bottom:24px; }
+  .rights-box h4{ font-size:11.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--slate); margin-bottom:18px; }
+  .rights-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px 32px; }
+  .rights-grid div{ display:flex; gap:12px; align-items:center; font-size:15.5px; color:var(--ink); }
+  .rights-grid .ck{ width:24px; height:24px; border-radius:7px; background:var(--blue-50); color:var(--blue); display:grid; place-items:center; flex:none; }
+  .rights-grid .ck svg{ width:13px; height:13px; }
+
+  /* CONTACT CTA (bright panel — replaces dark gradient) */
+  .contact-cta{ margin-top:38px; background:
+      radial-gradient(560px 300px at 90% 120%, rgba(59,115,240,.12) 0%, rgba(59,115,240,0) 60%),
+      var(--blue-100);
+    border:1px solid var(--blue-200); border-radius:var(--radius-lg); padding:40px 42px; }
+  .contact-cta .eyebrow{ margin-bottom:14px; }
+  .contact-cta h3{ font-size:25px; font-weight:600; letter-spacing:-.015em; margin-bottom:10px; }
+  .contact-cta p{ font-size:16.5px; color:var(--slate); margin-bottom:14px; }
+  .contact-email{ display:inline-flex; align-items:center; gap:9px; font-size:16px; font-weight:600; color:var(--blue); margin-bottom:24px; }
+  .contact-email svg{ width:17px; height:17px; }
+  .contact-actions{ display:flex; gap:13px; flex-wrap:wrap; }
+
+  /* FOOTER */
+  footer{ border-top:1px solid var(--line); padding:68px 0 34px; }
+  .foot-grid{ display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:48px; margin-bottom:50px; }
+  .foot-about{ max-width:300px; }
+  .foot-about .brand{ margin-bottom:18px; }
+  .foot-about p{ font-size:14.5px; color:var(--slate); line-height:1.65; }
+  .foot-col h4{ font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--slate); margin-bottom:18px; }
+  .foot-col ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+  .foot-col a{ font-size:14.5px; color:var(--ink); transition:color .15s; }
+  .foot-col a:hover{ color:var(--blue); }
+  .foot-bottom{ display:flex; align-items:center; justify-content:space-between; padding-top:26px; border-top:1px solid var(--line); flex-wrap:wrap; gap:14px; }
+  .foot-bottom p{ font-size:13.5px; color:var(--slate); }
+  .foot-rating{ display:flex; align-items:center; gap:9px; font-size:13.5px; color:var(--slate); }
+
+  @media (max-width:980px){
+    .layout{ grid-template-columns:1fr; gap:36px; }
+    .toc{ position:static; }
+    .toc ul{ display:grid; grid-template-columns:1fr 1fr; gap:0 18px; }
+    .copy-card{ max-width:360px; }
+    .foot-grid{ grid-template-columns:1fr 1fr; gap:36px; }
+  }
+  @media (max-width:680px){
+    :root{ --gutter:22px; }
+    .nav-links,.nav-right .signin{ display:none; }
+    .menu-btn{ display:block; }
+    .legal-hero h1{ font-size:34px; }
+    .tabs{ gap:22px; overflow-x:auto; }
+    .toc ul{ grid-template-columns:1fr; }
+    .rights-grid{ grid-template-columns:1fr; }
+    .contact-cta{ padding:30px 24px; }
+    .sec-h h2{ font-size:23px; }
+    .foot-grid{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#"><span class="brand-mark">V</span><span><span class="brand-name">Vertex</span><span class="brand-sub">Learning Solutions</span></span></a>
+    <nav class="nav-links"><a href="#">Courses</a><a href="#">Subscription</a><a href="#">Live classes</a><a href="#">Reviews</a><a href="#">About</a></nav>
+    <div class="nav-right">
+      <a class="signin" href="#">Sign in</a>
+      <a class="btn btn-primary" href="#">Enrol now</a>
+      <button class="menu-btn" aria-label="Open menu"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E2A57" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </div>
+</header>
+
+<!-- LEGAL HERO -->
+<section class="legal-hero">
+  <div class="wrap">
+    <nav class="crumb"><ol>
+      <li><a href="#">Home</a></li><li class="sep">/</li>
+      <li><a href="#">Legal</a></li><li class="sep">/</li>
+      <li aria-current="page">Privacy Policy</li>
+    </ol></nav>
+    <div class="eyebrow">Legal</div>
+    <h1>Privacy Policy</h1>
+    <p class="lead">How Vertex Learning Solutions collects, uses and protects your personal data when you use our website and learning platform.</p>
+    <div class="meta-row">
+      <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Last updated <b>26 June 2026</b></span>
+      <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> ~8 min read</span>
+      <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Compliant with <b>UK GDPR</b></span>
+    </div>
+    <div class="tabs">
+      <a href="#" class="active">Privacy Policy</a>
+      <a href="#">Terms &amp; Conditions</a>
+      <a href="#">Cookie Policy</a>
+    </div>
+  </div>
+</section>
+
+<!-- BODY -->
+<div class="wrap layout">
+
+  <!-- TOC SIDEBAR -->
+  <aside class="toc">
+    <div class="toc-title">On this page</div>
+    <ul>
+      <li><a href="#who-we-are" class="active"><span class="n">01</span> Who we are</a></li>
+      <li><a href="#info-we-collect"><span class="n">02</span> Information we collect</a></li>
+      <li><a href="#how-we-use"><span class="n">03</span> How we use your data</a></li>
+      <li><a href="#legal-bases"><span class="n">04</span> Legal bases</a></li>
+      <li><a href="#sharing"><span class="n">05</span> Sharing your data</a></li>
+      <li><a href="#transfers"><span class="n">06</span> International transfers</a></li>
+      <li><a href="#retention"><span class="n">07</span> How long we keep it</a></li>
+      <li><a href="#your-rights"><span class="n">08</span> Your rights</a></li>
+      <li><a href="#cookies"><span class="n">09</span> Cookies &amp; tracking</a></li>
+      <li><a href="#security"><span class="n">10</span> Data security</a></li>
+      <li><a href="#children"><span class="n">11</span> Children's privacy</a></li>
+      <li><a href="#changes"><span class="n">12</span> Changes &amp; contact</a></li>
+    </ul>
+    <div class="copy-card">
+      <h4>Prefer a copy?</h4>
+      <p>Download this policy as a PDF for your records.</p>
+      <a href="#">Download PDF <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></a>
+    </div>
+  </aside>
+
+  <!-- ARTICLE -->
+  <article class="article">
+    <p class="intro">Vertex Learning Solutions (“Vertex”, “VLS”, “we”, “us” or “our”) is committed to protecting your privacy. This policy explains what personal data we collect through <a class="inline-link" href="#">vls-online.com</a> and our learning platform, why we collect it, how we use it, and the rights you have over it under the UK GDPR and the Data Protection Act 2018.</p>
+
+    <div class="callout">
+      <div class="callout-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> The short version</div>
+      <ul>
+        <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> We only collect the data we need to deliver your courses and tutor support.</li>
+        <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> We never sell your personal data to anyone.</li>
+        <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> You can access, correct or delete your data at any time.</li>
+      </ul>
+    </div>
+
+    <section id="who-we-are" class="sec">
+      <div class="sec-h"><span class="num">01</span><h2>Who we are</h2></div>
+      <p>Vertex Learning Solutions is the data controller responsible for your personal data. We provide online exam-preparation courses for ACCA, CIMA, CMA (USA) and CIA qualifications. If you have any questions about this policy or how we handle your information, you can reach our data protection contact using the details at the end of this page.</p>
+      <p>We are registered with the UK Information Commissioner's Office (ICO) and process personal data in line with UK data protection law.</p>
+    </section>
+
+    <section id="info-we-collect" class="sec">
+      <div class="sec-h"><span class="num">02</span><h2>Information we collect</h2></div>
+      <p>We collect personal data that you give us directly, data generated as you use our platform, and a limited amount of technical data collected automatically.</p>
+      <table class="data-table">
+        <thead><tr><th>Category</th><th>What it includes</th></tr></thead>
+        <tbody>
+          <tr><td class="cat">Account details</td><td>Your name, email address, country and the qualification you're studying.</td></tr>
+          <tr><td class="cat">Payment data</td><td>Billing details processed securely by our payment provider — we don't store full card numbers.</td></tr>
+          <tr><td class="cat">Learning activity</td><td>Courses enrolled, lesson progress, quiz and mock-exam results.</td></tr>
+          <tr><td class="cat">Support messages</td><td>Questions and messages you send us, including via your WhatsApp study group.</td></tr>
+          <tr><td class="cat">Technical data</td><td>Device type, browser, and anonymised usage data via cookies (see section 9).</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="how-we-use" class="sec">
+      <div class="sec-h"><span class="num">03</span><h2>How we use your data</h2></div>
+      <p>We use your personal data to:</p>
+      <ul class="bullets">
+        <li>Create and manage your account and give you access to your courses.</li>
+        <li>Provide tutor support, weekly live classes and feedback on your progress.</li>
+        <li>Process payments and send you the receipts and confirmations you need.</li>
+        <li>Respond to your enquiries and provide customer support.</li>
+        <li>Improve our courses, platform and learning experience.</li>
+        <li>Send you service updates, and — only with your consent — marketing about new courses.</li>
+      </ul>
+    </section>
+
+    <section id="legal-bases" class="sec">
+      <div class="sec-h"><span class="num">04</span><h2>Legal bases for processing</h2></div>
+      <p>We rely on different legal bases depending on the purpose: <strong>performance of a contract</strong> to deliver the courses you enrol in; <strong>consent</strong> for optional marketing, which you can withdraw at any time; <strong>legitimate interests</strong> to improve and secure our services; and <strong>legal obligation</strong> where we're required to keep records, for example for tax.</p>
+    </section>
+
+    <section id="sharing" class="sec">
+      <div class="sec-h"><span class="num">05</span><h2>Sharing your data</h2></div>
+      <p>We share data only with trusted service providers who help us run our platform — including payment processors, email delivery, secure hosting and messaging services — and only to the extent they need it to perform their service. We require every provider to protect your data and use it solely on our instructions. <strong>We never sell your personal data.</strong></p>
+    </section>
+
+    <section id="transfers" class="sec">
+      <div class="sec-h"><span class="num">06</span><h2>International transfers</h2></div>
+      <p>As our students and providers are based around the world, your data may be processed outside the UK or EEA. Where it is, we put appropriate safeguards in place — such as the UK International Data Transfer Agreement or Standard Contractual Clauses — so your data receives an equivalent level of protection.</p>
+    </section>
+
+    <section id="retention" class="sec">
+      <div class="sec-h"><span class="num">07</span><h2>How long we keep it</h2></div>
+      <p>We keep your personal data only for as long as needed for the purposes set out in this policy. Account and learning data are retained while your account is active and for a reasonable period afterwards; some records are kept longer where the law requires it. When data is no longer needed, we securely delete or anonymise it.</p>
+    </section>
+
+    <section id="your-rights" class="sec">
+      <div class="sec-h"><span class="num">08</span><h2>Your rights</h2></div>
+      <p>Under UK data protection law you have a number of rights over your personal data. You can exercise any of these by contacting us.</p>
+      <div class="rights-box">
+        <h4>Your rights at a glance</h4>
+        <div class="rights-grid">
+          <div><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Access the data we hold about you</div>
+          <div><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Correct inaccurate information</div>
+          <div><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Request erasure of your data</div>
+          <div><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Restrict or object to processing</div>
+          <div><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Receive a portable copy of your data</div>
+          <div><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Withdraw consent at any time</div>
+        </div>
+      </div>
+      <p>You also have the right to lodge a complaint with the ICO if you believe we have not handled your data properly — though we'd always appreciate the chance to put things right first.</p>
+    </section>
+
+    <section id="cookies" class="sec">
+      <div class="sec-h"><span class="num">09</span><h2>Cookies &amp; tracking</h2></div>
+      <p>We use a small number of cookies to keep you signed in, remember your preferences and understand how the platform is used. You can manage your preferences at any time. For full details of every cookie we set, please see our <a class="inline-link" href="#">Cookie Policy</a>.</p>
+    </section>
+
+    <section id="security" class="sec">
+      <div class="sec-h"><span class="num">10</span><h2>Data security</h2></div>
+      <p>We use appropriate technical and organisational measures to protect your data, including encryption in transit, access controls and secure, monitored hosting. While no online service can be completely risk-free, we work hard to keep your information safe and review our measures regularly.</p>
+    </section>
+
+    <section id="children" class="sec">
+      <div class="sec-h"><span class="num">11</span><h2>Children's privacy</h2></div>
+      <p>Our courses are designed for working professionals and students pursuing professional qualifications. They are not directed at children, and we do not knowingly collect data from anyone under the age at which they can lawfully consent. If you believe a child has provided us with data, please contact us and we will remove it.</p>
+    </section>
+
+    <section id="changes" class="sec">
+      <div class="sec-h"><span class="num">12</span><h2>Changes &amp; contact</h2></div>
+      <p>We may update this policy from time to time. When we make material changes, we'll update the date at the top of the page and, where appropriate, let you know directly. Please check back occasionally so you're aware of how we're protecting your data.</p>
+
+      <div class="contact-cta">
+        <div class="eyebrow">Get in touch</div>
+        <h3>Questions about your data?</h3>
+        <p>Contact our data protection team and we'll respond as quickly as we can.</p>
+        <a class="contact-email" href="mailto:privacy@vls-online.com"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg> privacy@vls-online.com</a>
+        <div class="contact-actions">
+          <a class="btn btn-primary" href="mailto:privacy@vls-online.com">Email us</a>
+          <a class="btn btn-outline-blue" href="#">Make a data request
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        </div>
+      </div>
+    </section>
+  </article>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-about">
+        <a class="brand" href="#"><span class="brand-mark">V</span><span><span class="brand-name">Vertex</span><span class="brand-sub">Learning Solutions</span></span></a>
+        <p>A dedicated team of academic experts helping accounting and finance professionals excel — through the most comprehensive online courses, delivered on our own learning platform.</p>
+      </div>
+      <div class="foot-col"><h4>Courses</h4><ul>
+        <li><a href="#">ACCA individual courses</a></li><li><a href="#">ACCA subscription plan</a></li>
+        <li><a href="#">CIMA exam preparation</a></li><li><a href="#">CMA exam preparation</a></li><li><a href="#">CIA exam preparation</a></li>
+      </ul></div>
+      <div class="foot-col"><h4>Company</h4><ul>
+        <li><a href="#">About Vertex</a></li><li><a href="#">Student reviews</a></li>
+        <li><a href="#">Live classes</a></li><li><a href="#">Contact us</a></li><li><a href="#">Book a meeting</a></li>
+      </ul></div>
+      <div class="foot-col"><h4>Legal</h4><ul>
+        <li><a href="#">Privacy policy</a></li><li><a href="#">Terms &amp; conditions</a></li>
+        <li><a href="#">Cookie policy</a></li><li><a href="#">Complaint form</a></li><li><a href="#">Help centre</a></li>
+      </ul></div>
+    </div>
+    <div class="foot-bottom">
+      <p>© 2026 Vertex Learning Solutions · ACCA, CIMA, CMA (USA) &amp; CIA exam preparation</p>
+      <div class="foot-rating"><span class="stars">★★★★★</span> Rated 5.0 by students worldwide</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Scroll-spy: highlight the active section in the table of contents
+  (function(){
+    var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+    var map = {};
+    links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.sec'));
+    if(!('IntersectionObserver' in window)) return;
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){
+          links.forEach(function(l){ l.classList.remove('active'); });
+          var active = map[e.target.id];
+          if(active) active.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-15% 0px -70% 0px', threshold: 0 });
+    sections.forEach(function(s){ obs.observe(s); });
+  })();
+</script>
+
+</body>
+</html>

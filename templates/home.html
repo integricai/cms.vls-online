@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vertex Learning Solutions — Exam preparation for finance professionals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    /* Core palette — dark professional blue + white + light-blue accents */
+    --navy:        #0E2A57;   /* deep ink blue — headings, near-black text */
+    --ink:         #15233D;   /* primary body text */
+    --slate:       #3D4A63;   /* secondary text (kept dark for contrast) */
+    --blue:        #1E50C8;   /* primary brand blue — buttons, accents */
+    --blue-strong: #1A45B0;   /* button hover */
+    --blue-bright: #3B73F0;   /* light accent / highlight text */
+    --blue-50:     #F2F6FF;   /* lightest tint section bg */
+    --blue-100:    #E7EEFD;   /* light tint cards / bands */
+    --blue-200:    #D6E2FB;   /* borders, dividers */
+    --white:       #FFFFFF;
+    --surface:     #FFFFFF;
+    --line:        #E5EBF6;   /* hairline borders */
+    --line-soft:   #EEF2FA;
+
+    --shadow-sm: 0 1px 2px rgba(14,42,87,.05), 0 1px 3px rgba(14,42,87,.04);
+    --shadow-md: 0 6px 18px rgba(14,42,87,.07), 0 2px 6px rgba(14,42,87,.05);
+    --shadow-lg: 0 18px 48px rgba(14,42,87,.12), 0 6px 16px rgba(14,42,87,.07);
+
+    --radius: 16px;
+    --radius-lg: 22px;
+    --maxw: 1200px;
+    --gutter: 40px;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+  body{
+    margin:0;
+    font-family:'Poppins', system-ui, -apple-system, sans-serif;
+    color:var(--ink);
+    background:var(--white);
+    font-size:17px;
+    line-height:1.65;
+    font-weight:400;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  h1,h2,h3,h4{ margin:0; color:var(--navy); font-weight:600; line-height:1.18; letter-spacing:-.01em; }
+  p{ margin:0; }
+  a{ color:inherit; text-decoration:none; }
+  img,svg{ display:block; }
+
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 var(--gutter); }
+
+  /* Emphasis: replaces the serif-italic accent with Poppins in brand blue */
+  .accent{ color:var(--blue); font-style:italic; font-weight:600; }
+
+  .eyebrow{
+    font-size:12.5px; font-weight:600; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--blue); margin-bottom:18px;
+  }
+
+  /* Buttons */
+  .btn{
+    display:inline-flex; align-items:center; gap:9px;
+    font-family:inherit; font-size:15.5px; font-weight:500;
+    padding:14px 26px; border-radius:12px; cursor:pointer;
+    border:1px solid transparent; transition:.18s ease; white-space:nowrap;
+  }
+  .btn svg{ width:17px; height:17px; }
+  .btn-primary{ background:var(--blue); color:#fff; box-shadow:0 4px 14px rgba(30,80,200,.28); }
+  .btn-primary:hover{ background:var(--blue-strong); transform:translateY(-1px); box-shadow:0 8px 22px rgba(30,80,200,.32); }
+  .btn-ghost{ background:#fff; color:var(--navy); border-color:var(--line); }
+  .btn-ghost:hover{ border-color:var(--blue-200); background:var(--blue-50); }
+  .btn-white{ background:#fff; color:var(--blue); box-shadow:var(--shadow-md); }
+  .btn-white:hover{ transform:translateY(-1px); box-shadow:var(--shadow-lg); }
+  .btn-outline-blue{ background:transparent; color:var(--navy); border-color:var(--blue-200); }
+  .btn-outline-blue:hover{ background:#fff; }
+
+  /* ============ HEADER ============ */
+  header{
+    position:sticky; top:0; z-index:50;
+    background:rgba(255,255,255,.86); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line-soft);
+  }
+  .nav{ display:flex; align-items:center; justify-content:space-between; height:74px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:38px; height:38px; border-radius:10px; background:var(--blue);
+    display:grid; place-items:center; color:#fff; font-weight:700; font-size:19px;
+    box-shadow:0 4px 12px rgba(30,80,200,.3);
+  }
+  .brand-name{ font-weight:700; font-size:18px; color:var(--navy); line-height:1; letter-spacing:-.01em; }
+  .brand-sub{ font-size:9.5px; font-weight:600; letter-spacing:.22em; color:var(--slate); text-transform:uppercase; margin-top:3px; }
+  .nav-links{ display:flex; gap:34px; }
+  .nav-links a{ font-size:15px; font-weight:500; color:var(--slate); transition:color .15s; }
+  .nav-links a:hover{ color:var(--blue); }
+  .nav-right{ display:flex; align-items:center; gap:22px; }
+  .nav-right .signin{ font-size:15px; font-weight:500; color:var(--navy); }
+  .nav-right .signin:hover{ color:var(--blue); }
+  .menu-btn{ display:none; background:none; border:none; cursor:pointer; padding:6px; }
+
+  /* ============ HERO ============ */
+  .hero{ padding:78px 0 64px; background:
+      radial-gradient(1100px 520px at 88% -8%, var(--blue-50) 0%, rgba(242,246,255,0) 60%); }
+  .hero-grid{ display:grid; grid-template-columns:1.04fr .96fr; gap:64px; align-items:center; }
+
+  .rating-pill{
+    display:inline-flex; align-items:center; gap:9px;
+    background:#fff; border:1px solid var(--line); border-radius:999px;
+    padding:7px 15px; font-size:13.5px; font-weight:500; color:var(--slate);
+    box-shadow:var(--shadow-sm); margin-bottom:26px;
+  }
+  .stars{ color:#F5A623; letter-spacing:1px; font-size:13px; }
+  .rating-pill b{ color:var(--navy); font-weight:600; }
+
+  .hero h1{
+    font-size:60px; font-weight:600; line-height:1.06; letter-spacing:-.025em;
+    margin-bottom:22px;
+  }
+  .hero-lead{ font-size:18px; color:var(--slate); max-width:520px; line-height:1.6; margin-bottom:32px; }
+  .hero-cta{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:34px; }
+
+  .social-proof{ display:flex; align-items:center; gap:16px; }
+  .avatars{ display:flex; }
+  .avatars span{
+    width:38px; height:38px; border-radius:50%; border:2.5px solid #fff;
+    margin-left:-12px; display:grid; place-items:center; color:#fff;
+    font-size:13px; font-weight:600; box-shadow:0 2px 5px rgba(14,42,87,.12);
+  }
+  .avatars span:first-child{ margin-left:0; }
+  .a1{ background:#2D62E0; } .a2{ background:#3B8FE8; } .a3{ background:#6E5CE8; }
+  .a4{ background:#1FAE8C; } .a5{ background:var(--blue); font-size:11px!important; }
+  .social-proof p{ font-size:13.5px; color:var(--slate); max-width:240px; line-height:1.45; }
+  .social-proof b{ color:var(--navy); font-weight:600; }
+
+  /* Hero course card */
+  .hero-card-wrap{ position:relative; }
+  .course-card{
+    background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-lg); padding:26px; position:relative;
+  }
+  .cc-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+  .cc-tag{
+    font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--blue); background:var(--blue-50); border:1px solid var(--blue-100);
+    padding:5px 11px; border-radius:7px;
+  }
+  .cc-live{ display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:500; color:var(--slate); }
+  .cc-live .dot{ width:8px; height:8px; border-radius:50%; background:#22A06B; box-shadow:0 0 0 3px rgba(34,160,107,.18); }
+  .cc-title{ font-size:21px; font-weight:600; color:var(--navy); margin-bottom:4px; }
+  .cc-meta{ font-size:13px; color:var(--slate); margin-bottom:20px; }
+
+  .progress-box{
+    display:flex; align-items:center; gap:18px;
+    background:var(--blue-50); border:1px solid var(--blue-100);
+    border-radius:14px; padding:16px 18px; margin-bottom:18px;
+  }
+  .ring{ position:relative; width:58px; height:58px; flex:none; }
+  .ring svg{ transform:rotate(-90deg); }
+  .ring span{ position:absolute; inset:0; display:grid; place-items:center; font-size:14px; font-weight:600; color:var(--navy); }
+  .progress-box .pb-label{ font-size:14.5px; font-weight:600; color:var(--navy); }
+  .progress-box .pb-sub{ font-size:12.5px; color:var(--slate); }
+
+  .cc-list{ display:flex; flex-direction:column; gap:13px; }
+  .cc-item{ display:flex; align-items:center; gap:11px; font-size:13.5px; color:var(--ink); }
+  .cc-item .ico{ width:22px; height:22px; border-radius:6px; display:grid; place-items:center; flex:none; }
+  .cc-item .done{ background:#E3F4EC; color:#22A06B; }
+  .cc-item .play{ background:var(--blue-50); color:var(--blue); }
+  .cc-item .lock{ background:#F1F3F8; color:#8893A8; }
+  .cc-item .txt{ flex:1; }
+  .cc-item .time{ font-size:12px; color:var(--slate); }
+  .cc-item.muted .txt{ color:var(--slate); }
+
+  .float-badge{
+    position:absolute; background:#fff; border:1px solid var(--line);
+    border-radius:13px; box-shadow:var(--shadow-lg); padding:11px 14px;
+    display:flex; align-items:center; gap:11px;
+  }
+  .fb-top{ left:-30px; top:-22px; }
+  .fb-bottom{ right:-22px; bottom:48px; }
+  .fb-ico{ width:30px; height:30px; border-radius:8px; display:grid; place-items:center; flex:none; }
+  .fb-ico.green{ background:#E3F4EC; color:#22A06B; }
+  .fb-ico.blue{ background:var(--blue-50); color:var(--blue); }
+  .fb-title{ font-size:13px; font-weight:600; color:var(--navy); line-height:1.2; }
+  .fb-sub{ font-size:11.5px; color:var(--slate); line-height:1.2; margin-top:2px; }
+
+  /* ============ APPROVED BODIES BAR ============ */
+  .bodies{ border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft); }
+  .bodies-row{ display:flex; align-items:center; gap:46px; padding:30px 0; flex-wrap:wrap; }
+  .bodies-label{ font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--slate); max-width:120px; line-height:1.5; }
+  .bodies-list{ display:flex; align-items:center; gap:44px; flex-wrap:wrap; flex:1; justify-content:space-between; }
+  .body-item{ font-size:23px; font-weight:700; color:var(--navy); letter-spacing:-.01em; }
+  .body-item span{ color:var(--blue); }
+
+  /* ============ STATS (was dark — now bright light-blue band) ============ */
+  .stats-band{ padding:34px 0; }
+  .stats-inner{
+    background:var(--blue-50); border:1px solid var(--blue-100);
+    border-radius:var(--radius-lg); padding:42px 16px;
+    display:grid; grid-template-columns:repeat(4,1fr);
+  }
+  .stat{ text-align:center; padding:6px 22px; position:relative; }
+  .stat + .stat::before{
+    content:""; position:absolute; left:0; top:14%; height:72%; width:1px; background:var(--blue-200);
+  }
+  .stat .num{ font-size:42px; font-weight:700; color:var(--navy); letter-spacing:-.02em; line-height:1; }
+  .stat .num .star{ color:#F5A623; font-size:30px; }
+  .stat .lab{ font-size:13.5px; color:var(--slate); margin-top:9px; line-height:1.4; }
+
+  /* ============ SECTION SHELL ============ */
+  .section{ padding:96px 0; }
+  .section-head{ max-width:620px; margin-bottom:54px; }
+  .section-head h2{ font-size:40px; font-weight:600; letter-spacing:-.02em; line-height:1.12; margin-bottom:18px; }
+  .section-head p{ font-size:17.5px; color:var(--slate); line-height:1.6; }
+
+  /* Feature cards */
+  .feature-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+  .feature{
+    background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+    padding:30px 28px; transition:.2s ease; box-shadow:var(--shadow-sm);
+  }
+  .feature:hover{ border-color:var(--blue-200); box-shadow:var(--shadow-md); transform:translateY(-3px); }
+  .feature . f-ico{
+    width:48px; height:48px; border-radius:12px; background:var(--blue-50);
+    border:1px solid var(--blue-100); color:var(--blue);
+    display:grid; place-items:center; margin-bottom:22px;
+  }
+  .feature .f-ico svg{ width:22px; height:22px; }
+  .feature h3{ font-size:19px; font-weight:600; margin-bottom:11px; }
+  .feature p{ font-size:15px; color:var(--slate); line-height:1.62; }
+
+  /* ============ COURSES (light blue section) ============ */
+  .courses{ background:var(--blue-50); border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft); }
+  .price-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+  .price-card{
+    background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-md); overflow:hidden; display:flex; flex-direction:column;
+    transition:.2s ease;
+  }
+  .price-card:hover{ box-shadow:var(--shadow-lg); transform:translateY(-4px); }
+  .pc-bar{ height:5px; }
+  .pc-bar.acca{ background:linear-gradient(90deg,#1E50C8,#3B73F0); }
+  .pc-bar.cima{ background:linear-gradient(90deg,#1FAE8C,#34C6B0); }
+  .pc-bar.cma{ background:linear-gradient(90deg,#5B49D6,#7E6BF0); }
+  .pc-body{ padding:30px 28px; display:flex; flex-direction:column; flex:1; }
+  .pc-tag{ font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--blue); margin-bottom:14px; }
+  .pc-title{ font-size:22px; font-weight:600; color:var(--navy); margin-bottom:14px; line-height:1.2; }
+  .pc-desc{ font-size:14.5px; color:var(--slate); line-height:1.6; margin-bottom:24px; }
+  .pc-figs{ display:flex; gap:34px; padding:18px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); margin-bottom:24px; }
+  .pc-fig .v{ font-size:24px; font-weight:700; color:var(--navy); line-height:1; }
+  .pc-fig .k{ font-size:12.5px; color:var(--slate); margin-top:5px; }
+  .pc-foot{ display:flex; align-items:flex-end; justify-content:space-between; margin-top:auto; }
+  .pc-price .pre{ font-size:12.5px; color:var(--slate); }
+  .pc-price .amt{ font-size:30px; font-weight:700; color:var(--navy); letter-spacing:-.02em; line-height:1.1; }
+  .pc-link{ display:inline-flex; align-items:center; gap:7px; font-size:14.5px; font-weight:600; color:var(--blue); }
+  .pc-link svg{ width:15px; height:15px; transition:transform .18s; }
+  .pc-link:hover svg{ transform:translateX(3px); }
+
+  /* ============ TESTIMONIALS ============ */
+  .testi-grid{ display:grid; grid-template-columns:.92fr 1.08fr; gap:60px; align-items:center; }
+  .big-quote{ font-size:33px; font-weight:500; color:var(--navy); line-height:1.34; letter-spacing:-.015em; margin-bottom:30px; }
+  .quote-author{ display:flex; align-items:center; gap:14px; }
+  .qa-avatar{ width:48px; height:48px; border-radius:50%; background:var(--blue); color:#fff; display:grid; place-items:center; font-weight:600; font-size:18px; }
+  .qa-name{ font-size:16px; font-weight:600; color:var(--navy); }
+  .qa-role{ font-size:13.5px; color:var(--slate); }
+
+  .review-stack{ display:flex; flex-direction:column; gap:20px; }
+  .review{
+    background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+    padding:24px 26px; box-shadow:var(--shadow-sm);
+  }
+  .review .stars{ font-size:14px; margin-bottom:12px; }
+  .review p{ font-size:15.5px; color:var(--ink); line-height:1.6; margin-bottom:14px; }
+  .review .r-by{ font-size:13px; font-weight:500; color:var(--slate); }
+
+  /* ============ CTA (was dark gradient — now bright light-blue panel) ============ */
+  .cta-band{ padding:36px 0 96px; }
+  .cta-panel{
+    background:
+      radial-gradient(700px 360px at 85% 120%, rgba(59,115,240,.10) 0%, rgba(59,115,240,0) 60%),
+      var(--blue-100);
+    border:1px solid var(--blue-200);
+    border-radius:28px; padding:64px 60px; position:relative; overflow:hidden;
+    box-shadow:var(--shadow-sm);
+  }
+  .cta-panel .eyebrow{ color:var(--blue); }
+  .cta-panel h2{ font-size:42px; font-weight:600; letter-spacing:-.02em; line-height:1.12; margin-bottom:16px; max-width:560px; }
+  .cta-panel p{ font-size:18px; color:var(--slate); max-width:560px; line-height:1.6; margin-bottom:30px; }
+  .cta-actions{ display:flex; gap:14px; flex-wrap:wrap; }
+
+  /* ============ FOOTER ============ */
+  footer{ border-top:1px solid var(--line); padding:72px 0 36px; }
+  .foot-grid{ display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:48px; margin-bottom:54px; }
+  .foot-about{ max-width:300px; }
+  .foot-about .brand{ margin-bottom:18px; }
+  .foot-about p{ font-size:14.5px; color:var(--slate); line-height:1.65; }
+  .foot-col h4{ font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--slate); margin-bottom:18px; }
+  .foot-col ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+  .foot-col a{ font-size:14.5px; color:var(--ink); transition:color .15s; }
+  .foot-col a:hover{ color:var(--blue); }
+  .foot-bottom{ display:flex; align-items:center; justify-content:space-between; padding-top:28px; border-top:1px solid var(--line); flex-wrap:wrap; gap:14px; }
+  .foot-bottom p{ font-size:13.5px; color:var(--slate); }
+  .foot-rating{ display:flex; align-items:center; gap:9px; font-size:13.5px; color:var(--slate); }
+
+  /* ============ RESPONSIVE ============ */
+  @media (max-width:980px){
+    .hero-grid{ grid-template-columns:1fr; gap:48px; }
+    .hero h1{ font-size:46px; }
+    .testi-grid{ grid-template-columns:1fr; gap:40px; }
+    .feature-grid,.price-grid{ grid-template-columns:repeat(2,1fr); }
+    .stats-inner{ grid-template-columns:repeat(2,1fr); gap:30px 0; }
+    .stat + .stat::before{ display:none; }
+    .foot-grid{ grid-template-columns:1fr 1fr; gap:36px; }
+    .float-badge{ display:none; }
+  }
+  @media (max-width:680px){
+    :root{ --gutter:22px; }
+    .nav-links,.nav-right .signin{ display:none; }
+    .menu-btn{ display:block; }
+    .hero{ padding:54px 0 48px; }
+    .hero h1{ font-size:37px; }
+    .section{ padding:68px 0; }
+    .section-head h2,.cta-panel h2{ font-size:30px; }
+    .feature-grid,.price-grid{ grid-template-columns:1fr; }
+    .stats-inner{ grid-template-columns:1fr 1fr; }
+    .big-quote{ font-size:26px; }
+    .cta-panel{ padding:40px 28px; }
+    .foot-grid{ grid-template-columns:1fr; }
+    .bodies-row{ gap:22px; }
+    .body-item{ font-size:19px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== HEADER ===================== -->
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#">
+      <span class="brand-mark">V</span>
+      <span>
+        <span class="brand-name">Vertex</span>
+        <span class="brand-sub">Learning Solutions</span>
+      </span>
+    </a>
+    <nav class="nav-links">
+      <a href="#">Courses</a>
+      <a href="#">Subscription</a>
+      <a href="#">Live classes</a>
+      <a href="#">Reviews</a>
+      <a href="#">About</a>
+    </nav>
+    <div class="nav-right">
+      <a class="signin" href="#">Sign in</a>
+      <a class="btn btn-primary" href="#">Enrol now</a>
+      <button class="menu-btn" aria-label="Open menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E2A57" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ===================== HERO ===================== -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <div class="rating-pill">
+        <span class="stars">★★★★★</span> <b>5.0</b> · Rated excellent by students worldwide
+      </div>
+      <div class="eyebrow">Exam preparation for finance professionals</div>
+      <h1>Pass your professional exams <span class="accent">the first time.</span></h1>
+      <p class="hero-lead">Expert-led video lessons, weekly live classes and one-to-one tutor support for ACCA, CIMA, CMA (USA) and CIA — trusted by professionals in 88 countries since 2007.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#">Explore courses
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a class="btn btn-ghost" href="#">Book a free consultation</a>
+      </div>
+      <div class="social-proof">
+        <div class="avatars">
+          <span class="a1">A</span><span class="a2">S</span><span class="a3">M</span><span class="a4">K</span><span class="a5">+50k</span>
+        </div>
+        <p><b>50,000+ students</b> have prepared with Vertex across ACCA, CIMA, CMA &amp; CIA qualifications</p>
+      </div>
+    </div>
+
+    <div class="hero-card-wrap">
+      <div class="course-card">
+        <div class="cc-top">
+          <span class="cc-tag">ACCA · Strategic Professional</span>
+          <span class="cc-live"><span class="dot"></span> Live class tonight</span>
+        </div>
+        <h3 class="cc-title">Strategic Business Reporting</h3>
+        <p class="cc-meta">SBR · Tutor: Syed Ali · 12 modules</p>
+
+        <div class="progress-box">
+          <div class="ring">
+            <svg width="58" height="58" viewBox="0 0 58 58">
+              <circle cx="29" cy="29" r="25" fill="none" stroke="#D6E2FB" stroke-width="6"/>
+              <circle cx="29" cy="29" r="25" fill="none" stroke="#1E50C8" stroke-width="6" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="50"/>
+            </svg>
+            <span>68%</span>
+          </div>
+          <div>
+            <div class="pb-label">Course progress</div>
+            <div class="pb-sub">8 of 12 modules complete · on track</div>
+          </div>
+        </div>
+
+        <div class="cc-list">
+          <div class="cc-item">
+            <span class="ico done"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+            <span class="txt">Group accounting &amp; consolidations</span>
+            <span class="time">42 min</span>
+          </div>
+          <div class="cc-item">
+            <span class="ico play"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+            <span class="txt">Financial instruments — IFRS 9</span>
+            <span class="time">Now</span>
+          </div>
+          <div class="cc-item muted">
+            <span class="ico lock"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+            <span class="txt">Mock exam &amp; examiner debrief</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="float-badge fb-top">
+        <span class="fb-ico green"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <span>
+          <span class="fb-title">Mock exam 74%</span>
+          <span class="fb-sub">Passed · ready for exam day</span>
+        </span>
+      </div>
+      <div class="float-badge fb-bottom">
+        <span class="fb-ico blue"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+        <span>
+          <span class="fb-title">Tutor replied</span>
+          <span class="fb-sub">WhatsApp support · 2 min ago</span>
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== APPROVED BODIES ===================== -->
+<section class="bodies">
+  <div class="wrap bodies-row">
+    <div class="bodies-label">Approved exam preparation for</div>
+    <div class="bodies-list">
+      <div class="body-item">ACCA <span>(UK)</span></div>
+      <div class="body-item">CIMA <span>(UK)</span></div>
+      <div class="body-item">CMA <span>(USA)</span></div>
+      <div class="body-item">CIA <span>(USA)</span></div>
+      <div class="body-item">Dip-<span>IFRS</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== STATS (bright band) ===================== -->
+<section class="stats-band">
+  <div class="wrap">
+    <div class="stats-inner">
+      <div class="stat">
+        <div class="num">50,000+</div>
+        <div class="lab">Students prepared since 2007</div>
+      </div>
+      <div class="stat">
+        <div class="num">88</div>
+        <div class="lab">Countries reached worldwide</div>
+      </div>
+      <div class="stat">
+        <div class="num">14</div>
+        <div class="lab">ACCA courses in one annual plan</div>
+      </div>
+      <div class="stat">
+        <div class="num">5.0 <span class="star">★</span></div>
+        <div class="lab">Average student rating</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== TOOLKIT / FEATURES ===================== -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Everything in one place</div>
+      <h2>A complete toolkit built to get you <span class="accent">exam-ready.</span></h2>
+      <p>Every course brings together teaching, practice and real human support — structured exactly to the syllabus so nothing is left to chance.</p>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature">
+        <div class="f-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m10 9 5 3-5 3z"/></svg></div>
+        <h3>Expert video lessons</h3>
+        <p>Full syllabus coverage taught by qualified professionals, plus worked past-exam questions step by step.</p>
+      </div>
+      <div class="feature">
+        <div class="f-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <h3>One-to-one tutor support</h3>
+        <p>Ask questions any time in your WhatsApp study group and get fast, personal answers from your tutor.</p>
+      </div>
+      <div class="feature">
+        <div class="f-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+        <h3>Weekly live classes</h3>
+        <p>Join real-time sessions to work through the toughest topics — every class recorded so you never miss out.</p>
+      </div>
+      <div class="feature">
+        <div class="f-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+        <h3>Quizzes &amp; progress tests</h3>
+        <p>Chapter-by-chapter quizzes and timed progress tests check your understanding before you move on.</p>
+      </div>
+      <div class="feature">
+        <div class="f-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></div>
+        <h3>Detailed study notes</h3>
+        <p>Comprehensive, printable notes structured exactly to the syllabus — ideal for revision and quick reference.</p>
+      </div>
+      <div class="feature">
+        <div class="f-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h2a2 2 0 0 1 0 4h-2M7 5H5a2 2 0 0 0 0 4h2"/></svg></div>
+        <h3>Final mock exams</h3>
+        <p>Sit a full mock under exam conditions and get detailed examiner-style feedback before the real thing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== COURSES / PRICING ===================== -->
+<section class="section courses">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Choose your path</div>
+      <h2>Courses for every <span class="accent">qualification.</span></h2>
+      <p>Enrol in a single paper, or take the annual subscription for complete access to every course in your qualification.</p>
+    </div>
+
+    <div class="price-grid">
+      <div class="price-card">
+        <div class="pc-bar acca"></div>
+        <div class="pc-body">
+          <div class="pc-tag">ACCA · UK</div>
+          <h3 class="pc-title">ACCA Annual Subscription</h3>
+          <p class="pc-desc">All fourteen ACCA Complete Learning Packs — Knowledge, Skills and Strategic Professional — in one plan.</p>
+          <div class="pc-figs">
+            <div class="pc-fig"><div class="v">14</div><div class="k">courses</div></div>
+            <div class="pc-fig"><div class="v">365</div><div class="k">days access</div></div>
+          </div>
+          <div class="pc-foot">
+            <div class="pc-price"><div class="pre">One-time payment</div><div class="amt">£599</div></div>
+            <a class="pc-link" href="#">View plan <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+
+      <div class="price-card">
+        <div class="pc-bar cima"></div>
+        <div class="pc-body">
+          <div class="pc-tag">CIMA · UK</div>
+          <h3 class="pc-title">CIMA Exam Preparation</h3>
+          <p class="pc-desc">Operational, Management and Strategic levels with lecture videos, question videos and active tutor support.</p>
+          <div class="pc-figs">
+            <div class="pc-fig"><div class="v">9</div><div class="k">papers</div></div>
+            <div class="pc-fig"><div class="v">Live</div><div class="k">tutor support</div></div>
+          </div>
+          <div class="pc-foot">
+            <div class="pc-price"><div class="pre">From</div><div class="amt">£149</div></div>
+            <a class="pc-link" href="#">View courses <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+
+      <div class="price-card">
+        <div class="pc-bar cma"></div>
+        <div class="pc-body">
+          <div class="pc-tag">CMA · USA</div>
+          <h3 class="pc-title">CMA Complete Learning Pack</h3>
+          <p class="pc-desc">Everything needed to pass CMA Part 1 &amp; Part 2 first time — lecture videos, tutor slides and detailed notes.</p>
+          <div class="pc-figs">
+            <div class="pc-fig"><div class="v">2</div><div class="k">parts</div></div>
+            <div class="pc-fig"><div class="v">Notes</div><div class="k">included</div></div>
+          </div>
+          <div class="pc-foot">
+            <div class="pc-price"><div class="pre">From</div><div class="amt">£199</div></div>
+            <a class="pc-link" href="#">View courses <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== TESTIMONIALS ===================== -->
+<section class="section">
+  <div class="wrap">
+    <div class="eyebrow">Loved by students</div>
+    <div class="testi-grid">
+      <div>
+        <p class="big-quote">Before Vertex I thought the skills papers were impossibly wide. Now I walk into every exam <span class="accent">confident</span> — and I keep passing.</p>
+        <div class="quote-author">
+          <div class="qa-avatar">R</div>
+          <div>
+            <div class="qa-name">Rabia N.</div>
+            <div class="qa-role">ACCA student · passed LAW, FR &amp; AA</div>
+          </div>
+        </div>
+      </div>
+      <div class="review-stack">
+        <div class="review">
+          <div class="stars">★★★★★</div>
+          <p>The tutors are consistent and they genuinely love what they do. Whatever the time zone, I always got a response.</p>
+          <div class="r-by">Verified student — CMA (USA)</div>
+        </div>
+        <div class="review">
+          <div class="stars">★★★★★</div>
+          <p>I scored 31 on my own in Management Accounting, then joined Vertex and jumped to 59 just by following the lectures.</p>
+          <div class="r-by">Verified student — ACCA MA</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CTA (bright panel) ===================== -->
+<section class="cta-band">
+  <div class="wrap">
+    <div class="cta-panel">
+      <div class="eyebrow">Your exam, your timeline</div>
+      <h2>Start preparing <span class="accent">today.</span></h2>
+      <p>Enrol in minutes and get instant access to your course, your study group and your tutor. No downloads, no fuss — just a clear path to passing.</p>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="#">Enrol now</a>
+        <a class="btn btn-outline-blue" href="#">Talk to us on WhatsApp
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FOOTER ===================== -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-about">
+        <a class="brand" href="#">
+          <span class="brand-mark">V</span>
+          <span>
+            <span class="brand-name">Vertex</span>
+            <span class="brand-sub">Learning Solutions</span>
+          </span>
+        </a>
+        <p>A dedicated team of academic experts helping accounting and finance professionals excel — through the most comprehensive online courses, delivered on our own learning platform.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Courses</h4>
+        <ul>
+          <li><a href="#">ACCA individual courses</a></li>
+          <li><a href="#">ACCA subscription plan</a></li>
+          <li><a href="#">CIMA exam preparation</a></li>
+          <li><a href="#">CMA exam preparation</a></li>
+          <li><a href="#">CIA exam preparation</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About Vertex</a></li>
+          <li><a href="#">Student reviews</a></li>
+          <li><a href="#">Live classes</a></li>
+          <li><a href="#">Contact us</a></li>
+          <li><a href="#">Book a meeting</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#">Help centre</a></li>
+          <li><a href="#">Terms &amp; conditions</a></li>
+          <li><a href="#">Privacy policy</a></li>
+          <li><a href="#">Cookie policy</a></li>
+          <li><a href="#">Complaint form</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <p>© 2026 Vertex Learning Solutions · ACCA, CIMA, CMA (USA) &amp; CIA exam preparation</p>
+      <div class="foot-rating"><span class="stars">★★★★★</span> Rated 5.0 by students worldwide</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

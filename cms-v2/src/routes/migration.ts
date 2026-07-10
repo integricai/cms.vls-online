@@ -15,6 +15,7 @@ import {
 } from '../services/courseMigrationService';
 import { verifyStoryblokAccess } from '../services/storyblokClient';
 import { scanAndStoreMigrationPages } from '../services/pageScanner';
+import { listMigrationTemplateBlueprints, MigrationTemplateError } from '../services/migrationTemplateRegistry';
 import {
   getMigrationPageById,
   listMigrationPages,
@@ -61,6 +62,24 @@ function parsePageRequest(body: Record<string, unknown>): PageMigrationRequest {
     dryRun: Boolean(body.dryRun),
   };
 }
+
+router.get('/templates', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const templates = listMigrationTemplateBlueprints().map(blueprint => ({
+      template: blueprint.template,
+      fileName: blueprint.fileName,
+      sectionCount: blueprint.sections.length,
+      sections: blueprint.sections.map(section => ({
+        key: section.key,
+        label: section.label,
+        component: section.component,
+      })),
+    }));
+    return res.json({ ok: true, data: templates });
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.get('/pages', async (_req: Request, res: Response, next: NextFunction) => {
   try {
@@ -171,7 +190,7 @@ function storyblokErrorStatus(status: number): number {
 }
 
 router.use((err: Error, _req: Request, res: Response, next: NextFunction) => {
-  if (err instanceof CourseMigrationError || err instanceof CoursePageScrapeError) {
+  if (err instanceof CourseMigrationError || err instanceof CoursePageScrapeError || err instanceof MigrationTemplateError) {
     return res.status(err.status).json({ ok: false, error: err.message });
   }
   if (err instanceof StoryblokApiError) {

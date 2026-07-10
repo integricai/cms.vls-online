@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>About ACCA — The ACCA Professional Qualification | Vertex Learning Solutions</title>
+<meta name="description" content="Everything you need to know about the ACCA Professional Qualification — structure, entry requirements, fees, timeline and career opportunities. Prepare with Vertex Learning Solutions." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --navy:#0E2A57; --ink:#15233D; --slate:#3D4A63;
+    --blue:#1E50C8; --blue-strong:#1A45B0; --blue-bright:#3B73F0;
+    --blue-50:#F2F6FF; --blue-100:#E7EEFD; --blue-200:#D6E2FB;
+    --green:#1E9E6A; --green-bg:#E3F4EC; --amber:#F5A623;
+    --purple:#5B49D6; --purple-bg:#F2EEFC;
+    --teal:#1FAE8C; --teal-bg:#E2F5F0;
+    --white:#FFF; --line:#E5EBF6; --line-soft:#EEF2FA;
+    --shadow-sm:0 1px 2px rgba(14,42,87,.05),0 1px 3px rgba(14,42,87,.04);
+    --shadow-md:0 6px 18px rgba(14,42,87,.07),0 2px 6px rgba(14,42,87,.05);
+    --shadow-lg:0 18px 48px rgba(14,42,87,.12),0 6px 16px rgba(14,42,87,.07);
+    --radius:16px; --radius-lg:22px; --maxw:1200px; --gutter:40px;
+  }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+  body{ margin:0; font-family:'Poppins',system-ui,-apple-system,sans-serif; color:var(--ink);
+    background:var(--white); font-size:16.5px; line-height:1.62; font-weight:400;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  h1,h2,h3,h4{ margin:0; color:var(--navy); font-weight:600; line-height:1.18; letter-spacing:-.01em; }
+  p{ margin:0; } a{ color:inherit; text-decoration:none; } img,svg{ display:block; }
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 var(--gutter); }
+  .accent{ color:var(--blue); font-style:italic; font-weight:600; }
+  .eyebrow{ font-size:12.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--blue); margin-bottom:16px; }
+  .stars{ color:var(--amber); letter-spacing:1px; }
+
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:9px; font-family:inherit;
+    font-size:15.5px; font-weight:500; padding:14px 26px; border-radius:12px; cursor:pointer;
+    border:1px solid transparent; transition:.18s ease; white-space:nowrap; }
+  .btn svg{ width:17px; height:17px; }
+  .btn-primary{ background:var(--blue); color:#fff; box-shadow:0 4px 14px rgba(30,80,200,.28); }
+  .btn-primary:hover{ background:var(--blue-strong); transform:translateY(-1px); box-shadow:0 8px 22px rgba(30,80,200,.32); }
+  .btn-ghost{ background:#fff; color:var(--navy); border-color:var(--line); }
+  .btn-ghost:hover{ border-color:var(--blue-200); background:var(--blue-50); }
+  .btn-outline-blue{ background:transparent; color:var(--navy); border-color:var(--blue-200); }
+  .btn-outline-blue:hover{ background:#fff; }
+
+  /* HEADER */
+  header{ position:sticky; top:0; z-index:50; background:rgba(255,255,255,.88); backdrop-filter:blur(12px); border-bottom:1px solid var(--line-soft); }
+  .nav{ display:flex; align-items:center; justify-content:space-between; height:74px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{ width:38px; height:38px; border-radius:10px; background:var(--blue); display:grid; place-items:center; color:#fff; font-weight:700; font-size:19px; box-shadow:0 4px 12px rgba(30,80,200,.3); }
+  .brand-name{ font-weight:700; font-size:18px; color:var(--navy); line-height:1; letter-spacing:-.01em; }
+  .brand-sub{ font-size:9.5px; font-weight:600; letter-spacing:.22em; color:var(--slate); text-transform:uppercase; margin-top:3px; }
+  .nav-links{ display:flex; gap:34px; }
+  .nav-links a{ font-size:15px; font-weight:500; color:var(--slate); transition:color .15s; }
+  .nav-links a:hover, .nav-links a.active{ color:var(--blue); }
+  .nav-right{ display:flex; align-items:center; gap:22px; }
+  .nav-right .signin{ font-size:15px; font-weight:500; color:var(--navy); }
+  .nav-right .signin:hover{ color:var(--blue); }
+  .menu-btn{ display:none; background:none; border:none; cursor:pointer; padding:6px; }
+
+  /* BREADCRUMB */
+  .crumb{ padding:22px 0 6px; }
+  .crumb ol{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; align-items:center; gap:9px; font-size:13px; color:var(--slate); }
+  .crumb a:hover{ color:var(--blue); }
+  .crumb .sep{ color:var(--blue-200); }
+  .crumb [aria-current]{ color:var(--navy); font-weight:500; }
+
+  /* HERO */
+  .hero{ padding:36px 0 70px; background:
+      radial-gradient(1100px 520px at 88% -8%, var(--blue-50) 0%, rgba(242,246,255,0) 60%); }
+  .hero-grid{ display:grid; grid-template-columns:1.08fr .92fr; gap:64px; align-items:center; }
+  .hero h1{ font-size:48px; font-weight:600; line-height:1.08; letter-spacing:-.025em; margin-bottom:22px; }
+  .hero-lead{ font-size:17.5px; color:var(--slate); max-width:560px; line-height:1.66; margin-bottom:16px; }
+  .hero-sub{ font-size:15.5px; color:var(--slate); max-width:560px; line-height:1.66; margin-bottom:28px; }
+  .hero-cta{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:30px; }
+  .trust-row{ display:flex; gap:12px; flex-wrap:wrap; }
+  .trust-pill{ display:inline-flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--line);
+    border-radius:999px; padding:8px 16px; font-size:13px; font-weight:500; color:var(--navy); box-shadow:var(--shadow-sm); }
+  .trust-pill svg{ width:14px; height:14px; color:var(--blue); flex:none; }
+
+  /* Hero structure snapshot card */
+  .snap-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-lg); padding:26px; }
+  .snap-card .sc-tag{ font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--blue); background:var(--blue-50); border:1px solid var(--blue-100);
+    padding:5px 11px; border-radius:7px; display:inline-block; margin-bottom:18px; }
+  .snap-card h3{ font-size:19px; margin-bottom:16px; }
+  .snap-rows{ display:flex; flex-direction:column; gap:12px; }
+  .snap-row{ display:flex; align-items:center; gap:13px; background:var(--blue-50); border:1px solid var(--blue-100);
+    border-radius:12px; padding:13px 16px; }
+  .snap-row .n{ width:34px; height:34px; border-radius:9px; background:#fff; border:1px solid var(--blue-100);
+    color:var(--blue); display:grid; place-items:center; font-size:13px; font-weight:700; flex:none; }
+  .snap-row .t{ font-size:13.5px; font-weight:600; color:var(--navy); line-height:1.3; }
+  .snap-row .s{ font-size:12px; color:var(--slate); line-height:1.3; }
+  .snap-total{ display:flex; align-items:center; justify-content:space-between; margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
+  .snap-total .k{ font-size:13px; color:var(--slate); }
+  .snap-total .v{ font-size:20px; font-weight:700; color:var(--navy); }
+
+  /* SECTION SHELL */
+  .section{ padding:84px 0; }
+  .band{ background:var(--blue-50); border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft); }
+  .sec-head{ max-width:660px; margin-bottom:44px; }
+  .sec-head h2{ font-size:36px; font-weight:600; letter-spacing:-.02em; line-height:1.14; margin-bottom:16px; }
+  .sec-head p{ font-size:16.5px; color:var(--slate); line-height:1.62; }
+
+  /* CAREER CARDS */
+  .career-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  .career{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:26px 24px;
+    box-shadow:var(--shadow-sm); transition:.2s ease; display:flex; align-items:center; gap:16px; }
+  .career:hover{ border-color:var(--blue-200); box-shadow:var(--shadow-md); transform:translateY(-3px); }
+  .career .c-ico{ width:46px; height:46px; border-radius:12px; background:var(--blue-50); border:1px solid var(--blue-100);
+    color:var(--blue); display:grid; place-items:center; flex:none; }
+  .career .c-ico svg{ width:21px; height:21px; }
+  .career h3{ font-size:16px; font-weight:600; line-height:1.3; }
+
+  /* ===== QUALIFICATION STRUCTURE ===== */
+  .levels{ display:flex; flex-direction:column; gap:22px; }
+  .level{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); overflow:hidden; }
+  .level-bar{ height:5px; }
+  .level-bar.l1{ background:linear-gradient(90deg,#1FAE8C,#34C6B0); }
+  .level-bar.l2{ background:linear-gradient(90deg,#1E50C8,#3B73F0); }
+  .level-bar.l3{ background:linear-gradient(90deg,#5B49D6,#7E6BF0); }
+  .level-body{ padding:30px 32px; }
+  .level-head{ display:flex; align-items:center; gap:18px; margin-bottom:22px; flex-wrap:wrap; }
+  .level-num{ font-size:15px; font-weight:700; letter-spacing:.02em; width:44px; height:44px; border-radius:12px;
+    display:grid; place-items:center; flex:none; }
+  .level-num.l1{ background:var(--teal-bg); color:var(--teal); }
+  .level-num.l2{ background:var(--blue-50); color:var(--blue); }
+  .level-num.l3{ background:var(--purple-bg); color:var(--purple); }
+  .level-title{ font-size:21px; font-weight:600; color:var(--navy); }
+  .level-req{ font-size:13px; font-weight:600; color:var(--slate); background:var(--line-soft);
+    padding:6px 13px; border-radius:999px; margin-left:auto; }
+  .papers{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .paper{ display:flex; align-items:center; gap:12px; border:1px solid var(--line); border-radius:12px; padding:13px 15px; transition:.15s; }
+  .paper:hover{ border-color:var(--blue-200); background:var(--blue-50); }
+  .paper .code{ font-size:12px; font-weight:700; letter-spacing:.02em; width:40px; height:30px; border-radius:8px;
+    display:grid; place-items:center; flex:none; }
+  .paper .code.l1{ background:var(--teal-bg); color:var(--teal); }
+  .paper .code.l2{ background:var(--blue-50); color:var(--blue); }
+  .paper .code.l3{ background:var(--purple-bg); color:var(--purple); }
+  .paper .name{ font-size:13.5px; font-weight:500; color:var(--ink); line-height:1.3; }
+
+  /* TIMELINE / EXEMPTIONS */
+  .duo-grid{ display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  .duo-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); padding:34px 32px; }
+  .duo-card .d-ico{ width:48px; height:48px; border-radius:12px; background:var(--blue-50); border:1px solid var(--blue-100);
+    color:var(--blue); display:grid; place-items:center; margin-bottom:20px; }
+  .duo-card .d-ico svg{ width:22px; height:22px; }
+  .duo-card h3{ font-size:20px; margin-bottom:12px; }
+  .duo-card p{ font-size:15px; color:var(--slate); line-height:1.65; }
+  .big-figure{ display:flex; align-items:baseline; gap:12px; margin-top:22px; padding-top:20px; border-top:1px solid var(--line); }
+  .big-figure .v{ font-size:40px; font-weight:700; color:var(--navy); letter-spacing:-.02em; line-height:1; }
+  .big-figure .k{ font-size:14px; color:var(--slate); }
+
+  /* ENTRY REQUIREMENTS */
+  .req-list{ display:flex; flex-direction:column; gap:14px; max-width:760px; }
+  .req{ display:flex; align-items:flex-start; gap:15px; background:#fff; border:1px solid var(--line);
+    border-radius:var(--radius); padding:20px 24px; box-shadow:var(--shadow-sm); }
+  .req .chk{ width:28px; height:28px; border-radius:9px; background:var(--green-bg); color:var(--green);
+    display:grid; place-items:center; flex:none; margin-top:2px; }
+  .req .chk svg{ width:15px; height:15px; }
+  .req .t{ font-size:15.5px; font-weight:600; color:var(--navy); }
+  .req .s{ font-size:14px; color:var(--slate); margin-top:3px; line-height:1.55; }
+  .req.tip .chk{ background:#FCEEDD; color:#C77B1E; }
+
+  /* INDUSTRIES */
+  .ind-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+  .ind{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:24px 22px;
+    box-shadow:var(--shadow-sm); transition:.2s ease; }
+  .ind:hover{ border-color:var(--blue-200); box-shadow:var(--shadow-md); transform:translateY(-3px); }
+  .ind .i-ico{ width:42px; height:42px; border-radius:11px; background:var(--blue-50); border:1px solid var(--blue-100);
+    color:var(--blue); display:grid; place-items:center; margin-bottom:16px; }
+  .ind .i-ico svg{ width:19px; height:19px; }
+  .ind h3{ font-size:15px; font-weight:600; margin-bottom:5px; }
+  .ind p{ font-size:13px; color:var(--slate); line-height:1.5; }
+
+  /* FAQ */
+  .faq{ display:flex; flex-direction:column; gap:12px; max-width:860px; }
+  details.qa{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); overflow:hidden; }
+  details.qa[open]{ border-color:var(--blue-200); box-shadow:var(--shadow-md); }
+  .qa summary{ list-style:none; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:18px; padding:20px 24px; font-size:16px; font-weight:600; color:var(--navy); }
+  .qa summary::-webkit-details-marker{ display:none; }
+  .qa-icon{ width:24px; height:24px; flex:none; position:relative; }
+  .qa-icon::before,.qa-icon::after{ content:""; position:absolute; background:var(--blue); border-radius:2px; transition:.2s; }
+  .qa-icon::before{ left:5px; right:5px; top:11px; height:2px; }
+  .qa-icon::after{ top:5px; bottom:5px; left:11px; width:2px; }
+  details.qa[open] .qa-icon::after{ transform:scaleY(0); }
+  .qa-body{ padding:0 24px 22px; font-size:15px; color:var(--slate); line-height:1.68; max-width:760px; }
+  .qa-body b{ color:var(--navy); font-weight:600; }
+  .qa-body p + p{ margin-top:10px; }
+
+  /* CTA */
+  .cta-band{ padding:36px 0 90px; }
+  .cta-panel{ background:
+      radial-gradient(640px 320px at 88% 120%, rgba(59,115,240,.12) 0%, rgba(59,115,240,0) 60%),
+      var(--blue-100);
+    border:1px solid var(--blue-200); border-radius:28px; padding:60px 56px; box-shadow:var(--shadow-sm); }
+  .cta-panel h2{ font-size:38px; font-weight:600; letter-spacing:-.02em; line-height:1.14; margin-bottom:14px; max-width:560px; }
+  .cta-panel p{ font-size:17.5px; color:var(--slate); max-width:600px; line-height:1.6; margin-bottom:28px; }
+  .cta-actions{ display:flex; gap:14px; flex-wrap:wrap; }
+
+  /* FOOTER */
+  footer{ border-top:1px solid var(--line); padding:68px 0 34px; }
+  .foot-grid{ display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:48px; margin-bottom:50px; }
+  .foot-about{ max-width:300px; }
+  .foot-about .brand{ margin-bottom:18px; }
+  .foot-about p{ font-size:14.5px; color:var(--slate); line-height:1.65; }
+  .foot-col h4{ font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--slate); margin-bottom:18px; }
+  .foot-col ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+  .foot-col a{ font-size:14.5px; color:var(--ink); transition:color .15s; }
+  .foot-col a:hover{ color:var(--blue); }
+  .foot-bottom{ display:flex; align-items:center; justify-content:space-between; padding-top:26px; border-top:1px solid var(--line); flex-wrap:wrap; gap:14px; }
+  .foot-bottom p{ font-size:13.5px; color:var(--slate); }
+  .foot-rating{ display:flex; align-items:center; gap:9px; font-size:13.5px; color:var(--slate); }
+
+  @media (max-width:980px){
+    .hero-grid{ grid-template-columns:1fr; gap:44px; }
+    .hero h1{ font-size:40px; }
+    .career-grid{ grid-template-columns:repeat(2,1fr); }
+    .papers{ grid-template-columns:repeat(2,1fr); }
+    .duo-grid{ grid-template-columns:1fr; }
+    .ind-grid{ grid-template-columns:repeat(2,1fr); }
+    .foot-grid{ grid-template-columns:1fr 1fr; gap:36px; }
+  }
+  @media (max-width:680px){
+    :root{ --gutter:22px; }
+    .nav-links,.nav-right .signin{ display:none; }
+    .menu-btn{ display:block; }
+    .hero{ padding:24px 0 50px; }
+    .hero h1{ font-size:32px; }
+    .section{ padding:58px 0; }
+    .sec-head h2,.cta-panel h2{ font-size:26px; }
+    .career-grid,.papers,.ind-grid{ grid-template-columns:1fr; }
+    .level-body{ padding:24px 20px; }
+    .level-req{ margin-left:0; }
+    .cta-panel{ padding:38px 26px; }
+    .foot-grid{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#">
+      <span class="brand-mark">V</span>
+      <span><span class="brand-name">Vertex</span><span class="brand-sub">Learning Solutions</span></span>
+    </a>
+    <nav class="nav-links">
+      <a href="#" class="active">Courses</a><a href="#">Subscription</a><a href="#">Live classes</a><a href="#">Reviews</a><a href="#">About</a>
+    </nav>
+    <div class="nav-right">
+      <a class="signin" href="#">Sign in</a>
+      <a class="btn btn-primary" href="#">Enrol now</a>
+      <button class="menu-btn" aria-label="Open menu"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E2A57" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </div>
+</header>
+
+<!-- BREADCRUMB -->
+<div class="wrap crumb">
+  <ol>
+    <li><a href="#">Home</a></li><li class="sep">/</li>
+    <li><a href="#">ACCA</a></li><li class="sep">/</li>
+    <li aria-current="page">About ACCA</li>
+  </ol>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">The qualification</div>
+      <h1>The ACCA Professional <span class="accent">Qualification.</span></h1>
+      <p class="hero-lead">One of the world's most respected and internationally recognised accounting and finance qualifications — awarded by the Association of Chartered Certified Accountants, with members and students in more than 180 countries.</p>
+      <p class="hero-sub">At Vertex Learning Solutions, we help you prepare for your ACCA exams through structured online learning, tutor support, exam-focused study plans, quizzes, mock exams and live sessions.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#">View ACCA courses
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a class="btn btn-ghost" href="#">Book a free meeting</a>
+      </div>
+      <div class="trust-row">
+        <span class="trust-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Trusted ACCA content</span>
+        <span class="trust-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg> Students in 88 countries</span>
+        <span class="trust-pill"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01z"/></svg> Rated excellent on Trustpilot</span>
+      </div>
+    </div>
+
+    <div class="snap-card">
+      <span class="sc-tag">Qualification at a glance</span>
+      <h3>Three levels to membership</h3>
+      <div class="snap-rows">
+        <div class="snap-row">
+          <span class="n">01</span>
+          <span><span class="t">Applied Knowledge</span><br><span class="s">3 papers · BT, MA, FA</span></span>
+        </div>
+        <div class="snap-row">
+          <span class="n">02</span>
+          <span><span class="t">Applied Skills</span><br><span class="s">6 papers · LW, PM, TX, FR, AA, FM</span></span>
+        </div>
+        <div class="snap-row">
+          <span class="n">03</span>
+          <span><span class="t">Strategic Professional</span><br><span class="s">4 of 6 papers · SBL &amp; SBR + 2 options</span></span>
+        </div>
+      </div>
+      <div class="snap-total">
+        <span class="k">Exams to complete<br>(exemptions may apply)</span>
+        <span class="v">13 exams</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CAREER OPPORTUNITIES -->
+<section class="section band">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Where ACCA takes you</div>
+      <h2>ACCA career <span class="accent">opportunities.</span></h2>
+      <p>The ACCA qualification opens the door to high-value finance and accounting careers — in public practice, multinationals, banking, consulting and financial management.</p>
+    </div>
+    <div class="career-grid">
+      <div class="career">
+        <span class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 8 4 4 6-8 6 8 4-4v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/></svg></span>
+        <h3>Chief Financial Officer (CFO)</h3>
+      </div>
+      <div class="career">
+        <span class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span>
+        <h3>Chartered Accountant</h3>
+      </div>
+      <div class="career">
+        <span class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></span>
+        <h3>Financial Analyst</h3>
+      </div>
+      <div class="career">
+        <span class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg></span>
+        <h3>Auditor</h3>
+      </div>
+      <div class="career">
+        <span class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></span>
+        <h3>Finance Manager</h3>
+      </div>
+      <div class="career">
+        <span class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+        <h3>Internal Auditor</h3>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUALIFICATION STRUCTURE -->
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">The path to membership</div>
+      <h2>ACCA qualification <span class="accent">structure.</span></h2>
+      <p>Thirteen exams across three levels — plus three years' practical experience and the Ethics and Professional Skills module.</p>
+    </div>
+
+    <div class="levels">
+      <!-- Level 1 -->
+      <div class="level">
+        <div class="level-bar l1"></div>
+        <div class="level-body">
+          <div class="level-head">
+            <span class="level-num l1">01</span>
+            <span class="level-title">Applied Knowledge</span>
+            <span class="level-req">Complete all three papers</span>
+          </div>
+          <div class="papers">
+            <div class="paper"><span class="code l1">BT</span><span class="name">Business and Technology</span></div>
+            <div class="paper"><span class="code l1">MA</span><span class="name">Management Accounting</span></div>
+            <div class="paper"><span class="code l1">FA</span><span class="name">Financial Accounting</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Level 2 -->
+      <div class="level">
+        <div class="level-bar l2"></div>
+        <div class="level-body">
+          <div class="level-head">
+            <span class="level-num l2">02</span>
+            <span class="level-title">Applied Skills</span>
+            <span class="level-req">Complete all six papers</span>
+          </div>
+          <div class="papers">
+            <div class="paper"><span class="code l2">LW</span><span class="name">Corporate and Business Law</span></div>
+            <div class="paper"><span class="code l2">PM</span><span class="name">Performance Management</span></div>
+            <div class="paper"><span class="code l2">TX</span><span class="name">Taxation</span></div>
+            <div class="paper"><span class="code l2">FR</span><span class="name">Financial Reporting</span></div>
+            <div class="paper"><span class="code l2">AA</span><span class="name">Audit and Assurance</span></div>
+            <div class="paper"><span class="code l2">FM</span><span class="name">Financial Management</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Level 3 -->
+      <div class="level">
+        <div class="level-bar l3"></div>
+        <div class="level-body">
+          <div class="level-head">
+            <span class="level-num l3">03</span>
+            <span class="level-title">Strategic Professional</span>
+            <span class="level-req">Complete four of six papers</span>
+          </div>
+          <div class="papers">
+            <div class="paper"><span class="code l3">SBL</span><span class="name">Strategic Business Leader</span></div>
+            <div class="paper"><span class="code l3">SBR</span><span class="name">Strategic Business Reporting</span></div>
+            <div class="paper"><span class="code l3">AFM</span><span class="name">Advanced Financial Management</span></div>
+            <div class="paper"><span class="code l3">APM</span><span class="name">Advanced Performance Management</span></div>
+            <div class="paper"><span class="code l3">AAA</span><span class="name">Advanced Audit &amp; Assurance</span></div>
+            <div class="paper"><span class="code l3">ATX</span><span class="name">Advanced Taxation</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW LONG -->
+<section class="section band">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">How long does ACCA take?</div>
+      <h2>Your timeline, <span class="accent">your pace.</span></h2>
+    </div>
+    <div class="duo-grid">
+      <div class="duo-card">
+        <div class="d-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+        <h3>Completion time varies by student</h3>
+        <p>It depends on prior qualifications, exemptions, study pace and work commitments — but most students complete the full qualification within a predictable window.</p>
+        <div class="big-figure"><span class="v">2–4</span><span class="k">years to complete<br>for most students</span></div>
+      </div>
+      <div class="duo-card">
+        <div class="d-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></div>
+        <h3>Exemptions available</h3>
+        <p>Students with relevant degrees or prior accounting qualifications may receive exemptions from some Applied Knowledge and Applied Skills papers — allowing you to complete ACCA faster than the standard timeline.</p>
+        <div class="big-figure"><span class="v">Up to 9</span><span class="k">papers exempted,<br>depending on your background</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ENTRY REQUIREMENTS -->
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Getting started</div>
+      <h2>ACCA entry <span class="accent">requirements.</span></h2>
+      <p>To begin the ACCA Professional Qualification, students generally need one of the following:</p>
+    </div>
+    <div class="req-list">
+      <div class="req">
+        <span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <span><span class="t">Two A Levels and three GCSEs</span><br><span class="s">Including English and Mathematics.</span></span>
+      </div>
+      <div class="req">
+        <span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <span><span class="t">An equivalent qualification</span><br><span class="s">Such as a bachelor's degree or a professional certification — specialisation is not important.</span></span>
+      </div>
+      <div class="req tip">
+        <span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg></span>
+        <span><span class="t">Don't meet the requirements?</span><br><span class="s">Begin through the ACCA Foundation Diploma and progress to the full qualification from there.</span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INDUSTRIES -->
+<section class="section band">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Industries hiring ACCA professionals</div>
+      <h2>Work across any industry, <span class="accent">anywhere in the world.</span></h2>
+      <p>ACCA professionals are in demand globally — from multinational corporations to public sector organisations, across every major industry.</p>
+    </div>
+    <div class="ind-grid">
+      <div class="ind">
+        <span class="i-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M4 21V8l8-5 8 5v13M9 21v-6h6v6"/></svg></span>
+        <h3>Banking &amp; Finance</h3><p>Commercial &amp; investment banks</p>
+      </div>
+      <div class="ind">
+        <span class="i-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>
+        <h3>Technology</h3><p>Startups to global tech firms</p>
+      </div>
+      <div class="ind">
+        <span class="i-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></span>
+        <h3>Consulting</h3><p>Big 4 and boutique firms</p>
+      </div>
+      <div class="ind">
+        <span class="i-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v8M8 12h8"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <h3>Healthcare</h3><p>NHS, private &amp; international</p>
+      </div>
+      <div class="ind">
+        <span class="i-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20M4 20V9l5 3V9l5 3V9l5 3v8"/></svg></span>
+        <h3>Manufacturing</h3><p>Industrial &amp; FMCG sectors</p>
+      </div>
+      <div class="ind">
+        <span class="i-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></span>
+        <h3>Multinationals</h3><p>Fortune 500 &amp; global corps</p>
+      </div>
+      <div class="ind">
+        <span class="i-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M15 9h.01M9 13h.01M15 13h.01M9 17h.01M15 17h.01"/></svg></span>
+        <h3>Public Sector</h3><p>Government &amp; NGOs</p>
+      </div>
+      <div class="ind">
+        <span class="i-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></span>
+        <h3>Energy &amp; Utilities</h3><p>Oil, gas &amp; renewables</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Questions, answered</div>
+      <h2>Frequently asked <span class="accent">questions.</span></h2>
+    </div>
+    <div class="faq">
+      <details class="qa" open>
+        <summary>What are the entry requirements for the ACCA Qualification?<span class="qa-icon"></span></summary>
+        <div class="qa-body">
+          <p><b>ACCA Professional Qualification:</b> you need either completed A Levels or a bachelor's degree (university degree; specialisation is not important).</p>
+          <p><b>ACCA Foundation Diploma (AFD):</b> to enrol at the Fundamentals level, you need a relevant secondary school education covering five separate subjects, which must include English and mathematics.</p>
+        </div>
+      </details>
+      <details class="qa">
+        <summary>What documents do I need to register as an ACCA student?<span class="qa-icon"></span></summary>
+        <div class="qa-body">
+          <p>You are required to submit copies of: official educational documents (completion certificates and transcripts detailing the modules studied), proof of identity (birth certificate, passport, national ID card or driver's licence), and a passport-style photograph.</p>
+          <p>Where documents have been issued in a language other than English, ACCA requires a photocopy of the original language documents and a copy of an official English translation.</p>
+        </div>
+      </details>
+      <details class="qa">
+        <summary>How long does it take to register as an ACCA student?<span class="qa-icon"></span></summary>
+        <div class="qa-body">The online application takes no more than 15 minutes to complete, provided you have your documents ready. You can save a part-complete application and return to it later. You'll receive confirmation by email or letter once your application has been processed — student IDs usually arrive within ten days.</div>
+      </details>
+      <details class="qa">
+        <summary>What is the ACCA fee structure?<span class="qa-icon"></span></summary>
+        <div class="qa-body">
+          <p><b>Initial registration fee:</b> between £45 and £89 depending on your country. <b>Annual subscription fee:</b> £122 payable in January every year while you continue your education. <b>Exemption fees:</b> if you are awarded exemptions, these are charged at the early exam entry rate for that paper.</p>
+          <p>For a full list of current prices, visit the fees section of the main ACCA website.</p>
+        </div>
+      </details>
+      <details class="qa">
+        <summary>Which exam papers do I have to take to complete the qualification?<span class="qa-icon"></span></summary>
+        <div class="qa-body">To qualify as an ACCA member you will need to complete 13 exams (students with prior qualifications may be able to claim exemptions at Fundamentals level), three years' practical work experience, and the Ethics and Professional Skills module.</div>
+      </details>
+      <details class="qa">
+        <summary>When do ACCA exams take place?<span class="qa-icon"></span></summary>
+        <div class="qa-body">
+          <p><b>On-demand CBE:</b> four papers — BT, MA, FA and LW — have no fixed date and can be taken any time in the year. Book with an exam centre near you and pay locally; results are given immediately on submission.</p>
+          <p><b>Session-based exams:</b> all other papers run in four exam sessions, in the first week of March, June, September and December. Results are sent by email or SMS after six weeks.</p>
+        </div>
+      </details>
+      <details class="qa">
+        <summary>How much does the ACCA qualification cost, and how long does it take?<span class="qa-icon"></span></summary>
+        <div class="qa-body">
+          <p>With a bachelor's degree you need to pass thirteen exams (some may be exempted depending on your university), taking approximately 2.5 to 3 years.</p>
+          <p><b>Registration fee:</b> £45–£79 depending on your country. <b>Exam fees:</b> roughly $100–150 per paper — around $1,800 across 13 exams over three years. <b>Tuition fees:</b> depend on where you take your exam preparation.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-band">
+  <div class="wrap">
+    <div class="cta-panel">
+      <div class="eyebrow">Ready to take the next step?</div>
+      <h2>Start your ACCA journey <span class="accent">with Vertex.</span></h2>
+      <p>Join thousands of active learners already transforming their careers with Vertex Learning Solutions — expert tutors, live sessions and exam-focused study plans included.</p>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="#">View ACCA courses</a>
+        <a class="btn btn-outline-blue" href="#">Book a free meeting
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-about">
+        <a class="brand" href="#"><span class="brand-mark">V</span><span><span class="brand-name">Vertex</span><span class="brand-sub">Learning Solutions</span></span></a>
+        <p>A dedicated team of academic experts helping accounting and finance professionals excel — through the most comprehensive online courses, delivered on our own learning platform.</p>
+      </div>
+      <div class="foot-col"><h4>Courses</h4><ul>
+        <li><a href="#">ACCA individual courses</a></li><li><a href="#">ACCA subscription plan</a></li>
+        <li><a href="#">CIMA exam preparation</a></li><li><a href="#">CMA exam preparation</a></li><li><a href="#">CIA exam preparation</a></li>
+      </ul></div>
+      <div class="foot-col"><h4>Company</h4><ul>
+        <li><a href="#">About Vertex</a></li><li><a href="#">Student reviews</a></li>
+        <li><a href="#">Live classes</a></li><li><a href="#">Contact us</a></li><li><a href="#">Book a meeting</a></li>
+      </ul></div>
+      <div class="foot-col"><h4>Support</h4><ul>
+        <li><a href="#">Help centre</a></li><li><a href="#">Terms &amp; conditions</a></li>
+        <li><a href="#">Privacy policy</a></li><li><a href="#">Cookie policy</a></li><li><a href="#">Complaint form</a></li>
+      </ul></div>
+    </div>
+    <div class="foot-bottom">
+      <p>© 2026 Vertex Learning Solutions · ACCA, CIMA, CMA (USA) &amp; CIA exam preparation</p>
+      <div class="foot-rating"><span class="stars">★★★★★</span> Rated 5.0 by students worldwide</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

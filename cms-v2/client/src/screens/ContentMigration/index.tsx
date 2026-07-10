@@ -8,6 +8,7 @@ import type {
   PageScanResult,
   ScrapedCoursePage,
   StoryblokRegion,
+  TemplateReferenceSummary,
 } from '../../../../shared/migrationTypes';
 import { MIGRATION_TEMPLATE_LABELS } from '../../../../shared/migrationTemplateLabels';
 import { suggestDestinationSlug } from '../../../../shared/migrationDestination';
@@ -73,6 +74,7 @@ export default function ContentMigrationTab() {
   const [verifying, setVerifying] = useState(false);
   const [message, setMessage] = useState<StatusMessage | null>(null);
   const [result, setResult] = useState<PageMigrationResult | null>(null);
+  const [templateReference, setTemplateReference] = useState<TemplateReferenceSummary | null>(null);
 
   const selectedPage = useMemo(
     () => pages.find(page => page.id === selectedPageId) ?? null,
@@ -118,6 +120,15 @@ export default function ContentMigrationTab() {
       setDestinationSlug(suggestDestinationSlug(selectedPage.originUrl, selectedPage.template));
     }
   }, [selectedPage, destinationTouched]);
+
+  useEffect(() => {
+    api.get<TemplateReferenceSummary[]>('/migration/templates')
+      .then(templates => {
+        const match = templates.find(item => item.template === template) ?? null;
+        setTemplateReference(match);
+      })
+      .catch(() => setTemplateReference(null));
+  }, [template]);
 
   function buildPayload(dryRun = false) {
     return {
@@ -182,6 +193,7 @@ export default function ContentMigrationTab() {
     try {
       const data = await api.post<PageMigrationResult>('/migration/page/preview', buildPayload(true));
       setResult(data);
+      if (data.templateReference) setTemplateReference(data.templateReference);
       setMessage({
         type: data.warnings.length ? 'warning' : 'info',
         text: data.warnings.length
@@ -204,6 +216,7 @@ export default function ContentMigrationTab() {
     try {
       const data = await api.post<PageMigrationResult>('/migration/page', buildPayload(false));
       setResult(data);
+      if (data.templateReference) setTemplateReference(data.templateReference);
       setMessage({
         type: 'success',
         text: data.storyblok?.created
@@ -322,6 +335,9 @@ export default function ContentMigrationTab() {
             </select>
             <p className="mt-1 text-[11px] text-slate-400">
               Course pages go to <code>courses/</code>; all other templates go to the Storyblok root.
+              {templateReference ? (
+                <> Reference HTML: <code>templates/{templateReference.fileName}</code> ({templateReference.sectionCount} sections).</>
+              ) : null}
             </p>
           </Field>
 
@@ -418,6 +434,32 @@ export default function ContentMigrationTab() {
           {message && (
             <div className={`rounded-lg border px-4 py-3 text-sm ${statusClass(message.type)}`}>
               {message.text}
+            </div>
+          )}
+
+          {result?.componentLibrary && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+              <p className="font-semibold">Component library synced</p>
+              <p className="mt-1 text-xs">
+                {result.componentLibrary.presetsCreated} created, {result.componentLibrary.presetsUpdated} updated in
+                {' '}<code>{result.componentLibrary.folderSlug}/{template}</code>
+              </p>
+              <ul className="mt-2 max-h-32 overflow-y-auto text-xs text-blue-800">
+                {result.componentLibrary.presets.map(preset => (
+                  <li key={preset.fullSlug}>{preset.fullSlug} → {preset.component}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {result?.templateReference && (
+            <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
+              <p className="font-semibold text-slate-700">Template reference: templates/{result.templateReference.fileName}</p>
+              <ul className="mt-2 space-y-1">
+                {result.templateReference.sections.map(section => (
+                  <li key={section.key}>{section.label} → {section.component}</li>
+                ))}
+              </ul>
             </div>
           )}
 

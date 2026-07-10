@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>About Us — Vertex Learning Solutions</title>
+<meta name="description" content="Learn about Vertex Learning Solutions (VLS) — an online tutoring platform specialising in ACCA, CIMA and CMA qualifications. Expert tutors, a global student community, and a mission to change behaviours through education." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --navy:#0E2A57; --ink:#15233D; --slate:#3D4A63;
+    --blue:#1E50C8; --blue-strong:#1A45B0; --blue-bright:#3B73F0;
+    --blue-50:#F2F6FF; --blue-100:#E7EEFD; --blue-200:#D6E2FB;
+    --green:#1E9E6A; --green-bg:#E3F4EC; --amber:#F5A623;
+    --white:#FFF; --line:#E5EBF6; --line-soft:#EEF2FA;
+    --shadow-sm:0 1px 2px rgba(14,42,87,.05),0 1px 3px rgba(14,42,87,.04);
+    --shadow-md:0 6px 18px rgba(14,42,87,.07),0 2px 6px rgba(14,42,87,.05);
+    --shadow-lg:0 18px 48px rgba(14,42,87,.12),0 6px 16px rgba(14,42,87,.07);
+    --radius:16px; --radius-lg:22px; --maxw:1200px; --gutter:40px;
+  }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+  body{ margin:0; font-family:'Poppins',system-ui,-apple-system,sans-serif; color:var(--ink);
+    background:var(--white); font-size:16.5px; line-height:1.62; font-weight:400;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  h1,h2,h3,h4{ margin:0; color:var(--navy); font-weight:600; line-height:1.18; letter-spacing:-.01em; }
+  p{ margin:0; } a{ color:inherit; text-decoration:none; } img,svg{ display:block; }
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 var(--gutter); }
+  .accent{ color:var(--blue); font-style:italic; font-weight:600; }
+  .eyebrow{ font-size:12.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--blue); margin-bottom:16px; }
+  .stars{ color:var(--amber); letter-spacing:1px; }
+
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:9px; font-family:inherit;
+    font-size:15.5px; font-weight:500; padding:14px 26px; border-radius:12px; cursor:pointer;
+    border:1px solid transparent; transition:.18s ease; white-space:nowrap; }
+  .btn svg{ width:17px; height:17px; }
+  .btn-primary{ background:var(--blue); color:#fff; box-shadow:0 4px 14px rgba(30,80,200,.28); }
+  .btn-primary:hover{ background:var(--blue-strong); transform:translateY(-1px); box-shadow:0 8px 22px rgba(30,80,200,.32); }
+  .btn-ghost{ background:#fff; color:var(--navy); border-color:var(--line); }
+  .btn-ghost:hover{ border-color:var(--blue-200); background:var(--blue-50); }
+  .btn-outline-blue{ background:transparent; color:var(--navy); border-color:var(--blue-200); }
+  .btn-outline-blue:hover{ background:#fff; }
+
+  /* HEADER */
+  header{ position:sticky; top:0; z-index:50; background:rgba(255,255,255,.88); backdrop-filter:blur(12px); border-bottom:1px solid var(--line-soft); }
+  .nav{ display:flex; align-items:center; justify-content:space-between; height:74px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{ width:38px; height:38px; border-radius:10px; background:var(--blue); display:grid; place-items:center; color:#fff; font-weight:700; font-size:19px; box-shadow:0 4px 12px rgba(30,80,200,.3); }
+  .brand-name{ font-weight:700; font-size:18px; color:var(--navy); line-height:1; letter-spacing:-.01em; }
+  .brand-sub{ font-size:9.5px; font-weight:600; letter-spacing:.22em; color:var(--slate); text-transform:uppercase; margin-top:3px; }
+  .nav-links{ display:flex; gap:34px; }
+  .nav-links a{ font-size:15px; font-weight:500; color:var(--slate); transition:color .15s; }
+  .nav-links a:hover, .nav-links a.active{ color:var(--blue); }
+  .nav-right{ display:flex; align-items:center; gap:22px; }
+  .nav-right .signin{ font-size:15px; font-weight:500; color:var(--navy); }
+  .nav-right .signin:hover{ color:var(--blue); }
+  .menu-btn{ display:none; background:none; border:none; cursor:pointer; padding:6px; }
+
+  /* BREADCRUMB */
+  .crumb{ padding:22px 0 6px; }
+  .crumb ol{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; align-items:center; gap:9px; font-size:13px; color:var(--slate); }
+  .crumb a:hover{ color:var(--blue); }
+  .crumb .sep{ color:var(--blue-200); }
+  .crumb [aria-current]{ color:var(--navy); font-weight:500; }
+
+  /* HERO */
+  .hero{ padding:36px 0 76px; background:
+      radial-gradient(1100px 520px at 88% -8%, var(--blue-50) 0%, rgba(242,246,255,0) 60%); }
+  .hero-grid{ display:grid; grid-template-columns:1.05fr .95fr; gap:64px; align-items:center; }
+  .hero h1{ font-size:52px; font-weight:600; line-height:1.08; letter-spacing:-.025em; margin-bottom:22px; }
+  .hero-lead{ font-size:18px; color:var(--slate); max-width:540px; line-height:1.65; margin-bottom:26px; }
+  .hero-cta{ display:flex; gap:14px; flex-wrap:wrap; }
+
+  .value-ticks{ display:flex; flex-direction:column; gap:13px; margin-bottom:32px; }
+  .vt{ display:flex; align-items:center; gap:12px; font-size:15.5px; color:var(--ink); font-weight:500; }
+  .vt .chk{ width:26px; height:26px; border-radius:8px; background:var(--green-bg); color:var(--green); display:grid; place-items:center; flex:none; }
+  .vt .chk svg{ width:14px; height:14px; }
+
+  /* Mission card (hero right) */
+  .mission-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-lg); padding:34px 32px; position:relative; }
+  .mission-card .mc-tag{ font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--blue); background:var(--blue-50); border:1px solid var(--blue-100);
+    padding:5px 11px; border-radius:7px; display:inline-block; margin-bottom:20px; }
+  .mission-card blockquote{ margin:0 0 24px; font-size:20px; font-weight:500; color:var(--navy); line-height:1.5; letter-spacing:-.01em; }
+  .mission-card .mc-by{ display:flex; align-items:center; gap:13px; }
+  .mission-card .mc-av{ width:46px; height:46px; border-radius:50%; background:var(--blue); color:#fff; display:grid; place-items:center; font-weight:600; font-size:16px; flex:none; box-shadow:0 3px 9px rgba(30,80,200,.25); }
+  .mission-card .mc-name{ font-size:14.5px; font-weight:600; color:var(--navy); }
+  .mission-card .mc-role{ font-size:13px; color:var(--slate); }
+  .float-badge{ position:absolute; background:#fff; border:1px solid var(--line);
+    border-radius:13px; box-shadow:var(--shadow-lg); padding:11px 14px;
+    display:flex; align-items:center; gap:11px; }
+  .fb-top{ right:-24px; top:-22px; }
+  .fb-bottom{ left:-26px; bottom:-20px; }
+  .fb-ico{ width:30px; height:30px; border-radius:8px; display:grid; place-items:center; flex:none; }
+  .fb-ico.green{ background:var(--green-bg); color:var(--green); }
+  .fb-ico.blue{ background:var(--blue-50); color:var(--blue); }
+  .fb-title{ font-size:13px; font-weight:600; color:var(--navy); line-height:1.2; }
+  .fb-sub{ font-size:11.5px; color:var(--slate); line-height:1.2; margin-top:2px; }
+
+  /* STATS BAND */
+  .stats-band{ padding:0 0 34px; }
+  .stats-inner{ background:var(--blue-50); border:1px solid var(--blue-100);
+    border-radius:var(--radius-lg); padding:42px 16px;
+    display:grid; grid-template-columns:repeat(4,1fr); }
+  .stat{ text-align:center; padding:6px 22px; position:relative; }
+  .stat + .stat::before{ content:""; position:absolute; left:0; top:14%; height:72%; width:1px; background:var(--blue-200); }
+  .stat .num{ font-size:42px; font-weight:700; color:var(--navy); letter-spacing:-.02em; line-height:1; }
+  .stat .lab{ font-size:13.5px; color:var(--slate); margin-top:9px; line-height:1.4; }
+
+  /* SECTION SHELL */
+  .section{ padding:92px 0; }
+  .band{ background:var(--blue-50); border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft); }
+  .sec-head{ max-width:640px; margin-bottom:48px; }
+  .sec-head h2{ font-size:38px; font-weight:600; letter-spacing:-.02em; line-height:1.13; margin-bottom:16px; }
+  .sec-head p{ font-size:17px; color:var(--slate); line-height:1.62; }
+
+  /* STORY (two column) */
+  .story-grid{ display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:start; }
+  .story-grid h2{ font-size:38px; letter-spacing:-.02em; line-height:1.13; margin-bottom:20px; }
+  .story-grid .col p{ font-size:16.5px; color:var(--slate); line-height:1.7; }
+  .story-grid .col p + p{ margin-top:18px; }
+  .milestones{ display:flex; flex-direction:column; gap:0; border-left:2px solid var(--blue-200); }
+  .ms{ position:relative; padding:0 0 30px 30px; }
+  .ms:last-child{ padding-bottom:0; }
+  .ms::before{ content:""; position:absolute; left:-8px; top:5px; width:14px; height:14px; border-radius:50%;
+    background:var(--blue); border:3px solid #fff; box-shadow:0 0 0 2px var(--blue-200); }
+  .ms .yr{ font-size:12.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--blue); margin-bottom:4px; }
+  .ms .tt{ font-size:16.5px; font-weight:600; color:var(--navy); margin-bottom:4px; }
+  .ms .tx{ font-size:14.5px; color:var(--slate); line-height:1.6; }
+
+  /* VALUES CARDS */
+  .feature-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+  .feature{ background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+    padding:30px 28px; transition:.2s ease; box-shadow:var(--shadow-sm); }
+  .feature:hover{ border-color:var(--blue-200); box-shadow:var(--shadow-md); transform:translateY(-3px); }
+  .feature .f-ico{ width:48px; height:48px; border-radius:12px; background:var(--blue-50);
+    border:1px solid var(--blue-100); color:var(--blue);
+    display:grid; place-items:center; margin-bottom:22px; }
+  .feature .f-ico svg{ width:22px; height:22px; }
+  .feature h3{ font-size:19px; font-weight:600; margin-bottom:11px; }
+  .feature p{ font-size:15px; color:var(--slate); line-height:1.62; }
+
+  /* PLATFORM GRID */
+  .platform-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+  .plat{ background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+    padding:24px 22px; box-shadow:var(--shadow-sm); transition:.2s ease; }
+  .plat:hover{ border-color:var(--blue-200); box-shadow:var(--shadow-md); transform:translateY(-3px); }
+  .plat .p-ico{ width:40px; height:40px; border-radius:10px; background:var(--blue-50); border:1px solid var(--blue-100);
+    color:var(--blue); display:grid; place-items:center; margin-bottom:16px; }
+  .plat .p-ico svg{ width:19px; height:19px; }
+  .plat h3{ font-size:15.5px; font-weight:600; margin-bottom:6px; }
+  .plat p{ font-size:13.5px; color:var(--slate); line-height:1.55; }
+
+  /* DEVICES STRIP */
+  .devices{ display:flex; align-items:center; justify-content:center; gap:16px; margin-top:40px; flex-wrap:wrap; }
+  .device-pill{ display:inline-flex; align-items:center; gap:9px; background:#fff; border:1px solid var(--line);
+    border-radius:999px; padding:10px 20px; font-size:14px; font-weight:500; color:var(--navy); box-shadow:var(--shadow-sm); }
+  .device-pill svg{ width:16px; height:16px; color:var(--blue); }
+
+  /* GLOBAL REACH */
+  .reach-grid{ display:grid; grid-template-columns:.95fr 1.05fr; gap:60px; align-items:center; }
+  .reach-figs{ display:flex; gap:40px; margin:30px 0 34px; flex-wrap:wrap; }
+  .reach-fig .v{ font-size:36px; font-weight:700; color:var(--navy); letter-spacing:-.02em; line-height:1; }
+  .reach-fig .k{ font-size:12.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--slate); margin-top:8px; }
+  .regions{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .region{ display:flex; align-items:center; gap:13px; background:#fff; border:1px solid var(--line);
+    border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow-sm); }
+  .region .r-ico{ width:36px; height:36px; border-radius:10px; background:var(--blue-50); border:1px solid var(--blue-100);
+    color:var(--blue); display:grid; place-items:center; flex:none; }
+  .region .r-ico svg{ width:17px; height:17px; }
+  .region .r-name{ font-size:14.5px; font-weight:600; color:var(--navy); line-height:1.25; }
+  .region .r-sub{ font-size:12.5px; color:var(--slate); }
+
+  /* CONTACT */
+  .contact-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+  .contact-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+    padding:28px 26px; box-shadow:var(--shadow-sm); transition:.2s ease; }
+  .contact-card:hover{ border-color:var(--blue-200); box-shadow:var(--shadow-md); }
+  .contact-card .c-ico{ width:44px; height:44px; border-radius:11px; background:var(--blue-50); border:1px solid var(--blue-100);
+    color:var(--blue); display:grid; place-items:center; margin-bottom:18px; }
+  .contact-card .c-ico svg{ width:20px; height:20px; }
+  .contact-card h3{ font-size:16px; font-weight:600; margin-bottom:6px; }
+  .contact-card p{ font-size:14.5px; color:var(--slate); line-height:1.6; }
+  .contact-card a{ color:var(--blue); font-weight:500; }
+  .contact-card a:hover{ text-decoration:underline; }
+
+  /* CTA */
+  .cta-band{ padding:36px 0 90px; }
+  .cta-panel{ background:
+      radial-gradient(640px 320px at 88% 120%, rgba(59,115,240,.12) 0%, rgba(59,115,240,0) 60%),
+      var(--blue-100);
+    border:1px solid var(--blue-200); border-radius:28px; padding:60px 56px; box-shadow:var(--shadow-sm); }
+  .cta-panel h2{ font-size:38px; font-weight:600; letter-spacing:-.02em; line-height:1.14; margin-bottom:14px; max-width:560px; }
+  .cta-panel p{ font-size:17.5px; color:var(--slate); max-width:600px; line-height:1.6; margin-bottom:28px; }
+  .cta-actions{ display:flex; gap:14px; flex-wrap:wrap; }
+
+  /* FOOTER */
+  footer{ border-top:1px solid var(--line); padding:68px 0 34px; }
+  .foot-grid{ display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:48px; margin-bottom:50px; }
+  .foot-about{ max-width:300px; }
+  .foot-about .brand{ margin-bottom:18px; }
+  .foot-about p{ font-size:14.5px; color:var(--slate); line-height:1.65; }
+  .foot-col h4{ font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--slate); margin-bottom:18px; }
+  .foot-col ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+  .foot-col a{ font-size:14.5px; color:var(--ink); transition:color .15s; }
+  .foot-col a:hover{ color:var(--blue); }
+  .foot-bottom{ display:flex; align-items:center; justify-content:space-between; padding-top:26px; border-top:1px solid var(--line); flex-wrap:wrap; gap:14px; }
+  .foot-bottom p{ font-size:13.5px; color:var(--slate); }
+  .foot-rating{ display:flex; align-items:center; gap:9px; font-size:13.5px; color:var(--slate); }
+
+  @media (max-width:980px){
+    .hero-grid{ grid-template-columns:1fr; gap:48px; }
+    .hero h1{ font-size:42px; }
+    .story-grid,.reach-grid{ grid-template-columns:1fr; gap:44px; }
+    .feature-grid,.contact-grid{ grid-template-columns:repeat(2,1fr); }
+    .platform-grid{ grid-template-columns:repeat(2,1fr); }
+    .stats-inner{ grid-template-columns:repeat(2,1fr); gap:30px 0; }
+    .stat + .stat::before{ display:none; }
+    .foot-grid{ grid-template-columns:1fr 1fr; gap:36px; }
+    .float-badge{ display:none; }
+  }
+  @media (max-width:680px){
+    :root{ --gutter:22px; }
+    .nav-links,.nav-right .signin{ display:none; }
+    .menu-btn{ display:block; }
+    .hero{ padding:24px 0 54px; }
+    .hero h1{ font-size:34px; }
+    .section{ padding:60px 0; }
+    .sec-head h2,.story-grid h2,.cta-panel h2{ font-size:27px; }
+    .feature-grid,.platform-grid,.contact-grid,.regions{ grid-template-columns:1fr; }
+    .stats-inner{ grid-template-columns:1fr 1fr; }
+    .reach-figs{ gap:26px; }
+    .cta-panel{ padding:38px 26px; }
+    .foot-grid{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#">
+      <span class="brand-mark">V</span>
+      <span><span class="brand-name">Vertex</span><span class="brand-sub">Learning Solutions</span></span>
+    </a>
+    <nav class="nav-links">
+      <a href="#">Courses</a><a href="#">Subscription</a><a href="#">Live classes</a><a href="#">Reviews</a><a href="#" class="active">About</a>
+    </nav>
+    <div class="nav-right">
+      <a class="signin" href="#">Sign in</a>
+      <a class="btn btn-primary" href="#">Enrol now</a>
+      <button class="menu-btn" aria-label="Open menu"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E2A57" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </div>
+</header>
+
+<!-- BREADCRUMB -->
+<div class="wrap crumb">
+  <ol>
+    <li><a href="#">Home</a></li><li class="sep">/</li>
+    <li aria-current="page">About Vertex</li>
+  </ol>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">Who we are</div>
+      <h1>Changing behaviours <span class="accent">through education.</span></h1>
+      <p class="hero-lead">Vertex Learning Solutions is a dedicated team of academic experts helping accounting and finance professionals excel — pursuing the success of our students, partners and people with the highest standards of professionalism.</p>
+      <div class="value-ticks">
+        <div class="vt"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Integrity &amp; honesty</div>
+        <div class="vt"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Unending enthusiasm</div>
+        <div class="vt"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Continuing spirit of inquiry</div>
+      </div>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#">Meet the team
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a class="btn btn-ghost" href="#">Browse all courses</a>
+      </div>
+    </div>
+
+    <div style="position:relative;">
+      <div class="mission-card">
+        <span class="mc-tag">Our purpose &amp; mission</span>
+        <blockquote>&ldquo;We are in a growth industry operating in an international environment — there is great potential for people committed to building this company with us.&rdquo;</blockquote>
+        <div class="mc-by">
+          <div class="mc-av">V</div>
+          <div>
+            <div class="mc-name">Vertex Learning Solutions</div>
+            <div class="mc-role">Leadership · London, United Kingdom</div>
+          </div>
+        </div>
+      </div>
+      <div class="float-badge fb-top">
+        <span class="fb-ico green"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg></span>
+        <span><span class="fb-title">7,500+ active students</span><span class="fb-sub">Learning with VLS right now</span></span>
+      </div>
+      <div class="float-badge fb-bottom">
+        <span class="fb-ico blue"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></span>
+        <span><span class="fb-title">80+ countries</span><span class="fb-sub">A truly global community</span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="stats-band">
+  <div class="wrap">
+    <div class="stats-inner">
+      <div class="stat"><div class="num">7,500+</div><div class="lab">Active students worldwide</div></div>
+      <div class="stat"><div class="num">20+</div><div class="lab">Years of teaching expertise</div></div>
+      <div class="stat"><div class="num">40+</div><div class="lab">Courses across ACCA, CIMA, CMA &amp; CIA</div></div>
+      <div class="stat"><div class="num">98%</div><div class="lab">Student satisfaction rate</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- OUR STORY -->
+<section class="section">
+  <div class="wrap story-grid">
+    <div class="col">
+      <div class="eyebrow">Our story</div>
+      <h2>Built by educators, for <span class="accent">future professionals.</span></h2>
+      <p>Since 2007, Vertex Learning Solutions has helped accounting and finance professionals pass their exams and progress their careers. What began as a passion for teaching has grown into a global online tutoring platform specialising in ACCA, CIMA, CMA (USA) and CIA qualifications.</p>
+      <p>Key to our strategy has always been to attract and retain people who share our passion — tutors and staff selected for their expertise and their commitment to our core purpose and values. We strive to offer high-quality service and follow the highest standards of professionalism in every market we serve.</p>
+    </div>
+    <div class="milestones">
+      <div class="ms">
+        <div class="yr">2007</div>
+        <div class="tt">Vertex is founded</div>
+        <div class="tx">A small team of academic experts begins teaching professional accountancy qualifications.</div>
+      </div>
+      <div class="ms">
+        <div class="yr">Growth</div>
+        <div class="tt">Our own learning platform</div>
+        <div class="tx">We launch a purpose-built LMS — HD video, quizzes, notes and tutor support in one place.</div>
+      </div>
+      <div class="ms">
+        <div class="yr">Worldwide</div>
+        <div class="tt">A global community</div>
+        <div class="tx">Students in 80+ countries — from the UK and Middle East to South Asia, Africa and beyond.</div>
+      </div>
+      <div class="ms">
+        <div class="yr">Today</div>
+        <div class="tt">7,500+ active students</div>
+        <div class="tx">Headquartered in London, delivering ACCA, CIMA, CMA (USA) &amp; CIA exam preparation online.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VALUES & CULTURE -->
+<section class="section band">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Our culture</div>
+      <h2>The values we <span class="accent">stand for.</span></h2>
+      <p>Vertex's staff and student community are built on a foundation of respect for one another, the community, society, and the legal frameworks in which we operate. Diversity is celebrated — differences are welcome.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature">
+        <div class="f-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.6-9.5-9A5.5 5.5 0 0 1 12 6.5 5.5 5.5 0 0 1 21.5 12C19 16.4 12 21 12 21z"/></svg></div>
+        <h3>Respect &amp; integrity</h3>
+        <p>Built on mutual respect for one another, our community, and the legal frameworks in which we operate — with integrity and honesty in everything we do.</p>
+      </div>
+      <div class="feature">
+        <div class="f-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></div>
+        <h3>Diversity &amp; inclusion</h3>
+        <p>We celebrate differences and actively build communities where everyone can feel welcome, create a sense of belonging, achieve their potential and thrive.</p>
+      </div>
+      <div class="feature">
+        <div class="f-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></div>
+        <h3>Growth mindset</h3>
+        <p>Great minds don't all think alike. We value different perspectives because diverse teams achieve more — and learn important things from one another.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- THE PLATFORM -->
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">The platform</div>
+      <h2>A learning platform built for <span class="accent">exam success.</span></h2>
+      <p>Our LMS contains everything needed to create a captivating learning experience — fully optimised for web and mobile, accessible from desktops, tablets and smartphones.</p>
+    </div>
+    <div class="platform-grid">
+      <div class="plat">
+        <div class="p-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m10 9 5 3-5 3z"/></svg></div>
+        <h3>HD lecture videos</h3><p>Optimised streaming, always available.</p>
+      </div>
+      <div class="plat">
+        <div class="p-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+        <h3>Full syllabus coverage</h3><p>Every topic, every exam.</p>
+      </div>
+      <div class="plat">
+        <div class="p-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div>
+        <h3>Exam practice Q&amp;A</h3><p>Questions with solution videos.</p>
+      </div>
+      <div class="plat">
+        <div class="p-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></div>
+        <h3>Short revision notes</h3><p>Built for exam-day prep.</p>
+      </div>
+      <div class="plat">
+        <div class="p-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+        <h3>Graded quizzes</h3><p>Automated with full solutions.</p>
+      </div>
+      <div class="plat">
+        <div class="p-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg></div>
+        <h3>Assignment upload</h3><p>Submit work directly in-platform.</p>
+      </div>
+      <div class="plat">
+        <div class="p-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2v4l-4-4H9"/><path d="M13 4H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2v4l4-4h2z" transform="translate(0,-2)"/></svg></div>
+        <h3>Discussion boards</h3><p>Professional community access.</p>
+      </div>
+      <div class="plat">
+        <div class="p-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <h3>WhatsApp support</h3><p>Direct tutor group access.</p>
+      </div>
+    </div>
+
+    <div class="devices">
+      <span class="device-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> Desktop</span>
+      <span class="device-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 18h.01"/></svg> Mobile</span>
+      <span class="device-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M12 18h.01"/></svg> Tablet</span>
+    </div>
+  </div>
+</section>
+
+<!-- GLOBAL REACH -->
+<section class="section band">
+  <div class="wrap reach-grid">
+    <div>
+      <div class="eyebrow">Our reach</div>
+      <h2 style="font-size:38px; letter-spacing:-.02em; line-height:1.13; margin-bottom:18px;">A global student <span class="accent">community.</span></h2>
+      <p style="font-size:16.5px; color:var(--slate); line-height:1.65;">VLS students span the globe — from the United Kingdom and Middle East to South Asia, Africa and beyond. Our exam-focused approach works wherever you are in the world, with progress synced seamlessly across every device.</p>
+      <div class="reach-figs">
+        <div class="reach-fig"><div class="v">80+</div><div class="k">Countries</div></div>
+        <div class="reach-fig"><div class="v">7,500+</div><div class="k">Active students</div></div>
+        <div class="reach-fig"><div class="v">40+</div><div class="k">Courses</div></div>
+      </div>
+      <a class="btn btn-primary" href="#">Browse all courses
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+    <div class="regions">
+      <div class="region">
+        <span class="r-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+        <span><span class="r-name">United Kingdom</span><br><span class="r-sub">London HQ</span></span>
+      </div>
+      <div class="region">
+        <span class="r-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></span>
+        <span><span class="r-name">Middle East</span><br><span class="r-sub">Largest student cluster</span></span>
+      </div>
+      <div class="region">
+        <span class="r-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></span>
+        <span><span class="r-name">South Asia</span><br><span class="r-sub">Growing fast</span></span>
+      </div>
+      <div class="region">
+        <span class="r-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg></span>
+        <span><span class="r-name">Africa</span><br><span class="r-sub">Multiple countries</span></span>
+      </div>
+      <div class="region">
+        <span class="r-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <span><span class="r-name">Southeast Asia</span><br><span class="r-sub">Expanding</span></span>
+      </div>
+      <div class="region">
+        <span class="r-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg></span>
+        <span><span class="r-name">And beyond</span><br><span class="r-sub">80+ countries and counting</span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GET IN TOUCH -->
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Get in touch</div>
+      <h2>Talk to the <span class="accent">Vertex team.</span></h2>
+      <p>Vertex Learning Solutions Ltd · Kemp House, 128 City Road, London, EC1V 2NX, United Kingdom.</p>
+    </div>
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.35 1.79.66 2.64a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.44-1.23a2 2 0 0 1 2.11-.45c.85.31 1.74.54 2.64.66A2 2 0 0 1 22 16.92z"/></svg></div>
+        <h3>Call / WhatsApp</h3>
+        <p>Fast answers from a real person.<br><a href="tel:+447446426261">+44 7446 426261</a></p>
+      </div>
+      <div class="contact-card">
+        <div class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg></div>
+        <h3>Email us</h3>
+        <p>We reply within one working day.<br><a href="mailto:office@vls-online.com">office@vls-online.com</a></p>
+      </div>
+      <div class="contact-card">
+        <div class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <h3>Registered office</h3>
+        <p>Kemp House, 128 City Road,<br>London EC1V 2NX, United Kingdom</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-band">
+  <div class="wrap">
+    <div class="cta-panel">
+      <div class="eyebrow">Join the community</div>
+      <h2>Start your journey with <span class="accent">Vertex today.</span></h2>
+      <p>Join 7,500+ active students preparing for ACCA, CIMA, CMA (USA) and CIA with expert tutors, weekly live classes and support that's always within reach.</p>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="#">Explore courses</a>
+        <a class="btn btn-outline-blue" href="#">Book a meeting
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-about">
+        <a class="brand" href="#"><span class="brand-mark">V</span><span><span class="brand-name">Vertex</span><span class="brand-sub">Learning Solutions</span></span></a>
+        <p>A dedicated team of academic experts helping accounting and finance professionals excel — through the most comprehensive online courses, delivered on our own learning platform.</p>
+      </div>
+      <div class="foot-col"><h4>Courses</h4><ul>
+        <li><a href="#">ACCA individual courses</a></li><li><a href="#">ACCA subscription plan</a></li>
+        <li><a href="#">CIMA exam preparation</a></li><li><a href="#">CMA exam preparation</a></li><li><a href="#">CIA exam preparation</a></li>
+      </ul></div>
+      <div class="foot-col"><h4>Company</h4><ul>
+        <li><a href="#">About Vertex</a></li><li><a href="#">Student reviews</a></li>
+        <li><a href="#">Live classes</a></li><li><a href="#">Contact us</a></li><li><a href="#">Book a meeting</a></li>
+      </ul></div>
+      <div class="foot-col"><h4>Support</h4><ul>
+        <li><a href="#">Help centre</a></li><li><a href="#">Terms &amp; conditions</a></li>
+        <li><a href="#">Privacy policy</a></li><li><a href="#">Cookie policy</a></li><li><a href="#">Complaint form</a></li>
+      </ul></div>
+    </div>
+    <div class="foot-bottom">
+      <p>© 2026 Vertex Learning Solutions · ACCA, CIMA, CMA (USA) &amp; CIA exam preparation</p>
+      <div class="foot-rating"><span class="stars">★★★★★</span> Rated 5.0 by students worldwide</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

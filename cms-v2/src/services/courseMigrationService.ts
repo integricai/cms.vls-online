@@ -23,6 +23,16 @@ import {
   verifyStoryblokAccess,
   type StoryblokConfig,
 } from './storyblokClient';
+import {
+  applyTemplateStyles,
+  getMigrationTemplateBlueprint,
+} from './migrationTemplateRegistry';
+import {
+  getLibraryPresetBlok,
+  mergePresetWithData,
+  syncTemplateComponentLibrary,
+} from './storyblokComponentLibrary';
+import type { TemplateReferenceSummary, ComponentLibrarySummary } from '../../shared/migrationTypes';
 
 function blokUid(): string {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 12);
@@ -460,6 +470,134 @@ function normalizeDestinationSlug(raw: string): string {
   return slugifySegment(raw.trim());
 }
 
+function templateReferenceSummary(template: MigrationTemplate): TemplateReferenceSummary {
+  const blueprint = getMigrationTemplateBlueprint(template);
+  return {
+    template,
+    fileName: blueprint.fileName,
+    sectionCount: blueprint.sections.length,
+    sections: blueprint.sections.map(section => ({
+      key: section.key,
+      label: section.label,
+      component: section.component,
+    })),
+  };
+}
+
+async function stylizeBlok(
+  blok: Record<string, unknown> | null,
+  template: MigrationTemplate,
+  sectionKey: string,
+  config: StoryblokConfig | null,
+): Promise<Record<string, unknown> | null> {
+  if (!blok) return null;
+
+  const blueprint = getMigrationTemplateBlueprint(template);
+  const section = blueprint.sections.find(item => item.key === sectionKey)
+    ?? blueprint.sections.find(item => sectionKey.includes(item.key));
+
+  const styled = applyTemplateStyles(blueprint, section?.key ?? sectionKey, blok);
+  if (!config || !section) return styled;
+
+  const preset = await getLibraryPresetBlok(config, template, section.key);
+  return mergePresetWithData(preset, styled, section.styles);
+}
+
+async function buildCourseStoryblokContentAsync(
+  scraped: ScrapedCoursePage,
+  zenlerCourseId: string,
+  template: MigrationTemplate,
+  config: StoryblokConfig | null,
+): Promise<Record<string, unknown>> {
+  const base = buildCourseStoryblokContent(scraped, zenlerCourseId);
+  const body = Array.isArray(base.body) ? base.body as Record<string, unknown>[] : [];
+
+  const mapped: Array<Record<string, unknown> | null> = [];
+  for (const blok of body) {
+    const component = String(blok.component ?? '');
+    let sectionKey = 'section';
+    if (component === 'course_hero_layout') sectionKey = 'hero';
+    else if (component === 'course_introduction') sectionKey = 'what-you-ll-learn';
+    else if (component === 'course_tabs') sectionKey = 'course-content';
+    else if (component === 'testimonials') sectionKey = 'student-reviews';
+    else if (component === 'faq_section') sectionKey = 'faq';
+    else if (component === 'promotion_section') sectionKey = 'cta';
+    mapped.push(await stylizeBlok(blok, template, sectionKey, config));
+  }
+
+  return {
+    ...base,
+    body: mapped.filter(Boolean),
+  };
+}
+
+async function buildGenericStoryblokContentAsync(
+  scraped: ScrapedGenericPage,
+  template: MigrationTemplate,
+  config: StoryblokConfig | null,
+): Promise<Record<string, unknown>> {
+  const blueprint = getMigrationTemplateBlueprint(template);
+  const sourceUrl = scraped.sourceUrl;
+  const body: Record<string, unknown>[] = [];
+
+  let sectionIndex = 0;
+  for (const section of blueprint.sections) {
+    const scrapedSection = scraped.sections[sectionIndex];
+    sectionIndex += 1;
+
+    let blok: Record<string, unknown> | null = null;
+
+    if (section.component === 'home_hero_section') {
+      blok = {
+        _uid: blokUid(),
+        component: 'home_hero_section',
+        hero: [{
+          _uid: blokUid(),
+          component: 'home_hero',
+          heading: scraped.title,
+          description: scraped.metaDescription,
+        }],
+      };
+    } else if (section.component === 'enquiry_form') {
+      blok = { _uid: blokUid(), component: 'enquiry_form' };
+    } else if (section.component === 'faq_section' && scraped.faq?.items.length) {
+      blok = buildGenericFaqBlok(scraped, sourceUrl);
+    } else {
+      blok = {
+        _uid: blokUid(),
+        component: section.component,
+        heading_prefix: scrapedSection?.heading || scraped.title,
+        description: scrapedSection?.bodyText || scraped.metaDescription,
+        title: scrapedSection?.heading || scraped.title,
+        subtitle: scrapedSection?.bodyText || scraped.metaDescription,
+      };
+    }
+
+    const styled = await stylizeBlok(blok, template, section.key, config);
+    if (styled) body.push(styled);
+  }
+
+  if (!body.length) {
+    return buildGenericStoryblokContent(scraped, template);
+  }
+
+  const seo = (scraped.title || scraped.metaDescription)
+    ? [{
+        _uid: blokUid(),
+        component: 'seo',
+        title: scraped.title,
+        description: scraped.metaDescription,
+        canonical_url: sourceUrl,
+      }]
+    : [];
+
+  return {
+    component: 'page',
+    seo,
+    body,
+  };
+}
+
 export async function migratePage(input: PageMigrationRequest): Promise<PageMigrationResult> {
   if (!input.pageUrl?.trim()) throw new CourseMigrationError('Origin page URL is required');
   if (!input.storyblokSpaceId?.trim()) throw new CourseMigrationError('Storyblok space ID is required');
@@ -470,6 +608,7 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
     input.destinationSlug?.trim() || suggestDestinationSlug(input.pageUrl.trim(), template),
   );
   const fullSlug = storyFullSlug(template, destinationSlug);
+  const templateReference = templateReferenceSummary(template);
 
   if (template === 'course') {
     const scraped = await scrapeCoursePage(input.pageUrl.trim());
@@ -477,7 +616,7 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
     const warnings = collectCourseWarnings(scraped, zenlerCourseId);
 
     if (input.dryRun) {
-      return { template, destinationSlug, fullSlug, scraped, warnings };
+      return { template, destinationSlug, fullSlug, scraped, warnings, templateReference };
     }
 
     const config = storyblokConfig(input);
@@ -491,7 +630,22 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
       );
     }
 
-    const content = buildCourseStoryblokContent(scraped, zenlerCourseId);
+    const librarySync = await syncTemplateComponentLibrary(config, template);
+    const componentLibrary: ComponentLibrarySummary = {
+      folderSlug: librarySync.folderSlug,
+      presetsCreated: librarySync.created,
+      presetsUpdated: librarySync.updated,
+      presets: librarySync.presets.map(preset => ({
+        fullSlug: preset.fullSlug,
+        component: preset.component,
+        created: preset.created,
+      })),
+    };
+    warnings.push(
+      `Synced ${librarySync.presets.length} reusable component presets in Storyblok/${librarySync.folderSlug}/${template}.`,
+    );
+
+    const content = await buildCourseStoryblokContentAsync(scraped, zenlerCourseId, template, config);
     const upsert = await upsertStory(config, {
       name: scraped.title || scraped.slug.toUpperCase(),
       slug: destinationSlug,
@@ -514,6 +668,8 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
       fullSlug,
       scraped,
       warnings,
+      templateReference,
+      componentLibrary,
       storyblok: {
         storyId: upsert.story.id,
         fullSlug: upsert.story.full_slug,
@@ -527,13 +683,28 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
   const warnings = collectGenericWarnings(scraped);
 
   if (input.dryRun) {
-    return { template, destinationSlug, fullSlug, scraped, warnings };
+    return { template, destinationSlug, fullSlug, scraped, warnings, templateReference };
   }
 
   const config = storyblokConfig(input);
   await verifyStoryblokAccess(config);
 
-  const content = buildGenericStoryblokContent(scraped, template);
+  const librarySync = await syncTemplateComponentLibrary(config, template);
+  const componentLibrary: ComponentLibrarySummary = {
+    folderSlug: librarySync.folderSlug,
+    presetsCreated: librarySync.created,
+    presetsUpdated: librarySync.updated,
+    presets: librarySync.presets.map(preset => ({
+      fullSlug: preset.fullSlug,
+      component: preset.component,
+      created: preset.created,
+    })),
+  };
+  warnings.push(
+    `Synced ${librarySync.presets.length} reusable component presets in Storyblok/${librarySync.folderSlug}/${template}.`,
+  );
+
+  const content = await buildGenericStoryblokContentAsync(scraped, template, config);
   const upsert = await upsertStory(config, {
     name: scraped.title || genericBreadcrumbText(scraped) || destinationSlug,
     slug: destinationSlug,
@@ -555,6 +726,8 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
     fullSlug,
     scraped,
     warnings,
+    templateReference,
+    componentLibrary,
     storyblok: {
       storyId: upsert.story.id,
       fullSlug: upsert.story.full_slug,

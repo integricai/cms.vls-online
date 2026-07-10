@@ -171,12 +171,28 @@ export interface ScrapedGenericPage {
   faq: ScrapedCoursePage['faq'];
 }
 
+export interface TemplateReferenceSummary {
+  template: MigrationTemplate;
+  fileName: string;
+  sectionCount: number;
+  sections: Array<{ key: string; label: string; component: string }>;
+}
+
+export interface ComponentLibrarySummary {
+  folderSlug: string;
+  presetsCreated: number;
+  presetsUpdated: number;
+  presets: Array<{ fullSlug: string; component: string; created: boolean }>;
+}
+
 export interface PageMigrationResult {
   template: MigrationTemplate;
   destinationSlug: string;
   fullSlug: string;
   scraped: ScrapedCoursePage | ScrapedGenericPage;
   warnings: string[];
+  templateReference?: TemplateReferenceSummary;
+  componentLibrary?: ComponentLibrarySummary;
   storyblok?: {
     storyId: number;
     fullSlug: string;

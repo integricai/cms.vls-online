@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Strategic Business Reporting (SBR) — Vertex Learning Solutions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --navy:#0E2A57; --ink:#15233D; --slate:#3D4A63;
+    --blue:#1E50C8; --blue-strong:#1A45B0; --blue-bright:#3B73F0;
+    --blue-50:#F2F6FF; --blue-100:#E7EEFD; --blue-200:#D6E2FB;
+    --green:#1E9E6A; --green-bg:#E3F4EC; --amber:#F5A623;
+    --white:#FFF; --line:#E5EBF6; --line-soft:#EEF2FA;
+    --shadow-sm:0 1px 2px rgba(14,42,87,.05),0 1px 3px rgba(14,42,87,.04);
+    --shadow-md:0 6px 18px rgba(14,42,87,.07),0 2px 6px rgba(14,42,87,.05);
+    --shadow-lg:0 18px 48px rgba(14,42,87,.12),0 6px 16px rgba(14,42,87,.07);
+    --radius:16px; --radius-lg:22px; --maxw:1200px; --gutter:40px;
+  }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+  body{ margin:0; font-family:'Poppins',system-ui,-apple-system,sans-serif; color:var(--ink);
+    background:var(--white); font-size:16.5px; line-height:1.62; font-weight:400;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  h1,h2,h3,h4{ margin:0; color:var(--navy); font-weight:600; line-height:1.18; letter-spacing:-.01em; }
+  p{ margin:0; } a{ color:inherit; text-decoration:none; } img,svg{ display:block; }
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 var(--gutter); }
+  .accent{ color:var(--blue); font-style:italic; font-weight:600; }
+  .eyebrow{ font-size:12.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--blue); margin-bottom:16px; }
+
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:9px; font-family:inherit;
+    font-size:15.5px; font-weight:500; padding:14px 26px; border-radius:12px; cursor:pointer;
+    border:1px solid transparent; transition:.18s ease; white-space:nowrap; }
+  .btn svg{ width:17px; height:17px; }
+  .btn-primary{ background:var(--blue); color:#fff; box-shadow:0 4px 14px rgba(30,80,200,.28); }
+  .btn-primary:hover{ background:var(--blue-strong); transform:translateY(-1px); box-shadow:0 8px 22px rgba(30,80,200,.32); }
+  .btn-ghost{ background:#fff; color:var(--navy); border-color:var(--line); }
+  .btn-ghost:hover{ border-color:var(--blue-200); background:var(--blue-50); }
+  .btn-outline-blue{ background:transparent; color:var(--navy); border-color:var(--blue-200); }
+  .btn-outline-blue:hover{ background:#fff; }
+  .btn-block{ width:100%; }
+
+  /* HEADER */
+  header{ position:sticky; top:0; z-index:50; background:rgba(255,255,255,.88); backdrop-filter:blur(12px); border-bottom:1px solid var(--line-soft); }
+  .nav{ display:flex; align-items:center; justify-content:space-between; height:74px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{ width:38px; height:38px; border-radius:10px; background:var(--blue); display:grid; place-items:center; color:#fff; font-weight:700; font-size:19px; box-shadow:0 4px 12px rgba(30,80,200,.3); }
+  .brand-name{ font-weight:700; font-size:18px; color:var(--navy); line-height:1; letter-spacing:-.01em; }
+  .brand-sub{ font-size:9.5px; font-weight:600; letter-spacing:.22em; color:var(--slate); text-transform:uppercase; margin-top:3px; }
+  .nav-links{ display:flex; gap:34px; }
+  .nav-links a{ font-size:15px; font-weight:500; color:var(--slate); transition:color .15s; }
+  .nav-links a:hover{ color:var(--blue); }
+  .nav-right{ display:flex; align-items:center; gap:22px; }
+  .nav-right .signin{ font-size:15px; font-weight:500; color:var(--navy); }
+  .nav-right .signin:hover{ color:var(--blue); }
+  .menu-btn{ display:none; background:none; border:none; cursor:pointer; padding:6px; }
+
+  .stars{ color:var(--amber); letter-spacing:1px; }
+
+  /* BREADCRUMB */
+  .crumb{ padding:22px 0 6px; }
+  .crumb ol{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; align-items:center; gap:9px; font-size:13px; color:var(--slate); }
+  .crumb a:hover{ color:var(--blue); }
+  .crumb .sep{ color:var(--blue-200); }
+  .crumb [aria-current]{ color:var(--navy); font-weight:500; }
+
+  /* HERO */
+  .hero{ padding:8px 0 70px; }
+  .hero-grid{ display:grid; grid-template-columns:1fr 372px; gap:48px; align-items:start; }
+  .hero h1{ font-size:42px; font-weight:600; line-height:1.12; letter-spacing:-.02em; margin:10px 0 18px; }
+  .hero-lead{ font-size:17.5px; color:var(--slate); max-width:560px; line-height:1.6; margin-bottom:24px; }
+
+  .meta-row{ display:flex; align-items:center; gap:8px 18px; flex-wrap:wrap; margin-bottom:14px; }
+  .meta-item{ display:inline-flex; align-items:center; gap:7px; font-size:14px; color:var(--slate); }
+  .meta-item b{ color:var(--navy); font-weight:600; }
+  .meta-item svg{ width:15px; height:15px; color:var(--blue); }
+  .meta-sep{ width:1px; height:15px; background:var(--blue-200); }
+  .lang-pill{ display:inline-flex; align-items:center; gap:7px; font-size:13.5px; color:var(--slate); background:var(--blue-50); border:1px solid var(--blue-100); padding:5px 12px; border-radius:999px; margin-bottom:26px; }
+  .lang-pill svg{ width:14px; height:14px; color:var(--blue); }
+
+  .byline{ display:flex; align-items:center; gap:13px; margin-bottom:26px; }
+  .avatar{ width:46px; height:46px; border-radius:50%; background:var(--blue); color:#fff; display:grid; place-items:center; font-weight:600; font-size:16px; flex:none; box-shadow:0 3px 9px rgba(30,80,200,.25); }
+  .byline .bt{ font-size:14.5px; font-weight:600; color:var(--navy); }
+  .byline .bs{ font-size:13px; color:var(--slate); }
+
+  /* Bright video stage (replaces dark navy block) */
+  .video-stage{ position:relative; border-radius:var(--radius-lg); overflow:hidden; border:1px solid var(--blue-100);
+    background:
+      radial-gradient(520px 280px at 78% -20%, rgba(59,115,240,.16) 0%, rgba(59,115,240,0) 60%),
+      linear-gradient(155deg, #EAF1FF 0%, #DCE7FB 100%);
+    aspect-ratio:16/8.4; box-shadow:var(--shadow-md); }
+  .vs-play{ position:absolute; inset:0; display:grid; place-items:center; }
+  .vs-play button{ width:74px; height:74px; border-radius:50%; background:var(--blue); border:none; cursor:pointer;
+    display:grid; place-items:center; box-shadow:0 10px 26px rgba(30,80,200,.4); transition:.18s; }
+  .vs-play button:hover{ transform:scale(1.06); }
+  .vs-play svg{ width:26px; height:26px; color:#fff; margin-left:3px; }
+  .vs-label{ position:absolute; left:26px; bottom:24px; }
+  .vs-label .t{ font-size:16px; font-weight:600; color:var(--navy); }
+  .vs-label .s{ font-size:13px; color:var(--slate); margin-top:2px; }
+  .vs-time{ position:absolute; right:22px; bottom:22px; background:#fff; border:1px solid var(--line); color:var(--navy); font-size:12.5px; font-weight:600; padding:4px 11px; border-radius:7px; box-shadow:var(--shadow-sm); }
+
+  /* PRICE SIDEBAR */
+  .side{ position:sticky; top:96px; display:flex; flex-direction:column; gap:16px; }
+  .price-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); padding:26px; }
+  .price-top{ display:flex; align-items:baseline; gap:11px; }
+  .price-now{ font-size:38px; font-weight:700; color:var(--navy); letter-spacing:-.02em; line-height:1; }
+  .price-was{ font-size:18px; color:var(--slate); text-decoration:line-through; }
+  .price-save{ font-size:13.5px; font-weight:600; color:var(--green); margin:10px 0 4px; }
+  .price-access{ display:inline-flex; align-items:center; gap:7px; font-size:13px; color:var(--slate); margin-bottom:18px; }
+  .price-access svg{ width:14px; height:14px; color:var(--blue); }
+  .price-note{ text-align:center; font-size:12.5px; color:var(--slate); margin-top:12px; }
+  .includes{ border-top:1px solid var(--line); margin-top:20px; padding-top:20px; }
+  .includes h4{ font-size:11.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--slate); margin-bottom:15px; }
+  .includes ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+  .includes li{ display:flex; align-items:center; gap:11px; font-size:14px; color:var(--ink); }
+  .includes .ico{ width:22px; height:22px; border-radius:6px; background:var(--blue-50); color:var(--blue); display:grid; place-items:center; flex:none; }
+  .includes .ico svg{ width:13px; height:13px; }
+
+  .bestvalue{ background:var(--blue-100); border:1px solid var(--blue-200); border-radius:var(--radius); padding:20px 22px; }
+  .bestvalue .bv-tag{ font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--blue); margin-bottom:9px; }
+  .bestvalue p{ font-size:15px; font-weight:600; color:var(--navy); line-height:1.4; margin-bottom:12px; }
+  .bestvalue a{ display:inline-flex; align-items:center; gap:7px; font-size:13.5px; font-weight:600; color:var(--blue); }
+  .bestvalue a svg{ width:14px; height:14px; transition:transform .18s; }
+  .bestvalue a:hover svg{ transform:translateX(3px); }
+
+  /* SECTION SHELL */
+  .section{ padding:84px 0; }
+  .band{ background:var(--blue-50); border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft); }
+  .sec-head{ max-width:640px; margin-bottom:40px; }
+  .sec-head h2{ font-size:34px; font-weight:600; letter-spacing:-.02em; line-height:1.15; }
+  .sec-head .submeta{ display:flex; gap:8px 16px; flex-wrap:wrap; margin-top:16px; font-size:14px; color:var(--slate); }
+  .sec-head .submeta b{ color:var(--navy); font-weight:600; }
+  .sec-head .submeta span{ display:inline-flex; align-items:center; gap:8px; }
+  .sec-head .submeta span+span::before{ content:"·"; color:var(--blue-200); margin-right:8px; }
+
+  /* LEARN GRID */
+  .learn-grid{ display:grid; grid-template-columns:1fr 1fr; gap:22px 56px; }
+  .learn-item{ display:flex; gap:14px; }
+  .learn-item .chk{ width:26px; height:26px; border-radius:8px; background:var(--green-bg); color:var(--green); display:grid; place-items:center; flex:none; margin-top:1px; }
+  .learn-item .chk svg{ width:14px; height:14px; }
+  .learn-item p{ font-size:15.5px; color:var(--ink); line-height:1.58; }
+
+  /* COURSE CONTENT ACCORDION */
+  .modules{ display:flex; flex-direction:column; gap:12px; }
+  details.module{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); overflow:hidden; }
+  details.module[open]{ border-color:var(--blue-200); box-shadow:var(--shadow-md); }
+  .module summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:18px; padding:20px 24px; }
+  .module summary::-webkit-details-marker{ display:none; }
+  .mod-num{ font-size:14px; font-weight:700; color:var(--blue); width:26px; flex:none; }
+  .mod-title{ flex:1; font-size:16.5px; font-weight:600; color:var(--navy); }
+  .mod-meta{ font-size:13.5px; color:var(--slate); white-space:nowrap; }
+  .mod-chev{ width:20px; height:20px; color:var(--slate); transition:transform .2s; flex:none; }
+  details.module[open] .mod-chev{ transform:rotate(180deg); color:var(--blue); }
+  .lessons{ border-top:1px solid var(--line-soft); padding:8px 24px 14px 68px; }
+  .lesson{ display:flex; align-items:center; gap:13px; padding:11px 0; border-bottom:1px solid var(--line-soft); }
+  .lesson:last-child{ border-bottom:none; }
+  .lesson .lico{ width:24px; height:24px; border-radius:6px; display:grid; place-items:center; flex:none; }
+  .lico.play{ background:var(--blue-50); color:var(--blue); }
+  .lico.quiz{ background:var(--green-bg); color:var(--green); }
+  .lico.qv{ background:#FCEEDD; color:#C77B1E; }
+  .lico.mock{ background:#F2EEFC; color:#6A4FD0; }
+  .lesson .ltxt{ flex:1; font-size:14.5px; color:var(--ink); }
+  .lesson .ltime{ font-size:13px; color:var(--slate); white-space:nowrap; }
+
+  /* TUTOR CARD */
+  .tutor-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); padding:34px; display:flex; gap:28px; align-items:flex-start; }
+  .tutor-card .big-avatar{ width:78px; height:78px; border-radius:18px; background:var(--blue); color:#fff; display:grid; place-items:center; font-weight:600; font-size:26px; flex:none; box-shadow:0 6px 16px rgba(30,80,200,.3); }
+  .tutor-card .tname{ font-size:21px; font-weight:600; color:var(--navy); }
+  .tutor-card .trole{ font-size:14px; color:var(--blue); font-weight:500; margin-bottom:14px; }
+  .tutor-card .tbio{ font-size:15.5px; color:var(--slate); line-height:1.62; margin-bottom:22px; max-width:640px; }
+  .tutor-stats{ display:flex; gap:42px; }
+  .tutor-stats .v{ font-size:24px; font-weight:700; color:var(--navy); line-height:1; }
+  .tutor-stats .v .star{ color:var(--amber); }
+  .tutor-stats .k{ font-size:13px; color:var(--slate); margin-top:5px; }
+
+  /* REVIEWS */
+  .reviews-grid{ display:grid; grid-template-columns:300px 1fr; gap:36px; align-items:start; }
+  .score-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); padding:30px 28px; text-align:center; }
+  .score-card .big{ font-size:56px; font-weight:700; color:var(--navy); line-height:1; letter-spacing:-.02em; }
+  .score-card .score-stars{ font-size:18px; margin:8px 0 6px; }
+  .score-card .based{ font-size:13px; color:var(--slate); margin-bottom:22px; }
+  .bars{ display:flex; flex-direction:column; gap:9px; }
+  .bar-row{ display:flex; align-items:center; gap:10px; }
+  .bar-row .lbl{ font-size:13px; color:var(--slate); width:10px; text-align:right; }
+  .bar-row .track{ flex:1; height:7px; background:var(--blue-100); border-radius:99px; overflow:hidden; }
+  .bar-row .fill{ height:100%; background:var(--amber); border-radius:99px; }
+  .review-list{ display:flex; flex-direction:column; gap:18px; }
+  .review{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:24px 26px; }
+  .review .stars{ font-size:14px; margin-bottom:12px; }
+  .review p{ font-size:15.5px; color:var(--ink); line-height:1.6; margin-bottom:16px; }
+  .review .r-author{ display:flex; align-items:center; gap:12px; }
+  .review .ra-av{ width:38px; height:38px; border-radius:50%; background:var(--blue-100); color:var(--blue); display:grid; place-items:center; font-weight:600; font-size:14px; flex:none; }
+  .review .ra-name{ font-size:14px; font-weight:600; color:var(--navy); }
+  .review .ra-role{ font-size:12.5px; color:var(--slate); }
+
+  /* FAQ */
+  .faq{ display:flex; flex-direction:column; gap:12px; max-width:840px; }
+  details.qa{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); overflow:hidden; }
+  details.qa[open]{ border-color:var(--blue-200); box-shadow:var(--shadow-md); }
+  .qa summary{ list-style:none; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:18px; padding:20px 24px; font-size:16.5px; font-weight:600; color:var(--navy); }
+  .qa summary::-webkit-details-marker{ display:none; }
+  .qa-icon{ width:24px; height:24px; flex:none; position:relative; }
+  .qa-icon::before,.qa-icon::after{ content:""; position:absolute; background:var(--blue); border-radius:2px; transition:.2s; }
+  .qa-icon::before{ left:5px; right:5px; top:11px; height:2px; }
+  .qa-icon::after{ top:5px; bottom:5px; left:11px; width:2px; }
+  details.qa[open] .qa-icon::after{ transform:scaleY(0); }
+  .qa-body{ padding:0 24px 22px; font-size:15.5px; color:var(--slate); line-height:1.65; max-width:720px; }
+
+  /* CTA (bright panel — replaces dark gradient) */
+  .cta-band{ padding:36px 0 90px; }
+  .cta-panel{ background:
+      radial-gradient(640px 320px at 88% 120%, rgba(59,115,240,.12) 0%, rgba(59,115,240,0) 60%),
+      var(--blue-100);
+    border:1px solid var(--blue-200); border-radius:28px; padding:60px 56px; box-shadow:var(--shadow-sm); }
+  .cta-panel h2{ font-size:38px; font-weight:600; letter-spacing:-.02em; line-height:1.14; margin-bottom:14px; max-width:560px; }
+  .cta-panel p{ font-size:17.5px; color:var(--slate); max-width:600px; line-height:1.6; margin-bottom:28px; }
+  .cta-actions{ display:flex; gap:14px; flex-wrap:wrap; }
+
+  /* FOOTER */
+  footer{ border-top:1px solid var(--line); padding:68px 0 34px; }
+  .foot-grid{ display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:48px; margin-bottom:50px; }
+  .foot-about{ max-width:300px; }
+  .foot-about .brand{ margin-bottom:18px; }
+  .foot-about p{ font-size:14.5px; color:var(--slate); line-height:1.65; }
+  .foot-col h4{ font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--slate); margin-bottom:18px; }
+  .foot-col ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+  .foot-col a{ font-size:14.5px; color:var(--ink); transition:color .15s; }
+  .foot-col a:hover{ color:var(--blue); }
+  .foot-bottom{ display:flex; align-items:center; justify-content:space-between; padding-top:26px; border-top:1px solid var(--line); flex-wrap:wrap; gap:14px; }
+  .foot-bottom p{ font-size:13.5px; color:var(--slate); }
+  .foot-rating{ display:flex; align-items:center; gap:9px; font-size:13.5px; color:var(--slate); }
+
+  @media (max-width:980px){
+    .hero-grid{ grid-template-columns:1fr; gap:36px; }
+    .side{ position:static; }
+    .learn-grid{ grid-template-columns:1fr; gap:18px; }
+    .reviews-grid{ grid-template-columns:1fr; }
+    .tutor-card{ flex-direction:column; }
+    .foot-grid{ grid-template-columns:1fr 1fr; gap:36px; }
+  }
+  @media (max-width:680px){
+    :root{ --gutter:22px; }
+    .nav-links,.nav-right .signin{ display:none; }
+    .menu-btn{ display:block; }
+    .hero h1{ font-size:32px; }
+    .section{ padding:60px 0; }
+    .sec-head h2,.cta-panel h2{ font-size:27px; }
+    .tutor-stats{ gap:28px; flex-wrap:wrap; }
+    .module summary{ gap:12px; padding:16px; }
+    .mod-meta{ display:none; }
+    .lessons{ padding-left:46px; }
+    .cta-panel{ padding:38px 26px; }
+    .foot-grid{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#">
+      <span class="brand-mark">V</span>
+      <span><span class="brand-name">Vertex</span><span class="brand-sub">Learning Solutions</span></span>
+    </a>
+    <nav class="nav-links">
+      <a href="#">Courses</a><a href="#">Subscription</a><a href="#">Live classes</a><a href="#">Reviews</a><a href="#">About</a>
+    </nav>
+    <div class="nav-right">
+      <a class="signin" href="#">Sign in</a>
+      <a class="btn btn-primary" href="#">Enrol now</a>
+      <button class="menu-btn" aria-label="Open menu"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E2A57" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </div>
+</header>
+
+<!-- BREADCRUMB -->
+<div class="wrap crumb">
+  <ol>
+    <li><a href="#">Home</a></li><li class="sep">/</li>
+    <li><a href="#">ACCA</a></li><li class="sep">/</li>
+    <li><a href="#">Strategic Professional</a></li><li class="sep">/</li>
+    <li aria-current="page">Strategic Business Reporting</li>
+  </ol>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <!-- MAIN -->
+    <div>
+      <div class="eyebrow">ACCA · Strategic Professional</div>
+      <h1>Strategic Business Reporting (SBR)</h1>
+      <p class="hero-lead">Master the application of IFRS to complex scenarios, group accounting and corporate reporting — and learn the exam technique that turns knowledge into marks on the SBR paper.</p>
+
+      <div class="meta-row">
+        <span class="meta-item"><span class="stars">★★★★★</span> <b>5.0</b> · 288 reviews</span>
+        <span class="meta-sep"></span>
+        <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg> Updated Jan 2026</span>
+        <span class="meta-sep"></span>
+        <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg> <b>11</b> modules</span>
+        <span class="meta-sep"></span>
+        <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> ~<b>38h</b> video</span>
+      </div>
+      <span class="lang-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg> English</span>
+
+      <div class="byline">
+        <div class="avatar">SA</div>
+        <div><div class="bt">Taught by Syed Ali</div><div class="bs">Lead ACCA tutor · FCCA · 15+ years teaching</div></div>
+      </div>
+
+      <div class="video-stage">
+        <div class="vs-play"><button aria-label="Play course introduction">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button></div>
+        <div class="vs-label"><div class="t">Course introduction</div><div class="s">How this SBR course gets you exam-ready</div></div>
+        <span class="vs-time">3:12</span>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="side">
+      <div class="price-card">
+        <div class="price-top"><span class="price-now">£199</span><span class="price-was">£249</span></div>
+        <div class="price-save">Save 20% · enrolment closes soon</div>
+        <div class="price-access"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> One-time payment · 365 days full access</div>
+
+        <a class="btn btn-primary btn-block" href="#" style="margin-bottom:11px;">Enrol now</a>
+        <a class="btn btn-ghost btn-block" href="#">Book a free consultation</a>
+        <div class="price-note">No auto-renewal · cancel any time</div>
+
+        <div class="includes">
+          <h4>This course includes</h4>
+          <ul>
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> 70+ on-demand video lessons</li>
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Detailed syllabus study notes</li>
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Quizzes &amp; progress tests</li>
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> WhatsApp tutor support</li>
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Final mock with examiner debrief</li>
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Certificate of completion</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="bestvalue">
+        <div class="bv-tag">Best value</div>
+        <p>Get SBR plus all 14 ACCA courses with the Annual Plan</p>
+        <a href="#">View the annual plan — £599 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- WHAT YOU'LL LEARN -->
+<section class="section band">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">What you'll learn</div>
+      <h2>Walk into the SBR exam <span class="accent">fully prepared.</span></h2>
+    </div>
+    <div class="learn-grid">
+      <div class="learn-item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><p>Apply the IFRS conceptual framework and the professional &amp; ethical duties of the accountant to real scenarios.</p></div>
+      <div class="learn-item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><p>Prepare consolidated financial statements for complex groups, including associates and joint arrangements.</p></div>
+      <div class="learn-item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><p>Account confidently for financial instruments, leases, provisions and deferred tax under current IFRS.</p></div>
+      <div class="learn-item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><p>Report and analyse financial and non-financial performance for a range of stakeholders.</p></div>
+      <div class="learn-item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><p>Evaluate current developments in corporate reporting and explain their practical impact.</p></div>
+      <div class="learn-item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><p>Master case-study technique and time management to convert your knowledge into exam marks.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- COURSE CONTENT -->
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Course content</div>
+      <h2>A clear path through the <span class="accent">full syllabus.</span></h2>
+      <div class="submeta">
+        <span><b>11</b> modules</span><span><b>70+</b> lessons</span><span>~<b>38h</b> of video</span><span><b>1</b> final mock exam</span>
+      </div>
+    </div>
+
+    <div class="modules">
+      <details class="module" open>
+        <summary><span class="mod-num">01</span><span class="mod-title">The financial reporting framework</span><span class="mod-meta">3 lessons · 58 min</span><svg class="mod-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="lessons">
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">The IASB conceptual framework</span><span class="ltime">26 min</span></div>
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Regulatory environment &amp; IFRS adoption</span><span class="ltime">22 min</span></div>
+          <div class="lesson"><span class="lico quiz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="ltxt">Quiz: Framework fundamentals</span><span class="ltime">10 Q's</span></div>
+        </div>
+      </details>
+
+      <details class="module">
+        <summary><span class="mod-num">02</span><span class="mod-title">Professional &amp; ethical responsibilities</span><span class="mod-meta">4 lessons · 1h 05m</span><svg class="mod-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="lessons">
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">The ACCA Code of Ethics in practice</span><span class="ltime">18 min</span></div>
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Ethical threats &amp; professional judgement</span><span class="ltime">21 min</span></div>
+        </div>
+      </details>
+
+      <details class="module" open>
+        <summary><span class="mod-num">03</span><span class="mod-title">Financial instruments — IFRS 9</span><span class="mod-meta">4 lessons · 1h 54m</span><svg class="mod-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="lessons">
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Classification &amp; measurement</span><span class="ltime">34 min</span></div>
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Impairment &amp; expected credit losses</span><span class="ltime">26 min</span></div>
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Hedge accounting essentials</span><span class="ltime">30 min</span></div>
+          <div class="lesson"><span class="lico qv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg></span><span class="ltxt">Question practice · IFRS 9 in the exam</span><span class="ltime">Q VIDEO · 24M</span></div>
+        </div>
+      </details>
+
+      <details class="module">
+        <summary><span class="mod-num">04</span><span class="mod-title">Leases, provisions &amp; income taxes</span><span class="mod-meta">5 lessons · 1h 40m</span><svg class="mod-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="lessons">
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Lease accounting under IFRS 16</span><span class="ltime">28 min</span></div>
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Provisions, contingencies &amp; deferred tax</span><span class="ltime">31 min</span></div>
+        </div>
+      </details>
+
+      <details class="module">
+        <summary><span class="mod-num">05</span><span class="mod-title">Group accounting: consolidations</span><span class="mod-meta">6 lessons · 2h 12m</span><svg class="mod-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="lessons">
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Consolidated statement of financial position</span><span class="ltime">29 min</span></div>
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Goodwill, NCI &amp; fair value adjustments</span><span class="ltime">33 min</span></div>
+        </div>
+      </details>
+
+      <details class="module">
+        <summary><span class="mod-num">06</span><span class="mod-title">Complex groups &amp; changes in structure</span><span class="mod-meta">5 lessons · 1h 55m</span><svg class="mod-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="lessons">
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Step acquisitions &amp; disposals</span><span class="ltime">27 min</span></div>
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Associates &amp; joint arrangements</span><span class="ltime">24 min</span></div>
+        </div>
+      </details>
+
+      <details class="module">
+        <summary><span class="mod-num">07</span><span class="mod-title">Foreign currency transactions &amp; entities</span><span class="mod-meta">3 lessons · 1h 05m</span><svg class="mod-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="lessons">
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Individual transactions &amp; year-end retranslation</span><span class="ltime">22 min</span></div>
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Consolidating a foreign subsidiary</span><span class="ltime">25 min</span></div>
+        </div>
+      </details>
+
+      <details class="module">
+        <summary><span class="mod-num">08</span><span class="mod-title">Reporting financial &amp; non-financial performance</span><span class="mod-meta">4 lessons · 1h 20m</span><svg class="mod-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="lessons">
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Analysis &amp; interpretation for stakeholders</span><span class="ltime">23 min</span></div>
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Integrated &amp; sustainability reporting</span><span class="ltime">20 min</span></div>
+        </div>
+      </details>
+
+      <details class="module">
+        <summary><span class="mod-num">09</span><span class="mod-title">Current developments in corporate reporting</span><span class="mod-meta">2 lessons · 45 min</span><svg class="mod-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="lessons">
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Recent standards &amp; exposure drafts</span><span class="ltime">23 min</span></div>
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Discussing developments in the exam</span><span class="ltime">22 min</span></div>
+        </div>
+      </details>
+
+      <details class="module" open>
+        <summary><span class="mod-num">10</span><span class="mod-title">Exam technique &amp; case-study practice</span><span class="mod-meta">3 lessons · 4h 10m</span><svg class="mod-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="lessons">
+          <div class="lesson"><span class="lico play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="ltxt">Approaching the SBR case study</span><span class="ltime">20 min</span></div>
+          <div class="lesson"><span class="lico qv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg></span><span class="ltxt">Two-part question walkthrough</span><span class="ltime">Q VIDEO · 38M</span></div>
+          <div class="lesson"><span class="lico mock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span><span class="ltxt">Final mock exam &amp; examiner debrief</span><span class="ltime">MOCK · 3H</span></div>
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- YOUR TUTOR -->
+<section class="section band">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Your tutor</div>
+      <h2>Learn from a tutor who has <span class="accent">taught thousands.</span></h2>
+    </div>
+    <div class="tutor-card">
+      <div class="big-avatar">SA</div>
+      <div>
+        <div class="tname">Syed Ali</div>
+        <div class="trole">Lead ACCA tutor · FCCA</div>
+        <p class="tbio">Syed is a qualified accountant with more than fifteen years teaching ACCA. He's known for making the most demanding standards feel intuitive, linking every topic back to how it's actually tested — and for the interactive, real-world style that students consistently single out in their reviews.</p>
+        <div class="tutor-stats">
+          <div><div class="v">25,000+</div><div class="k">students taught</div></div>
+          <div><div class="v">4</div><div class="k">ACCA papers</div></div>
+          <div><div class="v">5.0 <span class="star">★</span></div><div class="k">tutor rating</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STUDENT REVIEWS -->
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Student reviews</div>
+      <h2>Rated <span class="accent">excellent</span> by SBR students.</h2>
+    </div>
+    <div class="reviews-grid">
+      <div class="score-card">
+        <div class="big">5.0</div>
+        <div class="score-stars stars">★★★★★</div>
+        <div class="based">Based on 288 reviews</div>
+        <div class="bars">
+          <div class="bar-row"><span class="lbl">5</span><span class="track"><span class="fill" style="width:96%"></span></span></div>
+          <div class="bar-row"><span class="lbl">4</span><span class="track"><span class="fill" style="width:4%"></span></span></div>
+          <div class="bar-row"><span class="lbl">3</span><span class="track"><span class="fill" style="width:0%"></span></span></div>
+          <div class="bar-row"><span class="lbl">2</span><span class="track"><span class="fill" style="width:0%"></span></span></div>
+          <div class="bar-row"><span class="lbl">1</span><span class="track"><span class="fill" style="width:0%"></span></span></div>
+        </div>
+      </div>
+      <div class="review-list">
+        <div class="review">
+          <div class="stars">★★★★★</div>
+          <p>Consolidations finally clicked for me. The way each standard is tied straight to the exam scenario meant I knew exactly what the marker wanted. Passed first time.</p>
+          <div class="r-author"><span class="ra-av">A</span><div><div class="ra-name">Amara O.</div><div class="ra-role">ACCA student · passed SBR, March 2026</div></div></div>
+        </div>
+        <div class="review">
+          <div class="stars">★★★★★</div>
+          <p>Whatever the time zone, a tutor always answered in the WhatsApp group. The mock and the examiner debrief at the end made the real exam feel familiar.</p>
+          <div class="r-author"><span class="ra-av">D</span><div><div class="ra-name">Daniel K.</div><div class="ra-role">ACCA student · Strategic Professional</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section band">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Questions, answered</div>
+      <h2>Frequently asked <span class="accent">questions.</span></h2>
+    </div>
+    <div class="faq">
+      <details class="qa" open>
+        <summary>Why do students most often fail SBR?<span class="qa-icon"></span></summary>
+        <div class="qa-body">The most common reasons are weak consolidation technique, failing to apply standards to the specific scenario, neglecting ethics and current developments, and poor time management across the two sections. This course targets each of those directly with scenario-based practice and a timed mock.</div>
+      </details>
+      <details class="qa">
+        <summary>What support is included with the course?<span class="qa-icon"></span></summary>
+        <div class="qa-body">You get direct access to your tutor through a dedicated WhatsApp study group, weekly live classes, and full marking and feedback on your final mock exam — so help is always close when you're stuck.</div>
+      </details>
+      <details class="qa">
+        <summary>How long do I have access?<span class="qa-icon"></span></summary>
+        <div class="qa-body">Your enrolment gives you 365 days of full access to every lesson, note and quiz, plus all recorded live classes — enough to cover a full exam cycle and resit window if you need it.</div>
+      </details>
+      <details class="qa">
+        <summary>Is the course aligned to the latest ACCA syllabus?<span class="qa-icon"></span></summary>
+        <div class="qa-body">Yes. The course is built to the current SBR syllabus and updated each exam cycle, with current developments and recently issued standards reflected throughout.</div>
+      </details>
+      <details class="qa">
+        <summary>What is the SBR exam format?<span class="qa-icon"></span></summary>
+        <div class="qa-body">SBR is a 3-hour 15-minute written exam in two sections: Section A (two compulsory case-study questions, 50 marks) and Section B (two further questions, 50 marks). The course's exam-technique module prepares you for both.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- CTA (bright panel) -->
+<section class="cta-band">
+  <div class="wrap">
+    <div class="cta-panel">
+      <div class="eyebrow">Ready when you are</div>
+      <h2>Start Strategic Business Reporting <span class="accent">today.</span></h2>
+      <p>Enrol now for instant access to every lesson, your study group and your tutor — and give yourself the best possible shot at passing SBR first time.</p>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="#">Enrol now · £199</a>
+        <a class="btn btn-outline-blue" href="#">Book a free consultation
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-about">
+        <a class="brand" href="#"><span class="brand-mark">V</span><span><span class="brand-name">Vertex</span><span class="brand-sub">Learning Solutions</span></span></a>
+        <p>A dedicated team of academic experts helping accounting and finance professionals excel — through the most comprehensive online courses, delivered on our own learning platform.</p>
+      </div>
+      <div class="foot-col"><h4>Courses</h4><ul>
+        <li><a href="#">ACCA individual courses</a></li><li><a href="#">ACCA subscription plan</a></li>
+        <li><a href="#">CIMA exam preparation</a></li><li><a href="#">CMA exam preparation</a></li><li><a href="#">CIA exam preparation</a></li>
+      </ul></div>
+      <div class="foot-col"><h4>Company</h4><ul>
+        <li><a href="#">About Vertex</a></li><li><a href="#">Student reviews</a></li>
+        <li><a href="#">Live classes</a></li><li><a href="#">Contact us</a></li><li><a href="#">Book a meeting</a></li>
+      </ul></div>
+      <div class="foot-col"><h4>Support</h4><ul>
+        <li><a href="#">Help centre</a></li><li><a href="#">Terms &amp; conditions</a></li>
+        <li><a href="#">Privacy policy</a></li><li><a href="#">Cookie policy</a></li><li><a href="#">Complaint form</a></li>
+      </ul></div>
+    </div>
+    <div class="foot-bottom">
+      <p>© 2026 Vertex Learning Solutions · ACCA, CIMA, CMA (USA) &amp; CIA exam preparation</p>
+      <div class="foot-rating"><span class="stars">★★★★★</span> Rated 5.0 by students worldwide</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

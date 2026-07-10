@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ACCA Sept 2026 — Weekly Live Sessions | Vertex Learning Solutions</title>
+<meta name="description" content="Schedule of weekly live sessions for the ACCA September 2026 exam session. Free for all Vertex students — face-to-face with tutors, extra exam questions, and recordings for every time zone." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --navy:#0E2A57; --ink:#15233D; --slate:#3D4A63;
+    --blue:#1E50C8; --blue-strong:#1A45B0; --blue-bright:#3B73F0;
+    --blue-50:#F2F6FF; --blue-100:#E7EEFD; --blue-200:#D6E2FB;
+    --green:#1E9E6A; --green-bg:#E3F4EC; --amber:#F5A623;
+    --purple:#5B49D6; --purple-bg:#F2EEFC;
+    --white:#FFF; --line:#E5EBF6; --line-soft:#EEF2FA;
+    --shadow-sm:0 1px 2px rgba(14,42,87,.05),0 1px 3px rgba(14,42,87,.04);
+    --shadow-md:0 6px 18px rgba(14,42,87,.07),0 2px 6px rgba(14,42,87,.05);
+    --shadow-lg:0 18px 48px rgba(14,42,87,.12),0 6px 16px rgba(14,42,87,.07);
+    --radius:16px; --radius-lg:22px; --maxw:1200px; --gutter:40px;
+  }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+  body{ margin:0; font-family:'Poppins',system-ui,-apple-system,sans-serif; color:var(--ink);
+    background:var(--white); font-size:16.5px; line-height:1.62; font-weight:400;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  h1,h2,h3,h4{ margin:0; color:var(--navy); font-weight:600; line-height:1.18; letter-spacing:-.01em; }
+  p{ margin:0; } a{ color:inherit; text-decoration:none; } img,svg{ display:block; }
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 var(--gutter); }
+  .accent{ color:var(--blue); font-style:italic; font-weight:600; }
+  .eyebrow{ font-size:12.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--blue); margin-bottom:16px; }
+  .stars{ color:var(--amber); letter-spacing:1px; }
+
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:9px; font-family:inherit;
+    font-size:15.5px; font-weight:500; padding:14px 26px; border-radius:12px; cursor:pointer;
+    border:1px solid transparent; transition:.18s ease; white-space:nowrap; }
+  .btn svg{ width:17px; height:17px; }
+  .btn-primary{ background:var(--blue); color:#fff; box-shadow:0 4px 14px rgba(30,80,200,.28); }
+  .btn-primary:hover{ background:var(--blue-strong); transform:translateY(-1px); box-shadow:0 8px 22px rgba(30,80,200,.32); }
+  .btn-ghost{ background:#fff; color:var(--navy); border-color:var(--line); }
+  .btn-ghost:hover{ border-color:var(--blue-200); background:var(--blue-50); }
+  .btn-outline-blue{ background:transparent; color:var(--navy); border-color:var(--blue-200); }
+  .btn-outline-blue:hover{ background:#fff; }
+
+  /* HEADER */
+  header{ position:sticky; top:0; z-index:50; background:rgba(255,255,255,.88); backdrop-filter:blur(12px); border-bottom:1px solid var(--line-soft); }
+  .nav{ display:flex; align-items:center; justify-content:space-between; height:74px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{ width:38px; height:38px; border-radius:10px; background:var(--blue); display:grid; place-items:center; color:#fff; font-weight:700; font-size:19px; box-shadow:0 4px 12px rgba(30,80,200,.3); }
+  .brand-name{ font-weight:700; font-size:18px; color:var(--navy); line-height:1; letter-spacing:-.01em; }
+  .brand-sub{ font-size:9.5px; font-weight:600; letter-spacing:.22em; color:var(--slate); text-transform:uppercase; margin-top:3px; }
+  .nav-links{ display:flex; gap:34px; }
+  .nav-links a{ font-size:15px; font-weight:500; color:var(--slate); transition:color .15s; }
+  .nav-links a:hover, .nav-links a.active{ color:var(--blue); }
+  .nav-right{ display:flex; align-items:center; gap:22px; }
+  .nav-right .signin{ font-size:15px; font-weight:500; color:var(--navy); }
+  .nav-right .signin:hover{ color:var(--blue); }
+  .menu-btn{ display:none; background:none; border:none; cursor:pointer; padding:6px; }
+
+  /* BREADCRUMB */
+  .crumb{ padding:22px 0 6px; }
+  .crumb ol{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; align-items:center; gap:9px; font-size:13px; color:var(--slate); }
+  .crumb a:hover{ color:var(--blue); }
+  .crumb .sep{ color:var(--blue-200); }
+  .crumb [aria-current]{ color:var(--navy); font-weight:500; }
+
+  /* HERO */
+  .hero{ padding:36px 0 70px; background:
+      radial-gradient(1100px 520px at 88% -8%, var(--blue-50) 0%, rgba(242,246,255,0) 60%); }
+  .hero-grid{ display:grid; grid-template-columns:1.05fr .95fr; gap:64px; align-items:center; }
+  .free-pill{ display:inline-flex; align-items:center; gap:9px; background:var(--green-bg); border:1px solid #CBE9DA;
+    border-radius:999px; padding:7px 16px; font-size:13.5px; font-weight:600; color:var(--green); margin-bottom:24px; }
+  .free-pill .dot{ width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 0 3px rgba(30,158,106,.18); }
+  .hero h1{ font-size:48px; font-weight:600; line-height:1.08; letter-spacing:-.025em; margin-bottom:22px; }
+  .hero-lead{ font-size:17.5px; color:var(--slate); max-width:540px; line-height:1.65; margin-bottom:26px; }
+  .hero-ticks{ display:flex; flex-direction:column; gap:13px; margin-bottom:32px; }
+  .ht{ display:flex; align-items:flex-start; gap:12px; font-size:15px; color:var(--ink); }
+  .ht .chk{ width:24px; height:24px; border-radius:7px; background:var(--green-bg); color:var(--green); display:grid; place-items:center; flex:none; margin-top:2px; }
+  .ht .chk svg{ width:13px; height:13px; }
+  .hero-cta{ display:flex; gap:14px; flex-wrap:wrap; }
+
+  /* Hero live card */
+  .live-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-lg); padding:26px; position:relative; }
+  .lc-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+  .lc-tag{ font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--blue); background:var(--blue-50); border:1px solid var(--blue-100); padding:5px 11px; border-radius:7px; }
+  .lc-live{ display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:500; color:var(--slate); }
+  .lc-live .dot{ width:8px; height:8px; border-radius:50%; background:#22A06B; box-shadow:0 0 0 3px rgba(34,160,107,.18); }
+  .lc-title{ font-size:20px; font-weight:600; color:var(--navy); margin-bottom:4px; }
+  .lc-meta{ font-size:13px; color:var(--slate); margin-bottom:20px; }
+  .lc-rows{ display:flex; flex-direction:column; gap:12px; }
+  .lc-row{ display:flex; align-items:center; gap:12px; background:var(--blue-50); border:1px solid var(--blue-100);
+    border-radius:12px; padding:13px 16px; }
+  .lc-row .ico{ width:32px; height:32px; border-radius:9px; background:#fff; border:1px solid var(--blue-100); color:var(--blue); display:grid; place-items:center; flex:none; }
+  .lc-row .ico svg{ width:15px; height:15px; }
+  .lc-row .t{ font-size:13.5px; font-weight:600; color:var(--navy); line-height:1.3; }
+  .lc-row .s{ font-size:12px; color:var(--slate); line-height:1.3; }
+
+  /* SECTION SHELL */
+  .section{ padding:84px 0; }
+  .band{ background:var(--blue-50); border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft); }
+  .sec-head{ max-width:660px; margin-bottom:44px; }
+  .sec-head h2{ font-size:36px; font-weight:600; letter-spacing:-.02em; line-height:1.14; margin-bottom:16px; }
+  .sec-head p{ font-size:16.5px; color:var(--slate); line-height:1.62; }
+
+  /* HOW IT WORKS */
+  .feature-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+  .feature{ background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+    padding:30px 28px; transition:.2s ease; box-shadow:var(--shadow-sm); }
+  .feature:hover{ border-color:var(--blue-200); box-shadow:var(--shadow-md); transform:translateY(-3px); }
+  .feature .f-ico{ width:48px; height:48px; border-radius:12px; background:var(--blue-50);
+    border:1px solid var(--blue-100); color:var(--blue); display:grid; place-items:center; margin-bottom:22px; }
+  .feature .f-ico svg{ width:22px; height:22px; }
+  .feature h3{ font-size:18px; font-weight:600; margin-bottom:10px; }
+  .feature p{ font-size:14.5px; color:var(--slate); line-height:1.62; }
+
+  /* ===== SCHEDULE CARDS ===== */
+  .sched-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+  .sess{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-md); overflow:hidden; display:flex; flex-direction:column; transition:.2s ease; }
+  .sess:hover{ box-shadow:var(--shadow-lg); transform:translateY(-4px); }
+  .sess-bar{ height:5px; }
+  .sess-bar.skills{ background:linear-gradient(90deg,#1E50C8,#3B73F0); }
+  .sess-bar.strategic{ background:linear-gradient(90deg,#5B49D6,#7E6BF0); }
+  .sess-body{ padding:26px 26px 24px; display:flex; flex-direction:column; flex:1; }
+  .sess-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px; }
+  .sess-tag{ font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--blue); background:var(--blue-50); border:1px solid var(--blue-100); padding:5px 10px; border-radius:7px; white-space:nowrap; }
+  .sess-tag.strat{ color:var(--purple); background:var(--purple-bg); border-color:#E4DDF8; }
+  .sess-mode{ font-size:11px; font-weight:600; letter-spacing:.04em; color:var(--green); background:var(--green-bg);
+    padding:5px 10px; border-radius:7px; white-space:nowrap; }
+  .sess-title{ font-size:20px; font-weight:600; color:var(--navy); margin-bottom:5px; line-height:1.2; }
+  .sess-tutor{ font-size:13.5px; color:var(--slate); margin-bottom:18px; }
+  .sess-tutor b{ color:var(--navy); font-weight:600; }
+  .sess-rows{ display:flex; flex-direction:column; gap:10px; border-top:1px solid var(--line); padding-top:18px; margin-bottom:18px; }
+  .sr{ display:flex; align-items:center; gap:11px; font-size:13.5px; color:var(--ink); }
+  .sr svg{ width:15px; height:15px; color:var(--blue); flex:none; }
+  .sr b{ color:var(--navy); font-weight:600; }
+  .sr.muted{ color:var(--slate); }
+  .sess-foot{ display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:16px; border-top:1px solid var(--line); }
+  .mock-chip{ display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600; color:#C77B1E;
+    background:#FCEEDD; padding:5px 11px; border-radius:7px; }
+  .sess-link{ display:inline-flex; align-items:center; gap:7px; font-size:14px; font-weight:600; color:var(--blue); }
+  .sess-link svg{ width:15px; height:15px; transition:transform .18s; }
+  .sess-link:hover svg{ transform:translateX(3px); }
+
+  /* Legend */
+  .legend{ display:flex; gap:22px; flex-wrap:wrap; margin-bottom:34px; }
+  .lg{ display:inline-flex; align-items:center; gap:9px; font-size:13.5px; color:var(--slate); }
+  .lg .sw{ width:22px; height:8px; border-radius:99px; }
+  .lg .sw.skills{ background:linear-gradient(90deg,#1E50C8,#3B73F0); }
+  .lg .sw.strategic{ background:linear-gradient(90deg,#5B49D6,#7E6BF0); }
+
+  /* NOTE STRIP */
+  .note-strip{ display:flex; align-items:flex-start; gap:16px; background:var(--blue-50); border:1px solid var(--blue-100);
+    border-radius:var(--radius); padding:22px 26px; margin-top:36px; }
+  .note-strip .n-ico{ width:38px; height:38px; border-radius:10px; background:#fff; border:1px solid var(--blue-100);
+    color:var(--blue); display:grid; place-items:center; flex:none; }
+  .note-strip .n-ico svg{ width:18px; height:18px; }
+  .note-strip p{ font-size:14.5px; color:var(--slate); line-height:1.6; }
+  .note-strip b{ color:var(--navy); font-weight:600; }
+
+  /* CTA */
+  .cta-band{ padding:36px 0 90px; }
+  .cta-panel{ background:
+      radial-gradient(640px 320px at 88% 120%, rgba(59,115,240,.12) 0%, rgba(59,115,240,0) 60%),
+      var(--blue-100);
+    border:1px solid var(--blue-200); border-radius:28px; padding:60px 56px; box-shadow:var(--shadow-sm); }
+  .cta-panel h2{ font-size:38px; font-weight:600; letter-spacing:-.02em; line-height:1.14; margin-bottom:14px; max-width:560px; }
+  .cta-panel p{ font-size:17.5px; color:var(--slate); max-width:600px; line-height:1.6; margin-bottom:28px; }
+  .cta-actions{ display:flex; gap:14px; flex-wrap:wrap; }
+
+  /* FOOTER */
+  footer{ border-top:1px solid var(--line); padding:68px 0 34px; }
+  .foot-grid{ display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:48px; margin-bottom:50px; }
+  .foot-about{ max-width:300px; }
+  .foot-about .brand{ margin-bottom:18px; }
+  .foot-about p{ font-size:14.5px; color:var(--slate); line-height:1.65; }
+  .foot-col h4{ font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--slate); margin-bottom:18px; }
+  .foot-col ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+  .foot-col a{ font-size:14.5px; color:var(--ink); transition:color .15s; }
+  .foot-col a:hover{ color:var(--blue); }
+  .foot-bottom{ display:flex; align-items:center; justify-content:space-between; padding-top:26px; border-top:1px solid var(--line); flex-wrap:wrap; gap:14px; }
+  .foot-bottom p{ font-size:13.5px; color:var(--slate); }
+  .foot-rating{ display:flex; align-items:center; gap:9px; font-size:13.5px; color:var(--slate); }
+
+  @media (max-width:980px){
+    .hero-grid{ grid-template-columns:1fr; gap:44px; }
+    .hero h1{ font-size:40px; }
+    .feature-grid{ grid-template-columns:1fr; }
+    .sched-grid{ grid-template-columns:repeat(2,1fr); }
+    .foot-grid{ grid-template-columns:1fr 1fr; gap:36px; }
+  }
+  @media (max-width:680px){
+    :root{ --gutter:22px; }
+    .nav-links,.nav-right .signin{ display:none; }
+    .menu-btn{ display:block; }
+    .hero{ padding:24px 0 50px; }
+    .hero h1{ font-size:32px; }
+    .section{ padding:58px 0; }
+    .sec-head h2,.cta-panel h2{ font-size:26px; }
+    .sched-grid{ grid-template-columns:1fr; }
+    .cta-panel{ padding:38px 26px; }
+    .foot-grid{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#">
+      <span class="brand-mark">V</span>
+      <span><span class="brand-name">Vertex</span><span class="brand-sub">Learning Solutions</span></span>
+    </a>
+    <nav class="nav-links">
+      <a href="#">Courses</a><a href="#">Subscription</a><a href="#" class="active">Live classes</a><a href="#">Reviews</a><a href="#">About</a>
+    </nav>
+    <div class="nav-right">
+      <a class="signin" href="#">Sign in</a>
+      <a class="btn btn-primary" href="#">Enrol now</a>
+      <button class="menu-btn" aria-label="Open menu"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E2A57" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </div>
+</header>
+
+<!-- BREADCRUMB -->
+<div class="wrap crumb">
+  <ol>
+    <li><a href="#">Home</a></li><li class="sep">/</li>
+    <li><a href="#">ACCA</a></li><li class="sep">/</li>
+    <li aria-current="page">Sept 2026 Live Sessions</li>
+  </ol>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="free-pill"><span class="dot"></span> Free for all Vertex students</span>
+      <div class="eyebrow">ACCA · September 2026 exam session</div>
+      <h1>Weekly live sessions, <span class="accent">totally free.</span></h1>
+      <p class="hero-lead">In addition to your Complete Learning Pack, we run weekly live sessions to engage you face-to-face with tutors, resolve your queries, and work through extra exam questions.</p>
+      <div class="hero-ticks">
+        <div class="ht"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> All Vertex students are invited — at no extra charge</div>
+        <div class="ht"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Every session recorded for students in other time zones</div>
+        <div class="ht"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Quizzes, progress tests and a final mock for every paper</div>
+      </div>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#schedule">View the schedule
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+        <a class="btn btn-ghost" href="#">Book a free consultation</a>
+      </div>
+    </div>
+
+    <div class="live-card">
+      <div class="lc-top">
+        <span class="lc-tag">Sept 2026 session</span>
+        <span class="lc-live"><span class="dot"></span> Live classes weekly</span>
+      </div>
+      <h3 class="lc-title">Your weekly live timetable</h3>
+      <p class="lc-meta">10 ACCA papers · Skills &amp; Strategic Professional</p>
+      <div class="lc-rows">
+        <div class="lc-row">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+          <span><span class="t">Live lessons start mid-June 2026</span><br><span class="s">Running weekly through to late August</span></span>
+        </div>
+        <div class="lc-row">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+          <span><span class="t">Evenings, UAE time</span><br><span class="s">7:30–8:00 PM — recordings if you can't attend</span></span>
+        </div>
+        <div class="lc-row">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
+          <span><span class="t">Final mocks 24–25 August 2026</span><br><span class="s">Sit a full mock before the real exam</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section band">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Why join the live sessions</div>
+      <h2>More than a recorded course — <span class="accent">real interaction.</span></h2>
+    </div>
+    <div class="feature-grid">
+      <div class="feature">
+        <div class="f-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20v-1a6.5 6.5 0 0 1 13 0v1"/><circle cx="17.5" cy="9" r="2.5"/><path d="M15 20v-.5a5 5 0 0 1 6.5-4.77"/></svg></div>
+        <h3>Face-to-face with tutors</h3>
+        <p>Meet your tutor live every week — ask questions in real time and get your queries resolved on the spot, not days later.</p>
+      </div>
+      <div class="feature">
+        <div class="f-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></div>
+        <h3>Extra exam questions</h3>
+        <p>Work through additional past-exam questions together — building the exam technique that turns knowledge into marks.</p>
+      </div>
+      <div class="feature">
+        <div class="f-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m10 9 5 3-5 3z"/></svg></div>
+        <h3>Recorded for every time zone</h3>
+        <p>Our students span 80+ countries. If you can't join live, every session is recorded and available to watch whenever suits you.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCHEDULE -->
+<section class="section" id="schedule">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Schedule of live sessions</div>
+      <h2>Sept 2026 ACCA exam session <span class="accent">timetable.</span></h2>
+      <p>Every paper includes the recorded course, weekly live lessons, quizzes, progress tests and a final mock exam.</p>
+    </div>
+
+    <div class="legend">
+      <span class="lg"><span class="sw skills"></span> Applied Skills</span>
+      <span class="lg"><span class="sw strategic"></span> Strategic Professional</span>
+    </div>
+
+    <div class="sched-grid">
+
+      <!-- PM F5 -->
+      <div class="sess">
+        <div class="sess-bar skills"></div>
+        <div class="sess-body">
+          <div class="sess-top"><span class="sess-tag">ACCA PM · F5</span><span class="sess-mode">Weekly live</span></div>
+          <h3 class="sess-title">Performance Management</h3>
+          <p class="sess-tutor">Tutors: <b>Syed M Ali / Haris Hanif</b></p>
+          <div class="sess-rows">
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Starts <b>June 17, 2026</b> · ends Aug 19</div>
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Every <b>Wednesday, 8:00 PM</b> UAE time</div>
+            <div class="sr muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Quizzes &amp; progress tests included</div>
+          </div>
+          <div class="sess-foot">
+            <span class="mock-chip">Mock · 24 Aug</span>
+            <a class="sess-link" href="#">See course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- TX F6 -->
+      <div class="sess">
+        <div class="sess-bar skills"></div>
+        <div class="sess-body">
+          <div class="sess-top"><span class="sess-tag">ACCA TX · F6</span><span class="sess-mode">Twice weekly</span></div>
+          <h3 class="sess-title">Taxation</h3>
+          <p class="sess-tutor">Tutor: <b>Danish Malik</b></p>
+          <div class="sess-rows">
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Starts <b>June 19, 2026</b> · ends Aug 21</div>
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Every <b>Friday, 7:30 PM</b> UAE time</div>
+            <div class="sr muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Quizzes &amp; progress tests included</div>
+          </div>
+          <div class="sess-foot">
+            <span class="mock-chip">Mock · 24 Aug</span>
+            <a class="sess-link" href="#">See course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- FR F7 -->
+      <div class="sess">
+        <div class="sess-bar skills"></div>
+        <div class="sess-body">
+          <div class="sess-top"><span class="sess-tag">ACCA FR · F7</span><span class="sess-mode">Weekly live</span></div>
+          <h3 class="sess-title">Financial Reporting</h3>
+          <p class="sess-tutor">Tutors: <b>Syed M Ali / Danish Malik</b></p>
+          <div class="sess-rows">
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Starts <b>June 13, 2026</b> · ends Aug 15</div>
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Every <b>Saturday, 7:30 PM</b> UAE time</div>
+            <div class="sr muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Quizzes &amp; progress tests included</div>
+          </div>
+          <div class="sess-foot">
+            <span class="mock-chip">Mock · 24 Aug</span>
+            <a class="sess-link" href="#">See course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- AA F8 -->
+      <div class="sess">
+        <div class="sess-bar skills"></div>
+        <div class="sess-body">
+          <div class="sess-top"><span class="sess-tag">ACCA AA · F8</span><span class="sess-mode">Weekly live</span></div>
+          <h3 class="sess-title">Audit &amp; Assurance</h3>
+          <p class="sess-tutor">Tutor: <b>Shahrukh Yousuf</b></p>
+          <div class="sess-rows">
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Starts <b>June 19, 2026</b> · ends Aug 21</div>
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Every <b>Friday, 7:30 PM</b> UAE time</div>
+            <div class="sr muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Quizzes &amp; progress tests included</div>
+          </div>
+          <div class="sess-foot">
+            <span class="mock-chip">Mock · 24 Aug</span>
+            <a class="sess-link" href="#">See course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- FM F9 -->
+      <div class="sess">
+        <div class="sess-bar skills"></div>
+        <div class="sess-body">
+          <div class="sess-top"><span class="sess-tag">ACCA FM · F9</span><span class="sess-mode">Weekly live</span></div>
+          <h3 class="sess-title">Financial Management</h3>
+          <p class="sess-tutor">Tutor: <b>Syed M Ali</b></p>
+          <div class="sess-rows">
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Starts <b>June 16, 2026</b> · ends Aug 18</div>
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Every <b>Tuesday, 7:30 PM</b> UAE time</div>
+            <div class="sr muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Quizzes &amp; progress tests included</div>
+          </div>
+          <div class="sess-foot">
+            <span class="mock-chip">Mock · 24 Aug</span>
+            <a class="sess-link" href="#">See course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- SBR -->
+      <div class="sess">
+        <div class="sess-bar strategic"></div>
+        <div class="sess-body">
+          <div class="sess-top"><span class="sess-tag strat">ACCA SBR</span><span class="sess-mode">Weekly live</span></div>
+          <h3 class="sess-title">Strategic Business Reporting</h3>
+          <p class="sess-tutor">Tutor: <b>Syed M Ali</b></p>
+          <div class="sess-rows">
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Starts <b>June 14, 2026</b> · ends Aug 17</div>
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Every <b>Sunday, 7:30 PM</b> UAE time</div>
+            <div class="sr muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Quizzes &amp; progress tests included</div>
+          </div>
+          <div class="sess-foot">
+            <span class="mock-chip">Mock · 25 Aug</span>
+            <a class="sess-link" href="#">See course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- SBL -->
+      <div class="sess">
+        <div class="sess-bar strategic"></div>
+        <div class="sess-body">
+          <div class="sess-top"><span class="sess-tag strat">ACCA SBL</span><span class="sess-mode">Weekly live</span></div>
+          <h3 class="sess-title">Strategic Business Leader</h3>
+          <p class="sess-tutor">Tutor: <b>Liliya Kirylenka</b></p>
+          <div class="sess-rows">
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Schedule: <b>to be announced</b></div>
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m10 9 5 3-5 3z"/></svg> Recorded course available now</div>
+            <div class="sr muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Quizzes &amp; progress tests included</div>
+          </div>
+          <div class="sess-foot">
+            <span class="mock-chip">Final mock included</span>
+            <a class="sess-link" href="#">See course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- AFM -->
+      <div class="sess">
+        <div class="sess-bar strategic"></div>
+        <div class="sess-body">
+          <div class="sess-top"><span class="sess-tag strat">ACCA AFM</span><span class="sess-mode">Weekly live</span></div>
+          <h3 class="sess-title">Advanced Financial Management</h3>
+          <p class="sess-tutor">Tutor: <b>Syed M Ali</b></p>
+          <div class="sess-rows">
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Starts <b>June 18, 2026</b> · ends Aug 20</div>
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Every <b>Thursday, 7:30 PM</b> UAE time</div>
+            <div class="sr muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Quizzes &amp; progress tests included</div>
+          </div>
+          <div class="sess-foot">
+            <span class="mock-chip">Mock · 25 Aug</span>
+            <a class="sess-link" href="#">See course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- APM -->
+      <div class="sess">
+        <div class="sess-bar strategic"></div>
+        <div class="sess-body">
+          <div class="sess-top"><span class="sess-tag strat">ACCA APM</span><span class="sess-mode">Weekly live</span></div>
+          <h3 class="sess-title">Advanced Performance Management</h3>
+          <p class="sess-tutor">Tutor: <b>Liliya Kirylenka</b></p>
+          <div class="sess-rows">
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Schedule: <b>to be announced</b></div>
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m10 9 5 3-5 3z"/></svg> Recorded course available now</div>
+            <div class="sr muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Quizzes &amp; progress tests included</div>
+          </div>
+          <div class="sess-foot">
+            <span class="mock-chip">Final mock included</span>
+            <a class="sess-link" href="#">See course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- AAA -->
+      <div class="sess">
+        <div class="sess-bar strategic"></div>
+        <div class="sess-body">
+          <div class="sess-top"><span class="sess-tag strat">ACCA AAA</span><span class="sess-mode">Weekly live</span></div>
+          <h3 class="sess-title">Advanced Audit &amp; Assurance</h3>
+          <p class="sess-tutor">Tutor: <b>Haris Hanif</b></p>
+          <div class="sess-rows">
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Starts <b>June 21, 2026</b> · ends Aug 17</div>
+            <div class="sr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Every <b>Sunday, 7:30 PM</b> UAE time</div>
+            <div class="sr muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Quizzes &amp; progress tests included</div>
+          </div>
+          <div class="sess-foot">
+            <span class="mock-chip">Mock · 25 Aug</span>
+            <a class="sess-link" href="#">See course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="note-strip">
+      <span class="n-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></span>
+      <p><b>Can't join live?</b> We know time zone differences affect our global community of students — that's why every live session is recorded and made available to all enrolled students, so you never fall behind.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-band">
+  <div class="wrap">
+    <div class="cta-panel">
+      <div class="eyebrow">Sept 2026 exam session</div>
+      <h2>Enrol now and join the <span class="accent">live sessions free.</span></h2>
+      <p>Every Complete Learning Pack includes access to these weekly live lessons at no extra charge — plus quizzes, progress tests and a final mock before exam day.</p>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="#">Explore ACCA courses</a>
+        <a class="btn btn-outline-blue" href="#">Talk to us on WhatsApp
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-about">
+        <a class="brand" href="#"><span class="brand-mark">V</span><span><span class="brand-name">Vertex</span><span class="brand-sub">Learning Solutions</span></span></a>
+        <p>A dedicated team of academic experts helping accounting and finance professionals excel — through the most comprehensive online courses, delivered on our own learning platform.</p>
+      </div>
+      <div class="foot-col"><h4>Courses</h4><ul>
+        <li><a href="#">ACCA individual courses</a></li><li><a href="#">ACCA subscription plan</a></li>
+        <li><a href="#">CIMA exam preparation</a></li><li><a href="#">CMA exam preparation</a></li><li><a href="#">CIA exam preparation</a></li>
+      </ul></div>
+      <div class="foot-col"><h4>Company</h4><ul>
+        <li><a href="#">About Vertex</a></li><li><a href="#">Student reviews</a></li>
+        <li><a href="#">Live classes</a></li><li><a href="#">Contact us</a></li><li><a href="#">Book a meeting</a></li>
+      </ul></div>
+      <div class="foot-col"><h4>Support</h4><ul>
+        <li><a href="#">Help centre</a></li><li><a href="#">Terms &amp; conditions</a></li>
+        <li><a href="#">Privacy policy</a></li><li><a href="#">Cookie policy</a></li><li><a href="#">Complaint form</a></li>
+      </ul></div>
+    </div>
+    <div class="foot-bottom">
+      <p>© 2026 Vertex Learning Solutions · ACCA, CIMA, CMA (USA) &amp; CIA exam preparation</p>
+      <div class="foot-rating"><span class="stars">★★★★★</span> Rated 5.0 by students worldwide</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

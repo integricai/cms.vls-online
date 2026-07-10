@@ -156,6 +156,7 @@ export interface UpsertStoryInput {
   fullSlug: string;
   content: Record<string, unknown>;
   publish?: boolean;
+  isFolder?: boolean;
 }
 
 export async function upsertStory(
@@ -170,7 +171,8 @@ export async function upsertStory(
       name: input.name,
       slug: input.slug,
       parent_id: input.parentId,
-      content: input.content,
+      content: input.isFolder ? undefined : input.content,
+      is_folder: input.isFolder ? true : undefined,
     },
     publish: input.publish ? 1 : 0,
   };
