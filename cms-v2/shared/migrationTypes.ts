@@ -135,6 +135,32 @@ export interface ScrapedContentSection {
   bodyText: string;
 }
 
+export interface ScrapedTemplateSection {
+  key: string;
+  html: string;
+  eyebrow: string;
+  headingPrefix: string;
+  headingAccent: string;
+  lead: string;
+  body: string;
+  bodyHtml: string;
+  stats: Array<{ value: string; label: string }>;
+  cards: Array<{ title: string; description: string }>;
+  timeline: Array<{ year: string; title: string; text: string }>;
+  contactCards: Array<{ title: string; detail: string; linkText: string; linkUrl: string }>;
+  heroItems: Array<{ text: string }>;
+  sideCard: {
+    tag: string;
+    quote: string;
+    authorName: string;
+    authorRole: string;
+  } | null;
+  badges: Array<{ title: string; subtitle: string }>;
+  ctaTitle: string;
+  ctaSubtitle: string;
+  ctaText: string;
+}
+
 export interface ScrapedCoursePage {
   sourceUrl: string;
   slug: string;
@@ -169,6 +195,7 @@ export interface ScrapedGenericPage {
   metaDescription: string;
   breadcrumbItems: ScrapedBreadcrumbItem[];
   sections: ScrapedContentSection[];
+  templateSections: ScrapedTemplateSection[];
   faq: ScrapedCoursePage['faq'];
 }
 

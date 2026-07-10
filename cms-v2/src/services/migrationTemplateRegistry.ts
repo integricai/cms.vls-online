@@ -386,6 +386,13 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
     'eyebrow', 'heading_prefix', 'heading_accent', 'description', 'cards',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
+  stat_item: ['value', 'label'],
+  icon_card: ['title', 'description', 'icon_key'],
+  timeline_item: ['year', 'title', 'text'],
+  contact_card: ['title', 'detail', 'link_text', 'link'],
+  page_hero_item: ['text', 'variant'],
+  page_hero_side_card: ['tag', 'title', 'quote', 'author_name', 'author_role', 'footer_label', 'footer_value', 'rows'],
+  page_hero_badge: ['title', 'subtitle', 'tone'],
 };
 
 /** Storyblok MAPI expects many schema "number" fields as numeric strings, not JSON numbers. */

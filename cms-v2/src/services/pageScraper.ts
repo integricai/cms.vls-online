@@ -2,6 +2,7 @@ import type { ScrapedContentSection, ScrapedGenericPage } from '../../shared/mig
 import { breadcrumbTrailText, parseBreadcrumbFromHtml } from './breadcrumbUtils';
 import { toPublicOriginUrl } from './migrationUrlUtils';
 import { CoursePageScrapeError, fetchPageHtml } from './coursePageScraper';
+import { parseTemplateSectionsFromHtml } from './pageSectionExtractor';
 
 function decodeEntities(value: string): string {
   return value
@@ -132,6 +133,7 @@ export async function scrapeGenericPage(sourceUrl: string): Promise<ScrapedGener
     metaDescription,
     breadcrumbItems,
     sections: parseSections(mainContent),
+    templateSections: parseTemplateSectionsFromHtml(mainContent),
     faq: parseFaqSection(html),
   };
 }

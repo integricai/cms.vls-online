@@ -33,6 +33,8 @@ import {
   mergePresetWithData,
   syncTemplateComponentLibrary,
 } from './storyblokComponentLibrary';
+import { buildBlokFromTemplateSection } from './pageContentBuilder';
+import { resolveTemplateSections } from './pageSectionExtractor';
 import type { TemplateReferenceSummary, ComponentLibrarySummary } from '../../shared/migrationTypes';
 
 function blokUid(): string {
@@ -583,13 +585,11 @@ async function buildGenericStoryblokContentAsync(
 ): Promise<Record<string, unknown>> {
   const blueprint = getMigrationTemplateBlueprint(template);
   const sourceUrl = scraped.sourceUrl;
+  const extractedByKey = resolveTemplateSections(template, scraped.templateSections ?? []);
   const body: Record<string, unknown>[] = [];
 
-  let sectionIndex = 0;
   for (const section of blueprint.sections) {
-    const scrapedSection = scraped.sections[sectionIndex];
-    sectionIndex += 1;
-
+    const extracted = extractedByKey.get(section.key);
     let blok: Record<string, unknown> | null = null;
 
     if (section.component === 'home_hero_section') {
@@ -607,95 +607,8 @@ async function buildGenericStoryblokContentAsync(
       blok = { _uid: blokUid(), component: 'enquiry_form' };
     } else if (section.component === 'faq_section' && scraped.faq?.items.length) {
       blok = buildGenericFaqBlok(scraped, sourceUrl);
-    } else if (section.component === 'promotion_section') {
-      blok = {
-        _uid: blokUid(),
-        component: 'promotion_section',
-        name: `${template}/${section.key}`,
-        title: scrapedSection?.heading || scraped.title || section.label || 'Get started',
-        subtitle: scrapedSection?.bodyText || scraped.metaDescription || '',
-        cta_text: 'Learn more',
-      };
-    } else if (section.component === 'page_hero') {
-      blok = {
-        _uid: blokUid(),
-        component: 'page_hero',
-        eyebrow: section.label,
-        heading_prefix: scrapedSection?.heading || scraped.title || section.label,
-        lead: scrapedSection?.bodyText || scraped.metaDescription || '',
-        primary_cta_text: 'Learn more',
-      };
-    } else if (section.component === 'stats_band') {
-      blok = {
-        _uid: blokUid(),
-        component: 'stats_band',
-        background_color: '#0E2A57',
-        items: [],
-      };
-    } else if (section.component === 'team_profiles') {
-      blok = {
-        _uid: blokUid(),
-        component: 'team_profiles',
-        eyebrow: section.label,
-        heading_prefix: scrapedSection?.heading || section.label,
-        description: scrapedSection?.bodyText || '',
-        profiles: [],
-      };
-    } else if (section.component === 'quote_block') {
-      blok = {
-        _uid: blokUid(),
-        component: 'quote_block',
-        eyebrow: section.label,
-        quote: scrapedSection?.bodyText || scrapedSection?.heading || scraped.title,
-        author_name: 'Vertex Learning Solutions',
-        author_initials: 'V',
-      };
-    } else if (section.component === 'qualification_structure') {
-      blok = {
-        _uid: blokUid(),
-        component: 'qualification_structure',
-        eyebrow: section.label,
-        heading_prefix: scrapedSection?.heading || section.label,
-        description: scrapedSection?.bodyText || '',
-        levels: [],
-      };
-    } else if (section.component === 'live_schedule') {
-      blok = {
-        _uid: blokUid(),
-        component: 'live_schedule',
-        eyebrow: section.label,
-        heading_prefix: scrapedSection?.heading || section.label,
-        description: scrapedSection?.bodyText || '',
-        sessions: [],
-      };
-    } else if (section.component === 'contact_cards') {
-      blok = {
-        _uid: blokUid(),
-        component: 'contact_cards',
-        eyebrow: section.label,
-        heading_prefix: scrapedSection?.heading || section.label,
-        description: scrapedSection?.bodyText || '',
-        cards: [],
-      };
-    } else if (section.component === 'icon_card_grid') {
-      blok = {
-        _uid: blokUid(),
-        component: 'icon_card_grid',
-        eyebrow: section.label,
-        heading_prefix: scrapedSection?.heading || section.label,
-        description: scrapedSection?.bodyText || '',
-        columns: 3,
-        cards: [],
-      };
     } else {
-      blok = {
-        _uid: blokUid(),
-        component: section.component,
-        eyebrow: section.label,
-        heading_prefix: scrapedSection?.heading || scraped.title || section.label,
-        body: scrapedSection?.bodyText || scraped.metaDescription || '',
-        description: scrapedSection?.bodyText || scraped.metaDescription || '',
-      };
+      blok = buildBlokFromTemplateSection(section, extracted, scraped);
     }
 
     const styled = await stylizeBlok(blok, template, section.key, presetBloksBySection, config);
