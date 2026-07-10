@@ -153,17 +153,17 @@ export interface UpsertStoryInput {
   name: string;
   slug: string;
   parentId?: number;
+  fullSlug: string;
   content: Record<string, unknown>;
   publish?: boolean;
 }
 
-export async function upsertCourseStory(
+export async function upsertStory(
   config: StoryblokConfig,
   input: UpsertStoryInput,
 ): Promise<{ story: StoryblokStoryRef; created: boolean; previewUrl: string }> {
   const normalized = buildConfig(config);
-  const fullSlug = input.parentId ? `courses/${input.slug}` : input.slug;
-  const existing = await findStoryBySlug(normalized, fullSlug);
+  const existing = await findStoryBySlug(normalized, input.fullSlug);
 
   const payload = {
     story: {
@@ -200,4 +200,13 @@ export async function upsertCourseStory(
     created: true,
     previewUrl: `${previewBase(normalized.region)}/stories/${data.story.full_slug}?token=${encodeURIComponent(normalized.accessToken)}`,
   };
+}
+
+/** @deprecated Use upsertStory */
+export async function upsertCourseStory(
+  config: StoryblokConfig,
+  input: Omit<UpsertStoryInput, 'fullSlug'> & { parentId?: number },
+): Promise<{ story: StoryblokStoryRef; created: boolean; previewUrl: string }> {
+  const fullSlug = input.parentId ? `courses/${input.slug}` : input.slug;
+  return upsertStory(config, { ...input, fullSlug });
 }

@@ -7,23 +7,21 @@ import type {
   ScrapedHero,
   ScrapedHeroRightItem,
   ScrapedLearnItem,
+  ScrapedPromotionSection,
   ScrapedTabPanel,
+  ScrapedTestimonialCard,
+  ScrapedTestimonials,
 } from '../../shared/migrationTypes';
+import { breadcrumbTrailText, parseBreadcrumbFromHtml } from './breadcrumbUtils';
+import {
+  ALLOWED_HOSTS,
+  toPublicOriginUrl,
+  toZenlerFetchUrl,
+} from './migrationUrlUtils';
 
 const MAX_PAGE_BYTES = 4 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 45_000;
 const FETCH_ATTEMPTS = 3;
-const ALLOWED_HOSTS = new Set(['vls-online.com', 'www.vls-online.com', 'vls.newzenler.com']);
-
-/** Zenler origin — faster and more reliable than vls-online.com via Cloudflare from serverless. */
-function fetchOriginUrl(url: URL): URL {
-  const fetchUrl = new URL(url.toString());
-  const host = fetchUrl.hostname.toLowerCase();
-  if (host === 'vls-online.com' || host === 'www.vls-online.com') {
-    fetchUrl.hostname = 'vls.newzenler.com';
-  }
-  return fetchUrl;
-}
 
 export class CoursePageScrapeError extends Error {
   status: number;
@@ -88,7 +86,7 @@ function isPrivateIp(ip: string): boolean {
   return true;
 }
 
-async function validateCourseUrl(raw: string): Promise<URL> {
+async function validateSiteUrl(raw: string, requireCoursePath = true): Promise<URL> {
   let parsed: URL;
   try {
     parsed = new URL(raw.trim());
@@ -100,7 +98,7 @@ async function validateCourseUrl(raw: string): Promise<URL> {
   }
   const host = parsed.hostname.toLowerCase();
   if (!ALLOWED_HOSTS.has(host)) {
-    throw new CoursePageScrapeError('Only vls-online.com course page URLs are allowed');
+    throw new CoursePageScrapeError('Only vls-online.com page URLs are allowed');
   }
   if (host === 'localhost' || host.endsWith('.local') || net.isIP(host) && isPrivateIp(host)) {
     throw new CoursePageScrapeError('Local and private network URLs are not allowed');
@@ -109,13 +107,13 @@ async function validateCourseUrl(raw: string): Promise<URL> {
   if (!addresses.length || addresses.some(address => isPrivateIp(address.address))) {
     throw new CoursePageScrapeError('URL resolves to a private or internal network address');
   }
-  if (!parsed.pathname.includes('/courses/')) {
+  if (requireCoursePath && !parsed.pathname.includes('/courses/')) {
     throw new CoursePageScrapeError('URL must point to a course page (/courses/{slug})');
   }
   return parsed;
 }
 
-async function fetchCourseHtmlOnce(url: URL): Promise<string> {
+async function fetchHtmlOnce(url: URL): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -124,7 +122,7 @@ async function fetchCourseHtmlOnce(url: URL): Promise<string> {
       signal: controller.signal,
       headers: {
         Accept: 'text/html,application/xhtml+xml',
-        'User-Agent': 'Mozilla/5.0 (compatible; VLS-CMS-CourseMigration/1.1; +https://vls-online.com)',
+        'User-Agent': 'Mozilla/5.0 (compatible; VLS-CMS-CourseMigration/1.2; +https://vls-online.com)',
       },
     });
     if (!response.ok) {
@@ -155,7 +153,7 @@ async function fetchCourseHtmlOnce(url: URL): Promise<string> {
       );
     }
     throw new CoursePageScrapeError(
-      error instanceof Error ? error.message : 'Could not fetch course page',
+      error instanceof Error ? error.message : 'Could not fetch page',
       502,
     );
   } finally {
@@ -163,13 +161,14 @@ async function fetchCourseHtmlOnce(url: URL): Promise<string> {
   }
 }
 
-async function fetchCourseHtml(url: URL): Promise<string> {
-  const fetchUrl = fetchOriginUrl(url);
+export async function fetchPageHtml(sourceUrl: string): Promise<string> {
+  const url = await validateSiteUrl(sourceUrl, false);
+  const fetchUrl = toZenlerFetchUrl(url);
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
     try {
-      return await fetchCourseHtmlOnce(fetchUrl);
+      return await fetchHtmlOnce(fetchUrl);
     } catch (error) {
       lastError = error;
       const retryable = error instanceof CoursePageScrapeError
@@ -181,7 +180,7 @@ async function fetchCourseHtml(url: URL): Promise<string> {
 
   throw lastError instanceof Error
     ? lastError
-    : new CoursePageScrapeError('Could not fetch course page', 502);
+    : new CoursePageScrapeError('Could not fetch page', 502);
 }
 
 function extractDivByIdPrefix(html: string, idPrefix: string): string {
@@ -216,10 +215,12 @@ function extractAllMatches(html: string, pattern: RegExp): string[] {
   return Array.from(html.matchAll(pattern), match => match[1]?.trim() ?? '').filter(Boolean);
 }
 
-function parseHero(heroHtml: string): ScrapedHero | null {
+function parseHero(heroHtml: string, pageUrl: string): ScrapedHero | null {
   if (!heroHtml.trim()) return null;
 
-  const breadcrumb = stripTags(extractFirstMatch(heroHtml, /<p[^>]*>([\s\S]*?)<\/p>/i));
+  const breadcrumbParagraph = extractFirstMatch(heroHtml, /<p[^>]*>([\s\S]*?)<\/p>/i);
+  const breadcrumbItems = parseBreadcrumbFromHtml(breadcrumbParagraph, pageUrl);
+  const breadcrumb = breadcrumbTrailText(breadcrumbItems);
   const heading = stripTags(extractFirstMatch(heroHtml, /<h1[^>]*>([\s\S]*?)<\/h1>/i));
 
   const descMatch = heroHtml.match(/<p[^>]*class="[^"]*-desc"[^>]*>([\s\S]*?)<\/p>/i)
@@ -253,6 +254,7 @@ function parseHero(heroHtml: string): ScrapedHero | null {
 
   return {
     breadcrumb,
+    breadcrumbItems,
     eyebrow: tags.join(' · '),
     heading,
     description,
@@ -373,9 +375,9 @@ function parseZenlerCourseDescription(descSlice: string): ScrapedCourseDescripti
   const sectionPattern = /<p[^>]*font-size:\s*25px[^>]*>([\s\S]*?)<\/p>\s*(<p[^>]*>[\s\S]*?<\/p>)/gi;
   for (const match of cleaned.matchAll(sectionPattern)) {
     const heading = stripTags(match[1]);
-    const html = match[2].trim();
-    const text = stripTags(html);
-    if (heading && text) sections.push({ heading, html, text });
+    const sectionHtml = match[2].trim();
+    const text = stripTags(sectionHtml);
+    if (heading && text) sections.push({ heading, html: sectionHtml, text });
   }
 
   if (sections.length) {
@@ -420,6 +422,78 @@ function parseCourseDescription(html: string): ScrapedCourseDescription | null {
   if (!descSlice.trim()) return null;
 
   return parseCmsCourseDescription(descSlice) ?? parseZenlerCourseDescription(descSlice);
+}
+
+function parseTabPanelBlocks(panelHtml: string): Array<{ blockType: string; fields: Record<string, string> }> {
+  const blocks: Array<{ blockType: string; fields: Record<string, string> }> = [];
+  const cleaned = panelHtml.trim();
+  if (!cleaned) return blocks;
+
+  const introHeading = stripTags(extractFirstMatch(cleaned, /<p[^>]*font-weight:700[^>]*>([\s\S]*?)<\/p>/i));
+  const introDesc = stripTags(extractFirstMatch(cleaned, /<p[^>]*font-weight:700[^>]*>[\s\S]*?<\/p>\s*<p[^>]*>([\s\S]*?)<\/p>/i));
+  if (introHeading || introDesc) {
+    blocks.push({
+      blockType: 'panel-intro',
+      fields: {
+        eyebrow: stripTags(extractFirstMatch(cleaned, /<p[^>]*text-transform:uppercase[^>]*>([\s\S]*?)<\/p>/i)) || "WHAT'S INCLUDED",
+        heading: introHeading || 'Everything you need to pass',
+        description: introDesc || stripTags(cleaned).slice(0, 500),
+      },
+    });
+  }
+
+  const cardPattern = /<div[^>]*display:grid[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi;
+  const cards: string[] = [];
+  for (const match of cleaned.matchAll(cardPattern)) {
+    const cardHtml = match[1];
+    const icon = stripTags(extractFirstMatch(cardHtml, /<span[^>]*>([\s\S]*?)<\/span>/i));
+    const title = stripTags(extractFirstMatch(cardHtml, /<p[^>]*font-weight:600[^>]*>([\s\S]*?)<\/p>/i));
+    const description = stripTags(extractFirstMatch(cardHtml, /<p[^>]*font-weight:600[^>]*>[\s\S]*?<\/p>\s*<p[^>]*>([\s\S]*?)<\/p>/i));
+    if (title) cards.push(`${icon}|${title}|${description}`);
+  }
+  if (cards.length) {
+    blocks.push({ blockType: 'inc-cards', fields: { cards: cards.join('\n') } });
+  }
+
+  const stepPattern = /<div[^>]*display:flex[^>]*align-items:flex-start[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi;
+  const steps: string[] = [];
+  for (const match of cleaned.matchAll(stepPattern)) {
+    const stepHtml = match[1];
+    const icon = stripTags(extractFirstMatch(stepHtml, /<span[^>]*>([\s\S]*?)<\/span>/i));
+    const title = stripTags(extractFirstMatch(stepHtml, /<p[^>]*font-weight:600[^>]*>([\s\S]*?)<\/p>/i));
+    const description = stripTags(extractFirstMatch(stepHtml, /<p[^>]*font-weight:600[^>]*>[\s\S]*?<\/p>\s*<p[^>]*>([\s\S]*?)<\/p>/i));
+    if (title) steps.push(`${icon}|${title}|${description}`);
+  }
+  if (steps.length) {
+    blocks.push({ blockType: 'steps', fields: { steps: steps.join('\n') } });
+  }
+
+  const bullets = extractAllMatches(cleaned, /<li[^>]*>([\s\S]*?)<\/li>/gi).map(stripTags).filter(Boolean);
+  if (bullets.length) {
+    blocks.push({ blockType: 'bullets', fields: { bullet_items: bullets.join('\n') } });
+  }
+
+  const paragraphs = extractAllMatches(cleaned, /<p[^>]*>([\s\S]*?)<\/p>/gi)
+    .map(stripTags)
+    .filter(text => text.length > 30);
+  if (!blocks.length && paragraphs.length) {
+    blocks.push({
+      blockType: 'heading-para',
+      fields: {
+        heading: paragraphs[0] ?? 'Overview',
+        paragraph: paragraphs.slice(1).join('\n\n') || paragraphs[0] || '',
+      },
+    });
+  }
+
+  if (!blocks.length) {
+    blocks.push({
+      blockType: 'paragraph',
+      fields: { paragraph: stripTags(cleaned).slice(0, 8000) },
+    });
+  }
+
+  return blocks;
 }
 
 function parseTabs(html: string): ScrapedTabPanel[] {
@@ -530,6 +604,58 @@ function parseFaq(html: string): ScrapedCoursePage['faq'] {
   return { title, icon: stripTags(icon), items };
 }
 
+function parseTestimonials(html: string): ScrapedTestimonials | null {
+  const testimonialMatch = html.match(/data-vls-testimonials|vls-testimonial|testimonial-carousel/i);
+  if (!testimonialMatch) return null;
+
+  const sectionStart = html.indexOf(testimonialMatch[0]);
+  const sectionHtml = html.slice(Math.max(0, sectionStart - 500), sectionStart + 120000);
+  const cards: ScrapedTestimonialCard[] = [];
+
+  const cardPattern = /<div[^>]*class="[^"]*testimonial[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi;
+  for (const match of sectionHtml.matchAll(cardPattern)) {
+    const cardHtml = match[1];
+    const quote = stripTags(extractFirstMatch(cardHtml, /<p[^>]*>([\s\S]*?)<\/p>/i));
+    const author = stripTags(extractFirstMatch(cardHtml, /<p[^>]*font-weight:600[^>]*>([\s\S]*?)<\/p>/i));
+    const role = stripTags(extractFirstMatch(cardHtml, /<p[^>]*font-weight:600[^>]*>[\s\S]*?<\/p>\s*<p[^>]*>([\s\S]*?)<\/p>/i));
+    if (quote) cards.push({ quote, author, role });
+  }
+
+  if (!cards.length) return null;
+
+  return {
+    eyebrow: stripTags(extractFirstMatch(sectionHtml, /<p[^>]*text-transform:uppercase[^>]*>([\s\S]*?)<\/p>/i)),
+    titlePrefix: stripTags(extractFirstMatch(sectionHtml, /<h2[^>]*>([\s\S]*?)<\/h2>/i)),
+    titleAccent: '',
+    subtitle: stripTags(extractFirstMatch(sectionHtml, /<h2[^>]*>[\s\S]*?<\/h2>\s*<p[^>]*>([\s\S]*?)<\/p>/i)),
+    cards,
+  };
+}
+
+function parsePromotion(html: string): ScrapedPromotionSection | null {
+  const promoMatch = html.match(/data-vls-promotion|promotion-section|vls-promotion/i);
+  if (!promoMatch) return null;
+
+  const sectionStart = html.indexOf(promoMatch[0]);
+  const sectionHtml = html.slice(Math.max(0, sectionStart - 200), sectionStart + 40000);
+  const title = stripTags(extractFirstMatch(sectionHtml, /<h2[^>]*>([\s\S]*?)<\/h2>/i))
+    || stripTags(extractFirstMatch(sectionHtml, /<p[^>]*font-weight:700[^>]*>([\s\S]*?)<\/p>/i));
+  const subtitle = stripTags(extractFirstMatch(sectionHtml, /<h2[^>]*>[\s\S]*?<\/h2>\s*<p[^>]*>([\s\S]*?)<\/p>/i));
+  const ctaMatch = sectionHtml.match(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/i);
+
+  if (!title && !subtitle) return null;
+  return {
+    title: title || 'Promotion',
+    subtitle,
+    ctaText: ctaMatch ? stripTags(ctaMatch[2]) : 'Sign Up',
+    ctaUrl: ctaMatch?.[1] ?? '',
+  };
+}
+
+function hasCourseFinderBanner(html: string): boolean {
+  return /data-vls-course-finder-banner="1"/i.test(html);
+}
+
 function parseJsonLdCourse(html: string): { name: string; description: string; courseId: string } {
   const scripts = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/gi) ?? [];
   for (const script of scripts) {
@@ -581,10 +707,10 @@ function inferZenlerCourseId(html: string): string {
 }
 
 export async function scrapeCoursePage(sourceUrl: string): Promise<ScrapedCoursePage> {
-  const url = await validateCourseUrl(sourceUrl);
-  const normalizedUrl = `https://vls-online.com${url.pathname.replace(/\/$/, '')}`;
+  const url = await validateSiteUrl(sourceUrl, true);
+  const normalizedUrl = toPublicOriginUrl(url);
 
-  const html = await fetchCourseHtml(url);
+  const html = await fetchPageHtml(sourceUrl);
   const slug = inferSlug(url);
   const title = meta(html, /<meta[^>]+property=["']og:title["'][^>]*>/i)
     || meta(html, /<title[^>]*>/i)
@@ -592,11 +718,13 @@ export async function scrapeCoursePage(sourceUrl: string): Promise<ScrapedCourse
   const metaDescription = meta(html, /<meta[^>]+name=["']description["'][^>]*>/i)
     || meta(html, /<meta[^>]+property=["']og:description["'][^>]*>/i);
   const jsonLd = parseJsonLdCourse(html);
-  const hero = parseHero(extractDivByIdPrefix(html, 'ch-'));
+  const hero = parseHero(extractDivByIdPrefix(html, 'ch-'), normalizedUrl);
   const heroRight = parseHeroRight(extractDivByIdPrefix(html, 'chr-'));
   const courseDescription = parseCourseDescription(html);
   const tabs = parseTabs(html);
   const faq = parseFaq(html);
+  const testimonials = parseTestimonials(html);
+  const promotion = parsePromotion(html);
 
   return {
     sourceUrl: normalizedUrl,
@@ -610,6 +738,11 @@ export async function scrapeCoursePage(sourceUrl: string): Promise<ScrapedCourse
     courseDescription,
     tabs,
     faq,
+    testimonials,
+    promotion,
+    hasCourseFinderBanner: hasCourseFinderBanner(html),
     schemaDescription: jsonLd.description,
   };
 }
+
+export { parseTabPanelBlocks };

@@ -53,6 +53,8 @@ const bookDiscountCodes_1 = __importDefault(require("./routes/bookDiscountCodes"
 const adminPayments_1 = __importDefault(require("./routes/adminPayments"));
 const paymentOptions_1 = __importDefault(require("./routes/paymentOptions"));
 const payments_1 = __importStar(require("./routes/payments"));
+const coursePricing_1 = __importDefault(require("./routes/coursePricing"));
+const tutors_1 = __importDefault(require("./routes/tutors"));
 const activity_1 = __importDefault(require("./routes/activity"));
 const trustpilot_1 = __importDefault(require("./routes/trustpilot"));
 const table_1 = __importDefault(require("./routes/table"));
@@ -216,6 +218,8 @@ app.use('/api/book-discount-codes', bookDiscountCodes_1.default);
 app.use('/api/admin', adminPayments_1.default);
 app.use('/api/payment-options', paymentOptions_1.default);
 app.use('/api/payments', payments_1.default);
+app.use('/api/course-pricing', coursePricing_1.default);
+app.use('/api/tutors', tutors_1.default);
 app.use('/api/activity', activity_1.default);
 app.use('/api/trustpilot', trustpilot_1.default);
 app.use('/api/table', table_1.default);

@@ -1,7 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import Field from '../../components/Field';
-import type { CourseMigrationResult, StoryblokRegion } from '../../../../shared/migrationTypes';
+import type {
+  MigrationPageRecord,
+  MigrationTemplate,
+  PageMigrationResult,
+  PageScanResult,
+  ScrapedCoursePage,
+  StoryblokRegion,
+} from '../../../../shared/migrationTypes';
+import { MIGRATION_TEMPLATE_LABELS } from '../../../../shared/migrationTemplateLabels';
+import { suggestDestinationSlug } from '../../../../shared/migrationDestination';
 
 const STORAGE_KEY = 'vls-content-migration-config';
 
@@ -42,18 +51,57 @@ function loadSavedConfig(): SavedConfig {
   }
 }
 
+function isCoursePage(scraped: PageMigrationResult['scraped']): scraped is ScrapedCoursePage {
+  return 'hero' in scraped;
+}
+
 export default function ContentMigrationTab() {
   const saved = loadSavedConfig();
-  const [pageUrl, setPageUrl] = useState('');
+  const [pages, setPages] = useState<MigrationPageRecord[]>([]);
+  const [selectedPageId, setSelectedPageId] = useState<number | null>(null);
+  const [template, setTemplate] = useState<MigrationTemplate>('course');
+  const [destinationSlug, setDestinationSlug] = useState('');
+  const [destinationTouched, setDestinationTouched] = useState(false);
   const [storyblokSpaceId, setStoryblokSpaceId] = useState(saved.storyblokSpaceId);
   const [storyblokAccessToken, setStoryblokAccessToken] = useState(saved.storyblokAccessToken);
   const [storyblokRegion, setStoryblokRegion] = useState<StoryblokRegion>(saved.storyblokRegion);
   const [publish, setPublish] = useState(false);
+  const [loadingPages, setLoadingPages] = useState(true);
+  const [scanning, setScanning] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [migrating, setMigrating] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [message, setMessage] = useState<StatusMessage | null>(null);
-  const [result, setResult] = useState<CourseMigrationResult | null>(null);
+  const [result, setResult] = useState<PageMigrationResult | null>(null);
+
+  const selectedPage = useMemo(
+    () => pages.find(page => page.id === selectedPageId) ?? null,
+    [pages, selectedPageId],
+  );
+
+  const pageUrl = selectedPage?.originUrl ?? '';
+
+  const loadPages = useCallback(async () => {
+    setLoadingPages(true);
+    try {
+      const data = await api.get<MigrationPageRecord[]>('/migration/pages');
+      setPages(data);
+      if (!selectedPageId && data.length) {
+        setSelectedPageId(data[0].id);
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Could not load migration pages.',
+      });
+    } finally {
+      setLoadingPages(false);
+    }
+  }, [selectedPageId]);
+
+  useEffect(() => {
+    void loadPages();
+  }, [loadPages]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -63,15 +111,48 @@ export default function ContentMigrationTab() {
     }));
   }, [storyblokSpaceId, storyblokAccessToken, storyblokRegion]);
 
+  useEffect(() => {
+    if (!selectedPage) return;
+    setTemplate(selectedPage.template);
+    if (!destinationTouched) {
+      setDestinationSlug(suggestDestinationSlug(selectedPage.originUrl, selectedPage.template));
+    }
+  }, [selectedPage, destinationTouched]);
+
   function buildPayload(dryRun = false) {
     return {
       pageUrl: pageUrl.trim(),
+      template,
+      destinationSlug: destinationSlug.trim(),
       storyblokSpaceId: storyblokSpaceId.trim(),
       storyblokAccessToken: storyblokAccessToken.trim(),
       storyblokRegion,
       publish,
       dryRun,
     };
+  }
+
+  async function scanSitePages() {
+    setScanning(true);
+    setMessage(null);
+    try {
+      const data = await api.post<PageScanResult>('/migration/pages/scan', { fetchTitles: false });
+      setPages(data.pages);
+      if (data.pages.length && !selectedPageId) {
+        setSelectedPageId(data.pages[0].id);
+      }
+      setMessage({
+        type: 'success',
+        text: `Scan complete. ${data.scanned} pages found (${data.inserted} new, ${data.updated} updated).`,
+      });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Site scan failed.',
+      });
+    } finally {
+      setScanning(false);
+    }
   }
 
   async function verifyStoryblok() {
@@ -99,13 +180,13 @@ export default function ContentMigrationTab() {
     setMessage(null);
     setResult(null);
     try {
-      const data = await api.post<CourseMigrationResult>('/migration/course/preview', buildPayload(true));
+      const data = await api.post<PageMigrationResult>('/migration/page/preview', buildPayload(true));
       setResult(data);
       setMessage({
         type: data.warnings.length ? 'warning' : 'info',
         text: data.warnings.length
           ? `Scrape completed with ${data.warnings.length} warning${data.warnings.length === 1 ? '' : 's'}. Review the extracted sections below.`
-          : 'Scrape completed. All major course sections were detected.',
+          : 'Scrape completed. All major sections were detected.',
       });
     } catch (error) {
       setMessage({
@@ -117,49 +198,153 @@ export default function ContentMigrationTab() {
     }
   }
 
-  async function migrateCourse() {
+  async function migratePage() {
     setMigrating(true);
     setMessage(null);
     try {
-      const data = await api.post<CourseMigrationResult>('/migration/course', buildPayload(false));
+      const data = await api.post<PageMigrationResult>('/migration/page', buildPayload(false));
       setResult(data);
       setMessage({
         type: 'success',
         text: data.storyblok?.created
-          ? `Created Storyblok course story at ${data.storyblok.fullSlug}.`
-          : `Updated Storyblok course story at ${data.storyblok?.fullSlug ?? 'courses/' + data.scraped.slug}.`,
+          ? `Created Storyblok story at ${data.storyblok.fullSlug}.`
+          : `Updated Storyblok story at ${data.storyblok?.fullSlug ?? data.fullSlug}.`,
       });
+      await loadPages();
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Course migration failed.',
+        text: error instanceof Error ? error.message : 'Page migration failed.',
       });
     } finally {
       setMigrating(false);
     }
   }
 
+  async function handleTemplateChange(nextTemplate: MigrationTemplate) {
+    setTemplate(nextTemplate);
+    if (!selectedPage) return;
+
+    if (!destinationTouched) {
+      setDestinationSlug(suggestDestinationSlug(selectedPage.originUrl, nextTemplate));
+    }
+
+    try {
+      await api.patch<MigrationPageRecord>(`/migration/pages/${selectedPage.id}`, {
+        template: nextTemplate,
+      });
+      setPages(current => current.map(page => (
+        page.id === selectedPage.id ? { ...page, template: nextTemplate } : page
+      )));
+    } catch {
+      // Non-blocking — selection still works locally
+    }
+  }
+
+  async function handleDestinationBlur() {
+    if (!selectedPage || !destinationSlug.trim()) return;
+    try {
+      const updated = await api.patch<MigrationPageRecord>(`/migration/pages/${selectedPage.id}`, {
+        destinationSlug: destinationSlug.trim(),
+      });
+      setPages(current => current.map(page => (page.id === updated.id ? updated : page)));
+    } catch {
+      // Non-blocking
+    }
+  }
+
   const scraped = result?.scraped;
+  const courseScraped = scraped && isCoursePage(scraped) ? scraped : null;
 
   return (
     <div className="p-6">
-      <div className="mb-6 max-w-3xl">
+      <div className="mb-6 max-w-4xl">
         <h2 className="mb-1 text-sm font-bold text-slate-700">Content Migration</h2>
         <p className="text-xs text-slate-500">
-          Scrape a live vls-online.com course page and create or update a Storyblok course story under the
-          courses folder using the built course page components.
+          Scan the live VLS site once to populate all pages, then migrate each page to Storyblok.
+          Course stories are created under the courses folder; all other templates are created at the root.
+          Pages are scraped from Zenler internal URLs for reliability.
         </p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+      <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
         <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
-          <Field label="Course page URL">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-slate-700">Site pages</p>
+            <button
+              type="button"
+              onClick={scanSitePages}
+              disabled={scanning}
+              className="btn-primary text-xs"
+            >
+              {scanning ? 'Scanning...' : 'Scan site once'}
+            </button>
+          </div>
+
+          <Field label="Origin URL">
+            <select
+              className="input"
+              value={selectedPageId ?? ''}
+              onChange={event => {
+                const id = Number(event.target.value);
+                setSelectedPageId(Number.isInteger(id) ? id : null);
+                setDestinationTouched(false);
+                setResult(null);
+              }}
+              disabled={loadingPages || !pages.length}
+            >
+              {loadingPages ? (
+                <option value="">Loading pages...</option>
+              ) : !pages.length ? (
+                <option value="">Run a site scan to populate pages</option>
+              ) : (
+                pages.map(page => (
+                  <option key={page.id} value={page.id}>
+                    {page.path} {page.title ? `— ${page.title}` : ''}
+                  </option>
+                ))
+              )}
+            </select>
+            {selectedPage ? (
+              <p className="mt-1 break-all text-[11px] text-slate-400">{selectedPage.originUrl}</p>
+            ) : null}
+          </Field>
+
+          <Field label="Template">
+            <select
+              className="input"
+              value={template}
+              onChange={event => void handleTemplateChange(event.target.value as MigrationTemplate)}
+            >
+              {(Object.entries(MIGRATION_TEMPLATE_LABELS) as Array<[MigrationTemplate, string]>).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] text-slate-400">
+              Course pages go to <code>courses/</code>; all other templates go to the Storyblok root.
+            </p>
+          </Field>
+
+          <Field label="Destination URL (Storyblok story slug)">
             <input
               className="input"
-              placeholder="https://vls-online.com/courses/fa2"
-              value={pageUrl}
-              onChange={event => setPageUrl(event.target.value)}
+              placeholder="e.g. courses/fa2 or privacy-policy"
+              value={destinationSlug}
+              onChange={event => {
+                setDestinationSlug(event.target.value);
+                setDestinationTouched(true);
+              }}
+              onBlur={() => void handleDestinationBlur()}
             />
+            <p className="mt-1 text-[11px] text-slate-400">
+              Auto-suggested from the origin URL using SEO-friendly slugs. Edit before migrating if needed.
+              {selectedPage && !destinationTouched ? ` Suggested: ${selectedPage.suggestedDestination}` : ''}
+            </p>
+            {destinationSlug ? (
+              <p className="mt-1 text-[11px] font-medium text-slate-600">
+                Story path: {template === 'course' ? `courses/${destinationSlug.replace(/^courses\//, '')}` : destinationSlug}
+              </p>
+            ) : null}
           </Field>
 
           <Field label="Storyblok space ID">
@@ -169,9 +354,6 @@ export default function ContentMigrationTab() {
               value={storyblokSpaceId}
               onChange={event => setStoryblokSpaceId(event.target.value)}
             />
-            <p className="mt-1 text-[11px] text-slate-400">
-              Numeric ID from Storyblok → Space settings → General.
-            </p>
           </Field>
 
           <Field label="Storyblok personal access token">
@@ -182,10 +364,6 @@ export default function ContentMigrationTab() {
               value={storyblokAccessToken}
               onChange={event => setStoryblokAccessToken(event.target.value)}
             />
-            <p className="mt-1 text-[11px] text-slate-400">
-              Create at My account → Account settings → Personal access tokens.
-              Enable Stories read/write for this space. Do not use the Preview/Public token from Space settings.
-            </p>
           </Field>
 
           <Field label="Storyblok region">
@@ -197,9 +375,6 @@ export default function ContentMigrationTab() {
               <option value="eu">EU (mapi.storyblok.com)</option>
               <option value="us">US (api-us.storyblok.com)</option>
             </select>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Must match your space server region in Space settings → General.
-            </p>
           </Field>
 
           <label className="flex items-center gap-2 text-xs text-slate-600">
@@ -230,8 +405,8 @@ export default function ContentMigrationTab() {
             </button>
             <button
               type="button"
-              onClick={migrateCourse}
-              disabled={migrating || !pageUrl.trim() || !storyblokSpaceId.trim() || !storyblokAccessToken.trim()}
+              onClick={migratePage}
+              disabled={migrating || !pageUrl.trim() || !destinationSlug.trim() || !storyblokSpaceId.trim() || !storyblokAccessToken.trim()}
               className="btn-primary text-xs"
             >
               {migrating ? 'Migrating...' : 'Migrate to Storyblok'}
@@ -274,51 +449,53 @@ export default function ContentMigrationTab() {
             </div>
           ) : null}
 
-          {scraped ? (
+          {courseScraped ? (
             <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
               <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
-                <h3 className="text-sm font-bold text-slate-700">Scraped content summary</h3>
+                <h3 className="text-sm font-bold text-slate-700">Scraped course content summary</h3>
               </div>
               <div className="grid gap-4 p-4 text-xs text-slate-600 md:grid-cols-2">
                 <div>
                   <p className="font-semibold text-slate-700">Page</p>
-                  <p>{scraped.title}</p>
-                  <p className="mt-1 text-slate-400">Slug: {scraped.slug}</p>
-                  <p className="mt-1 text-slate-400">Zenler ID: {scraped.zenlerCourseId || 'Not found'}</p>
+                  <p>{courseScraped.title}</p>
+                  <p className="mt-1 text-slate-400">Slug: {courseScraped.slug}</p>
+                  <p className="mt-1 text-slate-400">Zenler ID: {courseScraped.zenlerCourseId || 'Not found'}</p>
                 </div>
                 <div>
                   <p className="font-semibold text-slate-700">SEO</p>
-                  <p>{scraped.metaDescription || 'No description found'}</p>
+                  <p>{courseScraped.metaDescription || 'No description found'}</p>
                 </div>
                 <div>
                   <p className="font-semibold text-slate-700">Hero</p>
-                  <p>{scraped.hero?.heading || 'Not detected'}</p>
-                  <p className="mt-1">{scraped.hero?.description || 'No hero description'}</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-700">Course description</p>
-                  <p>{scraped.courseDescription?.title || 'Not detected'}</p>
-                  <p className="mt-1 text-slate-400">
-                    {scraped.courseDescription
-                      ? `${scraped.courseDescription.source === 'cms' ? 'CMS component' : 'Page content'} · ${(scraped.courseDescription.introP1 || scraped.courseDescription.bodyText).slice(0, 120)}${(scraped.courseDescription.introP1 || scraped.courseDescription.bodyText).length > 120 ? '…' : ''}`
-                      : 'No description section found between hero and tabs'}
-                  </p>
+                  <p>{courseScraped.hero?.heading || 'Not detected'}</p>
+                  <p className="mt-1">{courseScraped.hero?.description || 'No hero description'}</p>
+                  {courseScraped.hero?.breadcrumbItems.length ? (
+                    <ul className="mt-2 space-y-1">
+                      {courseScraped.hero.breadcrumbItems.map(item => (
+                        <li key={`${item.label}-${item.url}`}>
+                          {item.label} → {item.url}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
                 <div>
                   <p className="font-semibold text-slate-700">Sections detected</p>
                   <ul className="mt-1 space-y-1">
-                    <li>Hero right items: {scraped.heroRight?.items.length ?? 0}</li>
-                    <li>Course description: {scraped.courseDescription ? 'Yes' : 'No'}</li>
-                    <li>Tabs: {scraped.tabs.length}</li>
-                    <li>FAQ items: {scraped.faq?.items.length ?? 0}</li>
-                    <li>Learn items: {scraped.hero?.learnItems.length ?? 0}</li>
+                    <li>Hero right items: {courseScraped.heroRight?.items.length ?? 0}</li>
+                    <li>Course description: {courseScraped.courseDescription ? 'Yes' : 'No'}</li>
+                    <li>Tabs: {courseScraped.tabs.length}</li>
+                    <li>FAQ items: {courseScraped.faq?.items.length ?? 0}</li>
+                    <li>Testimonials: {courseScraped.testimonials?.cards.length ?? 0}</li>
+                    <li>Promotion: {courseScraped.promotion ? 'Yes' : 'No'}</li>
+                    <li>Course finder banner: {courseScraped.hasCourseFinderBanner ? 'Yes' : 'No'}</li>
                   </ul>
                 </div>
-                {scraped.tabs.length > 0 && (
+                {courseScraped.tabs.length > 0 && (
                   <div className="md:col-span-2">
                     <p className="font-semibold text-slate-700">Tabs</p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {scraped.tabs.map(tab => (
+                      {courseScraped.tabs.map(tab => (
                         <span key={tab.label} className="rounded bg-slate-100 px-2 py-1">
                           {tab.icon ? `${tab.icon} ` : ''}{tab.label}
                         </span>
@@ -328,9 +505,27 @@ export default function ContentMigrationTab() {
                 )}
               </div>
             </div>
+          ) : scraped ? (
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+                <h3 className="text-sm font-bold text-slate-700">Scraped page content summary</h3>
+              </div>
+              <div className="grid gap-4 p-4 text-xs text-slate-600 md:grid-cols-2">
+                <div>
+                  <p className="font-semibold text-slate-700">Page</p>
+                  <p>{scraped.title}</p>
+                  <p className="mt-1 text-slate-400">Slug: {scraped.slug}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-700">Sections</p>
+                  <p>{'sections' in scraped ? scraped.sections.length : 0} content sections</p>
+                  <p className="mt-1">FAQ items: {'faq' in scraped ? scraped.faq?.items.length ?? 0 : 0}</p>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500">
-              Paste a course page URL, then use Preview Scrape to inspect extracted content before migrating to Storyblok.
+              Scan the site once to populate pages, select an origin URL, then preview or migrate to Storyblok.
             </div>
           )}
         </div>

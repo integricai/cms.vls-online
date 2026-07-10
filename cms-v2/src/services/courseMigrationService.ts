@@ -1,10 +1,25 @@
-import type { CourseMigrationRequest, CourseMigrationResult, ScrapedCoursePage } from '../../shared/migrationTypes';
+import type {
+  CourseMigrationRequest,
+  MigrationTemplate,
+  PageMigrationRequest,
+  PageMigrationResult,
+  ScrapedCoursePage,
+  ScrapedGenericPage,
+  ScrapedTabPanel,
+} from '../../shared/migrationTypes';
+import {
+  getMigrationPageByOriginUrl,
+  markMigrationPageMigrated,
+} from '../models/migrationPage';
 import { listCourses } from '../models/course';
-import { CoursePageScrapeError, scrapeCoursePage } from './coursePageScraper';
+import { buildSchemaBreadcrumbBloks } from './breadcrumbUtils';
+import { CoursePageScrapeError, parseTabPanelBlocks, scrapeCoursePage } from './coursePageScraper';
+import { genericBreadcrumbText, scrapeGenericPage } from './pageScraper';
+import { slugifySegment, storyFullSlug, suggestDestinationSlug } from '../../shared/migrationDestination';
 import {
   findCoursesFolder,
   StoryblokApiError,
-  upsertCourseStory,
+  upsertStory,
   verifyStoryblokAccess,
   type StoryblokConfig,
 } from './storyblokClient';
@@ -23,12 +38,73 @@ function normalizeFaqQuestion(question: string): string {
   return question.replace(/^\d+\.\s*/, '').trim();
 }
 
+function buildTabBlocks(tab: ScrapedTabPanel): Record<string, unknown>[] {
+  const parsedBlocks = parseTabPanelBlocks(tab.contentHtml);
+  return parsedBlocks.map(block => {
+    const base: Record<string, unknown> = {
+      _uid: blokUid(),
+      component: 'course_tab_block',
+      block_type: block.blockType,
+    };
+
+    if (block.blockType === 'panel-intro') {
+      return {
+        ...base,
+        eyebrow: block.fields.eyebrow,
+        heading: block.fields.heading,
+        description: block.fields.description,
+      };
+    }
+
+    if (block.blockType === 'bullets') {
+      return { ...base, bullet_items: block.fields.bullet_items };
+    }
+
+    if (block.blockType === 'inc-cards' && block.fields.cards) {
+      const cards = block.fields.cards.split('\n').map(line => {
+        const [icon, title, description] = line.split('|');
+        return {
+          _uid: blokUid(),
+          component: 'course_tab_card',
+          icon: icon || '✅',
+          title: title || '',
+          description: description || '',
+        };
+      });
+      return { ...base, cards };
+    }
+
+    if (block.blockType === 'steps' && block.fields.steps) {
+      const steps = block.fields.steps.split('\n').map(line => {
+        const [icon, title, description] = line.split('|');
+        return {
+          _uid: blokUid(),
+          component: 'course_tab_step',
+          icon: icon || '📅',
+          title: title || '',
+          description: description || '',
+        };
+      });
+      return { ...base, steps };
+    }
+
+    return {
+      ...base,
+      heading: block.fields.heading || tab.label,
+      paragraph: block.fields.paragraph || tab.contentText || tab.label,
+    };
+  });
+}
+
 function buildHeroLayoutBlok(
   scraped: ScrapedCoursePage,
   zenlerCourseId: string,
   sourceUrl: string,
 ): Record<string, unknown> | null {
   if (!scraped.hero && !scraped.heroRight) return null;
+
+  const breadcrumbItems = scraped.hero?.breadcrumbItems ?? [];
+  const schemaBreadcrumbs = buildSchemaBreadcrumbBloks(breadcrumbItems);
 
   const left = scraped.hero
     ? [{
@@ -45,6 +121,8 @@ function buildHeroLayoutBlok(
           title: item.title,
           subtitle: item.subtitle,
         })),
+        schema_breadcrumb_id: `${sourceUrl}#breadcrumb`,
+        schema_breadcrumbs: schemaBreadcrumbs,
         schema_faq_section_id: `${sourceUrl}#faq`,
       }]
     : [{
@@ -94,7 +172,7 @@ function buildIntroductionBlok(scraped: ScrapedCoursePage): Record<string, unkno
     component: 'course_introduction',
     title: desc.title,
     paragraph_1: desc.introP1 || desc.introBold || desc.bodyText,
-    paragraph_2: desc.introP2 || undefined,
+    paragraph_2: desc.introP2 || desc.bodyHtml || undefined,
   };
 }
 
@@ -109,13 +187,7 @@ function buildTabsBlok(scraped: ScrapedCoursePage): Record<string, unknown> | nu
       component: 'course_tab',
       icon: tab.icon,
       label: tab.label,
-      blocks: [{
-        _uid: blokUid(),
-        component: 'course_tab_block',
-        block_type: 'heading-para',
-        heading: tab.label,
-        paragraph: tab.contentText || tab.label,
-      }],
+      blocks: buildTabBlocks(tab),
     })),
   };
 }
@@ -160,7 +232,57 @@ function buildPricingBlok(
   };
 }
 
-function buildStoryblokContent(scraped: ScrapedCoursePage, zenlerCourseId: string): Record<string, unknown> {
+function buildCurriculumBlok(zenlerCourseId: string, courseCode: string): Record<string, unknown> | null {
+  if (!zenlerCourseId && !courseCode) return null;
+  return {
+    _uid: blokUid(),
+    component: 'course_curriculum',
+    course_code: courseCode,
+    zenler_course_id: zenlerCourseId,
+  };
+}
+
+function buildTestimonialsBlok(scraped: ScrapedCoursePage): Record<string, unknown> | null {
+  if (!scraped.testimonials?.cards.length) return null;
+
+  return {
+    _uid: blokUid(),
+    component: 'testimonials',
+    eyebrow: scraped.testimonials.eyebrow,
+    title_prefix: scraped.testimonials.titlePrefix,
+    title_accent: scraped.testimonials.titleAccent,
+    subtitle: scraped.testimonials.subtitle,
+    cards: scraped.testimonials.cards.map(card => ({
+      _uid: blokUid(),
+      component: 'testimonial_card',
+      quote: card.quote,
+      author: card.author,
+      role: card.role,
+    })),
+  };
+}
+
+function buildPromotionBlok(scraped: ScrapedCoursePage): Record<string, unknown> | null {
+  if (!scraped.promotion) return null;
+
+  return {
+    _uid: blokUid(),
+    component: 'promotion_section',
+    title: scraped.promotion.title,
+    subtitle: scraped.promotion.subtitle,
+    cta_text: scraped.promotion.ctaText,
+    cta_link: storyblokLink(scraped.promotion.ctaUrl),
+  };
+}
+
+function buildCourseFinderBannerBlok(): Record<string, unknown> {
+  return {
+    _uid: blokUid(),
+    component: 'course_finder_banner',
+  };
+}
+
+function buildCourseStoryblokContent(scraped: ScrapedCoursePage, zenlerCourseId: string): Record<string, unknown> {
   const sourceUrl = scraped.sourceUrl || `https://vls-online.com/courses/${scraped.slug}`;
   const body: Record<string, unknown>[] = [];
 
@@ -173,11 +295,22 @@ function buildStoryblokContent(scraped: ScrapedCoursePage, zenlerCourseId: strin
   const tabs = buildTabsBlok(scraped);
   if (tabs) body.push(tabs);
 
+  const curriculum = buildCurriculumBlok(zenlerCourseId, scraped.courseCode);
+  if (curriculum) body.push(curriculum);
+
   const faq = buildFaqBlok(scraped, zenlerCourseId, sourceUrl);
   if (faq) body.push(faq);
 
+  const testimonials = buildTestimonialsBlok(scraped);
+  if (testimonials) body.push(testimonials);
+
   const pricing = buildPricingBlok(scraped, zenlerCourseId);
   if (pricing) body.push(pricing);
+
+  const promotion = buildPromotionBlok(scraped);
+  if (promotion) body.push(promotion);
+
+  if (scraped.hasCourseFinderBanner) body.push(buildCourseFinderBannerBlok());
 
   const seo = (scraped.title || scraped.metaDescription)
     ? [{
@@ -198,15 +331,104 @@ function buildStoryblokContent(scraped: ScrapedCoursePage, zenlerCourseId: strin
   };
 }
 
-function collectWarnings(scraped: ScrapedCoursePage, zenlerCourseId: string): string[] {
+function buildGenericFaqBlok(scraped: ScrapedGenericPage, sourceUrl: string): Record<string, unknown> | null {
+  if (!scraped.faq?.items.length) return null;
+
+  return {
+    _uid: blokUid(),
+    component: 'faq_section',
+    title: scraped.faq.title || 'Frequently Asked Questions',
+    icon: scraped.faq.icon || '❔',
+    schema_id: `${sourceUrl}#faq`,
+    items: scraped.faq.items.map(item => ({
+      _uid: blokUid(),
+      component: 'faq_item',
+      answer_type: 'paragraph',
+      question: normalizeFaqQuestion(item.question),
+      answer_paragraph: item.answerText,
+    })),
+  };
+}
+
+function buildGenericStoryblokContent(
+  scraped: ScrapedGenericPage,
+  template: MigrationTemplate,
+): Record<string, unknown> {
+  const sourceUrl = scraped.sourceUrl;
+  const body: Record<string, unknown>[] = [];
+
+  if (template === 'home') {
+    body.push({
+      _uid: blokUid(),
+      component: 'home_hero_section',
+      hero: [{
+        _uid: blokUid(),
+        component: 'home_hero',
+        heading: scraped.title,
+        description: scraped.metaDescription,
+      }],
+    });
+  }
+
+  for (const section of scraped.sections) {
+    body.push({
+      _uid: blokUid(),
+      component: 'content_cta_block',
+      heading_prefix: section.heading || scraped.title,
+      description: section.bodyText || section.heading,
+    });
+  }
+
+  if (template === 'form') {
+    body.push({
+      _uid: blokUid(),
+      component: 'enquiry_form',
+    });
+  }
+
+  const faq = buildGenericFaqBlok(scraped, sourceUrl);
+  if (faq) body.push(faq);
+
+  const seo = (scraped.title || scraped.metaDescription)
+    ? [{
+        _uid: blokUid(),
+        component: 'seo',
+        title: scraped.title,
+        description: scraped.metaDescription,
+        canonical_url: sourceUrl,
+      }]
+    : [];
+
+  return {
+    component: 'page',
+    seo,
+    body,
+  };
+}
+
+function collectCourseWarnings(scraped: ScrapedCoursePage, zenlerCourseId: string): string[] {
   const warnings: string[] = [];
   if (!scraped.hero) warnings.push('Course hero section was not detected on the source page.');
   if (!scraped.heroRight?.items.length) warnings.push('Course hero right card was not detected.');
   if (!scraped.courseDescription) warnings.push('Course description section was not detected between hero and tabs.');
   if (!scraped.tabs.length) warnings.push('Course tabs section was not detected.');
   if (!scraped.faq?.items.length) warnings.push('FAQ section was not detected.');
-  if (!zenlerCourseId) warnings.push('Zenler course ID was not found. Pricing blok was skipped.');
+  if (!scraped.testimonials?.cards.length) warnings.push('Testimonials section was not detected.');
+  if (!scraped.promotion) warnings.push('Promotion section was not detected.');
+  if (!scraped.hasCourseFinderBanner) warnings.push('Course finder banner was not detected.');
+  if (!zenlerCourseId) warnings.push('Zenler course ID was not found. Pricing and curriculum bloks were skipped.');
   if (!scraped.metaDescription) warnings.push('Meta description was not found.');
+  if (scraped.hero?.breadcrumbItems.some(item => !item.url)) {
+    warnings.push('Some breadcrumb items are missing URLs.');
+  }
+  return warnings;
+}
+
+function collectGenericWarnings(scraped: ScrapedGenericPage): string[] {
+  const warnings: string[] = [];
+  if (!scraped.sections.length) warnings.push('No content sections were detected on the source page.');
+  if (!scraped.metaDescription) warnings.push('Meta description was not found.');
+  if (!scraped.breadcrumbItems.length) warnings.push('Breadcrumb trail was not detected.');
   return warnings;
 }
 
@@ -226,7 +448,7 @@ export class CourseMigrationError extends Error {
   }
 }
 
-function storyblokConfig(input: CourseMigrationRequest): StoryblokConfig {
+function storyblokConfig(input: Pick<PageMigrationRequest, 'storyblokSpaceId' | 'storyblokAccessToken' | 'storyblokRegion'>): StoryblokConfig {
   return {
     spaceId: input.storyblokSpaceId.trim(),
     accessToken: input.storyblokAccessToken.trim(),
@@ -234,44 +456,103 @@ function storyblokConfig(input: CourseMigrationRequest): StoryblokConfig {
   };
 }
 
-export async function migrateCoursePage(input: CourseMigrationRequest): Promise<CourseMigrationResult> {
-  if (!input.pageUrl?.trim()) throw new CourseMigrationError('Course page URL is required');
+function normalizeDestinationSlug(raw: string): string {
+  return slugifySegment(raw.trim());
+}
+
+export async function migratePage(input: PageMigrationRequest): Promise<PageMigrationResult> {
+  if (!input.pageUrl?.trim()) throw new CourseMigrationError('Origin page URL is required');
   if (!input.storyblokSpaceId?.trim()) throw new CourseMigrationError('Storyblok space ID is required');
   if (!input.storyblokAccessToken?.trim()) throw new CourseMigrationError('Storyblok access token is required');
 
-  const scraped = await scrapeCoursePage(input.pageUrl.trim());
-  const zenlerCourseId = await resolveZenlerCourseId(scraped);
-  const warnings = collectWarnings(scraped, zenlerCourseId);
+  const template = input.template;
+  const destinationSlug = normalizeDestinationSlug(
+    input.destinationSlug?.trim() || suggestDestinationSlug(input.pageUrl.trim(), template),
+  );
+  const fullSlug = storyFullSlug(template, destinationSlug);
+
+  if (template === 'course') {
+    const scraped = await scrapeCoursePage(input.pageUrl.trim());
+    const zenlerCourseId = await resolveZenlerCourseId(scraped);
+    const warnings = collectCourseWarnings(scraped, zenlerCourseId);
+
+    if (input.dryRun) {
+      return { template, destinationSlug, fullSlug, scraped, warnings };
+    }
+
+    const config = storyblokConfig(input);
+    await verifyStoryblokAccess(config);
+
+    const coursesFolder = await findCoursesFolder(config);
+    if (!coursesFolder) {
+      throw new CourseMigrationError(
+        'Could not find a Storyblok folder with slug "courses". Create the courses folder first.',
+        404,
+      );
+    }
+
+    const content = buildCourseStoryblokContent(scraped, zenlerCourseId);
+    const upsert = await upsertStory(config, {
+      name: scraped.title || scraped.slug.toUpperCase(),
+      slug: destinationSlug,
+      parentId: coursesFolder.id,
+      fullSlug,
+      content,
+      publish: Boolean(input.publish),
+    });
+
+    if (!upsert.created) {
+      warnings.push('An existing Storyblok story was updated for this destination slug.');
+    }
+
+    const dbPage = await getMigrationPageByOriginUrl(scraped.sourceUrl);
+    if (dbPage) await markMigrationPageMigrated(dbPage.id, upsert.story.id);
+
+    return {
+      template,
+      destinationSlug,
+      fullSlug,
+      scraped,
+      warnings,
+      storyblok: {
+        storyId: upsert.story.id,
+        fullSlug: upsert.story.full_slug,
+        previewUrl: upsert.previewUrl,
+        created: upsert.created,
+      },
+    };
+  }
+
+  const scraped = await scrapeGenericPage(input.pageUrl.trim());
+  const warnings = collectGenericWarnings(scraped);
 
   if (input.dryRun) {
-    return { scraped, warnings };
+    return { template, destinationSlug, fullSlug, scraped, warnings };
   }
 
   const config = storyblokConfig(input);
   await verifyStoryblokAccess(config);
 
-  const coursesFolder = await findCoursesFolder(config);
-  if (!coursesFolder) {
-    throw new CourseMigrationError(
-      'Could not find a Storyblok folder with slug "courses". Create the courses folder first.',
-      404,
-    );
-  }
-
-  const content = buildStoryblokContent(scraped, zenlerCourseId);
-  const upsert = await upsertCourseStory(config, {
-    name: scraped.title || scraped.slug.toUpperCase(),
-    slug: scraped.slug,
-    parentId: coursesFolder.id,
+  const content = buildGenericStoryblokContent(scraped, template);
+  const upsert = await upsertStory(config, {
+    name: scraped.title || genericBreadcrumbText(scraped) || destinationSlug,
+    slug: destinationSlug,
+    fullSlug,
     content,
     publish: Boolean(input.publish),
   });
 
   if (!upsert.created) {
-    warnings.push('An existing Storyblok story was updated for this course slug.');
+    warnings.push('An existing Storyblok story was updated for this destination slug.');
   }
 
+  const dbPage = await getMigrationPageByOriginUrl(scraped.sourceUrl);
+  if (dbPage) await markMigrationPageMigrated(dbPage.id, upsert.story.id);
+
   return {
+    template,
+    destinationSlug,
+    fullSlug,
     scraped,
     warnings,
     storyblok: {
@@ -281,6 +562,20 @@ export async function migrateCoursePage(input: CourseMigrationRequest): Promise<
       created: upsert.created,
     },
   };
+}
+
+/** Backward-compatible course migration entry point. */
+export async function migrateCoursePage(input: CourseMigrationRequest): Promise<PageMigrationResult> {
+  return migratePage({
+    pageUrl: input.pageUrl,
+    template: input.template ?? 'course',
+    destinationSlug: input.destinationSlug ?? '',
+    storyblokSpaceId: input.storyblokSpaceId,
+    storyblokAccessToken: input.storyblokAccessToken,
+    storyblokRegion: input.storyblokRegion,
+    publish: input.publish,
+    dryRun: input.dryRun,
+  });
 }
 
 export { CoursePageScrapeError, StoryblokApiError };

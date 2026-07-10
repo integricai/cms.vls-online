@@ -1,5 +1,49 @@
 export type StoryblokRegion = 'eu' | 'us';
 
+export type MigrationTemplate =
+  | 'home'
+  | 'course'
+  | 'legal'
+  | 'form'
+  | 'landing'
+  | 'team_vls'
+  | 'schedules';
+
+export interface MigrationPageRecord {
+  id: number;
+  originUrl: string;
+  zenlerUrl: string;
+  title: string | null;
+  path: string;
+  template: MigrationTemplate;
+  suggestedDestination: string;
+  destinationSlug: string;
+  migratedAt: string | null;
+  storyblokStoryId: number | null;
+  scannedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PageScanResult {
+  scanned: number;
+  inserted: number;
+  updated: number;
+  pages: MigrationPageRecord[];
+}
+
+export interface PageMigrationRequest {
+  pageUrl: string;
+  template: MigrationTemplate;
+  destinationSlug: string;
+  storyblokSpaceId: string;
+  storyblokAccessToken: string;
+  storyblokRegion: StoryblokRegion;
+  publish?: boolean;
+  dryRun?: boolean;
+}
+
+/** @deprecated Use PageMigrationRequest — kept for backward compatibility */
 export interface CourseMigrationRequest {
   pageUrl: string;
   storyblokSpaceId: string;
@@ -7,6 +51,13 @@ export interface CourseMigrationRequest {
   storyblokRegion: StoryblokRegion;
   publish?: boolean;
   dryRun?: boolean;
+  template?: MigrationTemplate;
+  destinationSlug?: string;
+}
+
+export interface ScrapedBreadcrumbItem {
+  label: string;
+  url: string;
 }
 
 export interface ScrapedFaqItem {
@@ -29,6 +80,7 @@ export interface ScrapedLearnItem {
 
 export interface ScrapedHero {
   breadcrumb: string;
+  breadcrumbItems: ScrapedBreadcrumbItem[];
   eyebrow: string;
   heading: string;
   description: string;
@@ -55,6 +107,33 @@ export interface ScrapedCourseDescription {
   source: 'cms' | 'zenler';
 }
 
+export interface ScrapedTestimonialCard {
+  quote: string;
+  author: string;
+  role: string;
+}
+
+export interface ScrapedTestimonials {
+  eyebrow: string;
+  titlePrefix: string;
+  titleAccent: string;
+  subtitle: string;
+  cards: ScrapedTestimonialCard[];
+}
+
+export interface ScrapedPromotionSection {
+  title: string;
+  subtitle: string;
+  ctaText: string;
+  ctaUrl: string;
+}
+
+export interface ScrapedContentSection {
+  heading: string;
+  bodyHtml: string;
+  bodyText: string;
+}
+
 export interface ScrapedCoursePage {
   sourceUrl: string;
   slug: string;
@@ -76,11 +155,27 @@ export interface ScrapedCoursePage {
     icon: string;
     items: ScrapedFaqItem[];
   } | null;
+  testimonials: ScrapedTestimonials | null;
+  promotion: ScrapedPromotionSection | null;
+  hasCourseFinderBanner: boolean;
   schemaDescription: string;
 }
 
-export interface CourseMigrationResult {
-  scraped: ScrapedCoursePage;
+export interface ScrapedGenericPage {
+  sourceUrl: string;
+  slug: string;
+  title: string;
+  metaDescription: string;
+  breadcrumbItems: ScrapedBreadcrumbItem[];
+  sections: ScrapedContentSection[];
+  faq: ScrapedCoursePage['faq'];
+}
+
+export interface PageMigrationResult {
+  template: MigrationTemplate;
+  destinationSlug: string;
+  fullSlug: string;
+  scraped: ScrapedCoursePage | ScrapedGenericPage;
   warnings: string[];
   storyblok?: {
     storyId: number;
@@ -89,3 +184,6 @@ export interface CourseMigrationResult {
     created: boolean;
   };
 }
+
+/** @deprecated Use PageMigrationResult */
+export type CourseMigrationResult = PageMigrationResult;

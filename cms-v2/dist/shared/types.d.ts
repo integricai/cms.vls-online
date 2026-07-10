@@ -158,6 +158,142 @@ export interface CoursePriceRecord {
     createdAt: Date;
     updatedAt: Date;
 }
+export interface CourseGeoPrice {
+    id: number;
+    courseId: number;
+    courseName?: string;
+    zenlerCourseId?: string;
+    courseSlug?: string | null;
+    name: string;
+    currency: string;
+    amount: number;
+    compareAtAmount: number | null;
+    discountPercent: number | null;
+    discountedPrice: number | null;
+    /** Final USD price fed to ParityDeals: discountedPrice ?? amount */
+    effectiveAmount: number;
+    isDefault: boolean;
+    isActive: boolean;
+    stripePriceId: string | null;
+    validFrom: Date | string | null;
+    validUntil: Date | string | null;
+    priority: number;
+    durationMonths: number;
+    createdAt: Date | string;
+    updatedAt: Date | string;
+}
+export type CourseGeoPriceInput = {
+    id?: number;
+    courseId: number;
+    name: string;
+    currency?: string;
+    amount: number;
+    compareAtAmount?: number | null;
+    discountPercent?: number | null;
+    isDefault?: boolean;
+    isActive?: boolean;
+    stripePriceId?: string | null;
+    validFrom?: Date | string | null;
+    validUntil?: Date | string | null;
+    priority?: number;
+    durationMonths?: number;
+};
+export interface CoursePricingSummary {
+    courseId: number;
+    courseTitle: string;
+    zenlerCourseId: string;
+    courseSlug: string | null;
+    status: string | null;
+    isActive: boolean;
+    defaultPrice: {
+        id: number;
+        name: string;
+        amount: number;
+        currency: string;
+        compareAtAmount: number | null;
+        discountPercent: number | null;
+        discountedPrice: number | null;
+        effectiveAmount: number;
+        durationMonths: number;
+    } | null;
+    activePriceCount: number;
+    hasActiveDefault: boolean;
+    updatedAt: Date | string | null;
+}
+export interface ResolvedCoursePrice {
+    price: CourseGeoPrice;
+    matchReason: 'duration' | 'default' | 'explicit';
+    /** Final USD price for ParityDeals / checkout */
+    effectiveAmount: number;
+    detectedCountryCode: string | null;
+}
+export interface CoursePriceImportRow {
+    rowNumber: number;
+    zenlerCourseId?: string;
+    courseSlug?: string;
+    courseTitle?: string;
+    priceName: string;
+    currency: string;
+    amount: number;
+    compareAtAmount?: number | null;
+    discountPercent?: number | null;
+    isDefault?: boolean;
+    isActive?: boolean;
+    validFrom?: string | null;
+    validUntil?: string | null;
+    priority?: number;
+    durationMonths?: number;
+}
+export interface CoursePriceImportRowError {
+    rowNumber: number;
+    field?: string;
+    message: string;
+}
+export interface CoursePriceImportPreviewRow {
+    rowNumber: number;
+    action: 'create' | 'update';
+    courseId: number;
+    courseTitle: string;
+    zenlerCourseId: string;
+    price: CoursePriceImportRow;
+    existingPriceId?: number;
+}
+export interface CoursePriceImportPreview {
+    validRows: CoursePriceImportPreviewRow[];
+    errors: CoursePriceImportRowError[];
+    warnings: CoursePriceImportRowError[];
+}
+export interface CoursePriceImportResult {
+    created: number;
+    updated: number;
+    skipped: number;
+    errors: CoursePriceImportRowError[];
+}
+export interface Tutor {
+    id: number;
+    name: string;
+    email: string | null;
+    role: string | null;
+    bio: string | null;
+    photoUrl: string | null;
+    initials: string | null;
+    isActive: boolean;
+    courseIds: number[];
+    courseNames?: string[];
+    createdAt: Date | string;
+    updatedAt: Date | string;
+}
+export type TutorInput = {
+    id?: number;
+    name: string;
+    email?: string | null;
+    role?: string | null;
+    bio?: string | null;
+    photoUrl?: string | null;
+    initials?: string | null;
+    isActive?: boolean;
+    courseIds?: number[];
+};
 export interface BookRecord {
     id: number;
     sortOrder: number;
