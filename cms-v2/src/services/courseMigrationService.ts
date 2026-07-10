@@ -603,14 +603,85 @@ async function buildGenericStoryblokContentAsync(
         subtitle: scrapedSection?.bodyText || scraped.metaDescription || '',
         cta_text: 'Learn more',
       };
+    } else if (section.component === 'page_hero') {
+      blok = {
+        _uid: blokUid(),
+        component: 'page_hero',
+        eyebrow: section.label,
+        heading_prefix: scrapedSection?.heading || scraped.title || section.label,
+        lead: scrapedSection?.bodyText || scraped.metaDescription || '',
+        primary_cta_text: 'Learn more',
+      };
+    } else if (section.component === 'stats_band') {
+      blok = {
+        _uid: blokUid(),
+        component: 'stats_band',
+        background_color: '#0E2A57',
+        items: [],
+      };
+    } else if (section.component === 'team_profiles') {
+      blok = {
+        _uid: blokUid(),
+        component: 'team_profiles',
+        eyebrow: section.label,
+        heading_prefix: scrapedSection?.heading || section.label,
+        description: scrapedSection?.bodyText || '',
+        profiles: [],
+      };
+    } else if (section.component === 'quote_block') {
+      blok = {
+        _uid: blokUid(),
+        component: 'quote_block',
+        eyebrow: section.label,
+        quote: scrapedSection?.bodyText || scrapedSection?.heading || scraped.title,
+        author_name: 'Vertex Learning Solutions',
+        author_initials: 'V',
+      };
+    } else if (section.component === 'qualification_structure') {
+      blok = {
+        _uid: blokUid(),
+        component: 'qualification_structure',
+        eyebrow: section.label,
+        heading_prefix: scrapedSection?.heading || section.label,
+        description: scrapedSection?.bodyText || '',
+        levels: [],
+      };
+    } else if (section.component === 'live_schedule') {
+      blok = {
+        _uid: blokUid(),
+        component: 'live_schedule',
+        eyebrow: section.label,
+        heading_prefix: scrapedSection?.heading || section.label,
+        description: scrapedSection?.bodyText || '',
+        sessions: [],
+      };
+    } else if (section.component === 'contact_cards') {
+      blok = {
+        _uid: blokUid(),
+        component: 'contact_cards',
+        eyebrow: section.label,
+        heading_prefix: scrapedSection?.heading || section.label,
+        description: scrapedSection?.bodyText || '',
+        cards: [],
+      };
+    } else if (section.component === 'icon_card_grid') {
+      blok = {
+        _uid: blokUid(),
+        component: 'icon_card_grid',
+        eyebrow: section.label,
+        heading_prefix: scrapedSection?.heading || section.label,
+        description: scrapedSection?.bodyText || '',
+        columns: 3,
+        cards: [],
+      };
     } else {
       blok = {
         _uid: blokUid(),
         component: section.component,
         eyebrow: section.label,
         heading_prefix: scrapedSection?.heading || scraped.title || section.label,
+        body: scrapedSection?.bodyText || scraped.metaDescription || '',
         description: scrapedSection?.bodyText || scraped.metaDescription || '',
-        cta_text: 'Learn more',
       };
     }
 

@@ -42,19 +42,19 @@ const DEFAULT_TOKENS: TemplateDesignTokens = {
 };
 
 const SECTION_COMPONENT: Record<string, string> = {
-  hero: 'content_cta_block',
-  'legal-hero': 'content_cta_block',
-  section: 'content_cta_block',
-  band: 'content_cta_block',
+  hero: 'page_hero',
+  'legal-hero': 'page_hero',
+  section: 'content_section',
+  band: 'icon_card_grid',
   'cta-band': 'promotion_section',
   faq: 'faq_section',
   testimonials: 'testimonials',
   reviews: 'testimonials',
   courses: 'feature_cards_v2',
-  stats: 'content_cta_block',
-  toolkit: 'feature_cards_v2',
-  schedule: 'content_cta_block',
-  team: 'content_cta_block',
+  stats: 'stats_band',
+  toolkit: 'icon_card_grid',
+  schedule: 'live_schedule',
+  team: 'team_profiles',
   form: 'enquiry_form',
 };
 
@@ -130,25 +130,54 @@ const PAGE_BODY_COMPONENTS = new Set([
   'trustpilot_section',
   'promotion_section',
   'course_finder_banner',
+  'faq_section',
+  'page_hero',
+  'stats_band',
+  'content_section',
+  'icon_card_grid',
+  'team_profiles',
+  'quote_block',
+  'qualification_structure',
+  'live_schedule',
+  'contact_cards',
 ]);
 
 function componentForSection(key: string, classes: string[], template: MigrationTemplate): string {
-  let component = 'content_cta_block';
+  let component = 'content_section';
+
   if (template === 'home' && key.includes('hero')) component = 'home_hero_section';
   else if (template === 'course' && key.includes('hero')) component = 'course_hero_layout';
-  else if ((template === 'form' || template === 'about_us') && (key.includes('touch') || key.includes('form'))) {
-    component = 'enquiry_form';
-  } else if (classes.includes('faq') || key.includes('faq')) component = 'faq_section';
+  else if (key.includes('hero')) component = 'page_hero';
+  else if ((template === 'form' || template === 'about_us') && (key.includes('get-in-touch') || key.includes('touch') || /(^|-)form($|-)/.test(key))) {
+    component = 'contact_cards';
+  } else if (key.includes('stats')) component = 'stats_band';
+  else if (key.includes('tutor') || key.includes('profile') || key.includes('team-profile')) component = 'team_profiles';
+  else if (key.includes('quote') || key.includes('why-join')) component = 'quote_block';
+  else if (
+    key.includes('global-team')
+    || key.includes('values')
+    || key.includes('culture')
+    || key.includes('platform')
+    || key.includes('career')
+    || key.includes('industr')
+    || key.includes('how-it-works')
+    || key.includes('how-long')
+    || key.includes('entry')
+  ) {
+    component = 'icon_card_grid';
+  } else if (key.includes('qualification') || key.includes('structure')) component = 'qualification_structure';
+  else if (key.includes('schedule') || key.includes('timetable') || key.includes('live-session')) component = 'live_schedule';
+  else if (key.includes('story') || key.includes('reach') || key.includes('mission')) component = 'content_section';
+  else if (classes.includes('faq') || key.includes('faq')) component = 'faq_section';
   else if (key.includes('review') || key.includes('testimonial')) component = 'testimonials';
   else if (key.includes('cta')) component = 'promotion_section';
   else if (key.includes('course') && template === 'home') component = 'feature_cards_v2';
-  else if (key.includes('toolkit') || key.includes('feature')) component = 'feature_cards_v2';
-  else if (classes.includes('band')) component = 'content_cta_block';
-  else component = SECTION_COMPONENT[key.split('-')[0]] ?? 'content_cta_block';
+  else if (key.includes('toolkit') || key.includes('feature')) component = 'icon_card_grid';
+  else if (classes.includes('band')) component = 'icon_card_grid';
+  else component = SECTION_COMPONENT[key.split('-')[0]] ?? 'content_section';
 
-  // Generic pages use the `page` root type whose body whitelist is stricter than course_page.
   if (template !== 'course' && !PAGE_BODY_COMPONENTS.has(component)) {
-    return 'content_cta_block';
+    return 'content_section';
   }
   return component;
 }
@@ -322,6 +351,41 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
     'background_color', 'padding_top', 'padding_bottom',
   ],
   feature_cards_v2: ['title', 'subtitle', 'cards', 'background_color', 'padding_top', 'padding_bottom'],
+  page_hero: [
+    'eyebrow', 'heading_prefix', 'heading_accent', 'lead', 'sublead', 'free_pill',
+    'primary_cta_text', 'primary_cta_link', 'secondary_cta_text', 'secondary_cta_link',
+    'items', 'side_card', 'badges',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  stats_band: ['items', 'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size'],
+  content_section: [
+    'eyebrow', 'heading_prefix', 'heading_accent', 'body', 'timeline',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  icon_card_grid: [
+    'eyebrow', 'heading_prefix', 'heading_accent', 'description', 'columns', 'cards',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  team_profiles: [
+    'eyebrow', 'heading_prefix', 'heading_accent', 'description', 'profiles',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  quote_block: [
+    'eyebrow', 'quote', 'quote_accent', 'author_name', 'author_role', 'author_initials',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  qualification_structure: [
+    'eyebrow', 'heading_prefix', 'heading_accent', 'description', 'levels',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  live_schedule: [
+    'eyebrow', 'heading_prefix', 'heading_accent', 'description', 'sessions',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  contact_cards: [
+    'eyebrow', 'heading_prefix', 'heading_accent', 'description', 'cards',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
 };
 
 export function sanitizeBlokForStoryblok(blok: Record<string, unknown>): Record<string, unknown> {
@@ -345,7 +409,7 @@ export function sanitizeBlokForStoryblok(blok: Record<string, unknown>): Record<
   }
 
   // Nested bloks
-  for (const key of ['hero', 'form', 'checks', 'items', 'cards', 'left', 'right']) {
+  for (const key of ['hero', 'form', 'checks', 'items', 'cards', 'left', 'right', 'profiles', 'timeline', 'levels', 'sessions', 'side_card', 'badges', 'papers', 'stats', 'rows']) {
     const value = next[key];
     if (!Array.isArray(value)) continue;
     next[key] = value.map(item => (
@@ -462,12 +526,107 @@ export function buildPresetBlokFromSection(
     return sanitizeBlokForStoryblok(base);
   }
 
+  if (section.component === 'page_hero') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: section.label,
+      heading_prefix: section.sampleHeading || section.label,
+      lead: section.sampleDescription || '',
+      primary_cta_text: 'Learn more',
+      items: [],
+      side_card: [],
+      badges: [],
+    });
+  }
+
+  if (section.component === 'stats_band') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      background_color: '#0E2A57',
+      items: [
+        { _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12), component: 'stat_item', value: '7,500+', label: 'Active students' },
+        { _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12), component: 'stat_item', value: '80+', label: 'Countries' },
+      ],
+    });
+  }
+
+  if (section.component === 'content_section') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: section.label,
+      heading_prefix: section.sampleHeading || section.label,
+      body: section.sampleDescription || '',
+      timeline: [],
+    });
+  }
+
+  if (section.component === 'icon_card_grid') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: section.label,
+      heading_prefix: section.sampleHeading || section.label,
+      description: section.sampleDescription || '',
+      columns: 3,
+      cards: [],
+    });
+  }
+
+  if (section.component === 'team_profiles') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: section.label,
+      heading_prefix: section.sampleHeading || section.label,
+      description: section.sampleDescription || '',
+      profiles: [],
+    });
+  }
+
+  if (section.component === 'quote_block') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: section.label,
+      quote: section.sampleDescription || section.sampleHeading || 'Great potential for people committed to building with us.',
+      author_name: 'Vertex Learning Solutions',
+      author_role: 'Leadership',
+      author_initials: 'V',
+    });
+  }
+
+  if (section.component === 'qualification_structure') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: section.label,
+      heading_prefix: section.sampleHeading || section.label,
+      description: section.sampleDescription || '',
+      levels: [],
+    });
+  }
+
+  if (section.component === 'live_schedule') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: section.label,
+      heading_prefix: section.sampleHeading || section.label,
+      description: section.sampleDescription || '',
+      sessions: [],
+    });
+  }
+
+  if (section.component === 'contact_cards') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: section.label,
+      heading_prefix: section.sampleHeading || section.label,
+      description: section.sampleDescription || '',
+      cards: [],
+    });
+  }
+
   return sanitizeBlokForStoryblok({
     ...base,
     eyebrow: section.label,
     heading_prefix: section.sampleHeading || section.label,
-    description: section.sampleDescription || 'Content section preset from HTML template reference.',
-    cta_text: 'Learn more',
+    body: section.sampleDescription || 'Content section preset from HTML template reference.',
   });
 }
 
