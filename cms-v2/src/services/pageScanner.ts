@@ -1,5 +1,6 @@
 import type { MigrationPageRecord, PageScanResult } from '../../shared/migrationTypes';
 import { upsertMigrationPage, listMigrationPages } from '../models/migrationPage';
+import { CourseMigrationError } from './courseMigrationService';
 import {
   ALLOWED_HOSTS,
   inferTemplateFromPath,
@@ -70,9 +71,18 @@ async function fetchSitemapXml(): Promise<string> {
       },
     });
     if (!response.ok) {
-      throw new Error(`Sitemap returned HTTP ${response.status}`);
+      throw new CourseMigrationError(`Sitemap returned HTTP ${response.status}`, 502);
     }
     return await response.text();
+  } catch (error) {
+    if (error instanceof CourseMigrationError) throw error;
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new CourseMigrationError('Sitemap fetch timed out after 60 seconds', 504);
+    }
+    throw new CourseMigrationError(
+      error instanceof Error ? error.message : 'Could not fetch sitemap',
+      502,
+    );
   } finally {
     clearTimeout(timeout);
   }
@@ -103,6 +113,10 @@ export async function scanAndStoreMigrationPages(options?: { fetchTitles?: boole
   const xml = await fetchSitemapXml();
   const locValues = extractLocValues(xml)
     .filter(isAllowedSiteUrl);
+
+  if (!locValues.length) {
+    throw new CourseMigrationError('No page URLs were found in the sitemap', 502);
+  }
 
   const uniqueUrls = [...new Set(locValues.map(url => {
     const parsed = new URL(url);

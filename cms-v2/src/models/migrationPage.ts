@@ -1,6 +1,41 @@
 import { sql } from '../db/client';
 import type { MigrationPageRecord, MigrationTemplate } from '../../shared/migrationTypes';
 
+let ensureTablePromise: Promise<void> | null = null;
+
+function ensureMigrationPagesTable(): Promise<void> {
+  if (!ensureTablePromise) {
+    ensureTablePromise = (async () => {
+      await sql`
+        CREATE TABLE IF NOT EXISTS content_migration_pages (
+          id                      SERIAL       PRIMARY KEY,
+          origin_url              TEXT         NOT NULL UNIQUE,
+          zenler_url              TEXT         NOT NULL,
+          title                   TEXT,
+          path                    TEXT         NOT NULL,
+          template                TEXT         NOT NULL DEFAULT 'landing',
+          suggested_destination   TEXT         NOT NULL,
+          destination_slug        TEXT         NOT NULL,
+          migrated_at             TIMESTAMPTZ,
+          storyblok_story_id      INTEGER,
+          scanned_at              TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+          created_at              TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+          updated_at              TIMESTAMPTZ    NOT NULL DEFAULT NOW()
+        )
+      `;
+      await sql`
+        CREATE INDEX IF NOT EXISTS idx_content_migration_pages_template
+        ON content_migration_pages (template)
+      `;
+      await sql`
+        CREATE INDEX IF NOT EXISTS idx_content_migration_pages_path
+        ON content_migration_pages (path)
+      `;
+    })();
+  }
+  return ensureTablePromise;
+}
+
 interface DbRow {
   id: number;
   origin_url: string;
@@ -36,6 +71,7 @@ function rowToRecord(row: DbRow): MigrationPageRecord {
 }
 
 export async function listMigrationPages(): Promise<MigrationPageRecord[]> {
+  await ensureMigrationPagesTable();
   const rows = await sql`
     SELECT *
     FROM content_migration_pages
@@ -45,6 +81,7 @@ export async function listMigrationPages(): Promise<MigrationPageRecord[]> {
 }
 
 export async function getMigrationPageById(id: number): Promise<MigrationPageRecord | null> {
+  await ensureMigrationPagesTable();
   const rows = await sql`
     SELECT *
     FROM content_migration_pages
@@ -56,6 +93,7 @@ export async function getMigrationPageById(id: number): Promise<MigrationPageRec
 }
 
 export async function getMigrationPageByOriginUrl(originUrl: string): Promise<MigrationPageRecord | null> {
+  await ensureMigrationPagesTable();
   const rows = await sql`
     SELECT *
     FROM content_migration_pages
@@ -77,6 +115,7 @@ export interface UpsertMigrationPageInput {
 }
 
 export async function upsertMigrationPage(input: UpsertMigrationPageInput): Promise<'inserted' | 'updated'> {
+  await ensureMigrationPagesTable();
   const existing = await getMigrationPageByOriginUrl(input.originUrl);
   if (existing) {
     await sql`
@@ -121,6 +160,7 @@ export async function updateMigrationPage(
   id: number,
   patch: Partial<Pick<MigrationPageRecord, 'template' | 'destinationSlug' | 'title'>>,
 ): Promise<MigrationPageRecord | null> {
+  await ensureMigrationPagesTable();
   const existing = await getMigrationPageById(id);
   if (!existing) return null;
 
@@ -145,6 +185,7 @@ export async function markMigrationPageMigrated(
   id: number,
   storyId: number,
 ): Promise<void> {
+  await ensureMigrationPagesTable();
   await sql`
     UPDATE content_migration_pages
     SET
