@@ -119,6 +119,11 @@ function buildConfig(config: StoryblokConfig): StoryblokConfig {
   };
 }
 
+export function isStoryblokApiError(err: unknown): err is StoryblokApiError {
+  return err instanceof StoryblokApiError
+    || (err instanceof Error && err.name === 'StoryblokApiError' && typeof (err as StoryblokApiError).status === 'number');
+}
+
 async function storyblokRequest<T>(
   rawConfig: StoryblokConfig,
   method: string,
@@ -126,14 +131,20 @@ async function storyblokRequest<T>(
   body?: unknown,
 ): Promise<T> {
   const config = buildConfig(rawConfig);
-  const response = await fetch(`${managementBase(config.region)}/spaces/${config.spaceId}${path}`, {
-    method,
-    headers: {
-      Authorization: config.accessToken,
-      'Content-Type': 'application/json',
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${managementBase(config.region)}/spaces/${config.spaceId}${path}`, {
+      method,
+      headers: {
+        Authorization: config.accessToken,
+        'Content-Type': 'application/json',
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : 'Network request failed';
+    throw new StoryblokApiError(`Storyblok request failed: ${message}`, 502, cause);
+  }
 
   let payload: { error?: string; [key: string]: unknown } | null = null;
   try {

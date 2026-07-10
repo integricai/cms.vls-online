@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import type { MigrationTemplate } from '../../shared/migrationTypes';
 import type {
   ComponentLibraryPresetRef,
@@ -60,7 +61,7 @@ async function findOrCreateFolder(
 }
 
 async function ensureLibraryFolder(config: StoryblokConfig): Promise<StoryblokStoryRef> {
-  return findOrCreateFolder(config, COMPONENT_LIBRARY_FOLDER);
+  return findOrCreateFolder(config, 'component-library');
 }
 
 async function ensureTemplateFolder(
@@ -115,10 +116,12 @@ export async function syncTemplateComponentLibrary(
   const templateFolder = await ensureTemplateFolder(config, template, libraryFolder.id);
 
   const presets: ComponentLibraryPresetRef[] = [];
+  const presetBloksBySection: Record<string, Record<string, unknown>> = {};
   let created = 0;
   let updated = 0;
 
   for (const section of blueprint.sections) {
+    presetBloksBySection[section.key] = buildPresetBlokFromSection(blueprint, section);
     const preset = await upsertLibraryPreset(config, blueprint, section, templateFolder.id);
     presets.push(preset);
     if (preset.created) created += 1;
@@ -130,6 +133,7 @@ export async function syncTemplateComponentLibrary(
     presets,
     created,
     updated,
+    presetBloksBySection,
   };
 }
 

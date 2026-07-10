@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS content_migration_pages (
   suggested_destination   TEXT         NOT NULL,
   destination_slug        TEXT         NOT NULL,
   migrated_at             TIMESTAMPTZ,
-  storyblok_story_id      INTEGER,
+  storyblok_story_id      BIGINT,
   scanned_at              TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
   created_at              TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
   updated_at              TIMESTAMPTZ    NOT NULL DEFAULT NOW()

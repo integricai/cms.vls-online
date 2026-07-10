@@ -11,9 +11,8 @@ import {
   CoursePageScrapeError,
   migrateCoursePage,
   migratePage,
-  StoryblokApiError,
 } from '../services/courseMigrationService';
-import { verifyStoryblokAccess } from '../services/storyblokClient';
+import { isStoryblokApiError, verifyStoryblokAccess } from '../services/storyblokClient';
 import { scanAndStoreMigrationPages } from '../services/pageScanner';
 import { listMigrationTemplateBlueprints, MigrationTemplateError } from '../services/migrationTemplateRegistry';
 import {
@@ -193,12 +192,16 @@ router.use((err: Error, _req: Request, res: Response, next: NextFunction) => {
   if (err instanceof CourseMigrationError || err instanceof CoursePageScrapeError || err instanceof MigrationTemplateError) {
     return res.status(err.status).json({ ok: false, error: err.message });
   }
-  if (err instanceof StoryblokApiError) {
+  if (isStoryblokApiError(err)) {
     return res.status(storyblokErrorStatus(err.status)).json({
       ok: false,
       error: err.message,
       data: err.details,
     });
+  }
+  console.error('[migration]', err);
+  if (err instanceof Error && err.message.trim()) {
+    return res.status(500).json({ ok: false, error: err.message });
   }
   return next(err);
 });

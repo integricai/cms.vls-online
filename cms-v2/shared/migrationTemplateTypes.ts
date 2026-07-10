@@ -48,4 +48,6 @@ export interface ComponentLibrarySyncResult {
   presets: ComponentLibraryPresetRef[];
   created: number;
   updated: number;
+  /** In-memory preset bloks keyed by section key — avoids re-fetching during page build. */
+  presetBloksBySection: Record<string, Record<string, unknown>>;
 }

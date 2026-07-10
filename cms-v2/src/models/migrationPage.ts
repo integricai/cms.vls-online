@@ -17,7 +17,7 @@ function ensureMigrationPagesTable(): Promise<void> {
           suggested_destination   TEXT         NOT NULL,
           destination_slug        TEXT         NOT NULL,
           migrated_at             TIMESTAMPTZ,
-          storyblok_story_id      INTEGER,
+          storyblok_story_id      BIGINT,
           scanned_at              TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
           created_at              TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
           updated_at              TIMESTAMPTZ    NOT NULL DEFAULT NOW()
@@ -30,6 +30,11 @@ function ensureMigrationPagesTable(): Promise<void> {
       await sql`
         CREATE INDEX IF NOT EXISTS idx_content_migration_pages_path
         ON content_migration_pages (path)
+      `;
+      await sql`
+        ALTER TABLE content_migration_pages
+        ALTER COLUMN storyblok_story_id TYPE BIGINT
+        USING storyblok_story_id::bigint
       `;
     })();
   }

@@ -18,6 +18,7 @@ import { genericBreadcrumbText, scrapeGenericPage } from './pageScraper';
 import { slugifySegment, storyFullSlug, suggestDestinationSlug } from '../../shared/migrationDestination';
 import {
   findCoursesFolder,
+  isStoryblokApiError,
   StoryblokApiError,
   upsertStory,
   verifyStoryblokAccess,
@@ -489,21 +490,24 @@ async function syncLibrarySafely(
   config: StoryblokConfig,
   template: MigrationTemplate,
   warnings: string[],
-): Promise<ComponentLibrarySummary | undefined> {
+): Promise<{ summary: ComponentLibrarySummary; presetBloksBySection: Record<string, Record<string, unknown>> } | undefined> {
   try {
     const librarySync = await syncTemplateComponentLibrary(config, template);
     warnings.push(
       `Synced ${librarySync.presets.length} reusable component presets in Storyblok/${librarySync.folderSlug}/${template}.`,
     );
     return {
-      folderSlug: librarySync.folderSlug,
-      presetsCreated: librarySync.created,
-      presetsUpdated: librarySync.updated,
-      presets: librarySync.presets.map(preset => ({
-        fullSlug: preset.fullSlug,
-        component: preset.component,
-        created: preset.created,
-      })),
+      summary: {
+        folderSlug: librarySync.folderSlug,
+        presetsCreated: librarySync.created,
+        presetsUpdated: librarySync.updated,
+        presets: librarySync.presets.map(preset => ({
+          fullSlug: preset.fullSlug,
+          component: preset.component,
+          created: preset.created,
+        })),
+      },
+      presetBloksBySection: librarySync.presetBloksBySection,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown component library sync error';
@@ -516,6 +520,7 @@ async function stylizeBlok(
   blok: Record<string, unknown> | null,
   template: MigrationTemplate,
   sectionKey: string,
+  presetBloksBySection: Record<string, Record<string, unknown>> | null,
   config: StoryblokConfig | null,
 ): Promise<Record<string, unknown> | null> {
   if (!blok) return null;
@@ -525,7 +530,14 @@ async function stylizeBlok(
     ?? blueprint.sections.find(item => sectionKey.includes(item.key));
 
   const styled = applyTemplateStyles(blueprint, section?.key ?? sectionKey, blok);
-  if (!config || !section) return sanitizeBlokForStoryblok(styled);
+  if (!section) return sanitizeBlokForStoryblok(styled);
+
+  const cachedPreset = presetBloksBySection?.[section.key] ?? null;
+  if (cachedPreset) {
+    return sanitizeBlokForStoryblok(mergePresetWithData(cachedPreset, styled, section.styles));
+  }
+
+  if (!config) return sanitizeBlokForStoryblok(styled);
 
   try {
     const preset = await getLibraryPresetBlok(config, template, section.key);
@@ -539,6 +551,7 @@ async function buildCourseStoryblokContentAsync(
   scraped: ScrapedCoursePage,
   zenlerCourseId: string,
   template: MigrationTemplate,
+  presetBloksBySection: Record<string, Record<string, unknown>> | null,
   config: StoryblokConfig | null,
 ): Promise<Record<string, unknown>> {
   const base = buildCourseStoryblokContent(scraped, zenlerCourseId);
@@ -554,7 +567,7 @@ async function buildCourseStoryblokContentAsync(
     else if (component === 'testimonials') sectionKey = 'student-reviews';
     else if (component === 'faq_section') sectionKey = 'faq';
     else if (component === 'promotion_section') sectionKey = 'cta';
-    mapped.push(await stylizeBlok(blok, template, sectionKey, config));
+    mapped.push(await stylizeBlok(blok, template, sectionKey, presetBloksBySection, config));
   }
 
   return {
@@ -566,6 +579,7 @@ async function buildCourseStoryblokContentAsync(
 async function buildGenericStoryblokContentAsync(
   scraped: ScrapedGenericPage,
   template: MigrationTemplate,
+  presetBloksBySection: Record<string, Record<string, unknown>> | null,
   config: StoryblokConfig | null,
 ): Promise<Record<string, unknown>> {
   const blueprint = getMigrationTemplateBlueprint(template);
@@ -685,7 +699,7 @@ async function buildGenericStoryblokContentAsync(
       };
     }
 
-    const styled = await stylizeBlok(blok, template, section.key, config);
+    const styled = await stylizeBlok(blok, template, section.key, presetBloksBySection, config);
     if (styled) body.push(styled);
   }
 
@@ -712,8 +726,10 @@ async function buildGenericStoryblokContentAsync(
 
 export async function migratePage(input: PageMigrationRequest): Promise<PageMigrationResult> {
   if (!input.pageUrl?.trim()) throw new CourseMigrationError('Origin page URL is required');
-  if (!input.storyblokSpaceId?.trim()) throw new CourseMigrationError('Storyblok space ID is required');
-  if (!input.storyblokAccessToken?.trim()) throw new CourseMigrationError('Storyblok access token is required');
+  if (!input.dryRun) {
+    if (!input.storyblokSpaceId?.trim()) throw new CourseMigrationError('Storyblok space ID is required');
+    if (!input.storyblokAccessToken?.trim()) throw new CourseMigrationError('Storyblok access token is required');
+  }
 
   const template = input.template;
   const destinationSlug = normalizeDestinationSlug(
@@ -742,9 +758,15 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
       );
     }
 
-    const componentLibrary = await syncLibrarySafely(config, template, warnings);
+    const librarySync = await syncLibrarySafely(config, template, warnings);
 
-    const content = await buildCourseStoryblokContentAsync(scraped, zenlerCourseId, template, config);
+    const content = await buildCourseStoryblokContentAsync(
+      scraped,
+      zenlerCourseId,
+      template,
+      librarySync?.presetBloksBySection ?? null,
+      config,
+    );
     const upsert = await upsertStory(config, {
       name: scraped.title || scraped.slug.toUpperCase(),
       slug: destinationSlug,
@@ -758,8 +780,12 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
       warnings.push('An existing Storyblok story was updated for this destination slug.');
     }
 
-    const dbPage = await getMigrationPageByOriginUrl(scraped.sourceUrl);
-    if (dbPage) await markMigrationPageMigrated(dbPage.id, upsert.story.id);
+    try {
+      const dbPage = await getMigrationPageByOriginUrl(scraped.sourceUrl);
+      if (dbPage) await markMigrationPageMigrated(dbPage.id, upsert.story.id);
+    } catch (err) {
+      warnings.push(`Story created in Storyblok but migration tracking update failed: ${err instanceof Error ? err.message : 'Unknown database error'}`);
+    }
 
     return {
       template,
@@ -768,7 +794,7 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
       scraped,
       warnings,
       templateReference,
-      componentLibrary,
+      componentLibrary: librarySync?.summary,
       storyblok: {
         storyId: upsert.story.id,
         fullSlug: upsert.story.full_slug,
@@ -788,9 +814,14 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
   const config = storyblokConfig(input);
   await verifyStoryblokAccess(config);
 
-  const componentLibrary = await syncLibrarySafely(config, template, warnings);
+  const librarySync = await syncLibrarySafely(config, template, warnings);
 
-  const content = await buildGenericStoryblokContentAsync(scraped, template, config);
+  const content = await buildGenericStoryblokContentAsync(
+    scraped,
+    template,
+    librarySync?.presetBloksBySection ?? null,
+    config,
+  );
   const upsert = await upsertStory(config, {
     name: scraped.title || genericBreadcrumbText(scraped) || destinationSlug,
     slug: destinationSlug,
@@ -803,8 +834,12 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
     warnings.push('An existing Storyblok story was updated for this destination slug.');
   }
 
-  const dbPage = await getMigrationPageByOriginUrl(scraped.sourceUrl);
-  if (dbPage) await markMigrationPageMigrated(dbPage.id, upsert.story.id);
+  try {
+    const dbPage = await getMigrationPageByOriginUrl(scraped.sourceUrl);
+    if (dbPage) await markMigrationPageMigrated(dbPage.id, upsert.story.id);
+  } catch (err) {
+    warnings.push(`Story created in Storyblok but migration tracking update failed: ${err instanceof Error ? err.message : 'Unknown database error'}`);
+  }
 
   return {
     template,
@@ -813,7 +848,7 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
     scraped,
     warnings,
     templateReference,
-    componentLibrary,
+    componentLibrary: librarySync?.summary,
     storyblok: {
       storyId: upsert.story.id,
       fullSlug: upsert.story.full_slug,
