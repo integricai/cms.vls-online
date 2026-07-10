@@ -83,6 +83,7 @@ function formatStoryblokError(status: number, payload: unknown): string {
     const fieldMessages = [
       ...formatFieldErrors(record.story),
       ...formatFieldErrors(record.errors),
+      ...formatFieldErrors(record.content),
     ];
     if (fieldMessages.length) {
       return `Storyblok validation failed: ${fieldMessages.join('; ')}`;

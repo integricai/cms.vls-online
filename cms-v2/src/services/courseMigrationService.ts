@@ -18,7 +18,6 @@ import { genericBreadcrumbText, scrapeGenericPage } from './pageScraper';
 import { slugifySegment, storyFullSlug, suggestDestinationSlug } from '../../shared/migrationDestination';
 import {
   findCoursesFolder,
-  isStoryblokApiError,
   StoryblokApiError,
   upsertStory,
   verifyStoryblokAccess,

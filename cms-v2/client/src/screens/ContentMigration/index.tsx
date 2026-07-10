@@ -225,10 +225,12 @@ export default function ContentMigrationTab() {
       });
       await loadPages();
     } catch (error) {
-      setMessage({
-        type: 'error',
-        text: error instanceof Error ? error.message : 'Page migration failed.',
-      });
+      const err = error as Error & { data?: unknown };
+      let text = err instanceof Error ? err.message : 'Page migration failed.';
+      if (Array.isArray(err.data)) {
+        text = `${text} ${err.data.filter(item => typeof item === 'string').join(' ')}`.trim();
+      }
+      setMessage({ type: 'error', text });
     } finally {
       setMigrating(false);
     }

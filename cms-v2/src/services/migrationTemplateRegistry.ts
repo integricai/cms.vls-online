@@ -388,6 +388,28 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   ],
 };
 
+/** Storyblok MAPI expects many schema "number" fields as numeric strings, not JSON numbers. */
+const STORYBLOK_NUMERIC_STRING_FIELDS = new Set([
+  'padding_top',
+  'padding_bottom',
+  'padding_left',
+  'padding_right',
+  'font_size',
+  'columns',
+  'max_width',
+]);
+
+function coerceStoryblokNumericFields(blok: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...blok };
+  for (const key of STORYBLOK_NUMERIC_STRING_FIELDS) {
+    const value = next[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      next[key] = String(value);
+    }
+  }
+  return next;
+}
+
 export function sanitizeBlokForStoryblok(blok: Record<string, unknown>): Record<string, unknown> {
   const component = String(blok.component ?? '');
   const allow = BLOK_FIELD_ALLOWLIST[component];
@@ -401,7 +423,7 @@ export function sanitizeBlokForStoryblok(blok: Record<string, unknown>): Record<
       if (key.startsWith('migration_')) continue;
       next[key] = value;
     }
-    return next;
+    return coerceStoryblokNumericFields(next);
   }
 
   for (const key of allow) {
@@ -424,7 +446,7 @@ export function sanitizeBlokForStoryblok(blok: Record<string, unknown>): Record<
     next.title = title || 'Get started';
   }
 
-  return next;
+  return coerceStoryblokNumericFields(next);
 }
 
 export function applyTemplateStyles(
