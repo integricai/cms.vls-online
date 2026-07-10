@@ -159,6 +159,7 @@ export function buildBlokFromTemplateSection(
     return sanitizeBlokForStoryblok({
       ...base,
       name: section.key,
+      eyebrow: pickText(extracted?.eyebrow),
       title: pickText(extracted?.ctaTitle, extracted?.headingPrefix, section.sampleHeading, scraped.title, 'Get started'),
       subtitle: pickText(extracted?.ctaSubtitle, extracted?.body, extracted?.lead, section.sampleDescription, scraped.metaDescription),
       cta_text: pickText(extracted?.ctaText, 'Learn more'),

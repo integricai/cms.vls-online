@@ -36,7 +36,12 @@ export function suggestDestinationSlug(originUrl: string, template: MigrationTem
 }
 
 export function storyFullSlug(template: MigrationTemplate, destinationSlug: string): string {
-  const slug = destinationSlug.trim().replace(/^\/+|\/+$/g, '');
-  if (template === 'course') return slug ? `courses/${slug.replace(/^courses\//, '')}` : 'courses';
-  return slug || 'home';
+  const slug = destinationSlug.trim().replace(/^\/+|\/+$/g, '').replace(/^pages\//, '');
+  if (template === 'course') {
+    return slug ? `courses/${slug.replace(/^courses\//, '')}` : 'courses';
+  }
+  if (template === 'home' || !slug || slug === 'home') {
+    return 'pages/';
+  }
+  return `pages/${slug}`;
 }
