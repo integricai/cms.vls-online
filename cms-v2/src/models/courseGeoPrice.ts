@@ -4,6 +4,10 @@ import type {
   CourseGeoPriceInput,
   CoursePricingSummary,
 } from '../../shared/types';
+import {
+  discountedPriceForInput,
+  effectiveAmount,
+} from '../services/courseGeoPriceValidation';
 
 interface DbRow {
   id: number;
@@ -15,9 +19,8 @@ interface DbRow {
   currency: string;
   amount: string;
   compare_at_amount: string | null;
-  country_code: string | null;
-  region: string | null;
-  geo_group: string | null;
+  discount_percent: string | null;
+  discounted_price: string | null;
   is_default: boolean;
   is_active: boolean;
   stripe_price_id: string | null;
@@ -41,9 +44,10 @@ interface SummaryDbRow {
   default_amount: string | null;
   default_currency: string | null;
   default_compare_at_amount: string | null;
+  default_discount_percent: string | null;
+  default_discounted_price: string | null;
   default_duration_months: number | null;
   active_price_count: string;
-  countries_covered: string;
   has_active_default: boolean;
   updated_at: Date | null;
 }
@@ -55,6 +59,8 @@ function toDateOrNull(value: Date | string | null | undefined): Date | null {
 }
 
 export function rowToCourseGeoPrice(row: DbRow): CourseGeoPrice {
+  const amount = Number(row.amount);
+  const discountedPrice = row.discounted_price != null ? Number(row.discounted_price) : null;
   return {
     id: row.id,
     courseId: row.course_id,
@@ -63,11 +69,11 @@ export function rowToCourseGeoPrice(row: DbRow): CourseGeoPrice {
     courseSlug: row.course_slug,
     name: row.name,
     currency: row.currency,
-    amount: Number(row.amount),
+    amount,
     compareAtAmount: row.compare_at_amount != null ? Number(row.compare_at_amount) : null,
-    countryCode: row.country_code,
-    region: row.region,
-    geoGroup: row.geo_group,
+    discountPercent: row.discount_percent != null ? Number(row.discount_percent) : null,
+    discountedPrice,
+    effectiveAmount: effectiveAmount(amount, discountedPrice),
     isDefault: row.is_default,
     isActive: row.is_active,
     stripePriceId: row.stripe_price_id,
@@ -98,14 +104,15 @@ export async function listCoursePricingSummaries(search?: string): Promise<Cours
           dp.amount AS default_amount,
           dp.currency AS default_currency,
           dp.compare_at_amount AS default_compare_at_amount,
+          dp.discount_percent AS default_discount_percent,
+          dp.discounted_price AS default_discounted_price,
           dp.duration_months AS default_duration_months,
           COALESCE(stats.active_price_count, 0) AS active_price_count,
-          COALESCE(stats.countries_covered, 0) AS countries_covered,
           (dp.id IS NOT NULL) AS has_active_default,
           COALESCE(stats.updated_at, c.updated_at) AS updated_at
         FROM courses c
         LEFT JOIN LATERAL (
-          SELECT id, name, amount, currency, compare_at_amount, duration_months
+          SELECT id, name, amount, currency, compare_at_amount, discount_percent, discounted_price, duration_months
           FROM course_geo_prices
           WHERE course_id = c.id AND is_default = true AND is_active = true
           ORDER BY priority DESC, id ASC
@@ -114,7 +121,6 @@ export async function listCoursePricingSummaries(search?: string): Promise<Cours
         LEFT JOIN LATERAL (
           SELECT
             COUNT(*) FILTER (WHERE is_active = true) AS active_price_count,
-            COUNT(DISTINCT country_code) FILTER (WHERE is_active = true AND country_code IS NOT NULL) AS countries_covered,
             MAX(updated_at) AS updated_at
           FROM course_geo_prices
           WHERE course_id = c.id
@@ -137,14 +143,15 @@ export async function listCoursePricingSummaries(search?: string): Promise<Cours
           dp.amount AS default_amount,
           dp.currency AS default_currency,
           dp.compare_at_amount AS default_compare_at_amount,
+          dp.discount_percent AS default_discount_percent,
+          dp.discounted_price AS default_discounted_price,
           dp.duration_months AS default_duration_months,
           COALESCE(stats.active_price_count, 0) AS active_price_count,
-          COALESCE(stats.countries_covered, 0) AS countries_covered,
           (dp.id IS NOT NULL) AS has_active_default,
           COALESCE(stats.updated_at, c.updated_at) AS updated_at
         FROM courses c
         LEFT JOIN LATERAL (
-          SELECT id, name, amount, currency, compare_at_amount, duration_months
+          SELECT id, name, amount, currency, compare_at_amount, discount_percent, discounted_price, duration_months
           FROM course_geo_prices
           WHERE course_id = c.id AND is_default = true AND is_active = true
           ORDER BY priority DESC, id ASC
@@ -153,7 +160,6 @@ export async function listCoursePricingSummaries(search?: string): Promise<Cours
         LEFT JOIN LATERAL (
           SELECT
             COUNT(*) FILTER (WHERE is_active = true) AS active_price_count,
-            COUNT(DISTINCT country_code) FILTER (WHERE is_active = true AND country_code IS NOT NULL) AS countries_covered,
             MAX(updated_at) AS updated_at
           FROM course_geo_prices
           WHERE course_id = c.id
@@ -161,30 +167,40 @@ export async function listCoursePricingSummaries(search?: string): Promise<Cours
         ORDER BY c.sort_order ASC, c.name ASC
       `;
 
-  return (rows as SummaryDbRow[]).map(row => ({
-    courseId: row.course_id,
-    courseTitle: row.course_title,
-    zenlerCourseId: row.zenler_course_id,
-    courseSlug: row.course_slug,
-    status: row.status,
-    isActive: row.is_active,
-    defaultPrice: row.default_price_id != null
-      ? {
-          id: row.default_price_id,
-          name: row.default_price_name ?? '',
-          amount: Number(row.default_amount),
-          currency: row.default_currency ?? 'USD',
-          compareAtAmount: row.default_compare_at_amount != null
-            ? Number(row.default_compare_at_amount)
-            : null,
-          durationMonths: row.default_duration_months ?? 6,
-        }
-      : null,
-    activePriceCount: Number(row.active_price_count),
-    countriesCovered: Number(row.countries_covered),
-    hasActiveDefault: row.has_active_default,
-    updatedAt: row.updated_at,
-  }));
+  return (rows as SummaryDbRow[]).map(row => {
+    const amount = row.default_amount != null ? Number(row.default_amount) : 0;
+    const discountedPrice = row.default_discounted_price != null
+      ? Number(row.default_discounted_price)
+      : null;
+    return {
+      courseId: row.course_id,
+      courseTitle: row.course_title,
+      zenlerCourseId: row.zenler_course_id,
+      courseSlug: row.course_slug,
+      status: row.status,
+      isActive: row.is_active,
+      defaultPrice: row.default_price_id != null
+        ? {
+            id: row.default_price_id,
+            name: row.default_price_name ?? '',
+            amount,
+            currency: row.default_currency ?? 'USD',
+            compareAtAmount: row.default_compare_at_amount != null
+              ? Number(row.default_compare_at_amount)
+              : null,
+            discountPercent: row.default_discount_percent != null
+              ? Number(row.default_discount_percent)
+              : null,
+            discountedPrice,
+            effectiveAmount: effectiveAmount(amount, discountedPrice),
+            durationMonths: row.default_duration_months ?? 6,
+          }
+        : null,
+      activePriceCount: Number(row.active_price_count),
+      hasActiveDefault: row.has_active_default,
+      updatedAt: row.updated_at,
+    };
+  });
 }
 
 export async function listGeoPricesForCourse(courseId: number): Promise<CourseGeoPrice[]> {
@@ -237,12 +253,9 @@ export async function getGeoPriceById(id: number): Promise<CourseGeoPrice | null
 
 export async function findGeoPriceByUpsertKey(data: {
   courseId: number;
-  countryCode: string | null;
-  currency: string;
   name: string;
   durationMonths: number;
 }): Promise<CourseGeoPrice | null> {
-  const country = data.countryCode ?? '';
   const rows = await sql`
     SELECT
       p.*,
@@ -252,8 +265,6 @@ export async function findGeoPriceByUpsertKey(data: {
     FROM course_geo_prices p
     JOIN courses c ON c.id = p.course_id
     WHERE p.course_id = ${data.courseId}
-      AND COALESCE(p.country_code, '') = ${country}
-      AND UPPER(p.currency) = ${data.currency.toUpperCase()}
       AND LOWER(p.name) = ${data.name.toLowerCase()}
       AND p.duration_months = ${data.durationMonths}
     LIMIT 1
@@ -285,6 +296,7 @@ async function clearOtherActiveDefaults(courseId: number, keepId?: number): Prom
 export async function createGeoPrice(input: CourseGeoPriceInput): Promise<CourseGeoPrice> {
   const isDefault = Boolean(input.isDefault);
   const isActive = input.isActive !== false;
+  const discountedPrice = discountedPriceForInput(input);
 
   if (isDefault && isActive) {
     await clearOtherActiveDefaults(input.courseId);
@@ -292,17 +304,17 @@ export async function createGeoPrice(input: CourseGeoPriceInput): Promise<Course
 
   const rows = await sql`
     INSERT INTO course_geo_prices (
-      course_id, name, currency, amount, compare_at_amount, country_code, region, geo_group,
+      course_id, name, currency, amount, compare_at_amount,
+      discount_percent, discounted_price,
       is_default, is_active, stripe_price_id, valid_from, valid_until, priority, duration_months
     ) VALUES (
       ${input.courseId},
       ${input.name.trim()},
-      ${input.currency.toUpperCase()},
+      'USD',
       ${input.amount},
       ${input.compareAtAmount ?? null},
-      ${input.countryCode ?? null},
-      ${input.region?.trim() || null},
-      ${input.geoGroup?.trim() || null},
+      ${input.discountPercent ?? null},
+      ${discountedPrice},
       ${isDefault},
       ${isActive},
       ${input.stripePriceId?.trim() || null},
@@ -323,21 +335,20 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
   const existing = await getGeoPriceById(id);
   if (!existing) return null;
 
-  const next = {
+  const nextInput: CourseGeoPriceInput = {
+    courseId: existing.courseId,
     name: input.name !== undefined ? String(input.name).trim() : existing.name,
-    currency: input.currency !== undefined ? String(input.currency).toUpperCase() : existing.currency,
+    currency: 'USD',
     amount: input.amount !== undefined ? Number(input.amount) : existing.amount,
     compareAtAmount: input.compareAtAmount !== undefined ? input.compareAtAmount : existing.compareAtAmount,
-    countryCode: input.countryCode !== undefined ? input.countryCode : existing.countryCode,
-    region: input.region !== undefined ? (input.region?.trim() || null) : existing.region,
-    geoGroup: input.geoGroup !== undefined ? (input.geoGroup?.trim() || null) : existing.geoGroup,
+    discountPercent: input.discountPercent !== undefined ? input.discountPercent : existing.discountPercent,
     isDefault: input.isDefault !== undefined ? Boolean(input.isDefault) : existing.isDefault,
     isActive: input.isActive !== undefined ? Boolean(input.isActive) : existing.isActive,
     stripePriceId: input.stripePriceId !== undefined
       ? (input.stripePriceId?.trim() || null)
       : existing.stripePriceId,
-    validFrom: input.validFrom !== undefined ? toDateOrNull(input.validFrom) : toDateOrNull(existing.validFrom),
-    validUntil: input.validUntil !== undefined ? toDateOrNull(input.validUntil) : toDateOrNull(existing.validUntil),
+    validFrom: input.validFrom !== undefined ? input.validFrom : existing.validFrom,
+    validUntil: input.validUntil !== undefined ? input.validUntil : existing.validUntil,
     priority: input.priority !== undefined
       ? (Number.isFinite(input.priority) ? Number(input.priority) : 0)
       : existing.priority,
@@ -346,26 +357,27 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
       : existing.durationMonths,
   };
 
-  if (next.isDefault && next.isActive) {
+  const discountedPrice = discountedPriceForInput(nextInput);
+
+  if (nextInput.isDefault && nextInput.isActive) {
     await clearOtherActiveDefaults(existing.courseId, id);
   }
 
   const rows = await sql`
     UPDATE course_geo_prices
-    SET name = ${next.name},
-        currency = ${next.currency},
-        amount = ${next.amount},
-        compare_at_amount = ${next.compareAtAmount},
-        country_code = ${next.countryCode},
-        region = ${next.region},
-        geo_group = ${next.geoGroup},
-        is_default = ${next.isDefault},
-        is_active = ${next.isActive},
-        stripe_price_id = ${next.stripePriceId},
-        valid_from = ${next.validFrom},
-        valid_until = ${next.validUntil},
-        priority = ${next.priority},
-        duration_months = ${next.durationMonths},
+    SET name = ${nextInput.name},
+        currency = 'USD',
+        amount = ${nextInput.amount},
+        compare_at_amount = ${nextInput.compareAtAmount},
+        discount_percent = ${nextInput.discountPercent ?? null},
+        discounted_price = ${discountedPrice},
+        is_default = ${nextInput.isDefault},
+        is_active = ${nextInput.isActive},
+        stripe_price_id = ${nextInput.stripePriceId},
+        valid_from = ${toDateOrNull(nextInput.validFrom)},
+        valid_until = ${toDateOrNull(nextInput.validUntil)},
+        priority = ${nextInput.priority},
+        duration_months = ${nextInput.durationMonths},
         updated_at = NOW()
     WHERE id = ${id}
     RETURNING *
@@ -387,8 +399,6 @@ export async function setDefaultGeoPrice(courseId: number, priceId: number): Pro
 export async function upsertGeoPriceByKey(input: CourseGeoPriceInput): Promise<{ price: CourseGeoPrice; created: boolean }> {
   const existing = await findGeoPriceByUpsertKey({
     courseId: input.courseId,
-    countryCode: input.countryCode ?? null,
-    currency: input.currency,
     name: input.name,
     durationMonths: input.durationMonths ?? 6,
   });

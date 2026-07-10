@@ -1,9 +1,21 @@
 import type { CourseGeoPriceInput } from '../../shared/types';
-import { isValidIsoCountryCode, normalizeCountryCode } from '../utils/isoCountryCodes';
 
 export interface ValidationIssue {
   field?: string;
   message: string;
+}
+
+export function roundMoney(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+export function computeDiscountedPrice(amount: number, discountPercent: number | null | undefined): number | null {
+  if (discountPercent == null || discountPercent <= 0) return null;
+  return roundMoney(amount * (1 - discountPercent / 100));
+}
+
+export function effectiveAmount(amount: number, discountedPrice: number | null | undefined): number {
+  return discountedPrice != null && discountedPrice > 0 ? discountedPrice : amount;
 }
 
 function parseDate(value: unknown): Date | null {
@@ -31,13 +43,6 @@ export function validateGeoPriceInput(
     issues.push({ field: 'name', message: 'price name is required' });
   }
 
-  const currency = String(input.currency ?? '').trim().toUpperCase();
-  if (!currency) {
-    issues.push({ field: 'currency', message: 'currency is required' });
-  } else if (!/^[A-Z]{3}$/.test(currency)) {
-    issues.push({ field: 'currency', message: 'currency must be a 3-letter ISO code' });
-  }
-
   const amount = Number(input.amount);
   if (!Number.isFinite(amount) || amount <= 0) {
     issues.push({ field: 'amount', message: 'amount must be greater than 0' });
@@ -55,9 +60,16 @@ export function validateGeoPriceInput(
     }
   }
 
-  const countryCode = normalizeCountryCode(input.countryCode);
-  if (countryCode && !isValidIsoCountryCode(countryCode)) {
-    issues.push({ field: 'countryCode', message: `invalid ISO country code: ${countryCode}` });
+  if (input.discountPercent != null && input.discountPercent !== undefined) {
+    const discountPercent = Number(input.discountPercent);
+    if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100) {
+      issues.push({ field: 'discountPercent', message: 'discount must be between 0 and 100' });
+    } else if (Number.isFinite(amount) && discountPercent > 0) {
+      const discounted = computeDiscountedPrice(amount, discountPercent);
+      if (discounted != null && discounted <= 0) {
+        issues.push({ field: 'discountPercent', message: 'discount results in a non-positive price' });
+      }
+    }
   }
 
   const validFrom = parseDate(input.validFrom);
@@ -85,18 +97,23 @@ export function validateGeoPriceInput(
 }
 
 export function normalizeGeoPriceInput(input: CourseGeoPriceInput): CourseGeoPriceInput {
+  const amount = Number(input.amount);
+  const discountPercentRaw = input.discountPercent;
+  const discountPercent = discountPercentRaw == null || String(discountPercentRaw).trim() === ''
+    ? null
+    : roundMoney(Number(discountPercentRaw));
+  const normalizedDiscount = discountPercent != null && discountPercent > 0 ? discountPercent : null;
+
   return {
     ...input,
     courseId: Number(input.courseId),
     name: String(input.name).trim(),
-    currency: String(input.currency).trim().toUpperCase(),
-    amount: Number(input.amount),
+    currency: 'USD',
+    amount,
     compareAtAmount: input.compareAtAmount == null || input.compareAtAmount === undefined
       ? null
       : Number(input.compareAtAmount),
-    countryCode: normalizeCountryCode(input.countryCode),
-    region: input.region?.trim() || null,
-    geoGroup: input.geoGroup?.trim() || null,
+    discountPercent: normalizedDiscount,
     isDefault: Boolean(input.isDefault),
     isActive: input.isActive !== false,
     stripePriceId: input.stripePriceId?.trim() || null,
@@ -107,4 +124,8 @@ export function normalizeGeoPriceInput(input: CourseGeoPriceInput): CourseGeoPri
       ? Math.min(6, Math.max(1, Number(input.durationMonths)))
       : 6,
   };
+}
+
+export function discountedPriceForInput(input: CourseGeoPriceInput): number | null {
+  return computeDiscountedPrice(input.amount, input.discountPercent);
 }

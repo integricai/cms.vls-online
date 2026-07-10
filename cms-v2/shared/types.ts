@@ -184,7 +184,7 @@ export interface CoursePriceRecord {
   updatedAt: Date;
 }
 
-// ── Geo / multi-location course pricing ───────────────────────────
+// ── USD course pricing (regional discounts via ParityDeals) ───────
 
 export interface CourseGeoPrice {
   id: number;
@@ -196,9 +196,10 @@ export interface CourseGeoPrice {
   currency: string;
   amount: number;
   compareAtAmount: number | null;
-  countryCode: string | null;
-  region: string | null;
-  geoGroup: string | null;
+  discountPercent: number | null;
+  discountedPrice: number | null;
+  /** Final USD price fed to ParityDeals: discountedPrice ?? amount */
+  effectiveAmount: number;
   isDefault: boolean;
   isActive: boolean;
   stripePriceId: string | null;
@@ -214,12 +215,10 @@ export type CourseGeoPriceInput = {
   id?: number;
   courseId: number;
   name: string;
-  currency: string;
+  currency?: string;
   amount: number;
   compareAtAmount?: number | null;
-  countryCode?: string | null;
-  region?: string | null;
-  geoGroup?: string | null;
+  discountPercent?: number | null;
   isDefault?: boolean;
   isActive?: boolean;
   stripePriceId?: string | null;
@@ -242,19 +241,22 @@ export interface CoursePricingSummary {
     amount: number;
     currency: string;
     compareAtAmount: number | null;
+    discountPercent: number | null;
+    discountedPrice: number | null;
+    effectiveAmount: number;
     durationMonths: number;
   } | null;
   activePriceCount: number;
-  countriesCovered: number;
   hasActiveDefault: boolean;
   updatedAt: Date | string | null;
 }
 
 export interface ResolvedCoursePrice {
   price: CourseGeoPrice;
-  matchReason: 'country' | 'region_or_geo_group' | 'currency' | 'default';
+  matchReason: 'duration' | 'default' | 'explicit';
+  /** Final USD price for ParityDeals / checkout */
+  effectiveAmount: number;
   detectedCountryCode: string | null;
-  requestedCurrency: string | null;
 }
 
 export interface CoursePriceImportRow {
@@ -263,12 +265,10 @@ export interface CoursePriceImportRow {
   courseSlug?: string;
   courseTitle?: string;
   priceName: string;
-  countryCode?: string | null;
-  region?: string | null;
-  geoGroup?: string | null;
   currency: string;
   amount: number;
   compareAtAmount?: number | null;
+  discountPercent?: number | null;
   isDefault?: boolean;
   isActive?: boolean;
   validFrom?: string | null;

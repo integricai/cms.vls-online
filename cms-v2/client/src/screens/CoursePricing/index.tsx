@@ -14,11 +14,8 @@ const DURATION_OPTIONS = [1, 2, 3, 4, 5, 6];
 type PriceDraft = {
   id?: number;
   name: string;
-  countryCode: string;
-  region: string;
-  geoGroup: string;
-  currency: string;
   amount: string;
+  discountPercent: string;
   compareAtAmount: string;
   durationMonths: string;
   isActive: boolean;
@@ -32,11 +29,8 @@ type PriceDraft = {
 function emptyDraft(): PriceDraft {
   return {
     name: '',
-    countryCode: '',
-    region: '',
-    geoGroup: '',
-    currency: 'GBP',
     amount: '',
+    discountPercent: '',
     compareAtAmount: '',
     durationMonths: '6',
     isActive: true,
@@ -48,15 +42,19 @@ function emptyDraft(): PriceDraft {
   };
 }
 
+function calcDiscountedPrice(amount: string, discountPercent: string): number | null {
+  const list = Number(amount);
+  const discount = Number(discountPercent);
+  if (!Number.isFinite(list) || list <= 0 || !Number.isFinite(discount) || discount <= 0) return null;
+  return Math.round(list * (1 - discount / 100) * 100) / 100;
+}
+
 function priceToDraft(price: CourseGeoPrice): PriceDraft {
   return {
     id: price.id,
     name: price.name,
-    countryCode: price.countryCode ?? '',
-    region: price.region ?? '',
-    geoGroup: price.geoGroup ?? '',
-    currency: price.currency,
     amount: String(price.amount),
+    discountPercent: price.discountPercent != null ? String(price.discountPercent) : '',
     compareAtAmount: price.compareAtAmount != null ? String(price.compareAtAmount) : '',
     durationMonths: String(price.durationMonths ?? 6),
     isActive: price.isActive,
@@ -189,12 +187,9 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
     try {
       const body = {
         name: draft.name.trim(),
-        currency: draft.currency.trim().toUpperCase(),
         amount: Number(draft.amount),
         compareAtAmount: draft.compareAtAmount === '' ? null : Number(draft.compareAtAmount),
-        countryCode: draft.countryCode.trim().toUpperCase() || null,
-        region: draft.region.trim() || null,
-        geoGroup: draft.geoGroup.trim() || null,
+        discountPercent: draft.discountPercent === '' ? null : Number(draft.discountPercent),
         isActive: draft.isActive,
         isDefault: draft.isDefault,
         validFrom: draft.validFrom || null,
@@ -406,8 +401,8 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
                         <th className="py-1 pr-2">Action</th>
                         <th className="py-1 pr-2">Course</th>
                         <th className="py-1 pr-2">Price</th>
-                        <th className="py-1 pr-2">Country</th>
-                        <th className="py-1 pr-2">Amount</th>
+                        <th className="py-1 pr-2">Amount (USD)</th>
+                        <th className="py-1 pr-2">Discount</th>
                         <th className="py-1">Default</th>
                       </tr>
                     </thead>
@@ -418,8 +413,12 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
                           <td className="py-1 pr-2">{row.action}</td>
                           <td className="py-1 pr-2">{row.courseTitle}</td>
                           <td className="py-1 pr-2">{row.price.priceName}</td>
-                          <td className="py-1 pr-2">{row.price.countryCode || '—'}</td>
-                          <td className="py-1 pr-2">{formatMoney(row.price.amount, row.price.currency)}</td>
+                          <td className="py-1 pr-2">{formatMoney(row.price.amount, 'USD')}</td>
+                          <td className="py-1 pr-2">
+                            {row.price.discountPercent != null && row.price.discountPercent > 0
+                              ? `${row.price.discountPercent}%`
+                              : '—'}
+                          </td>
                           <td className="py-1 pr-2">{row.price.durationMonths ?? 6} mo</td>
                           <td className="py-1">{row.price.isDefault ? 'Yes' : 'No'}</td>
                         </tr>
@@ -461,6 +460,8 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
   }
 
   if (view === 'manage' && selectedCourseId) {
+    const previewDiscounted = calcDiscountedPrice(draft.amount, draft.discountPercent);
+
     return (
       <div className={shellClass}>
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -484,27 +485,33 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
               <input className="input mt-1" value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} />
             </label>
             <label className="text-xs text-slate-600">
-              Country code
-              <input className="input mt-1" value={draft.countryCode} placeholder="GB" onChange={e => setDraft(d => ({ ...d, countryCode: e.target.value }))} />
-            </label>
-            <label className="text-xs text-slate-600">
-              Region
-              <input className="input mt-1" value={draft.region} onChange={e => setDraft(d => ({ ...d, region: e.target.value }))} />
-            </label>
-            <label className="text-xs text-slate-600">
-              Geo group
-              <input className="input mt-1" value={draft.geoGroup} onChange={e => setDraft(d => ({ ...d, geoGroup: e.target.value }))} />
-            </label>
-            <label className="text-xs text-slate-600">
-              Currency
-              <input className="input mt-1" value={draft.currency} onChange={e => setDraft(d => ({ ...d, currency: e.target.value }))} />
-            </label>
-            <label className="text-xs text-slate-600">
-              Amount
+              List price (USD)
               <input className="input mt-1" type="number" min="0" step="0.01" value={draft.amount} onChange={e => setDraft(d => ({ ...d, amount: e.target.value }))} />
             </label>
             <label className="text-xs text-slate-600">
-              Compare-at amount
+              Discount (%)
+              <input
+                className="input mt-1"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                placeholder="0"
+                value={draft.discountPercent}
+                onChange={e => setDraft(d => ({ ...d, discountPercent: e.target.value }))}
+              />
+            </label>
+            <label className="text-xs text-slate-600">
+              Final price (USD)
+              <input
+                className="input mt-1 bg-slate-50"
+                type="text"
+                readOnly
+                value={previewDiscounted != null ? formatMoney(previewDiscounted, 'USD') : (draft.amount ? formatMoney(Number(draft.amount), 'USD') : '—')}
+              />
+            </label>
+            <label className="text-xs text-slate-600">
+              Compare-at amount (USD)
               <input className="input mt-1" type="number" min="0" step="0.01" value={draft.compareAtAmount} onChange={e => setDraft(d => ({ ...d, compareAtAmount: e.target.value }))} />
             </label>
             <label className="text-xs text-slate-600">
@@ -566,10 +573,9 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
             <thead className="bg-slate-50 text-slate-500">
               <tr>
                 <th className="px-3 py-2">Price name</th>
-                <th className="px-3 py-2">Country</th>
-                <th className="px-3 py-2">Region / geo</th>
-                <th className="px-3 py-2">Currency</th>
-                <th className="px-3 py-2">Amount</th>
+                <th className="px-3 py-2">List price</th>
+                <th className="px-3 py-2">Discount</th>
+                <th className="px-3 py-2">Final price</th>
                 <th className="px-3 py-2">Duration</th>
                 <th className="px-3 py-2">Compare-at</th>
                 <th className="px-3 py-2">Active</th>
@@ -582,18 +588,17 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
             <tbody>
               {prices.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="px-3 py-6 text-center text-slate-500">No prices yet. Add a default price to start.</td>
+                  <td colSpan={11} className="px-3 py-6 text-center text-slate-500">No prices yet. Add a default price to start.</td>
                 </tr>
               )}
               {prices.map(price => (
                 <tr key={price.id} className="border-t border-slate-100">
                   <td className="px-3 py-2 font-medium text-slate-800">{price.name}</td>
-                  <td className="px-3 py-2">{price.countryCode || '—'}</td>
-                  <td className="px-3 py-2">{[price.region, price.geoGroup].filter(Boolean).join(' / ') || '—'}</td>
-                  <td className="px-3 py-2">{price.currency}</td>
-                  <td className="px-3 py-2">{formatMoney(price.amount, price.currency)}</td>
+                  <td className="px-3 py-2">{formatMoney(price.amount, 'USD')}</td>
+                  <td className="px-3 py-2">{price.discountPercent != null && price.discountPercent > 0 ? `${price.discountPercent}%` : '—'}</td>
+                  <td className="px-3 py-2 font-medium text-emerald-800">{formatMoney(price.effectiveAmount, 'USD')}</td>
                   <td className="px-3 py-2">{price.durationMonths} mo</td>
-                  <td className="px-3 py-2">{formatMoney(price.compareAtAmount, price.currency)}</td>
+                  <td className="px-3 py-2">{formatMoney(price.compareAtAmount, 'USD')}</td>
                   <td className="px-3 py-2">{price.isActive ? 'Yes' : 'No'}</td>
                   <td className="px-3 py-2">{price.isDefault ? 'Yes' : 'No'}</td>
                   <td className="px-3 py-2">
@@ -629,7 +634,7 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
           {!embedded && <h1 className="text-xl font-semibold text-slate-900">Course Pricing</h1>}
           {embedded && <h2 className="text-sm font-bold text-slate-700">Course Pricing</h2>}
           <p className="text-sm text-slate-500">
-            Manage geo/location-based prices per course with duration in months.
+            Manage USD prices per course and duration. Regional discounts are handled by ParityDeals.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -674,9 +679,8 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
             <tr>
               <th className="px-3 py-2">Course title</th>
               <th className="px-3 py-2">Zenler course ID</th>
-              <th className="px-3 py-2">Default price</th>
+              <th className="px-3 py-2">Default final price</th>
               <th className="px-3 py-2">Active prices</th>
-              <th className="px-3 py-2">Countries</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Last updated</th>
               <th className="px-3 py-2">Actions</th>
@@ -685,12 +689,12 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-slate-500">Loading…</td>
+                <td colSpan={7} className="px-3 py-8 text-center text-slate-500">Loading…</td>
               </tr>
             )}
             {!loading && summaries.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-slate-500">No courses found. Sync courses from Zenler in Settings first.</td>
+                <td colSpan={7} className="px-3 py-8 text-center text-slate-500">No courses found. Sync courses from Zenler in Settings first.</td>
               </tr>
             )}
             {!loading && summaries.map(row => (
@@ -699,11 +703,10 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
                 <td className="px-3 py-2 font-mono text-[11px]">{row.zenlerCourseId}</td>
                 <td className="px-3 py-2">
                   {row.defaultPrice
-                    ? formatMoney(row.defaultPrice.amount, row.defaultPrice.currency)
+                    ? formatMoney(row.defaultPrice.effectiveAmount, 'USD')
                     : <span className="text-amber-700">Missing default</span>}
                 </td>
                 <td className="px-3 py-2">{row.activePriceCount}</td>
-                <td className="px-3 py-2">{row.countriesCovered}</td>
                 <td className="px-3 py-2">
                   <span className={row.isActive ? 'text-emerald-700' : 'text-slate-400'}>
                     {row.isActive ? 'Active' : 'Inactive'}

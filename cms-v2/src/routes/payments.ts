@@ -108,9 +108,6 @@ async function createGeoPriceCheckout(req: Request, res: Response) {
   }
 
   const geo = detectCountryFromRequest(req, req.body?.countryCode);
-  const currency = String(req.body?.currency ?? '').trim().toUpperCase() || null;
-  const region = String(req.body?.region ?? '').trim() || null;
-  const geoGroup = String(req.body?.geoGroup ?? '').trim() || null;
   const campaignCode = String(req.body?.campaignCode ?? '').trim() || null;
   const durationRaw = Number(req.body?.durationMonths);
   const durationMonths = Number.isInteger(durationRaw) && durationRaw >= 1 && durationRaw <= 6
@@ -127,19 +124,16 @@ async function createGeoPriceCheckout(req: Request, res: Response) {
       }
       resolved = {
         price,
-        matchReason: 'country' as const,
+        matchReason: 'explicit' as const,
+        effectiveAmount: price.effectiveAmount,
         detectedCountryCode: geo.countryCode,
-        requestedCurrency: currency,
       };
     } else {
       resolved = await resolveCoursePrice({
         courseId,
-        countryCode: geo.countryCode,
-        currency,
-        region,
-        geoGroup,
-        campaignCode,
         durationMonths,
+        campaignCode,
+        detectedCountryCode: geo.countryCode,
       });
     }
   } catch (err) {
@@ -162,8 +156,8 @@ async function createGeoPriceCheckout(req: Request, res: Response) {
     studentName,
     studentEmail,
     countryCode: geo.countryCode,
-    amount: resolved.price.amount,
-    currency: resolved.price.currency,
+    amount: resolved.effectiveAmount,
+    currency: 'USD',
   });
 
   const session = await createStripeCheckoutSession({
@@ -173,8 +167,8 @@ async function createGeoPriceCheckout(req: Request, res: Response) {
     zenlerCourseId: course.zenlerCourseId,
     courseTitle: course.name,
     paymentCardTitle: `${course.name} — ${resolved.price.name}`,
-    amount: resolved.price.amount,
-    currency: resolved.price.currency,
+    amount: resolved.effectiveAmount,
+    currency: 'USD',
     studentEmail,
     countryCode: geo.countryCode,
   });
@@ -184,8 +178,9 @@ async function createGeoPriceCheckout(req: Request, res: Response) {
     checkoutUrl: session.url,
     orderId: order.id,
     coursePriceId: resolved.price.id,
-    amount: resolved.price.amount,
-    currency: resolved.price.currency,
+    amount: resolved.effectiveAmount,
+    listAmount: resolved.price.amount,
+    currency: 'USD',
     countryCode: geo.countryCode,
     matchReason: resolved.matchReason,
   });

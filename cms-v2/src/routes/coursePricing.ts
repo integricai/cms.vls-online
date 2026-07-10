@@ -41,16 +41,13 @@ function parseBodyInput(body: Record<string, unknown>, courseId: number): Course
   return normalizeGeoPriceInput({
     courseId,
     name: String(body.name ?? body.priceName ?? ''),
-    currency: String(body.currency ?? ''),
     amount: Number(body.amount),
     compareAtAmount: body.compareAtAmount == null || body.compareAtAmount === ''
       ? null
       : Number(body.compareAtAmount),
-    countryCode: body.countryCode == null || body.countryCode === ''
+    discountPercent: body.discountPercent == null || body.discountPercent === ''
       ? null
-      : String(body.countryCode),
-    region: body.region == null || body.region === '' ? null : String(body.region),
-    geoGroup: body.geoGroup == null || body.geoGroup === '' ? null : String(body.geoGroup),
+      : Number(body.discountPercent),
     isDefault: Boolean(body.isDefault),
     isActive: body.isActive !== false && body.isActive !== 'false',
     stripePriceId: body.stripePriceId == null || body.stripePriceId === ''
@@ -71,20 +68,14 @@ router.get('/resolve', async (req: Request, res: Response, next: NextFunction) =
     if (!courseId) return res.status(400).json({ ok: false, error: 'courseId is required' });
 
     const geo = detectCountryFromRequest(req, String(req.query.countryCode ?? ''));
-    const currency = String(req.query.currency ?? '').trim().toUpperCase() || null;
-    const region = String(req.query.region ?? '').trim() || null;
-    const geoGroup = String(req.query.geoGroup ?? '').trim() || null;
     const campaignCode = String(req.query.campaignCode ?? '').trim() || null;
     const durationMonths = parseDurationMonths(req.query.durationMonths);
 
     const resolved = await resolveCoursePrice({
       courseId,
-      countryCode: geo.countryCode,
-      currency,
-      region,
-      geoGroup,
-      campaignCode,
       durationMonths,
+      campaignCode,
+      detectedCountryCode: geo.countryCode,
     });
 
     return res.json({
