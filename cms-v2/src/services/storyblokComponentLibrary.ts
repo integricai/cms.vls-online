@@ -47,7 +47,7 @@ async function findOrCreateFolder(
   if (existing) return existing;
 
   const created = await upsertStory(config, {
-    name: parentId ? slug : 'Component Library',
+    name: parentId ? slug.replace(/_/g, ' ') : 'Component Library',
     slug,
     parentId,
     fullSlug,
@@ -85,7 +85,7 @@ export async function upsertLibraryPreset(
   const fullSlug = presetStorySlug(blueprint.template, section.key);
 
   const result = await upsertStory(config, {
-    name: `${blueprint.template} / ${section.label}`,
+    name: `${blueprint.template} / ${section.label}`.slice(0, 100),
     slug: section.key,
     parentId: templateFolderId,
     fullSlug,

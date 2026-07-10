@@ -20,6 +20,7 @@ const TEMPLATE_FILES: Record<MigrationTemplate, string> = {
   course: 'course.html',
   legal: 'legal.html',
   form: 'about-us.html',
+  about_us: 'about-us.html',
   landing: 'landing.html',
   team_vls: 'team vls.html',
   schedules: 'schedule.html',
@@ -117,34 +118,60 @@ function sectionKeyFromComment(comment: string): string {
     .slice(0, 48) || 'section';
 }
 
+const PAGE_BODY_COMPONENTS = new Set([
+  'home_hero_section',
+  'home_hero',
+  'enquiry_form',
+  'contact_form',
+  'feature_cards_v2',
+  'content_cta_block',
+  'two_column_platform',
+  'testimonials',
+  'trustpilot_section',
+  'promotion_section',
+  'course_finder_banner',
+]);
+
 function componentForSection(key: string, classes: string[], template: MigrationTemplate): string {
-  if (template === 'home' && key.includes('hero')) return 'home_hero_section';
-  if (template === 'course' && key.includes('hero')) return 'course_hero_layout';
-  if (template === 'form' && (key.includes('touch') || key.includes('form'))) return 'enquiry_form';
-  if (classes.includes('faq') || key.includes('faq')) return 'faq_section';
-  if (key.includes('review') || key.includes('testimonial')) return 'testimonials';
-  if (key.includes('cta')) return 'promotion_section';
-  if (key.includes('course') && template === 'home') return 'feature_cards_v2';
-  if (key.includes('toolkit') || key.includes('feature')) return 'feature_cards_v2';
-  if (classes.includes('band')) return 'content_cta_block';
-  return SECTION_COMPONENT[key.split('-')[0]] ?? 'content_cta_block';
+  let component = 'content_cta_block';
+  if (template === 'home' && key.includes('hero')) component = 'home_hero_section';
+  else if (template === 'course' && key.includes('hero')) component = 'course_hero_layout';
+  else if ((template === 'form' || template === 'about_us') && (key.includes('touch') || key.includes('form'))) {
+    component = 'enquiry_form';
+  } else if (classes.includes('faq') || key.includes('faq')) component = 'faq_section';
+  else if (key.includes('review') || key.includes('testimonial')) component = 'testimonials';
+  else if (key.includes('cta')) component = 'promotion_section';
+  else if (key.includes('course') && template === 'home') component = 'feature_cards_v2';
+  else if (key.includes('toolkit') || key.includes('feature')) component = 'feature_cards_v2';
+  else if (classes.includes('band')) component = 'content_cta_block';
+  else component = SECTION_COMPONENT[key.split('-')[0]] ?? 'content_cta_block';
+
+  // Generic pages use the `page` root type whose body whitelist is stricter than course_page.
+  if (template !== 'course' && !PAGE_BODY_COMPONENTS.has(component)) {
+    return 'content_cta_block';
+  }
+  return component;
 }
 
-function stylesForSection(classes: string[], tokens: TemplateDesignTokens): Record<string, string | number> {
+function cleanSectionLabel(comment: string): string {
+  return comment.replace(/=+/g, '').replace(/\s+/g, ' ').trim() || comment.trim();
+}
+
+function stylesForSection(
+  classes: string[],
+  tokens: TemplateDesignTokens,
+  component: string,
+): Record<string, string | number> {
   const isBand = classes.includes('band');
   const isHero = classes.includes('hero') || classes.includes('legal-hero');
-  const isCta = classes.includes('cta-band') || classes.includes('cta-panel');
+  const isCta = classes.includes('cta-band') || classes.includes('cta-panel') || component === 'promotion_section';
 
-  if (isCta) {
+  if (component === 'promotion_section' || isCta) {
     return {
       background_color: tokens.blue50,
       button_background: tokens.blue,
       padding_top: 72,
       padding_bottom: 72,
-      cta_background: tokens.blue,
-      cta_text_color: tokens.white,
-      heading_accent_color: tokens.blue,
-      eyebrow_color: tokens.blue,
     };
   }
 
@@ -173,16 +200,21 @@ function stylesForSection(classes: string[], tokens: TemplateDesignTokens): Reco
 
 function parseSections(html: string, tokens: TemplateDesignTokens, template: MigrationTemplate): TemplateSectionBlueprint[] {
   const sections: TemplateSectionBlueprint[] = [];
-  const commentPattern = /<!--\s*([^=][^>-][\s\S]*?)\s*-->/gi;
+  const commentPattern = /<!--\s*([\s\S]*?)\s*-->/gi;
   const sectionPattern = /<section\b([^>]*)>([\s\S]*?)<\/section>/gi;
 
   const commentMatches = [...html.matchAll(commentPattern)]
     .map(match => ({
       index: match.index ?? 0,
-      label: match[1].trim(),
+      label: cleanSectionLabel(match[1]),
       key: sectionKeyFromComment(match[1]),
+      raw: match[1].trim(),
     }))
-    .filter(item => !/header|footer/i.test(item.label));
+    .filter(item => {
+      if (!item.raw || item.raw.length > 80) return false;
+      if (/header|footer|profile:|duplicate this/i.test(item.raw)) return false;
+      return true;
+    });
 
   for (const match of html.matchAll(sectionPattern)) {
     const attrs = match[1];
@@ -197,6 +229,7 @@ function parseSections(html: string, tokens: TemplateDesignTokens, template: Mig
 
     const key = nearestComment?.key ?? classes[0] ?? `section-${sections.length + 1}`;
     const label = nearestComment?.label ?? key;
+    const component = componentForSection(key, classes, template);
     const heading = stripTags(inner.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1]
       ?? inner.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i)?.[1]
       ?? '');
@@ -209,10 +242,10 @@ function parseSections(html: string, tokens: TemplateDesignTokens, template: Mig
     sections.push({
       key,
       label,
-      component: componentForSection(key, classes, template),
+      component,
       classes,
       isBand: classes.includes('band'),
-      styles: stylesForSection(classes, tokens),
+      styles: stylesForSection(classes, tokens, component),
       sampleHeading: heading,
       sampleDescription: description,
     });
@@ -225,7 +258,7 @@ function parseSections(html: string, tokens: TemplateDesignTokens, template: Mig
       component: 'content_cta_block',
       classes: ['section'],
       isBand: false,
-      styles: stylesForSection(['section'], tokens),
+      styles: stylesForSection(['section'], tokens, 'content_cta_block'),
       sampleHeading: '',
       sampleDescription: '',
     });
@@ -268,6 +301,68 @@ export function listMigrationTemplateBlueprints(): MigrationTemplateBlueprint[] 
   return (Object.keys(TEMPLATE_FILES) as MigrationTemplate[]).map(getMigrationTemplateBlueprint);
 }
 
+const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
+  content_cta_block: [
+    'eyebrow', 'show_eyebrow_dot', 'heading_prefix', 'heading_accent', 'description',
+    'checks', 'cta_text', 'cta_link', 'footer_note',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right',
+    'max_width', 'eyebrow_color', 'heading_accent_color', 'check_color',
+    'cta_background', 'cta_text_color', 'footer_note_color', 'font_size',
+  ],
+  promotion_section: [
+    'name', 'title', 'subtitle', 'cta_text', 'cta_link',
+    'background_color', 'button_background',
+    'padding_left', 'padding_right', 'padding_top', 'padding_bottom', 'font_size',
+  ],
+  home_hero_section: ['hero', 'form', 'background_color', 'padding_top', 'padding_bottom'],
+  enquiry_form: ['title', 'subtitle', 'background_color', 'padding_top', 'padding_bottom'],
+  faq_section: ['title', 'icon', 'items', 'schema_id', 'background_color', 'padding_top', 'padding_bottom'],
+  testimonials: [
+    'eyebrow', 'title_prefix', 'title_accent', 'subtitle', 'cards',
+    'background_color', 'padding_top', 'padding_bottom',
+  ],
+  feature_cards_v2: ['title', 'subtitle', 'cards', 'background_color', 'padding_top', 'padding_bottom'],
+};
+
+export function sanitizeBlokForStoryblok(blok: Record<string, unknown>): Record<string, unknown> {
+  const component = String(blok.component ?? '');
+  const allow = BLOK_FIELD_ALLOWLIST[component];
+  const next: Record<string, unknown> = {
+    _uid: blok._uid,
+    component,
+  };
+
+  if (!allow) {
+    for (const [key, value] of Object.entries(blok)) {
+      if (key.startsWith('migration_')) continue;
+      next[key] = value;
+    }
+    return next;
+  }
+
+  for (const key of allow) {
+    if (blok[key] !== undefined) next[key] = blok[key];
+  }
+
+  // Nested bloks
+  for (const key of ['hero', 'form', 'checks', 'items', 'cards', 'left', 'right']) {
+    const value = next[key];
+    if (!Array.isArray(value)) continue;
+    next[key] = value.map(item => (
+      item && typeof item === 'object'
+        ? sanitizeBlokForStoryblok(item as Record<string, unknown>)
+        : item
+    ));
+  }
+
+  if (component === 'promotion_section') {
+    const title = String(next.title ?? '').trim();
+    next.title = title || 'Get started';
+  }
+
+  return next;
+}
+
 export function applyTemplateStyles(
   blueprint: MigrationTemplateBlueprint,
   sectionKey: string,
@@ -277,15 +372,13 @@ export function applyTemplateStyles(
     ?? blueprint.sections.find(item => sectionKey.includes(item.key))
     ?? blueprint.sections[0];
 
-  if (!section) return blok;
+  if (!section) return sanitizeBlokForStoryblok(blok);
 
-  return {
+  return sanitizeBlokForStoryblok({
     ...section.styles,
     ...blok,
-    migration_template: blueprint.template,
-    migration_section: section.key,
-    migration_library_ref: `component-library/${blueprint.template}/${section.key}`,
-  };
+    component: String(blok.component ?? section.component),
+  });
 }
 
 export function buildPresetBlokFromSection(
@@ -296,14 +389,11 @@ export function buildPresetBlokFromSection(
   const base: Record<string, unknown> = {
     _uid: uid,
     component: section.component,
-    migration_template: blueprint.template,
-    migration_section: section.key,
-    migration_library_ref: `component-library/${blueprint.template}/${section.key}`,
     ...section.styles,
   };
 
   if (section.component === 'home_hero_section') {
-    return {
+    return sanitizeBlokForStoryblok({
       ...base,
       hero: [{
         _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
@@ -311,11 +401,11 @@ export function buildPresetBlokFromSection(
         heading: section.sampleHeading || 'Hero heading',
         description: section.sampleDescription || 'Hero description from template reference.',
       }],
-    };
+    });
   }
 
   if (section.component === 'course_hero_layout') {
-    return {
+    return sanitizeBlokForStoryblok({
       ...base,
       left: [{
         _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
@@ -329,56 +419,56 @@ export function buildPresetBlokFromSection(
         section_label: 'THIS COURSE INCLUDES',
         items: [],
       }],
-    };
+    });
   }
 
   if (section.component === 'promotion_section') {
-    return {
+    return sanitizeBlokForStoryblok({
       ...base,
       name: `${blueprint.template}/${section.key}`,
-      title: section.sampleHeading || 'Ready to get started?',
+      title: section.sampleHeading || section.label || 'Ready to get started?',
       subtitle: section.sampleDescription || 'Use this preset across pages and update styling once in the component library.',
       cta_text: 'Enrol Now',
-    };
+    });
   }
 
   if (section.component === 'faq_section') {
-    return {
+    return sanitizeBlokForStoryblok({
       ...base,
       title: section.sampleHeading || 'Frequently Asked Questions',
       icon: '❔',
       items: [],
-    };
+    });
   }
 
   if (section.component === 'testimonials') {
-    return {
+    return sanitizeBlokForStoryblok({
       ...base,
       title_prefix: section.sampleHeading || 'What students say',
       subtitle: section.sampleDescription || '',
       cards: [],
-    };
+    });
   }
 
   if (section.component === 'feature_cards_v2') {
-    return {
+    return sanitizeBlokForStoryblok({
       ...base,
       title: section.sampleHeading || section.label,
       cards: [],
-    };
+    });
   }
 
   if (section.component === 'enquiry_form') {
-    return base;
+    return sanitizeBlokForStoryblok(base);
   }
 
-  return {
+  return sanitizeBlokForStoryblok({
     ...base,
     eyebrow: section.label,
     heading_prefix: section.sampleHeading || section.label,
     description: section.sampleDescription || 'Content section preset from HTML template reference.',
     cta_text: 'Learn more',
-  };
+  });
 }
 
 export { TEMPLATE_FILES };

@@ -5,6 +5,7 @@ export const MIGRATION_TEMPLATE_LABELS: Record<MigrationTemplate, string> = {
   course: 'Course',
   legal: 'Legal',
   form: 'Form',
+  about_us: 'About Us',
   landing: 'Landing',
   team_vls: 'Team VLS',
   schedules: 'Schedules',

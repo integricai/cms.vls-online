@@ -26,6 +26,7 @@ import {
 import {
   applyTemplateStyles,
   getMigrationTemplateBlueprint,
+  sanitizeBlokForStoryblok,
 } from './migrationTemplateRegistry';
 import {
   getLibraryPresetBlok,
@@ -484,6 +485,33 @@ function templateReferenceSummary(template: MigrationTemplate): TemplateReferenc
   };
 }
 
+async function syncLibrarySafely(
+  config: StoryblokConfig,
+  template: MigrationTemplate,
+  warnings: string[],
+): Promise<ComponentLibrarySummary | undefined> {
+  try {
+    const librarySync = await syncTemplateComponentLibrary(config, template);
+    warnings.push(
+      `Synced ${librarySync.presets.length} reusable component presets in Storyblok/${librarySync.folderSlug}/${template}.`,
+    );
+    return {
+      folderSlug: librarySync.folderSlug,
+      presetsCreated: librarySync.created,
+      presetsUpdated: librarySync.updated,
+      presets: librarySync.presets.map(preset => ({
+        fullSlug: preset.fullSlug,
+        component: preset.component,
+        created: preset.created,
+      })),
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown component library sync error';
+    warnings.push(`Component library sync skipped: ${message}. Page migration will continue without presets.`);
+    return undefined;
+  }
+}
+
 async function stylizeBlok(
   blok: Record<string, unknown> | null,
   template: MigrationTemplate,
@@ -497,10 +525,14 @@ async function stylizeBlok(
     ?? blueprint.sections.find(item => sectionKey.includes(item.key));
 
   const styled = applyTemplateStyles(blueprint, section?.key ?? sectionKey, blok);
-  if (!config || !section) return styled;
+  if (!config || !section) return sanitizeBlokForStoryblok(styled);
 
-  const preset = await getLibraryPresetBlok(config, template, section.key);
-  return mergePresetWithData(preset, styled, section.styles);
+  try {
+    const preset = await getLibraryPresetBlok(config, template, section.key);
+    return sanitizeBlokForStoryblok(mergePresetWithData(preset, styled, section.styles));
+  } catch {
+    return sanitizeBlokForStoryblok(styled);
+  }
 }
 
 async function buildCourseStoryblokContentAsync(
@@ -562,14 +594,23 @@ async function buildGenericStoryblokContentAsync(
       blok = { _uid: blokUid(), component: 'enquiry_form' };
     } else if (section.component === 'faq_section' && scraped.faq?.items.length) {
       blok = buildGenericFaqBlok(scraped, sourceUrl);
+    } else if (section.component === 'promotion_section') {
+      blok = {
+        _uid: blokUid(),
+        component: 'promotion_section',
+        name: `${template}/${section.key}`,
+        title: scrapedSection?.heading || scraped.title || section.label || 'Get started',
+        subtitle: scrapedSection?.bodyText || scraped.metaDescription || '',
+        cta_text: 'Learn more',
+      };
     } else {
       blok = {
         _uid: blokUid(),
         component: section.component,
-        heading_prefix: scrapedSection?.heading || scraped.title,
-        description: scrapedSection?.bodyText || scraped.metaDescription,
-        title: scrapedSection?.heading || scraped.title,
-        subtitle: scrapedSection?.bodyText || scraped.metaDescription,
+        eyebrow: section.label,
+        heading_prefix: scrapedSection?.heading || scraped.title || section.label,
+        description: scrapedSection?.bodyText || scraped.metaDescription || '',
+        cta_text: 'Learn more',
       };
     }
 
@@ -630,20 +671,7 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
       );
     }
 
-    const librarySync = await syncTemplateComponentLibrary(config, template);
-    const componentLibrary: ComponentLibrarySummary = {
-      folderSlug: librarySync.folderSlug,
-      presetsCreated: librarySync.created,
-      presetsUpdated: librarySync.updated,
-      presets: librarySync.presets.map(preset => ({
-        fullSlug: preset.fullSlug,
-        component: preset.component,
-        created: preset.created,
-      })),
-    };
-    warnings.push(
-      `Synced ${librarySync.presets.length} reusable component presets in Storyblok/${librarySync.folderSlug}/${template}.`,
-    );
+    const componentLibrary = await syncLibrarySafely(config, template, warnings);
 
     const content = await buildCourseStoryblokContentAsync(scraped, zenlerCourseId, template, config);
     const upsert = await upsertStory(config, {
@@ -689,20 +717,7 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
   const config = storyblokConfig(input);
   await verifyStoryblokAccess(config);
 
-  const librarySync = await syncTemplateComponentLibrary(config, template);
-  const componentLibrary: ComponentLibrarySummary = {
-    folderSlug: librarySync.folderSlug,
-    presetsCreated: librarySync.created,
-    presetsUpdated: librarySync.updated,
-    presets: librarySync.presets.map(preset => ({
-      fullSlug: preset.fullSlug,
-      component: preset.component,
-      created: preset.created,
-    })),
-  };
-  warnings.push(
-    `Synced ${librarySync.presets.length} reusable component presets in Storyblok/${librarySync.folderSlug}/${template}.`,
-  );
+  const componentLibrary = await syncLibrarySafely(config, template, warnings);
 
   const content = await buildGenericStoryblokContentAsync(scraped, template, config);
   const upsert = await upsertStory(config, {

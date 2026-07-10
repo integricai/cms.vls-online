@@ -41,6 +41,28 @@ function managementBase(region: StoryblokRegion): string {
     : 'https://mapi.storyblok.com/v1';
 }
 
+function formatFieldErrors(value: unknown, prefix = ''): string[] {
+  if (!value || typeof value !== 'object') return [];
+
+  if (Array.isArray(value)) {
+    return value
+      .map(item => (typeof item === 'string' ? item : JSON.stringify(item)))
+      .filter(Boolean)
+      .map(message => (prefix ? `${prefix}: ${message}` : message));
+  }
+
+  const messages: string[] = [];
+  for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+    const nextPrefix = prefix ? `${prefix}.${key}` : key;
+    if (typeof nested === 'string') {
+      messages.push(`${nextPrefix}: ${nested}`);
+      continue;
+    }
+    messages.push(...formatFieldErrors(nested, nextPrefix));
+  }
+  return messages;
+}
+
 function formatStoryblokError(status: number, payload: unknown): string {
   if (status === 401) {
     return [
@@ -58,13 +80,26 @@ function formatStoryblokError(status: number, payload: unknown): string {
 
   if (payload && typeof payload === 'object') {
     const record = payload as Record<string, unknown>;
-    if (typeof record.error === 'string' && record.error.trim()) return record.error;
-    if (Array.isArray(record.errors)) {
-      const messages = record.errors
-        .map(item => (typeof item === 'string' ? item : JSON.stringify(item)))
-        .filter(Boolean);
-      if (messages.length) return messages.join('; ');
+    const fieldMessages = [
+      ...formatFieldErrors(record.story),
+      ...formatFieldErrors(record.errors),
+    ];
+    if (fieldMessages.length) {
+      return `Storyblok validation failed: ${fieldMessages.join('; ')}`;
     }
+    if (typeof record.error === 'string' && record.error.trim()) {
+      return status === 422
+        ? `Storyblok validation failed (HTTP 422): ${record.error}`
+        : record.error;
+    }
+  }
+
+  if (status === 422) {
+    return [
+      'Storyblok rejected the story payload (HTTP 422).',
+      'Usually this means a required field is missing, a component is not allowed on the page type,',
+      'or a slug/folder conflict exists. Check the component whitelist for `page` in Storyblok.',
+    ].join(' ');
   }
 
   return `Storyblok API returned HTTP ${status}`;
@@ -171,8 +206,9 @@ export async function upsertStory(
       name: input.name,
       slug: input.slug,
       parent_id: input.parentId,
-      content: input.isFolder ? undefined : input.content,
-      is_folder: input.isFolder ? true : undefined,
+      ...(input.isFolder
+        ? { is_folder: true }
+        : { content: input.content }),
     },
     publish: input.publish ? 1 : 0,
   };

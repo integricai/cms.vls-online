@@ -5,6 +5,7 @@ export type MigrationTemplate =
   | 'course'
   | 'legal'
   | 'form'
+  | 'about_us'
   | 'landing'
   | 'team_vls'
   | 'schedules';

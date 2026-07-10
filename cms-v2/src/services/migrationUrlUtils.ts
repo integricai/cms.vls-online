@@ -34,7 +34,8 @@ export function inferTemplateFromPath(pathname: string): MigrationTemplate {
   if (path.startsWith('/courses/')) return 'course';
   if (/\/(legal|privacy|terms|cookie|gdpr|disclaimer|refund|returns|policy)/.test(path)) return 'legal';
   if (/\/(contact|forms|report|enquiry|book-a-meeting|bookmeeting)/.test(path)) return 'form';
-  if (/\/(team|our-team|tutors|about-us)/.test(path)) return 'team_vls';
+  if (/\/(about-us|about)$/.test(path)) return 'about_us';
+  if (/\/(team|our-team|tutors|teamvls)/.test(path)) return 'team_vls';
   if (/\/(schedule|schedules|timetable|exam-dates|exam-schedule)/.test(path)) return 'schedules';
   if (/\/(accacourses|cimacourses|cma|cia|courses)$/.test(path)) return 'landing';
   return 'landing';
