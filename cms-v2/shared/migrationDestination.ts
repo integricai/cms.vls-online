@@ -35,13 +35,19 @@ export function suggestDestinationSlug(originUrl: string, template: MigrationTem
   return slugifySegment(segments.join('-'));
 }
 
+/**
+ * Non-course stories are never given a `parentId` when created (there is no "pages" folder
+ * resolution, only `findCoursesFolder`), so they always land at the Storyblok root — the full
+ * slug used to look up an existing story must match that, or `findStoryBySlug` never finds it
+ * and every re-run tries to create a duplicate, which Storyblok rejects as "slug already taken".
+ */
 export function storyFullSlug(template: MigrationTemplate, destinationSlug: string): string {
   const slug = destinationSlug.trim().replace(/^\/+|\/+$/g, '').replace(/^pages\//, '');
   if (template === 'course') {
     return slug ? `courses/${slug.replace(/^courses\//, '')}` : 'courses';
   }
   if (template === 'home' || !slug || slug === 'home') {
-    return 'pages/';
+    return 'home';
   }
-  return `pages/${slug}`;
+  return slug;
 }
