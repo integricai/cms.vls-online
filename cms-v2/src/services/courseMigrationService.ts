@@ -27,7 +27,6 @@ import { genericBreadcrumbText, scrapeGenericPage } from './pageScraper';
 import { slugifySegment, storyFullSlug, suggestDestinationSlug } from '../../shared/migrationDestination';
 import {
   findCoursesFolder,
-  getStoryblokComponent,
   StoryblokApiError,
   upsertStory,
   validateStoryblokRootBloks,
@@ -852,13 +851,10 @@ async function detectMissingComponents(
   const rootComponent = rootComponentForTemplate(template);
   const bodyComponents = Array.from(new Set(blueprint.sections.map(section => section.component)));
 
-  const [rootExists, validation] = await Promise.all([
-    getStoryblokComponent(config, rootComponent).then(Boolean),
-    validateStoryblokRootBloks(config, rootComponent, bodyComponents),
-  ]);
+  const validation = await validateStoryblokRootBloks(config, rootComponent, bodyComponents);
 
   const missing = new Set<string>(validation.missingComponents);
-  if (!rootExists) missing.add(rootComponent);
+  if (!validation.rootExists) missing.add(rootComponent);
   for (const component of validation.missingFromWhitelist) {
     missing.add(`${component} (not allowed in ${rootComponent} body whitelist)`);
   }

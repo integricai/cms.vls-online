@@ -12,7 +12,7 @@ import {
 } from './migrationTemplateRegistry';
 import {
   findStoryBySlug,
-  StoryblokApiError,
+  getStoryContentById,
   upsertStory,
   type StoryblokConfig,
   type StoryblokStoryRef,
@@ -146,34 +146,10 @@ export async function getLibraryPresetBlok(
   const story = await findStoryBySlug(config, fullSlug);
   if (!story) return null;
 
-  const data = await fetchStoryContent(config, story.id);
-  const body = data?.content?.body;
+  const storyContent = await getStoryContentById(config, story.id);
+  const body = storyContent?.content?.body;
   if (!Array.isArray(body) || !body[0] || typeof body[0] !== 'object') return null;
   return cloneBlokWithFreshUids(body[0] as Record<string, unknown>);
-}
-
-async function fetchStoryContent(
-  config: StoryblokConfig,
-  storyId: number,
-): Promise<{ content?: { body?: unknown[] } } | null> {
-  const regionBase = config.region === 'us'
-    ? 'https://api-us.storyblok.com/v1'
-    : 'https://mapi.storyblok.com/v1';
-  const spaceId = config.spaceId.trim().match(/(\d{4,})/)?.[1] ?? config.spaceId.trim();
-  const token = config.accessToken.trim().replace(/^Bearer\s+/i, '');
-
-  const response = await fetch(`${regionBase}/spaces/${spaceId}/stories/${storyId}`, {
-    headers: {
-      Authorization: token,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new StoryblokApiError(`Could not load component library preset story ${storyId}`, response.status);
-  }
-
-  return response.json() as Promise<{ content?: { body?: unknown[] } }>;
 }
 
 export function mergePresetWithData(

@@ -140,6 +140,22 @@ export function isStoryblokApiError(err: unknown): err is StoryblokApiError {
     || (err instanceof Error && err.name === 'StoryblokApiError' && typeof (err as StoryblokApiError).status === 'number');
 }
 
+// Storyblok's Management API caps requests at 6/second per space+token. Every request in this
+// module funnels through this queue so concurrent call sites (e.g. Promise.all over per-section
+// component checks) can't burst past that limit; MIN_REQUEST_INTERVAL_MS keeps comfortably under it.
+const MIN_REQUEST_INTERVAL_MS = 200;
+let requestQueue: Promise<void> = Promise.resolve();
+
+function scheduleRequest<T>(task: () => Promise<T>): Promise<T> {
+  const run = requestQueue.then(task);
+  requestQueue = run.then(() => undefined, () => undefined);
+  return run;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function storyblokRequest<T>(
   rawConfig: StoryblokConfig,
   method: string,
@@ -147,37 +163,58 @@ async function storyblokRequest<T>(
   body?: unknown,
 ): Promise<T> {
   const config = buildConfig(rawConfig);
-  let response: Response;
-  try {
-    response = await fetch(`${managementBase(config.region)}/spaces/${config.spaceId}${path}`, {
-      method,
-      headers: {
-        Authorization: config.accessToken,
-        'Content-Type': 'application/json',
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-  } catch (cause) {
-    const message = cause instanceof Error ? cause.message : 'Network request failed';
-    throw new StoryblokApiError(`Storyblok request failed: ${message}`, 502, cause);
-  }
 
-  let payload: { error?: string; [key: string]: unknown } | null = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
-  }
+  return scheduleRequest(async () => {
+    const maxAttempts = 5;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      let response: Response;
+      try {
+        response = await fetch(`${managementBase(config.region)}/spaces/${config.spaceId}${path}`, {
+          method,
+          headers: {
+            Authorization: config.accessToken,
+            'Content-Type': 'application/json',
+          },
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+        });
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : 'Network request failed';
+        throw new StoryblokApiError(`Storyblok request failed: ${message}`, 502, cause);
+      }
 
-  if (!response.ok) {
+      if (response.status === 429 && attempt < maxAttempts) {
+        const retryAfterSeconds = Number(response.headers.get('retry-after'));
+        const backoffMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+          ? retryAfterSeconds * 1000
+          : attempt * 1000;
+        await sleep(backoffMs);
+        continue;
+      }
+
+      let payload: { error?: string; [key: string]: unknown } | null = null;
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        throw new StoryblokApiError(
+          formatStoryblokError(response.status, payload),
+          response.status,
+          payload,
+        );
+      }
+
+      await sleep(MIN_REQUEST_INTERVAL_MS);
+      return payload as T;
+    }
+
     throw new StoryblokApiError(
-      formatStoryblokError(response.status, payload),
-      response.status,
-      payload,
+      'Storyblok rate limit (6 requests/second) kept being hit after several retries. Wait a moment and try again.',
+      429,
     );
-  }
-
-  return payload as T;
+  });
 }
 
 export async function verifyStoryblokAccess(config: StoryblokConfig): Promise<{ spaceName: string }> {
@@ -208,7 +245,7 @@ export async function validateStoryblokRootBloks(
   config: StoryblokConfig,
   rootComponent: string,
   bodyComponents: string[],
-): Promise<{ missingComponents: string[]; missingFromWhitelist: string[] }> {
+): Promise<{ rootExists: boolean; missingComponents: string[]; missingFromWhitelist: string[] }> {
   const uniqueComponents = Array.from(new Set(bodyComponents.filter(Boolean)));
   const root = await getStoryblokComponent(config, rootComponent);
   const bodyField = root?.schema?.body;
@@ -230,9 +267,27 @@ export async function validateStoryblokRootBloks(
   })));
 
   return {
+    rootExists: Boolean(root),
     missingComponents: componentChecks.filter(item => !item.exists).map(item => item.component),
     missingFromWhitelist,
   };
+}
+
+export async function getStoryContentById(
+  config: StoryblokConfig,
+  storyId: number,
+): Promise<{ content?: Record<string, unknown> } | null> {
+  try {
+    const data = await storyblokRequest<{ story?: { content?: Record<string, unknown> } }>(
+      config,
+      'GET',
+      `/stories/${storyId}`,
+    );
+    return data.story ?? null;
+  } catch (err) {
+    if (isStoryblokApiError(err) && err.status === 404) return null;
+    throw err;
+  }
 }
 
 export async function findStoryBySlug(
