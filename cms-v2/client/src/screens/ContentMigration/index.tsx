@@ -258,6 +258,16 @@ export default function ContentMigrationTab() {
           type: 'error',
           text: `Blocked: ${data.missingComponents.length} component${data.missingComponents.length === 1 ? '' : 's'} missing in Storyblok. See the list below.`,
         });
+      } else if (!data.draftStory) {
+        setMessage({
+          type: 'error',
+          text: `Blocked: this page's live layout doesn't match the "${selectedPage.template}" template. See the unmatched sections below.`,
+        });
+      } else if (data.unmatchedSections.length) {
+        setMessage({
+          type: 'success',
+          text: `Draft structure ${data.draftStory.created ? 'created' : 'updated'} at ${data.draftStory.fullSlug}. ${data.unmatchedSections.length} section(s) had no matching live content and will be skipped in Migrate Content.`,
+        });
       } else {
         setMessage({
           type: 'success',
@@ -538,6 +548,24 @@ export default function ContentMigrationTab() {
               <ul className="list-disc space-y-1 pl-4">
                 {structureResult.missingComponents.map(component => (
                   <li key={component}><code>{component}</code></li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {structureResult && structureResult.unmatchedSections.length > 0 && (
+            <div className={`rounded-lg border px-4 py-3 text-xs ${structureResult.draftStory ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-red-200 bg-red-50 text-red-800'}`}>
+              <p className="mb-2 font-bold">
+                {structureResult.draftStory ? 'Sections skipped — no matching live content' : 'Unmatched sections — Generate Structure stopped'}
+              </p>
+              <p className="mb-2">
+                {structureResult.draftStory
+                  ? 'These template sections had nothing matching on the live page, so Migrate Content will leave them out rather than filling them with the template reference file\'s sample copy.'
+                  : `None of this template's sections match the live page's actual layout. This page's real structure needs its own component(s) built (e.g. for its sidebar/list layout) instead of being forced into this template.`}
+              </p>
+              <ul className="list-disc space-y-1 pl-4">
+                {structureResult.unmatchedSections.map(section => (
+                  <li key={section}>{section}</li>
                 ))}
               </ul>
             </div>

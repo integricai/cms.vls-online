@@ -25,6 +25,11 @@ export function buildBlokFromTemplateSection(
   extracted: ScrapedTemplateSection | undefined,
   scraped: ScrapedGenericPage,
 ): Record<string, unknown> | null {
+  // `section.sampleHeading`/`sampleDescription` are the static template reference file's own
+  // sample copy (design reference only). With no live match, using them here would silently pass
+  // off placeholder text as migrated content — omit the section instead (see detectUnmatchedSections).
+  if (!extracted) return null;
+
   const base = {
     _uid: uid(),
     component: section.component,

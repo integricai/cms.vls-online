@@ -45,7 +45,7 @@ import {
   syncTemplateComponentLibrary,
 } from './storyblokComponentLibrary';
 import { buildBlokFromTemplateSection } from './pageContentBuilder';
-import { resolveTemplateSections } from './pageSectionExtractor';
+import { indexTemplateSections, resolveTemplateSections } from './pageSectionExtractor';
 import type { TemplateReferenceSummary, ComponentLibrarySummary } from '../../shared/migrationTypes';
 
 function blokUid(): string {
@@ -861,6 +861,22 @@ async function detectMissingComponents(
   return Array.from(missing);
 }
 
+/**
+ * Course pages use a fixed builder-function mapping (not blueprint sections), so this only
+ * applies to generic templates. Returns the labels of every blueprint section that has zero
+ * matching content on the actually-scraped live page — i.e. sections that would otherwise be
+ * filled with the static template reference file's own sample copy instead of real content.
+ */
+function detectUnmatchedSections(
+  blueprint: ReturnType<typeof getMigrationTemplateBlueprint>,
+  scraped: ScrapedGenericPage,
+): string[] {
+  const liveByKey = indexTemplateSections(scraped.templateSections ?? []);
+  return blueprint.sections
+    .filter(section => section.component !== 'enquiry_form' && !liveByKey.has(section.key))
+    .map(section => section.label || section.key);
+}
+
 /** Phase 1: scrape every detail from the source page and persist it, without touching Storyblok. */
 export async function previewScrapePage(pageId: number): Promise<ScrapePhaseResult> {
   const page = await getMigrationPageById(pageId);
@@ -912,10 +928,31 @@ export async function generatePageStructure(
       page,
       templateReference,
       missingComponents,
+      unmatchedSections: [],
       warnings: [
         `Generate Structure stopped: ${missingComponents.length} component(s) are missing (or not whitelisted) in Storyblok. Create these components/renderers, then try again.`,
       ],
     };
+  }
+
+  let unmatchedSections: string[] = [];
+  if (template !== 'course') {
+    const scraped = scrapedRaw as ScrapedGenericPage;
+    const eligibleSections = blueprint.sections.filter(section => section.component !== 'enquiry_form');
+    unmatchedSections = detectUnmatchedSections(blueprint, scraped);
+    if (eligibleSections.length > 0 && unmatchedSections.length === eligibleSections.length) {
+      return {
+        page,
+        templateReference,
+        missingComponents: [],
+        unmatchedSections,
+        warnings: [
+          `Generate Structure stopped: none of the "${template}" template's ${eligibleSections.length} section(s) match anything found on the live page. ` +
+            'This page\'s real layout does not fit this template — build a matching component (e.g. for its actual sections/layout) before migrating, ' +
+            'rather than filling the page with the template reference file\'s placeholder copy.',
+        ],
+      };
+    }
   }
 
   const warnings: string[] = [];
@@ -959,6 +996,12 @@ export async function generatePageStructure(
     warnings.push('An existing Storyblok story at this destination was updated with the generated structure.');
   }
 
+  if (unmatchedSections.length) {
+    warnings.push(
+      `${unmatchedSections.length} section(s) have no matching content on the live page and will be skipped in Migrate Content: ${unmatchedSections.join(', ')}.`,
+    );
+  }
+
   await saveStructureResult(pageId, {
     structure: { templateReference, componentLibrary: librarySync?.summary ?? null },
     draftStoryId: upsert.story.id,
@@ -971,6 +1014,7 @@ export async function generatePageStructure(
     templateReference,
     componentLibrary: librarySync?.summary,
     missingComponents: [],
+    unmatchedSections,
     draftStory: {
       storyId: upsert.story.id,
       fullSlug: upsert.story.full_slug,

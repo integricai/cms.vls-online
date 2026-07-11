@@ -259,6 +259,8 @@ export interface StructurePhaseResult {
   templateReference: TemplateReferenceSummary;
   componentLibrary?: ComponentLibrarySummary;
   missingComponents: string[];
+  /** Blueprint sections of the chosen template that have zero matching content on the live page. */
+  unmatchedSections: string[];
   draftStory?: {
     storyId: number;
     fullSlug: string;
