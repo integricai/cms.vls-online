@@ -3,7 +3,6 @@ import net from 'net';
 import type {
   ScrapedCourseDescription,
   ScrapedCoursePage,
-  ScrapedFaqItem,
   ScrapedHero,
   ScrapedHeroRightItem,
   ScrapedLearnItem,
@@ -18,6 +17,7 @@ import {
   toPublicOriginUrl,
   toZenlerFetchUrl,
 } from './migrationUrlUtils';
+import { parseFaq } from './faqParser';
 
 const MAX_PAGE_BYTES = 4 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 45_000;
@@ -532,78 +532,6 @@ function parseTabs(html: string): ScrapedTabPanel[] {
   return panels;
 }
 
-function parseFaqFromJsonLd(html: string): ScrapedCoursePage['faq'] | null {
-  const scripts = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi)
-    ?? html.match(/<script[^>]*>[\s\S]*?<\/script>/gi)
-    ?? [];
-
-  for (const script of scripts) {
-    const jsonText = script.replace(/<\/?script[^>]*>/gi, '').trim();
-    if (!jsonText.includes('FAQPage') || !jsonText.includes('mainEntity')) continue;
-    try {
-      const data = JSON.parse(jsonText) as {
-        '@type'?: string;
-        '@graph'?: Array<{
-          '@type'?: string;
-          mainEntity?: Array<{ name?: string; acceptedAnswer?: { text?: string } }>;
-        }>;
-        mainEntity?: Array<{ name?: string; acceptedAnswer?: { text?: string } }>;
-      };
-
-      const nodes = Array.isArray(data['@graph']) ? data['@graph'] : [data];
-      const faqNode = nodes.find(node => node['@type'] === 'FAQPage');
-      const mainEntity = faqNode?.mainEntity ?? (data['@type'] === 'FAQPage' ? data.mainEntity : undefined);
-      if (!Array.isArray(mainEntity)) continue;
-
-      const items = mainEntity
-        .map(entity => ({
-          question: String(entity.name ?? '').trim(),
-          answerHtml: richTextParagraph(String(entity.acceptedAnswer?.text ?? '').trim()),
-          answerText: String(entity.acceptedAnswer?.text ?? '').trim(),
-        }))
-        .filter(item => item.question);
-      if (!items.length) continue;
-      return { title: 'Frequently Asked Questions', icon: '❔', items };
-    } catch {
-      // ignore malformed FAQ JSON
-    }
-  }
-  return null;
-}
-
-function richTextParagraph(text: string): string {
-  return `<p>${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`;
-}
-
-function parseFaq(html: string): ScrapedCoursePage['faq'] {
-  const fromJson = parseFaqFromJsonLd(html);
-  if (fromJson) return fromJson;
-
-  const uidMatch = html.match(/<div class="(vlsfaq[a-z0-9]+)"(?=[\s>])/i);
-  if (!uidMatch) return null;
-
-  const uid = uidMatch[1];
-  const start = html.indexOf(uidMatch[0]);
-  const faqHtml = html.slice(start, start + 250000);
-  const title = stripTags(extractFirstMatch(faqHtml, /<h2[^>]*>([\s\S]*?)<\/h2>/i)) || 'Frequently Asked Questions';
-  const icon = extractFirstMatch(faqHtml, /<span class="[^"]*-head-ico"[^>]*>([\s\S]*?)<\/span>/i);
-
-  const items: ScrapedFaqItem[] = [];
-  const itemPattern = new RegExp(
-    `<div[^>]*class="${uid}-item"[^>]*>[\\s\\S]*?<span[^>]*class="${uid}-q"[^>]*>([\\s\\S]*?)<\\/span>[\\s\\S]*?<div[^>]*itemprop=["']text["'][^>]*>([\\s\\S]*?)<\\/div>`,
-    'gi',
-  );
-  for (const match of faqHtml.matchAll(itemPattern)) {
-    const question = stripTags(match[1]);
-    const answerHtml = match[2].trim();
-    const answerText = stripTags(answerHtml);
-    if (question) items.push({ question, answerHtml, answerText });
-  }
-
-  if (!items.length) return null;
-  return { title, icon: stripTags(icon), items };
-}
-
 function parseTestimonials(html: string): ScrapedTestimonials | null {
   const testimonialMatch = html.match(/data-vls-testimonials|vls-testimonial|testimonial-carousel/i);
   if (!testimonialMatch) return null;
@@ -722,7 +650,7 @@ export async function scrapeCoursePage(sourceUrl: string): Promise<ScrapedCourse
   const heroRight = parseHeroRight(extractDivByIdPrefix(html, 'chr-'));
   const courseDescription = parseCourseDescription(html);
   const tabs = parseTabs(html);
-  const faq = parseFaq(html);
+  const { faq, warnings: faqWarnings } = parseFaq(html);
   const testimonials = parseTestimonials(html);
   const promotion = parsePromotion(html);
 
@@ -742,6 +670,7 @@ export async function scrapeCoursePage(sourceUrl: string): Promise<ScrapedCourse
     promotion,
     hasCourseFinderBanner: hasCourseFinderBanner(html),
     schemaDescription: jsonLd.description,
+    extractionWarnings: faqWarnings,
   };
 }
 

@@ -11,7 +11,8 @@
     "import-blob": "ts-node src/db/import-blob.ts",
     "seed-user": "ts-node src/db/seed-user.ts",
     "migrate-course": "ts-node scripts/migrate-course-local.ts",
-    "test:pricing": "ts-node src/services/pricingResolver.test.ts"
+    "test:pricing": "ts-node src/services/pricingResolver.test.ts",
+    "test:faq": "ts-node src/services/faqParser.test.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.9.5",

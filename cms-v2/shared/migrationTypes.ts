@@ -24,6 +24,10 @@ export interface MigrationPageRecord {
   scannedAt: string;
   createdAt: string;
   updatedAt: string;
+  scrapedAt: string | null;
+  scrapeWarnings: string[];
+  structureGeneratedAt: string | null;
+  draftStoryId: number | null;
 }
 
 export interface PageScanResult {
@@ -186,6 +190,7 @@ export interface ScrapedCoursePage {
   promotion: ScrapedPromotionSection | null;
   hasCourseFinderBanner: boolean;
   schemaDescription: string;
+  extractionWarnings?: string[];
 }
 
 export interface ScrapedGenericPage {
@@ -197,6 +202,7 @@ export interface ScrapedGenericPage {
   sections: ScrapedContentSection[];
   templateSections: ScrapedTemplateSection[];
   faq: ScrapedCoursePage['faq'];
+  extractionWarnings?: string[];
 }
 
 export interface TemplateReferenceSummary {
@@ -231,3 +237,48 @@ export interface PageMigrationResult {
 
 /** @deprecated Use PageMigrationResult */
 export type CourseMigrationResult = PageMigrationResult;
+
+export interface StoryblokCredentials {
+  storyblokSpaceId: string;
+  storyblokAccessToken: string;
+  storyblokRegion: StoryblokRegion;
+}
+
+export type ScrapePhaseRequest = StoryblokCredentials;
+
+export interface ScrapePhaseResult {
+  page: MigrationPageRecord;
+  scraped: ScrapedCoursePage | ScrapedGenericPage;
+  warnings: string[];
+}
+
+export type StructurePhaseRequest = StoryblokCredentials;
+
+export interface StructurePhaseResult {
+  page: MigrationPageRecord;
+  templateReference: TemplateReferenceSummary;
+  componentLibrary?: ComponentLibrarySummary;
+  missingComponents: string[];
+  draftStory?: {
+    storyId: number;
+    fullSlug: string;
+    previewUrl: string;
+    created: boolean;
+  };
+  warnings: string[];
+}
+
+export interface ContentPhaseRequest extends StoryblokCredentials {
+  publish?: boolean;
+}
+
+export interface ContentPhaseResult {
+  page: MigrationPageRecord;
+  warnings: string[];
+  storyblok: {
+    storyId: number;
+    fullSlug: string;
+    previewUrl: string;
+    created: boolean;
+  };
+}

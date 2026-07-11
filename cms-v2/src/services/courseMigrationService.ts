@@ -1,15 +1,24 @@
 import type {
+  ContentPhaseResult,
   CourseMigrationRequest,
+  MigrationPageRecord,
   MigrationTemplate,
   PageMigrationRequest,
   PageMigrationResult,
   ScrapedCoursePage,
   ScrapedGenericPage,
+  ScrapePhaseResult,
   ScrapedTabPanel,
+  StoryblokCredentials,
+  StructurePhaseResult,
 } from '../../shared/migrationTypes';
 import {
+  getMigrationPageById,
   getMigrationPageByOriginUrl,
+  getScrapedData,
   markMigrationPageMigrated,
+  saveScrapeResult,
+  saveStructureResult,
 } from '../models/migrationPage';
 import { listCourses } from '../models/course';
 import { buildSchemaBreadcrumbBloks } from './breadcrumbUtils';
@@ -18,6 +27,7 @@ import { genericBreadcrumbText, scrapeGenericPage } from './pageScraper';
 import { slugifySegment, storyFullSlug, suggestDestinationSlug } from '../../shared/migrationDestination';
 import {
   findCoursesFolder,
+  getStoryblokComponent,
   StoryblokApiError,
   upsertStory,
   validateStoryblokRootBloks,
@@ -26,6 +36,7 @@ import {
 } from './storyblokClient';
 import {
   applyTemplateStyles,
+  buildPresetBlokFromSection,
   getMigrationTemplateBlueprint,
   sanitizeBlokForStoryblok,
 } from './migrationTemplateRegistry';
@@ -421,7 +432,7 @@ function buildGenericStoryblokContent(
 }
 
 function collectCourseWarnings(scraped: ScrapedCoursePage, zenlerCourseId: string): string[] {
-  const warnings: string[] = [];
+  const warnings: string[] = [...(scraped.extractionWarnings ?? [])];
   if (!scraped.hero) warnings.push('Course hero section was not detected on the source page.');
   if (!scraped.heroRight?.items.length) warnings.push('Course hero right card was not detected.');
   if (!scraped.courseDescription) warnings.push('Course description section was not detected between hero and tabs.');
@@ -439,10 +450,11 @@ function collectCourseWarnings(scraped: ScrapedCoursePage, zenlerCourseId: strin
 }
 
 function collectGenericWarnings(scraped: ScrapedGenericPage): string[] {
-  const warnings: string[] = [];
+  const warnings: string[] = [...(scraped.extractionWarnings ?? [])];
   if (!scraped.sections.length) warnings.push('No content sections were detected on the source page.');
   if (!scraped.metaDescription) warnings.push('Meta description was not found.');
   if (!scraped.breadcrumbItems.length) warnings.push('Breadcrumb trail was not detected.');
+  if (!scraped.faq?.items.length) warnings.push('FAQ section was not detected.');
   return warnings;
 }
 
@@ -812,6 +824,239 @@ export async function migrateCoursePage(input: CourseMigrationRequest): Promise<
     publish: input.publish,
     dryRun: input.dryRun,
   });
+}
+
+function storyblokConfigFromCredentials(credentials: StoryblokCredentials): StoryblokConfig {
+  return {
+    spaceId: credentials.storyblokSpaceId.trim(),
+    accessToken: credentials.storyblokAccessToken.trim(),
+    region: credentials.storyblokRegion,
+  };
+}
+
+function resolveDestinationSlug(page: MigrationPageRecord): string {
+  return normalizeDestinationSlug(
+    page.destinationSlug?.trim() || suggestDestinationSlug(page.originUrl, page.template),
+  );
+}
+
+function rootComponentForTemplate(template: MigrationTemplate): string {
+  return template === 'course' ? 'course_page' : 'page';
+}
+
+async function detectMissingComponents(
+  config: StoryblokConfig,
+  template: MigrationTemplate,
+  blueprint: ReturnType<typeof getMigrationTemplateBlueprint>,
+): Promise<string[]> {
+  const rootComponent = rootComponentForTemplate(template);
+  const bodyComponents = Array.from(new Set(blueprint.sections.map(section => section.component)));
+
+  const [rootExists, validation] = await Promise.all([
+    getStoryblokComponent(config, rootComponent).then(Boolean),
+    validateStoryblokRootBloks(config, rootComponent, bodyComponents),
+  ]);
+
+  const missing = new Set<string>(validation.missingComponents);
+  if (!rootExists) missing.add(rootComponent);
+  for (const component of validation.missingFromWhitelist) {
+    missing.add(`${component} (not allowed in ${rootComponent} body whitelist)`);
+  }
+  return Array.from(missing);
+}
+
+/** Phase 1: scrape every detail from the source page and persist it, without touching Storyblok. */
+export async function previewScrapePage(pageId: number): Promise<ScrapePhaseResult> {
+  const page = await getMigrationPageById(pageId);
+  if (!page) throw new CourseMigrationError('Migration page not found', 404);
+
+  if (page.template === 'course') {
+    const scraped = await scrapeCoursePage(page.originUrl);
+    const zenlerCourseId = await resolveZenlerCourseId(scraped);
+    const warnings = collectCourseWarnings(scraped, zenlerCourseId);
+    await saveScrapeResult(pageId, { scraped, warnings });
+    const updatedPage = await getMigrationPageById(pageId);
+    return { page: updatedPage ?? page, scraped, warnings };
+  }
+
+  const scraped = await scrapeGenericPage(page.originUrl);
+  const warnings = collectGenericWarnings(scraped);
+  await saveScrapeResult(pageId, { scraped, warnings });
+  const updatedPage = await getMigrationPageById(pageId);
+  return { page: updatedPage ?? page, scraped, warnings };
+}
+
+/**
+ * Phase 2: match scraped sections against the template blueprint and Storyblok's component
+ * collection. Flags and stops (creates nothing) if a required component schema is missing —
+ * missing renderers/components are built as explicit follow-up work, never guessed.
+ */
+export async function generatePageStructure(
+  pageId: number,
+  credentials: StoryblokCredentials,
+): Promise<StructurePhaseResult> {
+  const page = await getMigrationPageById(pageId);
+  if (!page) throw new CourseMigrationError('Migration page not found', 404);
+
+  const scrapedRaw = await getScrapedData(pageId);
+  if (!scrapedRaw) {
+    throw new CourseMigrationError('Run Preview Scrape for this page before generating structure.', 400);
+  }
+
+  const template = page.template;
+  const blueprint = getMigrationTemplateBlueprint(template);
+  const templateReference = templateReferenceSummary(template);
+
+  const config = storyblokConfigFromCredentials(credentials);
+  await verifyStoryblokAccess(config);
+
+  const missingComponents = await detectMissingComponents(config, template, blueprint);
+  if (missingComponents.length) {
+    return {
+      page,
+      templateReference,
+      missingComponents,
+      warnings: [
+        `Generate Structure stopped: ${missingComponents.length} component(s) are missing (or not whitelisted) in Storyblok. Create these components/renderers, then try again.`,
+      ],
+    };
+  }
+
+  const warnings: string[] = [];
+  const librarySync = await syncLibrarySafely(config, template, warnings);
+  const presetBloksBySection = librarySync?.presetBloksBySection ?? null;
+
+  const body = blueprint.sections.map(section => (
+    presetBloksBySection?.[section.key] ?? buildPresetBlokFromSection(blueprint, section)
+  ));
+
+  const destinationSlug = resolveDestinationSlug(page);
+  const fullSlug = storyFullSlug(template, destinationSlug);
+  const rootComponent = rootComponentForTemplate(template);
+
+  const content: Record<string, unknown> = template === 'course'
+    ? { component: rootComponent, title: page.title || destinationSlug, zenler_course_id: '', seo: [], body }
+    : { component: rootComponent, seo: [], body };
+
+  let parentId: number | undefined;
+  if (template === 'course') {
+    const coursesFolder = await findCoursesFolder(config);
+    if (!coursesFolder) {
+      throw new CourseMigrationError(
+        'Could not find a Storyblok folder with slug "courses". Create the courses folder first.',
+        404,
+      );
+    }
+    parentId = coursesFolder.id;
+  }
+
+  const upsert = await upsertStory(config, {
+    name: page.title || destinationSlug,
+    slug: destinationSlug,
+    parentId,
+    fullSlug,
+    content,
+    publish: false,
+  });
+
+  if (!upsert.created) {
+    warnings.push('An existing Storyblok story at this destination was updated with the generated structure.');
+  }
+
+  await saveStructureResult(pageId, {
+    structure: { templateReference, componentLibrary: librarySync?.summary ?? null },
+    draftStoryId: upsert.story.id,
+  });
+
+  const updatedPage = await getMigrationPageById(pageId);
+
+  return {
+    page: updatedPage ?? page,
+    templateReference,
+    componentLibrary: librarySync?.summary,
+    missingComponents: [],
+    draftStory: {
+      storyId: upsert.story.id,
+      fullSlug: upsert.story.full_slug,
+      previewUrl: upsert.previewUrl,
+      created: upsert.created,
+    },
+    warnings,
+  };
+}
+
+/** Phase 3: fill the draft story created in Phase 2 with the full scraped content. */
+export async function migratePageContent(
+  pageId: number,
+  input: StoryblokCredentials & { publish?: boolean },
+): Promise<ContentPhaseResult> {
+  const page = await getMigrationPageById(pageId);
+  if (!page) throw new CourseMigrationError('Migration page not found', 404);
+  if (!page.draftStoryId) {
+    throw new CourseMigrationError('Run Generate Structure for this page before migrating content.', 400);
+  }
+
+  const scrapedRaw = await getScrapedData(pageId);
+  if (!scrapedRaw) {
+    throw new CourseMigrationError('Run Preview Scrape for this page before migrating content.', 400);
+  }
+
+  const template = page.template;
+  const config = storyblokConfigFromCredentials(input);
+  await verifyStoryblokAccess(config);
+
+  const warnings: string[] = [];
+  const librarySync = await syncLibrarySafely(config, template, warnings);
+  const presetBloksBySection = librarySync?.presetBloksBySection ?? null;
+
+  const destinationSlug = resolveDestinationSlug(page);
+  const fullSlug = storyFullSlug(template, destinationSlug);
+
+  let content: Record<string, unknown>;
+  let parentId: number | undefined;
+
+  if (template === 'course') {
+    const scraped = scrapedRaw as ScrapedCoursePage;
+    const zenlerCourseId = await resolveZenlerCourseId(scraped);
+    warnings.push(...collectCourseWarnings(scraped, zenlerCourseId));
+    content = await buildCourseStoryblokContentAsync(scraped, zenlerCourseId, template, presetBloksBySection, config);
+
+    const coursesFolder = await findCoursesFolder(config);
+    if (!coursesFolder) {
+      throw new CourseMigrationError(
+        'Could not find a Storyblok folder with slug "courses". Create the courses folder first.',
+        404,
+      );
+    }
+    parentId = coursesFolder.id;
+  } else {
+    const scraped = scrapedRaw as ScrapedGenericPage;
+    warnings.push(...collectGenericWarnings(scraped));
+    content = await buildGenericStoryblokContentAsync(scraped, template, presetBloksBySection, config);
+  }
+
+  const upsert = await upsertStory(config, {
+    name: page.title || destinationSlug,
+    slug: destinationSlug,
+    parentId,
+    fullSlug,
+    content,
+    publish: Boolean(input.publish),
+  });
+
+  await markMigrationPageMigrated(pageId, upsert.story.id);
+  const updatedPage = await getMigrationPageById(pageId);
+
+  return {
+    page: updatedPage ?? page,
+    warnings,
+    storyblok: {
+      storyId: upsert.story.id,
+      fullSlug: upsert.story.full_slug,
+      previewUrl: upsert.previewUrl,
+      created: upsert.created,
+    },
+  };
 }
 
 export { CoursePageScrapeError, StoryblokApiError };

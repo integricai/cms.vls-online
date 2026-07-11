@@ -3,6 +3,7 @@ import { breadcrumbTrailText, parseBreadcrumbFromHtml } from './breadcrumbUtils'
 import { toPublicOriginUrl } from './migrationUrlUtils';
 import { CoursePageScrapeError, fetchPageHtml } from './coursePageScraper';
 import { parseTemplateSectionsFromHtml } from './pageSectionExtractor';
+import { parseFaq } from './faqParser';
 
 function decodeEntities(value: string): string {
   return value
@@ -77,32 +78,6 @@ function parseSections(contentHtml: string): ScrapedContentSection[] {
   return sections;
 }
 
-function parseFaqSection(html: string): ScrapedGenericPage['faq'] {
-  const uidMatch = html.match(/<div class="(vlsfaq[a-z0-9]+)"(?=[\s>])/i);
-  if (!uidMatch) return null;
-
-  const uid = uidMatch[1];
-  const start = html.indexOf(uidMatch[0]);
-  const faqHtml = html.slice(start, start + 250000);
-  const title = stripTags(faqHtml.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i)?.[1] ?? '') || 'Frequently Asked Questions';
-  const icon = faqHtml.match(/<span class="[^"]*-head-ico"[^>]*>([\s\S]*?)<\/span>/i)?.[1] ?? '';
-
-  const items: Array<{ question: string; answerHtml: string; answerText: string }> = [];
-  const itemPattern = new RegExp(
-    `<div[^>]*class="${uid}-item"[^>]*>[\\s\\S]*?<span[^>]*class="${uid}-q"[^>]*>([\\s\\S]*?)<\\/span>[\\s\\S]*?<div[^>]*itemprop=["']text["'][^>]*>([\\s\\S]*?)<\\/div>`,
-    'gi',
-  );
-  for (const match of faqHtml.matchAll(itemPattern)) {
-    const question = stripTags(match[1]);
-    const answerHtml = match[2].trim();
-    const answerText = stripTags(answerHtml);
-    if (question) items.push({ question, answerHtml, answerText });
-  }
-
-  if (!items.length) return null;
-  return { title, icon: stripTags(icon), items };
-}
-
 export async function scrapeGenericPage(sourceUrl: string): Promise<ScrapedGenericPage> {
   let parsed: URL;
   try {
@@ -125,6 +100,7 @@ export async function scrapeGenericPage(sourceUrl: string): Promise<ScrapedGener
     || stripTags(mainContent.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1] ?? '');
   const metaDescription = meta(html, /<meta[^>]+name=["']description["'][^>]*>/i)
     || meta(html, /<meta[^>]+property=["']og:description["'][^>]*>/i);
+  const { faq, warnings: faqWarnings } = parseFaq(html);
 
   return {
     sourceUrl: normalizedUrl,
@@ -134,7 +110,8 @@ export async function scrapeGenericPage(sourceUrl: string): Promise<ScrapedGener
     breadcrumbItems,
     sections: parseSections(mainContent),
     templateSections: parseTemplateSectionsFromHtml(mainContent),
-    faq: parseFaqSection(html),
+    faq,
+    extractionWarnings: faqWarnings,
   };
 }
 

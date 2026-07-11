@@ -2,12 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import Field from '../../components/Field';
 import type {
+  ContentPhaseResult,
   MigrationPageRecord,
   MigrationTemplate,
-  PageMigrationResult,
   PageScanResult,
   ScrapedCoursePage,
+  ScrapedGenericPage,
+  ScrapePhaseResult,
   StoryblokRegion,
+  StructurePhaseResult,
   TemplateReferenceSummary,
 } from '../../../../shared/migrationTypes';
 import { MIGRATION_TEMPLATE_LABELS } from '../../../../shared/migrationTemplateLabels';
@@ -52,8 +55,15 @@ function loadSavedConfig(): SavedConfig {
   }
 }
 
-function isCoursePage(scraped: PageMigrationResult['scraped']): scraped is ScrapedCoursePage {
+function isCoursePage(scraped: ScrapedCoursePage | ScrapedGenericPage): scraped is ScrapedCoursePage {
   return 'hero' in scraped;
+}
+
+function pageStatusLabel(page: MigrationPageRecord): string {
+  if (page.migratedAt) return 'Migrated';
+  if (page.draftStoryId) return 'Structure ready';
+  if (page.scrapedAt) return 'Scraped';
+  return 'Not started';
 }
 
 export default function ContentMigrationTab() {
@@ -69,12 +79,16 @@ export default function ContentMigrationTab() {
   const [publish, setPublish] = useState(false);
   const [loadingPages, setLoadingPages] = useState(true);
   const [scanning, setScanning] = useState(false);
-  const [previewing, setPreviewing] = useState(false);
-  const [migrating, setMigrating] = useState(false);
+  const [scraping, setScraping] = useState(false);
+  const [generatingStructure, setGeneratingStructure] = useState(false);
+  const [migratingContent, setMigratingContent] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [message, setMessage] = useState<StatusMessage | null>(null);
-  const [result, setResult] = useState<PageMigrationResult | null>(null);
   const [templateReference, setTemplateReference] = useState<TemplateReferenceSummary | null>(null);
+
+  const [scrapeResult, setScrapeResult] = useState<ScrapePhaseResult | null>(null);
+  const [structureResult, setStructureResult] = useState<StructurePhaseResult | null>(null);
+  const [contentResult, setContentResult] = useState<ContentPhaseResult | null>(null);
 
   const selectedPage = useMemo(
     () => pages.find(page => page.id === selectedPageId) ?? null,
@@ -82,6 +96,9 @@ export default function ContentMigrationTab() {
   );
 
   const pageUrl = selectedPage?.originUrl ?? '';
+  const hasCredentials = Boolean(storyblokSpaceId.trim() && storyblokAccessToken.trim());
+  const canGenerateStructure = Boolean(selectedPage?.scrapedAt || scrapeResult);
+  const canMigrateContent = Boolean(selectedPage?.draftStoryId || structureResult?.draftStory);
 
   const loadPages = useCallback(async () => {
     setLoadingPages(true);
@@ -130,17 +147,22 @@ export default function ContentMigrationTab() {
       .catch(() => setTemplateReference(null));
   }, [template]);
 
-  function buildPayload(dryRun = false) {
+  function credentialsPayload() {
     return {
-      pageUrl: pageUrl.trim(),
-      template,
-      destinationSlug: destinationSlug.trim(),
       storyblokSpaceId: storyblokSpaceId.trim(),
       storyblokAccessToken: storyblokAccessToken.trim(),
       storyblokRegion,
-      publish,
-      dryRun,
     };
+  }
+
+  function resetPhaseResults() {
+    setScrapeResult(null);
+    setStructureResult(null);
+    setContentResult(null);
+  }
+
+  function applyPageUpdate(updated: MigrationPageRecord) {
+    setPages(current => current.map(page => (page.id === updated.id ? updated : page)));
   }
 
   async function scanSitePages() {
@@ -170,11 +192,7 @@ export default function ContentMigrationTab() {
     setVerifying(true);
     setMessage(null);
     try {
-      const data = await api.post<{ spaceName: string }>('/migration/storyblok/verify', {
-        storyblokSpaceId: storyblokSpaceId.trim(),
-        storyblokAccessToken: storyblokAccessToken.trim(),
-        storyblokRegion,
-      });
+      const data = await api.post<{ spaceName: string }>('/migration/storyblok/verify', credentialsPayload());
       setMessage({ type: 'success', text: `Connected to Storyblok space: ${data.spaceName}` });
     } catch (error) {
       setMessage({
@@ -186,53 +204,90 @@ export default function ContentMigrationTab() {
     }
   }
 
-  async function previewScrape() {
-    setPreviewing(true);
+  async function runScrape() {
+    if (!selectedPage) return;
+    setScraping(true);
     setMessage(null);
-    setResult(null);
+    resetPhaseResults();
     try {
-      const data = await api.post<PageMigrationResult>('/migration/page/preview', buildPayload(true));
-      setResult(data);
-      if (data.templateReference) setTemplateReference(data.templateReference);
+      const data = await api.post<ScrapePhaseResult>(`/migration/pages/${selectedPage.id}/scrape`, {});
+      setScrapeResult(data);
+      applyPageUpdate(data.page);
       setMessage({
         type: data.warnings.length ? 'warning' : 'info',
         text: data.warnings.length
-          ? `Scrape completed with ${data.warnings.length} warning${data.warnings.length === 1 ? '' : 's'}. Review the extracted sections below.`
+          ? `Scrape completed with ${data.warnings.length} warning${data.warnings.length === 1 ? '' : 's'}. Review the extracted content below.`
           : 'Scrape completed. All major sections were detected.',
       });
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Scrape preview failed.',
+        text: error instanceof Error ? error.message : 'Preview scrape failed.',
       });
     } finally {
-      setPreviewing(false);
+      setScraping(false);
     }
   }
 
-  async function migratePage() {
-    setMigrating(true);
+  async function runGenerateStructure() {
+    if (!selectedPage) return;
+    setGeneratingStructure(true);
     setMessage(null);
+    setStructureResult(null);
+    setContentResult(null);
     try {
-      const data = await api.post<PageMigrationResult>('/migration/page', buildPayload(false));
-      setResult(data);
-      if (data.templateReference) setTemplateReference(data.templateReference);
-      setMessage({
-        type: 'success',
-        text: data.storyblok?.created
-          ? `Created Storyblok story at ${data.storyblok.fullSlug}.`
-          : `Updated Storyblok story at ${data.storyblok?.fullSlug ?? data.fullSlug}.`,
-      });
-      await loadPages();
+      const data = await api.post<StructurePhaseResult>(`/migration/pages/${selectedPage.id}/structure`, credentialsPayload());
+      setStructureResult(data);
+      applyPageUpdate(data.page);
+      if (data.missingComponents.length) {
+        setMessage({
+          type: 'error',
+          text: `Blocked: ${data.missingComponents.length} component${data.missingComponents.length === 1 ? '' : 's'} missing in Storyblok. See the list below.`,
+        });
+      } else {
+        setMessage({
+          type: 'success',
+          text: `Draft structure ${data.draftStory?.created ? 'created' : 'updated'} at ${data.draftStory?.fullSlug}.`,
+        });
+      }
     } catch (error) {
       const err = error as Error & { data?: unknown };
-      let text = err instanceof Error ? err.message : 'Page migration failed.';
+      let text = err instanceof Error ? err.message : 'Generate structure failed.';
       if (Array.isArray(err.data)) {
         text = `${text} ${err.data.filter(item => typeof item === 'string').join(' ')}`.trim();
       }
       setMessage({ type: 'error', text });
     } finally {
-      setMigrating(false);
+      setGeneratingStructure(false);
+    }
+  }
+
+  async function runMigrateContent() {
+    if (!selectedPage) return;
+    setMigratingContent(true);
+    setMessage(null);
+    try {
+      const data = await api.post<ContentPhaseResult>(`/migration/pages/${selectedPage.id}/content`, {
+        ...credentialsPayload(),
+        publish,
+      });
+      setContentResult(data);
+      applyPageUpdate(data.page);
+      setMessage({
+        type: 'success',
+        text: data.storyblok.created
+          ? `Created Storyblok story at ${data.storyblok.fullSlug}.`
+          : `Updated Storyblok story at ${data.storyblok.fullSlug}.`,
+      });
+    } catch (error) {
+      const err = error as Error & { data?: unknown };
+      let text = err instanceof Error ? err.message : 'Migrate content failed.';
+      if (Array.isArray(err.data)) {
+        text = `${text} ${err.data.filter(item => typeof item === 'string').join(' ')}`.trim();
+      }
+      setMessage({ type: 'error', text });
+    } finally {
+      setMigratingContent(false);
     }
   }
 
@@ -268,17 +323,24 @@ export default function ContentMigrationTab() {
     }
   }
 
-  const scraped = result?.scraped;
+  function selectPage(id: number | null) {
+    setSelectedPageId(id);
+    setDestinationTouched(false);
+    resetPhaseResults();
+  }
+
+  const scraped = scrapeResult?.scraped;
   const courseScraped = scraped && isCoursePage(scraped) ? scraped : null;
+  const genericScraped = scraped && !isCoursePage(scraped) ? scraped : null;
 
   return (
     <div className="p-6">
       <div className="mb-6 max-w-4xl">
         <h2 className="mb-1 text-sm font-bold text-slate-700">Content Migration</h2>
         <p className="text-xs text-slate-500">
-          Scan the live VLS site once to populate all pages, then migrate each page to Storyblok.
-          Course stories are created under the courses folder; all other templates are created at the root.
-          Pages are scraped from Zenler internal URLs for reliability.
+          Scan the live VLS site once to populate all pages, then work through the 3 migration phases for each page:
+          Preview Scrape, Generate Structure, Migrate Content. Course stories are created under the courses folder;
+          all other templates are created at the root. Pages are scraped from Zenler internal URLs for reliability.
         </p>
       </div>
 
@@ -302,9 +364,7 @@ export default function ContentMigrationTab() {
               value={selectedPageId ?? ''}
               onChange={event => {
                 const id = Number(event.target.value);
-                setSelectedPageId(Number.isInteger(id) ? id : null);
-                setDestinationTouched(false);
-                setResult(null);
+                selectPage(Number.isInteger(id) ? id : null);
               }}
               disabled={loadingPages || !pages.length}
             >
@@ -315,7 +375,7 @@ export default function ContentMigrationTab() {
               ) : (
                 pages.map(page => (
                   <option key={page.id} value={page.id}>
-                    {page.path} {page.title ? `— ${page.title}` : ''}
+                    {page.path} {page.title ? `— ${page.title}` : ''} [{pageStatusLabel(page)}]
                   </option>
                 ))
               )}
@@ -355,7 +415,7 @@ export default function ContentMigrationTab() {
               onBlur={() => void handleDestinationBlur()}
             />
             <p className="mt-1 text-[11px] text-slate-400">
-              Auto-suggested from the origin URL using SEO-friendly slugs. Edit before migrating if needed.
+              Auto-suggested from the origin URL using SEO-friendly slugs. Edit before generating structure if needed.
               {selectedPage && !destinationTouched ? ` Suggested: ${selectedPage.suggestedDestination}` : ''}
             </p>
             {destinationSlug ? (
@@ -401,33 +461,47 @@ export default function ContentMigrationTab() {
               checked={publish}
               onChange={event => setPublish(event.target.checked)}
             />
-            Publish story immediately after migration
+            Publish story when migrating content
           </label>
 
           <div className="flex flex-wrap gap-2 pt-2">
             <button
               type="button"
               onClick={verifyStoryblok}
-              disabled={verifying || !storyblokSpaceId.trim() || !storyblokAccessToken.trim()}
+              disabled={verifying || !hasCredentials}
               className="btn-ghost text-xs"
             >
               {verifying ? 'Verifying...' : 'Verify Storyblok'}
             </button>
+          </div>
+
+          <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">3-phase workflow</p>
             <button
               type="button"
-              onClick={previewScrape}
-              disabled={previewing || !pageUrl.trim()}
-              className="btn-ghost text-xs"
+              onClick={runScrape}
+              disabled={scraping || !pageUrl.trim()}
+              className="btn-ghost w-full justify-start text-xs"
             >
-              {previewing ? 'Scraping...' : 'Preview Scrape'}
+              {scraping ? 'Scraping...' : '1. Preview Scrape'}
             </button>
             <button
               type="button"
-              onClick={migratePage}
-              disabled={migrating || !pageUrl.trim() || !destinationSlug.trim() || !storyblokSpaceId.trim() || !storyblokAccessToken.trim()}
-              className="btn-primary text-xs"
+              onClick={runGenerateStructure}
+              disabled={generatingStructure || !canGenerateStructure || !hasCredentials}
+              className="btn-ghost w-full justify-start text-xs"
+              title={!canGenerateStructure ? 'Run Preview Scrape first' : undefined}
             >
-              {migrating ? 'Migrating...' : 'Migrate to Storyblok'}
+              {generatingStructure ? 'Generating...' : '2. Generate Structure'}
+            </button>
+            <button
+              type="button"
+              onClick={runMigrateContent}
+              disabled={migratingContent || !canMigrateContent || !hasCredentials}
+              className="btn-primary w-full justify-start text-xs"
+              title={!canMigrateContent ? 'Run Generate Structure first' : undefined}
+            >
+              {migratingContent ? 'Migrating...' : '3. Migrate Content'}
             </button>
           </div>
         </div>
@@ -439,40 +513,85 @@ export default function ContentMigrationTab() {
             </div>
           )}
 
-          {result?.componentLibrary && (
+          {scrapeResult?.warnings.length ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+              <p className="mb-2 font-bold">Scrape warnings</p>
+              <ul className="list-disc space-y-1 pl-4">
+                {scrapeResult.warnings.map(warning => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {structureResult && structureResult.missingComponents.length > 0 && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-800">
+              <p className="mb-2 font-bold">Missing components — Generate Structure stopped</p>
+              <p className="mb-2">
+                These components (or renderers in vls-online-v2) don't exist yet. Ask for them to be built, then run
+                Generate Structure again.
+              </p>
+              <ul className="list-disc space-y-1 pl-4">
+                {structureResult.missingComponents.map(component => (
+                  <li key={component}><code>{component}</code></li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {structureResult?.componentLibrary && (
             <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
               <p className="font-semibold">Component library synced</p>
               <p className="mt-1 text-xs">
-                {result.componentLibrary.presetsCreated} created, {result.componentLibrary.presetsUpdated} updated in
-                {' '}<code>{result.componentLibrary.folderSlug}/{template}</code>
+                {structureResult.componentLibrary.presetsCreated} created, {structureResult.componentLibrary.presetsUpdated} updated in
+                {' '}<code>{structureResult.componentLibrary.folderSlug}/{template}</code>
               </p>
               <ul className="mt-2 max-h-32 overflow-y-auto text-xs text-blue-800">
-                {result.componentLibrary.presets.map(preset => (
+                {structureResult.componentLibrary.presets.map(preset => (
                   <li key={preset.fullSlug}>{preset.fullSlug} → {preset.component}</li>
                 ))}
               </ul>
             </div>
           )}
 
-          {result?.templateReference && (
+          {(structureResult?.templateReference ?? templateReference) && (
             <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
-              <p className="font-semibold text-slate-700">Template reference: templates/{result.templateReference.fileName}</p>
+              <p className="font-semibold text-slate-700">
+                Template reference: templates/{(structureResult?.templateReference ?? templateReference)?.fileName}
+              </p>
               <ul className="mt-2 space-y-1">
-                {result.templateReference.sections.map(section => (
+                {(structureResult?.templateReference ?? templateReference)?.sections.map(section => (
                   <li key={section.key}>{section.label} → {section.component}</li>
                 ))}
               </ul>
             </div>
           )}
 
-          {result?.storyblok && (
+          {structureResult?.draftStory && (
             <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
               <p className="font-semibold">
-                {result.storyblok.created ? 'Story created' : 'Story updated'}: {result.storyblok.fullSlug}
+                {structureResult.draftStory.created ? 'Draft story created' : 'Draft story updated'}: {structureResult.draftStory.fullSlug}
               </p>
-              <p className="mt-1 text-xs">Story ID: {result.storyblok.storyId}</p>
+              <p className="mt-1 text-xs">Story ID: {structureResult.draftStory.storyId} (unpublished)</p>
               <a
-                href={result.storyblok.previewUrl}
+                href={structureResult.draftStory.previewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-block text-xs font-medium text-green-700 underline"
+              >
+                Open draft in Storyblok
+              </a>
+            </div>
+          )}
+
+          {contentResult?.storyblok && (
+            <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+              <p className="font-semibold">
+                {contentResult.storyblok.created ? 'Story created' : 'Story updated'}: {contentResult.storyblok.fullSlug}
+              </p>
+              <p className="mt-1 text-xs">Story ID: {contentResult.storyblok.storyId}</p>
+              <a
+                href={contentResult.storyblok.previewUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="mt-2 inline-block text-xs font-medium text-green-700 underline"
@@ -482,11 +601,11 @@ export default function ContentMigrationTab() {
             </div>
           )}
 
-          {result?.warnings.length ? (
+          {contentResult?.warnings.length ? (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-              <p className="mb-2 font-bold">Warnings</p>
+              <p className="mb-2 font-bold">Migrate content warnings</p>
               <ul className="list-disc space-y-1 pl-4">
-                {result.warnings.map(warning => (
+                {contentResult.warnings.map(warning => (
                   <li key={warning}>{warning}</li>
                 ))}
               </ul>
@@ -496,19 +615,17 @@ export default function ContentMigrationTab() {
           {courseScraped ? (
             <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
               <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
-                <h3 className="text-sm font-bold text-slate-700">Scraped course content summary</h3>
+                <h3 className="text-sm font-bold text-slate-700">Scraped course content (full detail)</h3>
               </div>
-              <div className="grid gap-4 p-4 text-xs text-slate-600 md:grid-cols-2">
+              <div className="space-y-4 p-4 text-xs text-slate-600">
                 <div>
                   <p className="font-semibold text-slate-700">Page</p>
                   <p>{courseScraped.title}</p>
                   <p className="mt-1 text-slate-400">Slug: {courseScraped.slug}</p>
                   <p className="mt-1 text-slate-400">Zenler ID: {courseScraped.zenlerCourseId || 'Not found'}</p>
+                  <p className="mt-1">{courseScraped.metaDescription || 'No meta description found'}</p>
                 </div>
-                <div>
-                  <p className="font-semibold text-slate-700">SEO</p>
-                  <p>{courseScraped.metaDescription || 'No description found'}</p>
-                </div>
+
                 <div>
                   <p className="font-semibold text-slate-700">Hero</p>
                   <p>{courseScraped.hero?.heading || 'Not detected'}</p>
@@ -516,60 +633,151 @@ export default function ContentMigrationTab() {
                   {courseScraped.hero?.breadcrumbItems.length ? (
                     <ul className="mt-2 space-y-1">
                       {courseScraped.hero.breadcrumbItems.map(item => (
-                        <li key={`${item.label}-${item.url}`}>
-                          {item.label} → {item.url}
+                        <li key={`${item.label}-${item.url}`}>{item.label} → {item.url}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {courseScraped.hero?.learnItems.length ? (
+                    <ul className="mt-2 list-disc space-y-1 pl-4">
+                      {courseScraped.hero.learnItems.map(item => (
+                        <li key={item.title}>
+                          <span className="font-medium">{item.title}</span>
+                          {item.subtitle ? ` — ${item.subtitle}` : ''}
                         </li>
                       ))}
                     </ul>
                   ) : null}
                 </div>
-                <div>
-                  <p className="font-semibold text-slate-700">Sections detected</p>
-                  <ul className="mt-1 space-y-1">
-                    <li>Hero right items: {courseScraped.heroRight?.items.length ?? 0}</li>
-                    <li>Course description: {courseScraped.courseDescription ? 'Yes' : 'No'}</li>
-                    <li>Tabs: {courseScraped.tabs.length}</li>
-                    <li>FAQ items: {courseScraped.faq?.items.length ?? 0}</li>
-                    <li>Testimonials: {courseScraped.testimonials?.cards.length ?? 0}</li>
-                    <li>Promotion: {courseScraped.promotion ? 'Yes' : 'No'}</li>
-                    <li>Course finder banner: {courseScraped.hasCourseFinderBanner ? 'Yes' : 'No'}</li>
-                  </ul>
-                </div>
+
+                {courseScraped.heroRight?.items.length ? (
+                  <div>
+                    <p className="font-semibold text-slate-700">Hero right — {courseScraped.heroRight.label}</p>
+                    <ul className="mt-1 list-disc space-y-1 pl-4">
+                      {courseScraped.heroRight.items.map(item => (
+                        <li key={item.title}>{item.icon} {item.title} — {item.description}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {courseScraped.courseDescription ? (
+                  <div>
+                    <p className="font-semibold text-slate-700">Course description</p>
+                    <p className="mt-1 whitespace-pre-wrap">{courseScraped.courseDescription.bodyText}</p>
+                  </div>
+                ) : null}
+
                 {courseScraped.tabs.length > 0 && (
-                  <div className="md:col-span-2">
-                    <p className="font-semibold text-slate-700">Tabs</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                  <div>
+                    <p className="font-semibold text-slate-700">Tabs ({courseScraped.tabs.length})</p>
+                    <div className="mt-2 space-y-3">
                       {courseScraped.tabs.map(tab => (
-                        <span key={tab.label} className="rounded bg-slate-100 px-2 py-1">
-                          {tab.icon ? `${tab.icon} ` : ''}{tab.label}
-                        </span>
+                        <div key={tab.label} className="rounded border border-slate-200 p-2">
+                          <p className="font-medium text-slate-700">{tab.icon ? `${tab.icon} ` : ''}{tab.label}</p>
+                          <p className="mt-1 whitespace-pre-wrap text-slate-500">{tab.contentText}</p>
+                        </div>
                       ))}
                     </div>
                   </div>
                 )}
+
+                <div>
+                  <p className="font-semibold text-slate-700">FAQ ({courseScraped.faq?.items.length ?? 0} items)</p>
+                  {courseScraped.faq?.items.length ? (
+                    <div className="mt-2 space-y-2">
+                      {courseScraped.faq.items.map((item, index) => (
+                        <div key={`${item.question}-${index}`} className="rounded border border-slate-200 p-2">
+                          <p className="font-medium text-slate-700">Q: {item.question}</p>
+                          <p className="mt-1 text-slate-500">A: {item.answerText}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-slate-400">No FAQ detected.</p>
+                  )}
+                </div>
+
+                {courseScraped.testimonials?.cards.length ? (
+                  <div>
+                    <p className="font-semibold text-slate-700">Testimonials ({courseScraped.testimonials.cards.length})</p>
+                    <div className="mt-2 space-y-2">
+                      {courseScraped.testimonials.cards.map((card, index) => (
+                        <div key={`${card.author}-${index}`} className="rounded border border-slate-200 p-2">
+                          <p className="italic text-slate-600">&ldquo;{card.quote}&rdquo;</p>
+                          <p className="mt-1 text-slate-400">— {card.author}{card.role ? `, ${card.role}` : ''}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {courseScraped.promotion ? (
+                  <div>
+                    <p className="font-semibold text-slate-700">Promotion</p>
+                    <p className="mt-1">{courseScraped.promotion.title}</p>
+                    <p className="mt-1 text-slate-500">{courseScraped.promotion.subtitle}</p>
+                  </div>
+                ) : null}
+
+                <p>Course finder banner: {courseScraped.hasCourseFinderBanner ? 'Yes' : 'No'}</p>
               </div>
             </div>
-          ) : scraped ? (
+          ) : genericScraped ? (
             <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
               <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
-                <h3 className="text-sm font-bold text-slate-700">Scraped page content summary</h3>
+                <h3 className="text-sm font-bold text-slate-700">Scraped page content (full detail)</h3>
               </div>
-              <div className="grid gap-4 p-4 text-xs text-slate-600 md:grid-cols-2">
+              <div className="space-y-4 p-4 text-xs text-slate-600">
                 <div>
                   <p className="font-semibold text-slate-700">Page</p>
-                  <p>{scraped.title}</p>
-                  <p className="mt-1 text-slate-400">Slug: {scraped.slug}</p>
+                  <p>{genericScraped.title}</p>
+                  <p className="mt-1 text-slate-400">Slug: {genericScraped.slug}</p>
+                  <p className="mt-1">{genericScraped.metaDescription || 'No meta description found'}</p>
                 </div>
+
+                {genericScraped.breadcrumbItems.length ? (
+                  <div>
+                    <p className="font-semibold text-slate-700">Breadcrumb</p>
+                    <ul className="mt-1 space-y-1">
+                      {genericScraped.breadcrumbItems.map(item => (
+                        <li key={`${item.label}-${item.url}`}>{item.label} → {item.url}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
                 <div>
-                  <p className="font-semibold text-slate-700">Sections</p>
-                  <p>{'sections' in scraped ? scraped.sections.length : 0} content sections</p>
-                  <p className="mt-1">FAQ items: {'faq' in scraped ? scraped.faq?.items.length ?? 0 : 0}</p>
+                  <p className="font-semibold text-slate-700">Content sections ({genericScraped.sections.length})</p>
+                  <div className="mt-2 space-y-2">
+                    {genericScraped.sections.map((section, index) => (
+                      <div key={`${section.heading}-${index}`} className="rounded border border-slate-200 p-2">
+                        {section.heading ? <p className="font-medium text-slate-700">{section.heading}</p> : null}
+                        <p className="mt-1 whitespace-pre-wrap text-slate-500">{section.bodyText}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-slate-700">FAQ ({genericScraped.faq?.items.length ?? 0} items)</p>
+                  {genericScraped.faq?.items.length ? (
+                    <div className="mt-2 space-y-2">
+                      {genericScraped.faq.items.map((item, index) => (
+                        <div key={`${item.question}-${index}`} className="rounded border border-slate-200 p-2">
+                          <p className="font-medium text-slate-700">Q: {item.question}</p>
+                          <p className="mt-1 text-slate-500">A: {item.answerText}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-slate-400">No FAQ detected.</p>
+                  )}
                 </div>
               </div>
             </div>
           ) : (
             <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500">
-              Scan the site once to populate pages, select an origin URL, then preview or migrate to Storyblok.
+              Scan the site once to populate pages, select an origin URL, then run Preview Scrape to begin.
             </div>
           )}
         </div>

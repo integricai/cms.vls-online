@@ -36,6 +36,15 @@ function ensureMigrationPagesTable(): Promise<void> {
         ALTER COLUMN storyblok_story_id TYPE BIGINT
         USING storyblok_story_id::bigint
       `;
+      await sql`
+        ALTER TABLE content_migration_pages
+          ADD COLUMN IF NOT EXISTS scraped_data JSONB,
+          ADD COLUMN IF NOT EXISTS scraped_at TIMESTAMPTZ,
+          ADD COLUMN IF NOT EXISTS scrape_warnings JSONB,
+          ADD COLUMN IF NOT EXISTS structure_data JSONB,
+          ADD COLUMN IF NOT EXISTS structure_generated_at TIMESTAMPTZ,
+          ADD COLUMN IF NOT EXISTS draft_story_id BIGINT
+      `;
     })();
   }
   return ensureTablePromise;
@@ -55,6 +64,12 @@ interface DbRow {
   scanned_at: Date;
   created_at: Date;
   updated_at: Date;
+  scraped_data: unknown;
+  scraped_at: Date | null;
+  scrape_warnings: string[] | null;
+  structure_data: unknown;
+  structure_generated_at: Date | null;
+  draft_story_id: number | null;
 }
 
 function rowToRecord(row: DbRow): MigrationPageRecord {
@@ -72,6 +87,10 @@ function rowToRecord(row: DbRow): MigrationPageRecord {
     scannedAt: row.scanned_at.toISOString(),
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
+    scrapedAt: row.scraped_at?.toISOString() ?? null,
+    scrapeWarnings: row.scrape_warnings ?? [],
+    structureGeneratedAt: row.structure_generated_at?.toISOString() ?? null,
+    draftStoryId: row.draft_story_id,
   };
 }
 
@@ -199,4 +218,58 @@ export async function markMigrationPageMigrated(
       updated_at = NOW()
     WHERE id = ${id}
   `;
+}
+
+export async function saveScrapeResult(
+  id: number,
+  input: { scraped: unknown; warnings: string[] },
+): Promise<void> {
+  await ensureMigrationPagesTable();
+  await sql`
+    UPDATE content_migration_pages
+    SET
+      scraped_data = ${JSON.stringify(input.scraped)}::jsonb,
+      scraped_at = NOW(),
+      scrape_warnings = ${JSON.stringify(input.warnings)}::jsonb,
+      updated_at = NOW()
+    WHERE id = ${id}
+  `;
+}
+
+export async function saveStructureResult(
+  id: number,
+  input: { structure: unknown; draftStoryId: number | null },
+): Promise<void> {
+  await ensureMigrationPagesTable();
+  await sql`
+    UPDATE content_migration_pages
+    SET
+      structure_data = ${JSON.stringify(input.structure)}::jsonb,
+      structure_generated_at = NOW(),
+      draft_story_id = ${input.draftStoryId},
+      updated_at = NOW()
+    WHERE id = ${id}
+  `;
+}
+
+export async function getScrapedData(id: number): Promise<unknown | null> {
+  await ensureMigrationPagesTable();
+  const rows = await sql`
+    SELECT scraped_data
+    FROM content_migration_pages
+    WHERE id = ${id}
+    LIMIT 1
+  `;
+  return (rows as Array<{ scraped_data: unknown }>)[0]?.scraped_data ?? null;
+}
+
+export async function getStructureData(id: number): Promise<unknown | null> {
+  await ensureMigrationPagesTable();
+  const rows = await sql`
+    SELECT structure_data
+    FROM content_migration_pages
+    WHERE id = ${id}
+    LIMIT 1
+  `;
+  return (rows as Array<{ structure_data: unknown }>)[0]?.structure_data ?? null;
 }

@@ -1,16 +1,15 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
 import type {
-  CourseMigrationRequest,
   MigrationTemplate,
-  PageMigrationRequest,
   StoryblokRegion,
 } from '../../shared/migrationTypes';
 import {
   CourseMigrationError,
   CoursePageScrapeError,
-  migrateCoursePage,
-  migratePage,
+  generatePageStructure,
+  migratePageContent,
+  previewScrapePage,
 } from '../services/courseMigrationService';
 import { isStoryblokApiError, verifyStoryblokAccess } from '../services/storyblokClient';
 import { scanAndStoreMigrationPages } from '../services/pageScanner';
@@ -20,7 +19,7 @@ import {
   listMigrationPages,
   updateMigrationPage,
 } from '../models/migrationPage';
-import { isMigrationTemplate, suggestDestinationSlug } from '../services/migrationUrlUtils';
+import { isMigrationTemplate } from '../services/migrationUrlUtils';
 
 const router = Router();
 
@@ -28,38 +27,6 @@ router.use(authGuard, requireRole('admin'));
 
 function isRegion(value: unknown): value is StoryblokRegion {
   return value === 'eu' || value === 'us';
-}
-
-function parseCourseRequest(body: Record<string, unknown>): CourseMigrationRequest {
-  return {
-    pageUrl: typeof body.pageUrl === 'string' ? body.pageUrl : '',
-    storyblokSpaceId: typeof body.storyblokSpaceId === 'string' ? body.storyblokSpaceId : '',
-    storyblokAccessToken: typeof body.storyblokAccessToken === 'string' ? body.storyblokAccessToken : '',
-    storyblokRegion: isRegion(body.storyblokRegion) ? body.storyblokRegion : 'eu',
-    publish: Boolean(body.publish),
-    dryRun: Boolean(body.dryRun),
-    template: isMigrationTemplate(body.template) ? body.template : undefined,
-    destinationSlug: typeof body.destinationSlug === 'string' ? body.destinationSlug : undefined,
-  };
-}
-
-function parsePageRequest(body: Record<string, unknown>): PageMigrationRequest {
-  const pageUrl = typeof body.pageUrl === 'string' ? body.pageUrl : '';
-  const template = isMigrationTemplate(body.template) ? body.template : 'course';
-  const destinationSlug = typeof body.destinationSlug === 'string' && body.destinationSlug.trim()
-    ? body.destinationSlug.trim()
-    : suggestDestinationSlug(pageUrl, template);
-
-  return {
-    pageUrl,
-    template,
-    destinationSlug,
-    storyblokSpaceId: typeof body.storyblokSpaceId === 'string' ? body.storyblokSpaceId : '',
-    storyblokAccessToken: typeof body.storyblokAccessToken === 'string' ? body.storyblokAccessToken : '',
-    storyblokRegion: isRegion(body.storyblokRegion) ? body.storyblokRegion : 'eu',
-    publish: Boolean(body.publish),
-    dryRun: Boolean(body.dryRun),
-  };
 }
 
 router.get('/templates', async (_req: Request, res: Response, next: NextFunction) => {
@@ -124,40 +91,55 @@ router.patch('/pages/:id', async (req: Request, res: Response, next: NextFunctio
   }
 });
 
-router.post('/page/preview', async (req: Request, res: Response, next: NextFunction) => {
+function parsePageId(rawId: string): number {
+  const id = Number(rawId);
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new CourseMigrationError('Invalid page ID', 400);
+  }
+  return id;
+}
+
+function parseStoryblokCredentials(body: Record<string, unknown>) {
+  return {
+    storyblokSpaceId: typeof body.storyblokSpaceId === 'string' ? body.storyblokSpaceId : '',
+    storyblokAccessToken: typeof body.storyblokAccessToken === 'string' ? body.storyblokAccessToken : '',
+    storyblokRegion: isRegion(body.storyblokRegion) ? body.storyblokRegion : 'eu',
+  };
+}
+
+router.post('/pages/:id/scrape', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const input = parsePageRequest(req.body as Record<string, unknown>);
-    const result = await migratePage({ ...input, dryRun: true });
+    const id = parsePageId(req.params.id);
+    const result = await previewScrapePage(id);
     return res.json({ ok: true, data: result });
   } catch (err) {
     next(err);
   }
 });
 
-router.post('/page', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/pages/:id/structure', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const input = parsePageRequest(req.body as Record<string, unknown>);
-    const result = await migratePage(input);
+    const id = parsePageId(req.params.id);
+    const credentials = parseStoryblokCredentials(req.body as Record<string, unknown>);
+    if (!credentials.storyblokSpaceId.trim() || !credentials.storyblokAccessToken.trim()) {
+      return res.status(400).json({ ok: false, error: 'Storyblok space ID and access token are required' });
+    }
+    const result = await generatePageStructure(id, credentials);
     return res.json({ ok: true, data: result });
   } catch (err) {
     next(err);
   }
 });
 
-router.post('/course/preview', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/pages/:id/content', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const input = parseCourseRequest(req.body as Record<string, unknown>);
-    const result = await migrateCoursePage({ ...input, dryRun: true });
-    return res.json({ ok: true, data: result });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.post('/course', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const input = parseCourseRequest(req.body as Record<string, unknown>);
-    const result = await migrateCoursePage(input);
+    const id = parsePageId(req.params.id);
+    const body = req.body as Record<string, unknown>;
+    const credentials = parseStoryblokCredentials(body);
+    if (!credentials.storyblokSpaceId.trim() || !credentials.storyblokAccessToken.trim()) {
+      return res.status(400).json({ ok: false, error: 'Storyblok space ID and access token are required' });
+    }
+    const result = await migratePageContent(id, { ...credentials, publish: Boolean(body.publish) });
     return res.json({ ok: true, data: result });
   } catch (err) {
     next(err);
