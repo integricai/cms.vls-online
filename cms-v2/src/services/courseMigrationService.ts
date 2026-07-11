@@ -20,6 +20,7 @@ import {
   findCoursesFolder,
   StoryblokApiError,
   upsertStory,
+  validateStoryblokRootBloks,
   verifyStoryblokAccess,
   type StoryblokConfig,
 } from './storyblokClient';
@@ -517,6 +518,34 @@ async function syncLibrarySafely(
   }
 }
 
+async function validateGenericPageSchema(
+  config: StoryblokConfig,
+  template: MigrationTemplate,
+): Promise<void> {
+  const blueprint = getMigrationTemplateBlueprint(template);
+  const bodyComponents = blueprint.sections.map(section => section.component);
+  const validation = await validateStoryblokRootBloks(config, 'page', bodyComponents);
+
+  const problems: string[] = [];
+  if (validation.missingComponents.length) {
+    problems.push(`missing component schemas: ${validation.missingComponents.join(', ')}`);
+  }
+  if (validation.missingFromWhitelist.length) {
+    problems.push(`not allowed in the page body whitelist: ${validation.missingFromWhitelist.join(', ')}`);
+  }
+
+  if (problems.length) {
+    throw new CourseMigrationError(
+      [
+        `Storyblok page schema is not ready for the ${template} migration.`,
+        problems.join('; '),
+        'Push the latest component schemas from vls-online-v2/storyblok/components, then try the migration again.',
+      ].join(' '),
+      422,
+    );
+  }
+}
+
 async function stylizeBlok(
   blok: Record<string, unknown> | null,
   template: MigrationTemplate,
@@ -725,6 +754,7 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
 
   const config = storyblokConfig(input);
   await verifyStoryblokAccess(config);
+  await validateGenericPageSchema(config, template);
 
   const librarySync = await syncLibrarySafely(config, template, warnings);
 

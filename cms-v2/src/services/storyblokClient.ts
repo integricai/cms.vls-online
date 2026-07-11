@@ -14,6 +14,12 @@ export interface StoryblokStoryRef {
   full_slug: string;
 }
 
+export interface StoryblokComponentRef {
+  id?: number;
+  name: string;
+  schema?: Record<string, unknown>;
+}
+
 export class StoryblokApiError extends Error {
   status: number;
   details: unknown;
@@ -63,6 +69,17 @@ function formatFieldErrors(value: unknown, prefix = ''): string[] {
   return messages;
 }
 
+function formatPrimitiveError(value: unknown, label: string): string[] {
+  if (typeof value === 'string' && value.trim()) return [`${label}: ${value.trim()}`];
+  if (Array.isArray(value)) {
+    return value
+      .map(item => (typeof item === 'string' ? item : JSON.stringify(item)))
+      .filter(Boolean)
+      .map(item => `${label}: ${item}`);
+  }
+  return [];
+}
+
 function formatStoryblokError(status: number, payload: unknown): string {
   if (status === 401) {
     return [
@@ -81,17 +98,15 @@ function formatStoryblokError(status: number, payload: unknown): string {
   if (payload && typeof payload === 'object') {
     const record = payload as Record<string, unknown>;
     const fieldMessages = [
+      ...formatPrimitiveError(record.error, 'error'),
+      ...formatPrimitiveError(record.message, 'message'),
       ...formatFieldErrors(record.story),
       ...formatFieldErrors(record.errors),
       ...formatFieldErrors(record.content),
+      ...formatFieldErrors(record.data),
     ];
     if (fieldMessages.length) {
       return `Storyblok validation failed: ${fieldMessages.join('; ')}`;
-    }
-    if (typeof record.error === 'string' && record.error.trim()) {
-      return status === 422
-        ? `Storyblok validation failed (HTTP 422): ${record.error}`
-        : record.error;
     }
   }
 
@@ -170,6 +185,54 @@ export async function verifyStoryblokAccess(config: StoryblokConfig): Promise<{ 
   await storyblokRequest<{ stories?: unknown[] }>(normalized, 'GET', '/stories?per_page=1');
   const data = await storyblokRequest<{ space?: { name?: string } }>(normalized, 'GET', '');
   return { spaceName: data.space?.name ?? 'Storyblok space' };
+}
+
+export async function getStoryblokComponent(
+  config: StoryblokConfig,
+  componentName: string,
+): Promise<StoryblokComponentRef | null> {
+  try {
+    const data = await storyblokRequest<{ component?: StoryblokComponentRef }>(
+      config,
+      'GET',
+      `/components/${encodeURIComponent(componentName)}`,
+    );
+    return data.component ?? null;
+  } catch (err) {
+    if (isStoryblokApiError(err) && err.status === 404) return null;
+    throw err;
+  }
+}
+
+export async function validateStoryblokRootBloks(
+  config: StoryblokConfig,
+  rootComponent: string,
+  bodyComponents: string[],
+): Promise<{ missingComponents: string[]; missingFromWhitelist: string[] }> {
+  const uniqueComponents = Array.from(new Set(bodyComponents.filter(Boolean)));
+  const root = await getStoryblokComponent(config, rootComponent);
+  const bodyField = root?.schema?.body;
+  const whitelist = (
+    bodyField
+    && typeof bodyField === 'object'
+    && Array.isArray((bodyField as Record<string, unknown>).component_whitelist)
+  )
+    ? (bodyField as { component_whitelist: unknown[] }).component_whitelist.filter((item): item is string => typeof item === 'string')
+    : [];
+
+  const missingFromWhitelist = whitelist.length
+    ? uniqueComponents.filter(component => !whitelist.includes(component))
+    : [];
+
+  const componentChecks = await Promise.all(uniqueComponents.map(async component => ({
+    component,
+    exists: Boolean(await getStoryblokComponent(config, component)),
+  })));
+
+  return {
+    missingComponents: componentChecks.filter(item => !item.exists).map(item => item.component),
+    missingFromWhitelist,
+  };
 }
 
 export async function findStoryBySlug(
