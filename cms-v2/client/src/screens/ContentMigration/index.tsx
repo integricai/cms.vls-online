@@ -59,6 +59,20 @@ function isCoursePage(scraped: ScrapedCoursePage | ScrapedGenericPage): scraped 
   return 'hero' in scraped;
 }
 
+/** api.post rejects with `err.data` set to whatever the backend put in the JSON `data` field — shape varies by error type. */
+function describeApiError(error: unknown, fallback: string): string {
+  const err = error as Error & { data?: unknown };
+  const base = err instanceof Error && err.message ? err.message : fallback;
+  if (Array.isArray(err.data)) {
+    const extra = err.data.filter((item): item is string => typeof item === 'string').join(' ');
+    return extra ? `${base} ${extra}`.trim() : base;
+  }
+  if (err.data && typeof err.data === 'object') {
+    return `${base} ${JSON.stringify(err.data)}`.trim();
+  }
+  return base;
+}
+
 function pageStatusLabel(page: MigrationPageRecord): string {
   if (page.migratedAt) return 'Migrated';
   if (page.draftStoryId) return 'Structure ready';
@@ -251,12 +265,7 @@ export default function ContentMigrationTab() {
         });
       }
     } catch (error) {
-      const err = error as Error & { data?: unknown };
-      let text = err instanceof Error ? err.message : 'Generate structure failed.';
-      if (Array.isArray(err.data)) {
-        text = `${text} ${err.data.filter(item => typeof item === 'string').join(' ')}`.trim();
-      }
-      setMessage({ type: 'error', text });
+      setMessage({ type: 'error', text: describeApiError(error, 'Generate structure failed.') });
     } finally {
       setGeneratingStructure(false);
     }
@@ -280,12 +289,7 @@ export default function ContentMigrationTab() {
           : `Updated Storyblok story at ${data.storyblok.fullSlug}.`,
       });
     } catch (error) {
-      const err = error as Error & { data?: unknown };
-      let text = err instanceof Error ? err.message : 'Migrate content failed.';
-      if (Array.isArray(err.data)) {
-        text = `${text} ${err.data.filter(item => typeof item === 'string').join(' ')}`.trim();
-      }
-      setMessage({ type: 'error', text });
+      setMessage({ type: 'error', text: describeApiError(error, 'Migrate content failed.') });
     } finally {
       setMigratingContent(false);
     }

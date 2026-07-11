@@ -95,30 +95,38 @@ function formatStoryblokError(status: number, payload: unknown): string {
     return 'Storyblok space not found. Check the numeric space ID in Space settings → General.';
   }
 
-  if (payload && typeof payload === 'object') {
-    const record = payload as Record<string, unknown>;
-    const fieldMessages = [
-      ...formatPrimitiveError(record.error, 'error'),
-      ...formatPrimitiveError(record.message, 'message'),
-      ...formatFieldErrors(record.story),
-      ...formatFieldErrors(record.errors),
-      ...formatFieldErrors(record.content),
-      ...formatFieldErrors(record.data),
-    ];
-    if (fieldMessages.length) {
-      return `Storyblok validation failed: ${fieldMessages.join('; ')}`;
-    }
+  const record = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null;
+  const fieldMessages = record
+    ? [
+        ...formatPrimitiveError(record.error, 'error'),
+        ...formatPrimitiveError(record.message, 'message'),
+        ...formatFieldErrors(record.story),
+        ...formatFieldErrors(record.errors),
+        ...formatFieldErrors(record.details),
+        ...formatFieldErrors(record.content),
+        ...formatFieldErrors(record.data),
+      ]
+    : [];
+
+  if (fieldMessages.length) {
+    return `Storyblok validation failed: ${fieldMessages.join('; ')}`;
   }
 
-  if (status === 422) {
-    return [
-      'Storyblok rejected the story payload (HTTP 422).',
-      'Usually this means a required field is missing, a component is not allowed on the page type,',
-      'or a slug/folder conflict exists. Check the component whitelist for `page` in Storyblok.',
-    ].join(' ');
+  const genericPrefix = status === 422
+    ? [
+        'Storyblok rejected the story payload (HTTP 422).',
+        'Usually this means a required field is missing, a component is not allowed on the page type,',
+        'or a slug/folder conflict exists. Check the component whitelist for `page` in Storyblok.',
+      ].join(' ')
+    : `Storyblok API returned HTTP ${status}`;
+
+  // formatFieldErrors/formatPrimitiveError only recognize a handful of known Storyblok error shapes.
+  // When none of them match, surface the raw payload instead of a message with no actionable detail.
+  if (record) {
+    return `${genericPrefix} Raw response: ${JSON.stringify(record).slice(0, 800)}`;
   }
 
-  return `Storyblok API returned HTTP ${status}`;
+  return genericPrefix;
 }
 
 function previewBase(region: StoryblokRegion): string {
