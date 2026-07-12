@@ -11,6 +11,7 @@ import {
   migratePageContent,
   previewScrapePage,
 } from '../services/courseMigrationService';
+import { confirmComponentCreation, generateComponentDraft } from '../services/componentGenerationService';
 import { isStoryblokApiError, verifyStoryblokAccess } from '../services/storyblokClient';
 import { scanAndStoreMigrationPages } from '../services/pageScanner';
 import { listMigrationTemplateBlueprints, MigrationTemplateError } from '../services/migrationTemplateRegistry';
@@ -140,6 +141,44 @@ router.post('/pages/:id/content', async (req: Request, res: Response, next: Next
       return res.status(400).json({ ok: false, error: 'Storyblok space ID and access token are required' });
     }
     const result = await migratePageContent(id, { ...credentials, publish: Boolean(body.publish) });
+    return res.json({ ok: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/pages/:id/generate-component', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parsePageId(req.params.id);
+    const credentials = parseStoryblokCredentials(req.body as Record<string, unknown>);
+    if (!credentials.storyblokSpaceId.trim() || !credentials.storyblokAccessToken.trim()) {
+      return res.status(400).json({ ok: false, error: 'Storyblok space ID and access token are required' });
+    }
+    const result = await generateComponentDraft(id, credentials);
+    return res.json({ ok: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/pages/:id/confirm-component', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parsePageId(req.params.id);
+    const body = req.body as Record<string, unknown>;
+    const credentials = parseStoryblokCredentials(body);
+    if (!credentials.storyblokSpaceId.trim() || !credentials.storyblokAccessToken.trim()) {
+      return res.status(400).json({ ok: false, error: 'Storyblok space ID and access token are required' });
+    }
+    const componentName = typeof body.componentName === 'string' ? body.componentName : '';
+    const storyblokSchema = body.storyblokSchema as { components?: unknown } | undefined;
+    if (!componentName || !storyblokSchema || !Array.isArray(storyblokSchema.components)) {
+      return res.status(400).json({ ok: false, error: 'componentName and storyblokSchema.components are required' });
+    }
+    const result = await confirmComponentCreation(id, {
+      ...credentials,
+      componentName,
+      storyblokSchema: storyblokSchema as { components: Array<Record<string, unknown>> },
+    });
     return res.json({ ok: true, data: result });
   } catch (err) {
     next(err);

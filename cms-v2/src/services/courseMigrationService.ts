@@ -47,6 +47,8 @@ import {
 import { buildBlokFromTemplateSection } from './pageContentBuilder';
 import { indexTemplateSections, resolveTemplateSections } from './pageSectionExtractor';
 import type { TemplateReferenceSummary, ComponentLibrarySummary } from '../../shared/migrationTypes';
+import { analyzeUnmatchedLayout } from './genericLayoutAnalyzer';
+import { buildCustomComponentBody } from './componentGenerationService';
 
 function blokUid(): string {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 12);
@@ -899,6 +901,71 @@ export async function previewScrapePage(pageId: number): Promise<ScrapePhaseResu
 }
 
 /**
+ * Used once a page has been through Generate Component: builds the draft story body from that
+ * one custom component (re-analyzed from the stored raw HTML) instead of the template blueprint,
+ * since a page like this was never going to match any blueprint section in the first place.
+ */
+async function generateCustomComponentStructure(
+  page: MigrationPageRecord,
+  pageId: number,
+  config: StoryblokConfig,
+  template: MigrationTemplate,
+  templateReference: TemplateReferenceSummary,
+  scraped: ScrapedGenericPage,
+): Promise<StructurePhaseResult> {
+  const componentName = page.customComponentName as string;
+  if (!scraped.rawHtml) {
+    throw new CourseMigrationError(
+      'No raw HTML saved for this page — run Preview Scrape again before Generate Structure.',
+      400,
+    );
+  }
+
+  const analysis = analyzeUnmatchedLayout(scraped.rawHtml, scraped.title || page.title || page.path);
+  const body = buildCustomComponentBody(componentName, analysis);
+
+  const destinationSlug = resolveDestinationSlug(page);
+  const fullSlug = storyFullSlug(template, destinationSlug);
+  const rootComponent = rootComponentForTemplate(template);
+
+  const upsert = await upsertStory(config, {
+    name: page.title || destinationSlug,
+    slug: destinationSlug,
+    fullSlug,
+    content: { component: rootComponent, seo: [], body },
+    publish: false,
+  });
+
+  const warnings: string[] = [
+    `Structure built from the custom component "${componentName}" instead of the "${template}" template blueprint.`,
+  ];
+  if (!upsert.created) {
+    warnings.push('An existing Storyblok story at this destination was updated with the generated structure.');
+  }
+
+  await saveStructureResult(pageId, {
+    structure: { templateReference, componentLibrary: null },
+    draftStoryId: upsert.story.id,
+  });
+
+  const updatedPage = await getMigrationPageById(pageId);
+
+  return {
+    page: updatedPage ?? page,
+    templateReference,
+    missingComponents: [],
+    unmatchedSections: [],
+    draftStory: {
+      storyId: upsert.story.id,
+      fullSlug: upsert.story.full_slug,
+      previewUrl: upsert.previewUrl,
+      created: upsert.created,
+    },
+    warnings,
+  };
+}
+
+/**
  * Phase 2: match scraped sections against the template blueprint and Storyblok's component
  * collection. Flags and stops (creates nothing) if a required component schema is missing —
  * missing renderers/components are built as explicit follow-up work, never guessed.
@@ -921,6 +988,10 @@ export async function generatePageStructure(
 
   const config = storyblokConfigFromCredentials(credentials);
   await verifyStoryblokAccess(config);
+
+  if (template !== 'course' && page.customComponentName) {
+    return generateCustomComponentStructure(page, pageId, config, template, templateReference, scrapedRaw as ScrapedGenericPage);
+  }
 
   const missingComponents = await detectMissingComponents(config, template, blueprint);
   if (missingComponents.length) {

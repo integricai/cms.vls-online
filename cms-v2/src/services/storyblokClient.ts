@@ -249,6 +249,19 @@ export async function getStoryblokComponent(
   }
 }
 
+export async function createStoryblokComponent(
+  config: StoryblokConfig,
+  schema: Record<string, unknown>,
+): Promise<{ id: number; name: string }> {
+  const data = await storyblokRequest<{ component: { id: number; name: string } }>(
+    config,
+    'POST',
+    '/components',
+    { component: schema },
+  );
+  return data.component;
+}
+
 export async function validateStoryblokRootBloks(
   config: StoryblokConfig,
   rootComponent: string,

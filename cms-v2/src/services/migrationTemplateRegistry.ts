@@ -24,6 +24,10 @@ const TEMPLATE_FILES: Record<MigrationTemplate, string> = {
   landing: 'landing.html',
   team_vls: 'team vls.html',
   schedules: 'schedule.html',
+  course_articles: 'course-articles.html',
+  live_sessions: 'acca-live.html',
+  book_meeting: 'book-meeting.html',
+  contact_us: 'contact-us.html',
 };
 
 const DEFAULT_TOKENS: TemplateDesignTokens = {

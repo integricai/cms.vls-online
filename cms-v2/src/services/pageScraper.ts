@@ -112,6 +112,7 @@ export async function scrapeGenericPage(sourceUrl: string): Promise<ScrapedGener
     templateSections: parseTemplateSectionsFromHtml(mainContent),
     faq,
     extractionWarnings: faqWarnings,
+    rawHtml: html,
   };
 }
 

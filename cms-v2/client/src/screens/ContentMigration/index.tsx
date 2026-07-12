@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import Field from '../../components/Field';
 import type {
+  ComponentDraftResult,
   ContentPhaseResult,
   MigrationPageRecord,
   MigrationTemplate,
@@ -73,6 +74,10 @@ function describeApiError(error: unknown, fallback: string): string {
   return base;
 }
 
+function copyToClipboard(text: string) {
+  void navigator.clipboard.writeText(text);
+}
+
 function pageStatusLabel(page: MigrationPageRecord): string {
   if (page.migratedAt) return 'Migrated';
   if (page.draftStoryId) return 'Structure ready';
@@ -103,6 +108,15 @@ export default function ContentMigrationTab() {
   const [scrapeResult, setScrapeResult] = useState<ScrapePhaseResult | null>(null);
   const [structureResult, setStructureResult] = useState<StructurePhaseResult | null>(null);
   const [contentResult, setContentResult] = useState<ContentPhaseResult | null>(null);
+
+  const [componentDraft, setComponentDraft] = useState<ComponentDraftResult | null>(null);
+  const [componentDraftLoading, setComponentDraftLoading] = useState(false);
+  const [componentCreating, setComponentCreating] = useState(false);
+  const [componentNameText, setComponentNameText] = useState('');
+  const [componentSchemaText, setComponentSchemaText] = useState('');
+  const [componentTsxText, setComponentTsxText] = useState('');
+  const [componentTypeText, setComponentTypeText] = useState('');
+  const [componentCreated, setComponentCreated] = useState<{ componentName: string } | null>(null);
 
   const selectedPage = useMemo(
     () => pages.find(page => page.id === selectedPageId) ?? null,
@@ -173,6 +187,16 @@ export default function ContentMigrationTab() {
     setScrapeResult(null);
     setStructureResult(null);
     setContentResult(null);
+    resetComponentDraft();
+  }
+
+  function resetComponentDraft() {
+    setComponentDraft(null);
+    setComponentNameText('');
+    setComponentSchemaText('');
+    setComponentTsxText('');
+    setComponentTypeText('');
+    setComponentCreated(null);
   }
 
   function applyPageUpdate(updated: MigrationPageRecord) {
@@ -249,6 +273,7 @@ export default function ContentMigrationTab() {
     setMessage(null);
     setStructureResult(null);
     setContentResult(null);
+    resetComponentDraft();
     try {
       const data = await api.post<StructurePhaseResult>(`/migration/pages/${selectedPage.id}/structure`, credentialsPayload());
       setStructureResult(data);
@@ -305,6 +330,65 @@ export default function ContentMigrationTab() {
     }
   }
 
+  async function runGenerateComponent() {
+    if (!selectedPage) return;
+    setComponentDraftLoading(true);
+    setMessage(null);
+    setComponentCreated(null);
+    try {
+      const data = await api.post<ComponentDraftResult>(
+        `/migration/pages/${selectedPage.id}/generate-component`,
+        credentialsPayload(),
+      );
+      setComponentDraft(data);
+      setComponentNameText(data.componentName);
+      setComponentSchemaText(JSON.stringify(data.storyblokSchema, null, 2));
+      setComponentTsxText(data.tsxCode);
+      setComponentTypeText(data.typeCode);
+      setMessage({
+        type: data.warnings.length ? 'warning' : 'info',
+        text: 'Component draft generated from the live page. Review and edit before creating it in Storyblok.',
+      });
+    } catch (error) {
+      setMessage({ type: 'error', text: describeApiError(error, 'Generate component failed.') });
+    } finally {
+      setComponentDraftLoading(false);
+    }
+  }
+
+  async function runConfirmComponent() {
+    if (!selectedPage) return;
+    let parsedSchema: { components: Array<Record<string, unknown>> };
+    try {
+      parsedSchema = JSON.parse(componentSchemaText);
+    } catch {
+      setMessage({ type: 'error', text: 'Storyblok schema is not valid JSON — fix it before creating the component.' });
+      return;
+    }
+    setComponentCreating(true);
+    setMessage(null);
+    try {
+      const data = await api.post<{ page: MigrationPageRecord; componentName: string; created: boolean }>(
+        `/migration/pages/${selectedPage.id}/confirm-component`,
+        {
+          ...credentialsPayload(),
+          componentName: componentNameText.trim(),
+          storyblokSchema: parsedSchema,
+        },
+      );
+      applyPageUpdate(data.page);
+      setComponentCreated({ componentName: data.componentName });
+      setMessage({
+        type: 'success',
+        text: `Component "${data.componentName}" ${data.created ? 'created' : 'already existed'} in Storyblok.`,
+      });
+    } catch (error) {
+      setMessage({ type: 'error', text: describeApiError(error, 'Create component failed.') });
+    } finally {
+      setComponentCreating(false);
+    }
+  }
+
   async function handleTemplateChange(nextTemplate: MigrationTemplate) {
     setTemplate(nextTemplate);
     if (!selectedPage) return;
@@ -346,6 +430,10 @@ export default function ContentMigrationTab() {
   const scraped = scrapeResult?.scraped;
   const courseScraped = scraped && isCoursePage(scraped) ? scraped : null;
   const genericScraped = scraped && !isCoursePage(scraped) ? scraped : null;
+
+  const fullyBlocked = Boolean(
+    structureResult && !structureResult.draftStory && structureResult.unmatchedSections.length > 0,
+  );
 
   return (
     <div className="p-6">
@@ -508,6 +596,17 @@ export default function ContentMigrationTab() {
             >
               {generatingStructure ? 'Generating...' : '2. Generate Structure'}
             </button>
+            {fullyBlocked ? (
+              <button
+                type="button"
+                onClick={runGenerateComponent}
+                disabled={componentDraftLoading || !hasCredentials}
+                className="btn-ghost w-full justify-start text-xs"
+                title="This page's layout matches no template — generate a custom component from its live HTML"
+              >
+                {componentDraftLoading ? 'Analyzing page...' : '2b. Generate Component'}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={runMigrateContent}
@@ -568,6 +667,117 @@ export default function ContentMigrationTab() {
                   <li key={section}>{section}</li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {componentDraft && (
+            <div className="space-y-3 overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+                <h3 className="text-sm font-bold text-slate-700">Generate Component — review before creating</h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Best-effort guess from the live page's HTML. Edit anything below before creating the component —
+                  none of this is written anywhere until you click "Create Component in Storyblok".
+                </p>
+              </div>
+
+              {componentDraft.warnings.length ? (
+                <div className="mx-4 mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  <ul className="list-disc space-y-1 pl-4">
+                    {componentDraft.warnings.map(warning => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              <div className="px-4">
+                <Field label="Component name">
+                  <input
+                    className="input"
+                    value={componentNameText}
+                    onChange={event => setComponentNameText(event.target.value)}
+                  />
+                </Field>
+              </div>
+
+              <div className="space-y-3 p-4 pt-0">
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-slate-700">Storyblok schema (JSON)</p>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(componentSchemaText)}
+                      className="rounded bg-slate-100 px-2 py-1 text-[11px] text-slate-600 hover:bg-slate-200"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <textarea
+                    className="input h-48 w-full font-mono text-[11px] leading-relaxed"
+                    value={componentSchemaText}
+                    onChange={event => setComponentSchemaText(event.target.value)}
+                    spellCheck={false}
+                  />
+                </div>
+
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-slate-700">TSX renderer (for vls-online-v2)</p>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(componentTsxText)}
+                      className="rounded bg-slate-100 px-2 py-1 text-[11px] text-slate-600 hover:bg-slate-200"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <textarea
+                    className="input h-64 w-full font-mono text-[11px] leading-relaxed"
+                    value={componentTsxText}
+                    onChange={event => setComponentTsxText(event.target.value)}
+                    spellCheck={false}
+                  />
+                </div>
+
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-slate-700">TypeScript types (for vls-online-v2)</p>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(componentTypeText)}
+                      className="rounded bg-slate-100 px-2 py-1 text-[11px] text-slate-600 hover:bg-slate-200"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <textarea
+                    className="input h-40 w-full font-mono text-[11px] leading-relaxed"
+                    value={componentTypeText}
+                    onChange={event => setComponentTypeText(event.target.value)}
+                    spellCheck={false}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={runConfirmComponent}
+                  disabled={componentCreating || !hasCredentials || !componentNameText.trim()}
+                  className="btn-primary text-xs"
+                >
+                  {componentCreating ? 'Creating...' : 'Create Component in Storyblok'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {componentCreated && (
+            <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+              <p className="font-semibold">Component "{componentCreated.componentName}" created in Storyblok.</p>
+              <p className="mt-1 text-xs">
+                Copy the TSX/type code above into vls-online-v2 (<code>templateSections.tsx</code>,{' '}
+                <code>types/storyblok.ts</code>, and register it in <code>StoryblokBloks.tsx</code>), then re-run
+                Generate Structure to build the draft story from this component.
+              </p>
             </div>
           )}
 

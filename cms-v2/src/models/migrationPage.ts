@@ -45,6 +45,10 @@ function ensureMigrationPagesTable(): Promise<void> {
           ADD COLUMN IF NOT EXISTS structure_generated_at TIMESTAMPTZ,
           ADD COLUMN IF NOT EXISTS draft_story_id BIGINT
       `;
+      await sql`
+        ALTER TABLE content_migration_pages
+          ADD COLUMN IF NOT EXISTS custom_component_name TEXT
+      `;
     })();
   }
   return ensureTablePromise;
@@ -70,6 +74,7 @@ interface DbRow {
   structure_data: unknown;
   structure_generated_at: Date | null;
   draft_story_id: number | null;
+  custom_component_name: string | null;
 }
 
 function rowToRecord(row: DbRow): MigrationPageRecord {
@@ -91,6 +96,7 @@ function rowToRecord(row: DbRow): MigrationPageRecord {
     scrapeWarnings: row.scrape_warnings ?? [],
     structureGeneratedAt: row.structure_generated_at?.toISOString() ?? null,
     draftStoryId: row.draft_story_id,
+    customComponentName: row.custom_component_name,
   };
 }
 
@@ -261,6 +267,17 @@ export async function getScrapedData(id: number): Promise<unknown | null> {
     LIMIT 1
   `;
   return (rows as Array<{ scraped_data: unknown }>)[0]?.scraped_data ?? null;
+}
+
+export async function saveCustomComponentName(id: number, componentName: string): Promise<void> {
+  await ensureMigrationPagesTable();
+  await sql`
+    UPDATE content_migration_pages
+    SET
+      custom_component_name = ${componentName},
+      updated_at = NOW()
+    WHERE id = ${id}
+  `;
 }
 
 export async function getStructureData(id: number): Promise<unknown | null> {

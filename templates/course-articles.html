@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ACCA AAA Technical Articles — Advanced Audit &amp; Assurance | Vertex Learning Solutions</title>
+<meta name="description" content="Official ACCA UK technical articles for AAA — Advanced Audit and Assurance — curated by VLS and grouped by syllabus area: exam technique, ethics, risk, procedures, reporting, governance and current issues." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --navy:#0E2A57; --ink:#15233D; --slate:#3D4A63;
+    --blue:#1E50C8; --blue-strong:#1A45B0; --blue-bright:#3B73F0;
+    --blue-50:#F2F6FF; --blue-100:#E7EEFD; --blue-200:#D6E2FB;
+    --green:#1E9E6A; --green-bg:#E3F4EC;
+    --amber:#C77B1E; --amber-bg:#FCEEDD;
+    --purple:#5B49D6; --purple-bg:#F2EEFC;
+    --teal:#1FAE8C; --teal-bg:#E2F5F0;
+    --rose:#C2417A; --rose-bg:#FBEAF2;
+    --star:#F5A623;
+    --white:#FFF; --line:#E5EBF6; --line-soft:#EEF2FA;
+    --shadow-sm:0 1px 2px rgba(14,42,87,.05),0 1px 3px rgba(14,42,87,.04);
+    --shadow-md:0 6px 18px rgba(14,42,87,.07),0 2px 6px rgba(14,42,87,.05);
+    --shadow-lg:0 18px 48px rgba(14,42,87,.12),0 6px 16px rgba(14,42,87,.07);
+    --radius:16px; --radius-lg:22px; --maxw:1200px; --gutter:40px;
+  }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+  body{ margin:0; font-family:'Poppins',system-ui,-apple-system,sans-serif; color:var(--ink);
+    background:var(--white); font-size:16.5px; line-height:1.62; font-weight:400;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  h1,h2,h3,h4{ margin:0; color:var(--navy); font-weight:600; line-height:1.18; letter-spacing:-.01em; }
+  p{ margin:0; } a{ color:inherit; text-decoration:none; } img,svg{ display:block; }
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 var(--gutter); }
+  .accent{ color:var(--blue); font-style:italic; font-weight:600; }
+  .eyebrow{ font-size:12.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--blue); margin-bottom:16px; }
+  .stars{ color:var(--star); letter-spacing:1px; }
+
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:9px; font-family:inherit;
+    font-size:15.5px; font-weight:500; padding:14px 26px; border-radius:12px; cursor:pointer;
+    border:1px solid transparent; transition:.18s ease; white-space:nowrap; }
+  .btn svg{ width:17px; height:17px; }
+  .btn-primary{ background:var(--blue); color:#fff; box-shadow:0 4px 14px rgba(30,80,200,.28); }
+  .btn-primary:hover{ background:var(--blue-strong); transform:translateY(-1px); box-shadow:0 8px 22px rgba(30,80,200,.32); }
+  .btn-outline-blue{ background:transparent; color:var(--navy); border-color:var(--blue-200); }
+  .btn-outline-blue:hover{ background:#fff; }
+
+  /* HEADER */
+  header{ position:sticky; top:0; z-index:50; background:rgba(255,255,255,.88); backdrop-filter:blur(12px); border-bottom:1px solid var(--line-soft); }
+  .nav{ display:flex; align-items:center; justify-content:space-between; height:74px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{ width:38px; height:38px; border-radius:10px; background:var(--blue); display:grid; place-items:center; color:#fff; font-weight:700; font-size:19px; box-shadow:0 4px 12px rgba(30,80,200,.3); }
+  .brand-name{ font-weight:700; font-size:18px; color:var(--navy); line-height:1; letter-spacing:-.01em; }
+  .brand-sub{ font-size:9.5px; font-weight:600; letter-spacing:.22em; color:var(--slate); text-transform:uppercase; margin-top:3px; }
+  .nav-links{ display:flex; gap:34px; }
+  .nav-links a{ font-size:15px; font-weight:500; color:var(--slate); transition:color .15s; }
+  .nav-links a:hover{ color:var(--blue); }
+  .nav-right{ display:flex; align-items:center; gap:22px; }
+  .nav-right .signin{ font-size:15px; font-weight:500; color:var(--navy); }
+  .nav-right .signin:hover{ color:var(--blue); }
+  .menu-btn{ display:none; background:none; border:none; cursor:pointer; padding:6px; }
+
+  /* BREADCRUMB */
+  .crumb{ padding:22px 0 6px; }
+  .crumb ol{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; align-items:center; gap:9px; font-size:13px; color:var(--slate); }
+  .crumb a:hover{ color:var(--blue); }
+  .crumb .sep{ color:var(--blue-200); }
+  .crumb [aria-current]{ color:var(--navy); font-weight:500; }
+
+  /* HERO */
+  .hero{ padding:36px 0 44px; background:
+      radial-gradient(1100px 520px at 88% -8%, var(--blue-50) 0%, rgba(242,246,255,0) 60%); }
+  .hero-inner{ max-width:780px; }
+  .level-pill{ display:inline-flex; align-items:center; gap:9px; background:var(--purple-bg); border:1px solid #E4DDF8;
+    border-radius:999px; padding:7px 16px; font-size:13px; font-weight:600; color:var(--purple); margin-bottom:22px; }
+  .level-pill .dot{ width:8px; height:8px; border-radius:50%; background:var(--purple); }
+  .hero h1{ font-size:40px; font-weight:600; line-height:1.12; letter-spacing:-.022em; margin-bottom:18px; }
+  .hero-lead{ font-size:16px; color:var(--slate); line-height:1.66; margin-bottom:24px; }
+  .hero-meta{ display:flex; gap:10px 20px; flex-wrap:wrap; font-size:14px; color:var(--slate); }
+  .hero-meta span{ display:inline-flex; align-items:center; gap:8px; }
+  .hero-meta svg{ width:15px; height:15px; color:var(--blue); flex:none; }
+  .hero-meta b{ color:var(--navy); font-weight:600; }
+
+  /* ===== LIBRARY LAYOUT: sidebar + list ===== */
+  .library{ padding:34px 0 60px; }
+  .lib-grid{ display:grid; grid-template-columns:280px 1fr; gap:32px; align-items:start; }
+
+  /* Sidebar */
+  .sidebar{ position:sticky; top:96px; border-radius:var(--radius-lg); overflow:hidden;
+    border:1px solid var(--line); box-shadow:var(--shadow-md); background:#fff; }
+  .sb-head{ background:var(--navy); padding:22px 24px; }
+  .sb-head .k{ font-size:10.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:#8FB1E8; margin-bottom:5px; }
+  .sb-head .v{ font-size:18px; font-weight:600; color:#fff; letter-spacing:-.01em; }
+  .sb-label{ font-size:11px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--slate);
+    padding:18px 24px 10px; border-bottom:1px solid var(--line-soft); }
+  .sb-list{ list-style:none; margin:0; padding:0; }
+  .sb-item{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    font-family:inherit; font-size:14px; font-weight:500; color:var(--ink); text-align:left;
+    background:none; border:none; border-bottom:1px solid var(--line-soft); border-left:3px solid transparent;
+    padding:13px 24px 13px 21px; cursor:pointer; transition:.15s; }
+  .sb-item:last-child{ border-bottom:none; }
+  .sb-item:hover{ background:var(--blue-50); color:var(--blue); }
+  .sb-item.active{ background:var(--blue-50); border-left-color:var(--blue); color:var(--blue); font-weight:600; }
+  .sb-item .ct{ font-size:12px; font-weight:600; color:var(--slate); background:var(--line-soft);
+    border-radius:99px; padding:2px 10px; flex:none; }
+  .sb-item.active .ct{ background:var(--blue-100); color:var(--blue); }
+
+  /* Section blocks */
+  .groups{ display:flex; flex-direction:column; gap:26px; }
+  .group{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); overflow:hidden; }
+  .group.hidden{ display:none; }
+  .group-head{ display:flex; align-items:center; gap:15px; padding:20px 26px; border-bottom:1px solid var(--line-soft); }
+  .group-head .bar{ width:4px; height:26px; border-radius:99px; flex:none; }
+  .group-head h2{ font-size:20px; font-weight:600; letter-spacing:-.015em; flex:1; }
+  .group-head .gcount{ font-size:13px; color:var(--slate); white-space:nowrap; }
+  /* group bar colors */
+  .g-technique .bar{ background:var(--blue); }     .g-technique .code{ background:var(--blue-50); color:var(--blue); border-color:var(--blue-100); }
+  .g-ethics .bar{ background:var(--green); }       .g-ethics .code{ background:var(--green-bg); color:var(--green); border-color:#CBE9DA; }
+  .g-risk .bar{ background:var(--amber); }         .g-risk .code{ background:var(--amber-bg); color:var(--amber); border-color:#F5DFC2; }
+  .g-procedures .bar{ background:var(--purple); }  .g-procedures .code{ background:var(--purple-bg); color:var(--purple); border-color:#E4DDF8; }
+  .g-reporting .bar{ background:var(--teal); }     .g-reporting .code{ background:var(--teal-bg); color:var(--teal); border-color:#C6EBE1; }
+  .g-governance .bar{ background:var(--navy); }    .g-governance .code{ background:#EAEFF7; color:var(--navy); border-color:#D8E1EF; }
+  .g-technology .bar{ background:var(--blue-bright); } .g-technology .code{ background:var(--blue-50); color:var(--blue-bright); border-color:var(--blue-100); }
+  .g-liability .bar{ background:var(--rose); }     .g-liability .code{ background:var(--rose-bg); color:var(--rose); border-color:#F3D3E2; }
+
+  /* Article rows */
+  .row{ display:grid; grid-template-columns:64px 1.05fr 1.3fr 34px; gap:20px; align-items:center;
+    padding:20px 26px; border-bottom:1px solid var(--line-soft); transition:.15s; }
+  .row:last-child{ border-bottom:none; }
+  .row:hover{ background:var(--blue-50); }
+  .row .code{ font-size:11.5px; font-weight:700; letter-spacing:.02em; border:1px solid;
+    border-radius:9px; padding:7px 0; text-align:center; }
+  .row .title{ font-size:15px; font-weight:600; color:var(--navy); line-height:1.4; }
+  .row:hover .title{ color:var(--blue); }
+  .row .desc{ font-size:13.5px; color:var(--slate); line-height:1.55; }
+  .row .go{ width:30px; height:30px; border-radius:9px; border:1px solid var(--line); background:#fff;
+    display:grid; place-items:center; color:var(--blue); transition:.15s; justify-self:end; }
+  .row:hover .go{ background:var(--blue); border-color:var(--blue); color:#fff; }
+  .row .go svg{ width:13px; height:13px; }
+
+  /* Copyright note */
+  .note-strip{ display:flex; align-items:flex-start; gap:16px; background:var(--blue-50); border:1px solid var(--blue-100);
+    border-radius:var(--radius); padding:22px 26px; margin-top:30px; }
+  .note-strip .n-ico{ width:38px; height:38px; border-radius:10px; background:#fff; border:1px solid var(--blue-100);
+    color:var(--blue); display:grid; place-items:center; flex:none; }
+  .note-strip .n-ico svg{ width:18px; height:18px; }
+  .note-strip p{ font-size:14px; color:var(--slate); line-height:1.6; }
+  .note-strip b{ color:var(--navy); font-weight:600; }
+  .note-strip a{ color:var(--blue); font-weight:500; }
+  .note-strip a:hover{ text-decoration:underline; }
+
+  /* CTA */
+  .cta-band{ padding:20px 0 90px; }
+  .cta-panel{ background:
+      radial-gradient(640px 320px at 88% 120%, rgba(59,115,240,.12) 0%, rgba(59,115,240,0) 60%),
+      var(--blue-100);
+    border:1px solid var(--blue-200); border-radius:28px; padding:60px 56px; box-shadow:var(--shadow-sm); }
+  .cta-panel h2{ font-size:36px; font-weight:600; letter-spacing:-.02em; line-height:1.14; margin-bottom:14px; max-width:600px; }
+  .cta-panel p{ font-size:17px; color:var(--slate); max-width:600px; line-height:1.6; margin-bottom:28px; }
+  .cta-actions{ display:flex; gap:14px; flex-wrap:wrap; }
+
+  /* FOOTER */
+  footer{ border-top:1px solid var(--line); padding:68px 0 34px; }
+  .foot-grid{ display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:48px; margin-bottom:50px; }
+  .foot-about{ max-width:300px; }
+  .foot-about .brand{ margin-bottom:18px; }
+  .foot-about p{ font-size:14.5px; color:var(--slate); line-height:1.65; }
+  .foot-col h4{ font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--slate); margin-bottom:18px; }
+  .foot-col ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+  .foot-col a{ font-size:14.5px; color:var(--ink); transition:color .15s; }
+  .foot-col a:hover{ color:var(--blue); }
+  .foot-bottom{ display:flex; align-items:center; justify-content:space-between; padding-top:26px; border-top:1px solid var(--line); flex-wrap:wrap; gap:14px; }
+  .foot-bottom p{ font-size:13.5px; color:var(--slate); }
+  .foot-rating{ display:flex; align-items:center; gap:9px; font-size:13.5px; color:var(--slate); }
+
+  @media (max-width:980px){
+    .hero h1{ font-size:33px; }
+    .lib-grid{ grid-template-columns:1fr; }
+    .sidebar{ position:static; }
+    .sb-list{ display:flex; flex-wrap:wrap; padding:10px; gap:8px; }
+    .sb-item{ width:auto; border:1px solid var(--line)!important; border-radius:999px; padding:8px 16px; }
+    .sb-item.active{ background:var(--blue); color:#fff; border-color:var(--blue)!important; }
+    .sb-item.active .ct{ background:rgba(255,255,255,.22); color:#fff; }
+    .sb-label{ border-bottom:none; padding-bottom:0; }
+    .row{ grid-template-columns:56px 1fr 34px; }
+    .row .desc{ grid-column:2 / 3; grid-row:2; }
+    .row .go{ grid-row:1 / 3; align-self:center; }
+    .foot-grid{ grid-template-columns:1fr 1fr; gap:36px; }
+  }
+  @media (max-width:680px){
+    :root{ --gutter:22px; }
+    .nav-links,.nav-right .signin{ display:none; }
+    .menu-btn{ display:block; }
+    .hero{ padding:24px 0 34px; }
+    .hero h1{ font-size:26px; }
+    .group-head{ padding:16px 18px; }
+    .row{ padding:16px 18px; gap:12px; }
+    .cta-panel{ padding:38px 26px; }
+    .cta-panel h2{ font-size:25px; }
+    .foot-grid{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#">
+      <span class="brand-mark">V</span>
+      <span><span class="brand-name">Vertex</span><span class="brand-sub">Learning Solutions</span></span>
+    </a>
+    <nav class="nav-links">
+      <a href="#">Courses</a><a href="#">Subscription</a><a href="#">Live classes</a><a href="#">Reviews</a><a href="#">About</a>
+    </nav>
+    <div class="nav-right">
+      <a class="signin" href="#">Sign in</a>
+      <a class="btn btn-primary" href="#">Enrol now</a>
+      <button class="menu-btn" aria-label="Open menu"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E2A57" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </div>
+</header>
+
+<!-- BREADCRUMB -->
+<div class="wrap crumb">
+  <ol>
+    <li><a href="#">Home</a></li><li class="sep">/</li>
+    <li><a href="#">Technical articles</a></li><li class="sep">/</li>
+    <li aria-current="page">AAA articles</li>
+  </ol>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-inner">
+      <span class="level-pill"><span class="dot"></span> ACCA · Strategic Professional</span>
+      <h1>AAA — Advanced Audit &amp; Assurance <span class="accent">technical articles.</span></h1>
+      <p class="hero-lead">Official technical articles published by ACCA UK, curated by VLS and grouped by AAA syllabus area — covering exam technique, ethics, risk, audit procedures, reporting, governance and current issues.</p>
+      <div class="hero-meta">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Published by <b>ACCA UK</b></span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> <b>18</b> articles · <b>8</b> topic areas</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Free to access</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== LIBRARY ===== -->
+<section class="library">
+  <div class="wrap lib-grid">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sb-head">
+        <div class="k">Currently viewing</div>
+        <div class="v">AAA Articles</div>
+      </div>
+      <div class="sb-label">Topic areas</div>
+      <ul class="sb-list" id="sbList">
+        <li><button class="sb-item active" data-topic="all">All articles <span class="ct">18</span></button></li>
+        <li><button class="sb-item" data-topic="technique">Exam Technique Series <span class="ct">4</span></button></li>
+        <li><button class="sb-item" data-topic="ethics">Ethics &amp; Professional Conduct <span class="ct">3</span></button></li>
+        <li><button class="sb-item" data-topic="risk">Audit Risk <span class="ct">1</span></button></li>
+        <li><button class="sb-item" data-topic="procedures">Audit Procedures &amp; Specialist Areas <span class="ct">3</span></button></li>
+        <li><button class="sb-item" data-topic="reporting">Auditor Reporting <span class="ct">2</span></button></li>
+        <li><button class="sb-item" data-topic="governance">Corporate Governance &amp; Audit Quality <span class="ct">2</span></button></li>
+        <li><button class="sb-item" data-topic="technology">Current Issues &amp; Technology <span class="ct">2</span></button></li>
+        <li><button class="sb-item" data-topic="liability">Auditor Liability <span class="ct">1</span></button></li>
+      </ul>
+    </aside>
+
+    <!-- GROUPED LISTS -->
+    <div class="groups" id="groups">
+
+      <!-- Exam Technique -->
+      <div class="group g-technique" data-topic="technique">
+        <div class="group-head"><span class="bar"></span><h2>Exam Technique Series</h2><span class="gcount">4 articles</span></div>
+        <a class="row" href="https://www.accaglobal.com/gb/en/student/exam-support-resources/professional-exams-study-resources/p7/technical-articles/exam-tech-ethics.html" target="_blank" rel="noopener">
+          <span class="code">P1</span>
+          <span class="title">Exam Technique — Part 1: Ethics</span>
+          <span class="desc">Demonstrates how to maximise marks on ethics questions using effective exam technique. Ethics is examined regularly across all AAA sections.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+        <a class="row" href="https://www.accaglobal.com/gb/en/student/exam-support-resources/professional-exams-study-resources/p7/technical-articles/audit-risk.html" target="_blank" rel="noopener">
+          <span class="code">P2</span>
+          <span class="title">Exam Technique — Part 2: Risk</span>
+          <span class="desc">Explains the different ways risk is examined in AAA and how to distinguish between them to score marks effectively.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+        <a class="row" href="https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f8/technical-articles/audit-procedures.html" target="_blank" rel="noopener">
+          <span class="code">P3</span>
+          <span class="title">Exam Technique — Part 3: Audit Procedures</span>
+          <span class="desc">Examines the level of detail required for procedures questions. Compares strong vs weak answers to illustrate the specificity needed to earn marks.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+        <a class="row" href="https://www.accaglobal.com/gb/en/technical-activities/technical-resources-search/2011/july/extended-audit-reporting.html" target="_blank" rel="noopener">
+          <span class="code">P4</span>
+          <span class="title">Exam Technique — Part 4: Auditor Reporting</span>
+          <span class="desc">Focuses on reporting to shareholders — audit report format, types of opinion, and modifications required in different scenarios.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+      </div>
+
+      <!-- Ethics -->
+      <div class="group g-ethics" data-topic="ethics">
+        <div class="group-head"><span class="bar"></span><h2>Ethics &amp; Professional Conduct</h2><span class="gcount">3 articles</span></div>
+        <a class="row" href="https://www.accaglobal.com/gb/en/technical-activities/technical-resources-search/2015/september/non-compliance-laws-regulations.html" target="_blank" rel="noopener">
+          <span class="code">NOC</span>
+          <span class="title">Responding to Non-Compliance with Laws and Regulations (NOCLAR)</span>
+          <span class="desc">Covers recent IESBA Code of Ethics developments on how auditors should respond to non-compliance with laws and regulations.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+        <a class="row" href="https://www.accaglobal.com/ie/en/student/exam-support-resources/professional-exams-study-resources/p7/technical-articles/role-mindset.html" target="_blank" rel="noopener">
+          <span class="code">ED</span>
+          <span class="title">Exposure Draft — Role and Mindset of Professional Accountant</span>
+          <span class="desc">Summarises key proposals in the Exposure Draft on promoting the role and mindset expected of professional accountants.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+        <a class="row" href="https://www.accaglobal.com/ie/en/student/exam-support-resources/fundamentals-exams-study-resources/f8/technical-articles/laws-and-regulations.html" target="_blank" rel="noopener">
+          <span class="code">L&amp;R</span>
+          <span class="title">Laws and Regulations</span>
+          <span class="desc">Covers how laws and regulations affect an audit — the responsibilities of both management and the auditor in this context.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+      </div>
+
+      <!-- Audit Risk -->
+      <div class="group g-risk" data-topic="risk">
+        <div class="group-head"><span class="bar"></span><h2>Audit Risk</h2><span class="gcount">1 article</span></div>
+        <a class="row" href="https://www.accaglobal.com/ie/en/student/exam-support-resources/professional-exams-study-resources/p7/technical-articles/misstatements.html" target="_blank" rel="noopener">
+          <span class="code">MIS</span>
+          <span class="title">Evaluation of Misstatements</span>
+          <span class="desc">Covers the completion stage of the audit — reviewing work performed and evaluating the implications of misstatements found for the auditor's report.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+      </div>
+
+      <!-- Procedures -->
+      <div class="group g-procedures" data-topic="procedures">
+        <div class="group-head"><span class="bar"></span><h2>Audit Procedures &amp; Specialist Areas</h2><span class="gcount">3 articles</span></div>
+        <a class="row" href="https://www.accaglobal.com/ie/en/student/exam-support-resources/professional-exams-study-resources/p7/technical-articles/group-audits.html" target="_blank" rel="noopener">
+          <span class="code">GRP</span>
+          <span class="title">Group Audits</span>
+          <span class="desc">Key areas of ISA 600 — Audits of Group Financial Statements, including the work of component auditors. Essential pre-exam reading.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+        <a class="row" href="https://www.accaglobal.com/ie/en/student/exam-support-resources/professional-exams-study-resources/p7/technical-articles/specialised-industries.html" target="_blank" rel="noopener">
+          <span class="code">SPC</span>
+          <span class="title">Auditing in Specialised Industries</span>
+          <span class="desc">Explores specific considerations for auditors when the client operates in a specialised industry — a practical and frequently tested area.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+        <a class="row" href="https://www.accaglobal.com/ie/en/student/acca-qual-student-journey/qual-resource/acca-qualification/f8/technical-articles/internal-auditors.html" target="_blank" rel="noopener">
+          <span class="code">INT</span>
+          <span class="title">Using the Work of Internal Auditors</span>
+          <span class="desc">Focuses on direct assistance by internal auditors — the controversy around independence threats and the benefits of using internal audit work.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+      </div>
+
+      <!-- Reporting -->
+      <div class="group g-reporting" data-topic="reporting">
+        <div class="group-head"><span class="bar"></span><h2>Auditor Reporting</h2><span class="gcount">2 articles</span></div>
+        <a class="row" href="https://www.accaglobal.com/ie/en/student/exam-support-resources/professional-exams-study-resources/p7/technical-articles/auditing-disclosures.html" target="_blank" rel="noopener">
+          <span class="code">DSC</span>
+          <span class="title">Auditing Disclosures in Financial Statements</span>
+          <span class="desc">Looks at auditing disclosures following developments in IFRS requirements and the increased complexity of information to be disclosed.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+        <a class="row" href="https://www.accaglobal.com/ie/en/technical-activities/technical-resources-search/2010/january/enhancing-external-audit-learning-from-the-public-sector.html" target="_blank" rel="noopener">
+          <span class="code">PUB</span>
+          <span class="title">Performance Information in the Public Sector</span>
+          <span class="desc">Covers the audit of performance information and pre-determined objectives in the public sector — a specific AAA syllabus area.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+      </div>
+
+      <!-- Governance -->
+      <div class="group g-governance" data-topic="governance">
+        <div class="group-head"><span class="bar"></span><h2>Corporate Governance &amp; Audit Quality</h2><span class="gcount">2 articles</span></div>
+        <a class="row" href="https://www.accaglobal.com/ie/en/student/exam-support-resources/professional-exams-study-resources/p7/technical-articles/corpgov-audit.html" target="_blank" rel="noopener">
+          <span class="code">GOV</span>
+          <span class="title">Corporate Governance and its Impact on Audit Practice</span>
+          <span class="desc">Explores how corporate governance principles and practice affect the audit process — building on governance knowledge from earlier ACCA papers.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+        <a class="row" href="https://www.accaglobal.com/ie/en/student/exam-support-resources/professional-exams-study-resources/p7/technical-articles/audit-quailty.html" target="_blank" rel="noopener">
+          <span class="code">AQ</span>
+          <span class="title">Audit Quality — A Perpetual Current Issue</span>
+          <span class="desc">Covers quality control in the context of practice management — a dedicated section in the AAA syllabus (Section C1).</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+      </div>
+
+      <!-- Technology -->
+      <div class="group g-technology" data-topic="technology">
+        <div class="group-head"><span class="bar"></span><h2>Current Issues &amp; Technology</h2><span class="gcount">2 articles</span></div>
+        <a class="row" href="https://www.accaglobal.com/ie/en/student/exam-support-resources/professional-exams-study-resources/p7/technical-articles/data-analytics.html" target="_blank" rel="noopener">
+          <span class="code">DA</span>
+          <span class="title">Data Analysis and the Auditor</span>
+          <span class="desc">Provides insight into what auditors must consider when using data analytics — what it means, how it is used, and how it improves audit efficiency.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+        <a class="row" href="https://www.accaglobal.com/hk/en/student/exam-support-resources/professional-exams-study-resources/p7/technical-articles/scepticism.html" target="_blank" rel="noopener">
+          <span class="code">PSC</span>
+          <span class="title">Professional Scepticism</span>
+          <span class="desc">Explains why professional scepticism is an essential part of the auditor's mindset and why its importance is growing in the modern audit environment.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+      </div>
+
+      <!-- Liability -->
+      <div class="group g-liability" data-topic="liability">
+        <div class="group-head"><span class="bar"></span><h2>Auditor Liability</h2><span class="gcount">1 article</span></div>
+        <a class="row" href="https://www.accaglobal.com/ie/en/student/exam-support-resources/professional-exams-study-resources/p7/technical-articles/auditor-liability.html" target="_blank" rel="noopener">
+          <span class="code">LIB</span>
+          <span class="title">Auditor Liability</span>
+          <span class="desc">Covers the legal and professional liability of auditors — negligence, duty of care, and the extent of auditor responsibility to third parties.</span>
+          <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+      </div>
+
+      <div class="note-strip">
+        <span class="n-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.8 9A2.5 2.5 0 0 0 9.7 9c0 2.5 2.3 2 2.3 4"/><path d="M12 17h.01"/></svg></span>
+        <p>All article content is copyright of the original publisher, <b>ACCA UK</b>. Links open directly on the ACCA Global website. VLS provides these links to help students access official ACCA academic resources. <a href="#">← Back to all technical articles</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-band">
+  <div class="wrap">
+    <div class="cta-panel">
+      <div class="eyebrow">Preparing for AAA?</div>
+      <h2>Turn reading into exam marks with the <span class="accent">AAA course.</span></h2>
+      <p>Pair these articles with our full AAA Complete Learning Pack — video lessons, weekly live classes, tutor support and a final mock with examiner-style feedback.</p>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="#">View the AAA course</a>
+        <a class="btn btn-outline-blue" href="#">Book a free consultation</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-about">
+        <a class="brand" href="#"><span class="brand-mark">V</span><span><span class="brand-name">Vertex</span><span class="brand-sub">Learning Solutions</span></span></a>
+        <p>A dedicated team of academic experts helping accounting and finance professionals excel — through the most comprehensive online courses, delivered on our own learning platform.</p>
+      </div>
+      <div class="foot-col"><h4>Courses</h4><ul>
+        <li><a href="#">ACCA individual courses</a></li><li><a href="#">ACCA subscription plan</a></li>
+        <li><a href="#">CIMA exam preparation</a></li><li><a href="#">CMA exam preparation</a></li><li><a href="#">CIA exam preparation</a></li>
+      </ul></div>
+      <div class="foot-col"><h4>Company</h4><ul>
+        <li><a href="#">About Vertex</a></li><li><a href="#">Student reviews</a></li>
+        <li><a href="#">Live classes</a></li><li><a href="#">Contact us</a></li><li><a href="#">Book a meeting</a></li>
+      </ul></div>
+      <div class="foot-col"><h4>Support</h4><ul>
+        <li><a href="#">Help centre</a></li><li><a href="#">Terms &amp; conditions</a></li>
+        <li><a href="#">Privacy policy</a></li><li><a href="#">Cookie policy</a></li><li><a href="#">Complaint form</a></li>
+      </ul></div>
+    </div>
+    <div class="foot-bottom">
+      <p>© 2026 Vertex Learning Solutions · ACCA, CIMA, CMA (USA) &amp; CIA exam preparation</p>
+      <div class="foot-rating"><span class="stars">★★★★★</span> Rated 5.0 by students worldwide</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const items = document.querySelectorAll('#sbList .sb-item');
+  const groups = document.querySelectorAll('#groups .group');
+  items.forEach(item => {
+    item.addEventListener('click', () => {
+      items.forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      const topic = item.dataset.topic;
+      groups.forEach(g => g.classList.toggle('hidden', topic !== 'all' && g.dataset.topic !== topic));
+      window.scrollTo({ top: document.querySelector('.library').offsetTop - 90, behavior: 'smooth' });
+    });
+  });
+</script>
+
+</body>
+</html>

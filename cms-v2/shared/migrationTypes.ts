@@ -8,7 +8,11 @@ export type MigrationTemplate =
   | 'about_us'
   | 'landing'
   | 'team_vls'
-  | 'schedules';
+  | 'schedules'
+  | 'course_articles'
+  | 'live_sessions'
+  | 'book_meeting'
+  | 'contact_us';
 
 export interface MigrationPageRecord {
   id: number;
@@ -28,6 +32,7 @@ export interface MigrationPageRecord {
   scrapeWarnings: string[];
   structureGeneratedAt: string | null;
   draftStoryId: number | null;
+  customComponentName: string | null;
 }
 
 export interface PageScanResult {
@@ -203,6 +208,8 @@ export interface ScrapedGenericPage {
   templateSections: ScrapedTemplateSection[];
   faq: ScrapedCoursePage['faq'];
   extractionWarnings?: string[];
+  /** Full fetched page HTML, kept so a fully-blocked page can later be re-analyzed for Generate Component. */
+  rawHtml?: string;
 }
 
 export interface TemplateReferenceSummary {
@@ -283,4 +290,26 @@ export interface ContentPhaseResult {
     previewUrl: string;
     created: boolean;
   };
+}
+
+export interface ComponentDraftResult {
+  componentName: string;
+  /** Ordered children-first, then the parent component — nested `bloks` fields reference earlier entries by name. */
+  storyblokSchema: { components: Array<Record<string, unknown>> };
+  tsxCode: string;
+  typeCode: string;
+  warnings: string[];
+}
+
+export type GenerateComponentRequest = StoryblokCredentials;
+
+export interface ConfirmComponentRequest extends StoryblokCredentials {
+  componentName: string;
+  storyblokSchema: { components: Array<Record<string, unknown>> };
+}
+
+export interface ConfirmComponentResult {
+  page: MigrationPageRecord;
+  componentName: string;
+  created: boolean;
 }
