@@ -9,12 +9,9 @@ export class PricingResolutionError extends Error {
   }
 }
 
-function pickHighestPriority(prices: CourseGeoPrice[]): CourseGeoPrice | null {
+function pickLowestId(prices: CourseGeoPrice[]): CourseGeoPrice | null {
   if (prices.length === 0) return null;
-  return [...prices].sort((a, b) => {
-    if (b.priority !== a.priority) return b.priority - a.priority;
-    return a.id - b.id;
-  })[0] ?? null;
+  return [...prices].sort((a, b) => a.id - b.id)[0] ?? null;
 }
 
 function filterByDuration(prices: CourseGeoPrice[], durationMonths?: number | null): CourseGeoPrice[] {
@@ -55,14 +52,14 @@ export function resolvePriceFromCandidates(
   }
 
   if (input.durationMonths != null) {
-    const durationMatch = pickHighestPriority(candidates);
+    const durationMatch = pickLowestId(candidates);
     if (durationMatch) {
       return toResolved(durationMatch, options.matchReason ?? 'duration', detectedCountryCode);
     }
   }
 
   const defaults = candidates.filter(p => p.isDefault);
-  const defaultMatch = pickHighestPriority(defaults);
+  const defaultMatch = pickLowestId(defaults);
   if (defaultMatch) {
     return toResolved(defaultMatch, options.matchReason ?? 'default', detectedCountryCode);
   }

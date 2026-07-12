@@ -9,7 +9,25 @@ import type {
 
 type View = 'list' | 'manage' | 'import';
 
-const DURATION_OPTIONS = [1, 2, 3, 4, 5, 6];
+const MONTH_OPTIONS = [
+  { value: 1, label: 'January' },
+  { value: 2, label: 'February' },
+  { value: 3, label: 'March' },
+  { value: 4, label: 'April' },
+  { value: 5, label: 'May' },
+  { value: 6, label: 'June' },
+  { value: 7, label: 'July' },
+  { value: 8, label: 'August' },
+  { value: 9, label: 'September' },
+  { value: 10, label: 'October' },
+  { value: 11, label: 'November' },
+  { value: 12, label: 'December' },
+];
+
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 11 }, (_, i) => CURRENT_YEAR + i);
+
+type PricingMode = 'session' | 'duration';
 
 type PriceDraft = {
   id?: number;
@@ -17,12 +35,12 @@ type PriceDraft = {
   amount: string;
   discountPercent: string;
   compareAtAmount: string;
-  durationMonths: string;
+  pricingMode: PricingMode;
+  examSessionMonth: string;
+  examSessionYear: string;
+  durationDays: string;
   isActive: boolean;
   isDefault: boolean;
-  validFrom: string;
-  validUntil: string;
-  priority: string;
   stripePriceId: string;
 };
 
@@ -32,12 +50,12 @@ function emptyDraft(): PriceDraft {
     amount: '',
     discountPercent: '',
     compareAtAmount: '',
-    durationMonths: '6',
+    pricingMode: 'duration',
+    examSessionMonth: String(MONTH_OPTIONS[0]!.value),
+    examSessionYear: String(CURRENT_YEAR),
+    durationDays: '',
     isActive: true,
     isDefault: false,
-    validFrom: '',
-    validUntil: '',
-    priority: '0',
     stripePriceId: '',
   };
 }
@@ -56,12 +74,12 @@ function priceToDraft(price: CourseGeoPrice): PriceDraft {
     amount: String(price.amount),
     discountPercent: price.discountPercent != null ? String(price.discountPercent) : '',
     compareAtAmount: price.compareAtAmount != null ? String(price.compareAtAmount) : '',
-    durationMonths: String(price.durationMonths ?? 6),
+    pricingMode: price.pricingMode,
+    examSessionMonth: price.examSessionMonth != null ? String(price.examSessionMonth) : String(MONTH_OPTIONS[0]!.value),
+    examSessionYear: price.examSessionYear != null ? String(price.examSessionYear) : String(CURRENT_YEAR),
+    durationDays: price.durationDays != null ? String(price.durationDays) : '',
     isActive: price.isActive,
     isDefault: price.isDefault,
-    validFrom: price.validFrom ? String(price.validFrom).slice(0, 10) : '',
-    validUntil: price.validUntil ? String(price.validUntil).slice(0, 10) : '',
-    priority: String(price.priority ?? 0),
     stripePriceId: price.stripePriceId ?? '',
   };
 }
@@ -73,6 +91,15 @@ function formatMoney(amount: number | null | undefined, currency: string | null 
   } catch {
     return `${amount} ${currency}`;
   }
+}
+
+function formatPricingMode(price: Pick<CourseGeoPrice, 'pricingMode' | 'examSessionMonth' | 'examSessionYear' | 'durationDays'>): string {
+  if (price.pricingMode === 'session') {
+    if (price.examSessionMonth == null || price.examSessionYear == null) return '—';
+    const monthLabel = MONTH_OPTIONS.find(m => m.value === price.examSessionMonth)?.label ?? String(price.examSessionMonth);
+    return `${monthLabel} ${price.examSessionYear}`;
+  }
+  return price.durationDays != null ? `${price.durationDays} day${price.durationDays === 1 ? '' : 's'}` : '—';
 }
 
 function formatDate(value: Date | string | null | undefined): string {
@@ -192,10 +219,10 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
         discountPercent: draft.discountPercent === '' ? null : Number(draft.discountPercent),
         isActive: draft.isActive,
         isDefault: draft.isDefault,
-        validFrom: draft.validFrom || null,
-        validUntil: draft.validUntil || null,
-        priority: Number(draft.priority) || 0,
-        durationMonths: Number(draft.durationMonths) || 6,
+        pricingMode: draft.pricingMode,
+        examSessionMonth: draft.pricingMode === 'session' ? Number(draft.examSessionMonth) : null,
+        examSessionYear: draft.pricingMode === 'session' ? Number(draft.examSessionYear) : null,
+        durationDays: draft.pricingMode === 'duration' ? Number(draft.durationDays) : null,
         stripePriceId: draft.stripePriceId.trim() || null,
       };
 
@@ -403,6 +430,7 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
                         <th className="py-1 pr-2">Price</th>
                         <th className="py-1 pr-2">Amount (USD)</th>
                         <th className="py-1 pr-2">Discount</th>
+                        <th className="py-1 pr-2">Pricing</th>
                         <th className="py-1">Default</th>
                       </tr>
                     </thead>
@@ -419,7 +447,14 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
                               ? `${row.price.discountPercent}%`
                               : '—'}
                           </td>
-                          <td className="py-1 pr-2">{row.price.durationMonths ?? 6} mo</td>
+                          <td className="py-1 pr-2">
+                            {formatPricingMode({
+                              pricingMode: row.price.pricingMode ?? 'duration',
+                              examSessionMonth: row.price.examSessionMonth ?? null,
+                              examSessionYear: row.price.examSessionYear ?? null,
+                              durationDays: row.price.durationDays ?? null,
+                            })}
+                          </td>
                           <td className="py-1">{row.price.isDefault ? 'Yes' : 'No'}</td>
                         </tr>
                       ))}
@@ -514,30 +549,69 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
               Compare-at amount (USD)
               <input className="input mt-1" type="number" min="0" step="0.01" value={draft.compareAtAmount} onChange={e => setDraft(d => ({ ...d, compareAtAmount: e.target.value }))} />
             </label>
-            <label className="text-xs text-slate-600">
-              Duration (months)
-              <select
-                className="input mt-1"
-                value={draft.durationMonths}
-                onChange={e => setDraft(d => ({ ...d, durationMonths: e.target.value }))}
-              >
-                {DURATION_OPTIONS.map(months => (
-                  <option key={months} value={months}>{months} month{months === 1 ? '' : 's'}</option>
-                ))}
-              </select>
-            </label>
-            <label className="text-xs text-slate-600">
-              Priority
-              <input className="input mt-1" type="number" value={draft.priority} onChange={e => setDraft(d => ({ ...d, priority: e.target.value }))} />
-            </label>
-            <label className="text-xs text-slate-600">
-              Valid from
-              <input className="input mt-1" type="date" value={draft.validFrom} onChange={e => setDraft(d => ({ ...d, validFrom: e.target.value }))} />
-            </label>
-            <label className="text-xs text-slate-600">
-              Valid until
-              <input className="input mt-1" type="date" value={draft.validUntil} onChange={e => setDraft(d => ({ ...d, validUntil: e.target.value }))} />
-            </label>
+            <div className="sm:col-span-2 lg:col-span-3">
+              <p className="mb-1 text-xs text-slate-600">Pricing type</p>
+              <div className="flex gap-4 text-xs text-slate-700">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="pricingMode"
+                    checked={draft.pricingMode === 'session'}
+                    onChange={() => setDraft(d => ({ ...d, pricingMode: 'session' }))}
+                  />
+                  Session based
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="pricingMode"
+                    checked={draft.pricingMode === 'duration'}
+                    onChange={() => setDraft(d => ({ ...d, pricingMode: 'duration' }))}
+                  />
+                  Duration based
+                </label>
+              </div>
+            </div>
+            {draft.pricingMode === 'session' ? (
+              <>
+                <label className="text-xs text-slate-600">
+                  Exam session month
+                  <select
+                    className="input mt-1"
+                    value={draft.examSessionMonth}
+                    onChange={e => setDraft(d => ({ ...d, examSessionMonth: e.target.value }))}
+                  >
+                    {MONTH_OPTIONS.map(month => (
+                      <option key={month.value} value={month.value}>{month.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs text-slate-600">
+                  Exam session year
+                  <select
+                    className="input mt-1"
+                    value={draft.examSessionYear}
+                    onChange={e => setDraft(d => ({ ...d, examSessionYear: e.target.value }))}
+                  >
+                    {YEAR_OPTIONS.map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </label>
+              </>
+            ) : (
+              <label className="text-xs text-slate-600">
+                Duration (Days)
+                <input
+                  className="input mt-1"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={draft.durationDays}
+                  onChange={e => setDraft(d => ({ ...d, durationDays: e.target.value.replace(/[^0-9]/g, '') }))}
+                />
+              </label>
+            )}
             <label className="text-xs text-slate-600">
               Stripe price ID
               <input className="input mt-1" value={draft.stripePriceId} onChange={e => setDraft(d => ({ ...d, stripePriceId: e.target.value }))} />
@@ -576,19 +650,17 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
                 <th className="px-3 py-2">List price</th>
                 <th className="px-3 py-2">Discount</th>
                 <th className="px-3 py-2">Final price</th>
-                <th className="px-3 py-2">Duration</th>
+                <th className="px-3 py-2">Pricing</th>
                 <th className="px-3 py-2">Compare-at</th>
                 <th className="px-3 py-2">Active</th>
                 <th className="px-3 py-2">Default</th>
-                <th className="px-3 py-2">Valid</th>
-                <th className="px-3 py-2">Priority</th>
                 <th className="px-3 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
               {prices.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-3 py-6 text-center text-slate-500">No prices yet. Add a default price to start.</td>
+                  <td colSpan={9} className="px-3 py-6 text-center text-slate-500">No prices yet. Add a default price to start.</td>
                 </tr>
               )}
               {prices.map(price => (
@@ -597,16 +669,10 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
                   <td className="px-3 py-2">{formatMoney(price.amount, 'USD')}</td>
                   <td className="px-3 py-2">{price.discountPercent != null && price.discountPercent > 0 ? `${price.discountPercent}%` : '—'}</td>
                   <td className="px-3 py-2 font-medium text-emerald-800">{formatMoney(price.effectiveAmount, 'USD')}</td>
-                  <td className="px-3 py-2">{price.durationMonths} mo</td>
+                  <td className="px-3 py-2">{formatPricingMode(price)}</td>
                   <td className="px-3 py-2">{formatMoney(price.compareAtAmount, 'USD')}</td>
                   <td className="px-3 py-2">{price.isActive ? 'Yes' : 'No'}</td>
                   <td className="px-3 py-2">{price.isDefault ? 'Yes' : 'No'}</td>
-                  <td className="px-3 py-2">
-                    {(price.validFrom || price.validUntil)
-                      ? `${price.validFrom ? String(price.validFrom).slice(0, 10) : '…'} → ${price.validUntil ? String(price.validUntil).slice(0, 10) : '…'}`
-                      : '—'}
-                  </td>
-                  <td className="px-3 py-2">{price.priority}</td>
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-1">
                       <button className="btn-ghost text-[11px]" onClick={() => { setEditingId(price.id); setDraft(priceToDraft(price)); }}>Edit</button>

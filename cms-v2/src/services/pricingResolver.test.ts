@@ -21,9 +21,10 @@ function price(partial: Partial<CourseGeoPrice> & Pick<CourseGeoPrice, 'id' | 'n
     isDefault: false,
     isActive: true,
     stripePriceId: null,
-    validFrom: null,
-    validUntil: null,
-    priority: 0,
+    pricingMode: 'duration',
+    examSessionMonth: null,
+    examSessionYear: null,
+    durationDays: 180,
     durationMonths: 6,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -47,7 +48,7 @@ console.log('pricingResolver + validation tests');
 run('resolves by duration when provided', () => {
   const resolved = resolvePriceFromCandidates([
     price({ id: 1, name: '6 months', amount: 349, durationMonths: 6, isDefault: true }),
-    price({ id: 2, name: '3 months', amount: 199, durationMonths: 3, isDefault: true, priority: 20 }),
+    price({ id: 2, name: '3 months', amount: 199, durationMonths: 3, isDefault: true }),
   ], { durationMonths: 3 });
   assert.strictEqual(resolved.price.id, 2);
   assert.strictEqual(resolved.matchReason, 'duration');
@@ -55,19 +56,19 @@ run('resolves by duration when provided', () => {
 
 run('falls back to default when duration not provided', () => {
   const resolved = resolvePriceFromCandidates([
-    price({ id: 1, name: 'Default', amount: 349, isDefault: true, priority: 1 }),
-    price({ id: 2, name: 'Other', amount: 199, isDefault: false, priority: 50 }),
+    price({ id: 1, name: 'Default', amount: 349, isDefault: true }),
+    price({ id: 2, name: 'Other', amount: 199, isDefault: false }),
   ], {});
   assert.strictEqual(resolved.price.id, 1);
   assert.strictEqual(resolved.matchReason, 'default');
 });
 
-run('picks highest priority among duration matches', () => {
+run('picks lowest id among duration matches', () => {
   const resolved = resolvePriceFromCandidates([
-    price({ id: 1, name: '6mo A', amount: 349, durationMonths: 6, priority: 10 }),
-    price({ id: 2, name: '6mo B', amount: 299, durationMonths: 6, priority: 50 }),
+    price({ id: 2, name: '6mo B', amount: 299, durationMonths: 6 }),
+    price({ id: 1, name: '6mo A', amount: 349, durationMonths: 6 }),
   ], { durationMonths: 6 });
-  assert.strictEqual(resolved.price.id, 2);
+  assert.strictEqual(resolved.price.id, 1);
 });
 
 run('throws when no price matches duration', () => {
@@ -99,58 +100,64 @@ run('computes discounted price from percent', () => {
   assert.strictEqual(computeDiscountedPrice(150, null), null);
 });
 
-run('validates amount, discount, dates, compare-at', () => {
+run('validates amount, discount, compare-at, and session fields', () => {
   const issues = validateGeoPriceInput({
     courseId: 1,
     name: 'Bad',
     amount: 10,
     compareAtAmount: 5,
     discountPercent: 150,
-    validFrom: '2026-06-01',
-    validUntil: '2026-01-01',
+    pricingMode: 'session',
+    examSessionMonth: 13,
+    examSessionYear: 1999,
   });
   const fields = issues.map(i => i.field);
   assert.ok(fields.includes('discountPercent'));
-  assert.ok(fields.includes('validUntil'));
   assert.ok(fields.includes('compareAtAmount'));
+  assert.ok(fields.includes('examSessionMonth'));
+  assert.ok(fields.includes('examSessionYear'));
 });
 
 run('accepts a valid USD price input', () => {
   const issues = validateGeoPriceInput({
     courseId: 1,
-    name: '6 Months Access',
+    name: '180 Days Access',
     amount: 150,
     compareAtAmount: 175,
     discountPercent: 10,
     isDefault: true,
     isActive: true,
+    pricingMode: 'duration',
+    durationDays: 180,
   });
   assert.strictEqual(issues.length, 0);
 });
 
 run('parses CSV import rows', () => {
   const csv = [
-    'zenler_course_id,course_slug,course_title,price_name,amount,discount_percent,compare_at_amount,duration_months,is_default,is_active,valid_from,valid_until,priority',
-    '71086,fa1,ACCA FA1,6 Months Access,150.00,10,175.00,6,true,true,,,100',
+    'zenler_course_id,course_slug,course_title,price_name,amount,discount_percent,compare_at_amount,pricing_mode,duration_days,is_default,is_active',
+    '71086,fa1,ACCA FA1,180 Days Access,150.00,10,175.00,duration,180,true,true',
   ].join('\n');
   const rows = parseCsvText(csv);
   assert.strictEqual(rows.length, 1);
   const parsed = parseImportRow(rows[0]!, 2);
   assert.strictEqual(parsed.zenlerCourseId, '71086');
-  assert.strictEqual(parsed.priceName, '6 Months Access');
+  assert.strictEqual(parsed.priceName, '180 Days Access');
   assert.strictEqual(parsed.amount, 150);
   assert.strictEqual(parsed.discountPercent, 10);
   assert.strictEqual(parsed.isDefault, true);
+  assert.strictEqual(parsed.durationDays, 180);
 });
 
-run('validates duration months range', () => {
+run('validates duration days must be a positive whole number', () => {
   const issues = validateGeoPriceInput({
     courseId: 1,
     name: 'Bad duration',
     amount: 100,
-    durationMonths: 9,
+    pricingMode: 'duration',
+    durationDays: -5,
   });
-  assert.ok(issues.some(i => i.field === 'durationMonths'));
+  assert.ok(issues.some(i => i.field === 'durationDays'));
 });
 
 console.log('All tests passed.');

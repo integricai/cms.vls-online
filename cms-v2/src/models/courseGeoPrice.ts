@@ -2,9 +2,11 @@ import { sql } from '../db/client';
 import type {
   CourseGeoPrice,
   CourseGeoPriceInput,
+  CoursePricingMode,
   CoursePricingSummary,
 } from '../../shared/types';
 import {
+  deriveLegacyDurationMonths,
   discountedPriceForInput,
   effectiveAmount,
 } from '../services/courseGeoPriceValidation';
@@ -24,9 +26,10 @@ interface DbRow {
   is_default: boolean;
   is_active: boolean;
   stripe_price_id: string | null;
-  valid_from: Date | null;
-  valid_until: Date | null;
-  priority: number;
+  pricing_mode: CoursePricingMode;
+  exam_session_month: number | null;
+  exam_session_year: number | null;
+  duration_days: number | null;
   duration_months: number;
   created_at: Date;
   updated_at: Date;
@@ -52,12 +55,6 @@ interface SummaryDbRow {
   updated_at: Date | null;
 }
 
-function toDateOrNull(value: Date | string | null | undefined): Date | null {
-  if (value == null || value === '') return null;
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
 export function rowToCourseGeoPrice(row: DbRow): CourseGeoPrice {
   const amount = Number(row.amount);
   const discountedPrice = row.discounted_price != null ? Number(row.discounted_price) : null;
@@ -77,9 +74,10 @@ export function rowToCourseGeoPrice(row: DbRow): CourseGeoPrice {
     isDefault: row.is_default,
     isActive: row.is_active,
     stripePriceId: row.stripe_price_id,
-    validFrom: row.valid_from,
-    validUntil: row.valid_until,
-    priority: row.priority,
+    pricingMode: row.pricing_mode,
+    examSessionMonth: row.exam_session_month,
+    examSessionYear: row.exam_session_year,
+    durationDays: row.duration_days,
     durationMonths: row.duration_months,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -115,7 +113,7 @@ export async function listCoursePricingSummaries(search?: string): Promise<Cours
           SELECT id, name, amount, currency, compare_at_amount, discount_percent, discounted_price, duration_months
           FROM course_geo_prices
           WHERE course_id = c.id AND is_default = true AND is_active = true
-          ORDER BY priority DESC, id ASC
+          ORDER BY id ASC
           LIMIT 1
         ) dp ON true
         LEFT JOIN LATERAL (
@@ -154,7 +152,7 @@ export async function listCoursePricingSummaries(search?: string): Promise<Cours
           SELECT id, name, amount, currency, compare_at_amount, discount_percent, discounted_price, duration_months
           FROM course_geo_prices
           WHERE course_id = c.id AND is_default = true AND is_active = true
-          ORDER BY priority DESC, id ASC
+          ORDER BY id ASC
           LIMIT 1
         ) dp ON true
         LEFT JOIN LATERAL (
@@ -213,7 +211,7 @@ export async function listGeoPricesForCourse(courseId: number): Promise<CourseGe
     FROM course_geo_prices p
     JOIN courses c ON c.id = p.course_id
     WHERE p.course_id = ${courseId}
-    ORDER BY p.is_default DESC, p.priority DESC, p.name ASC, p.id ASC
+    ORDER BY p.is_default DESC, p.name ASC, p.id ASC
   `;
   return (rows as DbRow[]).map(rowToCourseGeoPrice);
 }
@@ -229,9 +227,7 @@ export async function listActiveGeoPricesForCourse(courseId: number): Promise<Co
     JOIN courses c ON c.id = p.course_id
     WHERE p.course_id = ${courseId}
       AND p.is_active = true
-      AND (p.valid_from IS NULL OR p.valid_from <= NOW())
-      AND (p.valid_until IS NULL OR p.valid_until >= NOW())
-    ORDER BY p.priority DESC, p.id ASC
+    ORDER BY p.id ASC
   `;
   return (rows as DbRow[]).map(rowToCourseGeoPrice);
 }
@@ -254,7 +250,10 @@ export async function getGeoPriceById(id: number): Promise<CourseGeoPrice | null
 export async function findGeoPriceByUpsertKey(data: {
   courseId: number;
   name: string;
-  durationMonths: number;
+  pricingMode: CoursePricingMode;
+  durationDays?: number | null;
+  examSessionMonth?: number | null;
+  examSessionYear?: number | null;
 }): Promise<CourseGeoPrice | null> {
   const rows = await sql`
     SELECT
@@ -266,7 +265,10 @@ export async function findGeoPriceByUpsertKey(data: {
     JOIN courses c ON c.id = p.course_id
     WHERE p.course_id = ${data.courseId}
       AND LOWER(p.name) = ${data.name.toLowerCase()}
-      AND p.duration_months = ${data.durationMonths}
+      AND p.pricing_mode = ${data.pricingMode}
+      AND COALESCE(p.duration_days, 0) = ${data.durationDays ?? 0}
+      AND COALESCE(p.exam_session_month, 0) = ${data.examSessionMonth ?? 0}
+      AND COALESCE(p.exam_session_year, 0) = ${data.examSessionYear ?? 0}
     LIMIT 1
   `;
   return rows[0] ? rowToCourseGeoPrice(rows[0] as DbRow) : null;
@@ -297,6 +299,8 @@ export async function createGeoPrice(input: CourseGeoPriceInput): Promise<Course
   const isDefault = Boolean(input.isDefault);
   const isActive = input.isActive !== false;
   const discountedPrice = discountedPriceForInput(input);
+  const pricingMode = input.pricingMode ?? 'duration';
+  const durationMonths = deriveLegacyDurationMonths(pricingMode, input.durationDays);
 
   if (isDefault && isActive) {
     await clearOtherActiveDefaults(input.courseId);
@@ -306,7 +310,8 @@ export async function createGeoPrice(input: CourseGeoPriceInput): Promise<Course
     INSERT INTO course_geo_prices (
       course_id, name, currency, amount, compare_at_amount,
       discount_percent, discounted_price,
-      is_default, is_active, stripe_price_id, valid_from, valid_until, priority, duration_months
+      is_default, is_active, stripe_price_id,
+      pricing_mode, exam_session_month, exam_session_year, duration_days, duration_months
     ) VALUES (
       ${input.courseId},
       ${input.name.trim()},
@@ -318,10 +323,11 @@ export async function createGeoPrice(input: CourseGeoPriceInput): Promise<Course
       ${isDefault},
       ${isActive},
       ${input.stripePriceId?.trim() || null},
-      ${toDateOrNull(input.validFrom)},
-      ${toDateOrNull(input.validUntil)},
-      ${Number.isFinite(input.priority) ? Number(input.priority) : 0},
-      ${input.durationMonths ?? 6}
+      ${pricingMode},
+      ${pricingMode === 'session' ? (input.examSessionMonth ?? null) : null},
+      ${pricingMode === 'session' ? (input.examSessionYear ?? null) : null},
+      ${pricingMode === 'duration' ? (input.durationDays ?? null) : null},
+      ${durationMonths}
     )
     RETURNING *
   `;
@@ -335,6 +341,11 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
   const existing = await getGeoPriceById(id);
   if (!existing) return null;
 
+  const pricingMode = input.pricingMode !== undefined ? input.pricingMode : existing.pricingMode;
+  const examSessionMonth = input.examSessionMonth !== undefined ? input.examSessionMonth : existing.examSessionMonth;
+  const examSessionYear = input.examSessionYear !== undefined ? input.examSessionYear : existing.examSessionYear;
+  const durationDays = input.durationDays !== undefined ? input.durationDays : existing.durationDays;
+
   const nextInput: CourseGeoPriceInput = {
     courseId: existing.courseId,
     name: input.name !== undefined ? String(input.name).trim() : existing.name,
@@ -347,17 +358,14 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
     stripePriceId: input.stripePriceId !== undefined
       ? (input.stripePriceId?.trim() || null)
       : existing.stripePriceId,
-    validFrom: input.validFrom !== undefined ? input.validFrom : existing.validFrom,
-    validUntil: input.validUntil !== undefined ? input.validUntil : existing.validUntil,
-    priority: input.priority !== undefined
-      ? (Number.isFinite(input.priority) ? Number(input.priority) : 0)
-      : existing.priority,
-    durationMonths: input.durationMonths !== undefined
-      ? Number(input.durationMonths)
-      : existing.durationMonths,
+    pricingMode,
+    examSessionMonth: pricingMode === 'session' ? (examSessionMonth ?? null) : null,
+    examSessionYear: pricingMode === 'session' ? (examSessionYear ?? null) : null,
+    durationDays: pricingMode === 'duration' ? (durationDays ?? null) : null,
   };
 
   const discountedPrice = discountedPriceForInput(nextInput);
+  const durationMonths = deriveLegacyDurationMonths(pricingMode, nextInput.durationDays);
 
   if (nextInput.isDefault && nextInput.isActive) {
     await clearOtherActiveDefaults(existing.courseId, id);
@@ -374,10 +382,11 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
         is_default = ${nextInput.isDefault},
         is_active = ${nextInput.isActive},
         stripe_price_id = ${nextInput.stripePriceId},
-        valid_from = ${toDateOrNull(nextInput.validFrom)},
-        valid_until = ${toDateOrNull(nextInput.validUntil)},
-        priority = ${nextInput.priority},
-        duration_months = ${nextInput.durationMonths},
+        pricing_mode = ${nextInput.pricingMode},
+        exam_session_month = ${nextInput.examSessionMonth},
+        exam_session_year = ${nextInput.examSessionYear},
+        duration_days = ${nextInput.durationDays},
+        duration_months = ${durationMonths},
         updated_at = NOW()
     WHERE id = ${id}
     RETURNING *
@@ -400,7 +409,10 @@ export async function upsertGeoPriceByKey(input: CourseGeoPriceInput): Promise<{
   const existing = await findGeoPriceByUpsertKey({
     courseId: input.courseId,
     name: input.name,
-    durationMonths: input.durationMonths ?? 6,
+    pricingMode: input.pricingMode ?? 'duration',
+    durationDays: input.durationDays,
+    examSessionMonth: input.examSessionMonth,
+    examSessionYear: input.examSessionYear,
   });
 
   if (existing) {

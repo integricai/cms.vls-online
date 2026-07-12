@@ -186,6 +186,8 @@ export interface CoursePriceRecord {
 
 // ── USD course pricing (regional discounts via ParityDeals) ───────
 
+export type CoursePricingMode = 'session' | 'duration';
+
 export interface CourseGeoPrice {
   id: number;
   courseId: number;
@@ -203,9 +205,11 @@ export interface CourseGeoPrice {
   isDefault: boolean;
   isActive: boolean;
   stripePriceId: string | null;
-  validFrom: Date | string | null;
-  validUntil: Date | string | null;
-  priority: number;
+  pricingMode: CoursePricingMode;
+  examSessionMonth: number | null;
+  examSessionYear: number | null;
+  durationDays: number | null;
+  /** Legacy month-based duration, kept for checkout duration matching. */
   durationMonths: number;
   createdAt: Date | string;
   updatedAt: Date | string;
@@ -222,10 +226,10 @@ export type CourseGeoPriceInput = {
   isDefault?: boolean;
   isActive?: boolean;
   stripePriceId?: string | null;
-  validFrom?: Date | string | null;
-  validUntil?: Date | string | null;
-  priority?: number;
-  durationMonths?: number;
+  pricingMode?: CoursePricingMode;
+  examSessionMonth?: number | null;
+  examSessionYear?: number | null;
+  durationDays?: number | null;
 };
 
 export interface CoursePricingSummary {
@@ -271,10 +275,10 @@ export interface CoursePriceImportRow {
   discountPercent?: number | null;
   isDefault?: boolean;
   isActive?: boolean;
-  validFrom?: string | null;
-  validUntil?: string | null;
-  priority?: number;
-  durationMonths?: number;
+  pricingMode?: CoursePricingMode;
+  examSessionMonth?: number | null;
+  examSessionYear?: number | null;
+  durationDays?: number | null;
 }
 
 export interface CoursePriceImportRowError {

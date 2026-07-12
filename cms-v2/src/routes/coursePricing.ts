@@ -38,6 +38,7 @@ function parseCourseId(value: unknown): number | null {
 }
 
 function parseBodyInput(body: Record<string, unknown>, courseId: number): CourseGeoPriceInput {
+  const pricingMode = body.pricingMode === 'session' ? 'session' : 'duration';
   return normalizeGeoPriceInput({
     courseId,
     name: String(body.name ?? body.priceName ?? ''),
@@ -53,10 +54,16 @@ function parseBodyInput(body: Record<string, unknown>, courseId: number): Course
     stripePriceId: body.stripePriceId == null || body.stripePriceId === ''
       ? null
       : String(body.stripePriceId),
-    validFrom: body.validFrom == null || body.validFrom === '' ? null : String(body.validFrom),
-    validUntil: body.validUntil == null || body.validUntil === '' ? null : String(body.validUntil),
-    priority: body.priority == null || body.priority === '' ? 0 : Number(body.priority),
-    durationMonths: body.durationMonths == null || body.durationMonths === '' ? 6 : Number(body.durationMonths),
+    pricingMode,
+    examSessionMonth: body.examSessionMonth == null || body.examSessionMonth === ''
+      ? null
+      : Number(body.examSessionMonth),
+    examSessionYear: body.examSessionYear == null || body.examSessionYear === ''
+      ? null
+      : Number(body.examSessionYear),
+    durationDays: body.durationDays == null || body.durationDays === ''
+      ? null
+      : Number(body.durationDays),
   });
 }
 

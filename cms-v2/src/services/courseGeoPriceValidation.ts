@@ -1,4 +1,4 @@
-import type { CourseGeoPriceInput } from '../../shared/types';
+import type { CoursePricingMode, CourseGeoPriceInput } from '../../shared/types';
 
 export interface ValidationIssue {
   field?: string;
@@ -18,10 +18,18 @@ export function effectiveAmount(amount: number, discountedPrice: number | null |
   return discountedPrice != null && discountedPrice > 0 ? discountedPrice : amount;
 }
 
-function parseDate(value: unknown): Date | null {
-  if (value == null || value === '') return null;
-  const date = value instanceof Date ? value : new Date(String(value));
-  return Number.isNaN(date.getTime()) ? null : date;
+const CURRENT_YEAR = new Date().getFullYear();
+export const EXAM_SESSION_MIN_YEAR = CURRENT_YEAR;
+export const EXAM_SESSION_MAX_YEAR = CURRENT_YEAR + 10;
+
+export function deriveLegacyDurationMonths(
+  pricingMode: CoursePricingMode,
+  durationDays: number | null | undefined,
+): number {
+  if (pricingMode === 'duration' && Number.isFinite(Number(durationDays)) && Number(durationDays) > 0) {
+    return Math.min(6, Math.max(1, Math.round(Number(durationDays) / 30)));
+  }
+  return 6;
 }
 
 export function validateGeoPriceInput(
@@ -72,25 +80,26 @@ export function validateGeoPriceInput(
     }
   }
 
-  const validFrom = parseDate(input.validFrom);
-  const validUntil = parseDate(input.validUntil);
-  if (input.validFrom != null && input.validFrom !== '' && !validFrom) {
-    issues.push({ field: 'validFrom', message: 'valid_from is not a valid date' });
-  }
-  if (input.validUntil != null && input.validUntil !== '' && !validUntil) {
-    issues.push({ field: 'validUntil', message: 'valid_until is not a valid date' });
-  }
-  if (validFrom && validUntil && validUntil < validFrom) {
-    issues.push({ field: 'validUntil', message: 'valid_until cannot be before valid_from' });
-  }
-
-  if (input.priority != null && input.priority !== undefined && !Number.isFinite(Number(input.priority))) {
-    issues.push({ field: 'priority', message: 'priority must be a number' });
-  }
-
-  const durationMonths = Number(input.durationMonths ?? 6);
-  if (!Number.isInteger(durationMonths) || durationMonths < 1 || durationMonths > 6) {
-    issues.push({ field: 'durationMonths', message: 'duration must be between 1 and 6 months' });
+  const pricingMode = input.pricingMode ?? 'duration';
+  if (pricingMode !== 'session' && pricingMode !== 'duration') {
+    issues.push({ field: 'pricingMode', message: 'pricing_mode must be "session" or "duration"' });
+  } else if (pricingMode === 'session') {
+    const month = Number(input.examSessionMonth);
+    if (!Number.isInteger(month) || month < 1 || month > 12) {
+      issues.push({ field: 'examSessionMonth', message: 'exam session month must be between 1 and 12' });
+    }
+    const year = Number(input.examSessionYear);
+    if (!Number.isInteger(year) || year < EXAM_SESSION_MIN_YEAR || year > EXAM_SESSION_MAX_YEAR) {
+      issues.push({
+        field: 'examSessionYear',
+        message: `exam session year must be between ${EXAM_SESSION_MIN_YEAR} and ${EXAM_SESSION_MAX_YEAR}`,
+      });
+    }
+  } else {
+    const durationDays = Number(input.durationDays);
+    if (!Number.isInteger(durationDays) || durationDays <= 0) {
+      issues.push({ field: 'durationDays', message: 'duration (days) must be a whole number greater than 0' });
+    }
   }
 
   return issues;
@@ -103,6 +112,7 @@ export function normalizeGeoPriceInput(input: CourseGeoPriceInput): CourseGeoPri
     ? null
     : roundMoney(Number(discountPercentRaw));
   const normalizedDiscount = discountPercent != null && discountPercent > 0 ? discountPercent : null;
+  const pricingMode: CoursePricingMode = input.pricingMode === 'session' ? 'session' : 'duration';
 
   return {
     ...input,
@@ -117,12 +127,16 @@ export function normalizeGeoPriceInput(input: CourseGeoPriceInput): CourseGeoPri
     isDefault: Boolean(input.isDefault),
     isActive: input.isActive !== false,
     stripePriceId: input.stripePriceId?.trim() || null,
-    validFrom: input.validFrom ?? null,
-    validUntil: input.validUntil ?? null,
-    priority: Number.isFinite(Number(input.priority)) ? Number(input.priority) : 0,
-    durationMonths: Number.isFinite(Number(input.durationMonths))
-      ? Math.min(6, Math.max(1, Number(input.durationMonths)))
-      : 6,
+    pricingMode,
+    examSessionMonth: pricingMode === 'session' && Number.isFinite(Number(input.examSessionMonth))
+      ? Number(input.examSessionMonth)
+      : null,
+    examSessionYear: pricingMode === 'session' && Number.isFinite(Number(input.examSessionYear))
+      ? Number(input.examSessionYear)
+      : null,
+    durationDays: pricingMode === 'duration' && Number.isFinite(Number(input.durationDays))
+      ? Number(input.durationDays)
+      : null,
   };
 }
 
