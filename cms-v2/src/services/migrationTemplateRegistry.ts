@@ -144,12 +144,30 @@ const PAGE_BODY_COMPONENTS = new Set([
   'qualification_structure',
   'live_schedule',
   'contact_cards',
+  'book_meeting_hero',
+  'step_cards',
+  'article_library',
+  'live_sessions_hero',
+  'live_sessions_table',
+  'contact_page_section',
+  'legal_hero',
+  'legal_article',
+  'legal_section',
 ]);
 
 function componentForSection(key: string, classes: string[], template: MigrationTemplate): string {
   let component = 'content_section';
 
-  if (template === 'home' && key.includes('hero')) component = 'home_hero_section';
+  if (template === 'book_meeting' && key.includes('hero')) component = 'book_meeting_hero';
+  else if (template === 'book_meeting' && key.includes('how-it-works')) component = 'step_cards';
+  else if (template === 'book_meeting' && key.includes('alternatives')) component = 'contact_cards';
+  else if (template === 'course_articles' && key.includes('library')) component = 'article_library';
+  else if (template === 'live_sessions' && key.includes('hero')) component = 'live_sessions_hero';
+  else if (template === 'live_sessions' && (key.includes('schedule') || key.includes('timetable'))) component = 'live_sessions_table';
+  else if (template === 'contact_us' && key.includes('contact')) component = 'contact_page_section';
+  else if (template === 'legal' && (key.includes('legal-hero') || classes.includes('legal-hero'))) component = 'legal_hero';
+  else if (template === 'legal' && classes.includes('sec')) component = 'legal_section';
+  else if (template === 'home' && key.includes('hero')) component = 'home_hero_section';
   else if (template === 'course' && key.includes('hero')) component = 'course_hero_layout';
   else if (key.includes('hero')) component = 'page_hero';
   else if ((template === 'form' || template === 'about_us') && (key.includes('get-in-touch') || key.includes('touch') || /(^|-)form($|-)/.test(key))) {
@@ -397,6 +415,62 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   page_hero_item: ['text', 'variant'],
   page_hero_side_card: ['tag', 'title', 'quote', 'author_name', 'author_role', 'footer_label', 'footer_value', 'rows'],
   page_hero_badge: ['title', 'subtitle', 'tone'],
+  book_meeting_hero: [
+    'free_pill', 'heading_prefix', 'heading_accent', 'lead', 'benefits', 'meta_items',
+    'scheduler_tag', 'scheduler_title', 'scheduler_subtitle', 'scheduler_embed_url',
+    'scheduler_placeholder_heading', 'scheduler_placeholder_text', 'scheduler_cta_text', 'scheduler_cta_link',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  step_cards: [
+    'eyebrow', 'heading_prefix', 'heading_accent', 'description', 'steps',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  article_library: [
+    'sidebar_label', 'sidebar_value', 'topics', 'note_text',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  live_sessions_hero: [
+    'free_pill', 'eyebrow', 'heading_prefix', 'heading_accent', 'lead', 'ticks',
+    'primary_cta_text', 'primary_cta_link', 'secondary_cta_text', 'secondary_cta_link',
+    'card_tag', 'card_live_label', 'card_title', 'card_meta', 'card_rows',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  live_sessions_table: [
+    'eyebrow', 'heading_prefix', 'heading_accent', 'description', 'sessions', 'note_heading', 'note_text',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  contact_page_section: [
+    'form', 'sidebar',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  legal_hero: [
+    'eyebrow', 'heading', 'lead', 'meta_items', 'tabs',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  legal_article: [
+    'toc_title', 'toc_download_label', 'toc_download_link', 'intro', 'intro_callout_heading',
+    'intro_callout_items', 'toc_items',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  legal_section: [
+    'anchor_id', 'number', 'heading', 'body', 'checklist_heading', 'checklist_items', 'table_rows',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  labeled_icon_item: ['icon_key', 'title', 'subtitle'],
+  step_card: ['number', 'title', 'description'],
+  article_link_item: ['code', 'title', 'description', 'url'],
+  article_topic_group: ['topic_key', 'label', 'color_tone', 'articles'],
+  live_session_row: [
+    'paper_code', 'paper_name', 'tutors', 'track', 'format_label',
+    'start_date', 'live_day', 'live_time', 'end_date', 'mock_label', 'course_link',
+  ],
+  support_hours_row: ['day', 'hours'],
+  contact_info_sidebar: [
+    'info_heading', 'info_items', 'hours_heading', 'hours_rows', 'hours_note', 'socials_heading', 'socials',
+  ],
+  legal_tab: ['label', 'link', 'active'],
+  legal_table_row: ['col_a', 'col_b'],
+  legal_toc_item: ['label', 'anchor_id'],
 };
 
 /** Storyblok MAPI expects many schema "number" fields as numeric strings, not JSON numbers. */
@@ -442,7 +516,12 @@ export function sanitizeBlokForStoryblok(blok: Record<string, unknown>): Record<
   }
 
   // Nested bloks
-  for (const key of ['hero', 'form', 'checks', 'items', 'cards', 'left', 'right', 'profiles', 'timeline', 'levels', 'sessions', 'side_card', 'badges', 'papers', 'stats', 'rows']) {
+  for (const key of [
+    'hero', 'form', 'checks', 'items', 'cards', 'left', 'right', 'profiles', 'timeline', 'levels',
+    'sessions', 'side_card', 'badges', 'papers', 'stats', 'rows',
+    'benefits', 'meta_items', 'steps', 'topics', 'articles', 'ticks', 'card_rows', 'sidebar',
+    'info_items', 'hours_rows', 'socials', 'tabs', 'checklist_items', 'table_rows', 'toc_items',
+  ]) {
     const value = next[key];
     if (!Array.isArray(value)) continue;
     next[key] = value.map(item => (
@@ -652,6 +731,99 @@ export function buildPresetBlokFromSection(
       heading_prefix: section.sampleHeading || section.label,
       description: section.sampleDescription || '',
       cards: [],
+    });
+  }
+
+  if (section.component === 'book_meeting_hero') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      free_pill: 'Free 15-minute call',
+      heading_prefix: section.sampleHeading || section.label,
+      lead: section.sampleDescription || '',
+      benefits: [],
+      meta_items: [],
+      scheduler_title: 'Book your session',
+      scheduler_subtitle: 'Choose a time that works for you.',
+      scheduler_placeholder_heading: 'Scheduler coming soon',
+      scheduler_placeholder_text: 'Embed your booking calendar link here.',
+      scheduler_cta_text: 'Book now',
+    });
+  }
+
+  if (section.component === 'step_cards') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: section.label,
+      heading_prefix: section.sampleHeading || section.label,
+      description: section.sampleDescription || '',
+      steps: [],
+    });
+  }
+
+  if (section.component === 'article_library') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      sidebar_label: 'Currently viewing',
+      sidebar_value: section.label,
+      topics: [],
+      note_text: section.sampleDescription || '',
+    });
+  }
+
+  if (section.component === 'live_sessions_hero') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      free_pill: 'Free live sessions',
+      eyebrow: section.label,
+      heading_prefix: section.sampleHeading || section.label,
+      lead: section.sampleDescription || '',
+      ticks: [],
+      primary_cta_text: 'View schedule',
+      card_tag: 'Live now',
+      card_title: 'Upcoming session',
+      card_rows: [],
+    });
+  }
+
+  if (section.component === 'live_sessions_table') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: section.label,
+      heading_prefix: section.sampleHeading || section.label,
+      description: section.sampleDescription || '',
+      sessions: [],
+    });
+  }
+
+  if (section.component === 'contact_page_section') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      form: [{ _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12), component: 'contact_form' }],
+      sidebar: [],
+    });
+  }
+
+  if (section.component === 'legal_hero') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: 'Legal',
+      heading: section.sampleHeading || section.label,
+      lead: section.sampleDescription || '',
+      meta_items: [],
+      tabs: [],
+    });
+  }
+
+  if (section.component === 'legal_section') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      anchor_id: section.sampleHeading
+        ? section.sampleHeading.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+        : section.key,
+      heading: section.sampleHeading || section.label,
+      body: section.sampleDescription || '',
+      checklist_items: [],
+      table_rows: [],
     });
   }
 
