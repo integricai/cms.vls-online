@@ -166,6 +166,10 @@ export function buildBlokFromTemplateSection(
       ...base,
       sidebar_label: 'Currently viewing',
       sidebar_value: pickText(extracted?.headingPrefix, section.label),
+      // Explicitly override the component-library preset's `note_text` (a design-reference
+      // sample, not real page content) — otherwise it survives the preset merge whenever no
+      // real note was extracted from the live page.
+      note_text: '',
       ...(topics ? { topics } : {}),
     });
   }
