@@ -1,8 +1,10 @@
-import type { ScrapedContentSection, ScrapedGenericPage } from '../../shared/migrationTypes';
+import type { MigrationTemplate, ScrapedContentSection, ScrapedGenericPage } from '../../shared/migrationTypes';
 import { breadcrumbTrailText, parseBreadcrumbFromHtml } from './breadcrumbUtils';
 import { toPublicOriginUrl } from './migrationUrlUtils';
 import { CoursePageScrapeError, fetchPageHtml } from './coursePageScraper';
-import { parseTemplateSectionsFromHtml } from './pageSectionExtractor';
+import { indexTemplateSections, parseTemplateSectionsFromHtml } from './pageSectionExtractor';
+import { getMigrationTemplateBlueprint } from './migrationTemplateRegistry';
+import { buildCandidateBlocks, classifyAndExtractSections } from './aiSectionExtractor';
 import { parseFaq } from './faqParser';
 
 function decodeEntities(value: string): string {
@@ -78,7 +80,7 @@ function parseSections(contentHtml: string): ScrapedContentSection[] {
   return sections;
 }
 
-export async function scrapeGenericPage(sourceUrl: string): Promise<ScrapedGenericPage> {
+export async function scrapeGenericPage(sourceUrl: string, template?: MigrationTemplate): Promise<ScrapedGenericPage> {
   let parsed: URL;
   try {
     parsed = new URL(sourceUrl.trim());
@@ -102,6 +104,32 @@ export async function scrapeGenericPage(sourceUrl: string): Promise<ScrapedGener
     || meta(html, /<meta[^>]+property=["']og:description["'][^>]*>/i);
   const { faq, warnings: faqWarnings } = parseFaq(html);
 
+  const templateSections = parseTemplateSectionsFromHtml(mainContent);
+  const extractionWarnings = [...faqWarnings];
+  const sectionMatchSource: Record<string, 'live' | 'ai'> = {};
+  const sectionMatchConfidence: Record<string, number> = {};
+  for (const section of templateSections) sectionMatchSource[section.key] = 'live';
+
+  if (template) {
+    const blueprint = getMigrationTemplateBlueprint(template);
+    const liveByKey = indexTemplateSections(templateSections);
+    const missingSections = blueprint.sections.filter(
+      section => section.component !== 'enquiry_form' && !liveByKey.has(section.key),
+    );
+
+    if (missingSections.length) {
+      const candidateBlocks = buildCandidateBlocks(mainContent);
+      const { matches, warnings: aiWarnings } = await classifyAndExtractSections(template, missingSections, candidateBlocks);
+      extractionWarnings.push(...aiWarnings);
+
+      for (const [key, match] of matches) {
+        templateSections.push(match.section);
+        sectionMatchSource[key] = 'ai';
+        sectionMatchConfidence[key] = match.confidence;
+      }
+    }
+  }
+
   return {
     sourceUrl: normalizedUrl,
     slug: inferSlug(parsed.pathname),
@@ -109,10 +137,12 @@ export async function scrapeGenericPage(sourceUrl: string): Promise<ScrapedGener
     metaDescription,
     breadcrumbItems,
     sections: parseSections(mainContent),
-    templateSections: parseTemplateSectionsFromHtml(mainContent),
+    templateSections,
     faq,
-    extractionWarnings: faqWarnings,
+    extractionWarnings,
     rawHtml: html,
+    sectionMatchSource,
+    sectionMatchConfidence,
   };
 }
 

@@ -210,6 +210,10 @@ export interface ScrapedGenericPage {
   extractionWarnings?: string[];
   /** Full fetched page HTML, kept so a fully-blocked page can later be re-analyzed for Generate Component. */
   rawHtml?: string;
+  /** Per blueprint-section-key: whether that section's content came from the regex parser or the AI fallback. */
+  sectionMatchSource?: Record<string, 'live' | 'ai'>;
+  /** Per blueprint-section-key: AI match confidence (0-1), only present for 'ai' sourced sections. */
+  sectionMatchConfidence?: Record<string, number>;
 }
 
 export interface TemplateReferenceSummary {

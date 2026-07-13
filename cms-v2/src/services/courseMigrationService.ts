@@ -758,7 +758,7 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
     };
   }
 
-  const scraped = await scrapeGenericPage(input.pageUrl.trim());
+  const scraped = await scrapeGenericPage(input.pageUrl.trim(), template);
   const warnings = collectGenericWarnings(scraped);
 
   if (input.dryRun) {
@@ -893,7 +893,7 @@ export async function previewScrapePage(pageId: number): Promise<ScrapePhaseResu
     return { page: updatedPage ?? page, scraped, warnings };
   }
 
-  const scraped = await scrapeGenericPage(page.originUrl);
+  const scraped = await scrapeGenericPage(page.originUrl, page.template);
   const warnings = collectGenericWarnings(scraped);
   await saveScrapeResult(pageId, { scraped, warnings });
   const updatedPage = await getMigrationPageById(pageId);
