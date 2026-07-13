@@ -20,6 +20,10 @@ function pickText(...values: Array<string | undefined>): string {
   return '';
 }
 
+function slugify(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || uid();
+}
+
 export function buildBlokFromTemplateSection(
   section: TemplateSectionBlueprint,
   extracted: ScrapedTemplateSection | undefined,
@@ -135,6 +139,34 @@ export function buildBlokFromTemplateSection(
       description: pickText(extracted?.lead, extracted?.body, section.sampleDescription),
       columns: '3',
       ...(cards ? { cards } : {}),
+    });
+  }
+
+  if (section.component === 'article_library') {
+    const colorTones = ['blue', 'green', 'amber', 'purple', 'teal', 'navy', 'rose', 'gold'];
+    const topics = extracted?.groups.length
+      ? extracted.groups.map((group, index) => ({
+          _uid: uid(),
+          component: 'article_topic_group',
+          topic_key: slugify(group.label),
+          label: group.label,
+          color_tone: colorTones[index % colorTones.length],
+          articles: group.items.map(item => ({
+            _uid: uid(),
+            component: 'article_link_item',
+            code: item.code,
+            title: item.title,
+            description: item.description,
+            ...(storyblokLink(item.url) ? { url: storyblokLink(item.url) } : {}),
+          })),
+        }))
+      : undefined;
+
+    return sanitizeBlokForStoryblok({
+      ...base,
+      sidebar_label: 'Currently viewing',
+      sidebar_value: pickText(extracted?.headingPrefix, section.label),
+      ...(topics ? { topics } : {}),
     });
   }
 

@@ -26,6 +26,7 @@ interface ExtractedSectionPayload {
   body: string;
   stats: Array<{ value: string; label: string }>;
   cards: Array<{ title: string; description: string }>;
+  groups: Array<{ label: string; items: Array<{ code: string; title: string; description: string; url: string }> }>;
   timeline: Array<{ year: string; title: string; text: string }>;
   contactCards: Array<{ title: string; detail: string; linkText: string; linkUrl: string }>;
   heroItems: Array<{ text: string }>;
@@ -148,6 +149,7 @@ function emptySectionFor(key: string): ScrapedTemplateSection {
     bodyHtml: '',
     stats: [],
     cards: [],
+    groups: [],
     timeline: [],
     contactCards: [],
     heroItems: [],
@@ -186,6 +188,31 @@ const SECTION_SCHEMA = {
         additionalProperties: false,
         properties: { title: { type: 'string' }, description: { type: 'string' } },
         required: ['title', 'description'],
+      },
+    },
+    groups: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          label: { type: 'string' },
+          items: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                code: { type: 'string' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                url: { type: 'string' },
+              },
+              required: ['code', 'title', 'description', 'url'],
+            },
+          },
+        },
+        required: ['label', 'items'],
       },
     },
     timeline: {
@@ -246,7 +273,7 @@ const SECTION_SCHEMA = {
   },
   required: [
     'matchedBlockIndex', 'confidence', 'eyebrow', 'headingPrefix', 'headingAccent', 'lead', 'body',
-    'stats', 'cards', 'timeline', 'contactCards', 'heroItems', 'sideCard', 'badges',
+    'stats', 'cards', 'groups', 'timeline', 'contactCards', 'heroItems', 'sideCard', 'badges',
     'ctaTitle', 'ctaSubtitle', 'ctaText',
   ],
 };
@@ -339,9 +366,19 @@ export async function classifyAndExtractSections(
                   'Some pages repeat several sibling blocks that together form one logical section',
                   '(e.g. multiple topic-group blocks that collectively are the page\'s article/card list) —',
                   'when that happens, combine real content from ALL of the relevant sibling blocks into the',
-                  'extracted fields (e.g. put every card from every matching group into the `cards` array),',
-                  'not just the first one. Extract real field values from the blocks\' actual text — never',
-                  'invent content. Set matchedBlockIndex to the index of the single most representative',
+                  'extracted fields, not just the first one. Extract real field values from the blocks\'',
+                  'actual text — never invent content.',
+                  '',
+                  'Use `cards` for a flat, ungrouped list of items (e.g. feature cards, testimonials).',
+                  'Use `groups` instead when the content is organized into named categories/topics that',
+                  'each contain their own list of items (e.g. a library of articles grouped by syllabus',
+                  'area, or a course list grouped by level) — one entry per category, with `label` set to',
+                  'the category/topic name and `items` set to every item in that category (each item\'s',
+                  '`code` is a short badge/tag/prefix shown next to its title if the page has one, e.g. an',
+                  'article code, otherwise leave `code` empty; `url` is that item\'s own link if it has one,',
+                  'otherwise leave it empty). Do not put the same content into both `cards` and `groups`.',
+                  '',
+                  'Set matchedBlockIndex to the index of the single most representative',
                   'matched block (for reference) and confidence to how sure you are (0-1).',
                   'If truly nothing on the page matches a target section, set matchedBlockIndex to null,',
                   'confidence to 0, and leave text fields empty / arrays empty.',
@@ -387,6 +424,7 @@ export async function classifyAndExtractSections(
           bodyHtml: result.body,
           stats: result.stats,
           cards: result.cards,
+          groups: result.groups,
           timeline: result.timeline,
           contactCards: result.contactCards,
           heroItems: result.heroItems,

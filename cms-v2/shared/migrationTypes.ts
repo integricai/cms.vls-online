@@ -155,6 +155,9 @@ export interface ScrapedTemplateSection {
   bodyHtml: string;
   stats: Array<{ value: string; label: string }>;
   cards: Array<{ title: string; description: string }>;
+  /** Topic-grouped item lists (e.g. an article library grouped by syllabus area) — distinct from
+   * `cards`, which is a flat, ungrouped list. */
+  groups: Array<{ label: string; items: Array<{ code: string; title: string; description: string; url: string }> }>;
   timeline: Array<{ year: string; title: string; text: string }>;
   contactCards: Array<{ title: string; detail: string; linkText: string; linkUrl: string }>;
   heroItems: Array<{ text: string }>;
