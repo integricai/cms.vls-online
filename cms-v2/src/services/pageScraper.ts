@@ -118,7 +118,11 @@ export async function scrapeGenericPage(sourceUrl: string, template?: MigrationT
     );
 
     if (missingSections.length) {
-      const candidateBlocks = buildCandidateBlocks(mainContent);
+      // Use the full <body>, not the narrower main-content region: legacy page-builder pages often
+      // place hero/banner markup ahead of <main> (outside the region the fast regex parser scopes to),
+      // and the AI fallback shouldn't be limited to the same convention the fast path relies on.
+      const bodyContent = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] ?? mainContent;
+      const candidateBlocks = buildCandidateBlocks(bodyContent);
       const { matches, warnings: aiWarnings } = await classifyAndExtractSections(template, missingSections, candidateBlocks);
       extractionWarnings.push(...aiWarnings);
 

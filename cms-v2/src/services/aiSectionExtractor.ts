@@ -41,8 +41,6 @@ export interface AiSectionMatch {
   confidence: number;
 }
 
-const CONTENT_TAGS = new Set(['section', 'article', 'header', 'footer', 'div', 'main']);
-
 function textOf($el: cheerio.Cheerio<any>): string {
   return $el.text().replace(/\s+/g, ' ').trim();
 }
@@ -59,12 +57,13 @@ function nearestPrecedingComment($: cheerio.CheerioAPI, node: any): string {
   return '';
 }
 
-/** Finds the main content root the same way pageScraper.ts's extractMainContent() does. */
+/**
+ * The caller already decides what scope of HTML to hand in (main-content region for the fast path,
+ * full <body> for the AI path) — this just resolves cheerio's parsed root without narrowing further,
+ * since narrowing to <main> here would silently cut out content the caller deliberately included
+ * (e.g. hero/banner markup that legacy pages place before <main>).
+ */
 function findContentRoot($: cheerio.CheerioAPI): cheerio.Cheerio<any> {
-  const main = $('main').first();
-  if (main.length) return main;
-  const pageContent = $('[class*="page-content"]').first();
-  if (pageContent.length) return pageContent;
   const body = $('body').first();
   return body.length ? body : $.root();
 }
@@ -81,22 +80,39 @@ export function buildCandidateBlocks(html: string): CandidateBlock[] {
   const root = findContentRoot($);
   const blocks: CandidateBlock[] = [];
 
-  function visit(el: any, depth: number): void {
-    if (blocks.length >= MAX_BLOCKS) return;
+  function visit(el: any, depth: number, rawDepth: number): void {
+    if (blocks.length >= MAX_BLOCKS || rawDepth > 30) return;
+    if (el.type !== 'tag') return;
     const $el = $(el);
     const tag = String(el.tagName ?? '').toLowerCase();
-    if (!CONTENT_TAGS.has(tag)) return;
 
     const text = textOf($el);
     if (!text || text.length < 40) return;
 
-    const childElements = $el.children().toArray();
+    const childElements = $el.children().toArray().filter((child: any) => child.type === 'tag');
+
+    // A wrapper with exactly one child that actually carries any text is just a transparent layout
+    // div (page builders nest many of these, often alongside empty decorative siblings like
+    // `<div class="overly">`) — pass through it without spending the branching-depth budget, so
+    // real content isn't missed just because it sits several wrapper-divs deep.
+    const nonEmptyChildren = childElements.filter(child => textOf($(child)).length > 0);
+    if (nonEmptyChildren.length === 1) {
+      visit(nonEmptyChildren[0], depth, rawDepth + 1);
+      return;
+    }
+
     const childTextTotal = childElements.reduce((sum, child) => sum + textOf($(child)).length, 0);
     const ownText = text.length;
-    const looksLikeSingleBlock = depth >= 4 || childElements.length === 0 || ownText - childTextTotal > 80;
+    // A node only "contains" multiple distinct sub-blocks worth splitting into if more than one
+    // of its children independently carries enough text to be its own block; legacy page-builder
+    // markup wraps a single card/row in several small tags (span/strong/em/a) that must NOT each
+    // become their own fragment.
+    const substantialChildren = childElements.filter(child => textOf($(child)).length >= 40);
+    const looksLikeSingleBlock =
+      depth >= 4 || childElements.length === 0 || substantialChildren.length <= 1 || ownText - childTextTotal > 80;
 
     if (!looksLikeSingleBlock && depth < 4) {
-      for (const child of childElements) visit(child, depth + 1);
+      for (const child of substantialChildren) visit(child, depth + 1, rawDepth + 1);
       return;
     }
 
@@ -114,7 +130,7 @@ export function buildCandidateBlocks(html: string): CandidateBlock[] {
   }
 
   for (const child of root.children().toArray()) {
-    visit(child, 0);
+    visit(child, 0, 0);
   }
 
   return blocks;
@@ -261,11 +277,20 @@ export async function classifyAndExtractSections(
   const warnings: string[] = [];
 
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey || !missingSections.length || !candidateBlocks.length) {
+  if (!apiKey) {
+    warnings.push('AI section matching skipped: OPENAI_API_KEY is not configured on the server.');
+    console.warn('[aiSectionExtractor] OPENAI_API_KEY not configured — skipping AI section matching.');
+    return { matches, warnings };
+  }
+  if (!missingSections.length || !candidateBlocks.length) {
     return { matches, warnings };
   }
 
   const model = process.env.OPENAI_SECTION_MODEL || 'gpt-4.1-mini';
+  console.log(
+    `[aiSectionExtractor] Matching ${missingSections.length} missing section(s) [${missingSections.map(s => s.key).join(', ')}] ` +
+      `against ${candidateBlocks.length} candidate block(s) using model "${model}".`,
+  );
 
   const schema = {
     type: 'object',
@@ -310,9 +335,14 @@ export async function classifyAndExtractSections(
                   'Candidate content blocks scraped from the live page (index, tag/class, nearby comment if any, heading, text preview):',
                   blocksDescription,
                   '',
-                  'For each target section key, pick the single best-matching candidate block by meaning.',
-                  'Extract real field values from that block\'s actual text — never invent content.',
-                  'Set matchedBlockIndex to that block\'s index and confidence to how sure you are (0-1).',
+                  'For each target section key, find the candidate block(s) that best match it by meaning.',
+                  'Some pages repeat several sibling blocks that together form one logical section',
+                  '(e.g. multiple topic-group blocks that collectively are the page\'s article/card list) —',
+                  'when that happens, combine real content from ALL of the relevant sibling blocks into the',
+                  'extracted fields (e.g. put every card from every matching group into the `cards` array),',
+                  'not just the first one. Extract real field values from the blocks\' actual text — never',
+                  'invent content. Set matchedBlockIndex to the index of the single most representative',
+                  'matched block (for reference) and confidence to how sure you are (0-1).',
                   'If truly nothing on the page matches a target section, set matchedBlockIndex to null,',
                   'confidence to 0, and leave text fields empty / arrays empty.',
                 ].join('\n'),
