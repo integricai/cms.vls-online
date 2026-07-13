@@ -14,6 +14,10 @@ export interface CandidateBlock {
   headingText: string;
   textPreview: string;
   html: string;
+  /** Real `<a href>` targets found anywhere inside this block, in DOM order. Captured separately
+   * from `html` (which is length-capped) so long blocks don't lose links to truncation, and used
+   * to fill in item URLs deterministically instead of trusting the LLM to reproduce them verbatim. */
+  links: Array<{ text: string; href: string }>;
 }
 
 interface ExtractedSectionPayload {
@@ -26,7 +30,11 @@ interface ExtractedSectionPayload {
   body: string;
   stats: Array<{ value: string; label: string }>;
   cards: Array<{ title: string; description: string }>;
-  groups: Array<{ label: string; items: Array<{ code: string; title: string; description: string; url: string }> }>;
+  groups: Array<{
+    label: string;
+    blockIndex: number | null;
+    items: Array<{ code: string; title: string; description: string; url: string }>;
+  }>;
   timeline: Array<{ year: string; title: string; text: string }>;
   contactCards: Array<{ title: string; detail: string; linkText: string; linkUrl: string }>;
   heroItems: Array<{ text: string }>;
@@ -119,6 +127,12 @@ export function buildCandidateBlocks(html: string): CandidateBlock[] {
 
     const headingEl = $el.find('h1, h2, h3').first();
     const classAttr = String($el.attr('class') ?? '');
+    const links = $el
+      .find('a[href]')
+      .toArray()
+      .map((a: any) => ({ text: textOf($(a)), href: String($(a).attr('href') ?? '').trim() }))
+      .filter(link => link.href && !link.href.startsWith('#') && !link.href.startsWith('javascript:'));
+
     blocks.push({
       index: blocks.length,
       tag,
@@ -127,6 +141,7 @@ export function buildCandidateBlocks(html: string): CandidateBlock[] {
       headingText: headingEl.length ? textOf(headingEl) : '',
       textPreview: text.slice(0, MAX_BLOCK_TEXT),
       html: ($.html(el) ?? '').slice(0, MAX_BLOCK_HTML),
+      links,
     });
   }
 
@@ -197,6 +212,7 @@ const SECTION_SCHEMA = {
         additionalProperties: false,
         properties: {
           label: { type: 'string' },
+          blockIndex: { type: ['integer', 'null'] },
           items: {
             type: 'array',
             items: {
@@ -212,7 +228,7 @@ const SECTION_SCHEMA = {
             },
           },
         },
-        required: ['label', 'items'],
+        required: ['label', 'blockIndex', 'items'],
       },
     },
     timeline: {
@@ -375,8 +391,12 @@ export async function classifyAndExtractSections(
                   'area, or a course list grouped by level) — one entry per category, with `label` set to',
                   'the category/topic name and `items` set to every item in that category (each item\'s',
                   '`code` is a short badge/tag/prefix shown next to its title if the page has one, e.g. an',
-                  'article code, otherwise leave `code` empty; `url` is that item\'s own link if it has one,',
-                  'otherwise leave it empty). Do not put the same content into both `cards` and `groups`.',
+                  'article code, otherwise leave `code` empty). Do not put the same content into both',
+                  '`cards` and `groups`. Each group must come from exactly one candidate block — set its',
+                  '`blockIndex` to that block\'s index (if a category\'s items are split across more than one',
+                  'candidate block, emit multiple group entries, one per block). Do not try to type out each',
+                  'item\'s exact URL yourself — leave `url` empty; it will be filled in automatically from the',
+                  'matched block\'s real links afterwards.',
                   '',
                   'Set matchedBlockIndex to the index of the single most representative',
                   'matched block (for reference) and confidence to how sure you are (0-1).',
@@ -412,6 +432,22 @@ export async function classifyAndExtractSections(
       const result = parsed[section.key];
       if (!result || result.matchedBlockIndex === null || !result.confidence) continue;
 
+      // Never trust the model to reproduce URLs verbatim — overwrite each group item's
+      // `url` with the real `<a href>` captured from its matched block's DOM, positionally
+      // matched by index (items and links should appear in the same order on the page).
+      const groupsWithRealUrls = result.groups.map(group => {
+        const links = group.blockIndex !== null ? candidateBlocks[group.blockIndex]?.links : undefined;
+        return {
+          label: group.label,
+          items: group.items.map((item, index) => ({
+            code: item.code,
+            title: item.title,
+            description: item.description,
+            url: links?.[index]?.href || item.url,
+          })),
+        };
+      });
+
       matches.set(section.key, {
         confidence: result.confidence,
         section: {
@@ -424,7 +460,7 @@ export async function classifyAndExtractSections(
           bodyHtml: result.body,
           stats: result.stats,
           cards: result.cards,
-          groups: result.groups,
+          groups: groupsWithRealUrls,
           timeline: result.timeline,
           contactCards: result.contactCards,
           heroItems: result.heroItems,
