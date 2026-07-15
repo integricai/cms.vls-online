@@ -230,8 +230,8 @@ function stylesForSection(
   if (component === 'legal_article') {
     return {
       background_color: '#FFFFFF',
-      padding_top: 0,
-      padding_bottom: 0,
+      padding_top: 64,
+      padding_bottom: 84,
     };
   }
 
