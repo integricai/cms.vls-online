@@ -171,6 +171,87 @@ export interface ScrapedTemplateSection {
   ctaTitle: string;
   ctaSubtitle: string;
   ctaText: string;
+  profiles: Array<{
+    name: string;
+    role: string;
+    initials: string;
+    bio: string;
+    tags: string;
+    logosNote: string;
+    stats: Array<{ value: string; label: string }>;
+  }>;
+  steps: Array<{ number: string; title: string; description: string }>;
+  sessions: Array<{
+    tag: string;
+    mode: string;
+    title: string;
+    tutors: string;
+    scheduleLine: string;
+    timeLine: string;
+    extrasLine: string;
+    mockChip: string;
+    courseLink: string;
+    track: string;
+  }>;
+  liveSessionRows: Array<{
+    paperCode: string;
+    paperName: string;
+    tutors: string;
+    track: string;
+    formatLabel: string;
+    startDate: string;
+    liveDay: string;
+    liveTime: string;
+    endDate: string;
+    mockLabel: string;
+    courseLink: string;
+  }>;
+  levels: Array<{
+    number: string;
+    title: string;
+    requirement: string;
+    tone: string;
+    papers: Array<{ code: string; name: string }>;
+  }>;
+  labeledItems: Array<{ title: string; subtitle: string }>;
+  legalTabs: Array<{ label: string; link: string; active: boolean }>;
+  legalMetaItems: Array<{ title: string; subtitle: string }>;
+  legalTocItems: Array<{ label: string; anchorId: string; number: string }>;
+  legalCalloutHeading: string;
+  legalTocTitle: string;
+  legalTocDownloadLabel: string;
+  legalTocDownloadLink: string;
+  legalSectionNumber: string;
+  legalSectionHeading: string;
+  checklistHeading: string;
+  checklistItems: Array<{ title: string }>;
+  tableRows: Array<{ colA: string; colB: string }>;
+  schedulerTag: string;
+  schedulerTitle: string;
+  schedulerSubtitle: string;
+  schedulerPlaceholderHeading: string;
+  schedulerPlaceholderText: string;
+  schedulerCtaText: string;
+  schedulerCtaLink: string;
+  cardTag: string;
+  cardLiveLabel: string;
+  cardTitle: string;
+  cardMeta: string;
+  cardRows: Array<{ title: string; subtitle: string }>;
+  noteHeading: string;
+  noteText: string;
+  freePill: string;
+  primaryCtaLink: string;
+  secondaryCtaText: string;
+  secondaryCtaLink: string;
+  contactInfoHeading: string;
+  contactInfoItems: Array<{ title: string; subtitle: string; link: string }>;
+  supportHoursHeading: string;
+  supportHoursRows: Array<{ day: string; hours: string }>;
+  supportHoursNote: string;
+  socialsHeading: string;
+  socials: Array<{ label: string; link: string }>;
+  anchorId: string;
 }
 
 export interface ScrapedCoursePage {

@@ -1,6 +1,23 @@
 import fs from 'fs';
 import type { MigrationTemplate, ScrapedTemplateSection } from '../../shared/migrationTypes';
 import { getMigrationTemplateBlueprint } from './migrationTemplateRegistry';
+import {
+  emptyTemplateSectionFields,
+  parseBookMeetingHero,
+  parseContactPageSection,
+  parseLegalArticleBlock,
+  parseLegalMetaItems,
+  parseLegalSectionBlock,
+  parseLegalTabs,
+  parseLiveSessionRows,
+  parseLiveSessions,
+  parseLiveSessionsHero,
+  parseQualificationLevels,
+  parseStepCards,
+  parseTeamProfiles,
+  parseTutorCard,
+  stripTemplateTags,
+} from './templateSectionParsers';
 
 function decodeEntities(value: string): string {
   return value
@@ -61,7 +78,7 @@ function parseStats(sectionHtml: string): ScrapedTemplateSection['stats'] {
 }
 
 function parseFeatureCards(sectionHtml: string): ScrapedTemplateSection['cards'] {
-  return allMatches(sectionHtml, /<div class="(?:feature|plat)"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/gi)
+  return allMatches(sectionHtml, /<div class="(?:feature|plat|ts-card|duo-card)"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/gi)
     .map(match => ({ title: stripTags(match[1]), description: stripTags(match[2]) }))
     .filter(item => item.title || item.description);
 }
@@ -129,7 +146,52 @@ function parseSideCard(sectionHtml: string): ScrapedTemplateSection['sideCard'] 
   };
 }
 
-function parseSectionHtml(key: string, sectionHtml: string): ScrapedTemplateSection {
+function enrichSection(key: string, sectionHtml: string, base: ScrapedTemplateSection): ScrapedTemplateSection {
+  const enriched: ScrapedTemplateSection = { ...base };
+
+  if (sectionHtml.includes('class="profile"') || key.includes('tutor') || key.includes('team')) {
+    enriched.profiles = parseTeamProfiles(sectionHtml);
+  }
+  if (sectionHtml.includes('tutor-card')) {
+    enriched.profiles = parseTutorCard(sectionHtml);
+  }
+  if (sectionHtml.includes('class="step"')) {
+    enriched.steps = parseStepCards(sectionHtml);
+  }
+  if (sectionHtml.includes('class="sess"')) {
+    enriched.sessions = parseLiveSessions(sectionHtml);
+  }
+  if (sectionHtml.includes('class="sched"') || sectionHtml.includes('live_session_row')) {
+    enriched.liveSessionRows = parseLiveSessionRows(sectionHtml);
+  }
+  if (sectionHtml.includes('class="level"')) {
+    enriched.levels = parseQualificationLevels(sectionHtml);
+  }
+  if (sectionHtml.includes('class="legal-hero"')) {
+    enriched.legalMetaItems = parseLegalMetaItems(sectionHtml);
+    enriched.legalTabs = parseLegalTabs(sectionHtml);
+  }
+  if (sectionHtml.includes('class="sec"')) {
+    Object.assign(enriched, parseLegalSectionBlock(sectionHtml, enriched.anchorId));
+  }
+  if (key.includes('hero-booking') || sectionHtml.includes('book-card')) {
+    Object.assign(enriched, parseBookMeetingHero(sectionHtml));
+  }
+  if (sectionHtml.includes('live-card') && sectionHtml.includes('hero-ticks')) {
+    Object.assign(enriched, parseLiveSessionsHero(sectionHtml));
+  }
+  if (sectionHtml.includes('contact-grid') || sectionHtml.includes('contact-wrap')) {
+    Object.assign(enriched, parseContactPageSection(sectionHtml));
+  }
+  if (sectionHtml.includes('note-box') || sectionHtml.includes('sched-note')) {
+    enriched.noteHeading = firstMatch(sectionHtml, /<div class="note-box"[^>]*>[\s\S]*?<b>([\s\S]*?)<\/b>/i);
+    enriched.noteText = firstMatch(sectionHtml, /<div class="note-box"[^>]*>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/i);
+  }
+
+  return enriched;
+}
+
+function parseSectionHtml(key: string, sectionHtml: string, anchorId = ''): ScrapedTemplateSection {
   const { prefix, accent } = splitHeading(sectionHtml);
   const eyebrow = firstMatch(sectionHtml, /<div class="eyebrow"[^>]*>([\s\S]*?)<\/div>/i);
   const lead = firstMatch(sectionHtml, /<p[^>]*class="[^"]*hero-lead[^"]*"[^>]*>([\s\S]*?)<\/p>/i)
@@ -144,7 +206,7 @@ function parseSectionHtml(key: string, sectionHtml: string): ScrapedTemplateSect
     || firstMatch(sectionHtml, /<a[^>]*class="[^"]*btn-primary[^"]*"[^>]*>([\s\S]*?)<\/a>/i)
     || 'Learn more';
 
-  return {
+  const base: ScrapedTemplateSection = {
     key,
     html: sectionHtml,
     eyebrow,
@@ -164,6 +226,43 @@ function parseSectionHtml(key: string, sectionHtml: string): ScrapedTemplateSect
     ctaTitle: stripTags(ctaTitle),
     ctaSubtitle,
     ctaText: stripTags(ctaText),
+    ...emptyTemplateSectionFields(),
+    anchorId,
+  };
+
+  return enrichSection(key, sectionHtml, base);
+}
+
+function parseLegalArticleSection(contentHtml: string): ScrapedTemplateSection | null {
+  const layoutMatch = contentHtml.match(/<div class="wrap layout">([\s\S]*?)<\/div>\s*<!--\s*FOOTER/i);
+  if (!layoutMatch) return null;
+
+  const layoutHtml = layoutMatch[1];
+  const article = parseLegalArticleBlock(layoutHtml);
+
+  return {
+    key: 'legal-article',
+    html: layoutHtml,
+    eyebrow: '',
+    headingPrefix: '',
+    headingAccent: '',
+    lead: article.lead ?? '',
+    body: article.body ?? '',
+    bodyHtml: layoutHtml,
+    stats: [],
+    cards: [],
+    groups: [],
+    timeline: [],
+    contactCards: [],
+    heroItems: [],
+    sideCard: null,
+    badges: [],
+    ctaTitle: '',
+    ctaSubtitle: '',
+    ctaText: '',
+    ...emptyTemplateSectionFields(),
+    anchorId: '',
+    ...article,
   };
 }
 
@@ -188,6 +287,8 @@ export function parseTemplateSectionsFromHtml(contentHtml: string): ScrapedTempl
     const index = match.index ?? 0;
     const classMatch = attrs.match(/class="([^"]*)"/i);
     const classes = (classMatch?.[1] ?? '').split(/\s+/).filter(Boolean);
+    const idMatch = attrs.match(/\bid=["']([^"']+)["']/i);
+    const anchorId = idMatch?.[1] ?? '';
 
     const nearestComment = [...comments]
       .filter(item => item.index <= index)
@@ -200,9 +301,16 @@ export function parseTemplateSectionsFromHtml(contentHtml: string): ScrapedTempl
       else if (classes.includes('cta-band')) key = 'cta';
       else key = `section-${fallbackIndex + 1}`;
     }
+    if (classes.includes('sec') && anchorId) key = anchorId;
 
     fallbackIndex += 1;
-    sections.push(parseSectionHtml(key, inner));
+    sections.push(parseSectionHtml(key, inner, anchorId));
+  }
+
+  const legalArticle = parseLegalArticleSection(contentHtml);
+  if (legalArticle) {
+    const heroIndex = sections.findIndex(section => section.key.includes('legal-hero') || section.html.includes('legal-hero'));
+    sections.splice(heroIndex >= 0 ? heroIndex + 1 : 0, 0, legalArticle);
   }
 
   return sections;
@@ -231,6 +339,10 @@ export function mergeTemplateSectionSources(
   if (!live) return fromTemplate;
   if (!fromTemplate) return live;
 
+  const pickArray = <T,>(liveItems: T[], templateItems: T[]) => (
+    liveItems.length ? liveItems : templateItems
+  );
+
   return {
     key: live.key || fromTemplate.key,
     html: live.html || fromTemplate.html,
@@ -240,17 +352,61 @@ export function mergeTemplateSectionSources(
     lead: pickText(live.lead, fromTemplate.lead),
     body: pickText(live.body, fromTemplate.body),
     bodyHtml: live.bodyHtml || fromTemplate.bodyHtml,
-    stats: live.stats.length ? live.stats : fromTemplate.stats,
-    cards: live.cards.length ? live.cards : fromTemplate.cards,
-    groups: live.groups.length ? live.groups : fromTemplate.groups,
-    timeline: live.timeline.length ? live.timeline : fromTemplate.timeline,
-    contactCards: live.contactCards.length ? live.contactCards : fromTemplate.contactCards,
-    heroItems: live.heroItems.length ? live.heroItems : fromTemplate.heroItems,
+    stats: pickArray(live.stats, fromTemplate.stats),
+    cards: pickArray(live.cards, fromTemplate.cards),
+    groups: pickArray(live.groups, fromTemplate.groups),
+    timeline: pickArray(live.timeline, fromTemplate.timeline),
+    contactCards: pickArray(live.contactCards, fromTemplate.contactCards),
+    heroItems: pickArray(live.heroItems, fromTemplate.heroItems),
     sideCard: live.sideCard ?? fromTemplate.sideCard,
-    badges: live.badges.length ? live.badges : fromTemplate.badges,
+    badges: pickArray(live.badges, fromTemplate.badges),
     ctaTitle: pickText(live.ctaTitle, fromTemplate.ctaTitle),
     ctaSubtitle: pickText(live.ctaSubtitle, fromTemplate.ctaSubtitle),
     ctaText: pickText(live.ctaText, fromTemplate.ctaText),
+    profiles: pickArray(live.profiles, fromTemplate.profiles),
+    steps: pickArray(live.steps, fromTemplate.steps),
+    sessions: pickArray(live.sessions, fromTemplate.sessions),
+    liveSessionRows: pickArray(live.liveSessionRows, fromTemplate.liveSessionRows),
+    levels: pickArray(live.levels, fromTemplate.levels),
+    labeledItems: pickArray(live.labeledItems, fromTemplate.labeledItems),
+    legalTabs: pickArray(live.legalTabs, fromTemplate.legalTabs),
+    legalMetaItems: pickArray(live.legalMetaItems, fromTemplate.legalMetaItems),
+    legalTocItems: pickArray(live.legalTocItems, fromTemplate.legalTocItems),
+    legalCalloutHeading: pickText(live.legalCalloutHeading, fromTemplate.legalCalloutHeading),
+    legalTocTitle: pickText(live.legalTocTitle, fromTemplate.legalTocTitle),
+    legalTocDownloadLabel: pickText(live.legalTocDownloadLabel, fromTemplate.legalTocDownloadLabel),
+    legalTocDownloadLink: pickText(live.legalTocDownloadLink, fromTemplate.legalTocDownloadLink),
+    legalSectionNumber: pickText(live.legalSectionNumber, fromTemplate.legalSectionNumber),
+    legalSectionHeading: pickText(live.legalSectionHeading, fromTemplate.legalSectionHeading),
+    checklistHeading: pickText(live.checklistHeading, fromTemplate.checklistHeading),
+    checklistItems: pickArray(live.checklistItems, fromTemplate.checklistItems),
+    tableRows: pickArray(live.tableRows, fromTemplate.tableRows),
+    schedulerTag: pickText(live.schedulerTag, fromTemplate.schedulerTag),
+    schedulerTitle: pickText(live.schedulerTitle, fromTemplate.schedulerTitle),
+    schedulerSubtitle: pickText(live.schedulerSubtitle, fromTemplate.schedulerSubtitle),
+    schedulerPlaceholderHeading: pickText(live.schedulerPlaceholderHeading, fromTemplate.schedulerPlaceholderHeading),
+    schedulerPlaceholderText: pickText(live.schedulerPlaceholderText, fromTemplate.schedulerPlaceholderText),
+    schedulerCtaText: pickText(live.schedulerCtaText, fromTemplate.schedulerCtaText),
+    schedulerCtaLink: pickText(live.schedulerCtaLink, fromTemplate.schedulerCtaLink),
+    cardTag: pickText(live.cardTag, fromTemplate.cardTag),
+    cardLiveLabel: pickText(live.cardLiveLabel, fromTemplate.cardLiveLabel),
+    cardTitle: pickText(live.cardTitle, fromTemplate.cardTitle),
+    cardMeta: pickText(live.cardMeta, fromTemplate.cardMeta),
+    cardRows: pickArray(live.cardRows, fromTemplate.cardRows),
+    noteHeading: pickText(live.noteHeading, fromTemplate.noteHeading),
+    noteText: pickText(live.noteText, fromTemplate.noteText),
+    freePill: pickText(live.freePill, fromTemplate.freePill),
+    primaryCtaLink: pickText(live.primaryCtaLink, fromTemplate.primaryCtaLink),
+    secondaryCtaText: pickText(live.secondaryCtaText, fromTemplate.secondaryCtaText),
+    secondaryCtaLink: pickText(live.secondaryCtaLink, fromTemplate.secondaryCtaLink),
+    contactInfoHeading: pickText(live.contactInfoHeading, fromTemplate.contactInfoHeading),
+    contactInfoItems: pickArray(live.contactInfoItems, fromTemplate.contactInfoItems),
+    supportHoursHeading: pickText(live.supportHoursHeading, fromTemplate.supportHoursHeading),
+    supportHoursRows: pickArray(live.supportHoursRows, fromTemplate.supportHoursRows),
+    supportHoursNote: pickText(live.supportHoursNote, fromTemplate.supportHoursNote),
+    socialsHeading: pickText(live.socialsHeading, fromTemplate.socialsHeading),
+    socials: pickArray(live.socials, fromTemplate.socials),
+    anchorId: pickText(live.anchorId, fromTemplate.anchorId),
   };
 }
 

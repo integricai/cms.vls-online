@@ -281,8 +281,10 @@ function parseSections(html: string, tokens: TemplateDesignTokens, template: Mig
       .sort((a, b) => b.index - a.index)[0];
 
     const key = nearestComment?.key ?? classes[0] ?? `section-${sections.length + 1}`;
-    const label = nearestComment?.label ?? key;
-    const component = componentForSection(key, classes, template);
+    const idMatch = attrs.match(/\bid=["']([^"']+)["']/i);
+    const sectionKey = classes.includes('sec') && idMatch?.[1] ? idMatch[1] : key;
+    const label = nearestComment?.label ?? (classes.includes('sec') && idMatch?.[1] ? idMatch[1] : key);
+    const component = componentForSection(sectionKey, classes, template);
     const heading = stripTags(inner.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1]
       ?? inner.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i)?.[1]
       ?? '');
@@ -293,7 +295,7 @@ function parseSections(html: string, tokens: TemplateDesignTokens, template: Mig
     );
 
     sections.push({
-      key,
+      key: sectionKey,
       label,
       component,
       classes,
@@ -314,6 +316,25 @@ function parseSections(html: string, tokens: TemplateDesignTokens, template: Mig
       styles: stylesForSection(['section'], tokens, 'content_cta_block'),
       sampleHeading: '',
       sampleDescription: '',
+    });
+  }
+
+  if (template === 'legal') {
+    const layoutMatch = html.match(/<div class="wrap layout">([\s\S]*?)<\/div>\s*<!--\s*FOOTER/i);
+    const intro = layoutMatch
+      ? stripTags(layoutMatch[1].match(/<p class="intro"[^>]*>([\s\S]*?)<\/p>/i)?.[1] ?? '')
+      : '';
+    const heroIndex = sections.findIndex(section => section.component === 'legal_hero');
+    const insertAt = heroIndex >= 0 ? heroIndex + 1 : 0;
+    sections.splice(insertAt, 0, {
+      key: 'legal-article',
+      label: 'Legal article',
+      component: 'legal_article',
+      classes: ['layout'],
+      isBand: false,
+      styles: stylesForSection(['section'], tokens, 'legal_article'),
+      sampleHeading: 'On this page',
+      sampleDescription: intro,
     });
   }
 
@@ -447,6 +468,12 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   ],
   contact_page_section: [
     'form', 'sidebar',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  contact_form: [
+    'form_title', 'submit_text', 'thank_you_title', 'thank_you_description', 'recipients',
+    'enquiry_options', 'show_phone_field', 'show_country_code', 'enable_turnstile',
+    'message_rows', 'message_min_height',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
   legal_hero: [
@@ -817,7 +844,14 @@ export function buildPresetBlokFromSection(
   if (section.component === 'contact_page_section') {
     return sanitizeBlokForStoryblok({
       ...base,
-      form: [{ _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12), component: 'contact_form' }],
+      form: [{
+        _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+        component: 'contact_form',
+        form_title: section.sampleHeading || 'Send us a message',
+        submit_text: 'Send message',
+        thank_you_title: 'Message sent!',
+        thank_you_description: 'Thank you for reaching out. We will be in touch within 1 working day.',
+      }],
       sidebar: [],
     });
   }
@@ -843,6 +877,17 @@ export function buildPresetBlokFromSection(
       body: section.sampleDescription || '',
       checklist_items: [],
       table_rows: [],
+    });
+  }
+
+  if (section.component === 'legal_article') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      toc_title: 'On this page',
+      intro: section.sampleDescription || '',
+      intro_callout_heading: 'The short version',
+      intro_callout_items: [],
+      toc_items: [],
     });
   }
 
