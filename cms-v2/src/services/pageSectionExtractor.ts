@@ -66,6 +66,18 @@ function parseFeatureCards(sectionHtml: string): ScrapedTemplateSection['cards']
     .filter(item => item.title || item.description);
 }
 
+function parseReachFigs(sectionHtml: string): ScrapedTemplateSection['stats'] {
+  return allMatches(sectionHtml, /<div class="reach-fig"[^>]*>[\s\S]*?<div class="v"[^>]*>([\s\S]*?)<\/div>[\s\S]*?<div class="k"[^>]*>([\s\S]*?)<\/div>/gi)
+    .map(match => ({ value: stripTags(match[1]), label: stripTags(match[2]) }))
+    .filter(item => item.value || item.label);
+}
+
+function parseRegionCards(sectionHtml: string): ScrapedTemplateSection['cards'] {
+  return allMatches(sectionHtml, /<div class="region"[^>]*>[\s\S]*?<span class="r-name"[^>]*>([\s\S]*?)<\/span>[\s\S]*?<span class="r-sub"[^>]*>([\s\S]*?)<\/span>/gi)
+    .map(match => ({ title: stripTags(match[1]), description: stripTags(match[2]) }))
+    .filter(item => item.title || item.description);
+}
+
 function parseTimeline(sectionHtml: string): ScrapedTemplateSection['timeline'] {
   return allMatches(sectionHtml, /<div class="ms"[^>]*>[\s\S]*?<div class="yr"[^>]*>([\s\S]*?)<\/div>[\s\S]*?<div class="tt"[^>]*>([\s\S]*?)<\/div>[\s\S]*?<div class="tx"[^>]*>([\s\S]*?)<\/div>/gi)
     .map(match => ({
@@ -141,8 +153,8 @@ function parseSectionHtml(key: string, sectionHtml: string): ScrapedTemplateSect
     lead,
     body,
     bodyHtml: sectionHtml,
-    stats: parseStats(sectionHtml),
-    cards: parseFeatureCards(sectionHtml),
+    stats: [...parseStats(sectionHtml), ...parseReachFigs(sectionHtml)],
+    cards: [...parseFeatureCards(sectionHtml), ...parseRegionCards(sectionHtml)],
     groups: [],
     timeline: parseTimeline(sectionHtml),
     contactCards: parseContactCards(sectionHtml),

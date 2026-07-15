@@ -139,6 +139,7 @@ const PAGE_BODY_COMPONENTS = new Set([
   'stats_band',
   'content_section',
   'icon_card_grid',
+  'global_reach_section',
   'team_profiles',
   'quote_block',
   'qualification_structure',
@@ -189,7 +190,8 @@ function componentForSection(key: string, classes: string[], template: Migration
     component = 'icon_card_grid';
   } else if (key.includes('qualification') || key.includes('structure')) component = 'qualification_structure';
   else if (key.includes('schedule') || key.includes('timetable') || key.includes('live-session')) component = 'live_schedule';
-  else if (key.includes('story') || key.includes('reach') || key.includes('mission')) component = 'content_section';
+  else if (key.includes('reach')) component = 'global_reach_section';
+  else if (key.includes('story') || key.includes('mission')) component = 'content_section';
   else if (classes.includes('faq') || key.includes('faq')) component = 'faq_section';
   else if (key.includes('review') || key.includes('testimonial')) component = 'testimonials';
   else if (key.includes('cta')) component = 'promotion_section';
@@ -388,6 +390,10 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
     'eyebrow', 'heading_prefix', 'heading_accent', 'description', 'columns', 'cards',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
+  global_reach_section: [
+    'eyebrow', 'heading_prefix', 'heading_accent', 'lead', 'reach_figs', 'cta_text', 'cta_link', 'regions',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
   team_profiles: [
     'eyebrow', 'heading_prefix', 'heading_accent', 'description', 'profiles',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
@@ -521,6 +527,7 @@ export function sanitizeBlokForStoryblok(blok: Record<string, unknown>): Record<
     'sessions', 'side_card', 'badges', 'papers', 'stats', 'rows',
     'benefits', 'meta_items', 'steps', 'topics', 'articles', 'ticks', 'card_rows', 'sidebar',
     'info_items', 'hours_rows', 'socials', 'tabs', 'checklist_items', 'table_rows', 'toc_items',
+    'reach_figs', 'regions',
   ]) {
     const value = next[key];
     if (!Array.isArray(value)) continue;
@@ -669,6 +676,18 @@ export function buildPresetBlokFromSection(
       heading_prefix: section.sampleHeading || section.label,
       body: section.sampleDescription || '',
       timeline: [],
+    });
+  }
+
+  if (section.component === 'global_reach_section') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: section.label,
+      heading_prefix: section.sampleHeading || section.label,
+      lead: section.sampleDescription || '',
+      reach_figs: [],
+      cta_text: 'Browse all courses',
+      regions: [],
     });
   }
 

@@ -142,6 +142,37 @@ export function buildBlokFromTemplateSection(
     });
   }
 
+  if (section.component === 'global_reach_section') {
+    const reachFigs = extracted?.stats.length
+      ? extracted.stats.map(stat => ({
+          _uid: uid(),
+          component: 'stat_item',
+          value: stat.value,
+          label: stat.label,
+        }))
+      : undefined;
+
+    const regions = extracted?.cards.length
+      ? extracted.cards.map(card => ({
+          _uid: uid(),
+          component: 'labeled_icon_item',
+          title: card.title,
+          subtitle: card.description,
+        }))
+      : undefined;
+
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: pickText(extracted?.eyebrow, section.label),
+      heading_prefix: pickText(extracted?.headingPrefix, section.sampleHeading),
+      heading_accent: pickText(extracted?.headingAccent),
+      lead: pickText(extracted?.lead, extracted?.body, section.sampleDescription),
+      cta_text: pickText(extracted?.ctaText, 'Browse all courses'),
+      ...(reachFigs ? { reach_figs: reachFigs } : {}),
+      ...(regions ? { regions } : {}),
+    });
+  }
+
   if (section.component === 'article_library') {
     const colorTones = ['blue', 'green', 'amber', 'purple', 'teal', 'navy', 'rose', 'gold'];
     const topics = extracted?.groups.length
