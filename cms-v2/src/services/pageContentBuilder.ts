@@ -24,6 +24,24 @@ function slugify(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || uid();
 }
 
+const VALUES_ICON_KEYS = ['heart', 'globe', 'chart'];
+const PLATFORM_ICON_KEYS = ['video', 'book', 'help', 'document', 'checklist', 'upload', 'chat', 'message'];
+const CONTACT_ICON_KEYS = ['phone', 'mail', 'pin'];
+
+function iconKeyForCard(sectionKey: string, index: number): string | undefined {
+  if (sectionKey.includes('values') || sectionKey.includes('culture')) {
+    return VALUES_ICON_KEYS[index];
+  }
+  if (sectionKey.includes('platform')) {
+    return PLATFORM_ICON_KEYS[index];
+  }
+  return undefined;
+}
+
+function contactIconKey(index: number): string {
+  return CONTACT_ICON_KEYS[index] ?? 'mail';
+}
+
 export function buildBlokFromTemplateSection(
   section: TemplateSectionBlueprint,
   extracted: ScrapedTemplateSection | undefined,
@@ -47,7 +65,10 @@ export function buildBlokFromTemplateSection(
       heading_prefix: pickText(extracted?.headingPrefix, section.sampleHeading, scraped.title),
       heading_accent: pickText(extracted?.headingAccent),
       lead: pickText(extracted?.lead, extracted?.body, section.sampleDescription, scraped.metaDescription),
-      primary_cta_text: pickText(extracted?.ctaText, 'Learn more'),
+      primary_cta_text: pickText(extracted?.ctaText, 'Meet the team'),
+      secondary_cta_text: pickText(extracted?.secondaryCtaText, 'Browse all courses'),
+      primary_cta_link: storyblokLink('/team'),
+      secondary_cta_link: storyblokLink('/courses'),
     };
 
     if (extracted?.heroItems.length) {
@@ -67,6 +88,7 @@ export function buildBlokFromTemplateSection(
         quote: sideCard.quote,
         author_name: sideCard.authorName,
         author_role: sideCard.authorRole,
+        author_initials: sideCard.authorInitials || 'V',
       }];
     }
 
@@ -95,7 +117,9 @@ export function buildBlokFromTemplateSection(
 
     return sanitizeBlokForStoryblok({
       ...base,
-      background_color: '#0E2A57',
+      background_color: '#FFFFFF',
+      padding_top: 0,
+      padding_bottom: 34,
       ...(items ? { items } : {}),
     });
   }
@@ -122,12 +146,14 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'icon_card_grid') {
+    const isPlatform = section.key.includes('platform');
     const cards = extracted?.cards.length
-      ? extracted.cards.map(card => ({
+      ? extracted.cards.map((card, index) => ({
           _uid: uid(),
           component: 'icon_card',
           title: card.title,
           description: card.description,
+          icon_key: iconKeyForCard(section.key, index),
         }))
       : undefined;
 
@@ -137,7 +163,9 @@ export function buildBlokFromTemplateSection(
       heading_prefix: pickText(extracted?.headingPrefix, section.sampleHeading),
       heading_accent: pickText(extracted?.headingAccent),
       description: pickText(extracted?.lead, extracted?.body, section.sampleDescription),
-      columns: '3',
+      columns: isPlatform ? 4 : 3,
+      card_variant: isPlatform ? 'platform' : 'feature',
+      show_device_pills: isPlatform,
       ...(cards ? { cards } : {}),
     });
   }
@@ -168,6 +196,7 @@ export function buildBlokFromTemplateSection(
       heading_accent: pickText(extracted?.headingAccent),
       lead: pickText(extracted?.lead, extracted?.body, section.sampleDescription),
       cta_text: pickText(extracted?.ctaText, 'Browse all courses'),
+      cta_link: storyblokLink('/courses'),
       ...(reachFigs ? { reach_figs: reachFigs } : {}),
       ...(regions ? { regions } : {}),
     });
@@ -207,12 +236,13 @@ export function buildBlokFromTemplateSection(
 
   if (section.component === 'contact_cards') {
     const cards = extracted?.contactCards.length
-      ? extracted.contactCards.map(card => ({
+      ? extracted.contactCards.map((card, index) => ({
           _uid: uid(),
           component: 'contact_card',
           title: card.title,
           detail: card.detail,
           link_text: card.linkText,
+          icon_key: contactIconKey(index),
           ...(card.linkUrl ? { link: storyblokLink(card.linkUrl) } : {}),
         }))
       : undefined;
@@ -231,10 +261,14 @@ export function buildBlokFromTemplateSection(
     return sanitizeBlokForStoryblok({
       ...base,
       name: section.key,
-      eyebrow: pickText(extracted?.eyebrow),
-      title: pickText(extracted?.ctaTitle, extracted?.headingPrefix, section.sampleHeading, scraped.title, 'Get started'),
+      eyebrow: pickText(extracted?.eyebrow, 'Join the community'),
+      title: pickText(extracted?.headingPrefix, extracted?.ctaTitle, section.sampleHeading, scraped.title, 'Get started'),
+      title_accent: pickText(extracted?.headingAccent),
       subtitle: pickText(extracted?.ctaSubtitle, extracted?.body, extracted?.lead, section.sampleDescription, scraped.metaDescription),
-      cta_text: pickText(extracted?.ctaText, 'Learn more'),
+      cta_text: pickText(extracted?.ctaText, 'Explore courses'),
+      cta_link: storyblokLink('/courses'),
+      secondary_cta_text: pickText(extracted?.secondaryCtaText, 'Book a meeting'),
+      secondary_cta_link: storyblokLink('/bookmeeting'),
     });
   }
 

@@ -166,6 +166,7 @@ export interface ScrapedTemplateSection {
     quote: string;
     authorName: string;
     authorRole: string;
+    authorInitials?: string;
   } | null;
   badges: Array<{ title: string; subtitle: string }>;
   ctaTitle: string;

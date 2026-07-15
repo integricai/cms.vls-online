@@ -619,7 +619,7 @@ async function buildCourseStoryblokContentAsync(
   };
 }
 
-async function buildGenericStoryblokContentAsync(
+export async function buildGenericStoryblokContentAsync(
   scraped: ScrapedGenericPage,
   template: MigrationTemplate,
   presetBloksBySection: Record<string, Record<string, unknown>> | null,

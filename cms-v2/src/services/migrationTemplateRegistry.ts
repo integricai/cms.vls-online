@@ -221,18 +221,18 @@ function stylesForSection(
 
   if (component === 'promotion_section' || isCta) {
     return {
-      background_color: tokens.blue50,
+      background_color: tokens.white,
       button_background: tokens.blue,
-      padding_top: 72,
-      padding_bottom: 72,
+      padding_top: 36,
+      padding_bottom: 90,
     };
   }
 
   if (isHero) {
     return {
-      background_color: tokens.blue50,
-      padding_top: 48,
-      padding_bottom: 56,
+      background_color: tokens.white,
+      padding_top: 36,
+      padding_bottom: 76,
       heading_accent_color: tokens.blue,
       eyebrow_color: tokens.blue,
       cta_background: tokens.blue,
@@ -240,10 +240,18 @@ function stylesForSection(
     };
   }
 
+  if (component === 'stats_band') {
+    return {
+      background_color: tokens.white,
+      padding_top: 0,
+      padding_bottom: 34,
+    };
+  }
+
   return {
     background_color: isBand ? tokens.blue50 : tokens.white,
-    padding_top: 60,
-    padding_bottom: 60,
+    padding_top: 92,
+    padding_bottom: 92,
     heading_accent_color: tokens.blue,
     eyebrow_color: tokens.blue,
     cta_background: tokens.blue,
@@ -384,7 +392,8 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
     'cta_background', 'cta_text_color', 'footer_note_color', 'font_size',
   ],
   promotion_section: [
-    'name', 'title', 'subtitle', 'cta_text', 'cta_link',
+    'name', 'eyebrow', 'title', 'title_accent', 'subtitle', 'cta_text', 'cta_link',
+    'secondary_cta_text', 'secondary_cta_link',
     'background_color', 'button_background',
     'padding_left', 'padding_right', 'padding_top', 'padding_bottom', 'font_size',
   ],
@@ -408,7 +417,7 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
   icon_card_grid: [
-    'eyebrow', 'heading_prefix', 'heading_accent', 'description', 'columns', 'cards',
+    'eyebrow', 'heading_prefix', 'heading_accent', 'description', 'columns', 'card_variant', 'show_device_pills', 'cards',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
   global_reach_section: [
@@ -438,9 +447,9 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   stat_item: ['value', 'label'],
   icon_card: ['title', 'description', 'icon_key'],
   timeline_item: ['year', 'title', 'text'],
-  contact_card: ['title', 'detail', 'link_text', 'link'],
+  contact_card: ['title', 'detail', 'link_text', 'link', 'icon_key'],
   page_hero_item: ['text', 'variant'],
-  page_hero_side_card: ['tag', 'title', 'quote', 'author_name', 'author_role', 'footer_label', 'footer_value', 'rows'],
+  page_hero_side_card: ['tag', 'title', 'quote', 'author_name', 'author_role', 'author_initials', 'footer_label', 'footer_value', 'rows'],
   page_hero_badge: ['title', 'subtitle', 'tone'],
   book_meeting_hero: [
     'free_pill', 'heading_prefix', 'heading_accent', 'lead', 'benefits', 'meta_items',
@@ -568,6 +577,7 @@ export function sanitizeBlokForStoryblok(blok: Record<string, unknown>): Record<
   if (component === 'promotion_section') {
     const title = String(next.title ?? '').trim();
     next.title = title || 'Get started';
+    if (next.eyebrow === undefined) next.eyebrow = '';
   }
 
   return coerceStoryblokNumericFields(next);
@@ -675,10 +685,11 @@ export function buildPresetBlokFromSection(
   if (section.component === 'page_hero') {
     return sanitizeBlokForStoryblok({
       ...base,
-      eyebrow: section.label,
+      eyebrow: 'Who we are',
       heading_prefix: section.sampleHeading || section.label,
       lead: section.sampleDescription || '',
-      primary_cta_text: 'Learn more',
+      primary_cta_text: 'Meet the team',
+      secondary_cta_text: 'Browse all courses',
       items: [],
       side_card: [],
       badges: [],
@@ -688,10 +699,14 @@ export function buildPresetBlokFromSection(
   if (section.component === 'stats_band') {
     return sanitizeBlokForStoryblok({
       ...base,
-      background_color: '#0E2A57',
+      background_color: '#FFFFFF',
+      padding_top: 0,
+      padding_bottom: 34,
       items: [
-        { _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12), component: 'stat_item', value: '7,500+', label: 'Active students' },
-        { _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12), component: 'stat_item', value: '80+', label: 'Countries' },
+        { _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12), component: 'stat_item', value: '7,500+', label: 'Active students worldwide' },
+        { _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12), component: 'stat_item', value: '20+', label: 'Years of teaching expertise' },
+        { _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12), component: 'stat_item', value: '40+', label: 'Courses across ACCA, CIMA, CMA & CIA' },
+        { _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12), component: 'stat_item', value: '98%', label: 'Student satisfaction rate' },
       ],
     });
   }

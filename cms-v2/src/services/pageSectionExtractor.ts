@@ -72,25 +72,45 @@ function allMatches(html: string, pattern: RegExp): RegExpMatchArray[] {
 }
 
 function parseStats(sectionHtml: string): ScrapedTemplateSection['stats'] {
-  return allMatches(sectionHtml, /<div class="stat"[^>]*>[\s\S]*?<div class="num"[^>]*>([\s\S]*?)<\/div>[\s\S]*?<div class="lab"[^>]*>([\s\S]*?)<\/div>/gi)
+  const fromTemplate = allMatches(sectionHtml, /<div class="stat"[^>]*>[\s\S]*?<div class="num"[^>]*>([\s\S]*?)<\/div>[\s\S]*?<div class="lab"[^>]*>([\s\S]*?)<\/div>/gi)
+    .map(match => ({ value: stripTags(match[1]), label: stripTags(match[2]) }))
+    .filter(item => item.value || item.label);
+  if (fromTemplate.length) return fromTemplate;
+
+  return allMatches(sectionHtml, /<div class="tpl-stat"[^>]*>[\s\S]*?<div class="tpl-stat-num"[^>]*>([\s\S]*?)<\/div>[\s\S]*?<div class="tpl-stat-lab"[^>]*>([\s\S]*?)<\/div>/gi)
     .map(match => ({ value: stripTags(match[1]), label: stripTags(match[2]) }))
     .filter(item => item.value || item.label);
 }
 
 function parseFeatureCards(sectionHtml: string): ScrapedTemplateSection['cards'] {
-  return allMatches(sectionHtml, /<div class="(?:feature|plat|ts-card|duo-card)"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/gi)
+  const fromTemplate = allMatches(sectionHtml, /<div class="(?:feature|plat|ts-card|duo-card)"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/gi)
+    .map(match => ({ title: stripTags(match[1]), description: stripTags(match[2]) }))
+    .filter(item => item.title || item.description);
+  if (fromTemplate.length) return fromTemplate;
+
+  return allMatches(sectionHtml, /<div class="tpl-icon-card"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/gi)
     .map(match => ({ title: stripTags(match[1]), description: stripTags(match[2]) }))
     .filter(item => item.title || item.description);
 }
 
 function parseReachFigs(sectionHtml: string): ScrapedTemplateSection['stats'] {
-  return allMatches(sectionHtml, /<div class="reach-fig"[^>]*>[\s\S]*?<div class="v"[^>]*>([\s\S]*?)<\/div>[\s\S]*?<div class="k"[^>]*>([\s\S]*?)<\/div>/gi)
+  const fromTemplate = allMatches(sectionHtml, /<div class="reach-fig"[^>]*>[\s\S]*?<div class="v"[^>]*>([\s\S]*?)<\/div>[\s\S]*?<div class="k"[^>]*>([\s\S]*?)<\/div>/gi)
+    .map(match => ({ value: stripTags(match[1]), label: stripTags(match[2]) }))
+    .filter(item => item.value || item.label);
+  if (fromTemplate.length) return fromTemplate;
+
+  return allMatches(sectionHtml, /<div class="tpl-reach-fig"[^>]*>[\s\S]*?<div class="tpl-reach-fig-v"[^>]*>([\s\S]*?)<\/div>[\s\S]*?<div class="tpl-reach-fig-k"[^>]*>([\s\S]*?)<\/div>/gi)
     .map(match => ({ value: stripTags(match[1]), label: stripTags(match[2]) }))
     .filter(item => item.value || item.label);
 }
 
 function parseRegionCards(sectionHtml: string): ScrapedTemplateSection['cards'] {
-  return allMatches(sectionHtml, /<div class="region"[^>]*>[\s\S]*?<span class="r-name"[^>]*>([\s\S]*?)<\/span>[\s\S]*?<span class="r-sub"[^>]*>([\s\S]*?)<\/span>/gi)
+  const fromTemplate = allMatches(sectionHtml, /<div class="region"[^>]*>[\s\S]*?<span class="r-name"[^>]*>([\s\S]*?)<\/span>[\s\S]*?<span class="r-sub"[^>]*>([\s\S]*?)<\/span>/gi)
+    .map(match => ({ title: stripTags(match[1]), description: stripTags(match[2]) }))
+    .filter(item => item.title || item.description);
+  if (fromTemplate.length) return fromTemplate;
+
+  return allMatches(sectionHtml, /<div class="tpl-region"[^>]*>[\s\S]*?<span class="tpl-region-name"[^>]*>([\s\S]*?)<\/span>[\s\S]*?<span class="tpl-region-sub"[^>]*>([\s\S]*?)<\/span>/gi)
     .map(match => ({ title: stripTags(match[1]), description: stripTags(match[2]) }))
     .filter(item => item.title || item.description);
 }
@@ -143,6 +163,7 @@ function parseSideCard(sectionHtml: string): ScrapedTemplateSection['sideCard'] 
     quote: stripTags(block.match(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/i)?.[1] ?? ''),
     authorName: firstMatch(block, /<div class="mc-name"[^>]*>([\s\S]*?)<\/div>/i),
     authorRole: firstMatch(block, /<div class="mc-role"[^>]*>([\s\S]*?)<\/div>/i),
+    authorInitials: firstMatch(block, /<div class="mc-av"[^>]*>([\s\S]*?)<\/div>/i) || 'V',
   };
 }
 
@@ -193,18 +214,35 @@ function enrichSection(key: string, sectionHtml: string, base: ScrapedTemplateSe
 
 function parseSectionHtml(key: string, sectionHtml: string, anchorId = ''): ScrapedTemplateSection {
   const { prefix, accent } = splitHeading(sectionHtml);
-  const eyebrow = firstMatch(sectionHtml, /<div class="eyebrow"[^>]*>([\s\S]*?)<\/div>/i);
+  const eyebrow = firstMatch(sectionHtml, /<div class="eyebrow"[^>]*>([\s\S]*?)<\/div>/i)
+    || firstMatch(sectionHtml, /<p class="vls-eyebrow"[^>]*>([\s\S]*?)<\/p>/i);
   const lead = firstMatch(sectionHtml, /<p[^>]*class="[^"]*hero-lead[^"]*"[^>]*>([\s\S]*?)<\/p>/i)
+    || firstMatch(sectionHtml, /<p[^>]*class="[^"]*tpl-lead[^"]*"[^>]*>([\s\S]*?)<\/p>/i)
     || firstMatch(sectionHtml, /<div class="sec-head"[^>]*>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/i);
-  const paragraphs = allMatches(sectionHtml, /<p[^>]*>([\s\S]*?)<\/p>/gi)
-    .map(match => stripTags(match[1]))
-    .filter(text => text && text !== lead);
+  const storyColMatch = sectionHtml.match(/<div class="col"[^>]*>([\s\S]*?)<\/div>/i);
+  const storyParagraphs = storyColMatch
+    ? allMatches(storyColMatch[1], /<p[^>]*>([\s\S]*?)<\/p>/gi)
+        .map(match => stripTags(match[1]))
+        .filter(Boolean)
+    : [];
+  const paragraphs = storyParagraphs.length
+    ? storyParagraphs
+    : allMatches(sectionHtml, /<p[^>]*>([\s\S]*?)<\/p>/gi)
+        .map(match => stripTags(match[1]))
+        .filter(text => text && text !== lead);
   const body = paragraphs.join('\n\n');
-  const ctaTitle = firstMatch(sectionHtml, /<div class="cta-panel"[^>]*>[\s\S]*?<h2[^>]*>([\s\S]*?)<\/h2>/i) || prefix;
+  const ctaPanelHtml = sectionHtml.match(/<div class="cta-panel"[^>]*>([\s\S]*?)<\/div>/i)?.[0] ?? sectionHtml;
+  const ctaHeading = splitHeading(ctaPanelHtml);
+  const ctaTitle = ctaHeading.prefix || prefix;
+  const ctaAccent = ctaHeading.accent;
   const ctaSubtitle = firstMatch(sectionHtml, /<div class="cta-panel"[^>]*>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/i) || lead || body;
   const ctaText = firstMatch(sectionHtml, /<div class="cta-panel"[^>]*>[\s\S]*?<a[^>]*class="[^"]*btn-primary[^"]*"[^>]*>([\s\S]*?)<\/a>/i)
+    || firstMatch(sectionHtml, /<div class="hero-cta"[^>]*>[\s\S]*?<a[^>]*class="[^"]*btn-primary[^"]*"[^>]*>([\s\S]*?)<\/a>/i)
     || firstMatch(sectionHtml, /<a[^>]*class="[^"]*btn-primary[^"]*"[^>]*>([\s\S]*?)<\/a>/i)
     || 'Learn more';
+  const secondaryCtaText = firstMatch(sectionHtml, /<div class="cta-actions"[^>]*>[\s\S]*?<a[^>]*class="[^"]*btn-outline-blue[^"]*"[^>]*>([\s\S]*?)<\/a>/i)
+    || firstMatch(sectionHtml, /<div class="hero-cta"[^>]*>[\s\S]*?<a[^>]*class="[^"]*btn-ghost[^"]*"[^>]*>([\s\S]*?)<\/a>/i)
+    || '';
 
   const base: ScrapedTemplateSection = {
     key,
@@ -215,7 +253,9 @@ function parseSectionHtml(key: string, sectionHtml: string, anchorId = ''): Scra
     lead,
     body,
     bodyHtml: sectionHtml,
-    stats: [...parseStats(sectionHtml), ...parseReachFigs(sectionHtml)],
+    stats: key.includes('reach')
+      ? parseReachFigs(sectionHtml)
+      : [...parseStats(sectionHtml), ...parseReachFigs(sectionHtml)],
     cards: [...parseFeatureCards(sectionHtml), ...parseRegionCards(sectionHtml)],
     groups: [],
     timeline: parseTimeline(sectionHtml),
@@ -228,6 +268,9 @@ function parseSectionHtml(key: string, sectionHtml: string, anchorId = ''): Scra
     ctaText: stripTags(ctaText),
     ...emptyTemplateSectionFields(),
     anchorId,
+    secondaryCtaText: stripTags(secondaryCtaText),
+    ...(ctaAccent ? { headingAccent: key === 'cta' ? ctaAccent : accent } : {}),
+    ...(key === 'cta' && ctaHeading.prefix ? { headingPrefix: ctaHeading.prefix } : {}),
   };
 
   return enrichSection(key, sectionHtml, base);
@@ -330,7 +373,7 @@ export function getTemplateFileSections(template: MigrationTemplate): ScrapedTem
   return parseTemplateSectionsFromHtml(html);
 }
 
-/** Prefer live scraped section text; fall back to template HTML for structure and nested items. */
+/** Prefer template reference content when live scrape is sparse or uses Storyblok preset labels. */
 export function mergeTemplateSectionSources(
   live: ScrapedTemplateSection | undefined,
   fromTemplate: ScrapedTemplateSection | undefined,
@@ -339,39 +382,60 @@ export function mergeTemplateSectionSources(
   if (!live) return fromTemplate;
   if (!fromTemplate) return live;
 
-  const pickArray = <T,>(liveItems: T[], templateItems: T[]) => (
-    liveItems.length ? liveItems : templateItems
+  const pickRicherArray = <T,>(liveItems: T[], templateItems: T[]) => (
+    templateItems.length > liveItems.length ? templateItems : (liveItems.length ? liveItems : templateItems)
   );
+
+  const isPresetLabel = (value: string, key: string) => {
+    const norm = value.trim().toUpperCase();
+    const keyNorm = key.replace(/-/g, ' ').toUpperCase();
+    const keyAmp = key.replace(/-/g, ' & ').toUpperCase();
+    return norm === keyNorm || norm === keyAmp;
+  };
+
+  const eyebrow = fromTemplate.eyebrow && (!live.eyebrow || isPresetLabel(live.eyebrow, fromTemplate.key))
+    ? fromTemplate.eyebrow
+    : pickText(live.eyebrow, fromTemplate.eyebrow);
+
+  const headingPrefix = fromTemplate.headingAccent
+    ? pickText(fromTemplate.headingPrefix, live.headingPrefix)
+    : pickText(live.headingPrefix, fromTemplate.headingPrefix);
+
+  const headingAccent = pickText(fromTemplate.headingAccent, live.headingAccent);
+
+  const body = fromTemplate.body.includes('\n\n') || fromTemplate.body.length > live.body.length
+    ? pickText(fromTemplate.body, live.body)
+    : pickText(live.body, fromTemplate.body);
 
   return {
     key: live.key || fromTemplate.key,
     html: live.html || fromTemplate.html,
-    eyebrow: pickText(live.eyebrow, fromTemplate.eyebrow),
-    headingPrefix: pickText(live.headingPrefix, fromTemplate.headingPrefix),
-    headingAccent: pickText(live.headingAccent, fromTemplate.headingAccent),
+    eyebrow,
+    headingPrefix,
+    headingAccent,
     lead: pickText(live.lead, fromTemplate.lead),
-    body: pickText(live.body, fromTemplate.body),
+    body,
     bodyHtml: live.bodyHtml || fromTemplate.bodyHtml,
-    stats: pickArray(live.stats, fromTemplate.stats),
-    cards: pickArray(live.cards, fromTemplate.cards),
-    groups: pickArray(live.groups, fromTemplate.groups),
-    timeline: pickArray(live.timeline, fromTemplate.timeline),
-    contactCards: pickArray(live.contactCards, fromTemplate.contactCards),
-    heroItems: pickArray(live.heroItems, fromTemplate.heroItems),
-    sideCard: live.sideCard ?? fromTemplate.sideCard,
-    badges: pickArray(live.badges, fromTemplate.badges),
+    stats: pickRicherArray(live.stats, fromTemplate.stats),
+    cards: pickRicherArray(live.cards, fromTemplate.cards),
+    groups: pickRicherArray(live.groups, fromTemplate.groups),
+    timeline: pickRicherArray(live.timeline, fromTemplate.timeline),
+    contactCards: pickRicherArray(live.contactCards, fromTemplate.contactCards),
+    heroItems: pickRicherArray(live.heroItems, fromTemplate.heroItems),
+    sideCard: fromTemplate.sideCard ?? live.sideCard,
+    badges: pickRicherArray(live.badges, fromTemplate.badges),
     ctaTitle: pickText(live.ctaTitle, fromTemplate.ctaTitle),
     ctaSubtitle: pickText(live.ctaSubtitle, fromTemplate.ctaSubtitle),
     ctaText: pickText(live.ctaText, fromTemplate.ctaText),
-    profiles: pickArray(live.profiles, fromTemplate.profiles),
-    steps: pickArray(live.steps, fromTemplate.steps),
-    sessions: pickArray(live.sessions, fromTemplate.sessions),
-    liveSessionRows: pickArray(live.liveSessionRows, fromTemplate.liveSessionRows),
-    levels: pickArray(live.levels, fromTemplate.levels),
-    labeledItems: pickArray(live.labeledItems, fromTemplate.labeledItems),
-    legalTabs: pickArray(live.legalTabs, fromTemplate.legalTabs),
-    legalMetaItems: pickArray(live.legalMetaItems, fromTemplate.legalMetaItems),
-    legalTocItems: pickArray(live.legalTocItems, fromTemplate.legalTocItems),
+    profiles: pickRicherArray(live.profiles, fromTemplate.profiles),
+    steps: pickRicherArray(live.steps, fromTemplate.steps),
+    sessions: pickRicherArray(live.sessions, fromTemplate.sessions),
+    liveSessionRows: pickRicherArray(live.liveSessionRows, fromTemplate.liveSessionRows),
+    levels: pickRicherArray(live.levels, fromTemplate.levels),
+    labeledItems: pickRicherArray(live.labeledItems, fromTemplate.labeledItems),
+    legalTabs: pickRicherArray(live.legalTabs, fromTemplate.legalTabs),
+    legalMetaItems: pickRicherArray(live.legalMetaItems, fromTemplate.legalMetaItems),
+    legalTocItems: pickRicherArray(live.legalTocItems, fromTemplate.legalTocItems),
     legalCalloutHeading: pickText(live.legalCalloutHeading, fromTemplate.legalCalloutHeading),
     legalTocTitle: pickText(live.legalTocTitle, fromTemplate.legalTocTitle),
     legalTocDownloadLabel: pickText(live.legalTocDownloadLabel, fromTemplate.legalTocDownloadLabel),
@@ -379,8 +443,8 @@ export function mergeTemplateSectionSources(
     legalSectionNumber: pickText(live.legalSectionNumber, fromTemplate.legalSectionNumber),
     legalSectionHeading: pickText(live.legalSectionHeading, fromTemplate.legalSectionHeading),
     checklistHeading: pickText(live.checklistHeading, fromTemplate.checklistHeading),
-    checklistItems: pickArray(live.checklistItems, fromTemplate.checklistItems),
-    tableRows: pickArray(live.tableRows, fromTemplate.tableRows),
+    checklistItems: pickRicherArray(live.checklistItems, fromTemplate.checklistItems),
+    tableRows: pickRicherArray(live.tableRows, fromTemplate.tableRows),
     schedulerTag: pickText(live.schedulerTag, fromTemplate.schedulerTag),
     schedulerTitle: pickText(live.schedulerTitle, fromTemplate.schedulerTitle),
     schedulerSubtitle: pickText(live.schedulerSubtitle, fromTemplate.schedulerSubtitle),
@@ -392,7 +456,7 @@ export function mergeTemplateSectionSources(
     cardLiveLabel: pickText(live.cardLiveLabel, fromTemplate.cardLiveLabel),
     cardTitle: pickText(live.cardTitle, fromTemplate.cardTitle),
     cardMeta: pickText(live.cardMeta, fromTemplate.cardMeta),
-    cardRows: pickArray(live.cardRows, fromTemplate.cardRows),
+    cardRows: pickRicherArray(live.cardRows, fromTemplate.cardRows),
     noteHeading: pickText(live.noteHeading, fromTemplate.noteHeading),
     noteText: pickText(live.noteText, fromTemplate.noteText),
     freePill: pickText(live.freePill, fromTemplate.freePill),
@@ -400,12 +464,12 @@ export function mergeTemplateSectionSources(
     secondaryCtaText: pickText(live.secondaryCtaText, fromTemplate.secondaryCtaText),
     secondaryCtaLink: pickText(live.secondaryCtaLink, fromTemplate.secondaryCtaLink),
     contactInfoHeading: pickText(live.contactInfoHeading, fromTemplate.contactInfoHeading),
-    contactInfoItems: pickArray(live.contactInfoItems, fromTemplate.contactInfoItems),
+    contactInfoItems: pickRicherArray(live.contactInfoItems, fromTemplate.contactInfoItems),
     supportHoursHeading: pickText(live.supportHoursHeading, fromTemplate.supportHoursHeading),
-    supportHoursRows: pickArray(live.supportHoursRows, fromTemplate.supportHoursRows),
+    supportHoursRows: pickRicherArray(live.supportHoursRows, fromTemplate.supportHoursRows),
     supportHoursNote: pickText(live.supportHoursNote, fromTemplate.supportHoursNote),
     socialsHeading: pickText(live.socialsHeading, fromTemplate.socialsHeading),
-    socials: pickArray(live.socials, fromTemplate.socials),
+    socials: pickRicherArray(live.socials, fromTemplate.socials),
     anchorId: pickText(live.anchorId, fromTemplate.anchorId),
   };
 }
