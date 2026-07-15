@@ -445,7 +445,7 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
   stat_item: ['value', 'label'],
-  icon_card: ['title', 'description', 'icon_key'],
+  icon_card: ['title', 'description', 'icon_key', 'figure_value', 'figure_label', 'is_tip'],
   timeline_item: ['year', 'title', 'text'],
   contact_card: ['title', 'detail', 'link_text', 'link', 'icon_key'],
   page_hero_item: ['text', 'variant'],

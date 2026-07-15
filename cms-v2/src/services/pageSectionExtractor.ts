@@ -13,6 +13,12 @@ import {
   parseLiveSessions,
   parseLiveSessionsHero,
   parseQualificationLevels,
+  parseSnapCard,
+  parseTrustPills,
+  parseCareerCards,
+  parseIndustryCards,
+  parseRequirementCards,
+  parseDuoCards,
   parseStepCards,
   parseTeamProfiles,
   parseTutorCard,
@@ -156,15 +162,17 @@ function parseBadges(sectionHtml: string): ScrapedTemplateSection['badges'] {
 
 function parseSideCard(sectionHtml: string): ScrapedTemplateSection['sideCard'] {
   const card = sectionHtml.match(/<div class="mission-card"[^>]*>([\s\S]*?)<\/div>/i);
-  if (!card) return null;
-  const block = card[1];
-  return {
-    tag: firstMatch(block, /<span class="mc-tag"[^>]*>([\s\S]*?)<\/span>/i),
-    quote: stripTags(block.match(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/i)?.[1] ?? ''),
-    authorName: firstMatch(block, /<div class="mc-name"[^>]*>([\s\S]*?)<\/div>/i),
-    authorRole: firstMatch(block, /<div class="mc-role"[^>]*>([\s\S]*?)<\/div>/i),
-    authorInitials: firstMatch(block, /<div class="mc-av"[^>]*>([\s\S]*?)<\/div>/i) || 'V',
-  };
+  if (card) {
+    const block = card[1];
+    return {
+      tag: firstMatch(block, /<span class="mc-tag"[^>]*>([\s\S]*?)<\/span>/i),
+      quote: stripTags(block.match(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/i)?.[1] ?? ''),
+      authorName: firstMatch(block, /<div class="mc-name"[^>]*>([\s\S]*?)<\/div>/i),
+      authorRole: firstMatch(block, /<div class="mc-role"[^>]*>([\s\S]*?)<\/div>/i),
+      authorInitials: firstMatch(block, /<div class="mc-av"[^>]*>([\s\S]*?)<\/div>/i) || 'V',
+    };
+  }
+  return parseSnapCard(sectionHtml);
 }
 
 function enrichSection(key: string, sectionHtml: string, base: ScrapedTemplateSection, anchorId = ''): ScrapedTemplateSection {
@@ -187,6 +195,18 @@ function enrichSection(key: string, sectionHtml: string, base: ScrapedTemplateSe
   }
   if (sectionHtml.includes('class="level"')) {
     enriched.levels = parseQualificationLevels(sectionHtml);
+  }
+  if (sectionHtml.includes('trust-pill')) {
+    enriched.heroItems = parseTrustPills(sectionHtml);
+  }
+  if (sectionHtml.includes('career-grid') || sectionHtml.includes('class="career"')) {
+    enriched.cards = parseCareerCards(sectionHtml);
+  } else if (key.includes('entry-requirement') || sectionHtml.includes('req-list')) {
+    enriched.cards = parseRequirementCards(sectionHtml);
+  } else if (key.includes('industr') || sectionHtml.includes('ind-grid')) {
+    enriched.cards = parseIndustryCards(sectionHtml);
+  } else if (key.includes('how-long') || sectionHtml.includes('duo-grid')) {
+    enriched.cards = parseDuoCards(sectionHtml);
   }
   if (
     sectionHtml.includes('class="legal-hero"')
@@ -228,6 +248,7 @@ function parseSectionHtml(key: string, sectionHtml: string, anchorId = ''): Scra
   const lead = firstMatch(sectionHtml, /<p[^>]*class="[^"]*hero-lead[^"]*"[^>]*>([\s\S]*?)<\/p>/i)
     || firstMatch(sectionHtml, /<p[^>]*class="[^"]*tpl-lead[^"]*"[^>]*>([\s\S]*?)<\/p>/i)
     || firstMatch(sectionHtml, /<div class="sec-head"[^>]*>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/i);
+  const sublead = firstMatch(sectionHtml, /<p class="hero-sub"[^>]*>([\s\S]*?)<\/p>/i);
   const storyColMatch = sectionHtml.match(/<div class="col"[^>]*>([\s\S]*?)<\/div>/i);
   const storyParagraphs = storyColMatch
     ? allMatches(storyColMatch[1], /<p[^>]*>([\s\S]*?)<\/p>/gi)
@@ -252,6 +273,10 @@ function parseSectionHtml(key: string, sectionHtml: string, anchorId = ''): Scra
   const secondaryCtaText = firstMatch(sectionHtml, /<div class="cta-actions"[^>]*>[\s\S]*?<a[^>]*class="[^"]*btn-outline-blue[^"]*"[^>]*>([\s\S]*?)<\/a>/i)
     || firstMatch(sectionHtml, /<div class="hero-cta"[^>]*>[\s\S]*?<a[^>]*class="[^"]*btn-ghost[^"]*"[^>]*>([\s\S]*?)<\/a>/i)
     || '';
+  const primaryCtaLink = sectionHtml.match(/<div class="hero-cta"[^>]*>[\s\S]*?<a[^>]+class="[^"]*btn-primary[^"]*"[^>]+href=["']([^"']+)["']/i)?.[1]
+    || sectionHtml.match(/<a[^>]+class="[^"]*btn-primary[^"]*"[^>]+href=["']([^"']+)["']/i)?.[1]
+    || '';
+  const secondaryCtaLink = sectionHtml.match(/<div class="hero-cta"[^>]*>[\s\S]*?<a[^>]+class="[^"]*btn-ghost[^"]*"[^>]+href=["']([^"']+)["']/i)?.[1] ?? '';
 
   const base: ScrapedTemplateSection = {
     key,
@@ -260,6 +285,7 @@ function parseSectionHtml(key: string, sectionHtml: string, anchorId = ''): Scra
     headingPrefix: prefix,
     headingAccent: accent,
     lead,
+    sublead,
     body,
     bodyHtml: sectionHtml,
     stats: key.includes('reach')
@@ -278,6 +304,8 @@ function parseSectionHtml(key: string, sectionHtml: string, anchorId = ''): Scra
     ...emptyTemplateSectionFields(),
     anchorId,
     secondaryCtaText: stripTags(secondaryCtaText),
+    primaryCtaLink,
+    secondaryCtaLink,
     ...(ctaAccent ? { headingAccent: key === 'cta' ? ctaAccent : accent } : {}),
     ...(key === 'cta' && ctaHeading.prefix ? { headingPrefix: ctaHeading.prefix } : {}),
   };
@@ -423,6 +451,7 @@ export function mergeTemplateSectionSources(
     headingPrefix,
     headingAccent,
     lead: pickText(live.lead, fromTemplate.lead),
+    sublead: pickText(live.sublead, fromTemplate.sublead),
     body,
     bodyHtml: live.bodyHtml || fromTemplate.bodyHtml,
     stats: pickRicherArray(live.stats, fromTemplate.stats),

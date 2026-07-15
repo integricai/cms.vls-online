@@ -39,7 +39,28 @@ function iconKeyForCard(sectionKey: string, index: number): string | undefined {
   if (sectionKey.includes('platform')) {
     return PLATFORM_ICON_KEYS[index];
   }
+  if (sectionKey.includes('career')) {
+    return ['chart', 'document', 'chart', 'search', 'briefcase', 'shield'][index];
+  }
+  if (sectionKey.includes('industr')) {
+    return ['building', 'desktop', 'chart', 'health', 'building', 'cart', 'factory', 'globe'][index];
+  }
   return undefined;
+}
+
+function landingCardVariant(sectionKey: string): string | undefined {
+  if (sectionKey.includes('career')) return 'career';
+  if (sectionKey.includes('how-long')) return 'duo';
+  if (sectionKey.includes('entry')) return 'requirement';
+  if (sectionKey.includes('industr')) return 'industry';
+  return undefined;
+}
+
+function landingCardColumns(sectionKey: string, fallback: number): number {
+  if (sectionKey.includes('career')) return 3;
+  if (sectionKey.includes('how-long')) return 2;
+  if (sectionKey.includes('industr')) return 4;
+  return fallback;
 }
 
 function contactIconKey(index: number): string {
@@ -69,10 +90,11 @@ export function buildBlokFromTemplateSection(
       heading_prefix: pickText(extracted?.headingPrefix, section.sampleHeading, scraped.title),
       heading_accent: pickText(extracted?.headingAccent),
       lead: pickText(extracted?.lead, extracted?.body, section.sampleDescription, scraped.metaDescription),
+      sublead: pickText(extracted?.sublead),
       primary_cta_text: pickText(extracted?.ctaText, 'Meet the team'),
       secondary_cta_text: pickText(extracted?.secondaryCtaText, 'Browse all courses'),
-      primary_cta_link: storyblokLink('/team'),
-      secondary_cta_link: storyblokLink('/courses'),
+      primary_cta_link: storyblokLink(extracted?.primaryCtaLink || '/courses'),
+      secondary_cta_link: storyblokLink(extracted?.secondaryCtaLink || '/book-a-meeting'),
     };
 
     if (extracted?.heroItems.length) {
@@ -80,19 +102,31 @@ export function buildBlokFromTemplateSection(
         _uid: uid(),
         component: 'page_hero_item',
         text: item.text,
-        variant: 'tick',
+        variant: section.key.includes('hero') && item.text ? 'pill' : 'tick',
       }));
     }
 
-    if (sideCard?.quote || sideCard?.authorName) {
+    if (sideCard?.quote || sideCard?.authorName || sideCard?.rows?.length || sideCard?.title) {
       blok.side_card = [{
         _uid: uid(),
         component: 'page_hero_side_card',
         tag: sideCard.tag,
+        title: sideCard.title,
         quote: sideCard.quote,
         author_name: sideCard.authorName,
         author_role: sideCard.authorRole,
         author_initials: sideCard.authorInitials || 'V',
+        footer_label: sideCard.footerLabel,
+        footer_value: sideCard.footerValue,
+        ...(sideCard.rows?.length ? {
+          rows: sideCard.rows.map(row => ({
+            _uid: uid(),
+            component: 'page_hero_side_row',
+            number_label: row.number,
+            title: row.title,
+            subtitle: row.subtitle,
+          })),
+        } : {}),
       }];
     }
 
@@ -151,6 +185,7 @@ export function buildBlokFromTemplateSection(
 
   if (section.component === 'icon_card_grid') {
     const isPlatform = section.key.includes('platform');
+    const landingVariant = landingCardVariant(section.key);
     const cards = extracted?.cards.length
       ? extracted.cards.map((card, index) => ({
           _uid: uid(),
@@ -158,6 +193,9 @@ export function buildBlokFromTemplateSection(
           title: card.title,
           description: card.description,
           icon_key: iconKeyForCard(section.key, index),
+          ...(card.figureValue ? { figure_value: card.figureValue } : {}),
+          ...(card.figureLabel ? { figure_label: card.figureLabel } : {}),
+          ...(card.isTip ? { is_tip: true } : {}),
         }))
       : undefined;
 
@@ -167,8 +205,8 @@ export function buildBlokFromTemplateSection(
       heading_prefix: pickText(extracted?.headingPrefix, section.sampleHeading),
       heading_accent: pickText(extracted?.headingAccent),
       description: pickText(extracted?.lead, extracted?.body, section.sampleDescription),
-      columns: isPlatform ? 4 : 3,
-      card_variant: isPlatform ? 'platform' : 'feature',
+      columns: landingCardColumns(section.key, isPlatform ? 4 : 3),
+      card_variant: landingVariant || (isPlatform ? 'platform' : 'feature'),
       show_device_pills: isPlatform,
       ...(cards ? { cards } : {}),
     });

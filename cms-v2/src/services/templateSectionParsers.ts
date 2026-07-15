@@ -146,10 +146,80 @@ export function parseLiveSessionRows(sectionHtml: string): ScrapedTemplateSectio
     .filter(item => item.paperName);
 }
 
-export function parseQualificationLevels(sectionHtml: string): ScrapedTemplateSection['levels'] {
-  return allMatches(sectionHtml, /<div class="level"[^>]*>([\s\S]*?)<\/div>\s*(?=<div class="level"|$)/gi)
+export function parseSnapCard(sectionHtml: string): ScrapedTemplateSection['sideCard'] {
+  const cardMatch = sectionHtml.match(/<div class="snap-card"[^>]*>([\s\S]*?)<\/div>\s*(?:<\/div>\s*<\/div>|$)/i);
+  if (!cardMatch) return null;
+  const block = cardMatch[1] ?? cardMatch[0];
+  const rows = allMatches(block, /<div class="snap-row"[^>]*>[\s\S]*?<span class="n"[^>]*>([\s\S]*?)<\/span>[\s\S]*?<span class="t"[^>]*>([\s\S]*?)<\/span>[\s\S]*?<span class="s"[^>]*>([\s\S]*?)<\/span>/gi)
+    .map(match => ({
+      number: stripTemplateTags(match[1]),
+      title: stripTemplateTags(match[2]),
+      subtitle: stripTemplateTags(match[3]),
+    }))
+    .filter(item => item.title);
+  return {
+    tag: firstMatch(block, /<span class="sc-tag"[^>]*>([\s\S]*?)<\/span>/i),
+    title: firstMatch(block, /<h3[^>]*>([\s\S]*?)<\/h3>/i),
+    quote: '',
+    authorName: '',
+    authorRole: '',
+    footerLabel: stripTemplateTags(block.match(/<span class="k"[^>]*>([\s\S]*?)<\/span>/i)?.[1] ?? '').replace(/<br\s*\/?>/gi, '\n'),
+    footerValue: firstMatch(block, /<span class="v"[^>]*>([\s\S]*?)<\/span>/i),
+    rows,
+  };
+}
+
+export function parseTrustPills(sectionHtml: string): ScrapedTemplateSection['heroItems'] {
+  return allMatches(sectionHtml, /<span class="trust-pill"[^>]*>([\s\S]*?)<\/span>/gi)
+    .map(match => ({
+      text: stripTemplateTags(match[1].replace(/<svg[\s\S]*?<\/svg>/gi, '')),
+    }))
+    .filter(item => item.text);
+}
+
+export function parseCareerCards(sectionHtml: string): ScrapedTemplateSection['cards'] {
+  return allMatches(sectionHtml, /<div class="career"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>/gi)
+    .map(match => ({ title: stripTemplateTags(match[1]), description: '' }))
+    .filter(item => item.title);
+}
+
+export function parseIndustryCards(sectionHtml: string): ScrapedTemplateSection['cards'] {
+  return allMatches(sectionHtml, /<div class="ind"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/gi)
+    .map(match => ({
+      title: stripTemplateTags(match[1]),
+      description: stripTemplateTags(match[2]),
+    }))
+    .filter(item => item.title);
+}
+
+export function parseRequirementCards(sectionHtml: string): ScrapedTemplateSection['cards'] {
+  return allMatches(sectionHtml, /<div class="req([^"]*)"[^>]*>[\s\S]*?<span class="t"[^>]*>([\s\S]*?)<\/span>[\s\S]*?<span class="s"[^>]*>([\s\S]*?)<\/span>/gi)
+    .map(match => ({
+      title: stripTemplateTags(match[2]),
+      description: stripTemplateTags(match[3]),
+      isTip: match[1].includes('tip'),
+    }))
+    .filter(item => item.title);
+}
+
+export function parseDuoCards(sectionHtml: string): ScrapedTemplateSection['cards'] {
+  return allMatches(sectionHtml, /<div class="duo-card"[^>]*>([\s\S]*?)<\/div>\s*(?=<div class="duo-card"|<\/div>\s*<\/div>|$)/gi)
     .map(match => {
       const block = match[1] ?? match[0];
+      return {
+        title: firstMatch(block, /<h3[^>]*>([\s\S]*?)<\/h3>/i),
+        description: firstMatch(block, /<p[^>]*>([\s\S]*?)<\/p>/i),
+        figureValue: firstMatch(block, /<span class="v"[^>]*>([\s\S]*?)<\/span>/i),
+        figureLabel: stripTemplateTags(block.match(/<span class="k"[^>]*>([\s\S]*?)<\/span>/i)?.[1] ?? '').replace(/<br\s*\/?>/gi, '\n'),
+      };
+    })
+    .filter(item => item.title);
+}
+
+export function parseQualificationLevels(sectionHtml: string): ScrapedTemplateSection['levels'] {
+  return sectionHtml.split(/<div class="level">/i).slice(1)
+    .map(part => {
+      const block = part;
       const tone = block.includes('level-bar l3') ? 'l3' : block.includes('level-bar l2') ? 'l2' : 'l1';
       const number = firstMatch(block, /<span class="level-num[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
       const title = firstMatch(block, /<span class="level-title"[^>]*>([\s\S]*?)<\/span>/i);

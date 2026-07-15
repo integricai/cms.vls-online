@@ -154,7 +154,8 @@ export interface ScrapedTemplateSection {
   body: string;
   bodyHtml: string;
   stats: Array<{ value: string; label: string }>;
-  cards: Array<{ title: string; description: string }>;
+  cards: Array<{ title: string; description: string; figureValue?: string; figureLabel?: string; isTip?: boolean }>;
+  sublead: string;
   /** Topic-grouped item lists (e.g. an article library grouped by syllabus area) — distinct from
    * `cards`, which is a flat, ungrouped list. */
   groups: Array<{ label: string; items: Array<{ code: string; title: string; description: string; url: string }> }>;
@@ -163,10 +164,14 @@ export interface ScrapedTemplateSection {
   heroItems: Array<{ text: string }>;
   sideCard: {
     tag: string;
+    title?: string;
     quote: string;
     authorName: string;
     authorRole: string;
     authorInitials?: string;
+    footerLabel?: string;
+    footerValue?: string;
+    rows?: Array<{ number: string; title: string; subtitle: string }>;
   } | null;
   badges: Array<{ title: string; subtitle: string }>;
   ctaTitle: string;
