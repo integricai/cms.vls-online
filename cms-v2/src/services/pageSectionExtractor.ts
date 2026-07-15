@@ -24,6 +24,7 @@ import {
   parseTutorCard,
   stripTemplateTags,
 } from './templateSectionParsers';
+import { isPageBuilderLegalHtml, parsePageBuilderLegalSections } from './pageBuilderLegalParser';
 
 function decodeEntities(value: string): string {
   return value
@@ -448,6 +449,10 @@ function parseLegalBodySections(contentHtml: string): ScrapedTemplateSection[] {
 
 /** Parse `<section>` blocks from page HTML, keyed by nearest preceding HTML comment. */
 export function parseTemplateSectionsFromHtml(contentHtml: string): ScrapedTemplateSection[] {
+  if (isPageBuilderLegalHtml(contentHtml)) {
+    return parsePageBuilderLegalSections(contentHtml);
+  }
+
   const commentPattern = /<!--\s*([\s\S]*?)\s*-->/gi;
   const sectionPattern = /<section\b([^>]*)>([\s\S]*?)<\/section>/gi;
 
@@ -529,6 +534,8 @@ export function sectionHasLiveMatch(
   if (component === 'faq_section') return Boolean(scraped.faq?.items?.length);
   return indexTemplateSections(scraped.templateSections ?? []).has(sectionKey);
 }
+
+export { isPageBuilderLegalHtml, parsePageBuilderLegalSections } from './pageBuilderLegalParser';
 
 export function getTemplateFileSections(template: MigrationTemplate): ScrapedTemplateSection[] {
   const blueprint = getMigrationTemplateBlueprint(template);

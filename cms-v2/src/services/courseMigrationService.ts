@@ -45,8 +45,8 @@ import {
   syncTemplateComponentLibrary,
 } from './storyblokComponentLibrary';
 import { buildBlokFromTemplateSection } from './pageContentBuilder';
-import { indexTemplateSections, resolveTemplateSections, sectionHasLiveMatch } from './pageSectionExtractor';
-import type { TemplateReferenceSummary, ComponentLibrarySummary } from '../../shared/migrationTypes';
+import { indexTemplateSections, parseTemplateSectionsFromHtml, resolveTemplateSections, sectionHasLiveMatch, isPageBuilderLegalHtml } from './pageSectionExtractor';
+import type { TemplateSectionBlueprint } from '../../shared/migrationTemplateTypes';
 import { analyzeUnmatchedLayout } from './genericLayoutAnalyzer';
 import { buildCustomComponentBody } from './componentGenerationService';
 
@@ -633,12 +633,97 @@ function collapseLegalBody(body: Record<string, unknown>[]): Record<string, unkn
   return [hero, article].filter(Boolean) as Record<string, unknown>[];
 }
 
+function buildMinimalLegalStructureBody(
+  blueprint: ReturnType<typeof getMigrationTemplateBlueprint>,
+  presetBloksBySection: Record<string, Record<string, unknown>> | null,
+): Record<string, unknown>[] {
+  const heroSection = blueprint.sections.find(section => section.component === 'legal_hero');
+  const articleSection = blueprint.sections.find(section => section.component === 'legal_article');
+  const hero = heroSection
+    ? (presetBloksBySection?.[heroSection.key] ?? buildPresetBlokFromSection(blueprint, heroSection))
+    : null;
+  const article = articleSection
+    ? (presetBloksBySection?.[articleSection.key] ?? buildPresetBlokFromSection(blueprint, articleSection))
+    : null;
+  return collapseLegalBody([hero, article].filter(Boolean) as Record<string, unknown>[]);
+}
+
+async function buildPageBuilderLegalStoryblokContentAsync(
+  scraped: ScrapedGenericPage,
+  presetBloksBySection: Record<string, Record<string, unknown>> | null,
+  config: StoryblokConfig | null,
+): Promise<Record<string, unknown>> {
+  const blueprint = getMigrationTemplateBlueprint('legal');
+  const byKey = indexTemplateSections(scraped.templateSections ?? []);
+  const heroBlueprint = blueprint.sections.find(section => section.component === 'legal_hero');
+  const articleBlueprint = blueprint.sections.find(section => section.component === 'legal_article');
+  const sectionPreset = blueprint.sections.find(section => section.component === 'legal_section');
+  const body: Record<string, unknown>[] = [];
+
+  if (heroBlueprint) {
+    const heroBlok = buildBlokFromTemplateSection(heroBlueprint, byKey.get('legal-hero'), scraped);
+    const styled = await stylizeBlok(heroBlok, 'legal', heroBlueprint.key, presetBloksBySection, config);
+    if (styled) body.push(styled);
+  }
+
+  if (articleBlueprint) {
+    const articleBlok = buildBlokFromTemplateSection(articleBlueprint, byKey.get('legal-article'), scraped);
+    const styled = await stylizeBlok(articleBlok, 'legal', articleBlueprint.key, presetBloksBySection, config);
+    if (styled) body.push(styled);
+  }
+
+  for (const [key, extracted] of byKey) {
+    if (key === 'legal-hero' || key === 'legal-article') continue;
+    const dynamicBlueprint: TemplateSectionBlueprint = {
+      key,
+      label: extracted.legalSectionHeading || key,
+      component: 'legal_section',
+      classes: ['sec'],
+      isBand: false,
+      styles: sectionPreset?.styles ?? {},
+      sampleHeading: extracted.legalSectionHeading || key,
+      sampleDescription: extracted.body?.slice(0, 240) ?? '',
+    };
+    const blok = buildBlokFromTemplateSection(dynamicBlueprint, extracted, scraped);
+    const styled = await stylizeBlok(
+      blok,
+      'legal',
+      sectionPreset?.key ?? key,
+      presetBloksBySection,
+      config,
+    );
+    if (styled) body.push(styled);
+  }
+
+  const finalBody = collapseLegalBody(body);
+  const sourceUrl = scraped.sourceUrl;
+  const seo = (scraped.title || scraped.metaDescription)
+    ? [{
+        _uid: blokUid(),
+        component: 'seo',
+        title: scraped.title,
+        description: scraped.metaDescription,
+        canonical_url: sourceUrl,
+      }]
+    : [];
+
+  return {
+    component: 'page',
+    seo,
+    body: finalBody,
+  };
+}
+
 export async function buildGenericStoryblokContentAsync(
   scraped: ScrapedGenericPage,
   template: MigrationTemplate,
   presetBloksBySection: Record<string, Record<string, unknown>> | null,
   config: StoryblokConfig | null,
 ): Promise<Record<string, unknown>> {
+  if (template === 'legal' && scraped.rawHtml && isPageBuilderLegalHtml(scraped.rawHtml)) {
+    return buildPageBuilderLegalStoryblokContentAsync(scraped, presetBloksBySection, config);
+  }
+
   const blueprint = getMigrationTemplateBlueprint(template);
   const sourceUrl = scraped.sourceUrl;
   const extractedByKey = resolveTemplateSections(template, scraped.templateSections ?? []);
@@ -1027,11 +1112,13 @@ export async function generatePageStructure(
   }
 
   let unmatchedSections: string[] = [];
+  const scraped = scrapedRaw as ScrapedGenericPage;
+  const pageBuilderLegal = template === 'legal' && isPageBuilderLegalHtml(scraped.rawHtml ?? '');
+
   if (template !== 'course') {
-    const scraped = scrapedRaw as ScrapedGenericPage;
     const eligibleSections = blueprint.sections.filter(section => section.component !== 'enquiry_form');
-    unmatchedSections = detectUnmatchedSections(blueprint, scraped);
-    if (eligibleSections.length > 0 && unmatchedSections.length === eligibleSections.length) {
+    unmatchedSections = pageBuilderLegal ? [] : detectUnmatchedSections(blueprint, scraped);
+    if (!pageBuilderLegal && eligibleSections.length > 0 && unmatchedSections.length === eligibleSections.length) {
       return {
         page,
         templateReference,
@@ -1050,9 +1137,11 @@ export async function generatePageStructure(
   const librarySync = await syncLibrarySafely(config, template, warnings);
   const presetBloksBySection = librarySync?.presetBloksBySection ?? null;
 
-  const body = blueprint.sections.map(section => (
-    presetBloksBySection?.[section.key] ?? buildPresetBlokFromSection(blueprint, section)
-  ));
+  const body = pageBuilderLegal
+    ? buildMinimalLegalStructureBody(blueprint, presetBloksBySection)
+    : blueprint.sections.map(section => (
+      presetBloksBySection?.[section.key] ?? buildPresetBlokFromSection(blueprint, section)
+    ));
 
   const destinationSlug = resolveDestinationSlug(page);
   const fullSlug = storyFullSlug(template, destinationSlug);
@@ -1087,7 +1176,11 @@ export async function generatePageStructure(
     warnings.push('An existing Storyblok story at this destination was updated with the generated structure.');
   }
 
-  if (unmatchedSections.length) {
+  if (pageBuilderLegal) {
+    warnings.push(
+      'Live page uses a page-builder legal layout — draft structure is hero + article only; nested sections are created dynamically during Migrate Content.',
+    );
+  } else if (unmatchedSections.length) {
     warnings.push(
       `${unmatchedSections.length} section(s) have no matching content on the live page and will be skipped in Migrate Content: ${unmatchedSections.join(', ')}.`,
     );

@@ -2,7 +2,7 @@ import type { MigrationTemplate, ScrapedContentSection, ScrapedGenericPage } fro
 import { breadcrumbTrailText, parseBreadcrumbFromHtml } from './breadcrumbUtils';
 import { toPublicOriginUrl } from './migrationUrlUtils';
 import { CoursePageScrapeError, fetchPageHtml } from './coursePageScraper';
-import { indexTemplateSections, parseTemplateSectionsFromHtml } from './pageSectionExtractor';
+import { indexTemplateSections, parseTemplateSectionsFromHtml, isPageBuilderLegalHtml, parsePageBuilderLegalSections } from './pageSectionExtractor';
 import { getMigrationTemplateBlueprint } from './migrationTemplateRegistry';
 import { buildCandidateBlocks, classifyAndExtractSections } from './aiSectionExtractor';
 import { parseFaq } from './faqParser';
@@ -104,13 +104,20 @@ export async function scrapeGenericPage(sourceUrl: string, template?: MigrationT
     || meta(html, /<meta[^>]+property=["']og:description["'][^>]*>/i);
   const { faq, warnings: faqWarnings } = parseFaq(html);
 
-  const templateSections = parseTemplateSectionsFromHtml(mainContent);
+  let templateSections = parseTemplateSectionsFromHtml(mainContent);
+  if (!templateSections.length && isPageBuilderLegalHtml(html)) {
+    templateSections = parsePageBuilderLegalSections(html);
+  } else if (!isPageBuilderLegalHtml(mainContent) && isPageBuilderLegalHtml(html)) {
+    templateSections = parsePageBuilderLegalSections(html);
+  }
   const extractionWarnings = [...faqWarnings];
   const sectionMatchSource: Record<string, 'live' | 'ai'> = {};
   const sectionMatchConfidence: Record<string, number> = {};
   for (const section of templateSections) sectionMatchSource[section.key] = 'live';
 
-  if (template) {
+  const pageBuilderLegal = isPageBuilderLegalHtml(html);
+
+  if (template && !pageBuilderLegal) {
     const blueprint = getMigrationTemplateBlueprint(template);
     const liveByKey = indexTemplateSections(templateSections);
     const missingSections = blueprint.sections.filter(

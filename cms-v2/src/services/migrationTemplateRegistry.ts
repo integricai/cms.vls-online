@@ -219,6 +219,22 @@ function stylesForSection(
   const isHero = classes.includes('hero') || classes.includes('legal-hero');
   const isCta = classes.includes('cta-band') || classes.includes('cta-panel') || component === 'promotion_section';
 
+  if (component === 'legal_hero') {
+    return {
+      background_color: '#F2F6FF',
+      padding_top: 34,
+      padding_bottom: 0,
+    };
+  }
+
+  if (component === 'legal_article') {
+    return {
+      background_color: '#FFFFFF',
+      padding_top: 0,
+      padding_bottom: 0,
+    };
+  }
+
   if (component === 'promotion_section' || isCta) {
     return {
       background_color: tokens.white,
