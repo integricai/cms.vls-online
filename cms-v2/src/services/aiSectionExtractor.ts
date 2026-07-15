@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import type { MigrationTemplate, ScrapedTemplateSection } from '../../shared/migrationTypes';
 import type { TemplateSectionBlueprint } from '../../shared/migrationTemplateTypes';
+import { emptyTemplateSectionFields } from './templateSectionParsers';
 
 const MAX_BLOCKS = 40;
 const MAX_BLOCK_TEXT = 500;
@@ -173,6 +174,7 @@ function emptySectionFor(key: string): ScrapedTemplateSection {
     ctaTitle: '',
     ctaSubtitle: '',
     ctaText: '',
+    ...emptyTemplateSectionFields(),
   };
 }
 

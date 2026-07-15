@@ -291,11 +291,14 @@ function parseSections(html: string, tokens: TemplateDesignTokens, template: Mig
     const key = nearestComment?.key ?? classes[0] ?? `section-${sections.length + 1}`;
     const idMatch = attrs.match(/\bid=["']([^"']+)["']/i);
     const sectionKey = classes.includes('sec') && idMatch?.[1] ? idMatch[1] : key;
-    const label = nearestComment?.label ?? (classes.includes('sec') && idMatch?.[1] ? idMatch[1] : key);
-    const component = componentForSection(sectionKey, classes, template);
     const heading = stripTags(inner.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1]
       ?? inner.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i)?.[1]
       ?? '');
+    const commentLabel = nearestComment?.label ?? (classes.includes('sec') && idMatch?.[1] ? idMatch[1] : key);
+    const label = (commentLabel === 'ARTICLE' && classes.includes('sec') && (heading || idMatch?.[1]))
+      ? (heading || idMatch?.[1] || commentLabel)
+      : commentLabel;
+    const component = componentForSection(sectionKey, classes, template);
     const description = stripTags(
       inner.match(/<p[^>]*class="[^"]*(?:hero-lead|lead|hero-sub)[^"]*"[^>]*>([\s\S]*?)<\/p>/i)?.[1]
       ?? inner.match(/<p[^>]*>([\s\S]*?)<\/p>/i)?.[1]

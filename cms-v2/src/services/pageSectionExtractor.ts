@@ -314,10 +314,9 @@ function parseSectionHtml(key: string, sectionHtml: string, anchorId = ''): Scra
 }
 
 function parseLegalArticleSection(contentHtml: string): ScrapedTemplateSection | null {
-  const layoutMatch = contentHtml.match(/<div class="wrap layout">([\s\S]*?)<\/div>\s*<!--\s*FOOTER/i);
-  if (!layoutMatch) return null;
+  const layoutHtml = extractLegalLayoutHtml(contentHtml);
+  if (!layoutHtml) return null;
 
-  const layoutHtml = layoutMatch[1];
   const article = parseLegalArticleBlock(layoutHtml);
 
   return {
@@ -344,6 +343,107 @@ function parseLegalArticleSection(contentHtml: string): ScrapedTemplateSection |
     anchorId: '',
     ...article,
   };
+}
+
+function slugifyAnchor(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'section';
+}
+
+/** Pull the sidebar + article region from legal pages (template file or Storyblok-rendered variants). */
+function extractLegalLayoutHtml(contentHtml: string): string | null {
+  const wrapMatch = contentHtml.match(/<div class="wrap layout">([\s\S]*?)<\/div>\s*(?:<!--\s*FOOTER|<footer)/i);
+  if (wrapMatch) return wrapMatch[1];
+
+  const articleMatch = contentHtml.match(/<article[^>]*class="[^"]*article[^"]*"[^>]*>[\s\S]*?<\/article>/i);
+  if (articleMatch) {
+    const articleIndex = articleMatch.index ?? 0;
+    const beforeArticle = contentHtml.slice(0, articleIndex);
+    const aside = beforeArticle.match(/<aside[^>]*class="[^"]*toc[^"]*"[^>]*>[\s\S]*?<\/aside>/i)?.[0] ?? '';
+    return aside + articleMatch[0];
+  }
+
+  const divArticleMatch = contentHtml.match(/<div[^>]*class="[^"]*article[^"]*"[^>]*>[\s\S]*?<\/div>/i);
+  if (divArticleMatch) return divArticleMatch[0];
+
+  return null;
+}
+
+function parseLegalHeroSection(contentHtml: string): ScrapedTemplateSection | null {
+  const sectionMatch = contentHtml.match(/<section\b[^>]*class="[^"]*legal-hero[^"]*"[^>]*>[\s\S]*?<\/section>/i);
+  if (sectionMatch) return parseSectionHtml('legal-hero', sectionMatch[0]);
+
+  const divMatch = contentHtml.match(/<div[^>]*class="[^"]*legal-hero[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+  if (!divMatch) return null;
+
+  return parseSectionHtml('legal-hero', `<section class="legal-hero">${divMatch[1]}</section>`);
+}
+
+/** Find legal body sections inside article markup (including legacy div.sec blocks). */
+function parseLegalBodySections(contentHtml: string): ScrapedTemplateSection[] {
+  const articleHtml =
+    contentHtml.match(/<article[^>]*class="[^"]*article[^"]*"[^>]*>([\s\S]*?)<\/article>/i)?.[1]
+    ?? contentHtml.match(/<div[^>]*class="[^"]*article[^"]*"[^>]*>([\s\S]*?)<\/div>/i)?.[1]
+    ?? extractLegalLayoutHtml(contentHtml)
+    ?? '';
+
+  if (!articleHtml) return [];
+
+  const sections: ScrapedTemplateSection[] = [];
+  const seenKeys = new Set<string>();
+  const blockPatterns: Array<{ tag: 'section' | 'div'; pattern: RegExp }> = [
+    { tag: 'section', pattern: /<section\b([^>]*)>([\s\S]*?)<\/section>/gi },
+    { tag: 'div', pattern: /<div\b([^>]*\bclass="[^"]*\bsec\b[^"]*"[^>]*)>([\s\S]*?)<\/div>/gi },
+  ];
+
+  for (const { tag, pattern } of blockPatterns) {
+    for (const match of articleHtml.matchAll(pattern)) {
+      const attrs = match[1];
+      const inner = match[2];
+      const classMatch = attrs.match(/class="([^"]*)"/i);
+      const classes = (classMatch?.[1] ?? '').split(/\s+/).filter(Boolean);
+      const idMatch = attrs.match(/\bid=["']([^"']+)["']/i);
+      const anchorId = idMatch?.[1] ?? '';
+      const hasSecMarker = classes.includes('sec') || inner.includes('class="sec-h"') || Boolean(anchorId);
+      if (!hasSecMarker) continue;
+
+      const heading = firstMatch(inner, /<div class="sec-h"[^>]*>[\s\S]*?<h2[^>]*>([\s\S]*?)<\/h2>/i)
+        || firstMatch(inner, /<h2[^>]*>([\s\S]*?)<\/h2>/i);
+      const key = anchorId || (heading ? slugifyAnchor(heading) : '');
+      if (!key || seenKeys.has(key)) continue;
+
+      seenKeys.add(key);
+      const sectionHtml = `<${tag}${attrs}>${inner}</${tag}>`;
+      const partial = parseLegalSectionBlock(sectionHtml, key);
+
+      sections.push({
+        key,
+        html: sectionHtml,
+        eyebrow: '',
+        headingPrefix: partial.headingPrefix ?? partial.legalSectionHeading ?? heading,
+        headingAccent: '',
+        lead: '',
+        sublead: '',
+        body: partial.body ?? '',
+        bodyHtml: sectionHtml,
+        stats: [],
+        cards: [],
+        groups: [],
+        timeline: [],
+        contactCards: [],
+        heroItems: [],
+        sideCard: null,
+        badges: [],
+        ctaTitle: '',
+        ctaSubtitle: '',
+        ctaText: '',
+        ...emptyTemplateSectionFields(),
+        anchorId: key,
+        ...partial,
+      });
+    }
+  }
+
+  return sections;
 }
 
 /** Parse `<section>` blocks from page HTML, keyed by nearest preceding HTML comment. */
@@ -376,11 +476,13 @@ export function parseTemplateSectionsFromHtml(contentHtml: string): ScrapedTempl
 
     let key = nearestComment?.key ?? '';
     if (!key) {
-      if (classes.includes('hero')) key = 'hero';
+      if (classes.includes('legal-hero')) key = 'legal-hero';
+      else if (classes.includes('hero')) key = 'hero';
       else if (classes.includes('stats-band')) key = 'stats';
       else if (classes.includes('cta-band')) key = 'cta';
       else key = `section-${fallbackIndex + 1}`;
     }
+    if (classes.includes('legal-hero')) key = 'legal-hero';
     if (classes.includes('sec') && anchorId) key = anchorId;
 
     fallbackIndex += 1;
@@ -393,6 +495,19 @@ export function parseTemplateSectionsFromHtml(contentHtml: string): ScrapedTempl
     sections.splice(heroIndex >= 0 ? heroIndex + 1 : 0, 0, legalArticle);
   }
 
+  if (!sections.some(section => section.key.includes('legal-hero') || section.html.includes('legal-hero'))) {
+    const legalHero = parseLegalHeroSection(contentHtml);
+    if (legalHero) sections.unshift(legalHero);
+  }
+
+  const existingKeys = new Set(sections.map(section => section.key));
+  for (const legalSection of parseLegalBodySections(contentHtml)) {
+    if (!existingKeys.has(legalSection.key)) {
+      sections.push(legalSection);
+      existingKeys.add(legalSection.key);
+    }
+  }
+
   return sections;
 }
 
@@ -402,6 +517,17 @@ export function indexTemplateSections(sections: ScrapedTemplateSection[]): Map<s
     if (!map.has(section.key)) map.set(section.key, section);
   }
   return map;
+}
+
+/** True when the scraped live page (or FAQ) has content for this blueprint section. */
+export function sectionHasLiveMatch(
+  sectionKey: string,
+  component: string,
+  scraped: { templateSections?: ScrapedTemplateSection[]; faq?: { items: unknown[] } | null },
+): boolean {
+  if (component === 'home_hero_section' || component === 'enquiry_form') return true;
+  if (component === 'faq_section') return Boolean(scraped.faq?.items?.length);
+  return indexTemplateSections(scraped.templateSections ?? []).has(sectionKey);
 }
 
 export function getTemplateFileSections(template: MigrationTemplate): ScrapedTemplateSection[] {
@@ -419,9 +545,11 @@ export function mergeTemplateSectionSources(
   if (!live) return fromTemplate;
   if (!fromTemplate) return live;
 
-  const pickRicherArray = <T,>(liveItems: T[], templateItems: T[]) => (
-    templateItems.length > liveItems.length ? templateItems : (liveItems.length ? liveItems : templateItems)
-  );
+  const pickRicherArray = <T,>(liveItems: T[] | undefined, templateItems: T[] | undefined): T[] => {
+    const live = liveItems ?? [];
+    const template = templateItems ?? [];
+    return template.length > live.length ? template : (live.length ? live : template);
+  };
 
   const isPresetLabel = (value: string, key: string) => {
     const norm = value.trim().toUpperCase();

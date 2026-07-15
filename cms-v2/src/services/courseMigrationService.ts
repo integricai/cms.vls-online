@@ -45,7 +45,7 @@ import {
   syncTemplateComponentLibrary,
 } from './storyblokComponentLibrary';
 import { buildBlokFromTemplateSection } from './pageContentBuilder';
-import { indexTemplateSections, resolveTemplateSections } from './pageSectionExtractor';
+import { indexTemplateSections, resolveTemplateSections, sectionHasLiveMatch } from './pageSectionExtractor';
 import type { TemplateReferenceSummary, ComponentLibrarySummary } from '../../shared/migrationTypes';
 import { analyzeUnmatchedLayout } from './genericLayoutAnalyzer';
 import { buildCustomComponentBody } from './componentGenerationService';
@@ -645,6 +645,10 @@ export async function buildGenericStoryblokContentAsync(
   const body: Record<string, unknown>[] = [];
 
   for (const section of blueprint.sections) {
+    if (!sectionHasLiveMatch(section.key, section.component, scraped)) {
+      continue;
+    }
+
     const extracted = extractedByKey.get(section.key);
     let blok: Record<string, unknown> | null = null;
 
@@ -661,7 +665,7 @@ export async function buildGenericStoryblokContentAsync(
       };
     } else if (section.component === 'enquiry_form') {
       blok = { _uid: blokUid(), component: 'enquiry_form' };
-    } else if (section.component === 'faq_section' && scraped.faq?.items.length) {
+    } else if (section.component === 'faq_section' && scraped.faq?.items?.length) {
       blok = buildGenericFaqBlok(scraped, sourceUrl);
     } else {
       blok = buildBlokFromTemplateSection(section, extracted, scraped);

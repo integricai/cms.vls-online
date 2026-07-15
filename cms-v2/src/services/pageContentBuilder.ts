@@ -67,6 +67,10 @@ function contactIconKey(index: number): string {
   return CONTACT_ICON_KEYS[index] ?? 'mail';
 }
 
+function hasItems<T>(items: T[] | undefined | null): items is T[] {
+  return (items?.length ?? 0) > 0;
+}
+
 export function buildBlokFromTemplateSection(
   section: TemplateSectionBlueprint,
   extracted: ScrapedTemplateSection | undefined,
@@ -97,7 +101,7 @@ export function buildBlokFromTemplateSection(
       secondary_cta_link: storyblokLink(extracted?.secondaryCtaLink || '/book-a-meeting'),
     };
 
-    if (extracted?.heroItems.length) {
+    if (hasItems(extracted?.heroItems)) {
       blok.items = extracted.heroItems.map(item => ({
         _uid: uid(),
         component: 'page_hero_item',
@@ -130,7 +134,7 @@ export function buildBlokFromTemplateSection(
       }];
     }
 
-    if (extracted?.badges.length) {
+    if (hasItems(extracted?.badges)) {
       blok.badges = extracted.badges.map((badge, index) => ({
         _uid: uid(),
         component: 'page_hero_badge',
@@ -144,7 +148,7 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'stats_band') {
-    const items = extracted?.stats.length
+    const items = hasItems(extracted?.stats)
       ? extracted.stats.map(stat => ({
           _uid: uid(),
           component: 'stat_item',
@@ -163,7 +167,7 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'content_section') {
-    const timeline = extracted?.timeline.length
+    const timeline = hasItems(extracted?.timeline)
       ? extracted.timeline.map(item => ({
           _uid: uid(),
           component: 'timeline_item',
@@ -186,7 +190,7 @@ export function buildBlokFromTemplateSection(
   if (section.component === 'icon_card_grid') {
     const isPlatform = section.key.includes('platform');
     const landingVariant = landingCardVariant(section.key);
-    const cards = extracted?.cards.length
+    const cards = hasItems(extracted?.cards)
       ? extracted.cards.map((card, index) => ({
           _uid: uid(),
           component: 'icon_card',
@@ -213,7 +217,7 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'global_reach_section') {
-    const reachFigs = extracted?.stats.length
+    const reachFigs = hasItems(extracted?.stats)
       ? extracted.stats.map(stat => ({
           _uid: uid(),
           component: 'stat_item',
@@ -222,7 +226,7 @@ export function buildBlokFromTemplateSection(
         }))
       : undefined;
 
-    const regions = extracted?.cards.length
+    const regions = hasItems(extracted?.cards)
       ? extracted.cards.map(card => ({
           _uid: uid(),
           component: 'labeled_icon_item',
@@ -246,7 +250,7 @@ export function buildBlokFromTemplateSection(
 
   if (section.component === 'article_library') {
     const colorTones = ['blue', 'green', 'amber', 'purple', 'teal', 'navy', 'rose', 'gold'];
-    const topics = extracted?.groups.length
+    const topics = hasItems(extracted?.groups)
       ? extracted.groups.map((group, index) => ({
           _uid: uid(),
           component: 'article_topic_group',
@@ -277,7 +281,7 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'contact_cards') {
-    const cards = extracted?.contactCards.length
+    const cards = hasItems(extracted?.contactCards)
       ? extracted.contactCards.map((card, index) => ({
           _uid: uid(),
           component: 'contact_card',
@@ -327,7 +331,7 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'team_profiles') {
-    const profiles = extracted?.profiles.length
+    const profiles = hasItems(extracted?.profiles)
       ? extracted.profiles.map(profile => ({
           _uid: uid(),
           component: 'team_profile',
@@ -357,7 +361,7 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'step_cards') {
-    const steps = extracted?.steps.length
+    const steps = hasItems(extracted?.steps)
       ? extracted.steps.map(step => ({
           _uid: uid(),
           component: 'step_card',
@@ -378,7 +382,7 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'live_schedule') {
-    const sessions = extracted?.sessions.length
+    const sessions = hasItems(extracted?.sessions)
       ? extracted.sessions.map(session => ({
           _uid: uid(),
           component: 'live_session',
@@ -406,7 +410,7 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'live_sessions_table') {
-    const sessions = extracted?.liveSessionRows.length
+    const sessions = hasItems(extracted?.liveSessionRows)
       ? extracted.liveSessionRows.map(row => ({
           _uid: uid(),
           component: 'live_session_row',
@@ -437,7 +441,7 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'qualification_structure') {
-    const levels = extracted?.levels.length
+    const levels = hasItems(extracted?.levels)
       ? extracted.levels.map(level => ({
           _uid: uid(),
           component: 'qualification_level',
@@ -465,7 +469,7 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'book_meeting_hero') {
-    const benefits = extracted?.labeledItems.length
+    const benefits = hasItems(extracted?.labeledItems)
       ? extracted.labeledItems.map(item => ({
           _uid: uid(),
           component: 'labeled_icon_item',
@@ -473,7 +477,7 @@ export function buildBlokFromTemplateSection(
           subtitle: item.subtitle,
         }))
       : undefined;
-    const metaItems = extracted?.legalMetaItems.length
+    const metaItems = hasItems(extracted?.legalMetaItems)
       ? extracted.legalMetaItems.map(item => ({
           _uid: uid(),
           component: 'labeled_icon_item',
@@ -500,7 +504,7 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'live_sessions_hero') {
-    const ticks = extracted?.labeledItems.length
+    const ticks = hasItems(extracted?.labeledItems)
       ? extracted.labeledItems.map(item => ({
           _uid: uid(),
           component: 'labeled_icon_item',
@@ -508,7 +512,7 @@ export function buildBlokFromTemplateSection(
           subtitle: item.subtitle,
         }))
       : undefined;
-    const cardRows = extracted?.cardRows.length
+    const cardRows = hasItems(extracted?.cardRows)
       ? extracted.cardRows.map(item => ({
           _uid: uid(),
           component: 'labeled_icon_item',
@@ -538,7 +542,7 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'contact_page_section') {
-    const infoItems = extracted?.contactInfoItems.length
+    const infoItems = hasItems(extracted?.contactInfoItems)
       ? extracted.contactInfoItems.map(item => ({
           _uid: uid(),
           component: 'labeled_icon_item',
@@ -547,7 +551,7 @@ export function buildBlokFromTemplateSection(
           ...(storyblokLink(item.link) ? { icon_key: 'mail' } : {}),
         }))
       : undefined;
-    const hoursRows = extracted?.supportHoursRows.length
+    const hoursRows = hasItems(extracted?.supportHoursRows)
       ? extracted.supportHoursRows.map(row => ({
           _uid: uid(),
           component: 'support_hours_row',
@@ -555,7 +559,7 @@ export function buildBlokFromTemplateSection(
           hours: row.hours,
         }))
       : undefined;
-    const socials = extracted?.socials.length
+    const socials = hasItems(extracted?.socials)
       ? extracted.socials.map(item => ({
           _uid: uid(),
           component: 'footer_social',
@@ -591,7 +595,7 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'legal_hero') {
-    const metaItems = extracted?.legalMetaItems.length
+    const metaItems = hasItems(extracted?.legalMetaItems)
       ? extracted.legalMetaItems.map(item => ({
           _uid: uid(),
           component: 'labeled_icon_item',
@@ -599,7 +603,7 @@ export function buildBlokFromTemplateSection(
           subtitle: item.subtitle,
         }))
       : undefined;
-    const tabs = extracted?.legalTabs.length
+    const tabs = hasItems(extracted?.legalTabs)
       ? extracted.legalTabs.map(tab => ({
           _uid: uid(),
           component: 'legal_tab',
@@ -620,7 +624,7 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'legal_article') {
-    const introCalloutItems = extracted?.labeledItems.length
+    const introCalloutItems = hasItems(extracted?.labeledItems)
       ? extracted.labeledItems.map(item => ({
           _uid: uid(),
           component: 'labeled_icon_item',
@@ -628,7 +632,7 @@ export function buildBlokFromTemplateSection(
           subtitle: item.subtitle,
         }))
       : undefined;
-    const tocItems = extracted?.legalTocItems.length
+    const tocItems = hasItems(extracted?.legalTocItems)
       ? extracted.legalTocItems.map(item => ({
           _uid: uid(),
           component: 'legal_toc_item',
@@ -652,14 +656,14 @@ export function buildBlokFromTemplateSection(
   }
 
   if (section.component === 'legal_section') {
-    const checklistItems = extracted?.checklistItems.length
+    const checklistItems = hasItems(extracted?.checklistItems)
       ? extracted.checklistItems.map(item => ({
           _uid: uid(),
           component: 'labeled_icon_item',
           title: item.title,
         }))
       : undefined;
-    const tableRows = extracted?.tableRows.length
+    const tableRows = hasItems(extracted?.tableRows)
       ? extracted.tableRows.map(row => ({
           _uid: uid(),
           component: 'legal_table_row',
@@ -691,7 +695,7 @@ export function buildBlokFromTemplateSection(
     });
   }
 
-  if (section.component === 'faq_section' && scraped.faq?.items.length) {
+  if (section.component === 'faq_section' && hasItems(scraped.faq?.items)) {
     return null;
   }
 
