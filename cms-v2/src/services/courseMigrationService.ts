@@ -619,6 +619,20 @@ async function buildCourseStoryblokContentAsync(
   };
 }
 
+function collapseLegalBody(body: Record<string, unknown>[]): Record<string, unknown>[] {
+  const hero = body.find((blok) => blok.component === 'legal_hero');
+  const articleIndex = body.findIndex((blok) => blok.component === 'legal_article');
+  if (articleIndex < 0) return body;
+
+  const sections = body.filter((blok) => blok.component === 'legal_section');
+  const article = {
+    ...body[articleIndex],
+    ...(sections.length ? { sections } : {}),
+  };
+
+  return [hero, article].filter(Boolean) as Record<string, unknown>[];
+}
+
 export async function buildGenericStoryblokContentAsync(
   scraped: ScrapedGenericPage,
   template: MigrationTemplate,
@@ -661,6 +675,8 @@ export async function buildGenericStoryblokContentAsync(
     return buildGenericStoryblokContent(scraped, template);
   }
 
+  const finalBody = template === 'legal' ? collapseLegalBody(body) : body;
+
   const seo = (scraped.title || scraped.metaDescription)
     ? [{
         _uid: blokUid(),
@@ -674,7 +690,7 @@ export async function buildGenericStoryblokContentAsync(
   return {
     component: 'page',
     seo,
-    body,
+    body: finalBody,
   };
 }
 

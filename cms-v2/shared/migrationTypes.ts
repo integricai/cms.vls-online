@@ -227,6 +227,17 @@ export interface ScrapedTemplateSection {
   checklistHeading: string;
   checklistItems: Array<{ title: string }>;
   tableRows: Array<{ colA: string; colB: string }>;
+  bullets: string[];
+  introHtml: string;
+  contactCta: {
+    eyebrow: string;
+    heading: string;
+    body: string;
+    email: string;
+    primaryText: string;
+    secondaryText: string;
+    secondaryLink: string;
+  } | null;
   schedulerTag: string;
   schedulerTitle: string;
   schedulerSubtitle: string;

@@ -490,12 +490,14 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
   legal_article: [
-    'toc_title', 'toc_download_label', 'toc_download_link', 'intro', 'intro_callout_heading',
-    'intro_callout_items', 'toc_items',
+    'toc_title', 'toc_download_label', 'toc_download_link', 'intro', 'intro_html', 'intro_callout_heading',
+    'intro_callout_items', 'toc_items', 'sections',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
   legal_section: [
-    'anchor_id', 'number', 'heading', 'body', 'checklist_heading', 'checklist_items', 'table_rows',
+    'anchor_id', 'number', 'heading', 'body', 'bullets', 'checklist_heading', 'checklist_items', 'table_rows',
+    'contact_cta_eyebrow', 'contact_cta_heading', 'contact_cta_body', 'contact_cta_email',
+    'contact_cta_primary_text', 'contact_cta_secondary_text', 'contact_cta_secondary_link',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
   labeled_icon_item: ['icon_key', 'title', 'subtitle'],
@@ -512,7 +514,7 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   ],
   legal_tab: ['label', 'link', 'active'],
   legal_table_row: ['col_a', 'col_b'],
-  legal_toc_item: ['label', 'anchor_id'],
+  legal_toc_item: ['label', 'anchor_id', 'number'],
 };
 
 /** Storyblok MAPI expects many schema "number" fields as numeric strings, not JSON numbers. */

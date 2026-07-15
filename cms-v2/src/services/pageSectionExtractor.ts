@@ -167,7 +167,7 @@ function parseSideCard(sectionHtml: string): ScrapedTemplateSection['sideCard'] 
   };
 }
 
-function enrichSection(key: string, sectionHtml: string, base: ScrapedTemplateSection): ScrapedTemplateSection {
+function enrichSection(key: string, sectionHtml: string, base: ScrapedTemplateSection, anchorId = ''): ScrapedTemplateSection {
   const enriched: ScrapedTemplateSection = { ...base };
 
   if (sectionHtml.includes('class="profile"') || key.includes('tutor') || key.includes('team')) {
@@ -188,12 +188,21 @@ function enrichSection(key: string, sectionHtml: string, base: ScrapedTemplateSe
   if (sectionHtml.includes('class="level"')) {
     enriched.levels = parseQualificationLevels(sectionHtml);
   }
-  if (sectionHtml.includes('class="legal-hero"')) {
+  if (
+    sectionHtml.includes('class="legal-hero"')
+    || sectionHtml.includes('class="meta-row"')
+    || key.includes('legal-hero')
+  ) {
     enriched.legalMetaItems = parseLegalMetaItems(sectionHtml);
-    enriched.legalTabs = parseLegalTabs(sectionHtml);
+    const tabsBlock = sectionHtml.match(/<div class="tabs"[^>]*>([\s\S]*?)<\/div>/i)?.[1];
+    enriched.legalTabs = parseLegalTabs(tabsBlock ?? sectionHtml);
   }
-  if (sectionHtml.includes('class="sec"')) {
-    Object.assign(enriched, parseLegalSectionBlock(sectionHtml, enriched.anchorId));
+  if (
+    sectionHtml.includes('class="sec"')
+    || sectionHtml.includes('class="sec-h"')
+    || (anchorId && !sectionHtml.includes('class="legal-hero"'))
+  ) {
+    Object.assign(enriched, parseLegalSectionBlock(sectionHtml, enriched.anchorId || anchorId));
   }
   if (key.includes('hero-booking') || sectionHtml.includes('book-card')) {
     Object.assign(enriched, parseBookMeetingHero(sectionHtml));
@@ -273,7 +282,7 @@ function parseSectionHtml(key: string, sectionHtml: string, anchorId = ''): Scra
     ...(key === 'cta' && ctaHeading.prefix ? { headingPrefix: ctaHeading.prefix } : {}),
   };
 
-  return enrichSection(key, sectionHtml, base);
+  return enrichSection(key, sectionHtml, base, anchorId);
 }
 
 function parseLegalArticleSection(contentHtml: string): ScrapedTemplateSection | null {
@@ -347,7 +356,7 @@ export function parseTemplateSectionsFromHtml(contentHtml: string): ScrapedTempl
     if (classes.includes('sec') && anchorId) key = anchorId;
 
     fallbackIndex += 1;
-    sections.push(parseSectionHtml(key, inner, anchorId));
+    sections.push(parseSectionHtml(key, `<section${attrs}>${inner}</section>`, anchorId));
   }
 
   const legalArticle = parseLegalArticleSection(contentHtml);
@@ -445,6 +454,9 @@ export function mergeTemplateSectionSources(
     checklistHeading: pickText(live.checklistHeading, fromTemplate.checklistHeading),
     checklistItems: pickRicherArray(live.checklistItems, fromTemplate.checklistItems),
     tableRows: pickRicherArray(live.tableRows, fromTemplate.tableRows),
+    bullets: pickRicherArray(live.bullets, fromTemplate.bullets),
+    introHtml: pickText(fromTemplate.introHtml, live.introHtml),
+    contactCta: fromTemplate.contactCta ?? live.contactCta,
     schedulerTag: pickText(live.schedulerTag, fromTemplate.schedulerTag),
     schedulerTitle: pickText(live.schedulerTitle, fromTemplate.schedulerTitle),
     schedulerSubtitle: pickText(live.schedulerSubtitle, fromTemplate.schedulerSubtitle),

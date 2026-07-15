@@ -173,11 +173,11 @@ export function parseLegalMetaItems(sectionHtml: string): ScrapedTemplateSection
 }
 
 export function parseLegalTabs(sectionHtml: string): ScrapedTemplateSection['legalTabs'] {
-  return allMatches(sectionHtml, /<a[^>]*href=["']([^"']*)["'][^>]*class="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi)
+  return allMatches(sectionHtml, /<a[^>]*href=["']([^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi)
     .map(match => ({
-      label: stripTemplateTags(match[3]),
+      label: stripTemplateTags(match[2]),
       link: match[1],
-      active: match[2].includes('active'),
+      active: /class="[^"]*active/.test(match[0]),
     }))
     .filter(item => item.label);
 }
@@ -192,48 +192,88 @@ export function parseLegalTocItems(layoutHtml: string): ScrapedTemplateSection['
     .filter(item => item.label);
 }
 
+function sanitizeIntroHtml(html: string): string {
+  return html
+    .replace(/<(?!\/?(a)\b)[^>]+>/gi, '')
+    .replace(/<a(?![^>]*class=)/gi, '<a class="inline-link"')
+    .trim();
+}
+
 export function parseLegalArticleBlock(layoutHtml: string): Partial<ScrapedTemplateSection> {
-  const intro = stripTemplateTags(layoutHtml.match(/<p class="intro"[^>]*>([\s\S]*?)<\/p>/i)?.[1] ?? '');
+  const introRaw = layoutHtml.match(/<p class="intro"[^>]*>([\s\S]*?)<\/p>/i)?.[1] ?? '';
+  const introHtml = sanitizeIntroHtml(introRaw);
+  const intro = stripTemplateTags(introRaw);
   const calloutHeading = firstMatch(layoutHtml, /<div class="callout-h"[^>]*>[\s\S]*?<\/svg>\s*([\s\S]*?)<\/div>/i);
   const calloutItems = allMatches(layoutHtml, /<div class="callout"[^>]*>[\s\S]*?<li>[\s\S]*?<\/span>\s*([\s\S]*?)<\/li>/gi)
     .map(match => ({ title: stripTemplateTags(match[1]), subtitle: '' }));
   const tocTitle = firstMatch(layoutHtml, /<div class="toc-title"[^>]*>([\s\S]*?)<\/div>/i) || 'On this page';
-  const downloadLabel = firstMatch(layoutHtml, /<div class="copy-card"[^>]*>[\s\S]*?<h4[^>]*>([\s\S]*?)<\/h4>/i);
-  const downloadLink = layoutHtml.match(/<div class="copy-card"[^>]*>[\s\S]*?<a[^>]+href=["']([^"']+)["']/i)?.[1] ?? '';
+  const copyCard = layoutHtml.match(/<div class="copy-card"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '';
+  const downloadLabel = firstMatch(copyCard, /<a[^>]*>([\s\S]*?)<\/a>/i) || 'Download PDF';
+  const downloadLink = copyCard.match(/<a[^>]+href=["']([^"']+)["']/i)?.[1] ?? '';
 
   return {
     lead: intro,
     body: intro,
+    introHtml,
     legalCalloutHeading: calloutHeading,
     labeledItems: calloutItems,
     legalTocTitle: tocTitle,
-    legalTocDownloadLabel: downloadLabel,
+    legalTocDownloadLabel: stripTemplateTags(downloadLabel),
     legalTocDownloadLink: downloadLink,
     legalTocItems: parseLegalTocItems(layoutHtml),
   };
 }
 
+function sanitizeLegalParagraph(html: string): string {
+  return html
+    .replace(/<(?!\/?(strong|a)\b)[^>]+>/gi, '')
+    .replace(/<a(?![^>]*class=)/gi, '<a class="inline-link"')
+    .trim();
+}
+
 export function parseLegalSectionBlock(sectionHtml: string, anchorId = ''): Partial<ScrapedTemplateSection> {
   const number = firstMatch(sectionHtml, /<span class="num"[^>]*>([\s\S]*?)<\/span>/i);
-  const heading = firstMatch(sectionHtml, /<h2[^>]*>([\s\S]*?)<\/h2>/i);
+  const heading = firstMatch(sectionHtml, /<div class="sec-h"[^>]*>[\s\S]*?<h2[^>]*>([\s\S]*?)<\/h2>/i)
+    || firstMatch(sectionHtml, /<h2[^>]*>([\s\S]*?)<\/h2>/i);
   const paragraphs = allMatches(sectionHtml, /<p[^>]*>([\s\S]*?)<\/p>/gi)
+    .map(match => sanitizeLegalParagraph(match[1]))
+    .filter(text => text && !/^(Get in touch|Questions about)/i.test(stripTemplateTags(text)));
+  const bulletsBlock = sectionHtml.match(/<ul class="bullets"[^>]*>([\s\S]*?)<\/ul>/i)?.[1] ?? '';
+  const bullets = allMatches(bulletsBlock, /<li[^>]*>([\s\S]*?)<\/li>/gi)
     .map(match => stripTemplateTags(match[1]))
-    .filter(text => text && !/^(Get in touch|Questions about)/i.test(text));
+    .filter(Boolean);
   const checklistHeading = firstMatch(sectionHtml, /<div class="rights-box"[^>]*>[\s\S]*?<h4[^>]*>([\s\S]*?)<\/h4>/i);
-  const checklistItems = allMatches(sectionHtml, /<div class="rights-grid"[^>]*>[\s\S]*?<div>[\s\S]*?<\/span>\s*([\s\S]*?)<\/div>/gi)
-    .map(match => ({ title: stripTemplateTags(match[1]) }))
-    .filter(item => item.title);
+  const rightsGridStart = sectionHtml.indexOf('<div class="rights-grid"');
+  const checklistItems = rightsGridStart >= 0
+    ? allMatches(sectionHtml.slice(rightsGridStart), /<div><span class="ck">[\s\S]*?<\/span>\s*([^<]+)/gi)
+        .map(match => ({ title: stripTemplateTags(match[1]) }))
+        .filter(item => item.title)
+    : [];
   const tableRows = allMatches(sectionHtml, /<tr>[\s\S]*?<td class="cat"[^>]*>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>/gi)
     .map(match => ({ colA: stripTemplateTags(match[1]), colB: stripTemplateTags(match[2]) }))
     .filter(item => item.colA || item.colB);
+  const contactBlock = sectionHtml.match(/<div class="contact-cta"[^>]*>([\s\S]*?)<\/div>/i)?.[1];
+  const contactCta = contactBlock
+    ? {
+        eyebrow: firstMatch(contactBlock, /<div class="eyebrow"[^>]*>([\s\S]*?)<\/div>/i),
+        heading: firstMatch(contactBlock, /<h3[^>]*>([\s\S]*?)<\/h3>/i),
+        body: firstMatch(contactBlock, /<p[^>]*>([\s\S]*?)<\/p>/i),
+        email: contactBlock.match(/href=["']mailto:([^"']+)["']/i)?.[1] ?? '',
+        primaryText: firstMatch(contactBlock, /<a[^>]*class="[^"]*btn-primary[^"]*"[^>]*>([\s\S]*?)<\/a>/i),
+        secondaryText: firstMatch(contactBlock, /<a[^>]*class="[^"]*btn-outline-blue[^"]*"[^>]*>([\s\S]*?)<\/a>/i),
+        secondaryLink: contactBlock.match(/<a[^>]*class="[^"]*btn-outline-blue[^"]*"[^>]+href=["']([^"']+)["']/i)?.[1] ?? '',
+      }
+    : null;
 
   return {
     legalSectionNumber: number,
     legalSectionHeading: heading,
     body: paragraphs.join('\n\n'),
+    bullets,
     checklistHeading,
     checklistItems,
     tableRows,
+    contactCta,
     headingPrefix: heading,
     anchorId,
   };
@@ -306,7 +346,7 @@ export function emptyTemplateSectionFields(): Pick<
   | 'profiles' | 'steps' | 'sessions' | 'liveSessionRows' | 'levels' | 'labeledItems'
   | 'legalTabs' | 'legalMetaItems' | 'legalTocItems' | 'legalCalloutHeading' | 'legalTocTitle'
   | 'legalTocDownloadLabel' | 'legalTocDownloadLink' | 'legalSectionNumber' | 'legalSectionHeading'
-  | 'checklistHeading' | 'checklistItems' | 'tableRows' | 'schedulerTag' | 'schedulerTitle'
+  | 'checklistHeading' | 'checklistItems' | 'tableRows' | 'bullets' | 'introHtml' | 'contactCta' | 'schedulerTag' | 'schedulerTitle'
   | 'schedulerSubtitle' | 'schedulerPlaceholderHeading' | 'schedulerPlaceholderText' | 'schedulerCtaText'
   | 'schedulerCtaLink' | 'cardTag' | 'cardLiveLabel' | 'cardTitle' | 'cardMeta' | 'cardRows'
   | 'noteHeading' | 'noteText' | 'freePill' | 'primaryCtaLink' | 'secondaryCtaText' | 'secondaryCtaLink'
@@ -332,6 +372,9 @@ export function emptyTemplateSectionFields(): Pick<
     checklistHeading: '',
     checklistItems: [],
     tableRows: [],
+    bullets: [],
+    introHtml: '',
+    contactCta: null,
     schedulerTag: '',
     schedulerTitle: '',
     schedulerSubtitle: '',

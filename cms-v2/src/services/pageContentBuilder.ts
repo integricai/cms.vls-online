@@ -20,6 +20,10 @@ function pickText(...values: Array<string | undefined>): string {
   return '';
 }
 
+function stripTags(value: string): string {
+  return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function slugify(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || uid();
 }
@@ -592,6 +596,7 @@ export function buildBlokFromTemplateSection(
           component: 'legal_toc_item',
           label: item.label,
           anchor_id: item.anchorId,
+          number: item.number,
         }))
       : undefined;
 
@@ -601,6 +606,7 @@ export function buildBlokFromTemplateSection(
       toc_download_label: pickText(extracted?.legalTocDownloadLabel),
       ...(storyblokLink(extracted?.legalTocDownloadLink) ? { toc_download_link: storyblokLink(extracted?.legalTocDownloadLink) } : {}),
       intro: pickText(extracted?.lead, extracted?.body, section.sampleDescription),
+      intro_html: pickText(extracted?.introHtml),
       intro_callout_heading: pickText(extracted?.legalCalloutHeading, 'The short version'),
       ...(introCalloutItems ? { intro_callout_items: introCalloutItems } : {}),
       ...(tocItems ? { toc_items: tocItems } : {}),
@@ -623,6 +629,7 @@ export function buildBlokFromTemplateSection(
           col_b: row.colB,
         }))
       : undefined;
+    const contact = extracted?.contactCta;
 
     return sanitizeBlokForStoryblok({
       ...base,
@@ -630,9 +637,19 @@ export function buildBlokFromTemplateSection(
       number: pickText(extracted?.legalSectionNumber),
       heading: pickText(extracted?.legalSectionHeading, section.sampleHeading),
       body: pickText(extracted?.body, section.sampleDescription),
+      bullets: extracted?.bullets?.length ? extracted.bullets.join('\n') : undefined,
       checklist_heading: pickText(extracted?.checklistHeading),
       ...(checklistItems ? { checklist_items: checklistItems } : {}),
       ...(tableRows ? { table_rows: tableRows } : {}),
+      ...(contact?.heading ? {
+        contact_cta_eyebrow: contact.eyebrow,
+        contact_cta_heading: contact.heading,
+        contact_cta_body: contact.body,
+        contact_cta_email: contact.email,
+        contact_cta_primary_text: stripTags(contact.primaryText),
+        contact_cta_secondary_text: stripTags(contact.secondaryText),
+        ...(storyblokLink(contact.secondaryLink) ? { contact_cta_secondary_link: storyblokLink(contact.secondaryLink) } : {}),
+      } : {}),
     });
   }
 
