@@ -424,48 +424,161 @@ function parseCourseDescription(html: string): ScrapedCourseDescription | null {
   return parseCmsCourseDescription(descSlice) ?? parseZenlerCourseDescription(descSlice);
 }
 
+function parseTabPanelIntro(cleaned: string): Record<string, string> | null {
+  const panelHtml =
+    extractFirstMatch(cleaned, /<div class="[^"]*panel"[^>]*>([\s\S]*?)<\/div>/i)
+    || extractFirstMatch(cleaned, /<div[^>]*background:#0f1e3c[^>]*>([\s\S]*?)<\/div>/i);
+  if (!panelHtml) return null;
+
+  const eyebrow = stripTags(
+    extractFirstMatch(panelHtml, /<p[^>]*text-transform:uppercase[^>]*>([\s\S]*?)<\/p>/i)
+    || extractFirstMatch(panelHtml, /<p[^>]*letter-spacing:[^"']*uppercase[^>]*>([\s\S]*?)<\/p>/i),
+  );
+  const heading = stripTags(
+    extractFirstMatch(panelHtml, /<h2[^>]*>([\s\S]*?)<\/h2>/i)
+    || extractFirstMatch(panelHtml, /<p[^>]*font-weight:700[^>]*>([\s\S]*?)<\/p>/i),
+  );
+  const description = stripTags(
+    extractFirstMatch(panelHtml, /<h2[^>]*>[\s\S]*?<\/h2>\s*<p[^>]*>([\s\S]*?)<\/p>/i)
+    || extractFirstMatch(panelHtml, /<p[^>]*font-weight:700[^>]*>[\s\S]*?<\/p>\s*<p[^>]*>([\s\S]*?)<\/p>/i),
+  );
+
+  if (!heading && !description) return null;
+
+  return {
+    eyebrow: eyebrow || "WHAT'S INCLUDED",
+    heading: heading || 'Everything you need to pass',
+    description: description || '',
+  };
+}
+
+function parseFeatureCardRows(cleaned: string): string[] {
+  const cards: string[] = [];
+  const patterns = [
+    /<div style="display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;">([\s\S]*?)<\/div>\s*(?=<div style="display:flex;gap:12px|<\/div>\s*<\/div>)/gi,
+    /<div[^>]*display:grid[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi,
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of cleaned.matchAll(pattern)) {
+      const cardHtml = match[1];
+      const icon = stripTags(
+        extractFirstMatch(cardHtml, /<div[^>]*font-size:20px[^>]*>([\s\S]*?)<\/div>/i)
+        || extractFirstMatch(cardHtml, /<span[^>]*>([\s\S]*?)<\/span>/i),
+      );
+      const title = stripTags(extractFirstMatch(cardHtml, /<p[^>]*font-weight:600[^>]*>([\s\S]*?)<\/p>/i));
+      const description = stripTags(
+        extractFirstMatch(cardHtml, /<p[^>]*font-weight:600[^>]*>[\s\S]*?<\/p>\s*<p[^>]*>([\s\S]*?)<\/p>/is)
+        || extractFirstMatch(cardHtml, /<p[^>]*font-weight:600[^>]*>[\s\S]*?<\/div>\s*<p[^>]*>([\s\S]*?)<\/p>/is),
+      );
+      if (title) cards.push(`${icon}|${title}|${description}`);
+    }
+    if (cards.length) break;
+  }
+
+  return cards;
+}
+
+function parsePromoGridCards(cleaned: string): string[] {
+  const cards: string[] = [];
+  const pattern = /<div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;">([\s\S]*?)<\/div>\s*(?=<div style="background:#fff|$)/gi;
+  for (const match of cleaned.matchAll(pattern)) {
+    const cardHtml = match[1];
+    const icon = stripTags(
+      extractFirstMatch(cardHtml, /<div[^>]*font-size:24px[^>]*>([\s\S]*?)<\/div>/i)
+      || extractFirstMatch(cardHtml, /<div[^>]*font-size:20px[^>]*>([\s\S]*?)<\/div>/i),
+    );
+    const title = stripTags(extractFirstMatch(cardHtml, /<p[^>]*font-weight:600[^>]*>([\s\S]*?)<\/p>/i));
+    const description = stripTags(
+      extractFirstMatch(cardHtml, /<p[^>]*font-weight:600[^>]*>[\s\S]*?<\/p>\s*<p[^>]*>([\s\S]*?)<\/p>/is),
+    );
+    if (title) cards.push(`${icon}|${title}|${description}`);
+  }
+  return cards;
+}
+
+function parseStepRows(cleaned: string): string[] {
+  const steps: string[] = [];
+  const pattern = /<div style="display:flex;gap:16px;align-items:flex-start;">([\s\S]*?)<\/div>\s*(?=<div style="display:flex;gap:16px|<\/div>\s*<\/div>|$)/gi;
+
+  for (const match of cleaned.matchAll(pattern)) {
+    const stepHtml = match[1];
+    const icon = stripTags(
+      extractFirstMatch(stepHtml, /<div[^>]*border-radius:50%[^>]*>([\s\S]*?)<\/div>/i)
+      || extractFirstMatch(stepHtml, /<span[^>]*>([\s\S]*?)<\/span>/i),
+    );
+    const title = stripTags(
+      extractFirstMatch(stepHtml, /<p[^>]*font-weight:600[^>]*>([\s\S]*?)<\/p>/i)
+      || extractFirstMatch(stepHtml, /<p[^>]*font-size:15px[^>]*font-weight:600[^>]*>([\s\S]*?)<\/p>/i),
+    );
+    const description = stripTags(
+      extractFirstMatch(stepHtml, /<p[^>]*font-weight:600[^>]*>[\s\S]*?<\/p>\s*<p[^>]*>([\s\S]*?)<\/p>/is)
+      || extractFirstMatch(stepHtml, /<p[^>]*font-size:15px[^>]*font-weight:600[^>]*>[\s\S]*?<\/p>\s*<p[^>]*>([\s\S]*?)<\/p>/is),
+    );
+    if (title) steps.push(`${icon}|${title}|${description}`);
+  }
+
+  return steps;
+}
+
+function parseHeadingParagraphSections(cleaned: string): Array<{ heading: string; paragraph: string }> {
+  const sections: Array<{ heading: string; paragraph: string }> = [];
+  const patterns = [
+    /<div style="margin-bottom:1\.25rem;">([\s\S]*?)<\/div>/gi,
+    /<h3[^>]*>([\s\S]*?)<\/h3>\s*<p[^>]*>([\s\S]*?)<\/p>/gi,
+  ];
+
+  for (const match of cleaned.matchAll(patterns[0])) {
+    const block = match[1];
+    const heading = stripTags(extractFirstMatch(block, /<h3[^>]*>([\s\S]*?)<\/h3>/i));
+    const paragraph = stripTags(extractFirstMatch(block, /<h3[^>]*>[\s\S]*?<\/h3>\s*<p[^>]*>([\s\S]*?)<\/p>/is));
+    if (heading && paragraph) sections.push({ heading, paragraph });
+  }
+
+  if (!sections.length) {
+    for (const match of cleaned.matchAll(patterns[1])) {
+      const heading = stripTags(match[1]);
+      const paragraph = stripTags(match[2]);
+      if (heading && paragraph) sections.push({ heading, paragraph });
+    }
+  }
+
+  return sections;
+}
+
 function parseTabPanelBlocks(panelHtml: string): Array<{ blockType: string; fields: Record<string, string> }> {
   const blocks: Array<{ blockType: string; fields: Record<string, string> }> = [];
   const cleaned = panelHtml.trim();
   if (!cleaned) return blocks;
 
-  const introHeading = stripTags(extractFirstMatch(cleaned, /<p[^>]*font-weight:700[^>]*>([\s\S]*?)<\/p>/i));
-  const introDesc = stripTags(extractFirstMatch(cleaned, /<p[^>]*font-weight:700[^>]*>[\s\S]*?<\/p>\s*<p[^>]*>([\s\S]*?)<\/p>/i));
-  if (introHeading || introDesc) {
-    blocks.push({
-      blockType: 'panel-intro',
-      fields: {
-        eyebrow: stripTags(extractFirstMatch(cleaned, /<p[^>]*text-transform:uppercase[^>]*>([\s\S]*?)<\/p>/i)) || "WHAT'S INCLUDED",
-        heading: introHeading || 'Everything you need to pass',
-        description: introDesc || stripTags(cleaned).slice(0, 500),
-      },
-    });
+  const panelIntro = parseTabPanelIntro(cleaned);
+  if (panelIntro) {
+    blocks.push({ blockType: 'panel-intro', fields: panelIntro });
   }
 
-  const cardPattern = /<div[^>]*display:grid[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi;
-  const cards: string[] = [];
-  for (const match of cleaned.matchAll(cardPattern)) {
-    const cardHtml = match[1];
-    const icon = stripTags(extractFirstMatch(cardHtml, /<span[^>]*>([\s\S]*?)<\/span>/i));
-    const title = stripTags(extractFirstMatch(cardHtml, /<p[^>]*font-weight:600[^>]*>([\s\S]*?)<\/p>/i));
-    const description = stripTags(extractFirstMatch(cardHtml, /<p[^>]*font-weight:600[^>]*>[\s\S]*?<\/p>\s*<p[^>]*>([\s\S]*?)<\/p>/i));
-    if (title) cards.push(`${icon}|${title}|${description}`);
-  }
-  if (cards.length) {
-    blocks.push({ blockType: 'inc-cards', fields: { cards: cards.join('\n') } });
+  const featureCards = parseFeatureCardRows(cleaned);
+  if (featureCards.length) {
+    blocks.push({ blockType: 'inc-cards', fields: { cards: featureCards.join('\n') } });
   }
 
-  const stepPattern = /<div[^>]*display:flex[^>]*align-items:flex-start[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi;
-  const steps: string[] = [];
-  for (const match of cleaned.matchAll(stepPattern)) {
-    const stepHtml = match[1];
-    const icon = stripTags(extractFirstMatch(stepHtml, /<span[^>]*>([\s\S]*?)<\/span>/i));
-    const title = stripTags(extractFirstMatch(stepHtml, /<p[^>]*font-weight:600[^>]*>([\s\S]*?)<\/p>/i));
-    const description = stripTags(extractFirstMatch(stepHtml, /<p[^>]*font-weight:600[^>]*>[\s\S]*?<\/p>\s*<p[^>]*>([\s\S]*?)<\/p>/i));
-    if (title) steps.push(`${icon}|${title}|${description}`);
+  const promoCards = parsePromoGridCards(cleaned);
+  if (promoCards.length) {
+    blocks.push({ blockType: 'inc-cards', fields: { cards: promoCards.join('\n') } });
   }
+
+  const steps = parseStepRows(cleaned);
   if (steps.length) {
     blocks.push({ blockType: 'steps', fields: { steps: steps.join('\n') } });
+  }
+
+  for (const section of parseHeadingParagraphSections(cleaned)) {
+    blocks.push({
+      blockType: 'heading-para',
+      fields: {
+        heading: section.heading,
+        paragraph: section.paragraph,
+      },
+    });
   }
 
   const bullets = extractAllMatches(cleaned, /<li[^>]*>([\s\S]*?)<\/li>/gi).map(stripTags).filter(Boolean);
@@ -473,17 +586,19 @@ function parseTabPanelBlocks(panelHtml: string): Array<{ blockType: string; fiel
     blocks.push({ blockType: 'bullets', fields: { bullet_items: bullets.join('\n') } });
   }
 
-  const paragraphs = extractAllMatches(cleaned, /<p[^>]*>([\s\S]*?)<\/p>/gi)
-    .map(stripTags)
-    .filter(text => text.length > 30);
-  if (!blocks.length && paragraphs.length) {
-    blocks.push({
-      blockType: 'heading-para',
-      fields: {
-        heading: paragraphs[0] ?? 'Overview',
-        paragraph: paragraphs.slice(1).join('\n\n') || paragraphs[0] || '',
-      },
-    });
+  if (!blocks.length) {
+    const paragraphs = extractAllMatches(cleaned, /<p[^>]*>([\s\S]*?)<\/p>/gi)
+      .map(stripTags)
+      .filter((text) => text.length > 30);
+    if (paragraphs.length) {
+      blocks.push({
+        blockType: 'heading-para',
+        fields: {
+          heading: paragraphs[0] ?? 'Overview',
+          paragraph: paragraphs.slice(1).join('\n\n') || paragraphs[0] || '',
+        },
+      });
+    }
   }
 
   if (!blocks.length) {

@@ -46,7 +46,7 @@ import {
   syncTemplateComponentLibrary,
 } from './storyblokComponentLibrary';
 import { buildBlokFromTemplateSection } from './pageContentBuilder';
-import { buildMergedCourseStoryblokContent } from './buildCourseTemplateContent';
+import { buildMergedCourseStoryblokContent, mapScrapedCourseIntroduction } from './buildCourseTemplateContent';
 import { indexTemplateSections, parseTemplateSectionsFromHtml, resolveTemplateSections, sectionHasLiveMatch, isPageBuilderLegalHtml } from './pageSectionExtractor';
 import type { TemplateSectionBlueprint } from '../../shared/migrationTemplateTypes';
 import { analyzeUnmatchedLayout } from './genericLayoutAnalyzer';
@@ -138,15 +138,17 @@ function buildHeroLayoutBlok(
 }
 
 function buildIntroductionBlok(scraped: ScrapedCoursePage): Record<string, unknown> | null {
-  if (!scraped.courseDescription) return null;
+  const mapped = mapScrapedCourseIntroduction(scraped.courseDescription);
+  if (!mapped) return null;
 
-  const desc = scraped.courseDescription;
   return {
     _uid: blokUid(),
     component: 'course_introduction',
-    title: desc.title,
-    paragraph_1: desc.introP1 || desc.introBold || desc.bodyText,
-    paragraph_2: desc.introP2 || desc.bodyHtml || undefined,
+    title: mapped.title,
+    paragraph_1: mapped.paragraph1,
+    paragraph_2: mapped.paragraph2 || undefined,
+    read_more_label: 'Read more',
+    read_less_label: 'Read less',
   };
 }
 

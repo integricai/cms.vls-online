@@ -26,6 +26,26 @@ function pickText(...values: Array<string | undefined | null>): string {
   return '';
 }
 
+export function mapScrapedCourseIntroduction(
+  desc: ScrapedCoursePage['courseDescription'],
+): { title: string; paragraph1: string; paragraph2: string } | null {
+  if (!desc) return null;
+
+  const paragraph1 = pickText(desc.introP1, desc.introBold);
+  const paragraph2 = [desc.introP2, desc.bodyText]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join('\n\n');
+
+  if (!paragraph1 && !paragraph2) return null;
+
+  return {
+    title: pickText(desc.introBold, desc.title, 'Exam Paper Overview'),
+    paragraph1,
+    paragraph2,
+  };
+}
+
 function pickRicherArray<T>(live: T[] | undefined, template: T[]): T[] {
   const liveItems = live ?? [];
   return liveItems.length >= template.length ? liveItems : (template.length ? template : liveItems);
@@ -59,15 +79,20 @@ export function mergeCourseWithTemplate(
     videoDuration: template.videoDuration,
     videoUrl: pickText(scraped.heroVideoUrl ?? undefined, template.videoUrl),
     introductionTitle: pickText(
+      mapScrapedCourseIntroduction(scraped.courseDescription)?.title,
+      scraped.courseDescription?.introBold,
       scraped.courseDescription?.title,
       template.introductionTitle,
     ),
     introductionParagraph1: pickText(
-      scraped.courseDescription?.introP1 || scraped.courseDescription?.introBold,
+      mapScrapedCourseIntroduction(scraped.courseDescription)?.paragraph1,
+      scraped.courseDescription?.introP1,
+      scraped.courseDescription?.introBold,
       template.introductionParagraph1,
     ),
     introductionParagraph2: pickText(
-      scraped.courseDescription?.bodyText || scraped.courseDescription?.introP2,
+      mapScrapedCourseIntroduction(scraped.courseDescription)?.paragraph2,
+      [scraped.courseDescription?.introP2, scraped.courseDescription?.bodyText].filter(Boolean).join('\n\n'),
       template.introductionParagraph2,
     ),
     priceNow: template.priceNow,
