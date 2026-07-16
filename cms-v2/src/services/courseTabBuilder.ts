@@ -60,6 +60,24 @@ export function buildTabBlocksFromPanel(
       return { ...base, cards };
     }
 
+    if (block.blockType === 'more-cards' && block.fields.cards) {
+      const cards = block.fields.cards.split('\n').map(line => {
+        const [icon, title, description, ctaText, ctaHref] = line.split('|');
+        return {
+          _uid: blokUid(),
+          component: 'course_tab_card',
+          icon: icon || '⭐',
+          title: title || '',
+          description: description || '',
+          cta_text: ctaText?.trim() || undefined,
+          cta_link: ctaHref?.trim()
+            ? { linktype: 'url', url: ctaHref.trim(), cached_url: ctaHref.trim() }
+            : undefined,
+        };
+      });
+      return { ...base, cards };
+    }
+
     if (block.blockType === 'steps' && block.fields.steps) {
       const steps = block.fields.steps.split('\n').map(line => {
         const [icon, title, description] = line.split('|');

@@ -492,7 +492,9 @@ function parsePromoGridCards(cleaned: string): string[] {
     const description = stripTags(
       extractFirstMatch(cardHtml, /<p[^>]*font-weight:600[^>]*>[\s\S]*?<\/p>\s*<p[^>]*>([\s\S]*?)<\/p>/is),
     );
-    if (title) cards.push(`${icon}|${title}|${description}`);
+    const ctaText = stripTags(extractFirstMatch(cardHtml, /<a[^>]*>([\s\S]*?)<\/a>/i));
+    const ctaHref = extractFirstMatch(cardHtml, /<a[^>]*href="([^"]*)"[^>]*>/i);
+    if (title) cards.push(`${icon}|${title}|${description}|${ctaText}|${ctaHref}`);
   }
   return cards;
 }
@@ -563,7 +565,7 @@ function parseTabPanelBlocks(panelHtml: string): Array<{ blockType: string; fiel
 
   const promoCards = parsePromoGridCards(cleaned);
   if (promoCards.length) {
-    blocks.push({ blockType: 'inc-cards', fields: { cards: promoCards.join('\n') } });
+    blocks.push({ blockType: 'more-cards', fields: { cards: promoCards.join('\n') } });
   }
 
   const steps = parseStepRows(cleaned);
