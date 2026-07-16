@@ -170,6 +170,9 @@ function componentForSection(key: string, classes: string[], template: Migration
   else if (template === 'legal' && classes.includes('sec')) component = 'legal_section';
   else if (template === 'home' && key.includes('hero')) component = 'home_hero_section';
   else if (template === 'course' && key.includes('hero')) component = 'course_hero_layout';
+  else if (template === 'course' && (key.includes('what-you') || key.includes('learn'))) component = 'course_learn_section';
+  else if (template === 'course' && key.includes('course-content')) component = 'course_curriculum';
+  else if (template === 'course' && key.includes('tutor')) component = 'course_tutor_section';
   else if (key.includes('hero')) component = 'page_hero';
   else if ((template === 'form' || template === 'about_us') && (key.includes('get-in-touch') || key.includes('touch') || /(^|-)form($|-)/.test(key))) {
     component = 'contact_cards';
@@ -418,8 +421,12 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   ],
   home_hero_section: ['hero', 'form', 'background_color', 'padding_top', 'padding_bottom'],
   enquiry_form: ['title', 'subtitle', 'background_color', 'padding_top', 'padding_bottom'],
-  faq_section: ['title', 'icon', 'items', 'schema_id', 'background_color', 'padding_top', 'padding_bottom'],
+  faq_section: [
+    'title', 'icon', 'eyebrow', 'heading_prefix', 'heading_accent',
+    'items', 'schema_id', 'zenler_course_id', 'background_color', 'padding_top', 'padding_bottom',
+  ],
   testimonials: [
+    'layout', 'score', 'reviews_label', 'rating_bars',
     'eyebrow', 'title_prefix', 'title_accent', 'subtitle', 'cards',
     'background_color', 'padding_top', 'padding_bottom',
   ],
@@ -545,6 +552,8 @@ const STORYBLOK_NUMERIC_STRING_FIELDS = new Set([
   'font_size',
   'columns',
   'max_width',
+  'percent',
+  'rating',
 ]);
 
 function coerceStoryblokNumericFields(blok: Record<string, unknown>): Record<string, unknown> {
@@ -584,7 +593,7 @@ export function sanitizeBlokForStoryblok(blok: Record<string, unknown>): Record<
     'sessions', 'side_card', 'badges', 'papers', 'stats', 'rows',
     'benefits', 'meta_items', 'steps', 'topics', 'articles', 'ticks', 'card_rows', 'sidebar',
     'info_items', 'hours_rows', 'socials', 'tabs', 'checklist_items', 'table_rows', 'toc_items',
-    'reach_figs', 'regions',
+    'reach_figs', 'regions', 'meta_items', 'submeta_items', 'rating_bars', 'stats',
   ]) {
     const value = next[key];
     if (!Array.isArray(value)) continue;

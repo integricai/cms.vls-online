@@ -40,7 +40,7 @@ function iconKeyForCard(sectionKey: string, index: number): string | undefined {
     return PLATFORM_ICON_KEYS[index];
   }
   if (sectionKey.includes('career')) {
-    return ['chart', 'document', 'chart', 'search', 'briefcase', 'shield'][index];
+    return ['trend', 'document', 'chart', 'search', 'briefcase', 'shield'][index];
   }
   if (sectionKey.includes('industr')) {
     return ['building', 'desktop', 'chart', 'health', 'building', 'cart', 'factory', 'globe'][index];

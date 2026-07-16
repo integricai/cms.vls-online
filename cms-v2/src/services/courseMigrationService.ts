@@ -45,6 +45,7 @@ import {
   syncTemplateComponentLibrary,
 } from './storyblokComponentLibrary';
 import { buildBlokFromTemplateSection } from './pageContentBuilder';
+import { buildMergedCourseStoryblokContent } from './buildCourseTemplateContent';
 import { indexTemplateSections, parseTemplateSectionsFromHtml, resolveTemplateSections, sectionHasLiveMatch, isPageBuilderLegalHtml } from './pageSectionExtractor';
 import type { TemplateSectionBlueprint } from '../../shared/migrationTemplateTypes';
 import { analyzeUnmatchedLayout } from './genericLayoutAnalyzer';
@@ -597,20 +598,22 @@ async function buildCourseStoryblokContentAsync(
   presetBloksBySection: Record<string, Record<string, unknown>> | null,
   config: StoryblokConfig | null,
 ): Promise<Record<string, unknown>> {
-  const base = buildCourseStoryblokContent(scraped, zenlerCourseId);
+  const base = buildMergedCourseStoryblokContent(scraped, zenlerCourseId);
   const body = Array.isArray(base.body) ? base.body as Record<string, unknown>[] : [];
+  const sectionKeys = [
+    'hero',
+    'what-you-ll-learn',
+    'course-content',
+    'your-tutor',
+    'student-reviews',
+    'faq',
+    'cta-bright-panel',
+  ];
 
   const mapped: Array<Record<string, unknown> | null> = [];
-  for (const blok of body) {
-    const component = String(blok.component ?? '');
-    let sectionKey = 'section';
-    if (component === 'course_hero_layout') sectionKey = 'hero';
-    else if (component === 'course_introduction') sectionKey = 'what-you-ll-learn';
-    else if (component === 'course_tabs') sectionKey = 'course-content';
-    else if (component === 'testimonials') sectionKey = 'student-reviews';
-    else if (component === 'faq_section') sectionKey = 'faq';
-    else if (component === 'promotion_section') sectionKey = 'cta';
-    mapped.push(await stylizeBlok(blok, template, sectionKey, presetBloksBySection, config));
+  for (let index = 0; index < body.length; index += 1) {
+    const blok = body[index];
+    mapped.push(await stylizeBlok(blok, template, sectionKeys[index] ?? 'section', presetBloksBySection, config));
   }
 
   return {
