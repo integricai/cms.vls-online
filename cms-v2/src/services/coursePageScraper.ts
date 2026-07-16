@@ -634,6 +634,13 @@ function inferZenlerCourseId(html: string): string {
   return '';
 }
 
+function parseHeroVideoUrl(html: string): string | null {
+  const tabsStart = html.search(/<div\b[^>]*data-vctabs="1"/i);
+  const slice = tabsStart > 0 ? html.slice(0, tabsStart) : html.slice(0, 180000);
+  const match = slice.match(/https?:\/\/player\.vimeo\.com\/video\/\d+[^"'\s]*/i);
+  return match?.[0]?.trim() || null;
+}
+
 export async function scrapeCoursePage(sourceUrl: string): Promise<ScrapedCoursePage> {
   const url = await validateSiteUrl(sourceUrl, true);
   const normalizedUrl = toPublicOriginUrl(url);
@@ -650,6 +657,7 @@ export async function scrapeCoursePage(sourceUrl: string): Promise<ScrapedCourse
   const heroRight = parseHeroRight(extractDivByIdPrefix(html, 'chr-'));
   const courseDescription = parseCourseDescription(html);
   const tabs = parseTabs(html);
+  const heroVideoUrl = parseHeroVideoUrl(html);
   const { faq, warnings: faqWarnings } = parseFaq(html);
   const testimonials = parseTestimonials(html);
   const promotion = parsePromotion(html);
@@ -665,6 +673,7 @@ export async function scrapeCoursePage(sourceUrl: string): Promise<ScrapedCourse
     heroRight,
     courseDescription,
     tabs,
+    heroVideoUrl,
     faq,
     testimonials,
     promotion,

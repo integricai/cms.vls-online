@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { getMigrationTemplateBlueprint } from './migrationTemplateRegistry';
 import { stripTemplateTags } from './templateSectionParsers';
+import { defaultCourseTabsTemplate, type TemplateCourseTab } from './courseTabBuilder';
 
 export type ParsedCourseMetaItem = {
   showStars: boolean;
@@ -56,6 +57,11 @@ export type ParsedCourseTemplate = {
   videoTitle: string;
   videoSubtitle: string;
   videoDuration: string;
+  videoUrl: string;
+  introductionTitle: string;
+  introductionParagraph1: string;
+  introductionParagraph2: string;
+  courseTabs: TemplateCourseTab[];
   priceNow: string;
   priceWas: string;
   priceSave: string;
@@ -192,6 +198,7 @@ function parseSubmeta(sectionHtml: string): ParsedCourseSubmetaItem[] {
 
 export function parseCourseTemplateHtml(html: string): ParsedCourseTemplate {
   const heroSection = sectionHtml(html, 'hero') || html.match(/<section class="hero"[\s\S]*?<\/section>/i)?.[0] || '';
+  const introSection = sectionHtml(html, 'course-description') || html.match(/<div class="wrap course-intro"[\s\S]*?<\/div>\s*<\/div>\s*<\/section>/i)?.[0] || '';
   const learnSection = sectionHtml(html, 'what-you-ll-learn') || sectionHtml(html, 'learn');
   const curriculumSection = sectionHtml(html, 'course-content') || sectionHtml(html, 'content');
   const tutorSection = sectionHtml(html, 'your-tutor') || sectionHtml(html, 'tutor');
@@ -212,7 +219,9 @@ export function parseCourseTemplateHtml(html: string): ParsedCourseTemplate {
   const bestValue = sideHtml.match(/<div class="bestvalue"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '';
 
   const byline = heroSection.match(/<div class="byline"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '';
-  const video = heroSection.match(/<div class="video-stage"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '';
+  const videoStage = heroSection.match(/<div class="video-stage"[^>]*>([\s\S]*?)<\/div>/i)?.[0] ?? '';
+  const video = videoStage.match(/<div class="video-stage"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '';
+  const videoUrl = heroSection.match(/<div class="video-stage"[^>]*data-video-url=["']([^"']*)["']/i)?.[1]?.trim() ?? '';
 
   const tutorCard = tutorSection.match(/<div class="tutor-card"[^>]*>([\s\S]*)<\/div>\s*<\/div>\s*<\/section>/i)?.[1] ?? tutorSection;
 
@@ -234,6 +243,11 @@ export function parseCourseTemplateHtml(html: string): ParsedCourseTemplate {
     videoTitle: firstMatch(video, /<div class="t"[^>]*>([\s\S]*?)<\/div>/i),
     videoSubtitle: firstMatch(video, /<div class="s"[^>]*>([\s\S]*?)<\/div>/i),
     videoDuration: firstMatch(video, /<span class="vs-time"[^>]*>([\s\S]*?)<\/span>/i),
+    videoUrl,
+    introductionTitle: firstMatch(introSection, /<h2[^>]*>([\s\S]*?)<\/h2>/i) || 'Exam Paper Overview',
+    introductionParagraph1: firstMatch(introSection, /<p class="course-intro-p1"[^>]*>([\s\S]*?)<\/p>/i),
+    introductionParagraph2: firstMatch(introSection, /<p class="course-intro-p2"[^>]*>([\s\S]*?)<\/p>/i),
+    courseTabs: defaultCourseTabsTemplate(),
     priceNow: firstMatch(priceCard, /<span class="price-now"[^>]*>([\s\S]*?)<\/span>/i),
     priceWas: firstMatch(priceCard, /<span class="price-was"[^>]*>([\s\S]*?)<\/span>/i),
     priceSave: firstMatch(priceCard, /<div class="price-save"[^>]*>([\s\S]*?)<\/div>/i),

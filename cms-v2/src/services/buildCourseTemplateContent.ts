@@ -2,6 +2,11 @@ import type { ScrapedCoursePage } from '../../shared/migrationTypes';
 import type { ParsedCourseTemplate } from './courseTemplateParser';
 import { loadCourseTemplateFile } from './courseTemplateParser';
 import { sanitizeBlokForStoryblok } from './migrationTemplateRegistry';
+import {
+  buildCourseTabsBlok,
+  buildTabBlocksFromPanel,
+  buildTabBlocksFromTemplate,
+} from './courseTabBuilder';
 
 function uid(): string {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 12);
@@ -52,6 +57,19 @@ export function mergeCourseWithTemplate(
     videoTitle: template.videoTitle,
     videoSubtitle: template.videoSubtitle,
     videoDuration: template.videoDuration,
+    videoUrl: pickText(scraped.heroVideoUrl ?? undefined, template.videoUrl),
+    introductionTitle: pickText(
+      scraped.courseDescription?.title,
+      template.introductionTitle,
+    ),
+    introductionParagraph1: pickText(
+      scraped.courseDescription?.introP1 || scraped.courseDescription?.introBold,
+      template.introductionParagraph1,
+    ),
+    introductionParagraph2: pickText(
+      scraped.courseDescription?.bodyText || scraped.courseDescription?.introP2,
+      template.introductionParagraph2,
+    ),
     priceNow: template.priceNow,
     priceWas: template.priceWas,
     priceSave: template.priceSave,
@@ -99,6 +117,7 @@ export function buildCourseStoryblokFromTemplate(
     zenlerCourseId: string;
     sourceUrl: string;
     slug?: string;
+    scrapedTabs?: ScrapedCoursePage['tabs'];
   },
 ): Record<string, unknown> {
   const sourceUrl = options.sourceUrl;
@@ -122,6 +141,7 @@ export function buildCourseStoryblokFromTemplate(
       video_title: data.videoTitle,
       video_subtitle: data.videoSubtitle,
       video_duration: data.videoDuration,
+      video_url: data.videoUrl,
       meta_items: data.metaItems.map(item => ({
         _uid: uid(),
         component: 'course_meta_item',
@@ -158,6 +178,30 @@ export function buildCourseStoryblokFromTemplate(
       })),
     }],
   });
+
+  const introduction = sanitizeBlokForStoryblok({
+    _uid: uid(),
+    component: 'course_introduction',
+    title: data.introductionTitle,
+    paragraph_1: data.introductionParagraph1,
+    paragraph_2: data.introductionParagraph2,
+    read_more_label: 'Read more',
+    read_less_label: 'Read less',
+  });
+
+  const tabEntries = options.scrapedTabs?.length
+    ? options.scrapedTabs.map(tab => ({
+        icon: tab.icon || '📦',
+        label: tab.label,
+        blocks: buildTabBlocksFromPanel(tab),
+      }))
+    : data.courseTabs.map(tab => ({
+        icon: tab.icon,
+        label: tab.label,
+        blocks: buildTabBlocksFromTemplate(tab.blocks),
+      }));
+
+  const tabs = sanitizeBlokForStoryblok(buildCourseTabsBlok(tabEntries));
 
   const learnSection = sanitizeBlokForStoryblok({
     _uid: uid(),
@@ -281,6 +325,8 @@ export function buildCourseStoryblokFromTemplate(
     seo,
     body: [
       heroLayout,
+      introduction,
+      tabs,
       learnSection,
       curriculum,
       tutorSection,
@@ -301,6 +347,7 @@ export function buildMergedCourseStoryblokContent(
     zenlerCourseId,
     sourceUrl,
     slug: scraped.slug,
+    scrapedTabs: scraped.tabs,
   });
 }
 

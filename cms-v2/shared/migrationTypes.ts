@@ -287,6 +287,7 @@ export interface ScrapedCoursePage {
   } | null;
   courseDescription: ScrapedCourseDescription | null;
   tabs: ScrapedTabPanel[];
+  heroVideoUrl: string | null;
   faq: {
     title: string;
     icon: string;

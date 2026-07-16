@@ -22,7 +22,8 @@ import {
 } from '../models/migrationPage';
 import { listCourses } from '../models/course';
 import { buildSchemaBreadcrumbBloks } from './breadcrumbUtils';
-import { CoursePageScrapeError, parseTabPanelBlocks, scrapeCoursePage } from './coursePageScraper';
+import { CoursePageScrapeError, scrapeCoursePage } from './coursePageScraper';
+import { buildTabBlocksFromPanel } from './courseTabBuilder';
 import { genericBreadcrumbText, scrapeGenericPage } from './pageScraper';
 import { slugifySegment, storyFullSlug, suggestDestinationSlug } from '../../shared/migrationDestination';
 import {
@@ -66,61 +67,7 @@ function normalizeFaqQuestion(question: string): string {
 }
 
 function buildTabBlocks(tab: ScrapedTabPanel): Record<string, unknown>[] {
-  const parsedBlocks = parseTabPanelBlocks(tab.contentHtml);
-  return parsedBlocks.map(block => {
-    const base: Record<string, unknown> = {
-      _uid: blokUid(),
-      component: 'course_tab_block',
-      block_type: block.blockType,
-    };
-
-    if (block.blockType === 'panel-intro') {
-      return {
-        ...base,
-        eyebrow: block.fields.eyebrow,
-        heading: block.fields.heading,
-        description: block.fields.description,
-      };
-    }
-
-    if (block.blockType === 'bullets') {
-      return { ...base, bullet_items: block.fields.bullet_items };
-    }
-
-    if (block.blockType === 'inc-cards' && block.fields.cards) {
-      const cards = block.fields.cards.split('\n').map(line => {
-        const [icon, title, description] = line.split('|');
-        return {
-          _uid: blokUid(),
-          component: 'course_tab_card',
-          icon: icon || '✅',
-          title: title || '',
-          description: description || '',
-        };
-      });
-      return { ...base, cards };
-    }
-
-    if (block.blockType === 'steps' && block.fields.steps) {
-      const steps = block.fields.steps.split('\n').map(line => {
-        const [icon, title, description] = line.split('|');
-        return {
-          _uid: blokUid(),
-          component: 'course_tab_step',
-          icon: icon || '📅',
-          title: title || '',
-          description: description || '',
-        };
-      });
-      return { ...base, steps };
-    }
-
-    return {
-      ...base,
-      heading: block.fields.heading || tab.label,
-      paragraph: block.fields.paragraph || tab.contentText || tab.label,
-    };
-  });
+  return buildTabBlocksFromPanel(tab);
 }
 
 function buildHeroLayoutBlok(
