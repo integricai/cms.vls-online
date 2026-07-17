@@ -197,6 +197,9 @@ export function buildCourseStoryblokFromTemplate(
       best_value_text: data.bestValueText,
       best_value_link_text: data.bestValueLinkText,
       best_value_link: storyblokLink('/courses/fullaccess'),
+      show_reviews_summary: true,
+      reviews_stars: '★★★★★',
+      reviews_label: pickText(data.reviewsLabel, 'Based on 308 reviews'),
       items: data.includesItems.map(title => ({
         _uid: uid(),
         component: 'course_hero_right_item',

@@ -699,6 +699,9 @@ export function buildPresetBlokFromSection(
         _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
         component: 'course_hero_right',
         section_label: 'THIS COURSE INCLUDES',
+        show_reviews_summary: true,
+        reviews_stars: '★★★★★',
+        reviews_label: 'Based on 308 reviews',
         items: [],
       }],
     });

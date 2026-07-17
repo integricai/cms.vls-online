@@ -122,11 +122,17 @@ function buildHeroLayoutBlok(
           title: item.title,
           description: item.description,
         })),
+        show_reviews_summary: true,
+        reviews_stars: '★★★★★',
+        reviews_label: 'Based on 308 reviews',
       }]
     : [{
         _uid: blokUid(),
         component: 'course_hero_right',
         section_label: 'THIS COURSE INCLUDES',
+        show_reviews_summary: true,
+        reviews_stars: '★★★★★',
+        reviews_label: 'Based on 308 reviews',
         items: [],
       }];
 
