@@ -7,6 +7,7 @@ import type {
   TemplateSectionBlueprint,
 } from '../../shared/migrationTemplateTypes';
 import { DEFAULT_TRUSTPILOT_GRID_EMBED } from '../../shared/trustpilotDefaults';
+import { coerceBlokRichtextFields } from './storyblokRichtext';
 export class MigrationTemplateError extends Error {
   status: number;
 
@@ -599,6 +600,28 @@ function coerceStoryblokNumericFields(blok: Record<string, unknown>): Record<str
   return next;
 }
 
+const NESTED_BLOK_ARRAY_KEYS = [
+  'hero', 'form', 'checks', 'items', 'cards', 'left', 'right', 'profiles', 'timeline', 'levels',
+  'sessions', 'side_card', 'badges', 'papers', 'stats', 'rows',
+  'benefits', 'meta_items', 'steps', 'topics', 'articles', 'ticks', 'card_rows', 'sidebar',
+  'info_items', 'hours_rows', 'socials', 'tabs', 'blocks', 'checklist_items', 'table_rows',
+  'toc_items', 'reach_figs', 'regions', 'submeta_items', 'rating_bars',
+] as const;
+
+function sanitizeNestedBlokArrays(blok: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...blok };
+  for (const key of NESTED_BLOK_ARRAY_KEYS) {
+    const value = next[key];
+    if (!Array.isArray(value)) continue;
+    next[key] = value.map(item => (
+      item && typeof item === 'object'
+        ? sanitizeBlokForStoryblok(item as Record<string, unknown>)
+        : item
+    ));
+  }
+  return next;
+}
+
 export function sanitizeBlokForStoryblok(blok: Record<string, unknown>): Record<string, unknown> {
   const component = String(blok.component ?? '');
   const allow = BLOK_FIELD_ALLOWLIST[component];
@@ -612,37 +635,22 @@ export function sanitizeBlokForStoryblok(blok: Record<string, unknown>): Record<
       if (key.startsWith('migration_')) continue;
       next[key] = value;
     }
-    return coerceStoryblokNumericFields(next);
+  } else {
+    for (const key of allow) {
+      if (blok[key] !== undefined) next[key] = blok[key];
+    }
   }
 
-  for (const key of allow) {
-    if (blok[key] !== undefined) next[key] = blok[key];
-  }
-
-  // Nested bloks
-  for (const key of [
-    'hero', 'form', 'checks', 'items', 'cards', 'left', 'right', 'profiles', 'timeline', 'levels',
-    'sessions', 'side_card', 'badges', 'papers', 'stats', 'rows',
-    'benefits', 'meta_items', 'steps', 'topics', 'articles', 'ticks', 'card_rows', 'sidebar',
-    'info_items', 'hours_rows', 'socials', 'tabs', 'checklist_items', 'table_rows', 'toc_items',
-    'reach_figs', 'regions', 'meta_items', 'submeta_items', 'rating_bars', 'stats',
-  ]) {
-    const value = next[key];
-    if (!Array.isArray(value)) continue;
-    next[key] = value.map(item => (
-      item && typeof item === 'object'
-        ? sanitizeBlokForStoryblok(item as Record<string, unknown>)
-        : item
-    ));
-  }
+  let sanitized = sanitizeNestedBlokArrays(next);
 
   if (component === 'promotion_section') {
-    const title = String(next.title ?? '').trim();
-    next.title = title || 'Get started';
-    if (next.eyebrow === undefined) next.eyebrow = '';
+    const title = String(sanitized.title ?? '').trim();
+    sanitized = { ...sanitized, title: title || 'Get started' };
+    if (sanitized.eyebrow === undefined) sanitized.eyebrow = '';
   }
 
-  return coerceStoryblokNumericFields(next);
+  sanitized = coerceBlokRichtextFields(component, sanitized);
+  return coerceStoryblokNumericFields(sanitized);
 }
 
 export function applyTemplateStyles(
