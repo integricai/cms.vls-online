@@ -24,6 +24,7 @@ import { listCourses } from '../models/course';
 import { buildSchemaBreadcrumbBloks } from './breadcrumbUtils';
 import { CoursePageScrapeError, scrapeCoursePage } from './coursePageScraper';
 import { buildTabBlocksFromPanel } from './courseTabBuilder';
+import { DEFAULT_TRUSTPILOT_GRID_EMBED } from '../../shared/trustpilotDefaults';
 import { genericBreadcrumbText, scrapeGenericPage } from './pageScraper';
 import { slugifySegment, storyFullSlug, suggestDestinationSlug } from '../../shared/migrationDestination';
 import {
@@ -218,23 +219,18 @@ function buildCurriculumBlok(zenlerCourseId: string, courseCode: string): Record
   };
 }
 
-function buildTestimonialsBlok(scraped: ScrapedCoursePage): Record<string, unknown> | null {
-  if (!scraped.testimonials?.cards.length) return null;
+function buildTestimonialsBlok(scraped: ScrapedCoursePage): Record<string, unknown> {
+  const testimonials = scraped.testimonials;
 
   return {
     _uid: blokUid(),
     component: 'testimonials',
-    eyebrow: scraped.testimonials.eyebrow,
-    title_prefix: scraped.testimonials.titlePrefix,
-    title_accent: scraped.testimonials.titleAccent,
-    subtitle: scraped.testimonials.subtitle,
-    cards: scraped.testimonials.cards.map(card => ({
-      _uid: blokUid(),
-      component: 'testimonial_card',
-      quote: card.quote,
-      author: card.author,
-      role: card.role,
-    })),
+    layout: 'trustpilot',
+    trustpilot_embed: DEFAULT_TRUSTPILOT_GRID_EMBED,
+    eyebrow: testimonials?.eyebrow || 'Student reviews',
+    title_prefix: testimonials?.titlePrefix || 'What students say about their experience with Vertex',
+    title_accent: testimonials?.titleAccent || '',
+    subtitle: testimonials?.subtitle || '',
   };
 }
 

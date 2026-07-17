@@ -1,5 +1,6 @@
 import type { ScrapedCoursePage } from '../../shared/migrationTypes';
 import type { ParsedCourseTemplate } from './courseTemplateParser';
+import { DEFAULT_TRUSTPILOT_GRID_EMBED } from '../../shared/trustpilotDefaults';
 import { loadCourseTemplateFile } from './courseTemplateParser';
 import { sanitizeBlokForStoryblok } from './migrationTemplateRegistry';
 import {
@@ -279,27 +280,11 @@ export function buildCourseStoryblokFromTemplate(
   const testimonials = sanitizeBlokForStoryblok({
     _uid: uid(),
     component: 'testimonials',
-    layout: 'course_reviews',
+    layout: 'trustpilot',
+    trustpilot_embed: DEFAULT_TRUSTPILOT_GRID_EMBED,
     eyebrow: data.reviewsEyebrow,
     title_prefix: data.reviewsHeadingPrefix,
     title_accent: data.reviewsHeadingAccent,
-    score: data.reviewsScore,
-    reviews_label: data.reviewsLabel,
-    rating_bars: data.ratingBars.map(bar => ({
-      _uid: uid(),
-      component: 'rating_bar',
-      label: bar.label,
-      percent: String(bar.percent ?? 0),
-    })),
-    cards: data.reviewCards.map(card => ({
-      _uid: uid(),
-      component: 'testimonial_card',
-      quote: card.quote,
-      initials: card.initials,
-      name: card.name,
-      title: card.role,
-      rating: '5',
-    })),
   });
 
   const faqSection = sanitizeBlokForStoryblok({

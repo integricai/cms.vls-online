@@ -6,6 +6,7 @@ import type {
   TemplateDesignTokens,
   TemplateSectionBlueprint,
 } from '../../shared/migrationTemplateTypes';
+import { DEFAULT_TRUSTPILOT_GRID_EMBED } from '../../shared/trustpilotDefaults';
 export class MigrationTemplateError extends Error {
   status: number;
 
@@ -457,7 +458,8 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   ],
   testimonials: [
     'layout', 'score', 'reviews_label', 'rating_bars',
-    'eyebrow', 'title_prefix', 'title_accent', 'subtitle', 'cards',
+    'eyebrow', 'title_prefix', 'title_accent', 'subtitle',
+    'trustpilot_url', 'trustpilot_embed', 'cards',
     'background_color', 'padding_top', 'padding_bottom',
   ],
   feature_cards_v2: ['title', 'subtitle', 'cards', 'background_color', 'padding_top', 'padding_bottom'],
@@ -768,11 +770,15 @@ export function buildPresetBlokFromSection(
   }
 
   if (section.component === 'testimonials') {
+    const isCourseTemplate = blueprint.template === 'course';
     return sanitizeBlokForStoryblok({
       ...base,
+      layout: isCourseTemplate ? 'trustpilot' : 'course_reviews',
+      trustpilot_embed: isCourseTemplate ? DEFAULT_TRUSTPILOT_GRID_EMBED : undefined,
+      eyebrow: section.label,
       title_prefix: section.sampleHeading || 'What students say',
       subtitle: section.sampleDescription || '',
-      cards: [],
+      cards: isCourseTemplate ? undefined : [],
     });
   }
 
