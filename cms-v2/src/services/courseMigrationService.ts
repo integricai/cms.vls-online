@@ -1,4 +1,5 @@
 import type {
+  ComponentLibrarySummary,
   ContentPhaseResult,
   CourseMigrationRequest,
   MigrationPageRecord,
@@ -11,6 +12,7 @@ import type {
   ScrapedTabPanel,
   StoryblokCredentials,
   StructurePhaseResult,
+  TemplateReferenceSummary,
 } from '../../shared/migrationTypes';
 import {
   getMigrationPageById,

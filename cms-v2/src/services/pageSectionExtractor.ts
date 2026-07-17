@@ -343,6 +343,7 @@ function parseLegalArticleSection(contentHtml: string): ScrapedTemplateSection |
     ...emptyTemplateSectionFields(),
     anchorId: '',
     ...article,
+    sublead: article.sublead ?? '',
   };
 }
 

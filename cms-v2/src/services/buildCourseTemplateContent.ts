@@ -32,16 +32,24 @@ export function mapScrapedCourseIntroduction(
 ): { title: string; paragraph1: string; paragraph2: string } | null {
   if (!desc) return null;
 
-  const paragraph1 = pickText(desc.introP1, desc.introBold);
-  const paragraph2 = [desc.introP2, desc.bodyText]
+  const heading = pickText(desc.introBold, desc.title, 'Exam Paper Overview');
+  const rawParts = [desc.introP1, desc.introP2, desc.bodyText]
     .map((part) => part?.trim())
-    .filter(Boolean)
-    .join('\n\n');
+    .filter(Boolean) as string[];
+
+  const contentParts = rawParts.filter((part) => (
+    part !== heading
+    && part.toLowerCase() !== heading.toLowerCase()
+  ));
+  const effectiveParts = contentParts.length ? contentParts : rawParts;
+
+  const paragraph1 = effectiveParts[0] ?? '';
+  const paragraph2 = effectiveParts.slice(1).join('\n\n');
 
   if (!paragraph1 && !paragraph2) return null;
 
   return {
-    title: pickText(desc.introBold, desc.title, 'Exam Paper Overview'),
+    title: heading,
     paragraph1,
     paragraph2,
   };
@@ -89,25 +97,13 @@ export function mergeCourseWithTemplate(
     videoDuration: template.videoDuration,
     videoUrl: pickText(scraped.heroVideoUrl ?? undefined, template.videoUrl),
     introductionTitle: hasScrapedDescription
-      ? pickText(
-        scrapedIntro?.title,
-        scraped.courseDescription?.introBold,
-        scraped.courseDescription?.title,
-        template.introductionTitle,
-      )
+      ? pickText(scrapedIntro?.title, template.introductionTitle)
       : template.introductionTitle,
     introductionParagraph1: hasScrapedDescription
-      ? pickText(
-        scrapedIntro?.paragraph1,
-        scraped.courseDescription?.introP1,
-        scraped.courseDescription?.introBold,
-      )
+      ? pickText(scrapedIntro?.paragraph1)
       : template.introductionParagraph1,
     introductionParagraph2: hasScrapedDescription
-      ? pickText(
-        scrapedIntro?.paragraph2,
-        [scraped.courseDescription?.introP2, scraped.courseDescription?.bodyText].filter(Boolean).join('\n\n'),
-      )
+      ? pickText(scrapedIntro?.paragraph2)
       : template.introductionParagraph2,
     priceNow: template.priceNow,
     priceWas: template.priceWas,
@@ -121,10 +117,19 @@ export function mergeCourseWithTemplate(
       right?.items.map(item => item.title).filter(Boolean),
       template.includesItems,
     ),
-    learnItems: pickRicherArray(
+    learnItems: pickLiveArrayOrTemplate(
       hero?.learnItems.map(item => ({ title: item.title })).filter(item => item.title),
       template.learnItems,
     ),
+    learnEyebrow: (hero?.learnItems.length ?? 0) > 0
+      ? pickText(hero?.learnLabel, template.learnEyebrow)
+      : template.learnEyebrow,
+    learnHeadingPrefix: (hero?.learnItems.length ?? 0) > 0
+      ? ''
+      : template.learnHeadingPrefix,
+    learnHeadingAccent: (hero?.learnItems.length ?? 0) > 0
+      ? ''
+      : template.learnHeadingAccent,
     reviewsEyebrow: pickText(testimonials?.eyebrow, template.reviewsEyebrow),
     reviewsHeadingPrefix: pickText(testimonials?.titlePrefix, template.reviewsHeadingPrefix),
     reviewsHeadingAccent: pickText(testimonials?.titleAccent, template.reviewsHeadingAccent),

@@ -161,6 +161,7 @@ function emptySectionFor(key: string): ScrapedTemplateSection {
     headingPrefix: '',
     headingAccent: '',
     lead: '',
+    sublead: '',
     body: '',
     bodyHtml: '',
     stats: [],

@@ -46,9 +46,30 @@ const scraped: ScrapedCoursePage = {
 const merged = mergeCourseWithTemplate(scraped, template);
 
 assert(merged.introductionParagraph1.includes('AFM paragraph one'), 'paragraph 1 uses scraped text');
+assert(!merged.introductionParagraph1.includes('Exam Paper Overview') || merged.introductionParagraph1.includes('AFM paragraph'), 'paragraph 1 is not just the heading');
 assert(!merged.introductionParagraph2.includes('SBR'), 'paragraph 2 must not fall back to SBR template');
 assert(merged.faqItems[0]?.question === 'AFM Q1?', 'FAQ uses scraped items when present');
 assert(merged.faqItems.length === 1, 'FAQ does not pad with template items');
+
+const headingDuplicateScraped: ScrapedCoursePage = {
+  ...scraped,
+  courseDescription: {
+    icon: '📖',
+    title: 'About This Course',
+    introBold: 'ACCA AFM Exam Paper Overview',
+    introP1: 'ACCA AFM Exam Paper Overview',
+    introP2: 'This course is for ACCA Strategic Professional students who want advanced financial management preparation.',
+    bodyHtml: '',
+    bodyText: '',
+    source: 'zenler',
+  },
+};
+const headingMerged = mergeCourseWithTemplate(headingDuplicateScraped, template);
+assert(
+  headingMerged.introductionParagraph1.includes('Strategic Professional'),
+  'heading duplicate is skipped so paragraph 1 keeps the body text',
+);
+assert(headingMerged.introductionTitle === 'ACCA AFM Exam Paper Overview', 'title stays the scraped heading');
 
 const sanitized = sanitizeStoryContentForStoryblok({
   component: 'course_page',

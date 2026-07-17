@@ -215,6 +215,25 @@ function extractAllMatches(html: string, pattern: RegExp): string[] {
   return Array.from(html.matchAll(pattern), match => match[1]?.trim() ?? '').filter(Boolean);
 }
 
+function parseHeroLearnItems(html: string): ScrapedLearnItem[] {
+  const learnMarker = html.search(/WHAT YOU['']LL LEARN/i);
+  if (learnMarker === -1) return [];
+
+  const slice = html.slice(learnMarker, learnMarker + 25000);
+  const items: ScrapedLearnItem[] = [];
+  const cardPattern = /display:flex;align-items:flex-start;gap:12px;[\s\S]*?<p[^>]*font-weight:600[^>]*>([\s\S]*?)<\/p>\s*<p[^>]*>([\s\S]*?)<\/p>/gi;
+
+  for (const match of slice.matchAll(cardPattern)) {
+    const title = stripTags(match[1]);
+    const subtitle = stripTags(match[2]);
+    if (title && !/what you/i.test(title)) {
+      items.push({ title, subtitle });
+    }
+  }
+
+  return items;
+}
+
 function parseHero(heroHtml: string, pageUrl: string): ScrapedHero | null {
   if (!heroHtml.trim()) return null;
 
@@ -238,16 +257,23 @@ function parseHero(heroHtml: string, pageUrl: string): ScrapedHero | null {
   const learnLabel = stripTags(extractFirstMatch(
     heroHtml,
     /<p[^>]*text-transform:uppercase[^>]*margin:0 0 16px[^>]*>([\s\S]*?)<\/p>/i,
+  )) || stripTags(extractFirstMatch(
+    heroHtml,
+    /WHAT YOU['']LL LEARN/i,
   )) || "WHAT YOU'LL LEARN";
 
-  const learnItems: ScrapedLearnItem[] = [];
-  const learnCardPattern = /<div[^>]*display:grid[^>]*>[\s\S]*?<\/div>\s*<\/div>/i;
-  const learnSection = heroHtml.match(learnCardPattern)?.[0] ?? heroHtml;
-  const cardPattern = /<p[^>]*font-weight:600[^>]*>([\s\S]*?)<\/p>\s*(?:<p[^>]*>([\s\S]*?)<\/p>)?/gi;
-  for (const match of learnSection.matchAll(cardPattern)) {
-    const title = stripTags(match[1]);
-    const subtitle = stripTags(match[2] ?? '');
-    if (title && title !== learnLabel) learnItems.push({ title, subtitle });
+  let learnItems = parseHeroLearnItems(heroHtml);
+  if (!learnItems.length) {
+    const learnCardPattern = /<div[^>]*display:grid[^>]*>[\s\S]*?<\/div>\s*<\/div>/i;
+    const learnSection = heroHtml.match(learnCardPattern)?.[0] ?? heroHtml;
+    const cardPattern = /<p[^>]*font-weight:600[^>]*>([\s\S]*?)<\/p>\s*(?:<p[^>]*>([\s\S]*?)<\/p>)?/gi;
+    for (const match of learnSection.matchAll(cardPattern)) {
+      const title = stripTags(match[1]);
+      const subtitle = stripTags(match[2] ?? '');
+      if (title && title !== learnLabel && !/what you/i.test(title)) {
+        learnItems.push({ title, subtitle });
+      }
+    }
   }
 
   if (!heading && !description) return null;
