@@ -387,6 +387,8 @@ function augmentCourseSections(sections: TemplateSectionBlueprint[]): TemplateSe
         key: 'course-tabs',
         label: 'Course overview tabs',
         component: 'course_tabs',
+        classes: [],
+        isBand: false,
         sampleHeading: '',
         sampleDescription: '',
         styles: {

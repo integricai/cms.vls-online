@@ -1,4 +1,5 @@
 import type { StoryblokRegion } from '../../shared/migrationTypes';
+import { sanitizeStoryContentForStoryblok } from './storyblokStorySanitizer';
 
 export interface StoryblokConfig {
   spaceId: string;
@@ -352,6 +353,10 @@ export async function upsertStory(
   const normalized = buildConfig(config);
   const existing = await findStoryBySlug(normalized, input.fullSlug);
 
+  const content = input.isFolder
+    ? input.content
+    : sanitizeStoryContentForStoryblok(input.content);
+
   const payload = {
     story: {
       name: input.name,
@@ -359,7 +364,7 @@ export async function upsertStory(
       parent_id: input.parentId,
       ...(input.isFolder
         ? { is_folder: true }
-        : { content: input.content }),
+        : { content }),
     },
     publish: input.publish ? 1 : 0,
   };

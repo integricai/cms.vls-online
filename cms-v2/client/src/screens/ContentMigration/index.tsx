@@ -39,6 +39,16 @@ function statusClass(type: StatusMessage['type']): string {
   }[type];
 }
 
+function courseDescriptionPreviewParts(desc: NonNullable<ScrapedCoursePage['courseDescription']>) {
+  return [
+    desc.title ? { label: 'Section title', text: desc.title } : null,
+    desc.introBold ? { label: 'Heading', text: desc.introBold } : null,
+    desc.introP1 ? { label: 'Paragraph 1', text: desc.introP1 } : null,
+    desc.introP2 ? { label: 'Paragraph 2', text: desc.introP2 } : null,
+    desc.bodyText ? { label: 'Expanded body', text: desc.bodyText } : null,
+  ].filter((part): part is { label: string; text: string } => Boolean(part?.text.trim()));
+}
+
 function loadSavedConfig(): SavedConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -919,12 +929,31 @@ export default function ContentMigrationTab() {
                   </div>
                 ) : null}
 
-                {courseScraped.courseDescription ? (
+                {courseScraped.courseDescription ? (() => {
+                  const descriptionParts = courseDescriptionPreviewParts(courseScraped.courseDescription);
+                  return (
                   <div>
-                    <p className="font-semibold text-slate-700">Course description</p>
-                    <p className="mt-1 whitespace-pre-wrap">{courseScraped.courseDescription.bodyText}</p>
+                    <p className="font-semibold text-slate-700">
+                      Course description
+                      {courseScraped.courseDescription.source
+                        ? ` (${courseScraped.courseDescription.source})`
+                        : ''}
+                    </p>
+                    {descriptionParts.length ? (
+                      <div className="mt-2 space-y-3">
+                        {descriptionParts.map(part => (
+                          <div key={part.label}>
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{part.label}</p>
+                            <p className="mt-1 whitespace-pre-wrap">{part.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-slate-400">Description block found but no text extracted.</p>
+                    )}
                   </div>
-                ) : null}
+                  );
+                })() : null}
 
                 {courseScraped.tabs.length > 0 && (
                   <div>

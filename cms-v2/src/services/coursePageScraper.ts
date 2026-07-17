@@ -380,6 +380,13 @@ function parseZenlerCourseDescription(descSlice: string): ScrapedCourseDescripti
     if (heading && text) sections.push({ heading, html: sectionHtml, text });
   }
 
+  const headings = extractAllMatches(cleaned, /<p[^>]*font-size:\s*25px[^>]*>([\s\S]*?)<\/p>/gi)
+    .map(stripTags)
+    .filter(Boolean);
+  const dynamicParagraphs = extractAllMatches(cleaned, /<p[^>]*class="[^"]*dynamic-text[^"]*"[^>]*>([\s\S]*?)<\/p>/gi)
+    .map(html => ({ html, text: stripTags(html) }))
+    .filter(item => item.text.length > 20);
+
   if (sections.length) {
     return {
       icon: '📖',
@@ -393,26 +400,35 @@ function parseZenlerCourseDescription(descSlice: string): ScrapedCourseDescripti
     };
   }
 
-  const headings = extractAllMatches(cleaned, /<p[^>]*font-size:\s*25px[^>]*>([\s\S]*?)<\/p>/gi)
-    .map(stripTags)
-    .filter(Boolean);
-  const paragraphs = extractAllMatches(cleaned, /<p[^>]*class="[^"]*dynamic-text[^"]*"[^>]*>([\s\S]*?)<\/p>/gi)
-    .map(html => ({ html, text: stripTags(html) }))
-    .filter(item => item.text.length > 40);
+  if (dynamicParagraphs.length) {
+    return {
+      icon: '📖',
+      title: 'About This Course',
+      introBold: headings[0] ?? '',
+      introP1: dynamicParagraphs[0]?.text ?? '',
+      introP2: dynamicParagraphs[1]?.text ?? '',
+      bodyHtml: dynamicParagraphs.slice(2).map(item => item.html).join('\n'),
+      bodyText: dynamicParagraphs.slice(2).map(item => item.text).join('\n\n'),
+      source: 'zenler',
+    };
+  }
 
-  if (!paragraphs.length) return null;
+  const plainParagraphs = extractAllMatches(cleaned, /<p[^>]*>([\s\S]*?)<\/p>/gi)
+    .map(stripTags)
+    .filter(text => text.length > 40);
+
+  if (!plainParagraphs.length) return null;
+
+  const introBold = headings[0] ?? '';
 
   return {
     icon: '📖',
     title: 'About This Course',
-    introBold: headings[0] ?? '',
-    introP1: paragraphs[0]?.text ?? '',
-    introP2: paragraphs[1]?.text ?? '',
-    bodyHtml: [
-      ...headings.slice(2).map((heading, index) => `<h3>${heading}</h3>${paragraphs[index + 2]?.html ?? ''}`),
-      ...paragraphs.slice(2 + Math.max(0, headings.length - 2)).map(item => item.html),
-    ].filter(Boolean).join('\n'),
-    bodyText: paragraphs.slice(2).map(item => item.text).join('\n\n'),
+    introBold: introBold || plainParagraphs[0]?.slice(0, 120) || '',
+    introP1: plainParagraphs[0] ?? '',
+    introP2: plainParagraphs[1] ?? '',
+    bodyHtml: plainParagraphs.slice(2).map(text => `<p>${text}</p>`).join('\n'),
+    bodyText: plainParagraphs.slice(2).join('\n\n'),
     source: 'zenler',
   };
 }

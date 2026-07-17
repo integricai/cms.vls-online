@@ -550,21 +550,15 @@ async function buildCourseStoryblokContentAsync(
   config: StoryblokConfig | null,
 ): Promise<Record<string, unknown>> {
   const base = buildMergedCourseStoryblokContent(scraped, zenlerCourseId);
+  const blueprint = getMigrationTemplateBlueprint(template);
   const body = Array.isArray(base.body) ? base.body as Record<string, unknown>[] : [];
-  const sectionKeys = [
-    'hero',
-    'what-you-ll-learn',
-    'course-content',
-    'your-tutor',
-    'student-reviews',
-    'faq',
-    'cta-bright-panel',
-  ];
 
   const mapped: Array<Record<string, unknown> | null> = [];
-  for (let index = 0; index < body.length; index += 1) {
-    const blok = body[index];
-    mapped.push(await stylizeBlok(blok, template, sectionKeys[index] ?? 'section', presetBloksBySection, config));
+  for (const blok of body) {
+    const component = String(blok.component ?? '');
+    const section = blueprint.sections.find(item => item.component === component);
+    const sectionKey = section?.key ?? 'section';
+    mapped.push(await stylizeBlok(blok, template, sectionKey, presetBloksBySection, config));
   }
 
   return {

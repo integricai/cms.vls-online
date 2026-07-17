@@ -52,6 +52,13 @@ function pickRicherArray<T>(live: T[] | undefined, template: T[]): T[] {
   return liveItems.length >= template.length ? liveItems : (template.length ? template : liveItems);
 }
 
+/** Prefer scraped items when any exist; otherwise fall back to the reference template. */
+function pickLiveArrayOrTemplate<T>(live: T[] | undefined, template: T[]): T[] {
+  const liveItems = live ?? [];
+  if (liveItems.length > 0) return liveItems;
+  return template;
+}
+
 export function mergeCourseWithTemplate(
   scraped: ScrapedCoursePage,
   template: ParsedCourseTemplate = loadCourseTemplateFile(),
@@ -61,6 +68,8 @@ export function mergeCourseWithTemplate(
   const testimonials = scraped.testimonials;
   const faq = scraped.faq;
   const promotion = scraped.promotion;
+  const scrapedIntro = mapScrapedCourseIntroduction(scraped.courseDescription);
+  const hasScrapedDescription = Boolean(scraped.courseDescription);
 
   return {
     ...template,
@@ -79,23 +88,27 @@ export function mergeCourseWithTemplate(
     videoSubtitle: template.videoSubtitle,
     videoDuration: template.videoDuration,
     videoUrl: pickText(scraped.heroVideoUrl ?? undefined, template.videoUrl),
-    introductionTitle: pickText(
-      mapScrapedCourseIntroduction(scraped.courseDescription)?.title,
-      scraped.courseDescription?.introBold,
-      scraped.courseDescription?.title,
-      template.introductionTitle,
-    ),
-    introductionParagraph1: pickText(
-      mapScrapedCourseIntroduction(scraped.courseDescription)?.paragraph1,
-      scraped.courseDescription?.introP1,
-      scraped.courseDescription?.introBold,
-      template.introductionParagraph1,
-    ),
-    introductionParagraph2: pickText(
-      mapScrapedCourseIntroduction(scraped.courseDescription)?.paragraph2,
-      [scraped.courseDescription?.introP2, scraped.courseDescription?.bodyText].filter(Boolean).join('\n\n'),
-      template.introductionParagraph2,
-    ),
+    introductionTitle: hasScrapedDescription
+      ? pickText(
+        scrapedIntro?.title,
+        scraped.courseDescription?.introBold,
+        scraped.courseDescription?.title,
+        template.introductionTitle,
+      )
+      : template.introductionTitle,
+    introductionParagraph1: hasScrapedDescription
+      ? pickText(
+        scrapedIntro?.paragraph1,
+        scraped.courseDescription?.introP1,
+        scraped.courseDescription?.introBold,
+      )
+      : template.introductionParagraph1,
+    introductionParagraph2: hasScrapedDescription
+      ? pickText(
+        scrapedIntro?.paragraph2,
+        [scraped.courseDescription?.introP2, scraped.courseDescription?.bodyText].filter(Boolean).join('\n\n'),
+      )
+      : template.introductionParagraph2,
     priceNow: template.priceNow,
     priceWas: template.priceWas,
     priceSave: template.priceSave,
@@ -124,7 +137,7 @@ export function mergeCourseWithTemplate(
       })).filter(card => card.quote),
       template.reviewCards,
     ),
-    faqItems: pickRicherArray(
+    faqItems: pickLiveArrayOrTemplate(
       faq?.items.map(item => ({
         question: item.question,
         answer: item.answerText,
