@@ -170,6 +170,9 @@ function componentForSection(key: string, classes: string[], template: Migration
   else if (template === 'legal' && classes.includes('sec')) component = 'legal_section';
   else if (template === 'home' && key.includes('hero')) component = 'home_hero_section';
   else if (template === 'course' && key.includes('hero')) component = 'course_hero_layout';
+  else if (template === 'course' && (key.includes('course-description') || key === 'course-description')) {
+    component = 'course_introduction';
+  }
   else if (template === 'course' && (key.includes('what-you') || key.includes('learn'))) component = 'course_learn_section';
   else if (template === 'course' && key.includes('course-content')) component = 'course_curriculum';
   else if (template === 'course' && key.includes('tutor')) component = 'course_tutor_section';
@@ -371,6 +374,31 @@ function parseSections(html: string, tokens: TemplateDesignTokens, template: Mig
   return sections;
 }
 
+/** Live course pages include tabbed overview content after the intro — not a separate HTML section. */
+function augmentCourseSections(sections: TemplateSectionBlueprint[]): TemplateSectionBlueprint[] {
+  const output: TemplateSectionBlueprint[] = [];
+
+  for (const section of sections) {
+    output.push(section);
+    if (section.component === 'course_introduction') {
+      output.push({
+        key: 'course-tabs',
+        label: 'Course overview tabs',
+        component: 'course_tabs',
+        sampleHeading: '',
+        sampleDescription: '',
+        styles: {
+          background_color: '#FFFFFF',
+          padding_top: 0,
+          padding_bottom: 0,
+        },
+      });
+    }
+  }
+
+  return output;
+}
+
 function parseTemplateFile(template: MigrationTemplate, filePath: string): MigrationTemplateBlueprint {
   const html = fs.readFileSync(filePath, 'utf8');
   const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
@@ -382,7 +410,9 @@ function parseTemplateFile(template: MigrationTemplate, filePath: string): Migra
     fileName: path.basename(filePath),
     filePath,
     tokens,
-    sections: parseSections(html, tokens, template),
+    sections: template === 'course'
+      ? augmentCourseSections(parseSections(html, tokens, template))
+      : parseSections(html, tokens, template),
   };
 }
 
@@ -669,6 +699,52 @@ export function buildPresetBlokFromSection(
         section_label: 'THIS COURSE INCLUDES',
         items: [],
       }],
+    });
+  }
+
+  if (section.component === 'course_introduction') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      title: section.sampleHeading || section.label || 'Exam Paper Overview',
+      paragraph_1: section.sampleDescription || '',
+      read_more_label: 'Read more',
+      read_less_label: 'Read less',
+    });
+  }
+
+  if (section.component === 'course_tabs') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      tabs: [],
+    });
+  }
+
+  if (section.component === 'course_learn_section') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: "What you'll learn",
+      heading_prefix: section.sampleHeading || section.label,
+      heading_accent: '',
+      items: [],
+    });
+  }
+
+  if (section.component === 'course_curriculum') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: 'Course content',
+      heading_prefix: section.sampleHeading || section.label,
+      heading_accent: '',
+    });
+  }
+
+  if (section.component === 'course_tutor_section') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: 'Your tutor',
+      heading_prefix: section.sampleHeading || section.label,
+      heading_accent: '',
+      stats: [],
     });
   }
 

@@ -45,6 +45,13 @@ const PAGE_WHITELIST = new Set(
   )).schema.body.component_whitelist as string[],
 );
 
+const COURSE_PAGE_WHITELIST = new Set(
+  JSON.parse(fs.readFileSync(
+    path.resolve(process.cwd(), '../../vls-online-v2/storyblok/components/course_page.json'),
+    'utf8',
+  )).schema.body.component_whitelist as string[],
+);
+
 function assert(condition: boolean, message: string, errors: string[]): void {
   if (!condition) errors.push(message);
 }
@@ -58,9 +65,10 @@ async function main() {
     const sectionMap = new Map(sections.map(section => [section.key, section]));
 
     for (const section of blueprint.sections) {
+      const whitelist = blueprint.template === 'course' ? COURSE_PAGE_WHITELIST : PAGE_WHITELIST;
       assert(SCHEMAS.has(section.component), `${blueprint.template}/${section.key}: missing schema ${section.component}`, errors);
       assert(RENDERERS.has(section.component), `${blueprint.template}/${section.key}: missing renderer ${section.component}`, errors);
-      assert(PAGE_WHITELIST.has(section.component), `${blueprint.template}/${section.key}: not in page.body whitelist ${section.component}`, errors);
+      assert(whitelist.has(section.component), `${blueprint.template}/${section.key}: not in ${blueprint.template === 'course' ? 'course_page' : 'page'}.body whitelist ${section.component}`, errors);
 
       const extracted = sectionMap.get(section.key)
         ?? sections.find(item => item.key === section.key)
@@ -73,7 +81,7 @@ async function main() {
         faq: null,
       });
 
-      if (section.component !== 'faq_section') {
+      if (section.component !== 'faq_section' && section.key !== 'course-tabs') {
         assert(Boolean(blok), `${blueprint.template}/${section.key}: buildBlokFromTemplateSection returned null`, errors);
       }
     }
