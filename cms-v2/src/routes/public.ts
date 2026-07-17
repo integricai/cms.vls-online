@@ -8,7 +8,7 @@ import type { BlogPost } from '../models/blog';
 const router = Router();
 
 const COURSE_FINDER_BANNER_RUNTIME = readFileSync(
-  join(process.cwd(), 'src/assets/course-finder-banner.runtime.js'),
+  join(__dirname, '../assets/course-finder-banner.runtime.js'),
   'utf8',
 );
 
