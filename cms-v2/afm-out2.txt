@@ -1,0 +1,45 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\nadir\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+SCRAPE courseDescription: {
+  introBold: 'ACCA AFM Exam Paper Overview',
+  introP1Len: 28,
+  introP2Len: 431,
+  bodyTextLen: 0
+}
+SCRAPE learnItems: [
+  'Advanced investment appraisal',
+  'Corporate risk management',
+  'Treasury & working capital',
+  'Mergers, acquisitions & valuations'
+]
+TEMPLATE learnItems: [
+  'Apply the IFRS conceptual framework and the professional & ethical duties of the accountant to real scenarios.',
+  'Prepare consolidated financial statements for complex groups, including associates and joint arrangements.',
+  'Account confidently for financial instruments, leases, provisions and deferred tax under current IFRS.',
+  'Report and analyse financial and non-financial performance for a range of stakeholders.',
+  'Evaluate current developments in corporate reporting and explain their practical impact.',
+  'Master case-study technique and time management to convert your knowledge into exam marks.'
+]
+MERGED intro P1: This course is for ACCA Strategic Professional students who want advanced financial management preparation. It prepares 
+MERGED intro P2 len: 431
+MERGED learnItems: [
+  'Advanced investment appraisal',
+  'Corporate risk management',
+  'Treasury & working capital',
+  'Mergers, acquisitions & valuations'
+]
+STORY intro paragraph_1 type: object true
+STORY intro paragraph_2 type: object true
+STORY p1 text: {"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"This course is for ACCA Strategic Professional students who want advanced financial management preparation. It prepares s
+STORY learn titles: [
+  'Advanced investment appraisal',
+  'Corporate risk management',
+  'Treasury & working capital',
+  'Mergers, acquisitions & valuations'
+]

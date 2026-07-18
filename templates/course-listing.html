@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ACCA Online Courses | ACCA Exam Preparation | Vertex Learning Solutions</title>
+<meta name="description" content="Study ACCA online with Vertex Learning Solutions. Explore ACCA Foundation, Applied Knowledge, Skills, Professional, revision, mock exam and study note courses." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --navy:#0E2A57; --ink:#15233D; --slate:#3D4A63;
+    --blue:#1E50C8; --blue-strong:#1A45B0; --blue-bright:#3B73F0;
+    --blue-50:#F2F6FF; --blue-100:#E7EEFD; --blue-200:#D6E2FB;
+    --green:#1E9E6A; --green-bg:#E3F4EC;
+    --amber:#F5A623;
+    --purple:#5B49D6; --purple-bg:#F2EEFC;
+    --teal:#1FAE8C; --teal-bg:#E2F5F0;
+    --orange:#C77B1E; --orange-bg:#FCEEDD;
+    --rose:#C2417A; --rose-bg:#FBEAF2;
+    --white:#FFF; --line:#E5EBF6; --line-soft:#EEF2FA;
+    --shadow-sm:0 1px 2px rgba(14,42,87,.05),0 1px 3px rgba(14,42,87,.04);
+    --shadow-md:0 6px 18px rgba(14,42,87,.07),0 2px 6px rgba(14,42,87,.05);
+    --shadow-lg:0 18px 48px rgba(14,42,87,.12),0 6px 16px rgba(14,42,87,.07);
+    --radius:16px; --radius-lg:22px; --maxw:1200px; --gutter:40px;
+  }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+  body{ margin:0; font-family:'Poppins',system-ui,-apple-system,sans-serif; color:var(--ink);
+    background:var(--white); font-size:16.5px; line-height:1.62; font-weight:400;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  h1,h2,h3,h4{ margin:0; color:var(--navy); font-weight:600; line-height:1.18; letter-spacing:-.01em; }
+  p{ margin:0; } a{ color:inherit; text-decoration:none; } img,svg{ display:block; }
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 var(--gutter); }
+  .accent{ color:var(--blue); font-style:italic; font-weight:600; }
+  .eyebrow{ font-size:12.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--blue); margin-bottom:16px; }
+  .stars{ color:var(--amber); letter-spacing:1px; }
+
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:9px; font-family:inherit;
+    font-size:15.5px; font-weight:500; padding:14px 26px; border-radius:12px; cursor:pointer;
+    border:1px solid transparent; transition:.18s ease; white-space:nowrap; }
+  .btn svg{ width:17px; height:17px; }
+  .btn-primary{ background:var(--blue); color:#fff; box-shadow:0 4px 14px rgba(30,80,200,.28); }
+  .btn-primary:hover{ background:var(--blue-strong); transform:translateY(-1px); box-shadow:0 8px 22px rgba(30,80,200,.32); }
+  .btn-ghost{ background:#fff; color:var(--navy); border-color:var(--line); }
+  .btn-ghost:hover{ border-color:var(--blue-200); background:var(--blue-50); }
+  .btn-outline-blue{ background:transparent; color:var(--navy); border-color:var(--blue-200); }
+  .btn-outline-blue:hover{ background:#fff; }
+
+  /* HEADER */
+  header{ position:sticky; top:0; z-index:50; background:rgba(255,255,255,.88); backdrop-filter:blur(12px); border-bottom:1px solid var(--line-soft); }
+  .nav{ display:flex; align-items:center; justify-content:space-between; height:74px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{ width:38px; height:38px; border-radius:10px; background:var(--blue); display:grid; place-items:center; color:#fff; font-weight:700; font-size:19px; box-shadow:0 4px 12px rgba(30,80,200,.3); }
+  .brand-name{ font-weight:700; font-size:18px; color:var(--navy); line-height:1; letter-spacing:-.01em; }
+  .brand-sub{ font-size:9.5px; font-weight:600; letter-spacing:.22em; color:var(--slate); text-transform:uppercase; margin-top:3px; }
+  .nav-links{ display:flex; gap:34px; }
+  .nav-links a{ font-size:15px; font-weight:500; color:var(--slate); transition:color .15s; }
+  .nav-links a:hover, .nav-links a.active{ color:var(--blue); }
+  .nav-right{ display:flex; align-items:center; gap:22px; }
+  .nav-right .signin{ font-size:15px; font-weight:500; color:var(--navy); }
+  .nav-right .signin:hover{ color:var(--blue); }
+  .menu-btn{ display:none; background:none; border:none; cursor:pointer; padding:6px; }
+
+  /* BREADCRUMB */
+  .crumb{ padding:22px 0 6px; }
+  .crumb ol{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; align-items:center; gap:9px; font-size:13px; color:var(--slate); }
+  .crumb a:hover{ color:var(--blue); }
+  .crumb .sep{ color:var(--blue-200); }
+  .crumb [aria-current]{ color:var(--navy); font-weight:500; }
+
+  /* HERO */
+  .hero{ padding:36px 0 56px; background:
+      radial-gradient(1100px 520px at 88% -8%, var(--blue-50) 0%, rgba(242,246,255,0) 60%); }
+  .hero-grid{ display:grid; grid-template-columns:1.08fr .92fr; gap:56px; align-items:center; }
+  .hero h1{ font-size:44px; font-weight:600; line-height:1.09; letter-spacing:-.024em; margin-bottom:20px; }
+  /* rotating tagline */
+  .rotator{ position:relative; min-height:58px; margin-bottom:24px; }
+  .rotator p{ position:absolute; inset:0; font-size:17px; color:var(--slate); line-height:1.6; max-width:540px;
+    opacity:0; transform:translateY(6px); transition:opacity .5s ease, transform .5s ease; pointer-events:none; }
+  .rotator p.on{ opacity:1; transform:none; }
+  .proof-list{ display:flex; flex-direction:column; gap:13px; margin-bottom:28px; }
+  .pf{ display:flex; align-items:flex-start; gap:12px; font-size:14.5px; color:var(--ink); line-height:1.55; max-width:560px; }
+  .pf .chk{ width:24px; height:24px; border-radius:7px; background:var(--green-bg); color:var(--green); display:grid; place-items:center; flex:none; margin-top:2px; }
+  .pf .chk svg{ width:13px; height:13px; }
+  .hero-cta{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:26px; }
+  .trust-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .trust-pill{ display:inline-flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--line);
+    border-radius:999px; padding:7px 15px; font-size:12.5px; font-weight:500; color:var(--navy); box-shadow:var(--shadow-sm); }
+  .trust-pill svg{ width:13px; height:13px; color:var(--blue); flex:none; }
+
+  /* video stage */
+  .video-stage{ position:relative; border-radius:var(--radius-lg); overflow:hidden; border:1px solid var(--blue-100);
+    background:
+      radial-gradient(520px 280px at 78% -20%, rgba(59,115,240,.16) 0%, rgba(59,115,240,0) 60%),
+      linear-gradient(155deg,#EAF1FF 0%,#DCE7FB 100%);
+    aspect-ratio:16/9.6; box-shadow:var(--shadow-md); }
+  /* Replace this block with the Vimeo embed:
+     <iframe src="https://player.vimeo.com/video/1174159520?h=72f0e61515&title=0&byline=0&portrait=0"
+             style="width:100%;height:100%;border:0;" allow="autoplay; fullscreen"></iframe> */
+  .vs-play{ position:absolute; inset:0; display:grid; place-items:center; }
+  .vs-play a{ width:74px; height:74px; border-radius:50%; background:var(--blue);
+    display:grid; place-items:center; box-shadow:0 10px 26px rgba(30,80,200,.4); transition:.18s; }
+  .vs-play a:hover{ transform:scale(1.06); }
+  .vs-play svg{ width:26px; height:26px; color:#fff; margin-left:3px; }
+  .vs-label{ position:absolute; left:26px; bottom:22px; }
+  .vs-label .t{ font-size:15.5px; font-weight:600; color:var(--navy); }
+  .vs-label .s{ font-size:12.5px; color:var(--slate); margin-top:2px; }
+
+  /* STATS BAND */
+  .stats-band{ padding:0 0 30px; }
+  .stats-inner{ background:var(--blue-50); border:1px solid var(--blue-100);
+    border-radius:var(--radius-lg); padding:34px 16px; display:grid; grid-template-columns:repeat(4,1fr); }
+  .stat{ text-align:center; padding:4px 20px; position:relative; }
+  .stat + .stat::before{ content:""; position:absolute; left:0; top:14%; height:72%; width:1px; background:var(--blue-200); }
+  .stat .num{ font-size:34px; font-weight:700; color:var(--navy); letter-spacing:-.02em; line-height:1; }
+  .stat .num .star{ color:var(--amber); font-size:24px; }
+  .stat .lab{ font-size:13px; color:var(--slate); margin-top:8px; line-height:1.4; }
+
+  /* ===== CATALOGUE: sidebar + grouped rows ===== */
+  .catalog{ padding:44px 0 60px; }
+  .cat-head{ max-width:680px; margin-bottom:36px; }
+  .cat-head h2{ font-size:35px; font-weight:600; letter-spacing:-.02em; line-height:1.14; margin-bottom:14px; }
+  .cat-head p{ font-size:16px; color:var(--slate); line-height:1.65; }
+  .lib-grid{ display:grid; grid-template-columns:280px 1fr; gap:32px; align-items:start; }
+
+  .sidebar{ position:sticky; top:96px; border-radius:var(--radius-lg); overflow:hidden;
+    border:1px solid var(--line); box-shadow:var(--shadow-md); background:#fff; }
+  .sb-head{ background:var(--navy); padding:22px 24px; }
+  .sb-head .k{ font-size:10.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:#8FB1E8; margin-bottom:5px; }
+  .sb-head .v{ font-size:18px; font-weight:600; color:#fff; letter-spacing:-.01em; }
+  .sb-label{ font-size:11px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--slate);
+    padding:18px 24px 10px; border-bottom:1px solid var(--line-soft); }
+  .sb-list{ list-style:none; margin:0; padding:0; }
+  .sb-item{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    font-family:inherit; font-size:14px; font-weight:500; color:var(--ink); text-align:left;
+    background:none; border:none; border-bottom:1px solid var(--line-soft); border-left:3px solid transparent;
+    padding:13px 24px 13px 21px; cursor:pointer; transition:.15s; }
+  .sb-item:last-child{ border-bottom:none; }
+  .sb-item:hover{ background:var(--blue-50); color:var(--blue); }
+  .sb-item.active{ background:var(--blue-50); border-left-color:var(--blue); color:var(--blue); font-weight:600; }
+  .sb-item .ct{ font-size:12px; font-weight:600; color:var(--slate); background:var(--line-soft);
+    border-radius:99px; padding:2px 10px; flex:none; }
+  .sb-item.active .ct{ background:var(--blue-100); color:var(--blue); }
+
+  .groups{ display:flex; flex-direction:column; gap:26px; }
+  .group{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); overflow:hidden; }
+  .group.hidden{ display:none; }
+  .group-head{ display:flex; align-items:center; gap:15px; padding:20px 26px; border-bottom:1px solid var(--line-soft); }
+  .group-head .bar{ width:4px; height:26px; border-radius:99px; flex:none; }
+  .group-head h3{ font-size:20px; font-weight:600; letter-spacing:-.015em; flex:1; }
+  .group-head .gcount{ font-size:13px; color:var(--slate); white-space:nowrap; }
+  .g-knowledge .bar{ background:var(--teal); }   .g-knowledge .code{ background:var(--teal-bg); color:var(--teal); border-color:#C6EBE1; }
+  .g-skills .bar{ background:var(--blue); }      .g-skills .code{ background:var(--blue-50); color:var(--blue); border-color:var(--blue-100); }
+  .g-pro .bar{ background:var(--purple); }       .g-pro .code{ background:var(--purple-bg); color:var(--purple); border-color:#E4DDF8; }
+  .g-bundles .bar{ background:var(--green); }    .g-bundles .code{ background:var(--green-bg); color:var(--green); border-color:#CBE9DA; }
+  .g-revision .bar{ background:var(--orange); }  .g-revision .code{ background:var(--orange-bg); color:var(--orange); border-color:#F5DFC2; }
+  .g-notes .bar{ background:var(--navy); }       .g-notes .code{ background:#EAEFF7; color:var(--navy); border-color:#D8E1EF; }
+  .g-mocks .bar{ background:var(--rose); }       .g-mocks .code{ background:var(--rose-bg); color:var(--rose); border-color:#F3D3E2; }
+  .g-ifrs .bar{ background:var(--blue-bright); } .g-ifrs .code{ background:var(--blue-50); color:var(--blue-bright); border-color:var(--blue-100); }
+
+  .row{ display:grid; grid-template-columns:64px 1fr auto; gap:20px; align-items:center;
+    padding:18px 26px; border-bottom:1px solid var(--line-soft); transition:.15s; }
+  .row:last-child{ border-bottom:none; }
+  .row:hover{ background:var(--blue-50); }
+  .row .code{ font-size:11.5px; font-weight:700; letter-spacing:.02em; border:1px solid;
+    border-radius:9px; padding:7px 0; text-align:center; }
+  .row .title{ font-size:15px; font-weight:600; color:var(--navy); line-height:1.35; }
+  .row:hover .title{ color:var(--blue); }
+  .row .meta{ font-size:13px; color:var(--slate); margin-top:2px; }
+  .row .see{ display:inline-flex; align-items:center; gap:6px; font-size:13.5px; font-weight:600; color:var(--blue); white-space:nowrap; }
+  .row .see svg{ width:14px; height:14px; transition:transform .18s; }
+  .row:hover .see svg{ transform:translateX(3px); }
+  .row.more{ background:var(--blue-50); }
+  .row.more .title{ color:var(--blue); }
+
+  /* LMS PANEL — single panel, not cards */
+  .lms{ background:var(--blue-50); border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft); padding:80px 0; }
+  .lms-grid{ display:grid; grid-template-columns:.9fr 1.1fr; gap:56px; align-items:center; }
+  .lms-grid h2{ font-size:34px; letter-spacing:-.02em; line-height:1.15; margin-bottom:16px; }
+  .lms-grid > div > p{ font-size:16px; color:var(--slate); line-height:1.68; }
+  .lms-grid p + p{ margin-top:14px; }
+  .device-row{ display:flex; gap:12px; flex-wrap:wrap; margin-top:24px; }
+  .device-pill{ display:inline-flex; align-items:center; gap:9px; background:#fff; border:1px solid var(--line);
+    border-radius:999px; padding:9px 18px; font-size:13.5px; font-weight:500; color:var(--navy); box-shadow:var(--shadow-sm); }
+  .device-pill svg{ width:15px; height:15px; color:var(--blue); }
+  .lms-panel{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); overflow:hidden; }
+  .lms-panel .lp-head{ padding:18px 26px; border-bottom:1px solid var(--line-soft);
+    font-size:11.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--slate); }
+  .lms-list{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr 1fr; }
+  .lms-list li{ display:flex; align-items:flex-start; gap:12px; padding:16px 24px; border-bottom:1px solid var(--line-soft); }
+  .lms-list li:nth-child(odd){ border-right:1px solid var(--line-soft); }
+  .lms-list li:nth-last-child(-n+2){ border-bottom:none; }
+  .lms-list .ico{ width:34px; height:34px; border-radius:9px; background:var(--blue-50); border:1px solid var(--blue-100);
+    color:var(--blue); display:grid; place-items:center; flex:none; }
+  .lms-list .ico svg{ width:16px; height:16px; }
+  .lms-list .t{ font-size:14px; font-weight:600; color:var(--navy); line-height:1.3; }
+  .lms-list .s{ font-size:12px; color:var(--slate); line-height:1.4; margin-top:2px; }
+
+  /* CTA */
+  .cta-band{ padding:70px 0 90px; }
+  .cta-panel{ background:
+      radial-gradient(640px 320px at 88% 120%, rgba(59,115,240,.12) 0%, rgba(59,115,240,0) 60%),
+      var(--blue-100);
+    border:1px solid var(--blue-200); border-radius:28px; padding:60px 56px; box-shadow:var(--shadow-sm); }
+  .cta-panel h2{ font-size:38px; font-weight:600; letter-spacing:-.02em; line-height:1.14; margin-bottom:14px; max-width:560px; }
+  .cta-panel p{ font-size:17.5px; color:var(--slate); max-width:600px; line-height:1.6; margin-bottom:28px; }
+  .cta-actions{ display:flex; gap:14px; flex-wrap:wrap; }
+
+  /* FOOTER */
+  footer{ border-top:1px solid var(--line); padding:68px 0 34px; }
+  .foot-grid{ display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:48px; margin-bottom:50px; }
+  .foot-about{ max-width:300px; }
+  .foot-about .brand{ margin-bottom:18px; }
+  .foot-about p{ font-size:14.5px; color:var(--slate); line-height:1.65; }
+  .foot-col h4{ font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--slate); margin-bottom:18px; }
+  .foot-col ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+  .foot-col a{ font-size:14.5px; color:var(--ink); transition:color .15s; }
+  .foot-col a:hover{ color:var(--blue); }
+  .foot-bottom{ display:flex; align-items:center; justify-content:space-between; padding-top:26px; border-top:1px solid var(--line); flex-wrap:wrap; gap:14px; }
+  .foot-bottom p{ font-size:13.5px; color:var(--slate); }
+  .foot-rating{ display:flex; align-items:center; gap:9px; font-size:13.5px; color:var(--slate); }
+
+  @media (max-width:980px){
+    .hero-grid{ grid-template-columns:1fr; gap:40px; }
+    .hero h1{ font-size:36px; }
+    .rotator{ min-height:84px; }
+    .stats-inner{ grid-template-columns:repeat(2,1fr); gap:24px 0; }
+    .stat + .stat::before{ display:none; }
+    .lib-grid{ grid-template-columns:1fr; }
+    .sidebar{ position:static; }
+    .sb-list{ display:flex; flex-wrap:wrap; padding:10px; gap:8px; }
+    .sb-item{ width:auto; border:1px solid var(--line)!important; border-radius:999px; padding:8px 16px; }
+    .sb-item.active{ background:var(--blue); color:#fff; border-color:var(--blue)!important; }
+    .sb-item.active .ct{ background:rgba(255,255,255,.22); color:#fff; }
+    .sb-label{ border-bottom:none; padding-bottom:0; }
+    .lms-grid{ grid-template-columns:1fr; gap:36px; }
+    .foot-grid{ grid-template-columns:1fr 1fr; gap:36px; }
+  }
+  @media (max-width:680px){
+    :root{ --gutter:22px; }
+    .nav-links,.nav-right .signin{ display:none; }
+    .menu-btn{ display:block; }
+    .hero{ padding:24px 0 44px; }
+    .hero h1{ font-size:29px; }
+    .rotator{ min-height:110px; }
+    .cat-head h2,.lms-grid h2,.cta-panel h2{ font-size:26px; }
+    .row{ grid-template-columns:56px 1fr; }
+    .row .see{ grid-column:2; justify-self:start; margin-top:4px; }
+    .lms-list{ grid-template-columns:1fr; }
+    .lms-list li:nth-child(odd){ border-right:none; }
+    .lms-list li:nth-last-child(-n+2){ border-bottom:1px solid var(--line-soft); }
+    .lms-list li:last-child{ border-bottom:none; }
+    .stats-inner{ grid-template-columns:1fr 1fr; }
+    .cta-panel{ padding:38px 26px; }
+    .foot-grid{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#">
+      <span class="brand-mark">V</span>
+      <span><span class="brand-name">Vertex</span><span class="brand-sub">Learning Solutions</span></span>
+    </a>
+    <nav class="nav-links">
+      <a href="#" class="active">Courses</a><a href="#">Subscription</a><a href="#">Live classes</a><a href="#">Reviews</a><a href="#">About</a>
+    </nav>
+    <div class="nav-right">
+      <a class="signin" href="#">Sign in</a>
+      <a class="btn btn-primary" href="#">Enrol now</a>
+      <button class="menu-btn" aria-label="Open menu"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E2A57" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </div>
+</header>
+
+<!-- BREADCRUMB -->
+<div class="wrap crumb">
+  <ol>
+    <li><a href="#">Home</a></li><li class="sep">/</li>
+    <li><a href="#">ACCA</a></li><li class="sep">/</li>
+    <li aria-current="page">Exam preparation</li>
+  </ol>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">ACCA · Exam preparation</div>
+      <h1>Complete your ACCA journey <span class="accent">with Vertex.</span></h1>
+      <div class="rotator" id="rotator">
+        <p class="on">Walk into your exam knowing the syllabus, the technique, and the marker's mindset — and walk out passed.</p>
+        <p>Master every syllabus area, every question type, and every exam technique that separates a pass from a 75+.</p>
+        <p>Turn months of confusion into a clear, week-by-week path from your first lecture to a confident pass.</p>
+      </div>
+      <div class="proof-list">
+        <div class="pf"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Detailed topic and question videos — neither unnecessarily long, nor too short to omit important details.</div>
+        <div class="pf"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Everything in one place — Vertex students never need any other source for resources or support.</div>
+        <div class="pf"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Tutor-led courses, active WhatsApp support, intensive testing and an academic support team behind every pass.</div>
+      </div>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#catalog">Browse all 60 courses
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+        <a class="btn btn-ghost" href="#">Book a free meeting</a>
+      </div>
+      <div class="trust-row">
+        <span class="trust-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Trusted ACCA content</span>
+        <span class="trust-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg> Students in 88 countries</span>
+        <span class="trust-pill"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01z"/></svg> Rated on Trustpilot</span>
+      </div>
+    </div>
+
+    <div class="video-stage">
+      <!-- Replace with Vimeo embed — URL in the CSS comment above -->
+      <div class="vs-play">
+        <a href="https://player.vimeo.com/video/1174159520" aria-label="Play introduction video">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </a>
+      </div>
+      <div class="vs-label">
+        <div class="t">How Vertex gets you exam-ready</div>
+        <div class="s">Watch the course introduction</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="stats-band">
+  <div class="wrap">
+    <div class="stats-inner">
+      <div class="stat"><div class="num">70%+</div><div class="lab">Pass rates</div></div>
+      <div class="stat"><div class="num">100+</div><div class="lab">Nationwide &amp; global positions</div></div>
+      <div class="stat"><div class="num">20+</div><div class="lab">Years of experience since 2007</div></div>
+      <div class="stat"><div class="num">4.9 <span class="star">★</span></div><div class="lab">Trustpilot rating</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CATALOGUE -->
+<section class="catalog" id="catalog">
+  <div class="wrap">
+    <div class="cat-head">
+      <div class="eyebrow">All courses</div>
+      <h2>Sixty ACCA courses, organised by <span class="accent">what you need.</span></h2>
+      <p>From Applied Knowledge through Strategic Professional — plus revision courses, study notes, mock exams and bundles. Pick a category to narrow the list.</p>
+    </div>
+
+    <div class="lib-grid">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <div class="sb-head">
+          <div class="k">Currently viewing</div>
+          <div class="v">ACCA Courses</div>
+        </div>
+        <div class="sb-label">Categories</div>
+        <ul class="sb-list" id="sbList">
+          <li><button class="sb-item active" data-cat="all">All courses <span class="ct">60</span></button></li>
+          <li><button class="sb-item" data-cat="knowledge">Applied Knowledge <span class="ct">4</span></button></li>
+          <li><button class="sb-item" data-cat="skills">Applied Skills <span class="ct">7</span></button></li>
+          <li><button class="sb-item" data-cat="pro">Strategic Professional <span class="ct">6</span></button></li>
+          <li><button class="sb-item" data-cat="bundles">Course Bundles <span class="ct">6</span></button></li>
+          <li><button class="sb-item" data-cat="revision">Revision Courses <span class="ct">9</span></button></li>
+          <li><button class="sb-item" data-cat="notes">Study Notes <span class="ct">21</span></button></li>
+          <li><button class="sb-item" data-cat="mocks">Mock Exams <span class="ct">5</span></button></li>
+          <li><button class="sb-item" data-cat="ifrs">IFRS <span class="ct">2</span></button></li>
+        </ul>
+      </aside>
+
+      <!-- GROUPS -->
+      <div class="groups" id="groups">
+
+        <!-- Applied Knowledge -->
+        <div class="group g-knowledge" data-cat="knowledge">
+          <div class="group-head"><span class="bar"></span><h3>ACCA Applied Knowledge</h3><span class="gcount">4 courses</span></div>
+          <a class="row" href="#"><span class="code">BT·F1</span><span><span class="title">Business and Technology — Complete Learning Pack</span><br><span class="meta">Lectures · quizzes · study notes · tutor support</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row" href="#"><span class="code">MA·F2</span><span><span class="title">Management Accounting — Complete Learning Pack</span><br><span class="meta">Lectures · quizzes · study notes · tutor support</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row" href="#"><span class="code">FA·F3</span><span><span class="title">Financial Accounting — Complete Learning Pack</span><br><span class="meta">Lectures · quizzes · study notes · tutor support</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row more" href="#"><span class="code">ALL</span><span><span class="title">Browse all 4 Applied Knowledge courses →</span></span><span class="see"></span></a>
+        </div>
+
+        <!-- Applied Skills -->
+        <div class="group g-skills" data-cat="skills">
+          <div class="group-head"><span class="bar"></span><h3>ACCA Applied Skills</h3><span class="gcount">7 courses</span></div>
+          <a class="row" href="#"><span class="code">LW·F4</span><span><span class="title">Corporate and Business Law</span><br><span class="meta">On-demand CBE paper · full syllabus coverage</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row" href="#"><span class="code">PM·F5</span><span><span class="title">Performance Management</span><br><span class="meta">Recorded course + weekly live · Syed M Ali / Haris Hanif</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row" href="#"><span class="code">TX·F6</span><span><span class="title">Taxation</span><br><span class="meta">Recorded course + twice-weekly live · Danish Malik</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row" href="#"><span class="code">FR·F7</span><span><span class="title">Financial Reporting</span><br><span class="meta">Recorded course + weekly live · Syed M Ali / Danish Malik</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row" href="#"><span class="code">AA·F8</span><span><span class="title">Audit and Assurance</span><br><span class="meta">Recorded course + weekly live · Shahrukh Yousuf</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row" href="#"><span class="code">FM·F9</span><span><span class="title">Financial Management</span><br><span class="meta">Recorded course + weekly live · Syed M Ali</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row more" href="#"><span class="code">ALL</span><span><span class="title">Browse all 7 Applied Skills courses →</span></span><span class="see"></span></a>
+        </div>
+
+        <!-- Strategic Professional -->
+        <div class="group g-pro" data-cat="pro">
+          <div class="group-head"><span class="bar"></span><h3>ACCA Strategic Professional</h3><span class="gcount">6 courses</span></div>
+          <a class="row" href="#"><span class="code">SBL</span><span><span class="title">Strategic Business Leader</span><br><span class="meta">Recorded course + weekly live · Liliya Kirylenka</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row" href="#"><span class="code">SBR</span><span><span class="title">Strategic Business Reporting</span><br><span class="meta">Recorded course + weekly live · Syed M Ali</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row" href="#"><span class="code">AFM</span><span><span class="title">Advanced Financial Management</span><br><span class="meta">Recorded course + weekly live · Syed M Ali</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row" href="#"><span class="code">APM</span><span><span class="title">Advanced Performance Management</span><br><span class="meta">Recorded course + weekly live · Liliya Kirylenka</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row" href="#"><span class="code">AAA</span><span><span class="title">Advanced Audit and Assurance</span><br><span class="meta">Recorded course + weekly live · Haris Hanif</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row" href="#"><span class="code">ATX</span><span><span class="title">Advanced Taxation</span><br><span class="meta">Recorded course · quizzes · study notes</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+        </div>
+
+        <!-- Bundles -->
+        <div class="group g-bundles" data-cat="bundles">
+          <div class="group-head"><span class="bar"></span><h3>ACCA Course Bundles</h3><span class="gcount">6 bundles</span></div>
+          <a class="row" href="https://vls-online.com/courses/fullaccess"><span class="code">365</span><span><span class="title">ACCA Annual Subscription Plan — all 14 courses</span><br><span class="meta">Knowledge, Skills &amp; Strategic Professional · 365 days access · £599</span></span><span class="see">View plan <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row more" href="#"><span class="code">ALL</span><span><span class="title">Browse all 6 course bundles →</span><br><span class="meta">Level bundles and multi-paper packs</span></span><span class="see"></span></a>
+        </div>
+
+        <!-- Revision -->
+        <div class="group g-revision" data-cat="revision">
+          <div class="group-head"><span class="bar"></span><h3>ACCA Revision Courses</h3><span class="gcount">9 courses</span></div>
+          <a class="row more" href="#"><span class="code">REV</span><span><span class="title">Browse all 9 revision courses →</span><br><span class="meta">Exam-focused question practice and technique for the final weeks before your sitting</span></span><span class="see"></span></a>
+        </div>
+
+        <!-- Notes -->
+        <div class="group g-notes" data-cat="notes">
+          <div class="group-head"><span class="bar"></span><h3>ACCA Study Notes</h3><span class="gcount">21 sets</span></div>
+          <a class="row more" href="https://vls-online.com/accanotes"><span class="code">PDF</span><span><span class="title">Browse all 21 study note sets →</span><br><span class="meta">Comprehensive, printable notes structured exactly to each paper's syllabus</span></span><span class="see"></span></a>
+        </div>
+
+        <!-- Mocks -->
+        <div class="group g-mocks" data-cat="mocks">
+          <div class="group-head"><span class="bar"></span><h3>ACCA Mock Exams</h3><span class="gcount">5 mocks</span></div>
+          <a class="row more" href="https://vls-online.com/mockexams"><span class="code">MOCK</span><span><span class="title">Browse all 5 mock exams →</span><br><span class="meta">Sit a full mock under exam conditions with examiner-style marking and feedback</span></span><span class="see"></span></a>
+        </div>
+
+        <!-- IFRS -->
+        <div class="group g-ifrs" data-cat="ifrs">
+          <div class="group-head"><span class="bar"></span><h3>ACCA IFRS</h3><span class="gcount">2 courses</span></div>
+          <a class="row" href="https://vls-online.com/ifrs"><span class="code">DipIFR</span><span><span class="title">ACCA Diploma in IFRS</span><br><span class="meta">Taught by Syed M Ali · 40,000+ professionals prepared</span></span><span class="see">View course <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+          <a class="row more" href="#"><span class="code">ALL</span><span><span class="title">Browse both IFRS courses →</span></span><span class="see"></span></a>
+        </div>
+
+        <!--
+          TEMPLATE NOTE: each <a class="row"> is one course. Duplicate rows to list every course
+          in a category, and replace the "Browse all →" rows once the full lists are in.
+        -->
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LMS -->
+<section class="lms">
+  <div class="wrap lms-grid">
+    <div>
+      <div class="eyebrow">The platform</div>
+      <h2>Study anywhere, <span class="accent">on any device.</span></h2>
+      <p>Our LMS contains everything needed to create a captivating learning experience — fully optimised for web and mobile, accessible from desktops, tablets and smartphones.</p>
+      <p>Pick up exactly where you left off, with your progress synced seamlessly across your phone, tablet and laptop. No downloads, no disruptions — just a smooth learning experience that fits around your life rather than the other way round.</p>
+      <div class="device-row">
+        <span class="device-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> Desktop</span>
+        <span class="device-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 18h.01"/></svg> Mobile</span>
+        <span class="device-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M12 18h.01"/></svg> Tablet</span>
+      </div>
+    </div>
+    <div class="lms-panel">
+      <div class="lp-head">Everything included in your course</div>
+      <ul class="lms-list">
+        <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m10 9 5 3-5 3z"/></svg></span><span><span class="t">HD lecture videos</span><br><span class="s">Optimised streaming, always available</span></span></li>
+        <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span><span><span class="t">Full syllabus coverage</span><br><span class="s">Every topic, every exam</span></span></li>
+        <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></span><span><span class="t">Exam practice Q&amp;A</span><br><span class="s">Questions with solution videos</span></span></li>
+        <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span><span><span class="t">Short revision notes</span><br><span class="s">Built for exam-day prep</span></span></li>
+        <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><span><span class="t">Graded quizzes</span><br><span class="s">Automated with full solutions</span></span></li>
+        <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg></span><span><span class="t">Assignment upload</span><br><span class="s">Submit work directly in-platform</span></span></li>
+        <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20v-1a6.5 6.5 0 0 1 13 0v1"/><circle cx="17.5" cy="9" r="2.5"/><path d="M15 20v-.5a5 5 0 0 1 6.5-4.77"/></svg></span><span><span class="t">Discussion boards</span><br><span class="s">Professional community access</span></span></li>
+        <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span><span class="t">WhatsApp support</span><br><span class="s">Direct tutor group access</span></span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-band">
+  <div class="wrap">
+    <div class="cta-panel">
+      <div class="eyebrow">Preparing ACCA students since 2007</div>
+      <h2>Start your ACCA preparation <span class="accent">today.</span></h2>
+      <p>Enrol in a single paper, or take the Annual Subscription Plan for complete access to every ACCA course — with live classes, tutor support and mocks included.</p>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="#">View the annual plan — £599</a>
+        <a class="btn btn-outline-blue" href="#">Book a free meeting
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-about">
+        <a class="brand" href="#"><span class="brand-mark">V</span><span><span class="brand-name">Vertex</span><span class="brand-sub">Learning Solutions</span></span></a>
+        <p>A dedicated team of academic experts helping accounting and finance professionals excel — through the most comprehensive online courses, delivered on our own learning platform.</p>
+      </div>
+      <div class="foot-col"><h4>Courses</h4><ul>
+        <li><a href="#">ACCA individual courses</a></li><li><a href="#">ACCA subscription plan</a></li>
+        <li><a href="#">CIMA exam preparation</a></li><li><a href="#">CMA exam preparation</a></li><li><a href="#">CIA exam preparation</a></li>
+      </ul></div>
+      <div class="foot-col"><h4>Company</h4><ul>
+        <li><a href="#">About Vertex</a></li><li><a href="#">Student reviews</a></li>
+        <li><a href="#">Live classes</a></li><li><a href="#">Contact us</a></li><li><a href="#">Book a meeting</a></li>
+      </ul></div>
+      <div class="foot-col"><h4>Support</h4><ul>
+        <li><a href="#">Help centre</a></li><li><a href="#">Terms &amp; conditions</a></li>
+        <li><a href="#">Privacy policy</a></li><li><a href="#">Cookie policy</a></li><li><a href="#">Complaint form</a></li>
+      </ul></div>
+    </div>
+    <div class="foot-bottom">
+      <p>© 2026 Vertex Learning Solutions · ACCA, CIMA, CMA (USA) &amp; CIA exam preparation</p>
+      <div class="foot-rating"><span class="stars">★★★★★</span> Rated 5.0 by students worldwide</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Rotating hero taglines
+  const lines = document.querySelectorAll('#rotator p');
+  let idx = 0;
+  setInterval(() => {
+    lines[idx].classList.remove('on');
+    idx = (idx + 1) % lines.length;
+    lines[idx].classList.add('on');
+  }, 5000);
+
+  // Category filter
+  const items = document.querySelectorAll('#sbList .sb-item');
+  const groups = document.querySelectorAll('#groups .group');
+  items.forEach(item => {
+    item.addEventListener('click', () => {
+      items.forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      const cat = item.dataset.cat;
+      groups.forEach(g => g.classList.toggle('hidden', cat !== 'all' && g.dataset.cat !== cat));
+    });
+  });
+</script>
+
+</body>
+</html>

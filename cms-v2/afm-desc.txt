@@ -1,0 +1,11 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\nadir\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+what-you-ll-learn band false
+desc 25px sections 5
+desc area :1fr 1fr;gap:10px;}@media(max-width:600px){.lgsmq2wjw8j-cards>*{grid-column:span 2!important;}.lgsmq2wjw8j .split-card-img{flex-direction:column!important;}.lgsmq2wjw8j .split-card-img-frame{width:100%!important;max-width:none!important;min-width:0!important;}.lgsmq2wjw8j .split-card-img-copy{padding:14px 0 0!important;width:100%!important;}.lgsmq2wjw8j .split-card-img-cta a{width:100%!important;display:block!important;}}</style> <div class="lgsmq2wjw8j" style="padding:24px 20px;"> <div style="font-family:'Poppins',sans-serif;text-transform:uppercase;margin:0 0 10px;font-size:11px;font-weight:600;color:#204280;letter-spacing:0.12em;">GETTING STARTED</div> <h2 style="font-family:'Poppins',sans-serif;margin:0 0 16px;line-height:1.2;font-size:28px;font-weight:700;color:#0f172a;letter-spacing:0em;" data-uniqid="1780830864488" class="">ACCA AFM - Advanced Financial Management</h2> <div class="lgsmq2wjw8j-cards"> <div style="grid-column:span 2;background:#f8f9fa;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;display:flex;gap:14px;align-items:flex-start;"> <div style="width:30px;height:30px;min-width:30px;background:#e8edf5;border-radius:50%;display:flex;align-items:center;

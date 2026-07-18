@@ -1,0 +1,25 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\nadir\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+bold p count 29
+bold p samples [
+  'Advanced investment appraisal',
+  'Corporate risk management',
+  'Treasury & working capital',
+  'Mergers, acquisitions & valuations',
+  'Syllabus Topic Videos',
+  'Kit Question Videos',
+  'Chapter-by-Chapter Quizzes',
+  'Exam-Focused Study Notes',
+  'Tutor Support via WhatsApp',
+  'Weekly Live Sessions',
+  'Final Mock Exam',
+  "WHAT'S INCLUDED"
+]
+learn section found true
+learn snippet WHAT YOU'LL LEARN</p><div class="ch-mqo23klq-lg" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"> <div style="display:flex;align-items:flex-start;gap:12px;background:#fcfcfc;border:1px solid #1e3a5f;border-radius:10px;padding:16px 18px;"><span style="color:#12681c;font-size:15px;font-weight:700;flex-shrink:0;margin-top:1px;">Ô£ô</span><div><p style="font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;color:#1e3a5f;margin:0 0 4px;line-height:1.4;"> Advanced investment appra
