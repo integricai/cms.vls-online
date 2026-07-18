@@ -391,52 +391,81 @@ function parseCmsCourseDescription(descSlice: string): ScrapedCourseDescription 
   };
 }
 
+type ZenlerDescriptionSection = { heading: string; html: string; text: string };
+
+function headingMatchesText(heading: string, text: string): boolean {
+  return text === heading || text.toLowerCase() === heading.toLowerCase();
+}
+
+function findZenlerSectionBody(slice: string, heading: string): { html: string; text: string } | null {
+  const paragraphPattern = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+  for (const match of slice.matchAll(paragraphPattern)) {
+    const text = stripTags(match[1]);
+    if (text.length < 20) continue;
+    if (headingMatchesText(heading, text)) continue;
+    return { html: match[0], text };
+  }
+  return null;
+}
+
+function extractZenlerDescriptionSections(cleaned: string): ZenlerDescriptionSection[] {
+  const headingPattern = /<(p|h2|h3)\b[^>]*font-size:\s*25px[^>]*>([\s\S]*?)<\/\1>/gi;
+  const headings: Array<{ index: number; endIndex: number; text: string }> = [];
+
+  for (const match of cleaned.matchAll(headingPattern)) {
+    const text = stripTags(match[2]);
+    if (!text) continue;
+    const index = match.index ?? 0;
+    headings.push({ index, endIndex: index + match[0].length, text });
+  }
+
+  const sections: ZenlerDescriptionSection[] = [];
+  for (let i = 0; i < headings.length; i += 1) {
+    const sliceEnd = i + 1 < headings.length ? headings[i + 1].index : cleaned.length;
+    const body = findZenlerSectionBody(cleaned.slice(headings[i].endIndex, sliceEnd), headings[i].text);
+    if (!body) continue;
+    sections.push({ heading: headings[i].text, html: body.html, text: body.text });
+  }
+
+  return sections;
+}
+
+function buildZenlerCourseDescription(sections: ZenlerDescriptionSection[]): ScrapedCourseDescription {
+  return {
+    icon: '📖',
+    title: 'About This Course',
+    introBold: sections[0]?.heading ?? '',
+    introP1: sections[0]?.text ?? '',
+    introP2: '',
+    bodyHtml: sections.slice(1).map(section => `<h3>${section.heading}</h3>${section.html}`).join('\n'),
+    bodyText: sections.slice(1).map(section => `${section.heading}\n${section.text}`).join('\n\n'),
+    source: 'zenler',
+  };
+}
+
 function parseZenlerCourseDescription(descSlice: string): ScrapedCourseDescription | null {
   const cleaned = descSlice
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<!--[\s\S]*?-->/g, ' ');
 
-  const sections: Array<{ heading: string; html: string; text: string }> = [];
+  const pairedSections = extractZenlerDescriptionSections(cleaned);
+  if (pairedSections.length) {
+    return buildZenlerCourseDescription(pairedSections);
+  }
+
+  const legacySections: ZenlerDescriptionSection[] = [];
   const sectionPattern = /<p[^>]*font-size:\s*25px[^>]*>([\s\S]*?)<\/p>\s*(<p[^>]*>[\s\S]*?<\/p>)/gi;
   for (const match of cleaned.matchAll(sectionPattern)) {
     const heading = stripTags(match[1]);
     const sectionHtml = match[2].trim();
     const text = stripTags(sectionHtml);
-    if (heading && text) sections.push({ heading, html: sectionHtml, text });
+    if (heading && text && !headingMatchesText(heading, text)) {
+      legacySections.push({ heading, html: sectionHtml, text });
+    }
   }
-
-  const headings = extractAllMatches(cleaned, /<p[^>]*font-size:\s*25px[^>]*>([\s\S]*?)<\/p>/gi)
-    .map(stripTags)
-    .filter(Boolean);
-  const dynamicParagraphs = extractAllMatches(cleaned, /<p[^>]*class="[^"]*dynamic-text[^"]*"[^>]*>([\s\S]*?)<\/p>/gi)
-    .map(html => ({ html, text: stripTags(html) }))
-    .filter(item => item.text.length > 20);
-
-  if (sections.length) {
-    return {
-      icon: '📖',
-      title: 'About This Course',
-      introBold: sections[0]?.heading ?? '',
-      introP1: sections[0]?.text ?? '',
-      introP2: sections[1]?.text ?? '',
-      bodyHtml: sections.slice(2).map(section => `<h3>${section.heading}</h3>${section.html}`).join('\n'),
-      bodyText: sections.slice(2).map(section => `${section.heading}\n${section.text}`).join('\n\n'),
-      source: 'zenler',
-    };
-  }
-
-  if (dynamicParagraphs.length) {
-    return {
-      icon: '📖',
-      title: 'About This Course',
-      introBold: headings[0] ?? '',
-      introP1: dynamicParagraphs[0]?.text ?? '',
-      introP2: dynamicParagraphs[1]?.text ?? '',
-      bodyHtml: dynamicParagraphs.slice(2).map(item => item.html).join('\n'),
-      bodyText: dynamicParagraphs.slice(2).map(item => item.text).join('\n\n'),
-      source: 'zenler',
-    };
+  if (legacySections.length) {
+    return buildZenlerCourseDescription(legacySections);
   }
 
   const plainParagraphs = extractAllMatches(cleaned, /<p[^>]*>([\s\S]*?)<\/p>/gi)
@@ -445,7 +474,10 @@ function parseZenlerCourseDescription(descSlice: string): ScrapedCourseDescripti
 
   if (!plainParagraphs.length) return null;
 
-  const introBold = headings[0] ?? '';
+  const legacyHeadings = extractAllMatches(cleaned, /<p[^>]*font-size:\s*25px[^>]*>([\s\S]*?)<\/p>/gi)
+    .map(stripTags)
+    .filter(Boolean);
+  const introBold = legacyHeadings[0] ?? '';
 
   return {
     icon: '📖',
@@ -843,3 +875,8 @@ export async function scrapeCoursePage(sourceUrl: string): Promise<ScrapedCourse
 }
 
 export { parseTabPanelBlocks };
+
+/** Exported for unit tests — parses course description blocks from full page HTML. */
+export function parseCourseDescriptionFromHtml(html: string): ScrapedCourseDescription | null {
+  return parseCourseDescription(html);
+}

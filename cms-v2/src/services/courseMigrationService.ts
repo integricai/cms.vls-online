@@ -413,6 +413,62 @@ function collectGenericWarnings(scraped: ScrapedGenericPage): string[] {
   return warnings;
 }
 
+function pickText(...values: Array<string | undefined | null>): string {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) return trimmed;
+  }
+  return '';
+}
+
+function enrichCourseStructureBody(
+  body: Record<string, unknown>[],
+  scraped: ScrapedCoursePage,
+  zenlerCourseId: string,
+  destinationSlug: string,
+): Record<string, unknown>[] {
+  const courseRef = pickText(
+    scraped.courseCode,
+    destinationSlug.toUpperCase(),
+    scraped.slug.toUpperCase(),
+    zenlerCourseId,
+  );
+
+  return body.map(blok => {
+    const component = typeof blok.component === 'string' ? blok.component : '';
+
+    if (component === 'course_hero_layout' && Array.isArray(blok.left)) {
+      return {
+        ...blok,
+        left: blok.left.map(item => {
+          if (!item || typeof item !== 'object') return item;
+          const hero = item as Record<string, unknown>;
+          return hero.component === 'course_hero'
+            ? { ...hero, zenler_course_id: zenlerCourseId || hero.zenler_course_id }
+            : hero;
+        }),
+      };
+    }
+
+    if (component === 'course_curriculum') {
+      return {
+        ...blok,
+        course_id: courseRef,
+        zenler_course_id: zenlerCourseId || blok.zenler_course_id,
+      };
+    }
+
+    if (component === 'course_tutor_section') {
+      return {
+        ...blok,
+        name: pickText(typeof blok.name === 'string' ? blok.name : undefined, 'Course tutor'),
+      };
+    }
+
+    return blok;
+  });
+}
+
 async function resolveZenlerCourseId(scraped: ScrapedCoursePage): Promise<string> {
   if (scraped.zenlerCourseId) return scraped.zenlerCourseId;
   const courses = await listCourses();
@@ -1087,18 +1143,31 @@ export async function generatePageStructure(
   const librarySync = await syncLibrarySafely(config, template, warnings);
   const presetBloksBySection = librarySync?.presetBloksBySection ?? null;
 
-  const body = pageBuilderLegal
+  const destinationSlug = resolveDestinationSlug(page);
+
+  let body = pageBuilderLegal
     ? buildMinimalLegalStructureBody(blueprint, presetBloksBySection)
     : blueprint.sections.map(section => (
       presetBloksBySection?.[section.key] ?? buildPresetBlokFromSection(blueprint, section)
     ));
 
-  const destinationSlug = resolveDestinationSlug(page);
+  let zenlerCourseId = '';
+  if (template === 'course') {
+    const courseScraped = scrapedRaw as ScrapedCoursePage;
+    zenlerCourseId = await resolveZenlerCourseId(courseScraped);
+    body = enrichCourseStructureBody(body as Record<string, unknown>[], courseScraped, zenlerCourseId, destinationSlug);
+    if (!zenlerCourseId) {
+      warnings.push(
+        'Zenler course ID was not found in the scrape or CMS course list. Structure was generated with blank zenler_course_id — set it in Storyblok before migrating pricing/curriculum.',
+      );
+    }
+  }
+
   const fullSlug = storyFullSlug(template, destinationSlug);
   const rootComponent = rootComponentForTemplate(template);
 
   const content: Record<string, unknown> = template === 'course'
-    ? { component: rootComponent, title: page.title || destinationSlug, zenler_course_id: '', seo: [], body }
+    ? { component: rootComponent, title: page.title || destinationSlug, zenler_course_id: zenlerCourseId, seo: [], body }
     : { component: rootComponent, seo: [], body };
 
   let parentId: number | undefined;

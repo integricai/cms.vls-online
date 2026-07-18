@@ -813,20 +813,24 @@ export default function ContentMigrationTab() {
               </p>
               <ul className="mt-2 space-y-1">
                 {(structureResult?.templateReference ?? templateReference)?.sections.map(section => {
+                  const isCourseTemplate = template === 'course'
+                    || (structureResult?.templateReference ?? templateReference)?.template === 'course';
                   const source = genericScraped?.sectionMatchSource?.[section.key];
                   const confidence = genericScraped?.sectionMatchConfidence?.[section.key];
                   return (
                     <li key={section.key} className="flex items-center gap-2">
                       <span>{section.label} → {section.component}</span>
-                      {source === 'live' && (
+                      {isCourseTemplate ? (
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                          Course blueprint
+                        </span>
+                      ) : source === 'live' ? (
                         <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Live match</span>
-                      )}
-                      {source === 'ai' && (
+                      ) : source === 'ai' ? (
                         <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
                           AI-matched{confidence !== undefined ? ` · ${Math.round(confidence * 100)}% confidence` : ''}
                         </span>
-                      )}
-                      {!source && (
+                      ) : (
                         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">Unmatched</span>
                       )}
                     </li>
