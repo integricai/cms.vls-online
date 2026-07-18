@@ -312,6 +312,95 @@ export async function getStoryContentById(
   }
 }
 
+export interface StoryblokStoryRecord extends StoryblokStoryRef {
+  is_folder?: boolean;
+  content?: Record<string, unknown>;
+}
+
+export async function getStoryById(
+  config: StoryblokConfig,
+  storyId: number,
+): Promise<StoryblokStoryRecord | null> {
+  try {
+    const data = await storyblokRequest<{ story?: StoryblokStoryRecord }>(
+      config,
+      'GET',
+      `/stories/${storyId}`,
+    );
+    return data.story ?? null;
+  } catch (err) {
+    if (isStoryblokApiError(err) && err.status === 404) return null;
+    throw err;
+  }
+}
+
+export async function listStories(
+  config: StoryblokConfig,
+  query: Record<string, string | number | boolean | undefined> = {},
+): Promise<StoryblokStoryRecord[]> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== '') params.set(key, String(value));
+  }
+
+  const stories: StoryblokStoryRecord[] = [];
+  let page = 1;
+  const perPage = Number(query.per_page ?? 100);
+
+  while (true) {
+    params.set('page', String(page));
+    params.set('per_page', String(perPage));
+    const data = await storyblokRequest<{ stories?: StoryblokStoryRecord[] }>(
+      config,
+      'GET',
+      `/stories?${params.toString()}`,
+    );
+    const batch = data.stories ?? [];
+    stories.push(...batch);
+    if (batch.length < perPage) break;
+    page += 1;
+  }
+
+  return stories;
+}
+
+export async function updateStoryById(
+  config: StoryblokConfig,
+  storyId: number,
+  input: {
+    name: string;
+    slug: string;
+    parentId?: number;
+    content: Record<string, unknown>;
+    publish?: boolean;
+    isFolder?: boolean;
+  },
+): Promise<StoryblokStoryRef> {
+  const content = input.isFolder
+    ? input.content
+    : sanitizeStoryContentForStoryblok(input.content);
+
+  const payload = {
+    story: {
+      name: input.name,
+      slug: input.slug,
+      parent_id: input.parentId,
+      ...(input.isFolder
+        ? { is_folder: true }
+        : { content }),
+    },
+    publish: input.publish ? 1 : 0,
+  };
+
+  const data = await storyblokRequest<{ story: StoryblokStoryRef }>(
+    config,
+    'PUT',
+    `/stories/${storyId}`,
+    payload,
+  );
+  return data.story;
+}
+
 export async function findStoryBySlug(
   config: StoryblokConfig,
   slug: string,

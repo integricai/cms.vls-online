@@ -1,6 +1,6 @@
 import type { ScrapedCoursePage } from '../../shared/migrationTypes';
 import type { ParsedCourseTemplate } from './courseTemplateParser';
-import { DEFAULT_TRUSTPILOT_GRID_EMBED } from '../../shared/trustpilotDefaults';
+import { DEFAULT_TRUSTPILOT_CAROUSEL_EMBED } from '../../shared/trustpilotDefaults';
 import { loadCourseTemplateFile } from './courseTemplateParser';
 import { sanitizeBlokForStoryblok } from './migrationTemplateRegistry';
 import {
@@ -302,7 +302,7 @@ export function buildCourseStoryblokFromTemplate(
     _uid: uid(),
     component: 'testimonials',
     layout: 'trustpilot',
-    trustpilot_embed: DEFAULT_TRUSTPILOT_GRID_EMBED,
+    trustpilot_embed: DEFAULT_TRUSTPILOT_CAROUSEL_EMBED,
     eyebrow: data.reviewsEyebrow,
     title_prefix: data.reviewsHeadingPrefix,
     title_accent: data.reviewsHeadingAccent,

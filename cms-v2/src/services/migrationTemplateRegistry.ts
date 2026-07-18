@@ -6,7 +6,7 @@ import type {
   TemplateDesignTokens,
   TemplateSectionBlueprint,
 } from '../../shared/migrationTemplateTypes';
-import { DEFAULT_TRUSTPILOT_GRID_EMBED } from '../../shared/trustpilotDefaults';
+import { DEFAULT_TRUSTPILOT_CAROUSEL_EMBED } from '../../shared/trustpilotDefaults';
 import { coerceBlokRichtextFields } from './storyblokRichtext';
 export class MigrationTemplateError extends Error {
   status: number;
@@ -787,7 +787,7 @@ export function buildPresetBlokFromSection(
     return sanitizeBlokForStoryblok({
       ...base,
       layout: isCourseTemplate ? 'trustpilot' : 'course_reviews',
-      trustpilot_embed: isCourseTemplate ? DEFAULT_TRUSTPILOT_GRID_EMBED : undefined,
+      trustpilot_embed: isCourseTemplate ? DEFAULT_TRUSTPILOT_CAROUSEL_EMBED : undefined,
       eyebrow: section.label,
       title_prefix: section.sampleHeading || 'What students say',
       subtitle: section.sampleDescription || '',
