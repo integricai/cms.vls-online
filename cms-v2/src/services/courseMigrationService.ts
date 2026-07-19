@@ -771,7 +771,13 @@ export async function buildGenericStoryblokContentAsync(
     }
 
     const styled = await stylizeBlok(blok, template, section.key, presetBloksBySection, config);
-    if (styled) body.push(styled);
+    if (styled) {
+      body.push(styled);
+    } else if (allowTemplateFallback) {
+      const preset = presetBloksBySection?.[section.key]
+        ?? buildPresetBlokFromSection(blueprint, section);
+      if (preset) body.push(preset);
+    }
   }
 
   if (!body.length) {

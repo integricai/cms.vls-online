@@ -32,6 +32,7 @@ import {
   parseStudyNotesHeroFields,
   parseLmsFeatures,
   parseDevicePills,
+  parseNotesTableGroups,
   stripTemplateTags,
 } from './templateSectionParsers';
 import { isPageBuilderLegalHtml, parsePageBuilderLegalSections } from './pageBuilderLegalParser';
@@ -257,8 +258,11 @@ function enrichSection(key: string, sectionHtml: string, base: ScrapedTemplateSe
   if (sectionHtml.includes('rel-row')) {
     enriched.cards = parseRelatedRows(sectionHtml);
   }
-  if (sectionHtml.includes('class="group"') || sectionHtml.includes('class="catalog"')) {
+  if (sectionHtml.includes('class="group"') || (sectionHtml.includes('class="catalog"') && !sectionHtml.includes('table.notes'))) {
     enriched.groups = parseCatalogGroups(sectionHtml);
+  }
+  if (sectionHtml.includes('table class="notes"') || sectionHtml.includes('table-shell')) {
+    enriched.groups = parseNotesTableGroups(sectionHtml);
   }
   if (sectionHtml.includes('sb-head')) {
     enriched.cardTitle = firstMatch(sectionHtml, /<div class="sb-head"[^>]*>[\s\S]*?<div class="v"[^>]*>([\s\S]*?)<\/div>/i);

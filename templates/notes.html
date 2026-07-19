@@ -211,6 +211,41 @@
   .rel-row svg{ width:15px; height:15px; color:var(--blue); flex:none; transition:transform .18s; }
   .rel-row:hover svg{ transform:translateX(3px); }
 
+  /* NOTES TABLE */
+  .table-shell{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-md); overflow:hidden; }
+  .table-shell + .table-shell{ margin-top:26px; }
+  .table-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .nt-caption{ display:flex; align-items:center; gap:15px; padding:20px 26px; border-bottom:1px solid var(--line-soft); }
+  .nt-caption .bar{ width:4px; height:26px; border-radius:99px; flex:none; }
+  .nt-caption .bar.fd{ background:var(--green); }
+  .nt-caption .bar.pq{ background:var(--purple); }
+  .nt-caption h3{ font-size:19px; flex:1; }
+  .nt-caption span{ font-size:13px; color:var(--slate); white-space:nowrap; }
+  table.notes{ width:100%; border-collapse:collapse; min-width:640px; }
+  .notes thead th{ background:var(--navy); color:#fff; text-align:left;
+    font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+    padding:14px 20px; white-space:nowrap; }
+  .notes thead th:first-child{ padding-left:26px; }
+  .notes tbody td{ padding:15px 20px; border-bottom:1px solid var(--line-soft); vertical-align:middle; font-size:14px; color:var(--ink); }
+  .notes tbody td:first-child{ padding-left:26px; }
+  .notes tbody tr:last-child td{ border-bottom:none; }
+  .notes tbody tr{ transition:background .15s; }
+  .notes tbody tr:hover{ background:var(--blue-50); }
+  .notes tbody tr.current{ background:var(--purple-bg); }
+  .notes .n-code{ font-size:11.5px; font-weight:700; letter-spacing:.02em; border:1px solid;
+    border-radius:9px; padding:6px 0; width:64px; text-align:center; display:inline-block; }
+  .notes .n-code.fd{ background:var(--green-bg); color:var(--green); border-color:#CBE9DA; }
+  .notes .n-code.pq{ background:var(--purple-bg); color:var(--purple); border-color:#E4DDF8; }
+  .notes .n-title{ font-size:14.5px; font-weight:600; color:var(--navy); }
+  .notes .n-pages{ font-size:13px; color:var(--slate); white-space:nowrap; }
+  .notes .n-pages b{ color:var(--navy); font-weight:600; }
+  .notes .see{ display:inline-flex; align-items:center; gap:6px; font-size:13.5px; font-weight:600; color:var(--blue); white-space:nowrap; }
+  .notes .see svg{ width:14px; height:14px; transition:transform .18s; }
+  .notes tbody tr:hover .see svg{ transform:translateX(3px); }
+  .notes .here{ font-size:11.5px; font-weight:600; color:var(--purple); background:#fff; border:1px solid #E4DDF8;
+    border-radius:7px; padding:4px 10px; white-space:nowrap; }
+
   /* CTA */
   .cta-band{ padding:20px 0 90px; }
   .cta-panel{ background:
@@ -473,11 +508,60 @@
         <span style="flex:1;"><span class="t">ACCA Past Exam Papers</span><br><span class="s">Practise real past questions alongside your notes</span></span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
-      <a class="rel-row" href="https://vls-online.com/accanotes">
-        <span class="code">ALL</span>
-        <span style="flex:1;"><span class="t">ACCA Complete Study Notes — all papers</span><br><span class="s">Browse note sets for every ACCA paper, Knowledge to Strategic Professional</span></span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ALL ACCA NOTES TABLE -->
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Complete notes for every paper</div>
+      <h2>Browse study notes for <span class="accent">all ACCA papers.</span></h2>
+      <p>The AAA notes are part of a full series covering every ACCA paper — from the Foundation Diploma through to Strategic Professional. Every set is written by the VLS academic team, exam-focused, and available as an online ebook with a downloadable PDF.</p>
+    </div>
+
+    <!-- Foundation Diploma -->
+    <div class="table-shell">
+      <div class="nt-caption"><span class="bar fd"></span><h3>ACCA Foundation Diploma Study Notes</h3><span>4 papers</span></div>
+      <div class="table-scroll">
+        <table class="notes">
+          <thead><tr><th>Paper</th><th>Complete notes</th><th>Length</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><span class="n-code fd">FA1</span></td><td><span class="n-title">Recording Financial Transactions</span></td><td class="n-pages"><b>121</b> pages</td><td><a class="see" href="https://vls-online.com/courses/fa1notes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr><td><span class="n-code fd">MA1</span></td><td><span class="n-title">Management Information</span></td><td class="n-pages"><b>96</b> pages</td><td><a class="see" href="https://vls-online.com/courses/ma1notes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr><td><span class="n-code fd">FA2</span></td><td><span class="n-title">Maintaining Financial Records</span></td><td class="n-pages"><b>124</b> pages</td><td><a class="see" href="https://vls-online.com/courses/fa2notes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr><td><span class="n-code fd">MA2</span></td><td><span class="n-title">Maintaining Costs and Finance</span></td><td class="n-pages"><b>194</b> pages</td><td><a class="see" href="https://vls-online.com/courses/ma2notes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Professional Qualification -->
+    <div class="table-shell">
+      <div class="nt-caption"><span class="bar pq"></span><h3>ACCA Professional Qualification Study Notes</h3><span>15 papers</span></div>
+      <div class="table-scroll">
+        <table class="notes">
+          <thead><tr><th>Paper</th><th>Complete notes</th><th>Length</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><span class="n-code pq">BT·F1</span></td><td><span class="n-title">Business and Technology</span></td><td class="n-pages"><b>380</b> pages</td><td><a class="see" href="https://vls-online.com/courses/btnotes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr><td><span class="n-code pq">MA·F2</span></td><td><span class="n-title">Management Accounting</span></td><td class="n-pages"><b>218</b> pages</td><td><a class="see" href="https://vls-online.com/courses/f2notes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr><td><span class="n-code pq">FA·F3</span></td><td><span class="n-title">Financial Accounting</span></td><td class="n-pages"><b>179</b> pages</td><td><a class="see" href="https://vls-online.com/courses/f3notes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr><td><span class="n-code pq">LW·F4</span></td><td><span class="n-title">Corporate and Business Law (English Law)</span></td><td class="n-pages"><b>296</b> pages</td><td><a class="see" href="https://vls-online.com/courses/f4notes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr><td><span class="n-code pq">PM·F5</span></td><td><span class="n-title">Performance Management</span></td><td class="n-pages"><b>146</b> pages</td><td><a class="see" href="https://vls-online.com/courses/f5notes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr><td><span class="n-code pq">TX·F6</span></td><td><span class="n-title">Taxation (UK)</span></td><td class="n-pages"><b>72</b> pages</td><td><a class="see" href="https://vls-online.com/courses/f6notes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr><td><span class="n-code pq">FR·F7</span></td><td><span class="n-title">Financial Reporting</span></td><td class="n-pages"><b>182</b> pages</td><td><a class="see" href="https://vls-online.com/courses/f7notes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr><td><span class="n-code pq">AA·F8</span></td><td><span class="n-title">Audit &amp; Assurance</span></td><td class="n-pages"><b>204</b> pages</td><td><a class="see" href="https://vls-online.com/courses/f8notes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr><td><span class="n-code pq">FM·F9</span></td><td><span class="n-title">Financial Management</span></td><td class="n-pages"><b>181</b> pages</td><td><a class="see" href="https://vls-online.com/courses/f9notes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr><td><span class="n-code pq">SBR</span></td><td><span class="n-title">Strategic Business Reporting</span></td><td class="n-pages"><b>250</b> pages</td><td><a class="see" href="https://vls-online.com/courses/sbrnotes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr><td><span class="n-code pq">SBL</span></td><td><span class="n-title">Strategic Business Leader</span></td><td class="n-pages"><b>157</b> pages</td><td><a class="see" href="https://vls-online.com/courses/sblnotes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr><td><span class="n-code pq">AFM</span></td><td><span class="n-title">Advanced Financial Management</span></td><td class="n-pages"><b>170</b> pages</td><td><a class="see" href="https://vls-online.com/courses/afmnotes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr><td><span class="n-code pq">APM</span></td><td><span class="n-title">Advanced Performance Management</span></td><td class="n-pages"><b>115</b> pages</td><td><a class="see" href="https://vls-online.com/courses/apmnotes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+            <tr class="current"><td><span class="n-code pq">AAA</span></td><td><span class="n-title">Advanced Audit &amp; Assurance</span></td><td class="n-pages"><b>210</b> pages</td><td><span class="here">You're here</span></td></tr>
+            <tr><td><span class="n-code pq">DipIFR</span></td><td><span class="n-title">Diploma in International Financial Reporting</span></td><td class="n-pages"><b>208</b> pages</td><td><a class="see" href="https://vls-online.com/courses/ifrsnotes">Visit page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </section>

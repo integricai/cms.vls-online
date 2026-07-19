@@ -334,13 +334,16 @@ export function buildBlokFromTemplateSection(
 
   if (section.component === 'article_library') {
     const colorTones = ['blue', 'green', 'amber', 'purple', 'teal', 'navy', 'rose', 'gold'];
+    const isNotesTable = section.key.includes('notes-table') || section.key.includes('acca-notes');
     const topics = hasItems(extracted?.groups)
       ? extracted.groups.map((group, index) => ({
           _uid: uid(),
           component: 'article_topic_group',
           topic_key: slugify(group.label),
           label: group.label,
-          color_tone: colorTones[index % colorTones.length],
+          color_tone: isNotesTable
+            ? (group.label.toLowerCase().includes('foundation') ? 'green' : 'purple')
+            : colorTones[index % colorTones.length],
           articles: group.items.map(item => ({
             _uid: uid(),
             component: 'article_link_item',
@@ -354,12 +357,11 @@ export function buildBlokFromTemplateSection(
 
     return sanitizeBlokForStoryblok({
       ...base,
-      sidebar_label: 'Currently viewing',
-      sidebar_value: pickText(extracted?.cardTitle, extracted?.headingPrefix, section.label),
-      // Explicitly override the component-library preset's `note_text` (a design-reference
-      // sample, not real page content) — otherwise it survives the preset merge whenever no
-      // real note was extracted from the live page.
-      note_text: '',
+      sidebar_label: pickText(extracted?.eyebrow, isNotesTable ? 'Complete notes for every paper' : 'Currently viewing'),
+      sidebar_value: pickText(extracted?.headingPrefix, section.sampleHeading, section.label),
+      note_text: isNotesTable
+        ? pickText(extracted?.lead, extracted?.body, section.sampleDescription)
+        : '',
       ...(topics ? { topics } : {}),
     });
   }

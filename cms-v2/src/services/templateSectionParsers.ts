@@ -455,6 +455,27 @@ export function parseRelatedRows(sectionHtml: string): ScrapedTemplateSection['c
     .filter(item => item.title);
 }
 
+export function parseNotesTableGroups(sectionHtml: string): ScrapedTemplateSection['groups'] {
+  return sectionHtml.split(/<div class="table-shell">/i).slice(1)
+    .map(part => {
+      const label = firstMatch(part, /<h3[^>]*>([\s\S]*?)<\/h3>/i);
+      const items = allMatches(part, /<tr[^>]*>([\s\S]*?)<\/tr>/gi)
+        .map(match => {
+          const row = match[1] ?? match[0];
+          if (!row.includes('n-code')) return null;
+          const code = firstMatch(row, /<span class="n-code[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
+          const title = firstMatch(row, /<span class="n-title"[^>]*>([\s\S]*?)<\/span>/i);
+          const pages = stripTemplateTags(row.match(/<td class="n-pages"[^>]*>([\s\S]*?)<\/td>/i)?.[1] ?? '');
+          const url = row.match(/<a class="see"[^>]+href=["']([^"']+)["']/i)?.[1] ?? '';
+          if (!title) return null;
+          return { code, title, description: pages, url };
+        })
+        .filter((item): item is { code: string; title: string; description: string; url: string } => Boolean(item));
+      return { label, items };
+    })
+    .filter(group => group.label && group.items.length);
+}
+
 export function parseCatalogGroups(sectionHtml: string): ScrapedTemplateSection['groups'] {
   return sectionHtml.split(/<div class="group[^"]*"[^>]*>/i).slice(1)
     .map(part => {

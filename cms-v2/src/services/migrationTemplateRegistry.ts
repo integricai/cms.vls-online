@@ -177,6 +177,7 @@ function componentForSection(key: string, classes: string[], template: Migration
   else if (template === 'study_notes' && key.includes('contents')) component = 'feature_cards_v2';
   else if (template === 'study_notes' && (key.includes('why-notes') || key.includes('how-to-use'))) component = 'content_section';
   else if (template === 'study_notes' && key.includes('related')) component = 'feature_cards_v2';
+  else if (template === 'study_notes' && (key.includes('acca-notes-table') || key.includes('notes-table'))) component = 'article_library';
   else if (template === 'course_listing' && key.includes('hero')) component = 'hero_with_video';
   else if (template === 'course_listing' && key.includes('catalogue')) component = 'article_library';
   else if (template === 'course_listing' && key.includes('lms')) component = 'two_column_platform';
