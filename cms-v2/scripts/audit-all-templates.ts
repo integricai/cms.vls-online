@@ -6,6 +6,7 @@ import type { MigrationTemplate } from '../shared/migrationTypes';
 const TEMPLATES: MigrationTemplate[] = [
   'home', 'course', 'legal', 'about_us', 'landing', 'team_vls',
   'schedules', 'course_articles', 'live_sessions', 'book_meeting', 'contact_us',
+  'study_notes', 'course_listing',
 ];
 
 function nestedCount(blok: Record<string, unknown> | null): string {
@@ -42,7 +43,7 @@ async function main() {
         sections: [],
         templateSections: sections,
         faq: null,
-      }) as Record<string, unknown> | null;
+      }, { allowTemplateFallback: ['study_notes', 'course_listing'].includes(template) }) as Record<string, unknown> | null;
 
       const eyebrow = String(blok?.eyebrow ?? extracted?.eyebrow ?? '').slice(0, 28);
       const heading = String(blok?.heading_prefix ?? blok?.title ?? blok?.heading ?? extracted?.headingPrefix ?? '').slice(0, 40);

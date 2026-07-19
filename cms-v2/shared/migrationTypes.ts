@@ -12,7 +12,9 @@ export type MigrationTemplate =
   | 'course_articles'
   | 'live_sessions'
   | 'book_meeting'
-  | 'contact_us';
+  | 'contact_us'
+  | 'study_notes'
+  | 'course_listing';
 
 export interface MigrationPageRecord {
   id: number;
@@ -269,6 +271,14 @@ export interface ScrapedTemplateSection {
   socialsHeading: string;
   socials: Array<{ label: string; link: string }>;
   anchorId: string;
+  faqItems: ScrapedFaqItem[];
+  priceNow: string;
+  priceAccess: string;
+  priceTag: string;
+  includesItems: string[];
+  videoUrl: string;
+  videoTitle: string;
+  videoSubtitle: string;
 }
 
 export interface ScrapedCoursePage {

@@ -24,6 +24,8 @@ const TEMPLATES: MigrationTemplate[] = [
   'live_sessions',
   'book_meeting',
   'contact_us',
+  'study_notes',
+  'course_listing',
 ];
 
 function loadEnv(): void {

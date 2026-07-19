@@ -71,14 +71,98 @@ function hasItems<T>(items: T[] | undefined | null): items is T[] {
   return (items?.length ?? 0) > 0;
 }
 
+function fallbackExtracted(
+  section: TemplateSectionBlueprint,
+  scraped: ScrapedGenericPage,
+): ScrapedTemplateSection {
+  return {
+    key: section.key,
+    html: '',
+    eyebrow: section.label,
+    headingPrefix: section.sampleHeading,
+    headingAccent: '',
+    lead: section.sampleDescription,
+    sublead: '',
+    body: section.sampleDescription,
+    bodyHtml: '',
+    stats: [],
+    cards: [],
+    groups: [],
+    timeline: [],
+    contactCards: [],
+    heroItems: [],
+    sideCard: null,
+    badges: [],
+    ctaTitle: section.sampleHeading,
+    ctaSubtitle: section.sampleDescription,
+    ctaText: 'Learn more',
+    profiles: [],
+    steps: [],
+    sessions: [],
+    liveSessionRows: [],
+    levels: [],
+    labeledItems: [],
+    legalTabs: [],
+    legalMetaItems: [],
+    legalTocItems: [],
+    legalCalloutHeading: '',
+    legalTocTitle: '',
+    legalTocDownloadLabel: '',
+    legalTocDownloadLink: '',
+    legalSectionNumber: '',
+    legalSectionHeading: '',
+    checklistHeading: '',
+    checklistItems: [],
+    tableRows: [],
+    bullets: [],
+    introHtml: '',
+    contactCta: null,
+    schedulerTag: '',
+    schedulerTitle: '',
+    schedulerSubtitle: '',
+    schedulerPlaceholderHeading: '',
+    schedulerPlaceholderText: '',
+    schedulerCtaText: '',
+    schedulerCtaLink: '',
+    cardTag: '',
+    cardLiveLabel: '',
+    cardTitle: '',
+    cardMeta: '',
+    cardRows: [],
+    noteHeading: '',
+    noteText: '',
+    freePill: '',
+    primaryCtaLink: '',
+    secondaryCtaText: '',
+    secondaryCtaLink: '',
+    contactInfoHeading: '',
+    contactInfoItems: [],
+    supportHoursHeading: '',
+    supportHoursRows: [],
+    supportHoursNote: '',
+    socialsHeading: '',
+    socials: [],
+    anchorId: '',
+    faqItems: [],
+    priceNow: '',
+    priceAccess: '',
+    priceTag: '',
+    includesItems: [],
+    videoUrl: '',
+    videoTitle: scraped.title || 'Video preview',
+    videoSubtitle: scraped.metaDescription || '',
+  };
+}
+
 export function buildBlokFromTemplateSection(
   section: TemplateSectionBlueprint,
-  extracted: ScrapedTemplateSection | undefined,
+  extractedInput: ScrapedTemplateSection | undefined,
   scraped: ScrapedGenericPage,
+  options?: { allowTemplateFallback?: boolean },
 ): Record<string, unknown> | null {
-  // `section.sampleHeading`/`sampleDescription` are the static template reference file's own
-  // sample copy (design reference only). With no live match, using them here would silently pass
-  // off placeholder text as migrated content — omit the section instead (see detectUnmatchedSections).
+  const extracted = extractedInput ?? (
+    options?.allowTemplateFallback ? fallbackExtracted(section, scraped) : undefined
+  );
   if (!extracted) return null;
 
   const base = {
@@ -271,7 +355,7 @@ export function buildBlokFromTemplateSection(
     return sanitizeBlokForStoryblok({
       ...base,
       sidebar_label: 'Currently viewing',
-      sidebar_value: pickText(extracted?.headingPrefix, section.label),
+      sidebar_value: pickText(extracted?.cardTitle, extracted?.headingPrefix, section.label),
       // Explicitly override the component-library preset's `note_text` (a design-reference
       // sample, not real page content) — otherwise it survives the preset merge whenever no
       // real note was extracted from the live page.
@@ -695,8 +779,171 @@ export function buildBlokFromTemplateSection(
     });
   }
 
-  if (section.component === 'faq_section' && hasItems(scraped.faq?.items)) {
-    return null;
+  if (section.component === 'course_hero_layout') {
+    const includes = hasItems(extracted.includesItems)
+      ? extracted.includesItems
+      : ['Complete notes for exam preparation', 'Online view in ebook format', 'Downloadable as one PDF book'];
+    const rightItems = includes.map(title => ({
+      _uid: uid(),
+      component: 'course_hero_right_item',
+      title,
+    }));
+    const description = pickText(extracted.lead, extracted.body, section.sampleDescription, scraped.metaDescription);
+    const metaItems = hasItems(extracted.bullets)
+      ? extracted.bullets.map(text => ({
+          _uid: uid(),
+          component: 'course_meta_item',
+          text,
+          bold_text: '',
+          icon: '',
+          show_stars: false,
+          stars_text: '',
+        }))
+      : [];
+
+    return sanitizeBlokForStoryblok({
+      ...base,
+      left: [{
+        _uid: uid(),
+        component: 'course_hero',
+        eyebrow: pickText(extracted.eyebrow, section.label),
+        heading: pickText(extracted.headingPrefix, section.sampleHeading, scraped.title),
+        description,
+        video_url: pickText(extracted.videoUrl, 'https://vimeo.com/690938482'),
+        video_title: pickText(extracted.videoTitle, 'See inside the notes'),
+        video_subtitle: pickText(extracted.videoSubtitle, 'A quick tour of the ebook format'),
+        meta_items: metaItems,
+      }],
+      right: [{
+        _uid: uid(),
+        component: 'course_hero_right',
+        section_label: pickText(extracted.priceTag, 'Complete Notes'),
+        price_now: pickText(extracted.priceNow, '$12.90'),
+        price_access: pickText(extracted.priceAccess, 'One-time payment · three months access'),
+        cta_text: pickText(extracted.ctaText, 'Buy now'),
+        ...(storyblokLink(extracted.primaryCtaLink) ? { cta_link: storyblokLink(extracted.primaryCtaLink) } : {}),
+        secondary_cta_text: pickText(extracted.secondaryCtaText, 'View the full course'),
+        ...(storyblokLink(extracted.secondaryCtaLink) ? { secondary_cta_link: storyblokLink(extracted.secondaryCtaLink) } : {}),
+        items: rightItems,
+      }],
+    });
+  }
+
+  if (section.component === 'hero_with_video') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: pickText(extracted.eyebrow, section.label),
+      heading_prefix: pickText(extracted.headingPrefix, section.sampleHeading, scraped.title),
+      heading_accent: pickText(extracted.headingAccent),
+      lead: pickText(extracted.lead, extracted.body, section.sampleDescription, scraped.metaDescription),
+      sublead: pickText(extracted.sublead),
+      primary_cta_text: pickText(extracted.ctaText, 'Browse all courses'),
+      secondary_cta_text: pickText(extracted.secondaryCtaText, 'Book a free meeting'),
+      ...(storyblokLink(extracted.primaryCtaLink || '#catalog') ? { primary_cta_link: storyblokLink(extracted.primaryCtaLink || '#catalog') } : {}),
+      ...(storyblokLink(extracted.secondaryCtaLink || '/book-a-meeting') ? { secondary_cta_link: storyblokLink(extracted.secondaryCtaLink || '/book-a-meeting') } : {}),
+      video_url: pickText(extracted.videoUrl, 'https://vimeo.com/1174159520'),
+      video_title: pickText(extracted.videoTitle, 'How Vertex gets you exam-ready'),
+    });
+  }
+
+  if (section.component === 'two_column_platform') {
+    const featureSource = hasItems(extracted.cards) ? extracted.cards : extracted.labeledItems?.map(item => ({
+      title: item.title,
+      description: item.subtitle,
+    }));
+    const features = hasItems(featureSource)
+      ? featureSource.map(item => ({
+          _uid: uid(),
+          component: 'platform_feature',
+          title: item.title,
+          description: item.description,
+        }))
+      : [{
+          _uid: uid(),
+          component: 'platform_feature',
+          title: 'HD lecture videos',
+          description: 'Optimised streaming, always available',
+        }];
+    const deviceTags = hasItems(extracted.labeledItems)
+      ? extracted.labeledItems.map(item => ({
+          _uid: uid(),
+          component: 'platform_device_tag',
+          label: item.title,
+        }))
+      : [
+        { _uid: uid(), component: 'platform_device_tag', label: 'Desktop' },
+        { _uid: uid(), component: 'platform_device_tag', label: 'Mobile' },
+        { _uid: uid(), component: 'platform_device_tag', label: 'Tablet' },
+      ];
+
+    return sanitizeBlokForStoryblok({
+      ...base,
+      left_eyebrow: pickText(extracted.eyebrow, section.label, 'The platform'),
+      left_title: pickText(extracted.headingPrefix, section.sampleHeading),
+      left_description: pickText(extracted.lead, extracted.body, section.sampleDescription),
+      right_title: pickText(extracted.cardTitle, 'Everything included in your course'),
+      features,
+      device_tags: deviceTags,
+      cta_text: pickText(extracted.ctaText, 'Browse all courses'),
+      ...(storyblokLink(extracted.primaryCtaLink || '/accacourses') ? { cta_link: storyblokLink(extracted.primaryCtaLink || '/accacourses') } : {}),
+    });
+  }
+
+  if (section.component === 'feature_cards_v2') {
+    const cards = hasItems(extracted.cards)
+      ? extracted.cards.map(card => ({
+          _uid: uid(),
+          component: 'feature_card_v2',
+          title: card.title,
+          description: card.description,
+          cta_text: card.figureLabel || 'View',
+          ...(card.figureValue && (card.figureValue.startsWith('http') || card.figureValue.startsWith('/'))
+            ? { cta_link: storyblokLink(card.figureValue) }
+            : {}),
+        }))
+      : [{
+          _uid: uid(),
+          component: 'feature_card_v2',
+          title: section.sampleHeading || section.label,
+          description: section.sampleDescription || 'Content managers can update this card after migration.',
+          cta_text: 'Learn more',
+        }];
+
+    return sanitizeBlokForStoryblok({
+      ...base,
+      section_title: pickText(extracted.headingPrefix, section.sampleHeading, section.label),
+      section_description: pickText(extracted.lead, extracted.body, section.sampleDescription),
+      cards,
+    });
+  }
+
+  if (section.component === 'faq_section') {
+    if (hasItems(scraped.faq?.items)) return null;
+
+    const faqItems = hasItems(extracted.faqItems) ? extracted.faqItems : [];
+    return sanitizeBlokForStoryblok({
+      ...base,
+      title: pickText(extracted.headingPrefix, section.sampleHeading, 'Frequently Asked Questions'),
+      icon: '❔',
+      eyebrow: pickText(extracted.eyebrow, section.label),
+      heading_prefix: pickText(extracted.headingPrefix, section.sampleHeading),
+      heading_accent: pickText(extracted.headingAccent),
+      items: faqItems.length
+        ? faqItems.map(item => ({
+            _uid: uid(),
+            component: 'faq_item',
+            answer_type: 'paragraph',
+            question: item.question,
+            answer_paragraph: item.answerText,
+          }))
+        : [{
+            _uid: uid(),
+            component: 'faq_item',
+            answer_type: 'paragraph',
+            question: 'Questions about this product?',
+            answer_paragraph: section.sampleDescription || 'Content managers can add FAQ answers after migration.',
+          }],
+    });
   }
 
   return sanitizeBlokForStoryblok({

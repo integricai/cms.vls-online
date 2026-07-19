@@ -1,5 +1,6 @@
 import fs from 'fs';
 import type { MigrationTemplate, ScrapedTemplateSection } from '../../shared/migrationTypes';
+import { TEMPLATES_WITH_FULL_FALLBACK } from '../../shared/migrationTemplateLabels';
 import { getMigrationTemplateBlueprint } from './migrationTemplateRegistry';
 import {
   emptyTemplateSectionFields,
@@ -22,6 +23,15 @@ import {
   parseStepCards,
   parseTeamProfiles,
   parseTutorCard,
+  parseSyllabusRows,
+  parseContentsRows,
+  parseRelatedRows,
+  parseCatalogGroups,
+  parseProofPoints,
+  parseFaqDetails,
+  parseStudyNotesHeroFields,
+  parseLmsFeatures,
+  parseDevicePills,
   stripTemplateTags,
 } from './templateSectionParsers';
 import { isPageBuilderLegalHtml, parsePageBuilderLegalSections } from './pageBuilderLegalParser';
@@ -237,6 +247,50 @@ function enrichSection(key: string, sectionHtml: string, base: ScrapedTemplateSe
   if (sectionHtml.includes('note-box') || sectionHtml.includes('sched-note')) {
     enriched.noteHeading = firstMatch(sectionHtml, /<div class="note-box"[^>]*>[\s\S]*?<b>([\s\S]*?)<\/b>/i);
     enriched.noteText = firstMatch(sectionHtml, /<div class="note-box"[^>]*>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/i);
+  }
+  if (sectionHtml.includes('syl-row')) {
+    enriched.cards = parseSyllabusRows(sectionHtml);
+  }
+  if (sectionHtml.includes('cl-row')) {
+    enriched.cards = parseContentsRows(sectionHtml);
+  }
+  if (sectionHtml.includes('rel-row')) {
+    enriched.cards = parseRelatedRows(sectionHtml);
+  }
+  if (sectionHtml.includes('class="group"') || sectionHtml.includes('class="catalog"')) {
+    enriched.groups = parseCatalogGroups(sectionHtml);
+  }
+  if (sectionHtml.includes('sb-head')) {
+    enriched.cardTitle = firstMatch(sectionHtml, /<div class="sb-head"[^>]*>[\s\S]*?<div class="v"[^>]*>([\s\S]*?)<\/div>/i);
+  }
+  if (sectionHtml.includes('class="pf"')) {
+    enriched.labeledItems = parseProofPoints(sectionHtml);
+  }
+  if (sectionHtml.includes('<details class="qa"')) {
+    enriched.faqItems = parseFaqDetails(sectionHtml);
+  }
+  if (sectionHtml.includes('price-card')) {
+    Object.assign(enriched, parseStudyNotesHeroFields(sectionHtml));
+  }
+  if (sectionHtml.includes('lms-list')) {
+    enriched.cards = parseLmsFeatures(sectionHtml).map(item => ({
+      title: item.title,
+      description: item.subtitle,
+    }));
+  }
+  if (sectionHtml.includes('device-pill')) {
+    enriched.labeledItems = parseDevicePills(sectionHtml);
+  }
+  if (sectionHtml.includes('proof-list')) {
+    enriched.labeledItems = parseProofPoints(sectionHtml);
+  }
+  if (sectionHtml.includes('video-stage') && !sectionHtml.includes('price-card')) {
+    const videoUrl = sectionHtml.match(/<a[^>]+href=["'](https?:\/\/player\.vimeo\.com\/[^"']+)["']/i)?.[1]
+      ?? sectionHtml.match(/<a[^>]+href=["'](https?:\/\/vimeo\.com\/[^"']+)["']/i)?.[1]
+      ?? '';
+    enriched.videoUrl = videoUrl;
+    enriched.videoTitle = firstMatch(sectionHtml, /<div class="vs-label"[^>]*>[\s\S]*?<div class="t"[^>]*>([\s\S]*?)<\/div>/i);
+    enriched.videoSubtitle = firstMatch(sectionHtml, /<div class="vs-label"[^>]*>[\s\S]*?<div class="s"[^>]*>([\s\S]*?)<\/div>/i);
   }
 
   return enriched;
@@ -530,7 +584,9 @@ export function sectionHasLiveMatch(
   sectionKey: string,
   component: string,
   scraped: { templateSections?: ScrapedTemplateSection[]; faq?: { items: unknown[] } | null },
+  template?: MigrationTemplate,
 ): boolean {
+  if (template && TEMPLATES_WITH_FULL_FALLBACK.includes(template)) return true;
   if (component === 'home_hero_section' || component === 'enquiry_form') return true;
   if (component === 'faq_section') return Boolean(scraped.faq?.items?.length);
   return indexTemplateSections(scraped.templateSections ?? []).has(sectionKey);
@@ -648,6 +704,14 @@ export function mergeTemplateSectionSources(
     socialsHeading: pickText(live.socialsHeading, fromTemplate.socialsHeading),
     socials: pickRicherArray(live.socials, fromTemplate.socials),
     anchorId: pickText(live.anchorId, fromTemplate.anchorId),
+    faqItems: pickRicherArray(live.faqItems, fromTemplate.faqItems),
+    priceNow: pickText(live.priceNow, fromTemplate.priceNow),
+    priceAccess: pickText(live.priceAccess, fromTemplate.priceAccess),
+    priceTag: pickText(live.priceTag, fromTemplate.priceTag),
+    includesItems: pickRicherArray(live.includesItems, fromTemplate.includesItems),
+    videoUrl: pickText(live.videoUrl, fromTemplate.videoUrl),
+    videoTitle: pickText(live.videoTitle, fromTemplate.videoTitle),
+    videoSubtitle: pickText(live.videoSubtitle, fromTemplate.videoSubtitle),
   };
 }
 

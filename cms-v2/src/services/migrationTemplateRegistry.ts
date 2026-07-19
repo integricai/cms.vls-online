@@ -30,6 +30,8 @@ const TEMPLATE_FILES: Record<MigrationTemplate, string> = {
   live_sessions: 'acca-live.html',
   book_meeting: 'book-meeting.html',
   contact_us: 'contact-us.html',
+  study_notes: 'notes.html',
+  course_listing: 'course-listing.html',
 };
 
 const DEFAULT_TOKENS: TemplateDesignTokens = {
@@ -156,6 +158,8 @@ const PAGE_BODY_COMPONENTS = new Set([
   'legal_hero',
   'legal_article',
   'legal_section',
+  'hero_with_video',
+  'course_hero_layout',
 ]);
 
 function componentForSection(key: string, classes: string[], template: MigrationTemplate): string {
@@ -168,6 +172,14 @@ function componentForSection(key: string, classes: string[], template: Migration
   else if (template === 'live_sessions' && key.includes('hero')) component = 'live_sessions_hero';
   else if (template === 'live_sessions' && (key.includes('schedule') || key.includes('timetable'))) component = 'live_sessions_table';
   else if (template === 'contact_us' && key.includes('contact')) component = 'contact_page_section';
+  else if (template === 'study_notes' && key.includes('hero')) component = 'course_hero_layout';
+  else if (template === 'study_notes' && key.includes('covered')) component = 'icon_card_grid';
+  else if (template === 'study_notes' && key.includes('contents')) component = 'feature_cards_v2';
+  else if (template === 'study_notes' && (key.includes('why-notes') || key.includes('how-to-use'))) component = 'content_section';
+  else if (template === 'study_notes' && key.includes('related')) component = 'feature_cards_v2';
+  else if (template === 'course_listing' && key.includes('hero')) component = 'hero_with_video';
+  else if (template === 'course_listing' && key.includes('catalogue')) component = 'article_library';
+  else if (template === 'course_listing' && key.includes('lms')) component = 'two_column_platform';
   else if (template === 'legal' && (key.includes('legal-hero') || classes.includes('legal-hero'))) component = 'legal_hero';
   else if (template === 'legal' && classes.includes('sec')) component = 'legal_section';
   else if (template === 'home' && key.includes('hero')) component = 'home_hero_section';
@@ -465,7 +477,7 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
     'trustpilot_url', 'trustpilot_embed', 'cards',
     'background_color', 'padding_top', 'padding_bottom',
   ],
-  feature_cards_v2: ['title', 'subtitle', 'cards', 'background_color', 'padding_top', 'padding_bottom'],
+  feature_cards_v2: ['title', 'subtitle', 'section_title', 'section_description', 'cards', 'background_color', 'padding_top', 'padding_bottom'],
   page_hero: [
     'eyebrow', 'heading_prefix', 'heading_accent', 'lead', 'sublead', 'free_pill',
     'primary_cta_text', 'primary_cta_link', 'secondary_cta_text', 'secondary_cta_link',
@@ -576,6 +588,37 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   legal_tab: ['label', 'link', 'active'],
   legal_table_row: ['col_a', 'col_b'],
   legal_toc_item: ['label', 'anchor_id', 'number'],
+  hero_with_video: [
+    'eyebrow', 'heading_prefix', 'heading_accent', 'lead', 'sublead',
+    'primary_cta_text', 'primary_cta_link', 'secondary_cta_text', 'secondary_cta_link',
+    'video_url', 'video_title', 'video_poster',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  two_column_platform: [
+    'left_eyebrow', 'left_title', 'left_description', 'features',
+    'right_eyebrow', 'right_title', 'right_description', 'device_tags',
+    'cta_text', 'cta_link', 'cta_color',
+    'padding_top', 'padding_bottom', 'left_padding_horizontal', 'right_padding_horizontal',
+    'left_width_percent', 'left_background', 'right_background', 'check_color',
+    'feature_background', 'feature_columns', 'background_color', 'padding_left', 'padding_right', 'font_size',
+  ],
+  platform_feature: ['title', 'description'],
+  platform_device_tag: ['label'],
+  course_hero_layout: ['left', 'right', 'layout_ratio', 'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size'],
+  course_hero: [
+    'breadcrumb', 'zenler_course_id', 'eyebrow', 'meta_items', 'language_label', 'tutor_name', 'tutor_role',
+    'tutor_initials', 'video_title', 'video_subtitle', 'video_duration', 'video_url', 'heading', 'description',
+    'qualification_tags', 'pills', 'learn_section_label', 'learn_items',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  course_hero_right: [
+    'section_label', 'price_now', 'price_was', 'price_save', 'price_access', 'price_note',
+    'cta_text', 'cta_link', 'secondary_cta_text', 'secondary_cta_link', 'items',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  course_hero_right_item: ['title'],
+  feature_card_v2: ['title', 'description', 'cta_text', 'cta_link'],
+  faq_item: ['question', 'answer_type', 'answer_paragraph'],
 };
 
 /** Storyblok MAPI expects many schema "number" fields as numeric strings, not JSON numbers. */
@@ -607,7 +650,8 @@ const NESTED_BLOK_ARRAY_KEYS = [
   'sessions', 'side_card', 'badges', 'papers', 'stats', 'rows',
   'benefits', 'meta_items', 'steps', 'topics', 'articles', 'ticks', 'card_rows', 'sidebar',
   'info_items', 'hours_rows', 'socials', 'tabs', 'blocks', 'checklist_items', 'table_rows',
-  'toc_items', 'reach_figs', 'regions', 'submeta_items', 'rating_bars',
+  'toc_items', 'reach_figs', 'regions', 'submeta_items', 'rating_bars', 'left', 'right',
+  'features', 'device_tags',
 ] as const;
 
 function sanitizeNestedBlokArrays(blok: Record<string, unknown>): Record<string, unknown> {
@@ -778,7 +822,15 @@ export function buildPresetBlokFromSection(
       ...base,
       title: section.sampleHeading || 'Frequently Asked Questions',
       icon: '❔',
-      items: [],
+      eyebrow: section.label,
+      heading_prefix: section.sampleHeading || section.label,
+      items: [{
+        _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+        component: 'faq_item',
+        answer_type: 'paragraph',
+        question: 'Add your first question here',
+        answer_paragraph: section.sampleDescription || 'Content managers can update FAQ answers after migration.',
+      }],
     });
   }
 
@@ -798,8 +850,15 @@ export function buildPresetBlokFromSection(
   if (section.component === 'feature_cards_v2') {
     return sanitizeBlokForStoryblok({
       ...base,
-      title: section.sampleHeading || section.label,
-      cards: [],
+      section_title: section.sampleHeading || section.label,
+      section_description: section.sampleDescription || '',
+      cards: [{
+        _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+        component: 'feature_card_v2',
+        title: section.sampleHeading || section.label,
+        description: section.sampleDescription || 'Content managers can update this card after migration.',
+        cta_text: 'Learn more',
+      }],
     });
   }
 
@@ -953,6 +1012,41 @@ export function buildPresetBlokFromSection(
       sidebar_value: section.label,
       topics: [],
       note_text: section.sampleDescription || '',
+    });
+  }
+
+  if (section.component === 'hero_with_video') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: section.label,
+      heading_prefix: section.sampleHeading || section.label,
+      lead: section.sampleDescription || '',
+      primary_cta_text: 'Browse all courses',
+      secondary_cta_text: 'Book a free meeting',
+      video_url: 'https://vimeo.com/1174159520',
+      video_title: 'Course introduction',
+    });
+  }
+
+  if (section.component === 'two_column_platform') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      left_eyebrow: section.label,
+      left_title: section.sampleHeading || section.label,
+      left_description: section.sampleDescription || '',
+      right_title: 'Everything included in your course',
+      features: [{
+        _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+        component: 'platform_feature',
+        title: 'HD lecture videos',
+        description: 'Optimised streaming, always available',
+      }],
+      device_tags: [
+        { _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12), component: 'platform_device_tag', label: 'Desktop' },
+        { _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12), component: 'platform_device_tag', label: 'Mobile' },
+        { _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12), component: 'platform_device_tag', label: 'Tablet' },
+      ],
+      cta_text: 'Browse all courses',
     });
   }
 

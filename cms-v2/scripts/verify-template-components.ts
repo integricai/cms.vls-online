@@ -20,9 +20,7 @@ const TEMPLATES: MigrationTemplate[] = [
   'team_vls',
   'schedules',
   'course_articles',
-  'live_sessions',
-  'book_meeting',
-  'contact_us',
+  'live_sessions', 'book_meeting', 'contact_us', 'study_notes', 'course_listing',
 ];
 
 const RENDERERS = new Set(
@@ -79,7 +77,7 @@ async function main() {
         metaDescription: 'Test description',
         templateSections: sections,
         faq: null,
-      });
+      }, { allowTemplateFallback: ['study_notes', 'course_listing'].includes(blueprint.template) });
 
       if (section.component !== 'faq_section' && section.key !== 'course-tabs') {
         assert(Boolean(blok), `${blueprint.template}/${section.key}: buildBlokFromTemplateSection returned null`, errors);

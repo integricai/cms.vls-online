@@ -25,10 +25,10 @@ export function suggestDestinationSlug(originUrl: string, template: MigrationTem
     return segments.length === 0 || segments[0] === 'home' ? 'home' : slugifySegment(segments.join('-'));
   }
 
-  if (template === 'course') {
+  if (template === 'course' || template === 'study_notes') {
     const coursesIndex = segments.indexOf('courses');
     const slug = coursesIndex >= 0 ? segments[coursesIndex + 1] : segments[segments.length - 1];
-    return slugifySegment(slug || 'course');
+    return slugifySegment(slug || (template === 'study_notes' ? 'notes' : 'course'));
   }
 
   if (segments.length === 0) return 'home';
@@ -43,7 +43,7 @@ export function suggestDestinationSlug(originUrl: string, template: MigrationTem
  */
 export function storyFullSlug(template: MigrationTemplate, destinationSlug: string): string {
   const slug = destinationSlug.trim().replace(/^\/+|\/+$/g, '').replace(/^pages\//, '');
-  if (template === 'course') {
+  if (template === 'course' || template === 'study_notes') {
     return slug ? `courses/${slug.replace(/^courses\//, '')}` : 'courses';
   }
   if (template === 'home' || !slug || slug === 'home') {

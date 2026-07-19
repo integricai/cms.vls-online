@@ -29,6 +29,7 @@ import { buildTabBlocksFromPanel } from './courseTabBuilder';
 import { DEFAULT_TRUSTPILOT_CAROUSEL_EMBED } from '../../shared/trustpilotDefaults';
 import { genericBreadcrumbText, scrapeGenericPage } from './pageScraper';
 import { slugifySegment, storyFullSlug, suggestDestinationSlug } from '../../shared/migrationDestination';
+import { TEMPLATES_WITH_FULL_FALLBACK } from '../../shared/migrationTemplateLabels';
 import {
   findCoursesFolder,
   StoryblokApiError,
@@ -309,6 +310,10 @@ function buildCourseStoryblokContent(scraped: ScrapedCoursePage, zenlerCourseId:
     seo,
     body,
   };
+}
+
+function usesTemplateFallback(template: MigrationTemplate): boolean {
+  return TEMPLATES_WITH_FULL_FALLBACK.includes(template);
 }
 
 function buildGenericFaqBlok(scraped: ScrapedGenericPage, sourceUrl: string): Record<string, unknown> | null {
@@ -736,11 +741,12 @@ export async function buildGenericStoryblokContentAsync(
   const body: Record<string, unknown>[] = [];
 
   for (const section of blueprint.sections) {
-    if (!sectionHasLiveMatch(section.key, section.component, scraped)) {
+    if (!sectionHasLiveMatch(section.key, section.component, scraped, template)) {
       continue;
     }
 
     const extracted = extractedByKey.get(section.key);
+    const allowTemplateFallback = usesTemplateFallback(template);
     let blok: Record<string, unknown> | null = null;
 
     if (section.component === 'home_hero_section') {
@@ -758,8 +764,10 @@ export async function buildGenericStoryblokContentAsync(
       blok = { _uid: blokUid(), component: 'enquiry_form' };
     } else if (section.component === 'faq_section' && scraped.faq?.items?.length) {
       blok = buildGenericFaqBlok(scraped, sourceUrl);
+    } else if (section.component === 'faq_section' && allowTemplateFallback) {
+      blok = buildBlokFromTemplateSection(section, extracted, scraped, { allowTemplateFallback: true });
     } else {
-      blok = buildBlokFromTemplateSection(section, extracted, scraped);
+      blok = buildBlokFromTemplateSection(section, extracted, scraped, { allowTemplateFallback });
     }
 
     const styled = await stylizeBlok(blok, template, section.key, presetBloksBySection, config);
@@ -1124,7 +1132,12 @@ export async function generatePageStructure(
   if (template !== 'course') {
     const eligibleSections = blueprint.sections.filter(section => section.component !== 'enquiry_form');
     unmatchedSections = pageBuilderLegal ? [] : detectUnmatchedSections(blueprint, scraped);
-    if (!pageBuilderLegal && eligibleSections.length > 0 && unmatchedSections.length === eligibleSections.length) {
+    if (
+      !usesTemplateFallback(template)
+      && !pageBuilderLegal
+      && eligibleSections.length > 0
+      && unmatchedSections.length === eligibleSections.length
+    ) {
       return {
         page,
         templateReference,
@@ -1171,7 +1184,7 @@ export async function generatePageStructure(
     : { component: rootComponent, seo: [], body };
 
   let parentId: number | undefined;
-  if (template === 'course') {
+  if (template === 'course' || template === 'study_notes') {
     const coursesFolder = await findCoursesFolder(config);
     if (!coursesFolder) {
       throw new CourseMigrationError(
@@ -1200,9 +1213,15 @@ export async function generatePageStructure(
       'Live page uses a page-builder legal layout — draft structure is hero + article only; nested sections are created dynamically during Migrate Content.',
     );
   } else if (unmatchedSections.length) {
-    warnings.push(
-      `${unmatchedSections.length} section(s) have no matching content on the live page and will be skipped in Migrate Content: ${unmatchedSections.join(', ')}.`,
-    );
+    if (usesTemplateFallback(template)) {
+      warnings.push(
+        `${unmatchedSections.length} section(s) had no live-page match and will use the HTML template reference defaults: ${unmatchedSections.join(', ')}.`,
+      );
+    } else {
+      warnings.push(
+        `${unmatchedSections.length} section(s) have no matching content on the live page and will be skipped in Migrate Content: ${unmatchedSections.join(', ')}.`,
+      );
+    }
   }
 
   await saveStructureResult(pageId, {
@@ -1276,6 +1295,17 @@ export async function migratePageContent(
     const scraped = scrapedRaw as ScrapedGenericPage;
     warnings.push(...collectGenericWarnings(scraped));
     content = await buildGenericStoryblokContentAsync(scraped, template, presetBloksBySection, config);
+
+    if (template === 'study_notes') {
+      const coursesFolder = await findCoursesFolder(config);
+      if (!coursesFolder) {
+        throw new CourseMigrationError(
+          'Could not find a Storyblok folder with slug "courses". Create the courses folder first.',
+          404,
+        );
+      }
+      parentId = coursesFolder.id;
+    }
   }
 
   const upsert = await upsertStory(config, {

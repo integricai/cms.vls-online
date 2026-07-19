@@ -1,4 +1,4 @@
-import type { ScrapedTemplateSection } from '../../shared/migrationTypes';
+import type { ScrapedFaqItem, ScrapedTemplateSection } from '../../shared/migrationTypes';
 
 function decodeEntities(value: string): string {
   return value
@@ -411,6 +411,144 @@ export function parseContactPageSection(sectionHtml: string): Partial<ScrapedTem
   };
 }
 
+export function parseSyllabusRows(sectionHtml: string): ScrapedTemplateSection['cards'] {
+  return allMatches(sectionHtml, /<div class="syl-row"[^>]*>[\s\S]*?<span class="num"[^>]*>([\s\S]*?)<\/span>[\s\S]*?<span class="t"[^>]*>([\s\S]*?)<\/span>(?:<br>\s*<span class="s"[^>]*>([\s\S]*?)<\/span>)?/gi)
+    .map(match => ({
+      title: stripTemplateTags(match[2]),
+      description: match[3] ? stripTemplateTags(match[3]) : '',
+      figureValue: stripTemplateTags(match[1]),
+      figureLabel: '',
+    }))
+    .filter(item => item.title);
+}
+
+export function parseContentsRows(sectionHtml: string): ScrapedTemplateSection['cards'] {
+  return allMatches(sectionHtml, /<a class="cl-row"[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)
+    .map(match => {
+      const block = match[2] ?? match[0];
+      const title = firstMatch(block, /<span class="t"[^>]*>([\s\S]*?)<\/span>/i);
+      const description = firstMatch(block, /<span class="s"[^>]*>([\s\S]*?)<\/span>/i);
+      const action = firstMatch(block, /<span class="act[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
+      return {
+        title,
+        description,
+        figureLabel: action,
+        figureValue: match[1] ?? '',
+      };
+    })
+    .filter(item => item.title);
+}
+
+export function parseRelatedRows(sectionHtml: string): ScrapedTemplateSection['cards'] {
+  return allMatches(sectionHtml, /<a class="rel-row"[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)
+    .map(match => {
+      const block = match[2] ?? match[0];
+      const code = firstMatch(block, /<span class="code"[^>]*>([\s\S]*?)<\/span>/i);
+      const title = firstMatch(block, /<span class="t"[^>]*>([\s\S]*?)<\/span>/i);
+      const description = firstMatch(block, /<span class="s"[^>]*>([\s\S]*?)<\/span>/i);
+      return {
+        title: code ? `${code} — ${title}` : title,
+        description,
+        figureValue: match[1] ?? '',
+      };
+    })
+    .filter(item => item.title);
+}
+
+export function parseCatalogGroups(sectionHtml: string): ScrapedTemplateSection['groups'] {
+  return sectionHtml.split(/<div class="group[^"]*"[^>]*>/i).slice(1)
+    .map(part => {
+      const label = firstMatch(part, /<h3[^>]*>([\s\S]*?)<\/h3>/i);
+      const items = allMatches(part, /<a class="row[^"]*"[^>]+href=["']([^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi)
+        .map(rowMatch => {
+          const rowBlock = rowMatch[2] ?? rowMatch[0];
+          const code = firstMatch(rowBlock, /<span class="code"[^>]*>([\s\S]*?)<\/span>/i);
+          const title = firstMatch(rowBlock, /<span class="title"[^>]*>([\s\S]*?)<\/span>/i);
+          const description = firstMatch(rowBlock, /<span class="meta"[^>]*>([\s\S]*?)<\/span>/i);
+          return {
+            code,
+            title,
+            description,
+            url: rowMatch[1] ?? '',
+          };
+        })
+        .filter(item => item.title);
+      return { label, items };
+    })
+    .filter(group => group.label && group.items.length);
+}
+
+export function parseProofPoints(sectionHtml: string): ScrapedTemplateSection['labeledItems'] {
+  return allMatches(sectionHtml, /<div class="pf"[^>]*>([\s\S]*?)<\/div>/gi)
+    .map(match => ({
+      title: stripTemplateTags(match[1].replace(/<span class="chk"[\s\S]*?<\/span>/gi, '')),
+      subtitle: '',
+    }))
+    .filter(item => item.title);
+}
+
+export function parseFaqDetails(sectionHtml: string): ScrapedFaqItem[] {
+  return allMatches(sectionHtml, /<details class="qa"[^>]*>([\s\S]*?)<\/details>/gi)
+    .map(match => {
+      const block = match[1] ?? match[0];
+      const question = firstMatch(block, /<summary>([\s\S]*?)<\/summary>/i)
+        .replace(/<span class="qa-icon"[\s\S]*?<\/span>/gi, '');
+      const answerHtml = block.match(/<div class="qa-body"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '';
+      const answerText = stripTemplateTags(answerHtml);
+      return { question: stripTemplateTags(question), answerHtml, answerText };
+    })
+    .filter(item => item.question);
+}
+
+export function parseStudyNotesHeroFields(sectionHtml: string): Partial<ScrapedTemplateSection> {
+  const priceBlock = sectionHtml.match(/<div class="price-card"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '';
+  const includes = allMatches(priceBlock, /<li[^>]*>([\s\S]*?)<\/li>/gi)
+    .map(match => stripTemplateTags(match[1].replace(/<span class="ico"[\s\S]*?<\/span>/gi, '')))
+    .filter(Boolean);
+  const facts = allMatches(sectionHtml, /<span class="fact"[^>]*>([\s\S]*?)<\/span>/gi)
+    .map(match => stripTemplateTags(match[1].replace(/<svg[\s\S]*?<\/svg>/gi, '')))
+    .filter(Boolean);
+  const videoUrl = sectionHtml.match(/<a[^>]+href=["'](https?:\/\/player\.vimeo\.com\/[^"']+)["']/i)?.[1]
+    ?? sectionHtml.match(/<a[^>]+href=["'](https?:\/\/vimeo\.com\/[^"']+)["']/i)?.[1]
+    ?? '';
+  const videoTitle = firstMatch(sectionHtml, /<div class="vs-label"[^>]*>[\s\S]*?<div class="t"[^>]*>([\s\S]*?)<\/div>/i);
+  const videoSubtitle = firstMatch(sectionHtml, /<div class="vs-label"[^>]*>[\s\S]*?<div class="s"[^>]*>([\s\S]*?)<\/div>/i);
+
+  return {
+    eyebrow: firstMatch(sectionHtml, /<span class="level-pill"[^>]*>([\s\S]*?)<\/span>/i),
+    priceNow: firstMatch(priceBlock, /<span class="price-now"[^>]*>([\s\S]*?)<\/span>/i),
+    priceAccess: stripTemplateTags(priceBlock.match(/<div class="price-access"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? ''),
+    priceTag: firstMatch(priceBlock, /<span class="pc-tag"[^>]*>([\s\S]*?)<\/span>/i),
+    includesItems: includes,
+    bullets: facts,
+    videoUrl,
+    videoTitle,
+    videoSubtitle,
+    primaryCtaLink: priceBlock.match(/<a[^>]+class="[^"]*btn-primary[^"]*"[^>]+href=["']([^"']+)["']/i)?.[1] ?? '',
+    secondaryCtaLink: priceBlock.match(/<a[^>]+class="[^"]*btn-ghost[^"]*"[^>]+href=["']([^"']+)["']/i)?.[1] ?? '',
+    ctaText: firstMatch(priceBlock, /<a[^>]+class="[^"]*btn-primary[^"]*"[^>]*>([\s\S]*?)<\/a>/i),
+    secondaryCtaText: firstMatch(priceBlock, /<a[^>]+class="[^"]*btn-ghost[^"]*"[^>]*>([\s\S]*?)<\/a>/i),
+  };
+}
+
+export function parseLmsFeatures(sectionHtml: string): ScrapedTemplateSection['labeledItems'] {
+  return allMatches(sectionHtml, /<li[^>]*>[\s\S]*?<span class="t"[^>]*>([\s\S]*?)<\/span>(?:<br>\s*<span class="s"[^>]*>([\s\S]*?)<\/span>)?/gi)
+    .map(match => ({
+      title: stripTemplateTags(match[1]),
+      subtitle: match[2] ? stripTemplateTags(match[2]) : '',
+    }))
+    .filter(item => item.title);
+}
+
+export function parseDevicePills(sectionHtml: string): ScrapedTemplateSection['labeledItems'] {
+  return allMatches(sectionHtml, /<span class="device-pill"[^>]*>([\s\S]*?)<\/span>/gi)
+    .map(match => ({
+      title: stripTemplateTags(match[1].replace(/<svg[\s\S]*?<\/svg>/gi, '')),
+      subtitle: '',
+    }))
+    .filter(item => item.title);
+}
+
 export function emptyTemplateSectionFields(): Pick<
   ScrapedTemplateSection,
   | 'profiles' | 'steps' | 'sessions' | 'liveSessionRows' | 'levels' | 'labeledItems'
@@ -422,6 +560,7 @@ export function emptyTemplateSectionFields(): Pick<
   | 'noteHeading' | 'noteText' | 'freePill' | 'primaryCtaLink' | 'secondaryCtaText' | 'secondaryCtaLink'
   | 'contactInfoHeading' | 'contactInfoItems' | 'supportHoursHeading' | 'supportHoursRows'
   | 'supportHoursNote' | 'socialsHeading' | 'socials' | 'anchorId'
+  | 'faqItems' | 'priceNow' | 'priceAccess' | 'priceTag' | 'includesItems' | 'videoUrl' | 'videoTitle' | 'videoSubtitle'
 > {
   return {
     profiles: [],
@@ -471,5 +610,13 @@ export function emptyTemplateSectionFields(): Pick<
     socialsHeading: '',
     socials: [],
     anchorId: '',
+    faqItems: [],
+    priceNow: '',
+    priceAccess: '',
+    priceTag: '',
+    includesItems: [],
+    videoUrl: '',
+    videoTitle: '',
+    videoSubtitle: '',
   };
 }
