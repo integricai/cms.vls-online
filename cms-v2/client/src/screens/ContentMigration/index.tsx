@@ -184,8 +184,17 @@ export default function ContentMigrationTab() {
     setLoadingTemplates(true);
     api.get<MigrationTemplateOption[]>('/migration/templates')
       .then(templates => {
-        setMigrationTemplates(templates);
-        const match = templates.find(item => item.template === template) ?? null;
+        const byKey = new Map(templates.map(item => [item.template, item]));
+        const merged = (Object.entries(MIGRATION_TEMPLATE_LABELS) as Array<[MigrationTemplate, string]>)
+          .map(([value, label]) => byKey.get(value) ?? {
+            template: value,
+            label,
+            fileName: '',
+            sectionCount: 0,
+            sections: [],
+          });
+        setMigrationTemplates(merged);
+        const match = merged.find(item => item.template === template) ?? null;
         setTemplateReference(match);
       })
       .catch(() => {

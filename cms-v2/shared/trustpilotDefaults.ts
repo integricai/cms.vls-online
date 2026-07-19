@@ -1,5 +1,3 @@
-import { randomUUID } from 'crypto';
-
 /** Default Trustpilot Carousel TrustBox embed for course pages. */
 export const DEFAULT_TRUSTPILOT_CAROUSEL_EMBED = `<!-- TrustBox widget - Carousel -->
 <div class="trustpilot-widget" data-locale="en-US" data-template-id="53aa8912dec7e10d38f59f36" data-businessunit-id="60077b4c1568c0000152c727" data-style-height="140px" data-style-width="100%" data-token="8638b71f-203f-4dd5-8f73-1939427336f4" data-stars="1,2,3,4,5" data-review-languages="en">
@@ -11,7 +9,9 @@ export const DEFAULT_TRUSTPILOT_CAROUSEL_EMBED = `<!-- TrustBox widget - Carouse
 export const DEFAULT_TRUSTPILOT_GRID_EMBED = DEFAULT_TRUSTPILOT_CAROUSEL_EMBED;
 
 function blokUid(): string {
-  return randomUUID().replace(/-/g, '').slice(0, 12);
+  const uuid = globalThis.crypto?.randomUUID?.()
+    ?? `${Date.now()}${Math.random()}`.replace(/\D/g, '').padEnd(32, '0');
+  return uuid.replace(/-/g, '').slice(0, 12);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
