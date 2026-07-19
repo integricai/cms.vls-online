@@ -27,7 +27,7 @@ import { getContent, upsertContent } from './models/content';
 import { listBlogPosts } from './models/blog';
 import { getBlogAsset } from './models/blogAsset';
 import { blogTopicSlug, renderBlogArticle, renderBlogLanding } from './services/blogRender';
-import { listBannerCourses } from './models/course';
+import { listActiveCourses } from './models/course';
 import { listCoursePrices } from './models/coursePrice';
 import { listPublicBooks } from './models/book';
 import { mapActiveCoursesForFinder } from './services/courseFinderPublish';
@@ -113,7 +113,7 @@ app.get('/api/publish-course-finder-banner', async (_req, res, next) => {
   res.setHeader('Cache-Control', 'no-store');
   try {
     const [courses, configRow] = await Promise.all([
-      listBannerCourses(),
+      listActiveCourses(),
       getContent('vls-course-finder-banner-config'),
     ]);
     const config = configRow?.data && typeof configRow.data === 'object' ? configRow.data : null;

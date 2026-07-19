@@ -28,6 +28,9 @@ function mapCourseRow(row) {
     courseLevel: row.course_level || '',
     courseLevels,
     courseOption: row.course_option || '',
+    isActive: row.is_active !== false,
+    enableInBanner: row.enable_in_banner === true,
+    enableInNavigation: row.enable_in_navigation !== false,
   };
 }
 
@@ -51,13 +54,14 @@ export default async function handler(req, res) {
       sql`
         SELECT c.id, c.name, c.slug, c.category, c.level, c.status, c.zenler_url,
                c.sort_order, c.qualification, c.course_level, c.course_option,
+               c.is_active, c.enable_in_banner, c.enable_in_navigation,
                COALESCE(
                  array_remove(array_agg(cl.level ORDER BY cl.sort_order ASC, cl.level ASC), NULL),
                  ARRAY[]::text[]
                ) AS course_levels
         FROM courses c
         LEFT JOIN course_levels cl ON cl.course_id = c.id
-        WHERE c.is_active = true AND c.enable_in_banner = true
+        WHERE c.is_active = true
         GROUP BY c.id
         ORDER BY c.sort_order ASC, c.name ASC
       `,

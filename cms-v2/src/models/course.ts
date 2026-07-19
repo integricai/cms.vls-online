@@ -12,6 +12,7 @@ interface DbRow {
   zenler_url: string | null;
   is_active: boolean;
   enable_in_banner: boolean;
+  enable_in_navigation: boolean;
   sort_order: number;
   qualification: string | null;
   course_level: string | null;
@@ -44,6 +45,7 @@ function rowToCourse(row: DbRow): Course {
     zenlerUrl: row.zenler_url,
     isActive: row.is_active,
     enableInBanner: row.enable_in_banner,
+    enableInNavigation: row.enable_in_navigation,
     sortOrder: row.sort_order,
     qualification: row.qualification,
     courseLevel: row.course_level,
@@ -156,6 +158,7 @@ export async function updateCourseAdminMetadata(
   data: {
     isActive?: boolean;
     enableInBanner?: boolean;
+    enableInNavigation?: boolean;
     sortOrder?: number;
     qualification?: string | null;
     courseLevel?: string | null;
@@ -169,9 +172,10 @@ export async function updateCourseAdminMetadata(
 
   const rows = await sql`
     UPDATE courses
-    SET is_active          = ${data.isActive ?? existing.is_active},
-        enable_in_banner   = ${data.enableInBanner ?? existing.enable_in_banner},
-        sort_order         = ${data.sortOrder ?? existing.sort_order},
+    SET is_active              = ${data.isActive ?? existing.is_active},
+        enable_in_banner       = ${data.enableInBanner ?? existing.enable_in_banner},
+        enable_in_navigation   = ${data.enableInNavigation ?? existing.enable_in_navigation},
+        sort_order             = ${data.sortOrder ?? existing.sort_order},
         qualification = ${data.qualification === undefined ? existing.qualification : data.qualification},
         course_level  = ${data.courseLevel === undefined ? existing.course_level : data.courseLevel},
         course_option = ${data.courseOption === undefined ? existing.course_option : data.courseOption},

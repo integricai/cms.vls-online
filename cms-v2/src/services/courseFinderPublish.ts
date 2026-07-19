@@ -13,6 +13,9 @@ export interface CourseFinderEmbedCourse {
   courseLevel: string;
   courseLevels: string[];
   courseOption: string;
+  isActive: boolean;
+  enableInBanner: boolean;
+  enableInNavigation: boolean;
 }
 
 export function publicCourseUrl(zenlerUrl: string | null, slug: string | null): string {
@@ -36,5 +39,8 @@ export function mapActiveCoursesForFinder(courses: Course[]): CourseFinderEmbedC
       courseLevel: course.courseLevel || '',
       courseLevels: course.courseLevels || (course.courseLevel ? [course.courseLevel] : []),
       courseOption: course.courseOption || '',
+      isActive: course.isActive !== false,
+      enableInBanner: course.enableInBanner === true,
+      enableInNavigation: course.enableInNavigation !== false,
     }));
 }
