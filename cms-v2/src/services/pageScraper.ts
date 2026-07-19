@@ -3,6 +3,7 @@ import { breadcrumbTrailText, parseBreadcrumbFromHtml } from './breadcrumbUtils'
 import { toPublicOriginUrl } from './migrationUrlUtils';
 import { CoursePageScrapeError, fetchPageHtml } from './coursePageScraper';
 import { indexTemplateSections, parseTemplateSectionsFromHtml, isPageBuilderLegalHtml, parsePageBuilderLegalSections } from './pageSectionExtractor';
+import { augmentStudyNotesZenlerSections } from './zenlerStudyNotesParser';
 import { getMigrationTemplateBlueprint } from './migrationTemplateRegistry';
 import { buildCandidateBlocks, classifyAndExtractSections } from './aiSectionExtractor';
 import { parseFaq } from './faqParser';
@@ -105,6 +106,9 @@ export async function scrapeGenericPage(sourceUrl: string, template?: MigrationT
   const { faq, warnings: faqWarnings } = parseFaq(html);
 
   let templateSections = parseTemplateSectionsFromHtml(mainContent);
+  if (template === 'study_notes') {
+    templateSections = augmentStudyNotesZenlerSections(html, templateSections, normalizedUrl);
+  }
   if (!templateSections.length && isPageBuilderLegalHtml(html)) {
     templateSections = parsePageBuilderLegalSections(html);
   } else if (!isPageBuilderLegalHtml(mainContent) && isPageBuilderLegalHtml(html)) {

@@ -608,15 +608,19 @@ export function getTemplateFileSections(template: MigrationTemplate): ScrapedTem
 export function mergeTemplateSectionSources(
   live: ScrapedTemplateSection | undefined,
   fromTemplate: ScrapedTemplateSection | undefined,
+  template?: MigrationTemplate,
 ): ScrapedTemplateSection | undefined {
   if (!live && !fromTemplate) return undefined;
   if (!live) return fromTemplate;
   if (!fromTemplate) return live;
 
+  const preferLive = template ? TEMPLATES_WITH_FULL_FALLBACK.includes(template) : false;
+
   const pickRicherArray = <T,>(liveItems: T[] | undefined, templateItems: T[] | undefined): T[] => {
-    const live = liveItems ?? [];
-    const template = templateItems ?? [];
-    return template.length > live.length ? template : (live.length ? live : template);
+    const liveArr = liveItems ?? [];
+    const templateArr = templateItems ?? [];
+    if (preferLive && liveArr.length) return liveArr;
+    return templateArr.length > liveArr.length ? templateArr : (liveArr.length ? liveArr : templateArr);
   };
 
   const isPresetLabel = (value: string, key: string) => {
@@ -626,19 +630,27 @@ export function mergeTemplateSectionSources(
     return norm === keyNorm || norm === keyAmp;
   };
 
-  const eyebrow = fromTemplate.eyebrow && (!live.eyebrow || isPresetLabel(live.eyebrow, fromTemplate.key))
-    ? fromTemplate.eyebrow
-    : pickText(live.eyebrow, fromTemplate.eyebrow);
+  const eyebrow = preferLive
+    ? pickText(live.eyebrow, fromTemplate.eyebrow)
+    : fromTemplate.eyebrow && (!live.eyebrow || isPresetLabel(live.eyebrow, fromTemplate.key))
+      ? fromTemplate.eyebrow
+      : pickText(live.eyebrow, fromTemplate.eyebrow);
 
-  const headingPrefix = fromTemplate.headingAccent
-    ? pickText(fromTemplate.headingPrefix, live.headingPrefix)
-    : pickText(live.headingPrefix, fromTemplate.headingPrefix);
+  const headingPrefix = preferLive
+    ? pickText(live.headingPrefix, fromTemplate.headingPrefix)
+    : fromTemplate.headingAccent
+      ? pickText(fromTemplate.headingPrefix, live.headingPrefix)
+      : pickText(live.headingPrefix, fromTemplate.headingPrefix);
 
-  const headingAccent = pickText(fromTemplate.headingAccent, live.headingAccent);
+  const headingAccent = preferLive
+    ? pickText(live.headingAccent, fromTemplate.headingAccent)
+    : pickText(fromTemplate.headingAccent, live.headingAccent);
 
-  const body = fromTemplate.body.includes('\n\n') || fromTemplate.body.length > live.body.length
-    ? pickText(fromTemplate.body, live.body)
-    : pickText(live.body, fromTemplate.body);
+  const body = preferLive
+    ? pickText(live.body, fromTemplate.body)
+    : fromTemplate.body.includes('\n\n') || fromTemplate.body.length > live.body.length
+      ? pickText(fromTemplate.body, live.body)
+      : pickText(live.body, fromTemplate.body);
 
   return {
     key: live.key || fromTemplate.key,
@@ -729,7 +741,7 @@ export function resolveTemplateSections(
   const merged = new Map<string, ScrapedTemplateSection>();
 
   for (const key of keys) {
-    const section = mergeTemplateSectionSources(liveByKey.get(key), templateByKey.get(key));
+    const section = mergeTemplateSectionSources(liveByKey.get(key), templateByKey.get(key), template);
     if (section) merged.set(key, section);
   }
 
