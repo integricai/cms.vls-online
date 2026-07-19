@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "npm run build --prefix cms-v2/client",
+    "build:client": "npm run build --prefix cms-v2/client",
     "migrate": "npm run migrate --prefix cms-v2",
     "sync-component-library": "npm run sync-component-library --prefix cms-v2",
     "verify-template-components": "npm run verify-template-components --prefix cms-v2"

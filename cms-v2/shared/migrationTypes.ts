@@ -330,6 +330,7 @@ export interface ScrapedGenericPage {
 
 export interface TemplateReferenceSummary {
   template: MigrationTemplate;
+  label?: string;
   fileName: string;
   sectionCount: number;
   sections: Array<{ key: string; label: string; component: string }>;

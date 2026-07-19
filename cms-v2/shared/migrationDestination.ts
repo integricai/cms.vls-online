@@ -1,5 +1,10 @@
 import type { MigrationTemplate } from './migrationTypes';
 
+/** Storyblok stories for these templates are created under the `courses/` folder. */
+export function usesCoursesFolder(template: MigrationTemplate): boolean {
+  return template === 'course' || template === 'study_notes';
+}
+
 export function slugifySegment(value: string): string {
   return value
     .toLowerCase()
@@ -25,7 +30,7 @@ export function suggestDestinationSlug(originUrl: string, template: MigrationTem
     return segments.length === 0 || segments[0] === 'home' ? 'home' : slugifySegment(segments.join('-'));
   }
 
-  if (template === 'course' || template === 'study_notes') {
+  if (usesCoursesFolder(template)) {
     const coursesIndex = segments.indexOf('courses');
     const slug = coursesIndex >= 0 ? segments[coursesIndex + 1] : segments[segments.length - 1];
     return slugifySegment(slug || (template === 'study_notes' ? 'notes' : 'course'));
@@ -43,7 +48,7 @@ export function suggestDestinationSlug(originUrl: string, template: MigrationTem
  */
 export function storyFullSlug(template: MigrationTemplate, destinationSlug: string): string {
   const slug = destinationSlug.trim().replace(/^\/+|\/+$/g, '').replace(/^pages\//, '');
-  if (template === 'course' || template === 'study_notes') {
+  if (usesCoursesFolder(template)) {
     return slug ? `courses/${slug.replace(/^courses\//, '')}` : 'courses';
   }
   if (template === 'home' || !slug || slug === 'home') {

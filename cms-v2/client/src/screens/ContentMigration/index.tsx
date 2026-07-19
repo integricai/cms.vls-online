@@ -15,9 +15,11 @@ import type {
   TemplateReferenceSummary,
 } from '../../../../shared/migrationTypes';
 import { MIGRATION_TEMPLATE_LABELS } from '../../../../shared/migrationTemplateLabels';
-import { suggestDestinationSlug } from '../../../../shared/migrationDestination';
+import { storyFullSlug, suggestDestinationSlug } from '../../../../shared/migrationDestination';
 
 const STORAGE_KEY = 'vls-content-migration-config';
+
+type MigrationTemplateOption = TemplateReferenceSummary & { label: string };
 
 type SavedConfig = {
   storyblokSpaceId: string;
@@ -113,6 +115,8 @@ export default function ContentMigrationTab() {
   const [migratingContent, setMigratingContent] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [message, setMessage] = useState<StatusMessage | null>(null);
+  const [migrationTemplates, setMigrationTemplates] = useState<MigrationTemplateOption[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [templateReference, setTemplateReference] = useState<TemplateReferenceSummary | null>(null);
 
   const [scrapeResult, setScrapeResult] = useState<ScrapePhaseResult | null>(null);
@@ -177,12 +181,26 @@ export default function ContentMigrationTab() {
   }, [selectedPage, destinationTouched]);
 
   useEffect(() => {
-    api.get<TemplateReferenceSummary[]>('/migration/templates')
+    setLoadingTemplates(true);
+    api.get<MigrationTemplateOption[]>('/migration/templates')
       .then(templates => {
+        setMigrationTemplates(templates);
         const match = templates.find(item => item.template === template) ?? null;
         setTemplateReference(match);
       })
-      .catch(() => setTemplateReference(null));
+      .catch(() => {
+        const fallback = (Object.entries(MIGRATION_TEMPLATE_LABELS) as Array<[MigrationTemplate, string]>)
+          .map(([value, label]) => ({
+            template: value,
+            label,
+            fileName: '',
+            sectionCount: 0,
+            sections: [],
+          }));
+        setMigrationTemplates(fallback);
+        setTemplateReference(fallback.find(item => item.template === template) ?? null);
+      })
+      .finally(() => setLoadingTemplates(false));
   }, [template]);
 
   function credentialsPayload() {
@@ -451,8 +469,9 @@ export default function ContentMigrationTab() {
         <h2 className="mb-1 text-sm font-bold text-slate-700">Content Migration</h2>
         <p className="text-xs text-slate-500">
           Scan the live VLS site once to populate all pages, then work through the 3 migration phases for each page:
-          Preview Scrape, Generate Structure, Migrate Content. Course stories are created under the courses folder;
-          all other templates are created at the root. Pages are scraped from Zenler internal URLs for reliability.
+          Preview Scrape, Generate Structure, Migrate Content. Course and study notes stories are created under the
+          <code className="mx-1">courses/</code> folder (e.g. <code>courses/cima-notes</code>); all other templates
+          are created at the Storyblok root. Pages are scraped from Zenler internal URLs for reliability.
         </p>
       </div>
 
@@ -502,14 +521,20 @@ export default function ContentMigrationTab() {
               className="input"
               value={template}
               onChange={event => void handleTemplateChange(event.target.value as MigrationTemplate)}
+              disabled={loadingTemplates || !migrationTemplates.length}
             >
-              {(Object.entries(MIGRATION_TEMPLATE_LABELS) as Array<[MigrationTemplate, string]>).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
+              {loadingTemplates ? (
+                <option value="">Loading templates...</option>
+              ) : (
+                migrationTemplates.map(item => (
+                  <option key={item.template} value={item.template}>{item.label}</option>
+                ))
+              )}
             </select>
             <p className="mt-1 text-[11px] text-slate-400">
-              Course pages go to <code>courses/</code>; all other templates go to the Storyblok root.
-              {templateReference ? (
+              Course and study notes pages go to <code>courses/</code> (e.g. <code>courses/cima-notes</code>);
+              all other templates go to the Storyblok root.
+              {templateReference?.fileName ? (
                 <> Reference HTML: <code>templates/{templateReference.fileName}</code> ({templateReference.sectionCount} sections).</>
               ) : null}
             </p>
@@ -518,7 +543,7 @@ export default function ContentMigrationTab() {
           <Field label="Destination URL (Storyblok story slug)">
             <input
               className="input"
-              placeholder="e.g. courses/fa2 or privacy-policy"
+              placeholder="e.g. cima-notes or privacy-policy"
               value={destinationSlug}
               onChange={event => {
                 setDestinationSlug(event.target.value);
@@ -532,7 +557,7 @@ export default function ContentMigrationTab() {
             </p>
             {destinationSlug ? (
               <p className="mt-1 text-[11px] font-medium text-slate-600">
-                Story path: {template === 'course' ? `courses/${destinationSlug.replace(/^courses\//, '')}` : destinationSlug}
+                Story path: {storyFullSlug(template, destinationSlug)}
               </p>
             ) : null}
           </Field>

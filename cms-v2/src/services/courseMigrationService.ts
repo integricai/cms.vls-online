@@ -28,8 +28,8 @@ import { CoursePageScrapeError, scrapeCoursePage } from './coursePageScraper';
 import { buildTabBlocksFromPanel } from './courseTabBuilder';
 import { DEFAULT_TRUSTPILOT_CAROUSEL_EMBED } from '../../shared/trustpilotDefaults';
 import { genericBreadcrumbText, scrapeGenericPage } from './pageScraper';
-import { slugifySegment, storyFullSlug, suggestDestinationSlug } from '../../shared/migrationDestination';
-import { TEMPLATES_WITH_FULL_FALLBACK } from '../../shared/migrationTemplateLabels';
+import { slugifySegment, storyFullSlug, suggestDestinationSlug, usesCoursesFolder } from '../../shared/migrationDestination';
+import { MIGRATION_TEMPLATE_LABELS, TEMPLATES_WITH_FULL_FALLBACK } from '../../shared/migrationTemplateLabels';
 import {
   findCoursesFolder,
   StoryblokApiError,
@@ -506,6 +506,7 @@ function templateReferenceSummary(template: MigrationTemplate): TemplateReferenc
   const blueprint = getMigrationTemplateBlueprint(template);
   return {
     template,
+    label: MIGRATION_TEMPLATE_LABELS[template],
     fileName: blueprint.fileName,
     sectionCount: blueprint.sections.length,
     sections: blueprint.sections.map(section => ({
@@ -1190,7 +1191,7 @@ export async function generatePageStructure(
     : { component: rootComponent, seo: [], body };
 
   let parentId: number | undefined;
-  if (template === 'course' || template === 'study_notes') {
+  if (usesCoursesFolder(template)) {
     const coursesFolder = await findCoursesFolder(config);
     if (!coursesFolder) {
       throw new CourseMigrationError(
@@ -1302,7 +1303,7 @@ export async function migratePageContent(
     warnings.push(...collectGenericWarnings(scraped));
     content = await buildGenericStoryblokContentAsync(scraped, template, presetBloksBySection, config);
 
-    if (template === 'study_notes') {
+    if (usesCoursesFolder(template)) {
       const coursesFolder = await findCoursesFolder(config);
       if (!coursesFolder) {
         throw new CourseMigrationError(

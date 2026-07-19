@@ -21,6 +21,7 @@ import {
   updateMigrationPage,
 } from '../models/migrationPage';
 import { isMigrationTemplate } from '../services/migrationUrlUtils';
+import { MIGRATION_TEMPLATE_LABELS } from '../../shared/migrationTemplateLabels';
 
 const router = Router();
 
@@ -34,6 +35,7 @@ router.get('/templates', async (_req: Request, res: Response, next: NextFunction
   try {
     const templates = listMigrationTemplateBlueprints().map(blueprint => ({
       template: blueprint.template,
+      label: MIGRATION_TEMPLATE_LABELS[blueprint.template],
       fileName: blueprint.fileName,
       sectionCount: blueprint.sections.length,
       sections: blueprint.sections.map(section => ({
