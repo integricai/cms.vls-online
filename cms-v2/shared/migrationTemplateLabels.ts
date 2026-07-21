@@ -15,6 +15,7 @@ export const MIGRATION_TEMPLATE_LABELS: Record<MigrationTemplate, string> = {
   contact_us: 'Contact Us',
   study_notes: 'Study Notes',
   course_listing: 'Course Listing',
+  course_dual_price: 'Course Dual Price',
 };
 
 /** Templates that always emit every blueprint section, using the HTML reference file when live content is missing. */

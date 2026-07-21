@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import type { MigrationTemplate } from '../../shared/migrationTypes';
+import { isCoursePageTemplate } from '../../shared/migrationDestination';
 import type {
   MigrationTemplateBlueprint,
   TemplateDesignTokens,
@@ -32,6 +33,7 @@ const TEMPLATE_FILES: Record<MigrationTemplate, string> = {
   contact_us: 'contact-us.html',
   study_notes: 'notes.html',
   course_listing: 'course-listing.html',
+  course_dual_price: 'course-dual-price.html',
 };
 
 const DEFAULT_TOKENS: TemplateDesignTokens = {
@@ -184,13 +186,13 @@ function componentForSection(key: string, classes: string[], template: Migration
   else if (template === 'legal' && (key.includes('legal-hero') || classes.includes('legal-hero'))) component = 'legal_hero';
   else if (template === 'legal' && classes.includes('sec')) component = 'legal_section';
   else if (template === 'home' && key.includes('hero')) component = 'home_hero_section';
-  else if (template === 'course' && key.includes('hero')) component = 'course_hero_layout';
-  else if (template === 'course' && (key.includes('course-description') || key === 'course-description')) {
+  else if (isCoursePageTemplate(template) && key.includes('hero')) component = 'course_hero_layout';
+  else if (isCoursePageTemplate(template) && (key.includes('course-description') || key === 'course-description')) {
     component = 'course_introduction';
   }
-  else if (template === 'course' && (key.includes('what-you') || key.includes('learn'))) component = 'course_learn_section';
-  else if (template === 'course' && key.includes('course-content')) component = 'course_curriculum';
-  else if (template === 'course' && key.includes('tutor')) component = 'course_tutor_section';
+  else if (isCoursePageTemplate(template) && (key.includes('what-you') || key.includes('learn'))) component = 'course_learn_section';
+  else if (isCoursePageTemplate(template) && key.includes('course-content')) component = 'course_curriculum';
+  else if (isCoursePageTemplate(template) && key.includes('tutor')) component = 'course_tutor_section';
   else if (key.includes('hero')) component = 'page_hero';
   else if ((template === 'form' || template === 'about_us') && (key.includes('get-in-touch') || key.includes('touch') || /(^|-)form($|-)/.test(key))) {
     component = 'contact_cards';
@@ -221,7 +223,7 @@ function componentForSection(key: string, classes: string[], template: Migration
   else if (classes.includes('band')) component = 'icon_card_grid';
   else component = SECTION_COMPONENT[key.split('-')[0]] ?? 'content_section';
 
-  if (template !== 'course' && !PAGE_BODY_COMPONENTS.has(component)) {
+  if (!isCoursePageTemplate(template) && !PAGE_BODY_COMPONENTS.has(component)) {
     return 'content_section';
   }
   return component;
@@ -427,7 +429,7 @@ function parseTemplateFile(template: MigrationTemplate, filePath: string): Migra
     fileName: path.basename(filePath),
     filePath,
     tokens,
-    sections: template === 'course'
+    sections: isCoursePageTemplate(template)
       ? augmentCourseSections(parseSections(html, tokens, template))
       : parseSections(html, tokens, template),
   };
@@ -524,7 +526,7 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
   stat_item: ['value', 'label'],
-  icon_card: ['title', 'description', 'photo', 'icon_key', 'figure_value', 'figure_label', 'is_tip'],
+  icon_card: ['title', 'designation', 'description', 'photo', 'icon_key', 'figure_value', 'figure_label', 'is_tip'],
   timeline_item: ['year', 'title', 'text'],
   contact_card: ['title', 'detail', 'link_text', 'link', 'icon_key'],
   page_hero_item: ['text', 'variant'],
@@ -841,7 +843,7 @@ export function buildPresetBlokFromSection(
   }
 
   if (section.component === 'testimonials') {
-    const isCourseTemplate = blueprint.template === 'course';
+    const isCourseTemplate = isCoursePageTemplate(blueprint.template);
     return sanitizeBlokForStoryblok({
       ...base,
       layout: isCourseTemplate ? 'trustpilot' : 'course_reviews',

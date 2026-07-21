@@ -1,8 +1,12 @@
 import type { MigrationTemplate } from './migrationTypes';
 
+export function isCoursePageTemplate(template: MigrationTemplate): boolean {
+  return template === 'course' || template === 'course_dual_price';
+}
+
 /** Storyblok stories for these templates are created under the `courses/` folder. */
 export function usesCoursesFolder(template: MigrationTemplate): boolean {
-  return template === 'course' || template === 'study_notes';
+  return isCoursePageTemplate(template) || template === 'study_notes';
 }
 
 export function slugifySegment(value: string): string {

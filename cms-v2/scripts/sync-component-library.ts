@@ -26,6 +26,7 @@ const TEMPLATES: MigrationTemplate[] = [
   'contact_us',
   'study_notes',
   'course_listing',
+  'course_dual_price',
 ];
 
 function loadEnv(): void {

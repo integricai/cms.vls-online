@@ -7,6 +7,7 @@
 import fs from 'fs';
 import path from 'path';
 import type { MigrationTemplate } from '../shared/migrationTypes';
+import { isCoursePageTemplate } from '../shared/migrationDestination';
 import { listMigrationTemplateBlueprints } from '../src/services/migrationTemplateRegistry';
 import { getTemplateFileSections } from '../src/services/pageSectionExtractor';
 import { buildBlokFromTemplateSection } from '../src/services/pageContentBuilder';
@@ -20,7 +21,7 @@ const TEMPLATES: MigrationTemplate[] = [
   'team_vls',
   'schedules',
   'course_articles',
-  'live_sessions', 'book_meeting', 'contact_us', 'study_notes', 'course_listing',
+  'live_sessions', 'book_meeting', 'contact_us', 'study_notes', 'course_listing', 'course_dual_price',
 ];
 
 const RENDERERS = new Set(
@@ -63,10 +64,10 @@ async function main() {
     const sectionMap = new Map(sections.map(section => [section.key, section]));
 
     for (const section of blueprint.sections) {
-      const whitelist = blueprint.template === 'course' ? COURSE_PAGE_WHITELIST : PAGE_WHITELIST;
+      const whitelist = isCoursePageTemplate(blueprint.template) ? COURSE_PAGE_WHITELIST : PAGE_WHITELIST;
       assert(SCHEMAS.has(section.component), `${blueprint.template}/${section.key}: missing schema ${section.component}`, errors);
       assert(RENDERERS.has(section.component), `${blueprint.template}/${section.key}: missing renderer ${section.component}`, errors);
-      assert(whitelist.has(section.component), `${blueprint.template}/${section.key}: not in ${blueprint.template === 'course' ? 'course_page' : 'page'}.body whitelist ${section.component}`, errors);
+      assert(whitelist.has(section.component), `${blueprint.template}/${section.key}: not in ${isCoursePageTemplate(blueprint.template) ? 'course_page' : 'page'}.body whitelist ${section.component}`, errors);
 
       const extracted = sectionMap.get(section.key)
         ?? sections.find(item => item.key === section.key)

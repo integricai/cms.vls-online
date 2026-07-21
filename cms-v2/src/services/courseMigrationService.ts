@@ -28,7 +28,7 @@ import { CoursePageScrapeError, scrapeCoursePage } from './coursePageScraper';
 import { buildTabBlocksFromPanel } from './courseTabBuilder';
 import { DEFAULT_TRUSTPILOT_CAROUSEL_EMBED } from '../../shared/trustpilotDefaults';
 import { genericBreadcrumbText, scrapeGenericPage } from './pageScraper';
-import { slugifySegment, storyFullSlug, suggestDestinationSlug, usesCoursesFolder } from '../../shared/migrationDestination';
+import { slugifySegment, storyFullSlug, suggestDestinationSlug, usesCoursesFolder, isCoursePageTemplate } from '../../shared/migrationDestination';
 import { MIGRATION_TEMPLATE_LABELS, TEMPLATES_WITH_FULL_FALLBACK } from '../../shared/migrationTemplateLabels';
 import {
   findCoursesFolder,
@@ -821,7 +821,7 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
   const fullSlug = storyFullSlug(template, destinationSlug);
   const templateReference = templateReferenceSummary(template);
 
-  if (template === 'course') {
+  if (isCoursePageTemplate(template)) {
     const scraped = await scrapeCoursePage(input.pageUrl.trim());
     const zenlerCourseId = await resolveZenlerCourseId(scraped);
     const warnings = collectCourseWarnings(scraped, zenlerCourseId);
@@ -971,7 +971,7 @@ function resolveDestinationSlug(page: MigrationPageRecord): string {
 }
 
 function rootComponentForTemplate(template: MigrationTemplate): string {
-  return template === 'course' ? 'course_page' : 'page';
+  return isCoursePageTemplate(template) ? 'course_page' : 'page';
 }
 
 async function detectMissingComponents(
@@ -1013,7 +1013,7 @@ export async function previewScrapePage(pageId: number): Promise<ScrapePhaseResu
   const page = await getMigrationPageById(pageId);
   if (!page) throw new CourseMigrationError('Migration page not found', 404);
 
-  if (page.template === 'course') {
+  if (isCoursePageTemplate(page.template)) {
     const scraped = await scrapeCoursePage(page.originUrl);
     const zenlerCourseId = await resolveZenlerCourseId(scraped);
     const warnings = collectCourseWarnings(scraped, zenlerCourseId);
@@ -1118,7 +1118,7 @@ export async function generatePageStructure(
   const config = storyblokConfigFromCredentials(credentials);
   await verifyStoryblokAccess(config);
 
-  if (template !== 'course' && page.customComponentName) {
+  if (!isCoursePageTemplate(template) && page.customComponentName) {
     return generateCustomComponentStructure(page, pageId, config, template, templateReference, scrapedRaw as ScrapedGenericPage);
   }
 
@@ -1139,7 +1139,7 @@ export async function generatePageStructure(
   const scraped = scrapedRaw as ScrapedGenericPage;
   const pageBuilderLegal = template === 'legal' && isPageBuilderLegalHtml(scraped.rawHtml ?? '');
 
-  if (template !== 'course') {
+  if (!isCoursePageTemplate(template)) {
     const eligibleSections = blueprint.sections.filter(section => section.component !== 'enquiry_form');
     unmatchedSections = pageBuilderLegal ? [] : detectUnmatchedSections(blueprint, scraped);
     if (
@@ -1175,7 +1175,7 @@ export async function generatePageStructure(
     ));
 
   let zenlerCourseId = '';
-  if (template === 'course') {
+  if (isCoursePageTemplate(template)) {
     const courseScraped = scrapedRaw as ScrapedCoursePage;
     zenlerCourseId = await resolveZenlerCourseId(courseScraped);
     body = enrichCourseStructureBody(body as Record<string, unknown>[], courseScraped, zenlerCourseId, destinationSlug);
@@ -1189,7 +1189,7 @@ export async function generatePageStructure(
   const fullSlug = storyFullSlug(template, destinationSlug);
   const rootComponent = rootComponentForTemplate(template);
 
-  const content: Record<string, unknown> = template === 'course'
+  const content: Record<string, unknown> = isCoursePageTemplate(template)
     ? { component: rootComponent, title: page.title || destinationSlug, zenler_course_id: zenlerCourseId, seo: [], body }
     : { component: rootComponent, seo: [], body };
 
@@ -1287,7 +1287,7 @@ export async function migratePageContent(
   let content: Record<string, unknown>;
   let parentId: number | undefined;
 
-  if (template === 'course') {
+  if (isCoursePageTemplate(template)) {
     const scraped = scrapedRaw as ScrapedCoursePage;
     const zenlerCourseId = await resolveZenlerCourseId(scraped);
     warnings.push(...collectCourseWarnings(scraped, zenlerCourseId));

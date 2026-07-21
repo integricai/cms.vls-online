@@ -6,7 +6,7 @@ import type { MigrationTemplate } from '../shared/migrationTypes';
 const TEMPLATES: MigrationTemplate[] = [
   'home', 'course', 'legal', 'about_us', 'landing', 'team_vls',
   'schedules', 'course_articles', 'live_sessions', 'book_meeting', 'contact_us',
-  'study_notes', 'course_listing',
+  'study_notes', 'course_listing', 'course_dual_price',
 ];
 
 function nestedCount(blok: Record<string, unknown> | null): string {

@@ -15,7 +15,7 @@ import type {
   TemplateReferenceSummary,
 } from '../../../../shared/migrationTypes';
 import { MIGRATION_TEMPLATE_LABELS } from '../../../../shared/migrationTemplateLabels';
-import { storyFullSlug, suggestDestinationSlug } from '../../../../shared/migrationDestination';
+import { storyFullSlug, suggestDestinationSlug, isCoursePageTemplate } from '../../../../shared/migrationDestination';
 
 const STORAGE_KEY = 'vls-content-migration-config';
 
@@ -847,8 +847,9 @@ export default function ContentMigrationTab() {
               </p>
               <ul className="mt-2 space-y-1">
                 {(structureResult?.templateReference ?? templateReference)?.sections.map(section => {
-                  const isCourseTemplate = template === 'course'
-                    || (structureResult?.templateReference ?? templateReference)?.template === 'course';
+                  const refTemplate = (structureResult?.templateReference ?? templateReference)?.template;
+                  const isCourseTemplate = isCoursePageTemplate(template)
+                    || (refTemplate != null && isCoursePageTemplate(refTemplate));
                   const source = genericScraped?.sectionMatchSource?.[section.key];
                   const confidence = genericScraped?.sectionMatchConfidence?.[section.key];
                   return (
