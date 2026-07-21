@@ -21,6 +21,7 @@ import {
   parseRequirementCards,
   parseDuoCards,
   parseStepCards,
+  parseLegacyTeamCards,
   parseTeamProfiles,
   parseTutorCard,
   parseSyllabusRows,
@@ -190,7 +191,9 @@ function parseSideCard(sectionHtml: string): ScrapedTemplateSection['sideCard'] 
 function enrichSection(key: string, sectionHtml: string, base: ScrapedTemplateSection, anchorId = ''): ScrapedTemplateSection {
   const enriched: ScrapedTemplateSection = { ...base };
 
-  if (sectionHtml.includes('class="profile"') || key.includes('tutor') || key.includes('team')) {
+  if (/class="vlsteam[a-z0-9]+"/i.test(sectionHtml)) {
+    enriched.profiles = parseLegacyTeamCards(sectionHtml);
+  } else if (sectionHtml.includes('class="profile"') || key.includes('tutor') || key.includes('team')) {
     enriched.profiles = parseTeamProfiles(sectionHtml);
   }
   if (sectionHtml.includes('tutor-card')) {

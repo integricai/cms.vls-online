@@ -502,6 +502,11 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
     'eyebrow', 'heading_prefix', 'heading_accent', 'description', 'profiles',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
+  team_profile: [
+    'name', 'role', 'initials', 'photo', 'icon_key', 'bio', 'tags', 'logos_note', 'stats',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
+  team_profile_stat: ['value', 'label'],
   quote_block: [
     'eyebrow', 'quote', 'quote_accent', 'author_name', 'author_role', 'author_initials',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
@@ -519,7 +524,7 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
   stat_item: ['value', 'label'],
-  icon_card: ['title', 'description', 'icon_key', 'figure_value', 'figure_label', 'is_tip'],
+  icon_card: ['title', 'description', 'photo', 'icon_key', 'figure_value', 'figure_label', 'is_tip'],
   timeline_item: ['year', 'title', 'text'],
   contact_card: ['title', 'detail', 'link_text', 'link', 'icon_key'],
   page_hero_item: ['text', 'variant'],

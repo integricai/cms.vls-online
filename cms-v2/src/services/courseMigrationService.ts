@@ -49,6 +49,7 @@ import {
   mergePresetWithData,
   syncTemplateComponentLibrary,
 } from './storyblokComponentLibrary';
+import { hydrateTeamProfilePhotos } from './teamProfilePhotoMigration';
 import { buildBlokFromTemplateSection } from './pageContentBuilder';
 import { buildMergedCourseStoryblokContent, mapScrapedCourseIntroduction } from './buildCourseTemplateContent';
 import { indexTemplateSections, parseTemplateSectionsFromHtml, resolveTemplateSections, sectionHasLiveMatch, isPageBuilderLegalHtml } from './pageSectionExtractor';
@@ -770,6 +771,8 @@ export async function buildGenericStoryblokContentAsync(
     } else {
       blok = buildBlokFromTemplateSection(section, extracted, scraped, { allowTemplateFallback });
     }
+
+    blok = await hydrateTeamProfilePhotos(blok, config);
 
     const styled = await stylizeBlok(blok, template, section.key, presetBloksBySection, config);
     if (styled) {

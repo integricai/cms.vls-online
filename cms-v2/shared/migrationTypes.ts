@@ -183,6 +183,7 @@ export interface ScrapedTemplateSection {
     name: string;
     role: string;
     initials: string;
+    photoUrl?: string;
     bio: string;
     tags: string;
     logosNote: string;

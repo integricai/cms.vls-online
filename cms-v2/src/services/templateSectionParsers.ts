@@ -44,6 +44,61 @@ export function parseHeroTicks(sectionHtml: string): ScrapedTemplateSection['lab
     .filter(item => item.title);
 }
 
+function teamInitials(name: string): string {
+  if (!name) return '';
+  return name.trim().split(/\s+/).map(word => word[0] || '').join('').toUpperCase().slice(0, 2);
+}
+
+export function parseLegacyTeamCards(sectionHtml: string): ScrapedTemplateSection['profiles'] {
+  const uidMatch = sectionHtml.match(/class="(vlsteam[a-z0-9]+)"/i);
+  const uid = uidMatch?.[1];
+  if (!uid) return [];
+
+  const cardPattern = new RegExp(
+    `<div class="${uid}-card">([\\s\\S]*?)</div>\\s*</div>\\s*(?=<div class="${uid}-card"|</div>\\s*<style)`,
+    'gi',
+  );
+
+  return allMatches(sectionHtml, cardPattern)
+    .map(match => {
+      const block = match[1] ?? match[0];
+      const name = firstMatch(block, new RegExp(`class="${uid}-name"[^>]*>([\\s\\S]*?)<\\/h3>`, 'i'))
+        || firstMatch(block, new RegExp(`class="${uid}-name"[^>]*>([\\s\\S]*?)<\\/`, 'i'));
+      const role = firstMatch(block, new RegExp(`class="${uid}-role"[^>]*>([\\s\\S]*?)<\\/p>`, 'i'));
+      const photoUrl = block.match(new RegExp(`class="${uid}-photo"[^>]*src="([^"]+)"`, 'i'))?.[1]?.trim() ?? '';
+      const initials = firstMatch(block, new RegExp(`class="${uid}-initials"[^>]*>[\\s\\S]*?<span>([\\s\\S]*?)<\\/span>`, 'i'))
+        || teamInitials(name);
+      const bio = allMatches(block, new RegExp(`class="${uid}-para"[^>]*>([\\s\\S]*?)<\\/p>`, 'gi'))
+        .map(item => stripTemplateTags(item[1]))
+        .filter(Boolean)
+        .join('\n\n');
+      const tags = allMatches(block, new RegExp(`class="${uid}-tag"[^>]*>([\\s\\S]*?)<\\/span>`, 'gi'))
+        .map(item => stripTemplateTags(item[1]))
+        .join(', ');
+      const stats = allMatches(
+        block,
+        new RegExp(
+          `class="${uid}-feat"[^>]*>[\\s\\S]*?class="${uid}-fv"[^>]*>([\\s\\S]*?)<\\/div>[\\s\\S]*?class="${uid}-fl"[^>]*>([\\s\\S]*?)<\\/div>`,
+          'gi',
+        ),
+      )
+        .map(item => ({ value: stripTemplateTags(item[1]), label: stripTemplateTags(item[2]) }))
+        .filter(item => item.value || item.label);
+
+      return {
+        name,
+        role,
+        initials,
+        photoUrl,
+        bio,
+        tags,
+        logosNote: '',
+        stats,
+      };
+    })
+    .filter(item => item.name || item.bio || item.photoUrl);
+}
+
 export function parseTeamProfiles(sectionHtml: string): ScrapedTemplateSection['profiles'] {
   return allMatches(sectionHtml, /<div class="profile"[^>]*>([\s\S]*?)<\/div>\s*(?=<div class="profile"|<!--\s*TEMPLATE NOTE|$)/gi)
     .map(match => {
@@ -51,7 +106,11 @@ export function parseTeamProfiles(sectionHtml: string): ScrapedTemplateSection['
       const name = firstMatch(block, /<div class="prof-name"[^>]*>([\s\S]*?)<\/div>/i)
         || firstMatch(block, /<h3[^>]*>([\s\S]*?)<\/h3>/i);
       const role = firstMatch(block, /<div class="prof-role"[^>]*>([\s\S]*?)<\/div>/i);
-      const initials = firstMatch(block, /<div class="prof-photo"[^>]*>([\s\S]*?)<\/div>/i);
+      const photoBlock = block.match(/<div class="prof-photo"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '';
+      const photoUrl = photoBlock.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1]?.trim() ?? '';
+      const initials = photoUrl
+        ? ''
+        : stripTemplateTags(photoBlock);
       const bio = allMatches(block, /<div class="prof-body"[^>]*>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/gi)
         .map(m => stripTemplateTags(m[1]))
         .filter(Boolean)
@@ -63,7 +122,7 @@ export function parseTeamProfiles(sectionHtml: string): ScrapedTemplateSection['
       const stats = allMatches(block, /<div class="ps"[^>]*>[\s\S]*?<span class="v"[^>]*>([\s\S]*?)<\/span>[\s\S]*?<span class="k"[^>]*>([\s\S]*?)<\/span>/gi)
         .map(m => ({ value: stripTemplateTags(m[1]), label: stripTemplateTags(m[2]) }))
         .filter(item => item.value || item.label);
-      return { name, role, initials, bio, tags, logosNote, stats };
+      return { name, role, initials, photoUrl, bio, tags, logosNote, stats };
     })
     .filter(item => item.name || item.bio);
 }

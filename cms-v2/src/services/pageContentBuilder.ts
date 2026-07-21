@@ -424,6 +424,7 @@ export function buildBlokFromTemplateSection(
           name: profile.name,
           role: profile.role,
           initials: profile.initials,
+          ...(profile.photoUrl ? { migration_photo_url: profile.photoUrl } : {}),
           bio: profile.bio,
           tags: profile.tags,
           logos_note: profile.logosNote,

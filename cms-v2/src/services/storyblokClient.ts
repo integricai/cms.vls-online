@@ -493,3 +493,118 @@ export async function upsertCourseStory(
   const fullSlug = input.parentId ? `courses/${input.slug}` : input.slug;
   return upsertStory(config, { ...input, fullSlug });
 }
+
+export type StoryblokUploadedAsset = {
+  id?: number;
+  alt?: string;
+  name?: string;
+  focus?: string;
+  title?: string;
+  filename: string;
+  copyright?: string;
+  fieldtype: 'asset';
+  meta_data?: Record<string, unknown>;
+  is_external_url?: boolean;
+};
+
+type SignedUploadResponse = {
+  id: number;
+  post_url: string;
+  fields: Record<string, string>;
+};
+
+async function loadImageBuffer(sourceUrl: string): Promise<{ buffer: Buffer; contentType: string; extension: string }> {
+  const trimmed = sourceUrl.trim();
+  if (!trimmed) throw new Error('Image source URL is empty');
+
+  if (trimmed.startsWith('data:')) {
+    const match = trimmed.match(/^data:([^;]+);base64,(.+)$/i);
+    if (!match) throw new Error('Invalid data URL image');
+    const contentType = match[1].toLowerCase();
+    const buffer = Buffer.from(match[2], 'base64');
+    const extension = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
+    return { buffer, contentType, extension };
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    const response = await fetch(trimmed);
+    if (!response.ok) throw new Error(`Failed to fetch image (${response.status})`);
+    const contentType = response.headers.get('content-type')?.split(';')[0]?.trim() || 'image/jpeg';
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const extension = trimmed.match(/\.(png|webp|jpe?g|gif)(?:[?#]|$)/i)?.[1]?.replace('jpeg', 'jpg')
+      || (contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg');
+    return { buffer, contentType, extension: extension === 'jpeg' ? 'jpg' : extension };
+  }
+
+  throw new Error('Unsupported image source URL');
+}
+
+export async function uploadStoryblokAsset(
+  config: StoryblokConfig,
+  input: { sourceUrl: string; filename: string; alt?: string },
+): Promise<StoryblokUploadedAsset> {
+  const { buffer, contentType, extension } = await loadImageBuffer(input.sourceUrl);
+  const filename = input.filename.includes('.') ? input.filename : `${input.filename}.${extension}`;
+
+  const signed = await storyblokRequest<SignedUploadResponse>(
+    config,
+    'POST',
+    '/assets/',
+    { filename, validate_upload: 1 },
+  );
+
+  const form = new FormData();
+  for (const [key, value] of Object.entries(signed.fields)) {
+    form.append(key, value);
+  }
+  form.append('file', new Blob([Uint8Array.from(buffer)], { type: contentType }), filename);
+
+  const uploadResponse = await fetch(signed.post_url, { method: 'POST', body: form });
+  if (!uploadResponse.ok) {
+    throw new StoryblokApiError(
+      `Storyblok asset upload to S3 failed (${uploadResponse.status})`,
+      uploadResponse.status,
+    );
+  }
+
+  const finished = await storyblokRequest<{ asset?: StoryblokUploadedAsset }>(
+    config,
+    'GET',
+    `/assets/${signed.id}/finish_upload`,
+  );
+
+  const asset = finished.asset;
+  const filenameUrl = asset?.filename
+    || (signed.fields.key ? `https://a.storyblok.com/${signed.fields.key}` : '');
+
+  if (!filenameUrl) {
+    throw new StoryblokApiError('Storyblok asset upload finished without a CDN filename', 502, finished);
+  }
+
+  return {
+    id: asset?.id ?? signed.id,
+    alt: input.alt ?? asset?.alt ?? '',
+    name: asset?.name ?? filename,
+    focus: asset?.focus ?? '',
+    title: asset?.title ?? '',
+    filename: filenameUrl,
+    copyright: asset?.copyright ?? '',
+    fieldtype: 'asset',
+    meta_data: asset?.meta_data ?? {},
+    is_external_url: false,
+  };
+}
+
+export async function uploadStoryblokAssetCached(
+  config: StoryblokConfig,
+  cache: Map<string, Promise<StoryblokUploadedAsset>>,
+  input: { sourceUrl: string; filename: string; alt?: string },
+): Promise<StoryblokUploadedAsset> {
+  const key = `${input.filename}::${input.sourceUrl.length}::${input.sourceUrl.slice(0, 64)}`;
+  const existing = cache.get(key);
+  if (existing) return existing;
+
+  const pending = uploadStoryblokAsset(config, input);
+  cache.set(key, pending);
+  return pending;
+}
