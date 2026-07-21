@@ -51,7 +51,8 @@ import {
 } from './storyblokComponentLibrary';
 import { hydrateTeamProfilePhotos } from './teamProfilePhotoMigration';
 import { buildBlokFromTemplateSection } from './pageContentBuilder';
-import { buildMergedCourseStoryblokContent, mapScrapedCourseIntroduction } from './buildCourseTemplateContent';
+import { buildMergedCourseStoryblokContent, buildHeroRightBlokFromTemplate, mapScrapedCourseIntroduction } from './buildCourseTemplateContent';
+import { loadCourseTemplateFile } from './courseTemplateParser';
 import { indexTemplateSections, parseTemplateSectionsFromHtml, resolveTemplateSections, sectionHasLiveMatch, isPageBuilderLegalHtml } from './pageSectionExtractor';
 import type { TemplateSectionBlueprint } from '../../shared/migrationTemplateTypes';
 import { analyzeUnmatchedLayout } from './genericLayoutAnalyzer';
@@ -427,6 +428,21 @@ function pickText(...values: Array<string | undefined | null>): string {
   return '';
 }
 
+function applySessionPricingHeroRight(
+  body: Record<string, unknown>[],
+  template: MigrationTemplate,
+): Record<string, unknown>[] {
+  if (template !== 'course_dual_price') return body;
+  const parsed = loadCourseTemplateFile('course_dual_price');
+  if (parsed.pricingLayout !== 'session_selector') return body;
+  const heroRight = buildHeroRightBlokFromTemplate(parsed);
+  return body.map(blok => (
+    blok.component === 'course_hero_layout'
+      ? { ...blok, right: [heroRight] }
+      : blok
+  ));
+}
+
 function enrichCourseStructureBody(
   body: Record<string, unknown>[],
   scraped: ScrapedCoursePage,
@@ -614,7 +630,7 @@ async function buildCourseStoryblokContentAsync(
   presetBloksBySection: Record<string, Record<string, unknown>> | null,
   config: StoryblokConfig | null,
 ): Promise<Record<string, unknown>> {
-  const base = buildMergedCourseStoryblokContent(scraped, zenlerCourseId);
+  const base = buildMergedCourseStoryblokContent(scraped, zenlerCourseId, template);
   const blueprint = getMigrationTemplateBlueprint(template);
   const body = Array.isArray(base.body) ? base.body as Record<string, unknown>[] : [];
 
@@ -1179,6 +1195,7 @@ export async function generatePageStructure(
     const courseScraped = scrapedRaw as ScrapedCoursePage;
     zenlerCourseId = await resolveZenlerCourseId(courseScraped);
     body = enrichCourseStructureBody(body as Record<string, unknown>[], courseScraped, zenlerCourseId, destinationSlug);
+    body = applySessionPricingHeroRight(body as Record<string, unknown>[], template);
     if (!zenlerCourseId) {
       warnings.push(
         'Zenler course ID was not found in the scrape or CMS course list. Structure was generated with blank zenler_course_id — set it in Storyblok before migrating pricing/curriculum.',

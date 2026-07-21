@@ -175,10 +175,12 @@ export default function ContentMigrationTab() {
   useEffect(() => {
     if (!selectedPage) return;
     setTemplate(selectedPage.template);
-    if (!destinationTouched) {
-      setDestinationSlug(suggestDestinationSlug(selectedPage.originUrl, selectedPage.template));
-    }
-  }, [selectedPage, destinationTouched]);
+    setDestinationSlug(
+      selectedPage.destinationSlug?.trim()
+      || suggestDestinationSlug(selectedPage.originUrl, selectedPage.template),
+    );
+    setDestinationTouched(false);
+  }, [selectedPage]);
 
   useEffect(() => {
     setLoadingTemplates(true);
@@ -279,8 +281,22 @@ export default function ContentMigrationTab() {
     }
   }
 
+  async function persistPageSettings() {
+    if (!selectedPage || !destinationSlug.trim()) return;
+    try {
+      const updated = await api.patch<MigrationPageRecord>(`/migration/pages/${selectedPage.id}`, {
+        template,
+        destinationSlug: destinationSlug.trim(),
+      });
+      setPages(current => current.map(page => (page.id === updated.id ? updated : page)));
+    } catch {
+      // Non-blocking — migration can still proceed with the last saved values
+    }
+  }
+
   async function runScrape() {
     if (!selectedPage) return;
+    await persistPageSettings();
     setScraping(true);
     setMessage(null);
     resetPhaseResults();
@@ -306,6 +322,7 @@ export default function ContentMigrationTab() {
 
   async function runGenerateStructure() {
     if (!selectedPage) return;
+    await persistPageSettings();
     setGeneratingStructure(true);
     setMessage(null);
     setStructureResult(null);
@@ -345,6 +362,7 @@ export default function ContentMigrationTab() {
 
   async function runMigrateContent() {
     if (!selectedPage) return;
+    await persistPageSettings();
     setMigratingContent(true);
     setMessage(null);
     try {

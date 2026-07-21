@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import type { MigrationTemplate } from '../../shared/migrationTypes';
 import { isCoursePageTemplate } from '../../shared/migrationDestination';
+import { buildHeroRightBlokFromTemplate } from './buildCourseTemplateContent';
+import { loadCourseTemplateFile } from './courseTemplateParser';
 import type {
   MigrationTemplateBlueprint,
   TemplateDesignTokens,
@@ -620,10 +622,14 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
   course_hero_right: [
+    'pricing_layout', 'session_selector_label', 'cta_text_prefix', 'session_options',
     'section_label', 'price_now', 'price_was', 'price_save', 'price_access', 'price_note',
     'cta_text', 'cta_link', 'secondary_cta_text', 'secondary_cta_link', 'items',
+    'show_best_value', 'best_value_tag', 'best_value_text', 'best_value_link_text', 'best_value_link',
+    'show_reviews_summary', 'reviews_stars', 'reviews_label',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
+  course_session_option: ['title', 'subtitle', 'price', 'badge', 'cta_suffix', 'cta_link', 'is_default'],
   course_hero_right_item: ['title'],
   feature_card_v2: ['title', 'description', 'cta_text', 'cta_link'],
   faq_item: ['question', 'answer_type', 'answer_paragraph'],
@@ -749,6 +755,22 @@ export function buildPresetBlokFromSection(
   }
 
   if (section.component === 'course_hero_layout') {
+    const dualPriceTemplate = blueprint.template === 'course_dual_price'
+      ? loadCourseTemplateFile('course_dual_price')
+      : null;
+    const right = dualPriceTemplate?.pricingLayout === 'session_selector'
+      ? [buildHeroRightBlokFromTemplate(dualPriceTemplate)]
+      : [{
+        _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+        component: 'course_hero_right',
+        pricing_layout: 'standard',
+        section_label: 'THIS COURSE INCLUDES',
+        show_reviews_summary: true,
+        reviews_stars: '★★★★★',
+        reviews_label: 'Based on 308 reviews',
+        items: [],
+      }];
+
     return sanitizeBlokForStoryblok({
       ...base,
       left: [{
@@ -757,15 +779,7 @@ export function buildPresetBlokFromSection(
         heading: section.sampleHeading || 'Course heading',
         description: section.sampleDescription || 'Course hero description from template reference.',
       }],
-      right: [{
-        _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
-        component: 'course_hero_right',
-        section_label: 'THIS COURSE INCLUDES',
-        show_reviews_summary: true,
-        reviews_stars: '★★★★★',
-        reviews_label: 'Based on 308 reviews',
-        items: [],
-      }],
+      right,
     });
   }
 
@@ -799,6 +813,7 @@ export function buildPresetBlokFromSection(
   if (section.component === 'course_curriculum') {
     return sanitizeBlokForStoryblok({
       ...base,
+      course_id: 'COURSE',
       eyebrow: 'Course content',
       heading_prefix: section.sampleHeading || section.label,
       heading_accent: '',

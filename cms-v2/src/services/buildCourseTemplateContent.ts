@@ -1,3 +1,4 @@
+import type { MigrationTemplate } from '../../shared/migrationTypes';
 import type { ScrapedCoursePage } from '../../shared/migrationTypes';
 import type { ParsedCourseTemplate } from './courseTemplateParser';
 import { DEFAULT_TRUSTPILOT_CAROUSEL_EMBED } from '../../shared/trustpilotDefaults';
@@ -69,7 +70,7 @@ function pickLiveArrayOrTemplate<T>(live: T[] | undefined, template: T[]): T[] {
 
 export function mergeCourseWithTemplate(
   scraped: ScrapedCoursePage,
-  template: ParsedCourseTemplate = loadCourseTemplateFile(),
+  template: ParsedCourseTemplate = loadCourseTemplateFile('course'),
 ): ParsedCourseTemplate {
   const hero = scraped.hero;
   const right = scraped.heroRight;
@@ -106,11 +107,17 @@ export function mergeCourseWithTemplate(
       ? pickText(scrapedIntro?.paragraph2)
       : template.introductionParagraph2,
     priceNow: template.priceNow,
-    priceWas: template.priceWas,
-    priceSave: template.priceSave,
+    priceWas: template.pricingLayout === 'session_selector' ? '' : template.priceWas,
+    priceSave: template.pricingLayout === 'session_selector' ? '' : template.priceSave,
     priceAccess: template.priceAccess,
-    priceNote: template.priceNote,
-    primaryCtaText: pickText(right?.ctaText?.replace(/\s*→\s*$/, ''), template.primaryCtaText),
+    priceNote: template.pricingLayout === 'session_selector' ? '' : template.priceNote,
+    pricingLayout: template.pricingLayout,
+    sessionSelectorLabel: template.sessionSelectorLabel,
+    ctaTextPrefix: template.ctaTextPrefix,
+    sessionOptions: template.sessionOptions,
+    primaryCtaText: template.pricingLayout === 'session_selector'
+      ? template.primaryCtaText
+      : pickText(right?.ctaText?.replace(/\s*→\s*$/, ''), template.primaryCtaText),
     secondaryCtaText: template.secondaryCtaText,
     includesLabel: pickText(right?.label, template.includesLabel),
     includesItems: pickRicherArray(
@@ -153,6 +160,70 @@ export function mergeCourseWithTemplate(
     ctaBody: pickText(promotion?.subtitle, template.ctaBody),
     ctaPrimaryText: pickText(promotion?.ctaText, template.ctaPrimaryText),
   };
+}
+
+export function buildHeroRightBlokFromTemplate(data: ParsedCourseTemplate): Record<string, unknown> {
+  const defaultSession = data.sessionOptions.find(option => option.isDefault) ?? data.sessionOptions[0];
+  const includesItems = data.includesItems.map(title => ({
+    _uid: uid(),
+    component: 'course_hero_right_item',
+    title,
+  }));
+
+  if (data.pricingLayout === 'session_selector') {
+    const ctaPrefix = pickText(data.ctaTextPrefix, 'Enrol now');
+    const ctaSuffix = defaultSession?.ctaSuffix ?? '';
+    return sanitizeBlokForStoryblok({
+      _uid: uid(),
+      component: 'course_hero_right',
+      pricing_layout: 'session_selector',
+      session_selector_label: data.sessionSelectorLabel || 'Choose your exam session',
+      cta_text_prefix: ctaPrefix,
+      price_now: pickText(data.priceNow, defaultSession?.price),
+      price_access: data.priceAccess,
+      cta_text: ctaSuffix ? `${ctaPrefix} · ${ctaSuffix}` : ctaPrefix,
+      section_label: data.includesLabel,
+      show_best_value: false,
+      show_reviews_summary: true,
+      reviews_stars: '★★★★★',
+      reviews_label: pickText(data.reviewsLabel, 'Based on 308 reviews'),
+      session_options: data.sessionOptions.map(option => ({
+        _uid: uid(),
+        component: 'course_session_option',
+        title: option.title,
+        subtitle: option.subtitle,
+        price: option.price,
+        badge: option.badge,
+        cta_suffix: option.ctaSuffix,
+        is_default: option.isDefault,
+      })),
+      items: includesItems,
+    });
+  }
+
+  return sanitizeBlokForStoryblok({
+    _uid: uid(),
+    component: 'course_hero_right',
+    pricing_layout: 'standard',
+    section_label: data.includesLabel,
+    price_now: data.priceNow,
+    price_was: data.priceWas,
+    price_save: data.priceSave,
+    price_access: data.priceAccess,
+    price_note: data.priceNote,
+    cta_text: data.primaryCtaText,
+    secondary_cta_text: data.secondaryCtaText,
+    secondary_cta_link: storyblokLink('/bookmeeting'),
+    show_best_value: Boolean(data.bestValueText),
+    best_value_tag: data.bestValueTag,
+    best_value_text: data.bestValueText,
+    best_value_link_text: data.bestValueLinkText,
+    best_value_link: storyblokLink('/courses/fullaccess'),
+    show_reviews_summary: true,
+    reviews_stars: '★★★★★',
+    reviews_label: pickText(data.reviewsLabel, 'Based on 308 reviews'),
+    items: includesItems,
+  });
 }
 
 export function buildCourseStoryblokFromTemplate(
@@ -198,32 +269,7 @@ export function buildCourseStoryblokFromTemplate(
       schema_breadcrumb_id: `${sourceUrl}#breadcrumb`,
       schema_faq_section_id: `${sourceUrl}#faq`,
     }],
-    right: [{
-      _uid: uid(),
-      component: 'course_hero_right',
-      section_label: data.includesLabel,
-      price_now: data.priceNow,
-      price_was: data.priceWas,
-      price_save: data.priceSave,
-      price_access: data.priceAccess,
-      price_note: data.priceNote,
-      cta_text: data.primaryCtaText,
-      secondary_cta_text: data.secondaryCtaText,
-      secondary_cta_link: storyblokLink('/bookmeeting'),
-      show_best_value: Boolean(data.bestValueText),
-      best_value_tag: data.bestValueTag,
-      best_value_text: data.bestValueText,
-      best_value_link_text: data.bestValueLinkText,
-      best_value_link: storyblokLink('/courses/fullaccess'),
-      show_reviews_summary: true,
-      reviews_stars: '★★★★★',
-      reviews_label: pickText(data.reviewsLabel, 'Based on 308 reviews'),
-      items: data.includesItems.map(title => ({
-        _uid: uid(),
-        component: 'course_hero_right_item',
-        title,
-      })),
-    }],
+    right: [buildHeroRightBlokFromTemplate(data)],
   });
 
   const introduction = sanitizeBlokForStoryblok({
@@ -371,8 +417,9 @@ export function buildCourseStoryblokFromTemplate(
 export function buildMergedCourseStoryblokContent(
   scraped: ScrapedCoursePage,
   zenlerCourseId: string,
+  template: MigrationTemplate = 'course',
 ): Record<string, unknown> {
-  const merged = mergeCourseWithTemplate(scraped);
+  const merged = mergeCourseWithTemplate(scraped, loadCourseTemplateFile(template));
   const sourceUrl = scraped.sourceUrl || `https://vls-online.com/courses/${scraped.slug}`;
   return buildCourseStoryblokFromTemplate(merged, {
     zenlerCourseId,

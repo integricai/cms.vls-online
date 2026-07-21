@@ -111,6 +111,20 @@
   .price-access{ display:inline-flex; align-items:center; gap:7px; font-size:13px; color:var(--slate); margin-bottom:18px; }
   .price-access svg{ width:14px; height:14px; color:var(--blue); }
   .price-note{ text-align:center; font-size:12.5px; color:var(--slate); margin-top:12px; }
+  .session-selector{ margin:18px 0 20px; }
+  .session-label{ font-size:11.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--slate); margin:0 0 12px; }
+  .session-options{ display:flex; flex-direction:column; gap:10px; }
+  .session-option{ position:relative; display:grid; grid-template-columns:18px 1fr auto; gap:10px; align-items:center; border:1px solid var(--line); border-radius:12px; padding:14px 13px; background:#fff; cursor:pointer; transition:border-color .15s, box-shadow .15s; }
+  .session-option:has(input:checked){ border-color:var(--blue); box-shadow:0 0 0 1px var(--blue); }
+  .session-option input{ position:absolute; opacity:0; pointer-events:none; }
+  .session-radio{ width:15px; height:15px; border-radius:999px; border:1px solid #b8c7e1; box-shadow:inset 0 0 0 3px #fff; }
+  .session-option:has(input:checked) .session-radio{ background:var(--blue); border-color:var(--blue); }
+  .session-copy{ min-width:0; display:grid; gap:2px; }
+  .session-title{ font-size:14px; font-weight:600; color:var(--navy); line-height:1.2; }
+  .session-subtitle{ font-size:12.5px; color:var(--slate); line-height:1.3; }
+  .session-price{ font-size:20px; font-weight:700; color:var(--navy); line-height:1; }
+  .session-badge{ position:absolute; right:10px; top:-9px; border-radius:999px; background:var(--green-bg); color:var(--green); padding:3px 8px; font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+  .session-cta{ margin-bottom:0; }
   .includes{ border-top:1px solid var(--line); margin-top:20px; padding-top:20px; }
   .includes h4{ font-size:11.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--slate); margin-bottom:15px; }
   .includes ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
@@ -319,16 +333,38 @@
       </div>
     </div>
 
-    <!-- SIDEBAR -->
+    <!-- SIDEBAR — dual exam-session pricing -->
     <aside class="side">
       <div class="price-card">
-        <div class="price-top"><span class="price-now">£199</span><span class="price-was">£249</span></div>
-        <div class="price-save">Save 20% · enrolment closes soon</div>
-        <div class="price-access"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> One-time payment · 365 days full access</div>
+        <div class="price-top"><span class="price-now">$140</span></div>
+        <div class="price-access"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> One-time payment · two months access</div>
 
-        <a class="btn btn-primary btn-block" href="#" style="margin-bottom:11px;">Enrol now</a>
-        <a class="btn btn-ghost btn-block" href="#">Book a free consultation</a>
-        <div class="price-note">No auto-renewal · cancel any time</div>
+        <div class="session-selector">
+          <h4 class="session-label">Choose your exam session</h4>
+          <div class="session-options">
+            <label class="session-option" data-cta-suffix="September session">
+              <input type="radio" name="exam-session" value="sept-2026" checked>
+              <span class="session-radio" aria-hidden="true"></span>
+              <span class="session-copy">
+                <span class="session-title">September 2026 session</span>
+                <span class="session-subtitle">Two months access · until your exam</span>
+              </span>
+              <span class="session-price">$140</span>
+            </label>
+            <label class="session-option" data-cta-suffix="December session">
+              <input type="radio" name="exam-session" value="dec-2026">
+              <span class="session-badge">Best value</span>
+              <span class="session-radio" aria-hidden="true"></span>
+              <span class="session-copy">
+                <span class="session-title">December 2026 session</span>
+                <span class="session-subtitle">Extended access · covers both sittings</span>
+              </span>
+              <span class="session-price">$240</span>
+            </label>
+          </div>
+        </div>
+
+        <a class="btn btn-primary btn-block session-cta" href="#" data-cta-prefix="Enrol now">Enrol now · September session</a>
 
         <div class="includes">
           <h4>This course includes</h4>
@@ -341,12 +377,6 @@
             <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Certificate of completion</li>
           </ul>
         </div>
-      </div>
-
-      <div class="bestvalue">
-        <div class="bv-tag">Best value</div>
-        <p>Get SBR plus all 14 ACCA courses with the Annual Plan</p>
-        <a href="#">View the annual plan — £599 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
       </div>
     </aside>
   </div>

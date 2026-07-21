@@ -1,5 +1,7 @@
 import fs from 'fs';
+import type { MigrationTemplate } from '../../shared/migrationTypes';
 import { getMigrationTemplateBlueprint } from './migrationTemplateRegistry';
+import { isCoursePageTemplate } from '../../shared/migrationDestination';
 import { stripTemplateTags } from './templateSectionParsers';
 import { defaultCourseTabsTemplate, type TemplateCourseTab } from './courseTabBuilder';
 
@@ -42,6 +44,17 @@ export type ParsedCourseFaqItem = {
   answer: string;
 };
 
+export type ParsedCourseSessionOption = {
+  title: string;
+  subtitle: string;
+  price: string;
+  badge: string;
+  ctaSuffix: string;
+  isDefault: boolean;
+};
+
+export type CoursePricingLayout = 'standard' | 'session_selector';
+
 export type ParsedCourseTemplate = {
   title: string;
   metaDescription: string;
@@ -67,6 +80,10 @@ export type ParsedCourseTemplate = {
   priceSave: string;
   priceAccess: string;
   priceNote: string;
+  pricingLayout: CoursePricingLayout;
+  sessionSelectorLabel: string;
+  ctaTextPrefix: string;
+  sessionOptions: ParsedCourseSessionOption[];
   primaryCtaText: string;
   secondaryCtaText: string;
   includesLabel: string;
@@ -169,6 +186,40 @@ function parseMetaItems(heroHtml: string): ParsedCourseMetaItem[] {
   }).filter(item => item.text || item.boldText || item.starsText);
 }
 
+function parseSessionOptions(sideHtml: string): {
+  label: string;
+  ctaPrefix: string;
+  options: ParsedCourseSessionOption[];
+} | null {
+  if (!/<div class="session-options"/i.test(sideHtml)) return null;
+
+  const selector = sideHtml.match(/<div class="session-selector"[^>]*>([\s\S]*?)<\/div>\s*(?:<a class="btn|<div class="includes")/i)?.[1] ?? '';
+  const label = firstMatch(selector, /<h4 class="session-label"[^>]*>([\s\S]*?)<\/h4>/i) || 'Choose your exam session';
+  const ctaPrefix = stripTemplateTags(
+    sideHtml.match(/<a class="btn btn-primary[^"]*session-cta[^"]*"[^>]*data-cta-prefix=["']([^"']+)["']/i)?.[1]
+    ?? sideHtml.match(/<a class="btn btn-primary[^"]*session-cta[^"]*"[^>]*>([\s\S]*?)<\/a>/i)?.[1]?.split('·')[0]
+    ?? 'Enrol now',
+  ).trim();
+
+  const options = allMatches(sideHtml, /<label class="session-option"([^>]*)>([\s\S]*?)<\/label>/gi).map((match, index) => {
+    const attrs = match[1] ?? '';
+    const block = match[2] ?? '';
+    const title = firstMatch(block, /<span class="session-title"[^>]*>([\s\S]*?)<\/span>/i);
+    const ctaSuffix = attrs.match(/data-cta-suffix=["']([^"']+)["']/i)?.[1]?.trim()
+      || title.replace(/\s+\d{4}\s+/i, ' ').replace(/\s+session$/i, ' session').trim();
+    return {
+      title,
+      subtitle: firstMatch(block, /<span class="session-subtitle"[^>]*>([\s\S]*?)<\/span>/i),
+      price: firstMatch(block, /<span class="session-price"[^>]*>([\s\S]*?)<\/span>/i),
+      badge: firstMatch(block, /<span class="session-badge"[^>]*>([\s\S]*?)<\/span>/i),
+      ctaSuffix,
+      isDefault: /<input[^>]+checked/i.test(block) || index === 0,
+    };
+  }).filter(option => option.title && option.price);
+
+  return options.length ? { label, ctaPrefix, options } : null;
+}
+
 function parseIncludes(sideHtml: string): { label: string; items: string[] } {
   const includes = sideHtml.match(/<div class="includes"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '';
   const label = firstMatch(includes, /<h4[^>]*>([\s\S]*?)<\/h4>/i) || 'This course includes';
@@ -214,9 +265,11 @@ export function parseCourseTemplateHtml(html: string): ParsedCourseTemplate {
   const faqHead = parseSecHead(faqSection);
 
   const sideHtml = heroSection.match(/<aside class="side"[^>]*>([\s\S]*?)<\/aside>/i)?.[1] ?? '';
+  const sessionPricing = parseSessionOptions(sideHtml);
   const priceCard = sideHtml.match(/<div class="price-card"[^>]*>([\s\S]*?)<\/div>\s*(?:<div class="bestvalue"|$)/i)?.[1] ?? sideHtml;
   const includes = parseIncludes(sideHtml);
   const bestValue = sideHtml.match(/<div class="bestvalue"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '';
+  const defaultSession = sessionPricing?.options.find(option => option.isDefault) ?? sessionPricing?.options[0];
 
   const byline = heroSection.match(/<div class="byline"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '';
   const videoStage = heroSection.match(/<div class="video-stage"[^>]*>([\s\S]*?)<\/div>/i)?.[0] ?? '';
@@ -248,12 +301,23 @@ export function parseCourseTemplateHtml(html: string): ParsedCourseTemplate {
     introductionParagraph1: firstMatch(introSection, /<p class="course-intro-p1"[^>]*>([\s\S]*?)<\/p>/i),
     introductionParagraph2: firstMatch(introSection, /<p class="course-intro-p2"[^>]*>([\s\S]*?)<\/p>/i),
     courseTabs: defaultCourseTabsTemplate(),
-    priceNow: firstMatch(priceCard, /<span class="price-now"[^>]*>([\s\S]*?)<\/span>/i),
-    priceWas: firstMatch(priceCard, /<span class="price-was"[^>]*>([\s\S]*?)<\/span>/i),
-    priceSave: firstMatch(priceCard, /<div class="price-save"[^>]*>([\s\S]*?)<\/div>/i),
+    priceNow: sessionPricing
+      ? firstMatch(priceCard, /<span class="price-now"[^>]*>([\s\S]*?)<\/span>/i) || defaultSession?.price || ''
+      : firstMatch(priceCard, /<span class="price-now"[^>]*>([\s\S]*?)<\/span>/i),
+    priceWas: sessionPricing ? '' : firstMatch(priceCard, /<span class="price-was"[^>]*>([\s\S]*?)<\/span>/i),
+    priceSave: sessionPricing ? '' : firstMatch(priceCard, /<div class="price-save"[^>]*>([\s\S]*?)<\/div>/i),
     priceAccess: stripTemplateTags(priceCard.match(/<div class="price-access"[^>]*>([\s\S]*?)<\/div>/i)?.[1]?.replace(/<svg[\s\S]*?<\/svg>/gi, '') ?? ''),
-    priceNote: firstMatch(priceCard, /<div class="price-note"[^>]*>([\s\S]*?)<\/div>/i),
-    primaryCtaText: stripTemplateTags(priceCard.match(/<a class="btn btn-primary[^"]*"[^>]*>([\s\S]*?)<\/a>/i)?.[1] ?? 'Enrol now'),
+    priceNote: sessionPricing ? '' : firstMatch(priceCard, /<div class="price-note"[^>]*>([\s\S]*?)<\/div>/i),
+    pricingLayout: sessionPricing ? 'session_selector' : 'standard',
+    sessionSelectorLabel: sessionPricing?.label ?? '',
+    ctaTextPrefix: sessionPricing?.ctaPrefix ?? 'Enrol now',
+    sessionOptions: sessionPricing?.options ?? [],
+    primaryCtaText: sessionPricing
+      ? stripTemplateTags(
+        sideHtml.match(/<a class="btn btn-primary[^"]*session-cta[^"]*"[^>]*>([\s\S]*?)<\/a>/i)?.[1]
+        ?? `${sessionPricing.ctaPrefix} · ${defaultSession?.ctaSuffix ?? ''}`,
+      )
+      : stripTemplateTags(priceCard.match(/<a class="btn btn-primary[^"]*"[^>]*>([\s\S]*?)<\/a>/i)?.[1] ?? 'Enrol now'),
     secondaryCtaText: stripTemplateTags(priceCard.match(/<a class="btn btn-ghost[^"]*"[^>]*>([\s\S]*?)<\/a>/i)?.[1] ?? 'Book a free consultation'),
     includesLabel: includes.label,
     includesItems: includes.items,
@@ -315,8 +379,8 @@ export function parseCourseTemplateHtml(html: string): ParsedCourseTemplate {
   };
 }
 
-export function loadCourseTemplateFile(): ParsedCourseTemplate {
-  const blueprint = getMigrationTemplateBlueprint('course');
+export function loadCourseTemplateFile(template: MigrationTemplate = 'course'): ParsedCourseTemplate {
+  const blueprint = getMigrationTemplateBlueprint(isCoursePageTemplate(template) ? template : 'course');
   const html = fs.readFileSync(blueprint.filePath, 'utf8');
   return parseCourseTemplateHtml(html);
 }
