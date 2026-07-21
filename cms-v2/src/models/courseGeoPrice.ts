@@ -232,6 +232,40 @@ export async function listActiveGeoPricesForCourse(courseId: number): Promise<Co
   return (rows as DbRow[]).map(rowToCourseGeoPrice);
 }
 
+export async function listActiveGeoPricesByZenlerCourseId(
+  zenlerCourseId: string,
+): Promise<{
+  courseId: number;
+  courseName: string;
+  zenlerCourseId: string;
+  courseSlug: string | null;
+  prices: CourseGeoPrice[];
+} | null> {
+  const rows = await sql`
+    SELECT
+      p.*,
+      c.id AS course_id,
+      c.name AS course_name,
+      c.zenler_course_id,
+      c.slug AS course_slug
+    FROM courses c
+    JOIN course_geo_prices p ON p.course_id = c.id AND p.is_active = true
+    WHERE c.zenler_course_id = ${zenlerCourseId.trim()}
+    ORDER BY p.id ASC
+  `;
+
+  if (!rows.length) return null;
+
+  const first = rows[0] as DbRow & { course_id: number };
+  return {
+    courseId: first.course_id,
+    courseName: first.course_name ?? '',
+    zenlerCourseId: first.zenler_course_id ?? zenlerCourseId,
+    courseSlug: first.course_slug ?? null,
+    prices: (rows as DbRow[]).map(rowToCourseGeoPrice),
+  };
+}
+
 export async function getGeoPriceById(id: number): Promise<CourseGeoPrice | null> {
   const rows = await sql`
     SELECT

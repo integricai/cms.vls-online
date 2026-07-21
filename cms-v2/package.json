@@ -14,6 +14,7 @@
     "sync-component-library": "npx tsx scripts/sync-component-library.ts",
     "verify-template-components": "npx tsx scripts/verify-template-components.ts",
     "test:pricing": "ts-node src/services/pricingResolver.test.ts",
+    "test:display-pricing": "ts-node src/services/courseDisplayPricing.test.ts",
     "test:faq": "ts-node src/services/faqParser.test.ts",
     "test:course-scraper": "ts-node src/services/coursePageScraper.test.ts",
     "test:course-template": "ts-node src/services/buildCourseTemplateContent.test.ts"

@@ -29,6 +29,8 @@ import { getBlogAsset } from './models/blogAsset';
 import { blogTopicSlug, renderBlogArticle, renderBlogLanding } from './services/blogRender';
 import { listActiveCourses } from './models/course';
 import { listCoursePrices } from './models/coursePrice';
+import { listActiveGeoPricesByZenlerCourseId } from './models/courseGeoPrice';
+import { buildCourseDisplayPricing } from './services/courseDisplayPricing';
 import { listPublicBooks } from './models/book';
 import { mapActiveCoursesForFinder } from './services/courseFinderPublish';
 
@@ -137,6 +139,56 @@ app.get('/api/publish-course-prices', async (_req, res, next) => {
   res.setHeader('Cache-Control', 'no-store');
   try {
     return res.json({ prices: await listCoursePrices() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/api/publish-course-pricing/:zenlerCourseId', (_req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.status(204).end();
+});
+
+app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120');
+  try {
+    const zenlerCourseId = String(req.params.zenlerCourseId ?? '').trim();
+    if (!zenlerCourseId) {
+      return res.status(400).json({ ok: false, error: 'zenlerCourseId is required' });
+    }
+
+    const course = await listActiveGeoPricesByZenlerCourseId(zenlerCourseId);
+    if (!course) {
+      return res.status(404).json({ ok: false, error: 'No active prices found for this course' });
+    }
+
+    const pricing = buildCourseDisplayPricing({
+      zenlerCourseId: course.zenlerCourseId,
+      courseSlug: course.courseSlug,
+      courseName: course.courseName,
+      prices: course.prices,
+    });
+
+    if (!pricing) {
+      return res.status(404).json({ ok: false, error: 'No active prices found for this course' });
+    }
+
+    const slug = pricing.courseSlug ?? 'course';
+    const plans = pricing.plans.map(plan => ({
+      ...plan,
+      checkoutPath: `/courses/${slug}/buy/plan/${plan.coursePriceId}`,
+    }));
+
+    return res.json({
+      ok: true,
+      data: {
+        ...pricing,
+        plans,
+        checkoutPath: `/courses/${slug}/buy`,
+      },
+    });
   } catch (err) {
     next(err);
   }

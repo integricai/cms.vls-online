@@ -66,6 +66,8 @@ const blogAsset_1 = require("./models/blogAsset");
 const blogRender_1 = require("./services/blogRender");
 const course_1 = require("./models/course");
 const coursePrice_1 = require("./models/coursePrice");
+const courseGeoPrice_1 = require("./models/courseGeoPrice");
+const courseDisplayPricing_1 = require("./services/courseDisplayPricing");
 const book_1 = require("./models/book");
 const courseFinderPublish_1 = require("./services/courseFinderPublish");
 const app = (0, express_1.default)();
@@ -162,6 +164,50 @@ app.get('/api/publish-course-prices', async (_req, res, next) => {
     res.setHeader('Cache-Control', 'no-store');
     try {
         return res.json({ prices: await (0, coursePrice_1.listCoursePrices)() });
+    }
+    catch (err) {
+        next(err);
+    }
+});
+app.options('/api/publish-course-pricing/:zenlerCourseId', (_req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.status(204).end();
+});
+app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120');
+    try {
+        const zenlerCourseId = String(req.params.zenlerCourseId ?? '').trim();
+        if (!zenlerCourseId) {
+            return res.status(400).json({ ok: false, error: 'zenlerCourseId is required' });
+        }
+        const course = await (0, courseGeoPrice_1.listActiveGeoPricesByZenlerCourseId)(zenlerCourseId);
+        if (!course) {
+            return res.status(404).json({ ok: false, error: 'No active prices found for this course' });
+        }
+        const pricing = (0, courseDisplayPricing_1.buildCourseDisplayPricing)({
+            zenlerCourseId: course.zenlerCourseId,
+            courseSlug: course.courseSlug,
+            courseName: course.courseName,
+            prices: course.prices,
+        });
+        if (!pricing) {
+            return res.status(404).json({ ok: false, error: 'No active prices found for this course' });
+        }
+        const slug = pricing.courseSlug ?? 'course';
+        const plans = pricing.plans.map(plan => ({
+            ...plan,
+            checkoutPath: `/courses/${slug}/buy/plan/${plan.coursePriceId}`,
+        }));
+        return res.json({
+            ok: true,
+            data: {
+                ...pricing,
+                plans,
+                checkoutPath: `/courses/${slug}/buy`,
+            },
+        });
     }
     catch (err) {
         next(err);
