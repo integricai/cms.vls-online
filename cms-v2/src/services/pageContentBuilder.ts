@@ -30,6 +30,7 @@ function slugify(value: string): string {
 
 const VALUES_ICON_KEYS = ['heart', 'globe', 'chart'];
 const PLATFORM_ICON_KEYS = ['video', 'book', 'help', 'document', 'checklist', 'upload', 'chat', 'message'];
+const GLOBAL_TEAM_ICON_KEYS = ['chat', 'video', 'calendar', 'globe'];
 const CONTACT_ICON_KEYS = ['phone', 'mail', 'pin'];
 
 function iconKeyForCard(sectionKey: string, index: number): string | undefined {
@@ -44,6 +45,9 @@ function iconKeyForCard(sectionKey: string, index: number): string | undefined {
   }
   if (sectionKey.includes('industr')) {
     return ['building', 'desktop', 'chart', 'health', 'building', 'cart', 'factory', 'globe'][index];
+  }
+  if (sectionKey.includes('global-team') || sectionKey.includes('team-strip')) {
+    return GLOBAL_TEAM_ICON_KEYS[index];
   }
   return undefined;
 }
