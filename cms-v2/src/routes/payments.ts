@@ -119,7 +119,8 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
     const courseId = parsePositiveInt(req.body?.courseId);
     const coursePriceId = parsePositiveInt(req.body?.coursePriceId);
     if (courseId || coursePriceId) {
-      return createGeoPriceCheckout(req, res);
+      await createGeoPriceCheckout(req, res, next);
+      return;
     }
 
     const paymentOptionId = parsePaymentOptionId(req.body?.paymentOptionId);
@@ -184,128 +185,136 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
   }
 });
 
-async function createGeoPriceCheckout(req: Request, res: Response) {
-  const explicitPriceId = parsePositiveInt(req.body?.coursePriceId);
-  let courseId = parsePositiveInt(req.body?.courseId);
-
-  if (!courseId && explicitPriceId) {
-    const priceRow = await getGeoPriceById(explicitPriceId);
-    if (!priceRow || !priceRow.isActive) {
-      return res.status(404).json({ ok: false, error: 'Course price not found or inactive' });
-    }
-    courseId = priceRow.courseId;
-  }
-
-  if (!courseId) {
-    return res.status(400).json({ ok: false, error: 'courseId or coursePriceId is required' });
-  }
-
-  const course = await getCourseById(courseId);
-  if (!course || !course.isActive) {
-    return res.status(404).json({ ok: false, error: 'Course not found or inactive' });
-  }
-
-  const geo = detectCountryFromRequest(req, req.body?.countryCode);
-  const campaignCode = String(req.body?.campaignCode ?? '').trim() || null;
-  const durationRaw = Number(req.body?.durationMonths);
-  const durationMonths = Number.isInteger(durationRaw) && durationRaw >= 1 && durationRaw <= 6
-    ? durationRaw
-    : null;
-
-  let resolved;
+async function createGeoPriceCheckout(req: Request, res: Response, next: NextFunction) {
   try {
-    if (explicitPriceId) {
-      const price = await getGeoPriceById(explicitPriceId);
-      if (!price || price.courseId !== courseId || !price.isActive) {
+    const explicitPriceId = parsePositiveInt(req.body?.coursePriceId);
+    let courseId = parsePositiveInt(req.body?.courseId);
+
+    if (!courseId && explicitPriceId) {
+      const priceRow = await getGeoPriceById(explicitPriceId);
+      if (!priceRow || !priceRow.isActive) {
         return res.status(404).json({ ok: false, error: 'Course price not found or inactive' });
       }
-      resolved = {
-        price,
-        matchReason: 'explicit' as const,
-        effectiveAmount: price.effectiveAmount,
-        detectedCountryCode: geo.countryCode,
-      };
-    } else {
-      resolved = await resolveCoursePrice({
-        courseId,
-        durationMonths,
-        campaignCode,
-        detectedCountryCode: geo.countryCode,
-      });
+      courseId = priceRow.courseId;
     }
+
+    if (!courseId) {
+      return res.status(400).json({ ok: false, error: 'courseId or coursePriceId is required' });
+    }
+
+    const course = await getCourseById(courseId);
+    if (!course || !course.isActive) {
+      return res.status(404).json({ ok: false, error: 'Course not found or inactive' });
+    }
+
+    const geo = detectCountryFromRequest(req, req.body?.countryCode);
+    const campaignCode = String(req.body?.campaignCode ?? '').trim() || null;
+    const durationRaw = Number(req.body?.durationMonths);
+    const durationMonths = Number.isInteger(durationRaw) && durationRaw >= 1 && durationRaw <= 6
+      ? durationRaw
+      : null;
+
+    let resolved;
+    try {
+      if (explicitPriceId) {
+        const price = await getGeoPriceById(explicitPriceId);
+        if (!price || price.courseId !== courseId || !price.isActive) {
+          return res.status(404).json({ ok: false, error: 'Course price not found or inactive' });
+        }
+        resolved = {
+          price,
+          matchReason: 'explicit' as const,
+          effectiveAmount: price.effectiveAmount,
+          detectedCountryCode: geo.countryCode,
+        };
+      } else {
+        resolved = await resolveCoursePrice({
+          courseId,
+          durationMonths,
+          campaignCode,
+          detectedCountryCode: geo.countryCode,
+        });
+      }
+    } catch (err) {
+      if (err instanceof PricingResolutionError) {
+        return res.status(404).json({ ok: false, error: err.message });
+      }
+      throw err;
+    }
+
+    if (!resolved.price.durationDays || resolved.price.durationDays <= 0) {
+      return res.status(400).json({ ok: false, error: 'Selected price plan has no duration_days configured' });
+    }
+
+    const customerInput = parseCheckoutCustomer(req.body ?? {}, geo.countryCode);
+    const customer = await upsertCheckoutCustomer({
+      email: customerInput.studentEmail,
+      firstName: customerInput.firstName,
+      lastName: customerInput.lastName,
+      phone: customerInput.phone,
+      countryCode: geo.countryCode,
+    });
+
+    const discountPercent = computeDiscountPercent(resolved.price.amount, resolved.effectiveAmount)
+      ?? resolved.price.discountPercent;
+
+    const regionalPricingApplied = shouldApplyRegionalPricingAtCheckout({
+      countryCode: geo.countryCode,
+      regionalPricingApplied: req.body?.regionalPricingApplied === true,
+      listAmount: resolved.price.amount,
+      effectiveAmount: resolved.effectiveAmount,
+    });
+
+    const order = await createPaymentOrder({
+      paymentOptionId: null,
+      courseId: course.id,
+      coursePriceId: resolved.price.id,
+      customerId: customer?.id ?? null,
+      zenlerCourseId: course.zenlerCourseId,
+      courseTitle: course.name,
+      optionType: resolved.price.name,
+      studentName: customerInput.studentName,
+      studentEmail: customerInput.studentEmail,
+      countryCode: geo.countryCode,
+      quotedPricingRegion: resolveQuotedPricingRegion(geo.countryCode),
+      regionalPricingApplied,
+      amount: resolved.effectiveAmount,
+      currency: 'USD',
+      durationDays: resolved.price.durationDays,
+      discountPercent,
+    });
+
+    const session = await createStripeCheckoutSession({
+      orderId: order.id,
+      courseId: course.id,
+      coursePriceId: resolved.price.id,
+      zenlerCourseId: course.zenlerCourseId,
+      courseTitle: course.name,
+      paymentCardTitle: `${course.name} — ${resolved.price.name}`,
+      amount: resolved.effectiveAmount,
+      currency: 'USD',
+      studentEmail: customerInput.studentEmail,
+      countryCode: geo.countryCode,
+    });
+    await attachStripeCheckoutSession(order.id, session.id);
+
+    if (!session.url) {
+      return res.status(502).json({ ok: false, error: 'Stripe did not return a checkout URL' });
+    }
+
+    return res.json({
+      checkoutUrl: session.url,
+      orderId: order.id,
+      coursePriceId: resolved.price.id,
+      amount: resolved.effectiveAmount,
+      listAmount: resolved.price.amount,
+      currency: 'USD',
+      countryCode: geo.countryCode,
+      matchReason: resolved.matchReason,
+    });
   } catch (err) {
-    if (err instanceof PricingResolutionError) {
-      return res.status(404).json({ ok: false, error: err.message });
-    }
-    throw err;
+    next(err);
   }
-
-  if (!resolved.price.durationDays || resolved.price.durationDays <= 0) {
-    return res.status(400).json({ ok: false, error: 'Selected price plan has no duration_days configured' });
-  }
-
-  const customerInput = parseCheckoutCustomer(req.body ?? {}, geo.countryCode);
-  const customer = await upsertCheckoutCustomer({
-    email: customerInput.studentEmail,
-    firstName: customerInput.firstName,
-    lastName: customerInput.lastName,
-    phone: customerInput.phone,
-    countryCode: geo.countryCode,
-  });
-
-  const discountPercent = computeDiscountPercent(resolved.price.amount, resolved.effectiveAmount)
-    ?? resolved.price.discountPercent;
-
-  const regionalPricingApplied = shouldApplyRegionalPricingAtCheckout({
-    countryCode: geo.countryCode,
-    regionalPricingApplied: req.body?.regionalPricingApplied === true,
-    listAmount: resolved.price.amount,
-    effectiveAmount: resolved.effectiveAmount,
-  });
-
-  const order = await createPaymentOrder({
-    paymentOptionId: null,
-    courseId: course.id,
-    coursePriceId: resolved.price.id,
-    customerId: customer?.id ?? null,
-    zenlerCourseId: course.zenlerCourseId,
-    courseTitle: course.name,
-    optionType: resolved.price.name,
-    studentName: customerInput.studentName,
-    studentEmail: customerInput.studentEmail,
-    countryCode: geo.countryCode,
-    quotedPricingRegion: resolveQuotedPricingRegion(geo.countryCode),
-    regionalPricingApplied,
-    amount: resolved.effectiveAmount,
-    currency: 'USD',
-    durationDays: resolved.price.durationDays,
-    discountPercent,
-  });
-
-  const session = await createStripeCheckoutSession({
-    orderId: order.id,
-    courseId: course.id,
-    coursePriceId: resolved.price.id,
-    zenlerCourseId: course.zenlerCourseId,
-    courseTitle: course.name,
-    paymentCardTitle: `${course.name} — ${resolved.price.name}`,
-    amount: resolved.effectiveAmount,
-    currency: 'USD',
-    studentEmail: customerInput.studentEmail,
-    countryCode: geo.countryCode,
-  });
-  await attachStripeCheckoutSession(order.id, session.id);
-
-  return res.json({
-    checkoutUrl: session.url,
-    orderId: order.id,
-    coursePriceId: resolved.price.id,
-    amount: resolved.effectiveAmount,
-    listAmount: resolved.price.amount,
-    currency: 'USD',
-    countryCode: geo.countryCode,
-    matchReason: resolved.matchReason,
-  });
 }
 
 router.get('/status', async (req: Request, res: Response, next: NextFunction) => {

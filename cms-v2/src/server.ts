@@ -333,7 +333,11 @@ app.use((err: Error, req: express.Request, res: express.Response, _next: express
   }).catch(alertErr => {
     console.error('[alert] failed to send CMS API error alert', alertErr);
   });
-  res.status(500).json({ ok: false, error: 'Internal server error' });
+  const isCheckout = req.originalUrl.includes('/api/payments/create-checkout-session');
+  const message = isCheckout && err.message?.trim()
+    ? err.message
+    : 'Internal server error';
+  res.status(500).json({ ok: false, error: message });
 });
 
 process.on('unhandledRejection', reason => {

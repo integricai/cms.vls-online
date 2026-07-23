@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
 export interface StripeCheckoutSession {
   id: string;
@@ -50,13 +51,14 @@ export async function createStripeCheckoutSession(input: {
   appendParam(params, 'metadata[studentEmail]', input.studentEmail);
   appendParam(params, 'metadata[countryCode]', input.countryCode);
 
-  const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+  const response = await fetchWithTimeout('https://api.stripe.com/v1/checkout/sessions', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${secretKey}`,
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: params,
+    timeoutMs: 20_000,
   });
 
   const body = await response.json() as { id?: string; url?: string | null; error?: { message?: string } };
@@ -75,8 +77,9 @@ function stripeSecretKey(): string {
 
 async function stripeApiGet<T>(path: string, query?: Record<string, string>): Promise<T> {
   const params = query ? `?${new URLSearchParams(query).toString()}` : '';
-  const response = await fetch(`https://api.stripe.com/v1${path}${params}`, {
+  const response = await fetchWithTimeout(`https://api.stripe.com/v1${path}${params}`, {
     headers: { Authorization: `Bearer ${stripeSecretKey()}` },
+    timeoutMs: 20_000,
   });
   const body = await response.json() as T & { error?: { message?: string } };
   if (!response.ok) {
@@ -86,13 +89,14 @@ async function stripeApiGet<T>(path: string, query?: Record<string, string>): Pr
 }
 
 async function stripeApiPost<T>(path: string, params: URLSearchParams): Promise<T> {
-  const response = await fetch(`https://api.stripe.com/v1${path}`, {
+  const response = await fetchWithTimeout(`https://api.stripe.com/v1${path}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${stripeSecretKey()}`,
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: params,
+    timeoutMs: 20_000,
   });
   const body = await response.json() as T & { error?: { message?: string } };
   if (!response.ok) {

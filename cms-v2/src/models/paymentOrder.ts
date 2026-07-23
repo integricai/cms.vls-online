@@ -122,20 +122,41 @@ export async function createPaymentOrder(data: {
   durationDays?: number | null;
   discountPercent?: number | null;
 }): Promise<PaymentOrder> {
-  const rows = await sql`
-    INSERT INTO payment_orders
-      (payment_option_id, course_id, course_price_id, customer_id, zenler_course_id, course_title,
-       option_type, student_name, student_email, country_code, quoted_pricing_region,
-       regional_pricing_applied, amount, currency, duration_days, discount_percent)
-    VALUES
-      (${data.paymentOptionId ?? null}, ${data.courseId ?? null}, ${data.coursePriceId ?? null},
-       ${data.customerId ?? null}, ${data.zenlerCourseId}, ${data.courseTitle}, ${data.optionType},
-       ${data.studentName}, ${data.studentEmail}, ${data.countryCode ?? null},
-       ${data.quotedPricingRegion ?? null}, ${data.regionalPricingApplied ?? false},
-       ${data.amount}, ${data.currency}, ${data.durationDays ?? null}, ${data.discountPercent ?? null})
-    RETURNING *
-  `;
-  return rowToOrder(rows[0] as DbRow);
+  try {
+    const rows = await sql`
+      INSERT INTO payment_orders
+        (payment_option_id, course_id, course_price_id, customer_id, zenler_course_id, course_title,
+         option_type, student_name, student_email, country_code, quoted_pricing_region,
+         regional_pricing_applied, amount, currency, duration_days, discount_percent)
+      VALUES
+        (${data.paymentOptionId ?? null}, ${data.courseId ?? null}, ${data.coursePriceId ?? null},
+         ${data.customerId ?? null}, ${data.zenlerCourseId}, ${data.courseTitle}, ${data.optionType},
+         ${data.studentName}, ${data.studentEmail}, ${data.countryCode ?? null},
+         ${data.quotedPricingRegion ?? null}, ${data.regionalPricingApplied ?? false},
+         ${data.amount}, ${data.currency}, ${data.durationDays ?? null}, ${data.discountPercent ?? null})
+      RETURNING *
+    `;
+    return rowToOrder(rows[0] as DbRow);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!/quoted_pricing_region|regional_pricing_applied/i.test(message)) throw err;
+
+    console.warn(
+      '[paymentOrder] Regional pricing columns missing — using legacy insert. Run migration 030_payment_regional_verification.sql.',
+    );
+    const rows = await sql`
+      INSERT INTO payment_orders
+        (payment_option_id, course_id, course_price_id, customer_id, zenler_course_id, course_title,
+         option_type, student_name, student_email, country_code, amount, currency, duration_days, discount_percent)
+      VALUES
+        (${data.paymentOptionId ?? null}, ${data.courseId ?? null}, ${data.coursePriceId ?? null},
+         ${data.customerId ?? null}, ${data.zenlerCourseId}, ${data.courseTitle}, ${data.optionType},
+         ${data.studentName}, ${data.studentEmail}, ${data.countryCode ?? null},
+         ${data.amount}, ${data.currency}, ${data.durationDays ?? null}, ${data.discountPercent ?? null})
+      RETURNING *
+    `;
+    return rowToOrder(rows[0] as DbRow);
+  }
 }
 
 export async function attachStripeCheckoutSession(orderId: number, sessionId: string): Promise<void> {
