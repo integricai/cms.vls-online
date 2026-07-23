@@ -7,6 +7,7 @@ export interface PaymentOrder {
   paymentOptionId: number | null;
   courseId: number | null;
   coursePriceId: number | null;
+  customerId: number | null;
   zenlerCourseId: string;
   courseTitle: string;
   optionType: string | null;
@@ -15,6 +16,8 @@ export interface PaymentOrder {
   countryCode: string | null;
   amount: number;
   currency: string;
+  durationDays: number | null;
+  discountPercent: number | null;
   status: PaymentOrderStatus;
   stripeCheckoutSessionId: string | null;
   stripePaymentIntentId: string | null;
@@ -32,6 +35,7 @@ interface DbRow {
   payment_option_id: number | null;
   course_id: number | null;
   course_price_id: number | null;
+  customer_id: number | null;
   zenler_course_id: string;
   course_title: string;
   option_type: string | null;
@@ -40,6 +44,8 @@ interface DbRow {
   country_code: string | null;
   amount: string;
   currency: string;
+  duration_days: number | null;
+  discount_percent: string | null;
   status: PaymentOrderStatus;
   stripe_checkout_session_id: string | null;
   stripe_payment_intent_id: string | null;
@@ -58,6 +64,7 @@ function rowToOrder(row: DbRow): PaymentOrder {
     paymentOptionId: row.payment_option_id,
     courseId: row.course_id ?? null,
     coursePriceId: row.course_price_id ?? null,
+    customerId: row.customer_id ?? null,
     zenlerCourseId: row.zenler_course_id,
     courseTitle: row.course_title,
     optionType: row.option_type,
@@ -66,6 +73,8 @@ function rowToOrder(row: DbRow): PaymentOrder {
     countryCode: row.country_code ?? null,
     amount: Number(row.amount),
     currency: row.currency,
+    durationDays: row.duration_days ?? null,
+    discountPercent: row.discount_percent != null ? Number(row.discount_percent) : null,
     status: row.status,
     stripeCheckoutSessionId: row.stripe_checkout_session_id,
     stripePaymentIntentId: row.stripe_payment_intent_id,
@@ -83,6 +92,7 @@ export async function createPaymentOrder(data: {
   paymentOptionId?: number | null;
   courseId?: number | null;
   coursePriceId?: number | null;
+  customerId?: number | null;
   zenlerCourseId: string;
   courseTitle: string;
   optionType: string | null;
@@ -91,16 +101,19 @@ export async function createPaymentOrder(data: {
   countryCode?: string | null;
   amount: number;
   currency: string;
+  durationDays?: number | null;
+  discountPercent?: number | null;
 }): Promise<PaymentOrder> {
   const rows = await sql`
     INSERT INTO payment_orders
-      (payment_option_id, course_id, course_price_id, zenler_course_id, course_title, option_type,
-       student_name, student_email, country_code, amount, currency)
+      (payment_option_id, course_id, course_price_id, customer_id, zenler_course_id, course_title,
+       option_type, student_name, student_email, country_code, amount, currency,
+       duration_days, discount_percent)
     VALUES
       (${data.paymentOptionId ?? null}, ${data.courseId ?? null}, ${data.coursePriceId ?? null},
-       ${data.zenlerCourseId}, ${data.courseTitle}, ${data.optionType},
+       ${data.customerId ?? null}, ${data.zenlerCourseId}, ${data.courseTitle}, ${data.optionType},
        ${data.studentName}, ${data.studentEmail}, ${data.countryCode ?? null},
-       ${data.amount}, ${data.currency})
+       ${data.amount}, ${data.currency}, ${data.durationDays ?? null}, ${data.discountPercent ?? null})
     RETURNING *
   `;
   return rowToOrder(rows[0] as DbRow);
@@ -139,7 +152,6 @@ export async function markPaymentOrderPaid(data: {
   const amount = data.amountTotal != null ? data.amountTotal / 100 : existing.amount;
   const currency = data.currency?.toUpperCase() ?? existing.currency;
 
-  // Verify paid amount/currency against the stored order (resolved course price).
   if (data.amountTotal != null) {
     const expectedCents = Math.round(existing.amount * 100);
     if (expectedCents !== data.amountTotal) {

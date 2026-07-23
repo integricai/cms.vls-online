@@ -29,6 +29,22 @@ CREATE TABLE IF NOT EXISTS course_geo_prices (
   )
 );
 
+-- Table may already exist from a later schema (e.g. country_code removed in 021).
+-- Ensure legacy geo columns exist before indexes that reference them.
+ALTER TABLE course_geo_prices
+  ADD COLUMN IF NOT EXISTS compare_at_amount NUMERIC(12,2),
+  ADD COLUMN IF NOT EXISTS country_code VARCHAR(2),
+  ADD COLUMN IF NOT EXISTS region TEXT,
+  ADD COLUMN IF NOT EXISTS geo_group TEXT,
+  ADD COLUMN IF NOT EXISTS is_default BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS stripe_price_id TEXT,
+  ADD COLUMN IF NOT EXISTS valid_from TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS valid_until TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS priority INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 CREATE UNIQUE INDEX IF NOT EXISTS course_geo_prices_upsert_key_idx
   ON course_geo_prices (
     course_id,

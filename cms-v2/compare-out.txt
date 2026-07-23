@@ -1,0 +1,52 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\nadir\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+CSV rows: 124
+CSV unique zenler course ids: 97
+Total active courses: 127
+Missing active default: 34
+Missing because NOT in CSV: 32
+Missing but zenler id IS in CSV: 2
+
+=== Not in CSV ===
+98461		ACCA - AAA Final Mock Exam	active_prices=0
+88699		ACCA Dip-IFR Diploma in IFRS - Notes	active_prices=0
+78905		ACCA Exam Preparation Subscription Plan	active_prices=0
+198859		ACCA Exam Preparation Subscription Plan	active_prices=0
+77212		ACCA FA (F3) - Financial Accounting - Urdu / Hindi Language	active_prices=0
+57324		ACCA FA1 - Recording Financial Transactions (Urdu / Hindi Language)	active_prices=0
+12944		ACCA FA2 - Maintaining Financial Records (Urdu / Hindi Language)	active_prices=0
+104860		ACCA FFA - Financial Accounting (Urdu / Hindi Language)	active_prices=0
+12934		ACCA FM (F9) - Financial Management - Urdu / Hindi	active_prices=0
+104859		ACCA FMA - Management Accounting (Urdu / Hindi Language)	active_prices=0
+72125		ACCA Foundation Diploma - Four Papers (Urdu / Hindi)	active_prices=0
+104691		ACCA Foundation Diploma - Seven Papers (Urdu / Hindi)	active_prices=0
+24794		ACCA Free Quizzes	active_prices=0
+62141		ACCA MA (F2) - Management Accounting - Urdu / Hindi Language	active_prices=0
+57949		ACCA MA1 - Management Information (Urdu / Hindi Language)	active_prices=0
+12941		ACCA MA2 - Managing Costs and Finance (Urdu / Hindi Language)	active_prices=0
+46991		ACCA Past Exam Papers	active_prices=0
+223540		BPP eBooks	active_prices=0
+44894		Business Valuation - A Complete Course	active_prices=0
+159395		CIA Part 1 - Essentials of Internal Auditing	active_prices=0
+217872		CIMA E3 - Strategic Management	active_prices=0
+206880		CIMA F3 - Complete Study Notes	active_prices=0
+217874		CIMA F3 - Financial Strategy	active_prices=0
+186586		CIMA Free Quizzes - P1 and P2	active_prices=0
+217873		CIMA P3 - Risk Management	active_prices=0
+191070		CMA Free Quizzes	active_prices=0
+39017		CMA Learning Resources - Hock International	active_prices=0
+191074		CMA Part 1 - Mock Exams	active_prices=0
+202315		CMA Part 1 - Revisions Course	active_prices=0
+202316		CMA Part 2 - Revisions Course	active_prices=0
+85184		Courses and Session Upgrade	active_prices=0
+12916		Introduction to Financial Accounting	active_prices=0
+
+=== In CSV but still missing default ===
+31679		Complete Learning Pack - CMA Part 1	active_prices=1
+31681		Complete Learning Pack - CMA Part 2	active_prices=1

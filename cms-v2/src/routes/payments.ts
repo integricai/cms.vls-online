@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { getPaymentCard } from '../models/coursePaymentCard';
 import { getCourseById, getGeoPriceById } from '../models/courseGeoPrice';
+import { splitStudentName, upsertCustomer, updateCustomerZenlerUserId } from '../models/customer';
 import {
   attachStripeCheckoutSession,
   createPaymentOrder,
@@ -9,6 +10,7 @@ import {
   markPaymentOrderPaid,
   updateZenlerEnrollment,
 } from '../models/paymentOrder';
+import { createSale, getSaleByPaymentOrderId } from '../models/sale';
 import {
   createStripeCheckoutSession,
   verifyStripeWebhook,
@@ -35,10 +37,80 @@ function parsePositiveInt(value: unknown): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
+function parseOptionalText(value: unknown): string | null {
+  const text = String(value ?? '').trim();
+  return text || null;
+}
+
+function computeDiscountPercent(listAmount: number, effectiveAmount: number): number | null {
+  if (!Number.isFinite(listAmount) || listAmount <= 0) return null;
+  if (!Number.isFinite(effectiveAmount) || effectiveAmount >= listAmount) return null;
+  return Math.round((1 - effectiveAmount / listAmount) * 10000) / 100;
+}
+
+function parseCheckoutCustomer(body: Record<string, unknown>, countryCode: string | null) {
+  const studentEmail = parseOptionalText(body.studentEmail);
+  const studentName = parseOptionalText(body.studentName);
+  const firstName = parseOptionalText(body.firstName) ?? splitStudentName(studentName).firstName;
+  const lastName = parseOptionalText(body.lastName) ?? splitStudentName(studentName).lastName;
+  const phone = parseOptionalText(body.phone);
+
+  return {
+    studentEmail,
+    studentName,
+    firstName,
+    lastName,
+    phone,
+    countryCode,
+  };
+}
+
+async function upsertCheckoutCustomer(input: {
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  countryCode: string | null;
+}) {
+  if (!input.email) return null;
+  return upsertCustomer({
+    email: input.email,
+    firstName: input.firstName,
+    lastName: input.lastName,
+    phone: input.phone,
+    countryCode: input.countryCode,
+  });
+}
+
+async function recordSaleForPaidOrder(order: Awaited<ReturnType<typeof markPaymentOrderPaid>>['order']) {
+  if (
+    !order.customerId
+    || !order.courseId
+    || !order.durationDays
+    || !order.paidAt
+  ) {
+    return null;
+  }
+
+  const existing = await getSaleByPaymentOrderId(order.id);
+  if (existing) return existing;
+
+  return createSale({
+    customerId: order.customerId,
+    courseId: order.courseId,
+    coursePriceId: order.coursePriceId,
+    paymentOrderId: order.id,
+    amount: order.amount,
+    currency: order.currency,
+    discountPercent: order.discountPercent,
+    durationDays: order.durationDays,
+    soldAt: order.paidAt,
+  });
+}
+
 /** Legacy payment-card checkout (course_payment_cards). */
 router.post('/create-checkout-session', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // New geo-price checkout path
     const courseId = parsePositiveInt(req.body?.courseId);
     const coursePriceId = parsePositiveInt(req.body?.coursePriceId);
     if (courseId || coursePriceId) {
@@ -63,18 +135,29 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
       return res.status(400).json({ ok: false, error: 'Payment option price is invalid' });
     }
 
-    const studentEmail = String(req.body?.studentEmail ?? '').trim() || null;
-    const studentName = String(req.body?.studentName ?? '').trim() || null;
+    const geo = detectCountryFromRequest(req, req.body?.countryCode);
+    const customerInput = parseCheckoutCustomer(req.body ?? {}, geo.countryCode);
+    const customer = await upsertCheckoutCustomer({
+      email: customerInput.studentEmail,
+      firstName: customerInput.firstName,
+      lastName: customerInput.lastName,
+      phone: customerInput.phone,
+      countryCode: geo.countryCode,
+    });
+
     const order = await createPaymentOrder({
       paymentOptionId: option.id,
       courseId: option.courseId,
+      customerId: customer?.id ?? null,
       zenlerCourseId: option.zenlerCourseId,
       courseTitle: option.courseName ?? option.title,
       optionType: option.optionType,
-      studentName,
-      studentEmail,
+      studentName: customerInput.studentName,
+      studentEmail: customerInput.studentEmail,
+      countryCode: geo.countryCode,
       amount,
       currency: option.currency || 'GBP',
+      discountPercent: computeDiscountPercent(option.normalPrice, amount),
     });
 
     const session = await createStripeCheckoutSession({
@@ -86,7 +169,7 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
       paymentCardTitle: option.title,
       amount,
       currency: option.currency || 'GBP',
-      studentEmail,
+      studentEmail: customerInput.studentEmail,
     });
     await attachStripeCheckoutSession(order.id, session.id);
 
@@ -143,21 +226,37 @@ async function createGeoPriceCheckout(req: Request, res: Response) {
     throw err;
   }
 
-  const studentEmail = String(req.body?.studentEmail ?? '').trim() || null;
-  const studentName = String(req.body?.studentName ?? '').trim() || null;
+  if (!resolved.price.durationDays || resolved.price.durationDays <= 0) {
+    return res.status(400).json({ ok: false, error: 'Selected price plan has no duration_days configured' });
+  }
+
+  const customerInput = parseCheckoutCustomer(req.body ?? {}, geo.countryCode);
+  const customer = await upsertCheckoutCustomer({
+    email: customerInput.studentEmail,
+    firstName: customerInput.firstName,
+    lastName: customerInput.lastName,
+    phone: customerInput.phone,
+    countryCode: geo.countryCode,
+  });
+
+  const discountPercent = computeDiscountPercent(resolved.price.amount, resolved.effectiveAmount)
+    ?? resolved.price.discountPercent;
 
   const order = await createPaymentOrder({
     paymentOptionId: null,
     courseId: course.id,
     coursePriceId: resolved.price.id,
+    customerId: customer?.id ?? null,
     zenlerCourseId: course.zenlerCourseId,
     courseTitle: course.name,
     optionType: resolved.price.name,
-    studentName,
-    studentEmail,
+    studentName: customerInput.studentName,
+    studentEmail: customerInput.studentEmail,
     countryCode: geo.countryCode,
     amount: resolved.effectiveAmount,
     currency: 'USD',
+    durationDays: resolved.price.durationDays,
+    discountPercent,
   });
 
   const session = await createStripeCheckoutSession({
@@ -169,7 +268,7 @@ async function createGeoPriceCheckout(req: Request, res: Response) {
     paymentCardTitle: `${course.name} — ${resolved.price.name}`,
     amount: resolved.effectiveAmount,
     currency: 'USD',
-    studentEmail,
+    studentEmail: customerInput.studentEmail,
     countryCode: geo.countryCode,
   });
   await attachStripeCheckoutSession(order.id, session.id);
@@ -254,7 +353,12 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
           zenlerUserId: enrollment.zenlerUserId,
           zenlerEnrollmentStatus: enrollment.status,
         });
+        if (order.customerId && enrollment.zenlerUserId) {
+          await updateCustomerZenlerUserId(order.customerId, enrollment.zenlerUserId);
+        }
       }
+
+      await recordSaleForPaidOrder(order);
 
       const studentSent = await sendStudentPaymentConfirmation(order);
       const adminSent = await sendAdminPaymentNotification(order);

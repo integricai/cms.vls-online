@@ -169,7 +169,8 @@ router.post('/admin/courses/:courseId/prices', authGuard, requireRole('admin', '
     }
 
     const price = await createGeoPrice(input);
-    return res.status(201).json({ ok: true, data: price });
+    const storyblokSync = await maybeSyncStoryblokForCourse(courseId, req.body ?? {});
+    return res.status(201).json({ ok: true, data: price, storyblokSync });
   } catch (err) {
     next(err);
   }
@@ -190,7 +191,8 @@ router.put('/admin/prices/:priceId', authGuard, requireRole('admin', 'editor'), 
     }
 
     const price = await updateGeoPrice(priceId, input);
-    return res.json({ ok: true, data: price });
+    const storyblokSync = await maybeSyncStoryblokForCourse(existing.courseId, req.body ?? {});
+    return res.json({ ok: true, data: price, storyblokSync });
   } catch (err) {
     next(err);
   }
@@ -202,7 +204,8 @@ router.post('/admin/prices/:priceId/deactivate', authGuard, requireRole('admin',
     if (!priceId) return res.status(400).json({ ok: false, error: 'Invalid price id' });
     const price = await deactivateGeoPrice(priceId);
     if (!price) return res.status(404).json({ ok: false, error: 'Price not found' });
-    return res.json({ ok: true, data: price });
+    const storyblokSync = await maybeSyncStoryblokForCourse(price.courseId, req.body ?? {});
+    return res.json({ ok: true, data: price, storyblokSync });
   } catch (err) {
     next(err);
   }
@@ -216,7 +219,8 @@ router.post('/admin/courses/:courseId/prices/:priceId/set-default', authGuard, r
 
     const price = await setDefaultGeoPrice(courseId, priceId);
     if (!price) return res.status(404).json({ ok: false, error: 'Price not found for course' });
-    return res.json({ ok: true, data: price });
+    const storyblokSync = await maybeSyncStoryblokForCourse(courseId, req.body ?? {});
+    return res.json({ ok: true, data: price, storyblokSync });
   } catch (err) {
     next(err);
   }
@@ -288,6 +292,85 @@ router.post('/admin/import/error-report', authGuard, requireRole('admin', 'edito
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="course-pricing-import-errors.csv"');
     return res.send(csv);
+  } catch (err) {
+    next(err);
+  }
+});
+
+function parseStoryblokSyncOptions(body: Record<string, unknown>) {
+  return {
+    storyblokSpaceId: typeof body.storyblokSpaceId === 'string' ? body.storyblokSpaceId : undefined,
+    storyblokAccessToken: typeof body.storyblokAccessToken === 'string' ? body.storyblokAccessToken : undefined,
+    storyblokRegion: body.storyblokRegion === 'us' ? 'us' as const : 'eu' as const,
+    publish: Boolean(body.publish),
+    dryRun: Boolean(body.dryRun),
+  };
+}
+
+async function maybeSyncStoryblokForCourse(
+  courseId: number,
+  body: Record<string, unknown>,
+): Promise<unknown | null> {
+  if (body.syncStoryblok !== true && body.syncStoryblok !== 'true') return null;
+
+  const { resolveStoryblokConfig, syncCoursePricingToStoryblok } = await import('../services/storyblokCoursePricingSync');
+  const options = parseStoryblokSyncOptions(body);
+  const config = resolveStoryblokConfig(options);
+  if (!config) {
+    throw new Error('Storyblok credentials are required when syncStoryblok is true');
+  }
+
+  return syncCoursePricingToStoryblok(courseId, config, {
+    publish: options.publish,
+    dryRun: options.dryRun,
+  });
+}
+
+router.post('/admin/courses/:courseId/storyblok-sync', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+  try {
+    const courseId = parseCourseId(req.params.courseId);
+    if (!courseId) return res.status(400).json({ ok: false, error: 'Invalid course id' });
+
+    const course = await getCourseById(courseId);
+    if (!course) return res.status(404).json({ ok: false, error: 'Course not found' });
+
+    const { resolveStoryblokConfig, syncCoursePricingToStoryblok } = await import('../services/storyblokCoursePricingSync');
+    const options = parseStoryblokSyncOptions(req.body ?? {});
+    const config = resolveStoryblokConfig(options);
+    if (!config) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Storyblok credentials are required (storyblokAccessToken or STORYBLOK_PERSONAL_TOKEN env)',
+      });
+    }
+
+    const result = await syncCoursePricingToStoryblok(courseId, config, {
+      publish: options.publish,
+      dryRun: options.dryRun,
+    });
+    return res.json({ ok: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/admin/storyblok-sync', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+  try {
+    const { resolveStoryblokConfig, syncAllCoursePricingToStoryblok } = await import('../services/storyblokCoursePricingSync');
+    const options = parseStoryblokSyncOptions(req.body ?? {});
+    const config = resolveStoryblokConfig(options);
+    if (!config) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Storyblok credentials are required (storyblokAccessToken or STORYBLOK_PERSONAL_TOKEN env)',
+      });
+    }
+
+    const results = await syncAllCoursePricingToStoryblok(config, {
+      publish: options.publish,
+      dryRun: options.dryRun,
+    });
+    return res.json({ ok: true, data: results });
   } catch (err) {
     next(err);
   }

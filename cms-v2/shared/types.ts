@@ -259,6 +259,34 @@ export interface CoursePricingSummary {
   updatedAt: Date | string | null;
 }
 
+export interface Customer {
+  id: number;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  countryCode: string | null;
+  zenlerUserId: string | null;
+  stripeCustomerId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Sale {
+  id: number;
+  customerId: number;
+  courseId: number;
+  coursePriceId: number | null;
+  paymentOrderId: number;
+  amount: number;
+  currency: string;
+  discountPercent: number | null;
+  durationDays: number;
+  soldAt: Date;
+  expiryDate: Date;
+  createdAt: Date;
+}
+
 export interface ResolvedCoursePrice {
   price: CourseGeoPrice;
   matchReason: 'duration' | 'default' | 'explicit';

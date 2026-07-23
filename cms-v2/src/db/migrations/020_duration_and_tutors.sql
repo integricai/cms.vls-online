@@ -1,6 +1,9 @@
 -- ── Course geo price duration ───────────────────────────────────────────────
 
 ALTER TABLE course_geo_prices
+  ADD COLUMN IF NOT EXISTS country_code VARCHAR(2);
+
+ALTER TABLE course_geo_prices
   ADD COLUMN IF NOT EXISTS duration_months INTEGER NOT NULL DEFAULT 6;
 
 ALTER TABLE course_geo_prices

@@ -14,7 +14,7 @@ const templateSections = getTemplateFileSections('legal');
 const heroTemplate = templateSections.find(section => section.key.includes('legal-hero') || section.html.includes('legal-hero'))
   ?? templateSections[0];
 const heroLive = { ...heroTemplate, legalMetaItems: undefined, legalTabs: undefined };
-assert.doesNotThrow(() => mergeTemplateSectionSources(heroLive as typeof heroTemplate, heroTemplate));
+assert.doesNotThrow(() => mergeTemplateSectionSources(heroLive as unknown as typeof heroTemplate, heroTemplate));
 
 const blueprint = getMigrationTemplateBlueprint('legal');
 const heroBlueprint = blueprint.sections.find(section => section.component === 'legal_hero')!;
@@ -25,12 +25,12 @@ const scraped: ScrapedGenericPage = {
   metaDescription: 'Cookie policy',
   breadcrumbItems: [],
   sections: [],
-  templateSections: [heroLive as typeof heroTemplate],
+  templateSections: [heroLive as unknown as typeof heroTemplate],
   faq: null,
   extractionWarnings: [],
   rawHtml: '',
 };
-assert.doesNotThrow(() => buildBlokFromTemplateSection(heroBlueprint, heroLive as typeof heroTemplate, scraped));
+assert.doesNotThrow(() => buildBlokFromTemplateSection(heroBlueprint, heroLive as unknown as typeof heroTemplate, scraped));
 
 // Part C: legal template sections parse with real keys, not only ARTICLE
 const cookieStyleHtml = `
