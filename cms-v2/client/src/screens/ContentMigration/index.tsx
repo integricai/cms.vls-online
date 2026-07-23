@@ -6,6 +6,7 @@ import type {
   ContentPhaseResult,
   MigrationPageRecord,
   MigrationTemplate,
+  PageContentFileSummary,
   PageScanResult,
   ScrapedCoursePage,
   ScrapedGenericPage,
@@ -97,6 +98,8 @@ function pageStatusLabel(page: MigrationPageRecord): string {
   return 'Not started';
 }
 
+type ContentSource = 'live' | 'file';
+
 export default function ContentMigrationTab() {
   const saved = loadSavedConfig();
   const [pages, setPages] = useState<MigrationPageRecord[]>([]);
@@ -131,6 +134,11 @@ export default function ContentMigrationTab() {
   const [componentTsxText, setComponentTsxText] = useState('');
   const [componentTypeText, setComponentTypeText] = useState('');
   const [componentCreated, setComponentCreated] = useState<{ componentName: string } | null>(null);
+  const [contentSource, setContentSource] = useState<ContentSource>('live');
+  const [pageContentFiles, setPageContentFiles] = useState<PageContentFileSummary[]>([]);
+  const [selectedPageContentFile, setSelectedPageContentFile] = useState('');
+  const [loadingPageContentFiles, setLoadingPageContentFiles] = useState(false);
+  const [ensuringPageContentFile, setEnsuringPageContentFile] = useState(false);
 
   const selectedPage = useMemo(
     () => pages.find(page => page.id === selectedPageId) ?? null,
@@ -139,6 +147,10 @@ export default function ContentMigrationTab() {
 
   const pageUrl = selectedPage?.originUrl ?? '';
   const hasCredentials = Boolean(storyblokSpaceId.trim() && storyblokAccessToken.trim());
+  const isFileSource = contentSource === 'file';
+  const canRunScrape = isFileSource
+    ? Boolean(selectedPage && selectedPageContentFile.trim())
+    : Boolean(pageUrl.trim());
   const canGenerateStructure = Boolean(selectedPage?.scrapedAt || scrapeResult);
   const canMigrateContent = Boolean(selectedPage?.draftStoryId || structureResult?.draftStory);
 
@@ -163,6 +175,58 @@ export default function ContentMigrationTab() {
   useEffect(() => {
     void loadPages();
   }, [loadPages]);
+
+  useEffect(() => {
+    if (contentSource !== 'file') return;
+    setLoadingPageContentFiles(true);
+    api.get<PageContentFileSummary[]>('/migration/page-content-files')
+      .then(files => {
+        setPageContentFiles(files);
+        if (!selectedPageContentFile && files.length) {
+          setSelectedPageContentFile(files[0].filename);
+        }
+      })
+      .catch(error => {
+        setMessage({
+          type: 'error',
+          text: error instanceof Error ? error.message : 'Could not load page-content files.',
+        });
+      })
+      .finally(() => setLoadingPageContentFiles(false));
+  }, [contentSource]);
+
+  useEffect(() => {
+    if (contentSource !== 'file' || !selectedPageContentFile.trim()) return;
+
+    let cancelled = false;
+    setEnsuringPageContentFile(true);
+
+    api.post<MigrationPageRecord>('/migration/page-content/ensure-page', {
+      filename: selectedPageContentFile.trim(),
+    })
+      .then(page => {
+        if (cancelled) return;
+        applyPageUpdate(page);
+        setSelectedPageId(page.id);
+        setTemplate('course_dual_price');
+        setDestinationSlug(page.destinationSlug || page.suggestedDestination);
+        setDestinationTouched(false);
+      })
+      .catch(error => {
+        if (cancelled) return;
+        setMessage({
+          type: 'error',
+          text: error instanceof Error ? error.message : 'Could not register page-content file.',
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setEnsuringPageContentFile(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [contentSource, selectedPageContentFile]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -301,7 +365,10 @@ export default function ContentMigrationTab() {
     setMessage(null);
     resetPhaseResults();
     try {
-      const data = await api.post<ScrapePhaseResult>(`/migration/pages/${selectedPage.id}/scrape`, {});
+      const payload = isFileSource
+        ? { source: 'file', filename: selectedPageContentFile.trim() }
+        : { source: 'live' };
+      const data = await api.post<ScrapePhaseResult>(`/migration/pages/${selectedPage.id}/scrape`, payload);
       setScrapeResult(data);
       applyPageUpdate(data.page);
       setMessage({
@@ -495,77 +562,146 @@ export default function ContentMigrationTab() {
       <div className="mb-6 max-w-4xl">
         <h2 className="mb-1 text-sm font-bold text-slate-700">Content Migration</h2>
         <p className="text-xs text-slate-500">
-          Scan the live VLS site once to populate all pages, then work through the 3 migration phases for each page:
-          Preview Scrape, Generate Structure, Migrate Content. Course and study notes stories are created under the
-          <code className="mx-1">courses/</code> folder (e.g. <code>courses/cima-notes</code>); all other templates
-          are created at the Storyblok root. Pages are scraped from Zenler internal URLs for reliability.
+          Scan the live VLS site or scrape local page-content files, then work through the 3 migration phases:
+          Preview Scrape, Generate Structure, Migrate Content. File-based migration is available for
+          <code className="mx-1">course_dual_price</code> pages in
+          <code className="mx-1">page-content/</code>.
         </p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
         <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold text-slate-700">Site pages</p>
-            <button
-              type="button"
-              onClick={scanSitePages}
-              disabled={scanning}
-              className="btn-primary text-xs"
-            >
-              {scanning ? 'Scanning...' : 'Scan site once'}
-            </button>
-          </div>
-
-          <Field label="Origin URL">
-            <select
-              className="input"
-              value={selectedPageId ?? ''}
-              onChange={event => {
-                const id = Number(event.target.value);
-                selectPage(Number.isInteger(id) ? id : null);
-              }}
-              disabled={loadingPages || !pages.length}
-            >
-              {loadingPages ? (
-                <option value="">Loading pages...</option>
-              ) : !pages.length ? (
-                <option value="">Run a site scan to populate pages</option>
-              ) : (
-                pages.map(page => (
-                  <option key={page.id} value={page.id}>
-                    {page.path} {page.title ? `— ${page.title}` : ''} [{pageStatusLabel(page)}]
-                  </option>
-                ))
-              )}
-            </select>
-            {selectedPage ? (
-              <p className="mt-1 break-all text-[11px] text-slate-400">{selectedPage.originUrl}</p>
-            ) : null}
+          <Field label="Content source">
+            <div className="space-y-2 text-xs text-slate-700">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="content-source"
+                  checked={contentSource === 'live'}
+                  onChange={() => {
+                    setContentSource('live');
+                    resetPhaseResults();
+                  }}
+                />
+                Scrape from VLS website
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="content-source"
+                  checked={contentSource === 'file'}
+                  onChange={() => {
+                    setContentSource('file');
+                    resetPhaseResults();
+                  }}
+                />
+                Scrape from files
+              </label>
+            </div>
           </Field>
 
-          <Field label="Template">
-            <select
-              className="input"
-              value={template}
-              onChange={event => void handleTemplateChange(event.target.value as MigrationTemplate)}
-              disabled={loadingTemplates || !migrationTemplates.length}
-            >
-              {loadingTemplates ? (
-                <option value="">Loading templates...</option>
-              ) : (
-                migrationTemplates.map(item => (
-                  <option key={item.template} value={item.template}>{item.label}</option>
-                ))
-              )}
-            </select>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Course and study notes pages go to <code>courses/</code> (e.g. <code>courses/cima-notes</code>);
-              all other templates go to the Storyblok root.
-              {templateReference?.fileName ? (
-                <> Reference HTML: <code>templates/{templateReference.fileName}</code> ({templateReference.sectionCount} sections).</>
-              ) : null}
-            </p>
-          </Field>
+          {isFileSource ? (
+            <>
+              <Field label="Page file">
+                <select
+                  className="input"
+                  value={selectedPageContentFile}
+                  onChange={event => {
+                    setSelectedPageContentFile(event.target.value);
+                    resetPhaseResults();
+                  }}
+                  disabled={loadingPageContentFiles || !pageContentFiles.length}
+                >
+                  {loadingPageContentFiles ? (
+                    <option value="">Loading files...</option>
+                  ) : !pageContentFiles.length ? (
+                    <option value="">No page-content files found</option>
+                  ) : (
+                    pageContentFiles.map(file => (
+                      <option key={file.filename} value={file.filename}>
+                        {file.filename}
+                      </option>
+                    ))
+                  )}
+                </select>
+                {selectedPage ? (
+                  <p className="mt-1 break-all text-[11px] text-slate-400">{selectedPage.originUrl}</p>
+                ) : null}
+                {ensuringPageContentFile ? (
+                  <p className="mt-1 text-[11px] text-slate-400">Registering page...</p>
+                ) : null}
+              </Field>
+
+              <Field label="Template">
+                <input className="input bg-slate-50" value="Course Dual Price" readOnly />
+              </Field>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold text-slate-700">Site pages</p>
+                <button
+                  type="button"
+                  onClick={scanSitePages}
+                  disabled={scanning}
+                  className="btn-primary text-xs"
+                >
+                  {scanning ? 'Scanning...' : 'Scan site once'}
+                </button>
+              </div>
+
+              <Field label="Origin URL">
+                <select
+                  className="input"
+                  value={selectedPageId ?? ''}
+                  onChange={event => {
+                    const id = Number(event.target.value);
+                    selectPage(Number.isInteger(id) ? id : null);
+                  }}
+                  disabled={loadingPages || !pages.length}
+                >
+                  {loadingPages ? (
+                    <option value="">Loading pages...</option>
+                  ) : !pages.length ? (
+                    <option value="">Run a site scan to populate pages</option>
+                  ) : (
+                    pages.map(page => (
+                      <option key={page.id} value={page.id}>
+                        {page.path} {page.title ? `— ${page.title}` : ''} [{pageStatusLabel(page)}]
+                      </option>
+                    ))
+                  )}
+                </select>
+                {selectedPage ? (
+                  <p className="mt-1 break-all text-[11px] text-slate-400">{selectedPage.originUrl}</p>
+                ) : null}
+              </Field>
+
+              <Field label="Template">
+                <select
+                  className="input"
+                  value={template}
+                  onChange={event => void handleTemplateChange(event.target.value as MigrationTemplate)}
+                  disabled={loadingTemplates || !migrationTemplates.length}
+                >
+                  {loadingTemplates ? (
+                    <option value="">Loading templates...</option>
+                  ) : (
+                    migrationTemplates.map(item => (
+                      <option key={item.template} value={item.template}>{item.label}</option>
+                    ))
+                  )}
+                </select>
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Course and study notes pages go to <code>courses/</code> (e.g. <code>courses/cima-notes</code>);
+                  all other templates go to the Storyblok root.
+                  {templateReference?.fileName ? (
+                    <> Reference HTML: <code>templates/{templateReference.fileName}</code> ({templateReference.sectionCount} sections).</>
+                  ) : null}
+                </p>
+              </Field>
+            </>
+          )}
 
           <Field label="Destination URL (Storyblok story slug)">
             <input
@@ -644,19 +780,27 @@ export default function ContentMigrationTab() {
             <button
               type="button"
               onClick={runScrape}
-              disabled={scraping || !pageUrl.trim()}
+              disabled={scraping || !canRunScrape || ensuringPageContentFile}
               className="btn-ghost w-full justify-start text-xs"
             >
-              {scraping ? 'Scraping...' : '1. Preview Scrape'}
+              {scraping
+                ? 'Scraping...'
+                : isFileSource
+                  ? 'Scrape from file'
+                  : '1. Preview Scrape'}
             </button>
             <button
               type="button"
               onClick={runGenerateStructure}
               disabled={generatingStructure || !canGenerateStructure || !hasCredentials}
               className="btn-ghost w-full justify-start text-xs"
-              title={!canGenerateStructure ? 'Run Preview Scrape first' : undefined}
+              title={!canGenerateStructure ? 'Run scrape first' : undefined}
             >
-              {generatingStructure ? 'Generating...' : '2. Generate Structure'}
+              {generatingStructure
+                ? 'Generating...'
+                : isFileSource
+                  ? 'Generate structure'
+                  : '2. Generate Structure'}
             </button>
             {fullyBlocked ? (
               <button
@@ -676,7 +820,11 @@ export default function ContentMigrationTab() {
               className="btn-primary w-full justify-start text-xs"
               title={!canMigrateContent ? 'Run Generate Structure first' : undefined}
             >
-              {migratingContent ? 'Migrating...' : '3. Migrate Content'}
+              {migratingContent
+                ? 'Migrating...'
+                : isFileSource
+                  ? 'Migrate content'
+                  : '3. Migrate Content'}
             </button>
           </div>
         </div>

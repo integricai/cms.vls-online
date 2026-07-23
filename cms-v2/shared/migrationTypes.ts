@@ -36,6 +36,15 @@ export interface MigrationPageRecord {
   structureGeneratedAt: string | null;
   draftStoryId: number | null;
   customComponentName: string | null;
+  sourceType: 'live' | 'file';
+  pageContentFilename: string | null;
+}
+
+export interface PageContentFileSummary {
+  filename: string;
+  slug: string;
+  title: string;
+  canonicalUrl: string;
 }
 
 export interface PageScanResult {
@@ -300,6 +309,11 @@ export interface ScrapedCoursePage {
   courseDescription: ScrapedCourseDescription | null;
   tabs: ScrapedTabPanel[];
   heroVideoUrl: string | null;
+  stageMode?: 'video' | 'image' | 'none';
+  stageImageUrl?: string | null;
+  stageImageAlt?: string | null;
+  stageCaptionTitle?: string | null;
+  stageCaptionSubtitle?: string | null;
   faq: {
     title: string;
     icon: string;

@@ -54,6 +54,7 @@ export type ParsedCourseSessionOption = {
 };
 
 export type CoursePricingLayout = 'standard' | 'session_selector';
+export type CourseStageMode = 'video' | 'image' | 'none';
 
 export type ParsedCourseTemplate = {
   title: string;
@@ -71,6 +72,11 @@ export type ParsedCourseTemplate = {
   videoSubtitle: string;
   videoDuration: string;
   videoUrl: string;
+  stageMode: CourseStageMode;
+  stageImageUrl: string;
+  stageImageAlt: string;
+  stageCaptionTitle: string;
+  stageCaptionSubtitle: string;
   introductionTitle: string;
   introductionParagraph1: string;
   introductionParagraph2: string;
@@ -275,6 +281,13 @@ export function parseCourseTemplateHtml(html: string): ParsedCourseTemplate {
   const videoStage = heroSection.match(/<div class="video-stage"[^>]*>([\s\S]*?)<\/div>/i)?.[0] ?? '';
   const video = videoStage.match(/<div class="video-stage"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '';
   const videoUrl = heroSection.match(/<div class="video-stage"[^>]*data-video-url=["']([^"']*)["']/i)?.[1]?.trim() ?? '';
+  const heroImageBlock = heroSection.match(/<figure class="hero-image"[^>]*>([\s\S]*?)<\/figure>/i)?.[0] ?? '';
+  const stageImageUrl = heroImageBlock.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1]?.trim() ?? '';
+  const stageImageAlt = heroImageBlock.match(/<img[^>]+alt=["']([^"']*)["']/i)?.[1]?.trim() ?? '';
+  const captionBlock = heroImageBlock.match(/<figcaption class="hi-caption"[^>]*>([\s\S]*?)<\/figcaption>/i)?.[1] ?? '';
+  const stageCaptionTitle = firstMatch(captionBlock, /<div class="t"[^>]*>([\s\S]*?)<\/div>/i);
+  const stageCaptionSubtitle = firstMatch(captionBlock, /<div class="s"[^>]*>([\s\S]*?)<\/div>/i);
+  const stageMode: CourseStageMode = videoUrl ? 'video' : stageImageUrl ? 'image' : 'none';
 
   const tutorCard = tutorSection.match(/<div class="tutor-card"[^>]*>([\s\S]*)<\/div>\s*<\/div>\s*<\/section>/i)?.[1] ?? tutorSection;
 
@@ -297,8 +310,14 @@ export function parseCourseTemplateHtml(html: string): ParsedCourseTemplate {
     videoSubtitle: firstMatch(video, /<div class="s"[^>]*>([\s\S]*?)<\/div>/i),
     videoDuration: firstMatch(video, /<span class="vs-time"[^>]*>([\s\S]*?)<\/span>/i),
     videoUrl,
+    stageMode,
+    stageImageUrl,
+    stageImageAlt,
+    stageCaptionTitle,
+    stageCaptionSubtitle,
     introductionTitle: firstMatch(introSection, /<h2[^>]*>([\s\S]*?)<\/h2>/i) || 'Exam Paper Overview',
-    introductionParagraph1: firstMatch(introSection, /<p class="course-intro-p1"[^>]*>([\s\S]*?)<\/p>/i),
+    introductionParagraph1: firstMatch(introSection, /<p class="course-intro-p1"[^>]*>([\s\S]*?)<\/p>/i)
+      || firstMatch(introSection, /<p[^>]*>([\s\S]*?)<\/p>/i),
     introductionParagraph2: firstMatch(introSection, /<p class="course-intro-p2"[^>]*>([\s\S]*?)<\/p>/i),
     courseTabs: defaultCourseTabsTemplate(),
     priceNow: sessionPricing

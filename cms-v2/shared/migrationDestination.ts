@@ -50,9 +50,14 @@ export function suggestDestinationSlug(originUrl: string, template: MigrationTem
  * slug used to look up an existing story must match that, or `findStoryBySlug` never finds it
  * and every re-run tries to create a duplicate, which Storyblok rejects as "slug already taken".
  */
-export function storyFullSlug(template: MigrationTemplate, destinationSlug: string): string {
+export function storyFullSlug(
+  template: MigrationTemplate,
+  destinationSlug: string,
+  options?: { useCoursesFolder?: boolean },
+): string {
   const slug = destinationSlug.trim().replace(/^\/+|\/+$/g, '').replace(/^pages\//, '');
-  if (usesCoursesFolder(template)) {
+  const inCoursesFolder = options?.useCoursesFolder ?? usesCoursesFolder(template);
+  if (inCoursesFolder) {
     return slug ? `courses/${slug.replace(/^courses\//, '')}` : 'courses';
   }
   if (template === 'home' || !slug || slug === 'home') {

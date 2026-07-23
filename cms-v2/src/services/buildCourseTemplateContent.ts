@@ -97,6 +97,12 @@ export function mergeCourseWithTemplate(
     videoSubtitle: template.videoSubtitle,
     videoDuration: template.videoDuration,
     videoUrl: pickText(scraped.heroVideoUrl ?? undefined, template.videoUrl),
+    stageMode: scraped.stageMode
+      ?? (scraped.stageImageUrl ? 'image' : scraped.heroVideoUrl ? 'video' : template.stageMode),
+    stageImageUrl: pickText(scraped.stageImageUrl ?? undefined, template.stageImageUrl),
+    stageImageAlt: pickText(scraped.stageImageAlt ?? undefined, template.stageImageAlt),
+    stageCaptionTitle: pickText(scraped.stageCaptionTitle ?? undefined, template.stageCaptionTitle),
+    stageCaptionSubtitle: pickText(scraped.stageCaptionSubtitle ?? undefined, template.stageCaptionSubtitle),
     introductionTitle: hasScrapedDescription
       ? pickText(scrapedIntro?.title, template.introductionTitle)
       : template.introductionTitle,
@@ -253,10 +259,13 @@ export function buildCourseStoryblokFromTemplate(
       tutor_name: data.tutorName,
       tutor_role: data.tutorRole,
       tutor_initials: data.tutorInitials,
-      video_title: data.videoTitle,
-      video_subtitle: data.videoSubtitle,
-      video_duration: data.videoDuration,
-      video_url: data.videoUrl,
+      stage_mode: data.stageMode === 'none' ? '' : data.stageMode,
+      stage_caption_title: data.stageMode === 'image' ? data.stageCaptionTitle : '',
+      stage_caption_subtitle: data.stageMode === 'image' ? data.stageCaptionSubtitle : '',
+      video_title: data.stageMode === 'video' ? data.videoTitle : '',
+      video_subtitle: data.stageMode === 'video' ? data.videoSubtitle : '',
+      video_duration: data.stageMode === 'video' ? data.videoDuration : '',
+      video_url: data.stageMode === 'video' ? data.videoUrl : '',
       meta_items: data.metaItems.map(item => ({
         _uid: uid(),
         component: 'course_meta_item',

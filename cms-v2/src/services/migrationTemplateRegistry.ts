@@ -617,7 +617,8 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   course_hero_layout: ['left', 'right', 'layout_ratio', 'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size'],
   course_hero: [
     'breadcrumb', 'zenler_course_id', 'eyebrow', 'meta_items', 'language_label', 'tutor_name', 'tutor_role',
-    'tutor_initials', 'video_title', 'video_subtitle', 'video_duration', 'video_url', 'heading', 'description',
+    'tutor_initials', 'stage_mode', 'stage_image', 'stage_caption_title', 'stage_caption_subtitle',
+    'video_title', 'video_subtitle', 'video_duration', 'video_url', 'heading', 'description',
     'qualification_tags', 'pills', 'learn_section_label', 'learn_items',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],

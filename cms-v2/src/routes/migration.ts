@@ -19,7 +19,9 @@ import {
   getMigrationPageById,
   listMigrationPages,
   updateMigrationPage,
+  upsertPageContentMigrationPage,
 } from '../models/migrationPage';
+import { listPageContentFiles, summarizePageContentFile } from '../services/pageContentFileLoader';
 import { isMigrationTemplate } from '../services/migrationUrlUtils';
 import { MIGRATION_TEMPLATE_LABELS } from '../../shared/migrationTemplateLabels';
 
@@ -110,10 +112,44 @@ function parseStoryblokCredentials(body: Record<string, unknown>) {
   };
 }
 
+router.get('/page-content-files', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const files = listPageContentFiles();
+    return res.json({ ok: true, data: files });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/page-content/ensure-page', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const filename = typeof (req.body as Record<string, unknown>)?.filename === 'string'
+      ? (req.body as Record<string, unknown>).filename as string
+      : '';
+    if (!filename.trim()) {
+      return res.status(400).json({ ok: false, error: 'filename is required' });
+    }
+
+    const summary = summarizePageContentFile(filename.trim());
+    const page = await upsertPageContentMigrationPage({
+      filename: summary.filename,
+      canonicalUrl: summary.canonicalUrl,
+      title: summary.title,
+      slug: summary.slug,
+    });
+    return res.json({ ok: true, data: page });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/pages/:id/scrape', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parsePageId(req.params.id);
-    const result = await previewScrapePage(id);
+    const body = req.body as Record<string, unknown>;
+    const source = body.source === 'file' ? 'file' : body.source === 'live' ? 'live' : undefined;
+    const filename = typeof body.filename === 'string' ? body.filename : undefined;
+    const result = await previewScrapePage(id, { source, filename });
     return res.json({ ok: true, data: result });
   } catch (err) {
     next(err);

@@ -49,6 +49,11 @@ function ensureMigrationPagesTable(): Promise<void> {
         ALTER TABLE content_migration_pages
           ADD COLUMN IF NOT EXISTS custom_component_name TEXT
       `;
+      await sql`
+        ALTER TABLE content_migration_pages
+          ADD COLUMN IF NOT EXISTS source_type TEXT NOT NULL DEFAULT 'live',
+          ADD COLUMN IF NOT EXISTS page_content_filename TEXT
+      `;
     })();
   }
   return ensureTablePromise;
@@ -75,6 +80,8 @@ interface DbRow {
   structure_generated_at: Date | null;
   draft_story_id: number | null;
   custom_component_name: string | null;
+  source_type: string;
+  page_content_filename: string | null;
 }
 
 function rowToRecord(row: DbRow): MigrationPageRecord {
@@ -97,6 +104,8 @@ function rowToRecord(row: DbRow): MigrationPageRecord {
     structureGeneratedAt: row.structure_generated_at?.toISOString() ?? null,
     draftStoryId: row.draft_story_id,
     customComponentName: row.custom_component_name,
+    sourceType: row.source_type === 'file' ? 'file' : 'live',
+    pageContentFilename: row.page_content_filename,
   };
 }
 
@@ -267,6 +276,71 @@ export async function getScrapedData(id: number): Promise<unknown | null> {
     LIMIT 1
   `;
   return (rows as Array<{ scraped_data: unknown }>)[0]?.scraped_data ?? null;
+}
+
+export async function updateMigrationPageSource(
+  id: number,
+  patch: Partial<{ sourceType: 'live' | 'file'; pageContentFilename: string | null }>,
+): Promise<void> {
+  await ensureMigrationPagesTable();
+  const existing = await getMigrationPageById(id);
+  if (!existing) return;
+
+  const sourceType = patch.sourceType ?? existing.sourceType;
+  const pageContentFilename = patch.pageContentFilename !== undefined
+    ? patch.pageContentFilename
+    : existing.pageContentFilename;
+
+  await sql`
+    UPDATE content_migration_pages
+    SET
+      source_type = ${sourceType},
+      page_content_filename = ${pageContentFilename},
+      updated_at = NOW()
+    WHERE id = ${id}
+  `;
+}
+
+export async function upsertPageContentMigrationPage(input: {
+  filename: string;
+  canonicalUrl: string;
+  title: string;
+  slug: string;
+}): Promise<MigrationPageRecord> {
+  await ensureMigrationPagesTable();
+
+  let path = `/${input.slug}`;
+  try {
+    path = new URL(input.canonicalUrl).pathname || path;
+  } catch {
+    // keep derived path
+  }
+
+  await upsertMigrationPage({
+    originUrl: input.canonicalUrl,
+    zenlerUrl: input.canonicalUrl,
+    title: input.title,
+    path,
+    template: 'course_dual_price',
+    suggestedDestination: input.slug,
+    destinationSlug: input.slug,
+  });
+
+  const page = await getMigrationPageByOriginUrl(input.canonicalUrl);
+  if (!page) {
+    throw new Error('Failed to upsert page-content migration page');
+  }
+
+  await updateMigrationPageSource(page.id, {
+    sourceType: 'file',
+    pageContentFilename: input.filename,
+  });
+
+  const updated = await getMigrationPageById(page.id);
+  if (!updated) {
+    throw new Error('Failed to load page-content migration page');
+  }
+  return updated;
 }
 
 export async function saveCustomComponentName(id: number, componentName: string): Promise<void> {
