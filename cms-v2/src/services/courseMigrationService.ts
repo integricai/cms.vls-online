@@ -33,6 +33,7 @@ import { slugifySegment, storyFullSlug, suggestDestinationSlug, usesCoursesFolde
 import { MIGRATION_TEMPLATE_LABELS, TEMPLATES_WITH_FULL_FALLBACK } from '../../shared/migrationTemplateLabels';
 import {
   findCoursesFolder,
+  getStoryblokComponent,
   StoryblokApiError,
   upsertStory,
   validateStoryblokRootBloks,
@@ -1023,29 +1024,33 @@ function storyblokConfigFromCredentials(credentials: StoryblokCredentials): Stor
   };
 }
 
-const LEVEL_PAGE_BODY_COMPONENTS = [
+const LEVEL_PAGE_TOP_LEVEL_COMPONENTS = [
   'level_page_hero',
+  'level_intro_section',
+  'level_pathway_section',
+  'level_papers_section',
+  'level_why_section',
+  'level_reviews_section',
+  'level_faq_section',
+  'level_cta_section',
+];
+
+/** Nestable children — must exist in Storyblok but are not page.body whitelist entries. */
+const LEVEL_PAGE_NESTABLE_COMPONENTS = [
   'level_hero_main',
   'level_pricing_sidebar',
   'level_breadcrumb_item',
   'level_meta_item',
   'level_session_option',
   'level_include_item',
-  'level_intro_section',
-  'level_pathway_section',
   'level_pathway_step',
-  'level_papers_section',
   'level_paper_group',
   'level_paper_module',
   'level_submeta_item',
-  'level_why_section',
   'level_why_item',
-  'level_reviews_section',
   'level_rating_bar',
   'level_review_card',
-  'level_faq_section',
   'level_faq_item',
-  'level_cta_section',
 ];
 
 function collectLevelPageWarnings(scraped: ScrapedLevelPage): string[] {
@@ -1074,6 +1079,33 @@ function migrationUsesCoursesFolder(page: MigrationPageRecord, template: Migrati
 
 function rootComponentForTemplate(template: MigrationTemplate): string {
   return isCoursePageTemplate(template) ? 'course_page' : 'page';
+}
+
+async function detectMissingLevelPageComponents(config: StoryblokConfig): Promise<string[]> {
+  const rootComponent = 'page';
+  const validation = await validateStoryblokRootBloks(
+    config,
+    rootComponent,
+    [...LEVEL_PAGE_TOP_LEVEL_COMPONENTS],
+  );
+
+  const missing = new Set<string>(validation.missingComponents);
+  if (!validation.rootExists) missing.add(rootComponent);
+  for (const component of validation.missingFromWhitelist) {
+    missing.add(`${component} (not allowed in ${rootComponent} body whitelist)`);
+  }
+
+  const nestableChecks = await Promise.all(
+    LEVEL_PAGE_NESTABLE_COMPONENTS.map(async (component) => ({
+      component,
+      exists: Boolean(await getStoryblokComponent(config, component)),
+    })),
+  );
+  for (const check of nestableChecks.filter(item => !item.exists)) {
+    missing.add(check.component);
+  }
+
+  return Array.from(missing);
 }
 
 async function detectMissingComponents(
@@ -1249,19 +1281,7 @@ export async function generatePageStructure(
   }
 
   const missingComponents = isLevelPageTemplate(template)
-    ? await detectMissingComponents(config, template, {
-      ...blueprint,
-      sections: LEVEL_PAGE_BODY_COMPONENTS.map(component => ({
-        key: component,
-        label: component,
-        component,
-        classes: [],
-        isBand: false,
-        styles: {},
-        sampleHeading: '',
-        sampleDescription: '',
-      })),
-    })
+    ? await detectMissingLevelPageComponents(config)
     : await detectMissingComponents(config, template, blueprint);
   if (missingComponents.length) {
     return {
