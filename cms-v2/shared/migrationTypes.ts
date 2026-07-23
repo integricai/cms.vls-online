@@ -1,5 +1,7 @@
 import type { ScrapedLevelPage } from './levelPageTypes';
 
+export type { ScrapedLevelPage } from './levelPageTypes';
+
 export type StoryblokRegion = 'eu' | 'us';
 
 export type MigrationTemplate =

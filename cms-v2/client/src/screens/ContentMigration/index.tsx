@@ -10,6 +10,8 @@ import type {
   PageScanResult,
   ScrapedCoursePage,
   ScrapedGenericPage,
+  ScrapedLevelPage,
+  ScrapedMigrationPage,
   ScrapePhaseResult,
   StoryblokRegion,
   StructurePhaseResult,
@@ -69,7 +71,11 @@ function loadSavedConfig(): SavedConfig {
   }
 }
 
-function isCoursePage(scraped: ScrapedCoursePage | ScrapedGenericPage): scraped is ScrapedCoursePage {
+function isLevelPage(scraped: ScrapedMigrationPage): scraped is ScrapedLevelPage {
+  return 'paperGroups' in scraped && 'pathwaySteps' in scraped;
+}
+
+function isCoursePage(scraped: ScrapedMigrationPage): scraped is ScrapedCoursePage {
   return 'hero' in scraped;
 }
 
@@ -550,8 +556,9 @@ export default function ContentMigrationTab() {
   }
 
   const scraped = scrapeResult?.scraped;
+  const levelScraped = scraped && isLevelPage(scraped) ? scraped : null;
   const courseScraped = scraped && isCoursePage(scraped) ? scraped : null;
-  const genericScraped = scraped && !isCoursePage(scraped) ? scraped : null;
+  const genericScraped = scraped && !isLevelPage(scraped) && !isCoursePage(scraped) ? scraped : null;
 
   const fullyBlocked = Boolean(
     structureResult && !structureResult.draftStory && structureResult.unmatchedSections.length > 0,
@@ -1215,6 +1222,105 @@ export default function ContentMigrationTab() {
                 <p>Course finder banner: {courseScraped.hasCourseFinderBanner ? 'Yes' : 'No'}</p>
               </div>
             </div>
+          ) : levelScraped ? (
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+                <h3 className="text-sm font-bold text-slate-700">Scraped level page content (full detail)</h3>
+              </div>
+              <div className="space-y-4 p-4 text-xs text-slate-600">
+                <div>
+                  <p className="font-semibold text-slate-700">Page</p>
+                  <p>{levelScraped.title}</p>
+                  <p className="mt-1 text-slate-400">Slug: {levelScraped.slug}</p>
+                  <p className="mt-1">{levelScraped.metaDescription || 'No meta description found'}</p>
+                </div>
+
+                {levelScraped.breadcrumbItems.length ? (
+                  <div>
+                    <p className="font-semibold text-slate-700">Breadcrumb</p>
+                    <ul className="mt-1 space-y-1">
+                      {levelScraped.breadcrumbItems.map(item => (
+                        <li key={`${item.label}-${item.url}`}>{item.label} → {item.url}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                <div>
+                  <p className="font-semibold text-slate-700">Hero</p>
+                  <p>{levelScraped.heading || 'Not detected'}</p>
+                  <p className="mt-1">{levelScraped.description || 'No hero description'}</p>
+                  <p className="mt-1 text-slate-400">Price: {levelScraped.priceNow || 'Not detected'}</p>
+                  {levelScraped.sessionOptions.length ? (
+                    <ul className="mt-2 space-y-1">
+                      {levelScraped.sessionOptions.map(option => (
+                        <li key={`${option.title}-${option.price}`}>
+                          {option.title} — {option.price}
+                          {option.isDefault ? ' (default)' : ''}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+
+                <div>
+                  <p className="font-semibold text-slate-700">Pathway ({levelScraped.pathwaySteps.length} steps)</p>
+                  <div className="mt-2 space-y-2">
+                    {levelScraped.pathwaySteps.map(step => (
+                      <div key={`${step.number}-${step.title}`} className="rounded border border-slate-200 p-2">
+                        <p className="font-medium text-slate-700">{step.number}. {step.title}</p>
+                        <p className="mt-1 text-slate-500">{step.body}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-slate-700">
+                    Papers ({levelScraped.paperGroups.reduce((count, group) => count + group.modules.length, 0)} modules)
+                  </p>
+                  <div className="mt-2 space-y-2">
+                    {levelScraped.paperGroups.map(group => (
+                      <div key={group.label || 'papers'} className="rounded border border-slate-200 p-2">
+                        {group.label ? <p className="font-medium text-slate-700">{group.label}</p> : null}
+                        <ul className="mt-1 list-disc space-y-1 pl-4">
+                          {group.modules.map(module => (
+                            <li key={`${module.code}-${module.title}`}>
+                              {module.code ? `${module.code} — ` : ''}{module.title}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-slate-700">Why VLS ({levelScraped.whyItems.length} items)</p>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-slate-700">Reviews ({levelScraped.reviewCards.length} cards)</p>
+                  <p className="mt-1 text-slate-400">{levelScraped.reviewsScore} {levelScraped.reviewsLabel}</p>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-slate-700">FAQ ({levelScraped.faqItems.length} items)</p>
+                  {levelScraped.faqItems.length ? (
+                    <div className="mt-2 space-y-2">
+                      {levelScraped.faqItems.map((item, index) => (
+                        <div key={`${item.question}-${index}`} className="rounded border border-slate-200 p-2">
+                          <p className="font-medium text-slate-700">Q: {item.question}</p>
+                          <p className="mt-1 text-slate-500">A: {item.answerText}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-slate-400">No FAQ detected.</p>
+                  )}
+                </div>
+              </div>
+            </div>
           ) : genericScraped ? (
             <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
               <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
@@ -1228,7 +1334,7 @@ export default function ContentMigrationTab() {
                   <p className="mt-1">{genericScraped.metaDescription || 'No meta description found'}</p>
                 </div>
 
-                {genericScraped.breadcrumbItems.length ? (
+                {genericScraped.breadcrumbItems?.length ? (
                   <div>
                     <p className="font-semibold text-slate-700">Breadcrumb</p>
                     <ul className="mt-1 space-y-1">
@@ -1240,9 +1346,9 @@ export default function ContentMigrationTab() {
                 ) : null}
 
                 <div>
-                  <p className="font-semibold text-slate-700">Content sections ({genericScraped.sections.length})</p>
+                  <p className="font-semibold text-slate-700">Content sections ({genericScraped.sections?.length ?? 0})</p>
                   <div className="mt-2 space-y-2">
-                    {genericScraped.sections.map((section, index) => (
+                    {(genericScraped.sections ?? []).map((section, index) => (
                       <div key={`${section.heading}-${index}`} className="rounded border border-slate-200 p-2">
                         {section.heading ? <p className="font-medium text-slate-700">{section.heading}</p> : null}
                         <p className="mt-1 whitespace-pre-wrap text-slate-500">{section.bodyText}</p>
