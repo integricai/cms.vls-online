@@ -376,7 +376,7 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
 
         {preview && (
           <div className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
               <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
                 Valid rows: <strong>{preview.validRows.length}</strong>
               </div>
@@ -386,7 +386,43 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
               <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
                 Warnings: <strong>{preview.warnings.length}</strong>
               </div>
+              {preview.stats && (
+                <>
+                  <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    No default: <strong>{preview.stats.coursesWithoutDefault}</strong>
+                  </div>
+                  <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                    Auto-defaulted: <strong>{preview.stats.autoDefaultedCourses}</strong>
+                  </div>
+                </>
+              )}
             </div>
+
+            {preview.warnings.length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-white p-4">
+                <h2 className="mb-2 text-sm font-semibold text-amber-800">Import warnings</h2>
+                <div className="max-h-48 overflow-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b text-slate-500">
+                        <th className="py-1 pr-2">Row</th>
+                        <th className="py-1 pr-2">Field</th>
+                        <th className="py-1">Message</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {preview.warnings.map((warn, i) => (
+                        <tr key={`${warn.rowNumber}-${i}`} className="border-b border-slate-100">
+                          <td className="py-1 pr-2">{warn.rowNumber || '—'}</td>
+                          <td className="py-1 pr-2">{warn.field ?? '—'}</td>
+                          <td className="py-1">{warn.message}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {preview.errors.length > 0 && (
               <div className="rounded-lg border border-red-200 bg-white p-4">
@@ -485,6 +521,7 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
             {importResult && (
               <div className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                 Created: <strong>{importResult.created}</strong> · Updated: <strong>{importResult.updated}</strong>
+                {importResult.deactivated > 0 && <> · Deactivated duplicates: <strong>{importResult.deactivated}</strong></>}
                 {importResult.skipped > 0 && <> · Skipped: <strong>{importResult.skipped}</strong></>}
               </div>
             )}

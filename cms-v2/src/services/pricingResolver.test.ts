@@ -6,7 +6,7 @@ import {
   effectiveAmount,
   validateGeoPriceInput,
 } from './courseGeoPriceValidation';
-import { parseCsvText, parseImportRow } from './courseGeoPriceImport';
+import { parseCsvText, parseImportRow, defaultPriorityScore } from './courseGeoPriceImport';
 
 function price(partial: Partial<CourseGeoPrice> & Pick<CourseGeoPrice, 'id' | 'name' | 'amount'>): CourseGeoPrice {
   const amount = partial.amount;
@@ -21,6 +21,7 @@ function price(partial: Partial<CourseGeoPrice> & Pick<CourseGeoPrice, 'id' | 'n
     isDefault: false,
     isActive: true,
     stripePriceId: null,
+    zenlerPricingCode: null,
     pricingMode: 'duration',
     examSessionMonth: null,
     examSessionYear: null,
@@ -147,6 +148,38 @@ run('parses CSV import rows', () => {
   assert.strictEqual(parsed.discountPercent, 10);
   assert.strictEqual(parsed.isDefault, true);
   assert.strictEqual(parsed.durationDays, 180);
+});
+
+run('parses discount percent with % suffix', () => {
+  const parsed = parseImportRow({
+    zenler_course_id: '71086',
+    price_name: 'Six Months Access',
+    amount: '150',
+    discount_percent: '20%',
+    pricing_mode: 'duration',
+    duration_days: '180',
+  }, 2);
+  assert.strictEqual(parsed.discountPercent, 20);
+});
+
+run('treats blank is_default as unspecified', () => {
+  const parsed = parseImportRow({
+    zenler_course_id: '71086',
+    price_name: 'Six Months Access',
+    amount: '150',
+    pricing_mode: 'duration',
+    duration_days: '180',
+    is_default: '',
+    is_active: 'TRUE',
+  }, 2);
+  assert.strictEqual(parsed.isDefault, undefined);
+  assert.strictEqual(parsed.isActive, true);
+});
+
+run('scores longer duration higher for auto-default', () => {
+  const short = defaultPriorityScore({ pricingMode: 'duration', durationDays: 120, examSessionMonth: null, examSessionYear: null });
+  const long = defaultPriorityScore({ pricingMode: 'duration', durationDays: 180, examSessionMonth: null, examSessionYear: null });
+  assert.ok(long > short);
 });
 
 run('validates duration days must be a positive whole number', () => {

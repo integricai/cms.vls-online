@@ -26,6 +26,7 @@ interface DbRow {
   is_default: boolean;
   is_active: boolean;
   stripe_price_id: string | null;
+  zenler_pricing_code: string | null;
   pricing_mode: CoursePricingMode;
   exam_session_month: number | null;
   exam_session_year: number | null;
@@ -74,6 +75,7 @@ export function rowToCourseGeoPrice(row: DbRow): CourseGeoPrice {
     isDefault: row.is_default,
     isActive: row.is_active,
     stripePriceId: row.stripe_price_id,
+    zenlerPricingCode: row.zenler_pricing_code,
     pricingMode: row.pricing_mode,
     examSessionMonth: row.exam_session_month,
     examSessionYear: row.exam_session_year,
@@ -281,9 +283,31 @@ export async function getGeoPriceById(id: number): Promise<CourseGeoPrice | null
   return rows[0] ? rowToCourseGeoPrice(rows[0] as DbRow) : null;
 }
 
-export async function findGeoPriceByUpsertKey(data: {
+export async function findGeoPriceByZenlerPricingCode(
+  courseId: number,
+  pricingCode: string,
+): Promise<CourseGeoPrice | null> {
+  const code = pricingCode.trim();
+  if (!code) return null;
+
+  const rows = await sql`
+    SELECT
+      p.*,
+      c.name AS course_name,
+      c.zenler_course_id,
+      c.slug AS course_slug
+    FROM course_geo_prices p
+    JOIN courses c ON c.id = p.course_id
+    WHERE p.course_id = ${courseId}
+      AND p.zenler_pricing_code = ${code}
+    ORDER BY p.id ASC
+    LIMIT 1
+  `;
+  return rows[0] ? rowToCourseGeoPrice(rows[0] as DbRow) : null;
+}
+
+export async function findGeoPriceByPricingSlot(data: {
   courseId: number;
-  name: string;
   pricingMode: CoursePricingMode;
   durationDays?: number | null;
   examSessionMonth?: number | null;
@@ -298,14 +322,88 @@ export async function findGeoPriceByUpsertKey(data: {
     FROM course_geo_prices p
     JOIN courses c ON c.id = p.course_id
     WHERE p.course_id = ${data.courseId}
-      AND LOWER(p.name) = ${data.name.toLowerCase()}
       AND p.pricing_mode = ${data.pricingMode}
       AND COALESCE(p.duration_days, 0) = ${data.durationDays ?? 0}
       AND COALESCE(p.exam_session_month, 0) = ${data.examSessionMonth ?? 0}
       AND COALESCE(p.exam_session_year, 0) = ${data.examSessionYear ?? 0}
+    ORDER BY p.id ASC
     LIMIT 1
   `;
   return rows[0] ? rowToCourseGeoPrice(rows[0] as DbRow) : null;
+}
+
+export async function findGeoPriceByUpsertKey(data: {
+  courseId: number;
+  pricingCode?: string | null;
+  name?: string;
+  pricingMode: CoursePricingMode;
+  durationDays?: number | null;
+  examSessionMonth?: number | null;
+  examSessionYear?: number | null;
+}): Promise<CourseGeoPrice | null> {
+  if (data.pricingCode?.trim()) {
+    const byCode = await findGeoPriceByZenlerPricingCode(data.courseId, data.pricingCode);
+    if (byCode) return byCode;
+  }
+
+  const bySlot = await findGeoPriceByPricingSlot({
+    courseId: data.courseId,
+    pricingMode: data.pricingMode,
+    durationDays: data.durationDays,
+    examSessionMonth: data.examSessionMonth,
+    examSessionYear: data.examSessionYear,
+  });
+  if (bySlot) return bySlot;
+
+  if (data.name?.trim()) {
+    const rows = await sql`
+      SELECT
+        p.*,
+        c.name AS course_name,
+        c.zenler_course_id,
+        c.slug AS course_slug
+      FROM course_geo_prices p
+      JOIN courses c ON c.id = p.course_id
+      WHERE p.course_id = ${data.courseId}
+        AND LOWER(p.name) = ${data.name.toLowerCase()}
+        AND p.pricing_mode = ${data.pricingMode}
+        AND COALESCE(p.duration_days, 0) = ${data.durationDays ?? 0}
+        AND COALESCE(p.exam_session_month, 0) = ${data.examSessionMonth ?? 0}
+        AND COALESCE(p.exam_session_year, 0) = ${data.examSessionYear ?? 0}
+      ORDER BY p.id ASC
+      LIMIT 1
+    `;
+    return rows[0] ? rowToCourseGeoPrice(rows[0] as DbRow) : null;
+  }
+
+  return null;
+}
+
+export async function deactivateDuplicateSlotPrices(
+  courseId: number,
+  keepId: number,
+  slot: {
+    pricingMode: CoursePricingMode;
+    durationDays?: number | null;
+    examSessionMonth?: number | null;
+    examSessionYear?: number | null;
+  },
+): Promise<number> {
+  const rows = await sql`
+    UPDATE course_geo_prices
+    SET is_active = false,
+        is_default = false,
+        updated_at = NOW()
+    WHERE course_id = ${courseId}
+      AND id <> ${keepId}
+      AND is_active = true
+      AND pricing_mode = ${slot.pricingMode}
+      AND COALESCE(duration_days, 0) = ${slot.durationDays ?? 0}
+      AND COALESCE(exam_session_month, 0) = ${slot.examSessionMonth ?? 0}
+      AND COALESCE(exam_session_year, 0) = ${slot.examSessionYear ?? 0}
+    RETURNING id
+  `;
+  return rows.length;
 }
 
 async function clearOtherActiveDefaults(courseId: number, keepId?: number): Promise<void> {
@@ -344,7 +442,7 @@ export async function createGeoPrice(input: CourseGeoPriceInput): Promise<Course
     INSERT INTO course_geo_prices (
       course_id, name, currency, amount, compare_at_amount,
       discount_percent, discounted_price,
-      is_default, is_active, stripe_price_id,
+      is_default, is_active, stripe_price_id, zenler_pricing_code,
       pricing_mode, exam_session_month, exam_session_year, duration_days, duration_months
     ) VALUES (
       ${input.courseId},
@@ -357,6 +455,7 @@ export async function createGeoPrice(input: CourseGeoPriceInput): Promise<Course
       ${isDefault},
       ${isActive},
       ${input.stripePriceId?.trim() || null},
+      ${input.zenlerPricingCode?.trim() || null},
       ${pricingMode},
       ${pricingMode === 'session' ? (input.examSessionMonth ?? null) : null},
       ${pricingMode === 'session' ? (input.examSessionYear ?? null) : null},
@@ -392,6 +491,9 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
     stripePriceId: input.stripePriceId !== undefined
       ? (input.stripePriceId?.trim() || null)
       : existing.stripePriceId,
+    zenlerPricingCode: input.zenlerPricingCode !== undefined
+      ? (input.zenlerPricingCode?.trim() || null)
+      : existing.zenlerPricingCode,
     pricingMode,
     examSessionMonth: pricingMode === 'session' ? (examSessionMonth ?? null) : null,
     examSessionYear: pricingMode === 'session' ? (examSessionYear ?? null) : null,
@@ -416,6 +518,7 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
         is_default = ${nextInput.isDefault},
         is_active = ${nextInput.isActive},
         stripe_price_id = ${nextInput.stripePriceId},
+        zenler_pricing_code = ${nextInput.zenlerPricingCode},
         pricing_mode = ${nextInput.pricingMode},
         exam_session_month = ${nextInput.examSessionMonth},
         exam_session_year = ${nextInput.examSessionYear},
@@ -439,9 +542,10 @@ export async function setDefaultGeoPrice(courseId: number, priceId: number): Pro
   return updateGeoPrice(priceId, { isDefault: true, isActive: true });
 }
 
-export async function upsertGeoPriceByKey(input: CourseGeoPriceInput): Promise<{ price: CourseGeoPrice; created: boolean }> {
+export async function upsertGeoPriceByKey(input: CourseGeoPriceInput): Promise<{ price: CourseGeoPrice; created: boolean; deactivated: number }> {
   const existing = await findGeoPriceByUpsertKey({
     courseId: input.courseId,
+    pricingCode: input.zenlerPricingCode,
     name: input.name,
     pricingMode: input.pricingMode ?? 'duration',
     durationDays: input.durationDays,
@@ -452,11 +556,23 @@ export async function upsertGeoPriceByKey(input: CourseGeoPriceInput): Promise<{
   if (existing) {
     const price = await updateGeoPrice(existing.id, input);
     if (!price) throw new Error('Failed to update geo price');
-    return { price, created: false };
+    const deactivated = await deactivateDuplicateSlotPrices(input.courseId, price.id, {
+      pricingMode: price.pricingMode,
+      durationDays: price.durationDays,
+      examSessionMonth: price.examSessionMonth,
+      examSessionYear: price.examSessionYear,
+    });
+    return { price, created: false, deactivated };
   }
 
   const price = await createGeoPrice(input);
-  return { price, created: true };
+  const deactivated = await deactivateDuplicateSlotPrices(input.courseId, price.id, {
+    pricingMode: price.pricingMode,
+    durationDays: price.durationDays,
+    examSessionMonth: price.examSessionMonth,
+    examSessionYear: price.examSessionYear,
+  });
+  return { price, created: true, deactivated };
 }
 
 export async function getCourseById(id: number): Promise<{ id: number; name: string; zenlerCourseId: string; slug: string | null; isActive: boolean } | null> {

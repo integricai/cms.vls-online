@@ -206,6 +206,8 @@ export interface CourseGeoPrice {
   isDefault: boolean;
   isActive: boolean;
   stripePriceId: string | null;
+  /** Zenler payment-option id (bulk import / checkout mapping). */
+  zenlerPricingCode: string | null;
   pricingMode: CoursePricingMode;
   examSessionMonth: number | null;
   examSessionYear: number | null;
@@ -227,6 +229,7 @@ export type CourseGeoPriceInput = {
   isDefault?: boolean;
   isActive?: boolean;
   stripePriceId?: string | null;
+  zenlerPricingCode?: string | null;
   pricingMode?: CoursePricingMode;
   examSessionMonth?: number | null;
   examSessionYear?: number | null;
@@ -267,6 +270,7 @@ export interface ResolvedCoursePrice {
 export interface CoursePriceImportRow {
   rowNumber: number;
   zenlerCourseId?: string;
+  pricingCode?: string;
   courseSlug?: string;
   courseTitle?: string;
   priceName: string;
@@ -274,7 +278,9 @@ export interface CoursePriceImportRow {
   amount: number;
   compareAtAmount?: number | null;
   discountPercent?: number | null;
+  /** Undefined = not specified in CSV (preserve existing on update). */
   isDefault?: boolean;
+  /** Undefined = not specified in CSV (preserve existing on update). */
   isActive?: boolean;
   pricingMode?: CoursePricingMode;
   examSessionMonth?: number | null;
@@ -296,18 +302,25 @@ export interface CoursePriceImportPreviewRow {
   zenlerCourseId: string;
   price: CoursePriceImportRow;
   existingPriceId?: number;
+  defaultSpecified?: boolean;
 }
 
 export interface CoursePriceImportPreview {
   validRows: CoursePriceImportPreviewRow[];
   errors: CoursePriceImportRowError[];
   warnings: CoursePriceImportRowError[];
+  stats?: {
+    coursesWithoutDefault: number;
+    duplicatesToDeactivate: number;
+    autoDefaultedCourses: number;
+  };
 }
 
 export interface CoursePriceImportResult {
   created: number;
   updated: number;
   skipped: number;
+  deactivated: number;
   errors: CoursePriceImportRowError[];
 }
 
