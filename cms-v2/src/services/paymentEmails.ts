@@ -1,4 +1,9 @@
 import type { PaymentOrder } from '../models/paymentOrder';
+import {
+  countryDisplayName,
+  pricingRegionLabel,
+  resolvePricingRegion,
+} from './pricingRegions';
 
 function parseSender(value: string | undefined) {
   const fallback = { email: 'noreply@vls-online.com', name: 'VLS Online' };
@@ -118,6 +123,90 @@ Payment date/time: ${order.paidAt?.toISOString() ?? ''}`;
 <p><strong>Amount paid:</strong> ${esc(amount)}</p>
 <p><strong>Stripe checkout session ID:</strong> ${esc(order.stripeCheckoutSessionId)}</p>
 <p><strong>Payment date/time:</strong> ${esc(order.paidAt?.toISOString())}</p>`,
+  });
+  return true;
+}
+
+export async function sendRegionalPricingMismatchRefund(
+  order: PaymentOrder,
+  paymentMethodCountry: string,
+): Promise<boolean> {
+  const to = order.studentEmail ?? order.stripeCustomerEmail;
+  if (!to) return false;
+
+  const name = order.studentName || 'Student';
+  const amount = formatAmount(order);
+  const quotedRegion = pricingRegionLabel(resolvePricingRegion(order.countryCode));
+  const paymentCountry = countryDisplayName(paymentMethodCountry);
+  const quotedCountry = countryDisplayName(order.countryCode);
+  const supportEmail = process.env.SUPPORT_EMAIL ?? 'support@vls-online.com';
+
+  const text = `Hi ${name},
+
+We have refunded your recent payment of ${amount} for "${order.courseTitle}".
+
+Our regional pricing is based on the country where you access our site and the country your payment method is registered in. These must match to qualify for a regional discount.
+
+At checkout, your session was associated with ${quotedCountry} (${quotedRegion} pricing). The payment method used is registered in ${paymentCountry}, which does not match our regional pricing rules.
+
+Your payment has been fully refunded. No course access has been granted.
+
+If you believe this is an error, please contact us at ${supportEmail} with your order reference.
+
+Kind regards,
+VLS Online`;
+
+  await sendEmail({
+    to,
+    subject: 'Payment refunded — regional pricing verification - VLS Online',
+    text,
+    html: `<p>Hi ${esc(name)},</p>
+<p>We have <strong>refunded</strong> your recent payment of <strong>${esc(amount)}</strong> for <strong>${esc(order.courseTitle)}</strong>.</p>
+<p>Our regional pricing is based on the country where you access our site and the country your payment method is registered in. These must match to qualify for a regional discount.</p>
+<p>At checkout, your session was associated with <strong>${esc(quotedCountry)}</strong> (${esc(quotedRegion)} pricing). The payment method used is registered in <strong>${esc(paymentCountry)}</strong>, which does not match our regional pricing rules.</p>
+<p>Your payment has been fully refunded. <strong>No course access has been granted.</strong></p>
+<p>If you believe this is an error, please contact us at <a href="mailto:${esc(supportEmail)}">${esc(supportEmail)}</a> with your order reference.</p>
+<p>Kind regards,<br>VLS Online</p>`,
+  });
+  return true;
+}
+
+export async function sendAdminRegionalMismatchNotification(
+  order: PaymentOrder,
+  paymentMethodCountry: string,
+): Promise<boolean> {
+  const to = process.env.ADMIN_NOTIFICATION_EMAIL;
+  if (!to) return false;
+
+  const amount = formatAmount(order);
+  const text = `Regional pricing mismatch — payment refunded
+
+Student name: ${order.studentName ?? ''}
+Student email: ${order.studentEmail ?? order.stripeCustomerEmail ?? ''}
+Course title: ${order.courseTitle}
+Amount refunded: ${amount}
+Quoted country: ${order.countryCode ?? ''} (${pricingRegionLabel(resolvePricingRegion(order.countryCode))})
+Payment method country: ${paymentMethodCountry} (${pricingRegionLabel(resolvePricingRegion(paymentMethodCountry))})
+Order ID: ${order.id}
+Stripe checkout session ID: ${order.stripeCheckoutSessionId ?? ''}
+Stripe refund ID: ${order.stripeRefundId ?? ''}
+Enrollment: blocked (regional mismatch)`;
+
+  await sendEmail({
+    to,
+    subject: `Regional pricing mismatch — refund issued - ${order.courseTitle}`,
+    text,
+    html: `<p><strong>Regional pricing mismatch — payment refunded</strong></p>
+<p><strong>Student name:</strong> ${esc(order.studentName)}</p>
+<p><strong>Student email:</strong> ${esc(order.studentEmail ?? order.stripeCustomerEmail)}</p>
+<p><strong>Course title:</strong> ${esc(order.courseTitle)}</p>
+<p><strong>Amount refunded:</strong> ${esc(amount)}</p>
+<p><strong>Quoted country:</strong> ${esc(order.countryCode)} (${esc(pricingRegionLabel(resolvePricingRegion(order.countryCode)))})</p>
+<p><strong>Payment method country:</strong> ${esc(paymentMethodCountry)} (${esc(pricingRegionLabel(resolvePricingRegion(paymentMethodCountry)))})</p>
+<p><strong>Order ID:</strong> ${esc(order.id)}</p>
+<p><strong>Stripe checkout session ID:</strong> ${esc(order.stripeCheckoutSessionId)}</p>
+<p><strong>Stripe refund ID:</strong> ${esc(order.stripeRefundId)}</p>
+<p><strong>Enrollment:</strong> blocked (regional mismatch)</p>`,
   });
   return true;
 }

@@ -20,6 +20,11 @@ import {
   sendStudentPaymentConfirmation,
 } from '../services/paymentEmails';
 import { detectCountryFromRequest } from '../services/geoDetection';
+import {
+  resolveQuotedPricingRegion,
+  shouldApplyRegionalPricingAtCheckout,
+  verifyRegionalPaymentMethod,
+} from '../services/paymentRegionalVerification';
 import { PricingResolutionError, resolveCoursePrice } from '../services/pricingResolver';
 import { enrollStudentInZenlerCourse } from '../services/zenlerEnrollment';
 
@@ -180,9 +185,19 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
 });
 
 async function createGeoPriceCheckout(req: Request, res: Response) {
-  const courseId = parsePositiveInt(req.body?.courseId);
+  const explicitPriceId = parsePositiveInt(req.body?.coursePriceId);
+  let courseId = parsePositiveInt(req.body?.courseId);
+
+  if (!courseId && explicitPriceId) {
+    const priceRow = await getGeoPriceById(explicitPriceId);
+    if (!priceRow || !priceRow.isActive) {
+      return res.status(404).json({ ok: false, error: 'Course price not found or inactive' });
+    }
+    courseId = priceRow.courseId;
+  }
+
   if (!courseId) {
-    return res.status(400).json({ ok: false, error: 'courseId is required' });
+    return res.status(400).json({ ok: false, error: 'courseId or coursePriceId is required' });
   }
 
   const course = await getCourseById(courseId);
@@ -199,7 +214,6 @@ async function createGeoPriceCheckout(req: Request, res: Response) {
 
   let resolved;
   try {
-    const explicitPriceId = parsePositiveInt(req.body?.coursePriceId);
     if (explicitPriceId) {
       const price = await getGeoPriceById(explicitPriceId);
       if (!price || price.courseId !== courseId || !price.isActive) {
@@ -242,6 +256,13 @@ async function createGeoPriceCheckout(req: Request, res: Response) {
   const discountPercent = computeDiscountPercent(resolved.price.amount, resolved.effectiveAmount)
     ?? resolved.price.discountPercent;
 
+  const regionalPricingApplied = shouldApplyRegionalPricingAtCheckout({
+    countryCode: geo.countryCode,
+    regionalPricingApplied: req.body?.regionalPricingApplied === true,
+    listAmount: resolved.price.amount,
+    effectiveAmount: resolved.effectiveAmount,
+  });
+
   const order = await createPaymentOrder({
     paymentOptionId: null,
     courseId: course.id,
@@ -253,6 +274,8 @@ async function createGeoPriceCheckout(req: Request, res: Response) {
     studentName: customerInput.studentName,
     studentEmail: customerInput.studentEmail,
     countryCode: geo.countryCode,
+    quotedPricingRegion: resolveQuotedPricingRegion(geo.countryCode),
+    regionalPricingApplied,
     amount: resolved.effectiveAmount,
     currency: 'USD',
     durationDays: resolved.price.durationDays,
@@ -303,6 +326,8 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
       coursePriceId: order.coursePriceId,
       studentEmail: order.studentEmail ?? order.stripeCustomerEmail,
       zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
+      paymentMethodCountry: order.paymentMethodCountry,
+      refundedAt: order.refundedAt?.toISOString() ?? null,
     });
   } catch (err) {
     next(err);
@@ -342,6 +367,16 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
     });
 
     if (!wasAlreadyPaid) {
+      const paymentIntentId = typeof session.payment_intent === 'string'
+        ? session.payment_intent
+        : order.stripePaymentIntentId;
+
+      const regionalCheck = await verifyRegionalPaymentMethod(order, paymentIntentId);
+      if (!regionalCheck.allowed) {
+        res.status(200).json({ ok: true, regionalMismatchRefunded: true });
+        return;
+      }
+
       const email = order.studentEmail ?? order.stripeCustomerEmail;
       if (email && order.zenlerCourseId) {
         const enrollment = await enrollStudentInZenlerCourse({

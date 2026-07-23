@@ -203,6 +203,7 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
         return res.json({
             ok: true,
             data: {
+                courseId: course.courseId,
                 ...pricing,
                 plans,
                 checkoutPath: `/courses/${slug}/buy`,

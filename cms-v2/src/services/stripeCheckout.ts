@@ -22,8 +22,7 @@ export async function createStripeCheckoutSession(input: {
   studentEmail: string | null;
   countryCode?: string | null;
 }): Promise<StripeCheckoutSession> {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-  if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not configured');
+  const secretKey = stripeSecretKey();
 
   const siteUrl = (process.env.PUBLIC_SITE_URL ?? 'https://vls-online.com').replace(/\/+$/, '');
   const unitAmount = Math.round(input.amount * 100);
@@ -35,6 +34,7 @@ export async function createStripeCheckoutSession(input: {
   params.append('mode', 'payment');
   params.append('success_url', `${siteUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`);
   params.append('cancel_url', `${siteUrl}/payment-cancelled`);
+  params.append('billing_address_collection', 'required');
   params.append('client_reference_id', String(input.orderId));
   params.append('line_items[0][price_data][currency]', input.currency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
@@ -65,6 +65,75 @@ export async function createStripeCheckoutSession(input: {
   }
 
   return { id: body.id, url: body.url ?? null };
+}
+
+function stripeSecretKey(): string {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not configured');
+  return secretKey;
+}
+
+async function stripeApiGet<T>(path: string, query?: Record<string, string>): Promise<T> {
+  const params = query ? `?${new URLSearchParams(query).toString()}` : '';
+  const response = await fetch(`https://api.stripe.com/v1${path}${params}`, {
+    headers: { Authorization: `Bearer ${stripeSecretKey()}` },
+  });
+  const body = await response.json() as T & { error?: { message?: string } };
+  if (!response.ok) {
+    throw new Error(body.error?.message ?? `Stripe API GET failed (${response.status})`);
+  }
+  return body;
+}
+
+async function stripeApiPost<T>(path: string, params: URLSearchParams): Promise<T> {
+  const response = await fetch(`https://api.stripe.com/v1${path}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${stripeSecretKey()}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: params,
+  });
+  const body = await response.json() as T & { error?: { message?: string } };
+  if (!response.ok) {
+    throw new Error(body.error?.message ?? `Stripe API POST failed (${response.status})`);
+  }
+  return body;
+}
+
+type StripePaymentMethod = {
+  type?: string;
+  card?: { country?: string | null };
+  billing_details?: { address?: { country?: string | null } };
+};
+
+type StripePaymentIntent = {
+  payment_method?: StripePaymentMethod | string | null;
+};
+
+function countryFromPaymentMethod(paymentMethod: StripePaymentMethod | null | undefined): string | null {
+  if (!paymentMethod) return null;
+  const cardCountry = paymentMethod.card?.country?.trim().toUpperCase();
+  if (cardCountry) return cardCountry;
+  const billingCountry = paymentMethod.billing_details?.address?.country?.trim().toUpperCase();
+  return billingCountry || null;
+}
+
+/** Issuing/billing country for the payment method used on a PaymentIntent. */
+export async function fetchPaymentMethodCountry(paymentIntentId: string): Promise<string | null> {
+  const intent = await stripeApiGet<StripePaymentIntent>(`/payment_intents/${encodeURIComponent(paymentIntentId)}`, {
+    'expand[]': 'payment_method',
+  });
+  const paymentMethod = typeof intent.payment_method === 'object' ? intent.payment_method : null;
+  return countryFromPaymentMethod(paymentMethod);
+}
+
+export async function createStripeRefund(paymentIntentId: string): Promise<{ id: string }> {
+  const params = new URLSearchParams();
+  params.append('payment_intent', paymentIntentId);
+  params.append('reason', 'requested_by_customer');
+  const refund = await stripeApiPost<{ id: string }>('/refunds', params);
+  return { id: refund.id };
 }
 
 export function verifyStripeWebhook(rawBody: Buffer, signatureHeader: string | undefined): unknown {

@@ -1,6 +1,7 @@
 import { sql } from '../db/client';
+import type { PricingRegion } from '../services/pricingRegions';
 
-export type PaymentOrderStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled';
+export type PaymentOrderStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled' | 'Refunded';
 
 export interface PaymentOrder {
   id: number;
@@ -14,6 +15,9 @@ export interface PaymentOrder {
   studentName: string | null;
   studentEmail: string | null;
   countryCode: string | null;
+  quotedPricingRegion: PricingRegion | null;
+  paymentMethodCountry: string | null;
+  regionalPricingApplied: boolean;
   amount: number;
   currency: string;
   durationDays: number | null;
@@ -21,6 +25,7 @@ export interface PaymentOrder {
   status: PaymentOrderStatus;
   stripeCheckoutSessionId: string | null;
   stripePaymentIntentId: string | null;
+  stripeRefundId: string | null;
   stripeCustomerEmail: string | null;
   zenlerUserId: string | null;
   zenlerEnrollmentStatus: string | null;
@@ -28,6 +33,7 @@ export interface PaymentOrder {
   adminEmailSentAt: Date | null;
   createdAt: Date;
   paidAt: Date | null;
+  refundedAt: Date | null;
 }
 
 interface DbRow {
@@ -42,6 +48,9 @@ interface DbRow {
   student_name: string | null;
   student_email: string | null;
   country_code: string | null;
+  quoted_pricing_region: string | null;
+  payment_method_country: string | null;
+  regional_pricing_applied: boolean;
   amount: string;
   currency: string;
   duration_days: number | null;
@@ -49,6 +58,7 @@ interface DbRow {
   status: PaymentOrderStatus;
   stripe_checkout_session_id: string | null;
   stripe_payment_intent_id: string | null;
+  stripe_refund_id: string | null;
   stripe_customer_email: string | null;
   zenler_user_id: string | null;
   zenler_enrollment_status: string | null;
@@ -56,6 +66,7 @@ interface DbRow {
   admin_email_sent_at: Date | null;
   created_at: Date;
   paid_at: Date | null;
+  refunded_at: Date | null;
 }
 
 function rowToOrder(row: DbRow): PaymentOrder {
@@ -71,6 +82,9 @@ function rowToOrder(row: DbRow): PaymentOrder {
     studentName: row.student_name,
     studentEmail: row.student_email,
     countryCode: row.country_code ?? null,
+    quotedPricingRegion: (row.quoted_pricing_region as PricingRegion | null) ?? null,
+    paymentMethodCountry: row.payment_method_country ?? null,
+    regionalPricingApplied: row.regional_pricing_applied ?? false,
     amount: Number(row.amount),
     currency: row.currency,
     durationDays: row.duration_days ?? null,
@@ -78,6 +92,7 @@ function rowToOrder(row: DbRow): PaymentOrder {
     status: row.status,
     stripeCheckoutSessionId: row.stripe_checkout_session_id,
     stripePaymentIntentId: row.stripe_payment_intent_id,
+    stripeRefundId: row.stripe_refund_id ?? null,
     stripeCustomerEmail: row.stripe_customer_email,
     zenlerUserId: row.zenler_user_id ?? null,
     zenlerEnrollmentStatus: row.zenler_enrollment_status ?? null,
@@ -85,6 +100,7 @@ function rowToOrder(row: DbRow): PaymentOrder {
     adminEmailSentAt: row.admin_email_sent_at,
     createdAt: row.created_at,
     paidAt: row.paid_at,
+    refundedAt: row.refunded_at ?? null,
   };
 }
 
@@ -99,6 +115,8 @@ export async function createPaymentOrder(data: {
   studentName: string | null;
   studentEmail: string | null;
   countryCode?: string | null;
+  quotedPricingRegion?: PricingRegion | null;
+  regionalPricingApplied?: boolean;
   amount: number;
   currency: string;
   durationDays?: number | null;
@@ -107,12 +125,13 @@ export async function createPaymentOrder(data: {
   const rows = await sql`
     INSERT INTO payment_orders
       (payment_option_id, course_id, course_price_id, customer_id, zenler_course_id, course_title,
-       option_type, student_name, student_email, country_code, amount, currency,
-       duration_days, discount_percent)
+       option_type, student_name, student_email, country_code, quoted_pricing_region,
+       regional_pricing_applied, amount, currency, duration_days, discount_percent)
     VALUES
       (${data.paymentOptionId ?? null}, ${data.courseId ?? null}, ${data.coursePriceId ?? null},
        ${data.customerId ?? null}, ${data.zenlerCourseId}, ${data.courseTitle}, ${data.optionType},
        ${data.studentName}, ${data.studentEmail}, ${data.countryCode ?? null},
+       ${data.quotedPricingRegion ?? null}, ${data.regionalPricingApplied ?? false},
        ${data.amount}, ${data.currency}, ${data.durationDays ?? null}, ${data.discountPercent ?? null})
     RETURNING *
   `;
@@ -206,4 +225,31 @@ export async function markOrderEmailsSent(orderId: number, sent: { student?: boo
         END
     WHERE id = ${orderId}
   `;
+}
+
+export async function recordPaymentMethodCountry(orderId: number, paymentMethodCountry: string | null): Promise<void> {
+  await sql`
+    UPDATE payment_orders
+    SET payment_method_country = ${paymentMethodCountry}
+    WHERE id = ${orderId}
+  `;
+}
+
+export async function markPaymentOrderRefunded(data: {
+  orderId: number;
+  stripeRefundId: string;
+  paymentMethodCountry: string | null;
+  zenlerEnrollmentStatus: string;
+}): Promise<PaymentOrder> {
+  const rows = await sql`
+    UPDATE payment_orders
+    SET status = 'Refunded',
+        stripe_refund_id = ${data.stripeRefundId},
+        payment_method_country = ${data.paymentMethodCountry},
+        zenler_enrollment_status = ${data.zenlerEnrollmentStatus},
+        refunded_at = NOW()
+    WHERE id = ${data.orderId}
+    RETURNING *
+  `;
+  return rowToOrder(rows[0] as DbRow);
 }
