@@ -682,7 +682,7 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   level_why_item: ['body_html'],
   level_reviews_section: [
     'eyebrow', 'heading_prefix', 'heading_accent', 'score', 'score_stars', 'score_label',
-    'rating_bars', 'review_cards',
+    'rating_bars', 'trustpilot_embed',
   ],
   level_rating_bar: ['label', 'percent'],
   level_review_card: ['stars', 'quote', 'initials', 'name', 'role'],

@@ -1,4 +1,5 @@
 import type { ScrapedLevelPage } from '../../shared/levelPageTypes';
+import { DEFAULT_TRUSTPILOT_GRID_EMBED } from '../../shared/trustpilotDefaults';
 import { sanitizeBlokForStoryblok } from './migrationTemplateRegistry';
 
 function uid(): string {
@@ -186,15 +187,7 @@ function buildReviewsBlok(scraped: ScrapedLevelPage): Record<string, unknown> {
       label: bar.label,
       percent: bar.percent,
     })),
-    review_cards: scraped.reviewCards.map(card => ({
-      _uid: uid(),
-      component: 'level_review_card',
-      stars: card.stars,
-      quote: card.quote,
-      initials: card.initials,
-      name: card.name,
-      role: card.role,
-    })),
+    trustpilot_embed: DEFAULT_TRUSTPILOT_GRID_EMBED,
   });
 }
 
@@ -264,7 +257,7 @@ export function buildLevelPageStructureBody(): Record<string, unknown>[] {
     placeholder('level_pathway_section', { steps: [placeholder('level_pathway_step')] }),
     placeholder('level_papers_section', { groups: [placeholder('level_paper_group', { modules: [placeholder('level_paper_module')] })] }),
     placeholder('level_why_section', { items: [placeholder('level_why_item')] }),
-    placeholder('level_reviews_section', { review_cards: [placeholder('level_review_card')] }),
+    placeholder('level_reviews_section', { trustpilot_embed: DEFAULT_TRUSTPILOT_GRID_EMBED }),
     placeholder('level_faq_section', { items: [placeholder('level_faq_item')] }),
     placeholder('level_cta_section'),
   ];
