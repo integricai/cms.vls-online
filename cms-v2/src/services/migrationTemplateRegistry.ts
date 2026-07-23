@@ -36,6 +36,7 @@ const TEMPLATE_FILES: Record<MigrationTemplate, string> = {
   study_notes: 'notes.html',
   course_listing: 'course-listing.html',
   course_dual_price: 'course-dual-price.html',
+  qualification_level_page: 'qualification-level-page.html',
 };
 
 const DEFAULT_TOKENS: TemplateDesignTokens = {
@@ -164,6 +165,14 @@ const PAGE_BODY_COMPONENTS = new Set([
   'legal_section',
   'hero_with_video',
   'course_hero_layout',
+  'level_page_hero',
+  'level_intro_section',
+  'level_pathway_section',
+  'level_papers_section',
+  'level_why_section',
+  'level_reviews_section',
+  'level_faq_section',
+  'level_cta_section',
 ]);
 
 function componentForSection(key: string, classes: string[], template: MigrationTemplate): string {
@@ -188,6 +197,18 @@ function componentForSection(key: string, classes: string[], template: Migration
   else if (template === 'legal' && (key.includes('legal-hero') || classes.includes('legal-hero'))) component = 'legal_hero';
   else if (template === 'legal' && classes.includes('sec')) component = 'legal_section';
   else if (template === 'home' && key.includes('hero')) component = 'home_hero_section';
+  else if (template === 'qualification_level_page' && key.includes('hero')) component = 'level_page_hero';
+  else if (template === 'qualification_level_page' && (key.includes('what-is') || key.includes('seo') || classes.includes('course-intro'))) {
+    component = 'level_intro_section';
+  }
+  else if (template === 'qualification_level_page' && key.includes('pathway')) component = 'level_pathway_section';
+  else if (template === 'qualification_level_page' && key.includes('paper')) component = 'level_papers_section';
+  else if (template === 'qualification_level_page' && key.includes('why')) component = 'level_why_section';
+  else if (template === 'qualification_level_page' && key.includes('review')) component = 'level_reviews_section';
+  else if (template === 'qualification_level_page' && key.includes('faq')) component = 'level_faq_section';
+  else if (template === 'qualification_level_page' && (key.includes('cta') || classes.includes('cta-band'))) {
+    component = 'level_cta_section';
+  }
   else if (isCoursePageTemplate(template) && key.includes('hero')) component = 'course_hero_layout';
   else if (isCoursePageTemplate(template) && (key.includes('course-description') || key === 'course-description')) {
     component = 'course_introduction';
@@ -634,6 +655,43 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   course_hero_right_item: ['title'],
   feature_card_v2: ['title', 'description', 'cta_text', 'cta_link'],
   faq_item: ['question', 'answer_type', 'answer_paragraph'],
+  level_page_hero: ['main', 'sidebar'],
+  level_hero_main: [
+    'breadcrumbs', 'eyebrow', 'heading', 'description', 'meta_items', 'language_label',
+    'tutor_name', 'tutor_role', 'tutor_initials', 'stage_mode', 'stage_image',
+    'stage_caption_title', 'stage_caption_subtitle',
+  ],
+  level_pricing_sidebar: [
+    'price_now', 'price_from_label', 'price_access', 'price_note', 'session_selector_label',
+    'cta_text_prefix', 'primary_cta_text', 'primary_cta_link', 'session_options',
+    'includes_label', 'includes_items', 'best_value_tag', 'best_value_text',
+    'best_value_link_text', 'best_value_link',
+  ],
+  level_breadcrumb_item: ['label', 'link'],
+  level_meta_item: ['show_stars', 'stars_text', 'bold_text', 'text', 'icon'],
+  level_session_option: ['title', 'subtitle', 'price', 'badge', 'cta_suffix', 'is_default'],
+  level_include_item: ['text'],
+  level_intro_section: ['body_html'],
+  level_pathway_section: ['eyebrow', 'heading_prefix', 'heading_accent', 'steps'],
+  level_pathway_step: ['number', 'title', 'body', 'tag'],
+  level_papers_section: ['eyebrow', 'heading_prefix', 'heading_accent', 'submeta_items', 'groups'],
+  level_paper_group: ['label', 'modules'],
+  level_paper_module: ['code', 'title', 'meta', 'body_html', 'cta_text', 'cta_link', 'is_open'],
+  level_submeta_item: ['value', 'label'],
+  level_why_section: ['eyebrow', 'heading_prefix', 'heading_accent', 'items'],
+  level_why_item: ['body_html'],
+  level_reviews_section: [
+    'eyebrow', 'heading_prefix', 'heading_accent', 'score', 'score_stars', 'score_label',
+    'rating_bars', 'review_cards',
+  ],
+  level_rating_bar: ['label', 'percent'],
+  level_review_card: ['stars', 'quote', 'initials', 'name', 'role'],
+  level_faq_section: ['eyebrow', 'heading_prefix', 'heading_accent', 'items'],
+  level_faq_item: ['question', 'answer_html'],
+  level_cta_section: [
+    'eyebrow', 'heading_prefix', 'heading_accent', 'body',
+    'primary_cta_text', 'primary_cta_link', 'secondary_cta_text', 'secondary_cta_link',
+  ],
 };
 
 /** Storyblok MAPI expects many schema "number" fields as numeric strings, not JSON numbers. */
@@ -666,7 +724,8 @@ const NESTED_BLOK_ARRAY_KEYS = [
   'benefits', 'meta_items', 'steps', 'topics', 'articles', 'ticks', 'card_rows', 'sidebar',
   'info_items', 'hours_rows', 'socials', 'tabs', 'blocks', 'checklist_items', 'table_rows',
   'toc_items', 'reach_figs', 'regions', 'submeta_items', 'rating_bars', 'left', 'right',
-  'features', 'device_tags',
+  'features', 'device_tags', 'main', 'sidebar', 'breadcrumbs', 'session_options', 'includes_items',
+  'steps', 'groups', 'modules', 'submeta_items', 'review_cards',
 ] as const;
 
 function sanitizeNestedBlokArrays(blok: Record<string, unknown>): Record<string, unknown> {

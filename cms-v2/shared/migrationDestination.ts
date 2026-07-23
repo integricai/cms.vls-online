@@ -4,6 +4,10 @@ export function isCoursePageTemplate(template: MigrationTemplate): boolean {
   return template === 'course' || template === 'course_dual_price';
 }
 
+export function isLevelPageTemplate(template: MigrationTemplate): boolean {
+  return template === 'qualification_level_page';
+}
+
 /** Storyblok stories for these templates are created under the `courses/` folder. */
 export function usesCoursesFolder(template: MigrationTemplate): boolean {
   return isCoursePageTemplate(template) || template === 'study_notes';

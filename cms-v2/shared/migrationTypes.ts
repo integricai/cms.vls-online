@@ -1,3 +1,5 @@
+import type { ScrapedLevelPage } from './levelPageTypes';
+
 export type StoryblokRegion = 'eu' | 'us';
 
 export type MigrationTemplate =
@@ -15,7 +17,8 @@ export type MigrationTemplate =
   | 'contact_us'
   | 'study_notes'
   | 'course_listing'
-  | 'course_dual_price';
+  | 'course_dual_price'
+  | 'qualification_level_page';
 
 export interface MigrationPageRecord {
   id: number;
@@ -359,11 +362,14 @@ export interface ComponentLibrarySummary {
   presets: Array<{ fullSlug: string; component: string; created: boolean }>;
 }
 
+
+export type ScrapedMigrationPage = ScrapedCoursePage | ScrapedGenericPage | ScrapedLevelPage;
+
 export interface PageMigrationResult {
   template: MigrationTemplate;
   destinationSlug: string;
   fullSlug: string;
-  scraped: ScrapedCoursePage | ScrapedGenericPage;
+  scraped: ScrapedMigrationPage;
   warnings: string[];
   templateReference?: TemplateReferenceSummary;
   componentLibrary?: ComponentLibrarySummary;
@@ -388,7 +394,7 @@ export type ScrapePhaseRequest = StoryblokCredentials;
 
 export interface ScrapePhaseResult {
   page: MigrationPageRecord;
-  scraped: ScrapedCoursePage | ScrapedGenericPage;
+  scraped: ScrapedMigrationPage;
   warnings: string[];
 }
 

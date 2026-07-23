@@ -21,7 +21,7 @@ const TEMPLATES: MigrationTemplate[] = [
   'team_vls',
   'schedules',
   'course_articles',
-  'live_sessions', 'book_meeting', 'contact_us', 'study_notes', 'course_listing', 'course_dual_price',
+  'live_sessions', 'book_meeting', 'contact_us', 'study_notes', 'course_listing', 'course_dual_price', 'qualification_level_page',
 ];
 
 const RENDERERS = new Set(

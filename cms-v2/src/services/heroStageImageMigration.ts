@@ -20,6 +20,7 @@ async function uploadHeroStageImage(
   config: StoryblokConfig,
   cache: Map<string, Promise<StoryblokUploadedAsset>>,
   blok: Record<string, unknown>,
+  folder = 'course-hero',
 ): Promise<{ blok: Record<string, unknown>; uploaded: boolean }> {
   const source = String(blok.migration_stage_image_url ?? '').trim();
   if (!source || !isUploadableImageSource(source) || isStoryblokAssetUrl(source)) {
@@ -33,7 +34,7 @@ async function uploadHeroStageImage(
   try {
     const asset = await uploadStoryblokAssetCached(config, cache, {
       sourceUrl: source,
-      filename: `course-hero/${slug}`,
+      filename: `${folder}/${slug}`,
       alt,
     });
     const { migration_stage_image_url: _url, migration_stage_image_alt: _alt, ...rest } = blok;
@@ -58,6 +59,15 @@ async function hydrateBlokTree(
     next = result.blok;
     if (hadSource && !result.uploaded) {
       warnings.push('Hero stage image could not be uploaded to Storyblok — upload it manually in the course hero blok.');
+    }
+  }
+
+  if (blok.component === 'level_hero_main' && blok.stage_mode === 'image') {
+    const hadSource = Boolean(String(blok.migration_stage_image_url ?? '').trim());
+    const result = await uploadHeroStageImage(config, cache, blok, 'level-hero');
+    next = result.blok;
+    if (hadSource && !result.uploaded) {
+      warnings.push('Hero stage image could not be uploaded to Storyblok — upload it manually in the level hero blok.');
     }
   }
 

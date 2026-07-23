@@ -208,7 +208,7 @@ export default function ContentMigrationTab() {
         if (cancelled) return;
         applyPageUpdate(page);
         setSelectedPageId(page.id);
-        setTemplate('course_dual_price');
+        setTemplate('qualification_level_page');
         setDestinationSlug(page.destinationSlug || page.suggestedDestination);
         setDestinationTouched(false);
       })
@@ -564,7 +564,7 @@ export default function ContentMigrationTab() {
         <p className="text-xs text-slate-500">
           Scan the live VLS site or scrape local page-content files, then work through the 3 migration phases:
           Preview Scrape, Generate Structure, Migrate Content. File-based migration is available for
-          <code className="mx-1">course_dual_price</code> pages in
+          <code className="mx-1">qualification_level_page</code> pages in
           <code className="mx-1">page-content/</code>.
         </p>
       </div>

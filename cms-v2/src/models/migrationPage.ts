@@ -321,7 +321,7 @@ export async function upsertPageContentMigrationPage(input: {
     zenlerUrl: input.canonicalUrl,
     title: input.title,
     path,
-    template: 'course_dual_price',
+    template: 'qualification_level_page',
     suggestedDestination: input.slug,
     destinationSlug: input.slug,
   });

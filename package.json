@@ -7,7 +7,8 @@
     "build:client": "npm run build --prefix cms-v2/client",
     "migrate": "npm run migrate --prefix cms-v2",
     "sync-component-library": "npm run sync-component-library --prefix cms-v2",
-    "verify-template-components": "npm run verify-template-components --prefix cms-v2"
+    "verify-template-components": "npm run verify-template-components --prefix cms-v2",
+    "test:display-pricing": "npm run test:display-pricing --prefix cms-v2"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.9.5",

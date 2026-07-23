@@ -29,7 +29,7 @@ import { CoursePageScrapeError, scrapeCoursePage } from './coursePageScraper';
 import { buildTabBlocksFromPanel } from './courseTabBuilder';
 import { DEFAULT_TRUSTPILOT_CAROUSEL_EMBED } from '../../shared/trustpilotDefaults';
 import { genericBreadcrumbText, scrapeGenericPage } from './pageScraper';
-import { slugifySegment, storyFullSlug, suggestDestinationSlug, usesCoursesFolder, isCoursePageTemplate } from '../../shared/migrationDestination';
+import { slugifySegment, storyFullSlug, suggestDestinationSlug, usesCoursesFolder, isCoursePageTemplate, isLevelPageTemplate } from '../../shared/migrationDestination';
 import { MIGRATION_TEMPLATE_LABELS, TEMPLATES_WITH_FULL_FALLBACK } from '../../shared/migrationTemplateLabels';
 import {
   findCoursesFolder,
@@ -54,7 +54,12 @@ import { hydrateTeamProfilePhotos } from './teamProfilePhotoMigration';
 import { buildBlokFromTemplateSection } from './pageContentBuilder';
 import { buildMergedCourseStoryblokContent, buildHeroRightBlokFromTemplate, mapScrapedCourseIntroduction } from './buildCourseTemplateContent';
 import { hydrateCourseHeroStageImages } from './heroStageImageMigration';
-import { collectPageContentScrapeWarnings, scrapePageContentFile } from './pageContentScraper';
+import { collectLevelPageScrapeWarnings, scrapeLevelPageFile } from './levelPageScraper';
+import {
+  buildLevelPageStoryblokContent,
+  buildLevelPageStructureBody,
+} from './buildLevelPageStoryblokContent';
+import type { ScrapedLevelPage } from '../../shared/levelPageTypes';
 import { loadCourseTemplateFile } from './courseTemplateParser';
 import { indexTemplateSections, parseTemplateSectionsFromHtml, resolveTemplateSections, sectionHasLiveMatch, isPageBuilderLegalHtml } from './pageSectionExtractor';
 import type { TemplateSectionBlueprint } from '../../shared/migrationTemplateTypes';
@@ -1018,6 +1023,44 @@ function storyblokConfigFromCredentials(credentials: StoryblokCredentials): Stor
   };
 }
 
+const LEVEL_PAGE_BODY_COMPONENTS = [
+  'level_page_hero',
+  'level_hero_main',
+  'level_pricing_sidebar',
+  'level_breadcrumb_item',
+  'level_meta_item',
+  'level_session_option',
+  'level_include_item',
+  'level_intro_section',
+  'level_pathway_section',
+  'level_pathway_step',
+  'level_papers_section',
+  'level_paper_group',
+  'level_paper_module',
+  'level_submeta_item',
+  'level_why_section',
+  'level_why_item',
+  'level_reviews_section',
+  'level_rating_bar',
+  'level_review_card',
+  'level_faq_section',
+  'level_faq_item',
+  'level_cta_section',
+];
+
+function collectLevelPageWarnings(scraped: ScrapedLevelPage): string[] {
+  return collectLevelPageScrapeWarnings(scraped);
+}
+
+async function buildLevelPageStoryblokContentAsync(
+  scraped: ScrapedLevelPage,
+  config: StoryblokConfig,
+): Promise<{ content: Record<string, unknown>; warnings: string[] }> {
+  const base = buildLevelPageStoryblokContent(scraped);
+  const hydrated = await hydrateCourseHeroStageImages(base, config);
+  return { content: hydrated.content, warnings: hydrated.warnings };
+}
+
 function resolveDestinationSlug(page: MigrationPageRecord): string {
   return normalizeDestinationSlug(
     page.destinationSlug?.trim() || suggestDestinationSlug(page.originUrl, page.template),
@@ -1084,12 +1127,12 @@ export async function previewScrapePage(
     if (!filename) {
       throw new CourseMigrationError('Select a page-content file before scraping.', 400);
     }
-    if (page.template !== 'course_dual_price') {
-      throw new CourseMigrationError('File scraping is only supported for the Course Dual Price template.', 400);
+    if (page.template !== 'qualification_level_page') {
+      throw new CourseMigrationError('File scraping is only supported for the Qualification Level Page template.', 400);
     }
 
-    const scraped = scrapePageContentFile(filename);
-    const warnings = collectPageContentScrapeWarnings(scraped);
+    const scraped = scrapeLevelPageFile(filename);
+    const warnings = collectLevelPageScrapeWarnings(scraped);
     await saveScrapeResult(pageId, { scraped, warnings });
     await updateMigrationPageSource(pageId, { sourceType: 'file', pageContentFilename: filename });
     const updatedPage = await getMigrationPageById(pageId);
@@ -1201,11 +1244,25 @@ export async function generatePageStructure(
   const config = storyblokConfigFromCredentials(credentials);
   await verifyStoryblokAccess(config);
 
-  if (!isCoursePageTemplate(template) && page.customComponentName) {
+  if (!isCoursePageTemplate(template) && !isLevelPageTemplate(template) && page.customComponentName) {
     return generateCustomComponentStructure(page, pageId, config, template, templateReference, scrapedRaw as ScrapedGenericPage);
   }
 
-  const missingComponents = await detectMissingComponents(config, template, blueprint);
+  const missingComponents = isLevelPageTemplate(template)
+    ? await detectMissingComponents(config, template, {
+      ...blueprint,
+      sections: LEVEL_PAGE_BODY_COMPONENTS.map(component => ({
+        key: component,
+        label: component,
+        component,
+        classes: [],
+        isBand: false,
+        styles: {},
+        sampleHeading: '',
+        sampleDescription: '',
+      })),
+    })
+    : await detectMissingComponents(config, template, blueprint);
   if (missingComponents.length) {
     return {
       page,
@@ -1222,7 +1279,7 @@ export async function generatePageStructure(
   const scraped = scrapedRaw as ScrapedGenericPage;
   const pageBuilderLegal = template === 'legal' && isPageBuilderLegalHtml(scraped.rawHtml ?? '');
 
-  if (!isCoursePageTemplate(template)) {
+  if (!isCoursePageTemplate(template) && !isLevelPageTemplate(template)) {
     const eligibleSections = blueprint.sections.filter(section => section.component !== 'enquiry_form');
     unmatchedSections = pageBuilderLegal ? [] : detectUnmatchedSections(blueprint, scraped);
     if (
@@ -1251,11 +1308,13 @@ export async function generatePageStructure(
 
   const destinationSlug = resolveDestinationSlug(page);
 
-  let body = pageBuilderLegal
+  let body: Record<string, unknown>[] = pageBuilderLegal
     ? buildMinimalLegalStructureBody(blueprint, presetBloksBySection)
-    : blueprint.sections.map(section => (
-      presetBloksBySection?.[section.key] ?? buildPresetBlokFromSection(blueprint, section)
-    ));
+    : isLevelPageTemplate(template)
+      ? buildLevelPageStructureBody()
+      : blueprint.sections.map(section => (
+        presetBloksBySection?.[section.key] ?? buildPresetBlokFromSection(blueprint, section)
+      ));
 
   let zenlerCourseId = '';
   if (isCoursePageTemplate(template)) {
@@ -1393,6 +1452,12 @@ export async function migratePageContent(
       }
       parentId = coursesFolder.id;
     }
+  } else if (isLevelPageTemplate(template)) {
+    const scraped = scrapedRaw as ScrapedLevelPage;
+    warnings.push(...collectLevelPageWarnings(scraped));
+    const built = await buildLevelPageStoryblokContentAsync(scraped, config);
+    content = built.content;
+    warnings.push(...built.warnings);
   } else {
     const scraped = scrapedRaw as ScrapedGenericPage;
     warnings.push(...collectGenericWarnings(scraped));
