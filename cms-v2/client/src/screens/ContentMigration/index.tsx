@@ -9,7 +9,6 @@ import type {
   PageContentFileSummary,
   PageScanResult,
   ScrapedCoursePage,
-  ScrapedGenericPage,
   ScrapedLevelPage,
   ScrapedMigrationPage,
   ScrapePhaseResult,
