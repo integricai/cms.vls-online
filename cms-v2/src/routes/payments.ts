@@ -1,14 +1,13 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { getPaymentCard } from '../models/coursePaymentCard';
 import { getCourseById, getGeoPriceById } from '../models/courseGeoPrice';
-import { splitStudentName, upsertCustomer, updateCustomerZenlerUserId } from '../models/customer';
+import { splitStudentName, upsertCustomer } from '../models/customer';
 import {
   attachStripeCheckoutSession,
   createPaymentOrder,
   getPaymentOrderByCheckoutSession,
   markOrderEmailsSent,
   markPaymentOrderPaid,
-  updateZenlerEnrollment,
 } from '../models/paymentOrder';
 import {
   createStripeCheckoutSession,
@@ -27,7 +26,11 @@ import {
 } from '../services/paymentRegionalVerification';
 import { effectiveAmount } from '../services/courseGeoPriceValidation';
 import { PricingResolutionError, resolveCoursePrice } from '../services/pricingResolver';
-import { enrollStudentInZenlerCourse } from '../services/zenlerEnrollment';
+import {
+  ensureZenlerEnrollmentForPaidOrder,
+  runZenlerEnrollmentForPaidOrder,
+} from '../services/zenlerEnrollmentEnsure';
+import { courseAccessUrlForEnrollment } from '../services/schoolAccess';
 
 const router = Router();
 
@@ -301,11 +304,12 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
     const sessionId = String(req.query.session_id ?? '').trim();
     if (!sessionId) return res.status(400).json({ ok: false, error: 'session_id is required' });
 
-    const order = await getPaymentOrderByCheckoutSession(sessionId);
+    let order = await getPaymentOrderByCheckoutSession(sessionId);
     if (!order) return res.status(404).json({ ok: false, error: 'Payment order not found' });
 
     if (order.status === 'Paid') {
       await ensureSaleRecordedForPaidOrder(order);
+      order = await ensureZenlerEnrollmentForPaidOrder(order);
     }
 
     return res.json({
@@ -318,6 +322,11 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
       coursePriceId: order.coursePriceId,
       studentEmail: order.studentEmail ?? order.stripeCustomerEmail,
       zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
+      isNewZenlerUser: order.zenlerUserCreated,
+      courseAccessUrl: courseAccessUrlForEnrollment({
+        zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
+        isNewZenlerUser: order.zenlerUserCreated,
+      }),
       paymentMethodCountry: order.paymentMethodCountry,
       refundedAt: order.refundedAt?.toISOString() ?? null,
     });
@@ -349,7 +358,7 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
       return;
     }
 
-    const { order, wasAlreadyPaid } = await markPaymentOrderPaid({
+    let { order, wasAlreadyPaid } = await markPaymentOrderPaid({
       orderId,
       stripeCheckoutSessionId: session.id ?? null,
       stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
@@ -370,22 +379,14 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
       }
 
       const email = order.studentEmail ?? order.stripeCustomerEmail;
+      let enrollmentEmailContext = null;
       if (email && order.zenlerCourseId) {
-        const enrollment = await enrollStudentInZenlerCourse({
-          email,
-          name: order.studentName,
-          zenlerCourseId: order.zenlerCourseId,
-        });
-        await updateZenlerEnrollment(order.id, {
-          zenlerUserId: enrollment.zenlerUserId,
-          zenlerEnrollmentStatus: enrollment.status,
-        });
-        if (order.customerId && enrollment.zenlerUserId) {
-          await updateCustomerZenlerUserId(order.customerId, enrollment.zenlerUserId);
-        }
+        const enrollmentResult = await runZenlerEnrollmentForPaidOrder(order);
+        order = enrollmentResult.order;
+        enrollmentEmailContext = enrollmentResult.emailContext;
       }
 
-      const studentSent = await sendStudentPaymentConfirmation(order);
+      const studentSent = await sendStudentPaymentConfirmation(order, enrollmentEmailContext);
       const adminSent = await sendAdminPaymentNotification(order);
       await markOrderEmailsSent(order.id, { student: studentSent, admin: adminSent });
     }

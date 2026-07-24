@@ -4,6 +4,8 @@ import {
   pricingRegionLabel,
   resolvePricingRegion,
 } from './pricingRegions';
+import type { ZenlerEnrollmentEmailContext } from './zenlerEnrollmentEnsure';
+import { VLS_SCHOOL_LOGIN_URL } from './schoolAccess';
 
 function parseSender(value: string | undefined) {
   const fallback = { email: 'noreply@vls-online.com', name: 'VLS Online' };
@@ -61,13 +63,54 @@ function esc(value: unknown): string {
     .replace(/"/g, '&quot;');
 }
 
-export async function sendStudentPaymentConfirmation(order: PaymentOrder): Promise<boolean> {
+export async function sendStudentPaymentConfirmation(
+  order: PaymentOrder,
+  access?: ZenlerEnrollmentEmailContext | null,
+): Promise<boolean> {
   const to = order.studentEmail ?? order.stripeCustomerEmail;
   if (!to) return false;
 
   const name = order.studentName || 'Student';
   const option = order.optionType || 'Course payment';
   const amount = formatAmount(order);
+  const loginUrl = access?.courseAccessUrl ?? VLS_SCHOOL_LOGIN_URL;
+
+  let accessText = '';
+  let accessHtml = '';
+
+  if (access?.zenlerEnrollmentStatus.startsWith('enrolled')) {
+    if (access.isNewZenlerUser && access.temporaryPassword) {
+      accessText = `
+Access your course at: ${loginUrl}
+Email: ${to}
+Temporary password: ${access.temporaryPassword}
+
+Please log in and change your password after your first sign-in. Your enrolled course will appear under My Courses.
+
+`;
+      accessHtml = `<p><strong>Access your course:</strong> <a href="${esc(loginUrl)}">${esc(loginUrl)}</a></p>
+<p><strong>Email:</strong> ${esc(to)}<br>
+<strong>Temporary password:</strong> ${esc(access.temporaryPassword)}</p>
+<p>Please log in and change your password after your first sign-in. Your enrolled course will appear under <strong>My Courses</strong>.</p>`;
+    } else {
+      accessText = `
+Access your course at: ${loginUrl}
+Sign in with your existing VLS school account. Your enrolled course will appear under My Courses.
+
+`;
+      accessHtml = `<p><strong>Access your course:</strong> <a href="${esc(loginUrl)}">${esc(loginUrl)}</a></p>
+<p>Sign in with your existing VLS school account. Your enrolled course will appear under <strong>My Courses</strong>.</p>`;
+    }
+  } else {
+    accessText = `
+Access your course at: ${loginUrl}
+If you are a new student, create your account at https://school.vls-online.com/register using the same email address you used for payment.
+
+`;
+    accessHtml = `<p><strong>Access your course:</strong> <a href="${esc(loginUrl)}">${esc(loginUrl)}</a></p>
+<p>If you are a new student, create your account at <a href="https://school.vls-online.com/register">https://school.vls-online.com/register</a> using the same email address you used for payment.</p>`;
+  }
+
   const text = `Hi ${name},
 
 Thank you for your payment.
@@ -79,7 +122,7 @@ Option: ${option}
 Amount paid: ${amount}
 
 Your payment has been confirmed.
-
+${accessText}
 Kind regards,
 VLS Online`;
 
@@ -94,6 +137,7 @@ VLS Online`;
 <strong>Option:</strong> ${esc(option)}<br>
 <strong>Amount paid:</strong> ${esc(amount)}</p>
 <p>Your payment has been confirmed.</p>
+${accessHtml}
 <p>Kind regards,<br>VLS Online</p>`,
   });
   return true;

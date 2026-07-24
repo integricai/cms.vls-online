@@ -29,6 +29,7 @@ export interface PaymentOrder {
   stripeCustomerEmail: string | null;
   zenlerUserId: string | null;
   zenlerEnrollmentStatus: string | null;
+  zenlerUserCreated: boolean;
   confirmationEmailSentAt: Date | null;
   adminEmailSentAt: Date | null;
   createdAt: Date;
@@ -62,6 +63,7 @@ interface DbRow {
   stripe_customer_email: string | null;
   zenler_user_id: string | null;
   zenler_enrollment_status: string | null;
+  zenler_user_created: boolean;
   confirmation_email_sent_at: Date | null;
   admin_email_sent_at: Date | null;
   created_at: Date;
@@ -96,6 +98,7 @@ function rowToOrder(row: DbRow): PaymentOrder {
     stripeCustomerEmail: row.stripe_customer_email,
     zenlerUserId: row.zenler_user_id ?? null,
     zenlerEnrollmentStatus: row.zenler_enrollment_status ?? null,
+    zenlerUserCreated: row.zenler_user_created ?? false,
     confirmationEmailSentAt: row.confirmation_email_sent_at,
     adminEmailSentAt: row.admin_email_sent_at,
     createdAt: row.created_at,
@@ -240,14 +243,31 @@ export async function markPaymentOrderPaid(data: {
 
 export async function updateZenlerEnrollment(
   orderId: number,
-  data: { zenlerUserId: string | null; zenlerEnrollmentStatus: string },
+  data: {
+    zenlerUserId: string | null;
+    zenlerEnrollmentStatus: string;
+    zenlerUserCreated?: boolean;
+  },
 ): Promise<void> {
-  await sql`
-    UPDATE payment_orders
-    SET zenler_user_id = ${data.zenlerUserId},
-        zenler_enrollment_status = ${data.zenlerEnrollmentStatus}
-    WHERE id = ${orderId}
-  `;
+  try {
+    await sql`
+      UPDATE payment_orders
+      SET zenler_user_id = ${data.zenlerUserId},
+          zenler_enrollment_status = ${data.zenlerEnrollmentStatus},
+          zenler_user_created = COALESCE(${data.zenlerUserCreated ?? null}, zenler_user_created)
+      WHERE id = ${orderId}
+    `;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!/zenler_user_created/i.test(message)) throw err;
+
+    await sql`
+      UPDATE payment_orders
+      SET zenler_user_id = ${data.zenlerUserId},
+          zenler_enrollment_status = ${data.zenlerEnrollmentStatus}
+      WHERE id = ${orderId}
+    `;
+  }
 }
 
 export async function markOrderEmailsSent(orderId: number, sent: { student?: boolean; admin?: boolean }): Promise<void> {

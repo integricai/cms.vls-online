@@ -1,33 +1,49 @@
 /**
  * Zenler user create/find + course enrollment after successful payment.
- *
- * Wired into the Stripe webhook path. Requires ZENLER_API_KEY + ZENLER_ACCOUNT_NAME.
- * Until Zenler enrollment endpoints are confirmed, this records a pending status
- * and logs clearly so ops can complete enrollment manually if needed.
  */
+
+import { randomBytes } from 'crypto';
+import { splitStudentName } from '../models/customer';
+import {
+  createZenlerStudent,
+  enrollZenlerUserInCourse,
+  findZenlerUserByEmail,
+  isStudentEnrolledInCourse,
+  zenlerCredentialsConfigured,
+} from './zenlerApi';
 
 export interface ZenlerEnrollmentInput {
   email: string;
   name: string | null;
   zenlerCourseId: string;
+  zenlerPlanId?: number | null;
 }
 
 export interface ZenlerEnrollmentResult {
   zenlerUserId: string | null;
-  status: 'enrolled' | 'pending' | 'failed' | 'skipped';
+  status: 'enrolled' | 'enrolled_new' | 'pending' | 'failed' | 'skipped';
+  isNewZenlerUser: boolean;
+  temporaryPassword: string | null;
   message: string;
+}
+
+function generateTemporaryPassword(): string {
+  return randomBytes(12).toString('base64url');
+}
+
+function enrollmentStatusFromExisting(isNewUser: boolean): 'enrolled' | 'enrolled_new' {
+  return isNewUser ? 'enrolled_new' : 'enrolled';
 }
 
 export async function enrollStudentInZenlerCourse(
   input: ZenlerEnrollmentInput,
 ): Promise<ZenlerEnrollmentResult> {
-  const apiKey = process.env.ZENLER_API_KEY;
-  const account = process.env.ZENLER_ACCOUNT_NAME;
-
-  if (!apiKey || !account) {
+  if (!zenlerCredentialsConfigured()) {
     return {
       zenlerUserId: null,
       status: 'skipped',
+      isNewZenlerUser: false,
+      temporaryPassword: null,
       message: 'Zenler API credentials are not configured',
     };
   }
@@ -37,22 +53,70 @@ export async function enrollStudentInZenlerCourse(
     return {
       zenlerUserId: null,
       status: 'failed',
+      isNewZenlerUser: false,
+      temporaryPassword: null,
       message: 'Student email is required for Zenler enrollment',
     };
   }
 
-  // Placeholder for the live Zenler user/enrollment API calls.
-  // The payment flow stores course_price_id + zenler_course_id so enrollment
-  // can be completed/retried once the Zenler endpoints are finalized.
-  console.info('[zenler-enrollment] queued', {
-    email,
-    name: input.name,
-    zenlerCourseId: input.zenlerCourseId,
-  });
+  const planId = input.zenlerPlanId != null && input.zenlerPlanId > 0
+    ? input.zenlerPlanId
+    : undefined;
 
-  return {
-    zenlerUserId: null,
-    status: 'pending',
-    message: 'Enrollment queued — Zenler user/enroll API integration pending',
-  };
+  try {
+    let existingUser = await findZenlerUserByEmail(email);
+    let isNewZenlerUser = false;
+    let temporaryPassword: string | null = null;
+
+    if (!existingUser) {
+      const { firstName, lastName } = splitStudentName(input.name);
+      temporaryPassword = generateTemporaryPassword();
+      existingUser = await createZenlerStudent({
+        email,
+        firstName: firstName ?? email.split('@')[0] ?? 'Student',
+        lastName,
+        password: temporaryPassword,
+      });
+      isNewZenlerUser = true;
+    }
+
+    const zenlerUserId = existingUser.id;
+    const alreadyEnrolled = await isStudentEnrolledInCourse({
+      zenlerUserId,
+      email,
+      zenlerCourseId: input.zenlerCourseId,
+    });
+
+    if (!alreadyEnrolled) {
+      await enrollZenlerUserInCourse({
+        zenlerUserId,
+        zenlerCourseId: input.zenlerCourseId,
+        planId,
+      });
+    }
+
+    return {
+      zenlerUserId,
+      status: enrollmentStatusFromExisting(isNewZenlerUser),
+      isNewZenlerUser,
+      temporaryPassword,
+      message: alreadyEnrolled
+        ? 'Student was already enrolled in this Zenler course'
+        : 'Student enrolled in Zenler course',
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[zenler-enrollment] failed', {
+      email,
+      zenlerCourseId: input.zenlerCourseId,
+      message,
+    });
+    return {
+      zenlerUserId: null,
+      status: 'failed',
+      isNewZenlerUser: false,
+      temporaryPassword: null,
+      message,
+    };
+  }
 }
