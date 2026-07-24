@@ -208,13 +208,6 @@ export default function SalesTab() {
 
   return (
     <div className="p-6">
-      <div className="mb-4">
-        <h2 className="mb-1 text-sm font-bold text-slate-700">Sales</h2>
-        <p className="text-xs text-slate-500">
-          Track course sales, tutor claims, and commission (% of paid amount).
-        </p>
-      </div>
-
       <div className="mb-4 flex flex-wrap gap-1 border-b border-slate-200">
         {(Object.keys(VIEW_LABELS) as SalesView[]).map(key => (
           <button

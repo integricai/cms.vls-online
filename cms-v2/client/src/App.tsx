@@ -32,6 +32,8 @@ import StepCards from './screens/StepCards';
 import LegalPage from './screens/LegalPage';
 import Team from './screens/Team';
 import Settings from './screens/Settings';
+import Configurations from './screens/Configurations';
+import Sales from './screens/Sales';
 import AcceptSale from './screens/AcceptSale';
 import Forms from './screens/Forms';
 import FAQ from './screens/FAQ';
@@ -114,8 +116,13 @@ export default function App() {
           <Route path="/page-desc-with-menu"  element={<PageDescWithMenu />} />
           <Route path="/split-screen-sections" element={<Navigate to="/split-screen/left-hero" replace />} />
           <Route path="/settings"          element={<RequireAdmin><Settings /></RequireAdmin>} />
+          <Route path="/configurations"   element={<RequireAdmin><Configurations /></RequireAdmin>} />
+          <Route path="/sales"            element={<RequireAdmin><Sales /></RequireAdmin>} />
           <Route path="/settings/users"   element={<Navigate to="/settings" replace />} />
           <Route path="/settings/menu"    element={<Navigate to="/settings" replace />} />
+          <Route path="/settings/courses" element={<Navigate to="/configurations" replace />} />
+          <Route path="/settings/tutors"  element={<Navigate to="/configurations" replace />} />
+          <Route path="/settings/sales"   element={<Navigate to="/sales" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>
