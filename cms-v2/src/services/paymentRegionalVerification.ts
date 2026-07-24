@@ -7,49 +7,30 @@ import {
   sendAdminRegionalMismatchNotification,
   sendRegionalPricingMismatchRefund,
 } from './paymentEmails';
-import {
-  isDiscountedPricingRegion,
-  pricingRegionsMatch,
-  resolvePricingRegion,
-  type PricingRegion,
-} from './pricingRegions';
+import { geoPricingRegionsMatch, resolveGeoRegionCode } from './geoPricing';
 import { createStripeRefund, fetchPaymentMethodCountry } from './stripeCheckout';
 
 export type RegionalVerificationResult =
   | { allowed: true; paymentMethodCountry: string | null }
   | { allowed: false; refunded: true; paymentMethodCountry: string };
 
-export function resolveQuotedPricingRegion(countryCode: string | null | undefined): PricingRegion {
-  return resolvePricingRegion(countryCode);
+export function resolveQuotedPricingRegion(countryCode: string | null | undefined): string | null {
+  return resolveGeoRegionCode(countryCode);
 }
 
-/** Whether checkout used a discounted regional tier that must match the payment method. */
+/** Whether checkout used geo regional pricing that must match the payment method country. */
 export function shouldVerifyRegionalPricing(order: PaymentOrder): boolean {
-  if (!order.countryCode) return false;
-  if (order.regionalPricingApplied) return true;
-  return isDiscountedPricingRegion(resolvePricingRegion(order.countryCode));
+  return order.regionalPricingApplied === true;
 }
 
 export function shouldApplyRegionalPricingAtCheckout(input: {
-  countryCode: string | null;
-  regionalPricingApplied?: boolean;
-  listAmount?: number;
-  effectiveAmount?: number;
+  geoPricingApplied?: boolean;
 }): boolean {
-  if (input.regionalPricingApplied === true) return true;
-  if (
-    input.listAmount != null
-    && input.effectiveAmount != null
-    && input.effectiveAmount < input.listAmount
-    && isDiscountedPricingRegion(resolvePricingRegion(input.countryCode))
-  ) {
-    return true;
-  }
-  return isDiscountedPricingRegion(resolvePricingRegion(input.countryCode));
+  return input.geoPricingApplied === true;
 }
 
 /**
- * Compare quoted checkout region to payment-method country.
+ * Compare quoted checkout geo region to payment-method country.
  * On mismatch: refund via Stripe, block enrollment, notify student and admin.
  */
 export async function verifyRegionalPaymentMethod(
@@ -73,7 +54,7 @@ export async function verifyRegionalPaymentMethod(
     return { allowed: true, paymentMethodCountry: null };
   }
 
-  if (pricingRegionsMatch(order.countryCode, paymentMethodCountry)) {
+  if (geoPricingRegionsMatch(order.countryCode, paymentMethodCountry)) {
     return { allowed: true, paymentMethodCountry };
   }
 

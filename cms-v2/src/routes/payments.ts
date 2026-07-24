@@ -21,11 +21,12 @@ import {
 } from '../services/paymentEmails';
 import { inviteTutorsForSale } from '../services/saleAssignment';
 import { detectCountryFromRequest } from '../services/geoDetection';
+import { applyGeoPricing } from '../services/geoPricing';
 import {
   resolveQuotedPricingRegion,
-  shouldApplyRegionalPricingAtCheckout,
   verifyRegionalPaymentMethod,
 } from '../services/paymentRegionalVerification';
+import { effectiveAmount } from '../services/courseGeoPriceValidation';
 import { PricingResolutionError, resolveCoursePrice } from '../services/pricingResolver';
 import { enrollStudentInZenlerCourse } from '../services/zenlerEnrollment';
 
@@ -230,11 +231,20 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
         if (!price || price.courseId !== courseId || !price.isActive) {
           return res.status(404).json({ ok: false, error: 'Course price not found or inactive' });
         }
+        const campaignAmount = effectiveAmount(price.amount, price.discountedPrice);
+        const geoApplied = applyGeoPricing({
+          listAmount: price.amount,
+          campaignAmount,
+          countryCode: geo.countryCode,
+        });
         resolved = {
           price,
           matchReason: 'explicit' as const,
-          effectiveAmount: price.effectiveAmount,
+          effectiveAmount: geoApplied.effectiveAmount,
           detectedCountryCode: geo.countryCode,
+          geoPricingApplied: geoApplied.geoPricingApplied,
+          geoRegionCode: geoApplied.geoRegionCode,
+          geoDiscountPercent: geoApplied.geoDiscountPercent,
         };
       } else {
         resolved = await resolveCoursePrice({
@@ -267,12 +277,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
     const discountPercent = computeDiscountPercent(resolved.price.amount, resolved.effectiveAmount)
       ?? resolved.price.discountPercent;
 
-    const regionalPricingApplied = shouldApplyRegionalPricingAtCheckout({
-      countryCode: geo.countryCode,
-      regionalPricingApplied: req.body?.regionalPricingApplied === true,
-      listAmount: resolved.price.amount,
-      effectiveAmount: resolved.effectiveAmount,
-    });
+    const regionalPricingApplied = resolved.geoPricingApplied === true;
 
     const order = await createPaymentOrder({
       paymentOptionId: null,

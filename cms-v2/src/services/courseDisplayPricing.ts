@@ -1,6 +1,6 @@
 import type { CourseGeoPrice } from '../../shared/types';
 import { effectiveAmount, roundMoney } from './courseGeoPriceValidation';
-
+import { applyGeoPricing } from './geoPricing';
 /** ACCA exam sittings: March, June, September, December. */
 export const ACCA_EXAM_MONTHS = [3, 6, 9, 12] as const;
 
@@ -26,6 +26,8 @@ export type PublishedCoursePricePlan = {
   lateEnrollmentDiscount: boolean;
   isDefault: boolean;
   badge: string | null;
+  geoPricingApplied: boolean;
+  geoRegionCode: string | null;
 };
 
 export type PublishedCoursePricing = {
@@ -106,13 +108,21 @@ function buildPlanFields(
     sessionYear: number | null;
     applyLateEnrollment: boolean;
     badge: string | null;
+    countryCode?: string | null;
   },
 ): PublishedCoursePricePlan {
   const tableDiscount = effectiveAmount(price.amount, price.discountedPrice);
   const lateEnrollmentDiscount = options.applyLateEnrollment && options.sessionMonth != null;
-  const effective = lateEnrollmentDiscount
+  const campaignAmount = lateEnrollmentDiscount
     ? roundMoney(tableDiscount * 0.5)
     : tableDiscount;
+
+  const geo = applyGeoPricing({
+    listAmount: price.amount,
+    campaignAmount,
+    countryCode: options.countryCode ?? null,
+  });
+  const effective = geo.effectiveAmount;
 
   const compareAt = lateEnrollmentDiscount
     ? tableDiscount
@@ -139,6 +149,8 @@ function buildPlanFields(
     lateEnrollmentDiscount,
     isDefault: price.isDefault,
     badge: options.badge,
+    geoPricingApplied: geo.geoPricingApplied,
+    geoRegionCode: geo.geoRegionCode,
   };
 }
 
@@ -148,6 +160,7 @@ export function buildCourseDisplayPricing(
     courseSlug: string | null;
     courseName: string;
     prices: CourseGeoPrice[];
+    countryCode?: string | null;
   },
   now: Date = new Date(),
 ): PublishedCoursePricing | null {
@@ -166,6 +179,7 @@ export function buildCourseDisplayPricing(
       sessionYear: null,
       applyLateEnrollment: false,
       badge: null,
+      countryCode: input.countryCode,
     })];
   } else {
     plans = sorted.slice(0, 2).map((price, index) => {
@@ -176,6 +190,7 @@ export function buildCourseDisplayPricing(
         sessionYear: session.year,
         applyLateEnrollment: index === 0 && monthsUntil <= 1,
         badge: index === 1 ? 'Best value' : null,
+        countryCode: input.countryCode,
       });
     });
   }

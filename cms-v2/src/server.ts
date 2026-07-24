@@ -32,6 +32,9 @@ import { listActiveCourses } from './models/course';
 import { listCoursePrices } from './models/coursePrice';
 import { listActiveGeoPricesByZenlerCourseId } from './models/courseGeoPrice';
 import { buildCourseDisplayPricing } from './services/courseDisplayPricing';
+import { detectCountryFromRequest } from './services/geoDetection';
+import { refreshGeoPricingCache } from './services/geoPricing';
+import pricingRegionsRouter from './routes/pricingRegions';
 import { listPublicBooks } from './models/book';
 import { mapActiveCoursesForFinder } from './services/courseFinderPublish';
 
@@ -165,11 +168,14 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
       return res.status(404).json({ ok: false, error: 'No active prices found for this course' });
     }
 
+    const geo = detectCountryFromRequest(req, String(req.query.countryCode ?? ''));
+
     const pricing = buildCourseDisplayPricing({
       zenlerCourseId: course.zenlerCourseId,
       courseSlug: course.courseSlug,
       courseName: course.courseName,
       prices: course.prices,
+      countryCode: geo.countryCode,
     });
 
     if (!pricing) {
@@ -186,6 +192,8 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
       ok: true,
       data: {
         courseId: course.courseId,
+        countryCode: geo.countryCode,
+        geoSource: geo.source,
         ...pricing,
         plans,
         checkoutPath: `/courses/${slug}/buy`,
@@ -251,6 +259,7 @@ app.use('/api/book-discount-codes', bookDiscountCodesRouter);
 app.use('/api/admin', adminPaymentsRouter);
 app.use('/api/payment-options', paymentOptionsRouter);
 app.use('/api/payments', paymentsRouter);
+app.use('/api/pricing-regions', pricingRegionsRouter);
 app.use('/api/course-pricing', coursePricingRouter);
 app.use('/api/tutors', tutorsRouter);
 app.use('/api/sales', salesRouter);
@@ -364,6 +373,9 @@ process.on('uncaughtException', err => {
 
 app.listen(PORT, () => {
   console.log(`cms-v2 running on http://localhost:${PORT}`);
+  refreshGeoPricingCache().catch(err => {
+    console.error('[geo-pricing] initial cache load failed', err);
+  });
 });
 
 export default app;

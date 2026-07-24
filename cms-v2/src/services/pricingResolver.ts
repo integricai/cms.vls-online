@@ -1,6 +1,7 @@
 import type { CourseGeoPrice, ResolvedCoursePrice } from '../../shared/types';
 import { listActiveGeoPricesForCourse } from '../models/courseGeoPrice';
 import { effectiveAmount } from './courseGeoPriceValidation';
+import { applyGeoPricing } from './geoPricing';
 
 export class PricingResolutionError extends Error {
   constructor(message: string) {
@@ -19,12 +20,26 @@ function filterByDuration(prices: CourseGeoPrice[], durationMonths?: number | nu
   return prices.filter(p => p.durationMonths === durationMonths);
 }
 
-function toResolved(price: CourseGeoPrice, matchReason: ResolvedCoursePrice['matchReason'], detectedCountryCode: string | null): ResolvedCoursePrice {
+function toResolved(
+  price: CourseGeoPrice,
+  matchReason: ResolvedCoursePrice['matchReason'],
+  detectedCountryCode: string | null,
+): ResolvedCoursePrice {
+  const campaignAmount = effectiveAmount(price.amount, price.discountedPrice);
+  const geo = applyGeoPricing({
+    listAmount: price.amount,
+    campaignAmount,
+    countryCode: detectedCountryCode,
+  });
+
   return {
     price,
     matchReason,
-    effectiveAmount: effectiveAmount(price.amount, price.discountedPrice),
+    effectiveAmount: geo.effectiveAmount,
     detectedCountryCode,
+    geoPricingApplied: geo.geoPricingApplied,
+    geoRegionCode: geo.geoRegionCode,
+    geoDiscountPercent: geo.geoDiscountPercent,
   };
 }
 

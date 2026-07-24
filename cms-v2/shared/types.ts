@@ -339,9 +339,21 @@ export interface SaleAcceptPreview {
 export interface ResolvedCoursePrice {
   price: CourseGeoPrice;
   matchReason: 'duration' | 'default' | 'explicit';
-  /** Final USD price for ParityDeals / checkout */
+  /** Final USD price for checkout (after campaign + optional geo discount) */
   effectiveAmount: number;
   detectedCountryCode: string | null;
+  geoPricingApplied: boolean;
+  geoRegionCode: string | null;
+  geoDiscountPercent: number | null;
+}
+
+export interface PricingRegionConfig {
+  code: string;
+  label: string;
+  discountPercent: number;
+  isActive: boolean;
+  sortOrder: number;
+  countries: string[];
 }
 
 export interface CoursePriceImportRow {

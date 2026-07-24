@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import CoursePricing from '../CoursePricing';
 import CoursesTab from './CoursesTab';
+import GeoPricingTab from './GeoPricingTab';
 import TutorsTab from './TutorsTab';
 
-type Tab = 'courses' | 'tutors' | 'coursePricing';
+type Tab = 'courses' | 'tutors' | 'coursePricing' | 'geoPricing';
 
 const TAB_LABELS: Record<Tab, string> = {
   courses: 'Courses',
   tutors: 'Tutors',
   coursePricing: 'Course Pricing',
+  geoPricing: 'Geo Pricing',
 };
 
 export default function Configurations() {
@@ -19,7 +21,7 @@ export default function Configurations() {
       <div className="border-b border-slate-200 bg-white px-6 py-4">
         <h1 className="text-lg font-bold text-slate-800">Configurations</h1>
         <p className="mt-0.5 text-xs text-slate-500">
-          Manage courses, tutors, and course pricing.
+          Manage courses, tutors, course pricing, and geo pricing regions.
         </p>
       </div>
       <div className="flex border-b border-slate-200 bg-white px-6">
@@ -41,6 +43,7 @@ export default function Configurations() {
         {tab === 'courses' && <CoursesTab />}
         {tab === 'tutors' && <TutorsTab />}
         {tab === 'coursePricing' && <CoursePricing embedded />}
+        {tab === 'geoPricing' && <GeoPricingTab />}
       </div>
     </div>
   );
