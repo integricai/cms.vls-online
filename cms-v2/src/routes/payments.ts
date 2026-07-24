@@ -19,6 +19,7 @@ import {
   sendAdminPaymentNotification,
   sendStudentPaymentConfirmation,
 } from '../services/paymentEmails';
+import { inviteTutorsForSale } from '../services/saleAssignment';
 import { detectCountryFromRequest } from '../services/geoDetection';
 import {
   resolveQuotedPricingRegion,
@@ -100,7 +101,7 @@ async function recordSaleForPaidOrder(order: Awaited<ReturnType<typeof markPayme
   const existing = await getSaleByPaymentOrderId(order.id);
   if (existing) return existing;
 
-  return createSale({
+  const sale = await createSale({
     customerId: order.customerId,
     courseId: order.courseId,
     coursePriceId: order.coursePriceId,
@@ -111,6 +112,14 @@ async function recordSaleForPaidOrder(order: Awaited<ReturnType<typeof markPayme
     durationDays: order.durationDays,
     soldAt: order.paidAt,
   });
+
+  try {
+    await inviteTutorsForSale(sale);
+  } catch (err) {
+    console.error(`[stripe-webhook] Failed to invite tutors for sale ${sale.id}`, err);
+  }
+
+  return sale;
 }
 
 /** Legacy payment-card checkout (course_payment_cards). */

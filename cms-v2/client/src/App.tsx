@@ -32,6 +32,7 @@ import StepCards from './screens/StepCards';
 import LegalPage from './screens/LegalPage';
 import Team from './screens/Team';
 import Settings from './screens/Settings';
+import AcceptSale from './screens/AcceptSale';
 import Forms from './screens/Forms';
 import FAQ from './screens/FAQ';
 import Events from './screens/Events';
@@ -61,6 +62,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/accept-sale" element={<AcceptSale />} />
         <Route
           element={
             <RequireAuth>

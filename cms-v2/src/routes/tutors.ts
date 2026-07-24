@@ -24,6 +24,12 @@ function parseCourseIds(value: unknown): number[] {
   return [...new Set(value.map(v => Number(v)).filter(id => Number.isInteger(id) && id > 0))];
 }
 
+function parseCommissionPercent(value: unknown): number {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(100, Math.max(0, Math.round(n * 100) / 100));
+}
+
 function parseBody(body: Record<string, unknown>): TutorInput {
   return {
     name: String(body.name ?? '').trim(),
@@ -33,6 +39,7 @@ function parseBody(body: Record<string, unknown>): TutorInput {
     photoUrl: body.photoUrl == null || body.photoUrl === '' ? null : String(body.photoUrl).trim(),
     initials: body.initials == null || body.initials === '' ? null : String(body.initials).trim(),
     isActive: body.isActive !== false && body.isActive !== 'false',
+    commissionPercent: parseCommissionPercent(body.commissionPercent),
     courseIds: parseCourseIds(body.courseIds),
   };
 }

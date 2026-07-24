@@ -7,8 +7,9 @@ import DiscountCodes from '../DiscountCodes';
 import ContentMigrationTab from '../ContentMigration';
 import CoursePricing from '../CoursePricing';
 import TutorsTab from './TutorsTab';
+import SalesTab from './SalesTab';
 
-type Tab = 'menu' | 'courses' | 'coursePricing' | 'tutors' | 'contentMigration' | 'books' | 'discountCodes' | 'payments' | 'users';
+type Tab = 'menu' | 'courses' | 'coursePricing' | 'tutors' | 'sales' | 'contentMigration' | 'books' | 'discountCodes' | 'payments' | 'users';
 
 type Course = {
   id: number;
@@ -514,6 +515,7 @@ const TAB_LABELS: Record<Tab, string> = {
   courses: 'Courses',
   coursePricing: 'Course Pricing',
   tutors: 'Tutors',
+  sales: 'Sales',
   contentMigration: 'Content Migration',
   books: 'Books',
   discountCodes: 'Discount Codes',
@@ -549,6 +551,7 @@ export default function Settings() {
         {tab === 'courses'  && <CoursesTab />}
         {tab === 'coursePricing' && <CoursePricing embedded />}
         {tab === 'tutors' && <TutorsTab />}
+        {tab === 'sales' && <SalesTab />}
         {tab === 'contentMigration' && <ContentMigrationTab />}
         {tab === 'books'    && <Books />}
         {tab === 'discountCodes' && <DiscountCodes />}

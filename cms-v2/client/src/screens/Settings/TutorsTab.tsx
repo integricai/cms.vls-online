@@ -11,6 +11,7 @@ type TutorDraft = {
   photoUrl: string;
   initials: string;
   isActive: boolean;
+  commissionPercent: string;
   courseIds: number[];
 };
 
@@ -23,6 +24,7 @@ function emptyDraft(): TutorDraft {
     photoUrl: '',
     initials: '',
     isActive: true,
+    commissionPercent: '0',
     courseIds: [],
   };
 }
@@ -37,6 +39,7 @@ function tutorToDraft(tutor: Tutor): TutorDraft {
     photoUrl: tutor.photoUrl ?? '',
     initials: tutor.initials ?? '',
     isActive: tutor.isActive,
+    commissionPercent: String(tutor.commissionPercent ?? 0),
     courseIds: tutor.courseIds ?? [],
   };
 }
@@ -103,6 +106,7 @@ export default function TutorsTab() {
         photoUrl: draft.photoUrl.trim() || null,
         initials: draft.initials.trim() || null,
         isActive: draft.isActive,
+        commissionPercent: Number(draft.commissionPercent || 0),
         courseIds: draft.courseIds,
       };
       if (editingId) {
@@ -169,6 +173,18 @@ export default function TutorsTab() {
             Photo URL
             <input className="input mt-1" value={draft.photoUrl} onChange={e => setDraft(d => ({ ...d, photoUrl: e.target.value }))} />
           </label>
+          <label className="text-xs text-slate-600">
+            Commission %
+            <input
+              className="input mt-1"
+              type="number"
+              min={0}
+              max={100}
+              step={0.01}
+              value={draft.commissionPercent}
+              onChange={e => setDraft(d => ({ ...d, commissionPercent: e.target.value }))}
+            />
+          </label>
           <label className="flex items-end gap-2 pb-2 text-xs text-slate-700">
             <input type="checkbox" checked={draft.isActive} onChange={e => setDraft(d => ({ ...d, isActive: e.target.checked }))} />
             Active
@@ -222,6 +238,7 @@ export default function TutorsTab() {
               <th className="px-3 py-2">Name</th>
               <th className="px-3 py-2">Role</th>
               <th className="px-3 py-2">Email</th>
+              <th className="px-3 py-2">Commission</th>
               <th className="px-3 py-2">Courses</th>
               <th className="px-3 py-2">Active</th>
               <th className="px-3 py-2">Actions</th>
@@ -229,10 +246,10 @@ export default function TutorsTab() {
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-slate-500">Loading…</td></tr>
+              <tr><td colSpan={7} className="px-3 py-8 text-center text-slate-500">Loading…</td></tr>
             )}
             {!loading && tutors.length === 0 && (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-slate-500">No tutors yet.</td></tr>
+              <tr><td colSpan={7} className="px-3 py-8 text-center text-slate-500">No tutors yet.</td></tr>
             )}
             {!loading && tutors.map(tutor => (
               <tr key={tutor.id} className="border-t border-slate-100">
@@ -242,6 +259,7 @@ export default function TutorsTab() {
                 </td>
                 <td className="px-3 py-2">{tutor.role || '—'}</td>
                 <td className="px-3 py-2">{tutor.email || '—'}</td>
+                <td className="px-3 py-2">{tutor.commissionPercent ?? 0}%</td>
                 <td className="px-3 py-2">
                   {(tutor.courseNames?.length ?? tutor.courseIds.length) > 0
                     ? (tutor.courseNames ?? tutor.courseIds.map(String)).join(', ')

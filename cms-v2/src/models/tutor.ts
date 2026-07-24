@@ -10,10 +10,17 @@ interface DbRow {
   photo_url: string | null;
   initials: string | null;
   is_active: boolean;
+  commission_percent?: string | number | null;
   course_ids?: number[];
   course_names?: string[];
   created_at: Date;
   updated_at: Date;
+}
+
+function parseCommissionPercent(value: unknown): number {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(100, Math.max(0, Math.round(n * 100) / 100));
 }
 
 function rowToTutor(row: DbRow): Tutor {
@@ -26,6 +33,7 @@ function rowToTutor(row: DbRow): Tutor {
     photoUrl: row.photo_url,
     initials: row.initials,
     isActive: row.is_active,
+    commissionPercent: parseCommissionPercent(row.commission_percent),
     courseIds: row.course_ids ?? [],
     courseNames: row.course_names,
     createdAt: row.created_at,
@@ -76,9 +84,27 @@ export async function getTutorById(id: number): Promise<Tutor | null> {
   return rows[0] ? rowToTutor(rows[0] as DbRow) : null;
 }
 
-export async function createTutor(input: TutorInput): Promise<Tutor> {
+export async function listActiveTutorsForCourse(courseId: number): Promise<Tutor[]> {
   const rows = await sql`
-    INSERT INTO tutors (name, email, role, bio, photo_url, initials, is_active)
+    SELECT
+      t.*,
+      COALESCE(array_remove(array_agg(c.id ORDER BY c.name ASC), NULL), ARRAY[]::integer[]) AS course_ids,
+      COALESCE(array_remove(array_agg(c.name ORDER BY c.name ASC), NULL), ARRAY[]::text[]) AS course_names
+    FROM tutors t
+    INNER JOIN tutor_courses tc ON tc.tutor_id = t.id AND tc.course_id = ${courseId}
+    LEFT JOIN tutor_courses tc2 ON tc2.tutor_id = t.id
+    LEFT JOIN courses c ON c.id = tc2.course_id
+    WHERE t.is_active = TRUE
+    GROUP BY t.id
+    ORDER BY t.name ASC
+  `;
+  return (rows as DbRow[]).map(rowToTutor);
+}
+
+export async function createTutor(input: TutorInput): Promise<Tutor> {
+  const commissionPercent = parseCommissionPercent(input.commissionPercent ?? 0);
+  const rows = await sql`
+    INSERT INTO tutors (name, email, role, bio, photo_url, initials, is_active, commission_percent)
     VALUES (
       ${input.name.trim()},
       ${input.email?.trim() || null},
@@ -86,7 +112,8 @@ export async function createTutor(input: TutorInput): Promise<Tutor> {
       ${input.bio?.trim() || null},
       ${input.photoUrl?.trim() || null},
       ${input.initials?.trim() || null},
-      ${input.isActive !== false}
+      ${input.isActive !== false},
+      ${commissionPercent}
     )
     RETURNING *
   `;
@@ -101,6 +128,10 @@ export async function updateTutor(id: number, input: Partial<TutorInput>): Promi
   const existing = await getTutorById(id);
   if (!existing) return null;
 
+  const commissionPercent = input.commissionPercent !== undefined
+    ? parseCommissionPercent(input.commissionPercent)
+    : existing.commissionPercent;
+
   const rows = await sql`
     UPDATE tutors
     SET name = ${input.name !== undefined ? input.name.trim() : existing.name},
@@ -110,6 +141,7 @@ export async function updateTutor(id: number, input: Partial<TutorInput>): Promi
         photo_url = ${input.photoUrl !== undefined ? (input.photoUrl?.trim() || null) : existing.photoUrl},
         initials = ${input.initials !== undefined ? (input.initials?.trim() || null) : existing.initials},
         is_active = ${input.isActive !== undefined ? Boolean(input.isActive) : existing.isActive},
+        commission_percent = ${commissionPercent},
         updated_at = NOW()
     WHERE id = ${id}
     RETURNING id

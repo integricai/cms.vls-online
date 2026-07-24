@@ -272,6 +272,8 @@ export interface Customer {
   updatedAt: Date;
 }
 
+export type SaleAssignmentStatus = 'AwaitingTutor' | 'Assigned' | 'AdminAssigned';
+
 export interface Sale {
   id: number;
   customerId: number;
@@ -284,7 +286,54 @@ export interface Sale {
   durationDays: number;
   soldAt: Date;
   expiryDate: Date;
+  tutorId: number | null;
+  assignmentStatus: SaleAssignmentStatus;
+  commissionPercent: number | null;
+  commissionAmount: number | null;
+  assignedAt: Date | null;
   createdAt: Date;
+}
+
+export interface SaleListItem extends Sale {
+  courseName: string | null;
+  customerEmail: string | null;
+  customerFirstName: string | null;
+  customerLastName: string | null;
+  tutorName: string | null;
+  inviteCount: number;
+  acceptedInviteCount: number;
+}
+
+export interface SaleCourseSummary {
+  courseId: number;
+  courseName: string;
+  saleCount: number;
+  unassignedCount: number;
+  totalAmount: number;
+  totalCommission: number;
+  currencies: string[];
+}
+
+export interface SaleTutorSummary {
+  tutorId: number;
+  tutorName: string;
+  commissionPercent: number;
+  saleCount: number;
+  totalAmount: number;
+  totalCommission: number;
+  currencies: string[];
+}
+
+export interface SaleAcceptPreview {
+  saleId: number;
+  courseName: string | null;
+  studentFirstName: string | null;
+  amount: number;
+  currency: string;
+  soldAt: Date | string;
+  tutorName: string | null;
+  status: 'available' | 'already_assigned' | 'expired' | 'invalid';
+  assignedTutorName?: string | null;
 }
 
 export interface ResolvedCoursePrice {
@@ -363,6 +412,7 @@ export interface Tutor {
   photoUrl: string | null;
   initials: string | null;
   isActive: boolean;
+  commissionPercent: number;
   courseIds: number[];
   courseNames?: string[];
   createdAt: Date | string;
@@ -378,6 +428,7 @@ export type TutorInput = {
   photoUrl?: string | null;
   initials?: string | null;
   isActive?: boolean;
+  commissionPercent?: number;
   courseIds?: number[];
 };
 
