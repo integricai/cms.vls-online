@@ -167,6 +167,23 @@ export async function attachStripeCheckoutSession(orderId: number, sessionId: st
   `;
 }
 
+export async function attachCustomerToPaymentOrder(
+  orderId: number,
+  customerId: number,
+  studentEmail?: string | null,
+): Promise<PaymentOrder> {
+  const rows = await sql`
+    UPDATE payment_orders
+    SET customer_id = ${customerId},
+        student_email = COALESCE(student_email, ${studentEmail ?? null}),
+        stripe_customer_email = COALESCE(stripe_customer_email, ${studentEmail ?? null})
+    WHERE id = ${orderId}
+    RETURNING *
+  `;
+  if (!rows[0]) throw new Error('Payment order not found');
+  return rowToOrder(rows[0] as DbRow);
+}
+
 export async function getPaymentOrder(id: number): Promise<PaymentOrder | null> {
   const rows = await sql`SELECT * FROM payment_orders WHERE id = ${id}`;
   return rows[0] ? rowToOrder(rows[0] as DbRow) : null;

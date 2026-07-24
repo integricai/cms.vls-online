@@ -10,7 +10,6 @@ import {
   markPaymentOrderPaid,
   updateZenlerEnrollment,
 } from '../models/paymentOrder';
-import { createSale, getSaleByPaymentOrderId } from '../models/sale';
 import {
   createStripeCheckoutSession,
   verifyStripeWebhook,
@@ -19,7 +18,7 @@ import {
   sendAdminPaymentNotification,
   sendStudentPaymentConfirmation,
 } from '../services/paymentEmails';
-import { inviteTutorsForSale } from '../services/saleAssignment';
+import { ensureSaleRecordedForPaidOrder } from '../services/saleRecording';
 import { detectCountryFromRequest } from '../services/geoDetection';
 import { applyGeoPricing } from '../services/geoPricing';
 import {
@@ -87,40 +86,6 @@ async function upsertCheckoutCustomer(input: {
     phone: input.phone,
     countryCode: input.countryCode,
   });
-}
-
-async function recordSaleForPaidOrder(order: Awaited<ReturnType<typeof markPaymentOrderPaid>>['order']) {
-  if (
-    !order.customerId
-    || !order.courseId
-    || !order.durationDays
-    || !order.paidAt
-  ) {
-    return null;
-  }
-
-  const existing = await getSaleByPaymentOrderId(order.id);
-  if (existing) return existing;
-
-  const sale = await createSale({
-    customerId: order.customerId,
-    courseId: order.courseId,
-    coursePriceId: order.coursePriceId,
-    paymentOrderId: order.id,
-    amount: order.amount,
-    currency: order.currency,
-    discountPercent: order.discountPercent,
-    durationDays: order.durationDays,
-    soldAt: order.paidAt,
-  });
-
-  try {
-    await inviteTutorsForSale(sale);
-  } catch (err) {
-    console.error(`[stripe-webhook] Failed to invite tutors for sale ${sale.id}`, err);
-  }
-
-  return sale;
 }
 
 /** Legacy payment-card checkout (course_payment_cards). */
@@ -339,6 +304,10 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
     const order = await getPaymentOrderByCheckoutSession(sessionId);
     if (!order) return res.status(404).json({ ok: false, error: 'Payment order not found' });
 
+    if (order.status === 'Paid') {
+      await ensureSaleRecordedForPaidOrder(order);
+    }
+
     return res.json({
       status: order.status,
       courseTitle: order.courseTitle,
@@ -416,12 +385,12 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
         }
       }
 
-      await recordSaleForPaidOrder(order);
-
       const studentSent = await sendStudentPaymentConfirmation(order);
       const adminSent = await sendAdminPaymentNotification(order);
       await markOrderEmailsSent(order.id, { student: studentSent, admin: adminSent });
     }
+
+    await ensureSaleRecordedForPaidOrder(order);
 
     res.status(200).json({ ok: true });
   } catch (err) {
