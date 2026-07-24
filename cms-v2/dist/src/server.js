@@ -55,6 +55,7 @@ const paymentOptions_1 = __importDefault(require("./routes/paymentOptions"));
 const payments_1 = __importStar(require("./routes/payments"));
 const coursePricing_1 = __importDefault(require("./routes/coursePricing"));
 const tutors_1 = __importDefault(require("./routes/tutors"));
+const sales_1 = __importDefault(require("./routes/sales"));
 const activity_1 = __importDefault(require("./routes/activity"));
 const trustpilot_1 = __importDefault(require("./routes/trustpilot"));
 const table_1 = __importDefault(require("./routes/table"));
@@ -68,6 +69,9 @@ const course_1 = require("./models/course");
 const coursePrice_1 = require("./models/coursePrice");
 const courseGeoPrice_1 = require("./models/courseGeoPrice");
 const courseDisplayPricing_1 = require("./services/courseDisplayPricing");
+const geoDetection_1 = require("./services/geoDetection");
+const geoPricing_1 = require("./services/geoPricing");
+const pricingRegions_1 = __importDefault(require("./routes/pricingRegions"));
 const book_1 = require("./models/book");
 const courseFinderPublish_1 = require("./services/courseFinderPublish");
 const app = (0, express_1.default)();
@@ -186,11 +190,13 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
         if (!course) {
             return res.status(404).json({ ok: false, error: 'No active prices found for this course' });
         }
+        const geo = (0, geoDetection_1.detectCountryFromRequest)(req, String(req.query.countryCode ?? ''));
         const pricing = (0, courseDisplayPricing_1.buildCourseDisplayPricing)({
             zenlerCourseId: course.zenlerCourseId,
             courseSlug: course.courseSlug,
             courseName: course.courseName,
             prices: course.prices,
+            countryCode: geo.countryCode,
         });
         if (!pricing) {
             return res.status(404).json({ ok: false, error: 'No active prices found for this course' });
@@ -204,6 +210,8 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
             ok: true,
             data: {
                 courseId: course.courseId,
+                countryCode: geo.countryCode,
+                geoSource: geo.source,
                 ...pricing,
                 plans,
                 checkoutPath: `/courses/${slug}/buy`,
@@ -265,8 +273,10 @@ app.use('/api/book-discount-codes', bookDiscountCodes_1.default);
 app.use('/api/admin', adminPayments_1.default);
 app.use('/api/payment-options', paymentOptions_1.default);
 app.use('/api/payments', payments_1.default);
+app.use('/api/pricing-regions', pricingRegions_1.default);
 app.use('/api/course-pricing', coursePricing_1.default);
 app.use('/api/tutors', tutors_1.default);
+app.use('/api/sales', sales_1.default);
 app.use('/api/activity', activity_1.default);
 app.use('/api/trustpilot', trustpilot_1.default);
 app.use('/api/table', table_1.default);
@@ -345,7 +355,11 @@ app.use((err, req, res, _next) => {
     }).catch(alertErr => {
         console.error('[alert] failed to send CMS API error alert', alertErr);
     });
-    res.status(500).json({ ok: false, error: 'Internal server error' });
+    const isCheckout = req.originalUrl.includes('/api/payments/create-checkout-session');
+    const message = isCheckout && err.message?.trim()
+        ? err.message
+        : 'Internal server error';
+    res.status(500).json({ ok: false, error: message });
 });
 process.on('unhandledRejection', reason => {
     console.error('[unhandledRejection]', reason);
@@ -366,6 +380,9 @@ process.on('uncaughtException', err => {
 // ── Start ─────────────────────────────────────────────────────────
 app.listen(PORT, () => {
     console.log(`cms-v2 running on http://localhost:${PORT}`);
+    (0, geoPricing_1.refreshGeoPricingCache)().catch(err => {
+        console.error('[geo-pricing] initial cache load failed', err);
+    });
 });
 exports.default = app;
 //# sourceMappingURL=server.js.map
