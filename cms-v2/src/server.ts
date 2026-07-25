@@ -33,7 +33,7 @@ import { listCoursePrices } from './models/coursePrice';
 import { listActiveGeoPricesByZenlerCourseId } from './models/courseGeoPrice';
 import { buildCourseDisplayPricing } from './services/courseDisplayPricing';
 import { detectClientIpFromRequest, detectCountryFromRequest } from './services/geoDetection';
-import { isParityDealsTestRequest } from './services/parityDealsTest';
+import { isParityDealsTestRequest, parityDealsRuntimeStatus } from './services/parityDealsTest';
 import { refreshGeoPricingCache } from './services/geoPricing';
 import pricingRegionsRouter from './routes/pricingRegions';
 import { listPublicBooks } from './models/book';
@@ -172,6 +172,7 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
 
     const geo = detectCountryFromRequest(req, String(req.query.countryCode ?? ''));
     const clientIp = detectClientIpFromRequest(req);
+    const parityStatus = parityDealsRuntimeStatus(req);
     const parityTest = isParityDealsTestRequest(req);
 
     const pricing = await buildCourseDisplayPricing({
@@ -201,6 +202,7 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
         countryCode: geo.countryCode,
         geoSource: geo.source,
         parityDealsTestMode: parityTest,
+        parityDeals: parityStatus,
         ...pricing,
         plans,
         checkoutPath: `/courses/${slug}/buy`,

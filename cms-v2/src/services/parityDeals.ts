@@ -24,7 +24,9 @@ export type RegionalPricingApplyResult = {
 };
 
 function pdIdentifier(): string | null {
-  const id = process.env.PARITYDEALS_PD_IDENTIFIER?.trim();
+  const id = String(process.env.PARITYDEALS_PD_IDENTIFIER ?? '')
+    .trim()
+    .replace(/^['"]|['"]$/g, '');
   return id || null;
 }
 
