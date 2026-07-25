@@ -33,6 +33,7 @@ import { listCoursePrices } from './models/coursePrice';
 import { listActiveGeoPricesByZenlerCourseId } from './models/courseGeoPrice';
 import { buildCourseDisplayPricing } from './services/courseDisplayPricing';
 import { detectClientIpFromRequest, detectCountryFromRequest } from './services/geoDetection';
+import { isParityDealsTestRequest } from './services/parityDealsTest';
 import { refreshGeoPricingCache } from './services/geoPricing';
 import pricingRegionsRouter from './routes/pricingRegions';
 import { listPublicBooks } from './models/book';
@@ -156,7 +157,8 @@ app.options('/api/publish-course-pricing/:zenlerCourseId', (_req, res) => {
 
 app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120');
+  // Country/IP-specific — never share across visitors at the CDN edge.
+  res.setHeader('Cache-Control', 'private, no-store');
   try {
     const zenlerCourseId = String(req.params.zenlerCourseId ?? '').trim();
     if (!zenlerCourseId) {
@@ -170,6 +172,7 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
 
     const geo = detectCountryFromRequest(req, String(req.query.countryCode ?? ''));
     const clientIp = detectClientIpFromRequest(req);
+    const parityTest = isParityDealsTestRequest(req);
 
     const pricing = await buildCourseDisplayPricing({
       zenlerCourseId: course.zenlerCourseId,
@@ -178,6 +181,7 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
       prices: course.prices,
       countryCode: geo.countryCode,
       ipAddress: clientIp,
+      ignoreVpnBlock: parityTest,
     });
 
     if (!pricing) {
@@ -196,6 +200,7 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
         courseId: course.courseId,
         countryCode: geo.countryCode,
         geoSource: geo.source,
+        parityDealsTestMode: parityTest,
         ...pricing,
         plans,
         checkoutPath: `/courses/${slug}/buy`,

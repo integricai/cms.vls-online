@@ -5,7 +5,7 @@ import {
 } from '../models/paymentOrder';
 import { splitStudentName, upsertCustomer } from '../models/customer';
 import { createSale, getSaleByPaymentOrderId } from '../models/sale';
-import { inviteTutorsForSale } from './saleAssignment';
+import { autoAssignCourseTutorForSale } from './saleAssignment';
 
 async function createSaleForOrder(order: PaymentOrder) {
   const existing = await getSaleByPaymentOrderId(order.id);
@@ -34,12 +34,12 @@ async function createSaleForOrder(order: PaymentOrder) {
   });
 
   try {
-    await inviteTutorsForSale(sale);
+    const assigned = await autoAssignCourseTutorForSale(sale);
+    return assigned ?? sale;
   } catch (err) {
-    console.error(`[sales] Failed to invite tutors for sale ${sale.id}`, err);
+    console.error(`[sales] Failed to auto-assign tutor for sale ${sale.id}`, err);
+    return sale;
   }
-
-  return sale;
 }
 
 /** Ensure a paid order has a linked customer and sales row (creates either if missing). */

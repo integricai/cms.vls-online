@@ -8,6 +8,10 @@ export interface GeoDetectionResult {
 
 /** Best-effort client IP for ParityDeals server-side discount lookup. */
 export function detectClientIpFromRequest(req: Request): string | null {
+  // Explicit hop from vls-api / Next proxy (visitor IP, not the server).
+  const forwardedClient = String(req.get('x-vls-client-ip') ?? '').trim();
+  if (forwardedClient) return forwardedClient.split(',')[0]!.trim();
+
   const cf = String(req.get('cf-connecting-ip') ?? '').trim();
   if (cf) return cf;
 

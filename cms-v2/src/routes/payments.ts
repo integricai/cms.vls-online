@@ -33,6 +33,7 @@ import {
   PricingResolutionError,
   resolveCoursePrice,
 } from '../services/pricingResolver';
+import { isParityDealsTestRequest } from '../services/parityDealsTest';
 import { getPaymentOrder } from '../models/paymentOrder';
 import {
   ensureZenlerEnrollmentForPaidOrder,
@@ -195,6 +196,9 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
 
     const geo = detectCountryFromRequest(req, req.body?.countryCode);
     const clientIp = detectClientIpFromRequest(req);
+    const parityTest = isParityDealsTestRequest(req)
+      || req.body?.parityDealsTest === true
+      || String(req.body?.test ?? '').toLowerCase() === 'true';
     const campaignCode = String(req.body?.campaignCode ?? '').trim() || null;
     const durationRaw = Number(req.body?.durationMonths);
     const durationMonths = Number.isInteger(durationRaw) && durationRaw >= 1 && durationRaw <= 6
@@ -218,7 +222,10 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
           geoRegionCode: null,
           geoDiscountPercent: null,
         };
-        resolved = await applyParityDealsToResolved(base, { ipAddress: clientIp });
+        resolved = await applyParityDealsToResolved(base, {
+          ipAddress: clientIp,
+          ignoreVpnBlock: parityTest,
+        });
       } else {
         resolved = await resolveCoursePrice({
           courseId,
@@ -226,6 +233,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
           campaignCode,
           detectedCountryCode: geo.countryCode,
           ipAddress: clientIp,
+          ignoreVpnBlock: parityTest,
         });
       }
     } catch (err) {

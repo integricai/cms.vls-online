@@ -5,57 +5,43 @@ import {
   getSaleDetailForInvite,
 } from '../models/sale';
 import {
-  createSaleTutorInvite,
   getInviteByToken,
   markInviteAccepted,
-  markInviteEmailed,
 } from '../models/saleTutorInvite';
 import { getTutorById, listActiveTutorsForCourse } from '../models/tutor';
-import { sendTutorSaleClaimInvite } from './saleEmails';
 
-function appBaseUrl(): string {
-  return (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/+$/, '');
-}
-
-export async function inviteTutorsForSale(sale: Sale): Promise<{ invited: number; emailed: number }> {
-  const detail = await getSaleDetailForInvite(sale.id);
-  if (!detail) return { invited: 0, emailed: 0 };
+/**
+ * Auto-assign the course's tutor after payment.
+ * Each course has a single teacher — no claim-invite emails.
+ */
+export async function autoAssignCourseTutorForSale(sale: Sale): Promise<Sale | null> {
+  if (sale.tutorId) return sale;
 
   const tutors = await listActiveTutorsForCourse(sale.courseId);
-  let invited = 0;
-  let emailed = 0;
-
-  for (const tutor of tutors) {
-    const invite = await createSaleTutorInvite({
-      saleId: sale.id,
-      tutorId: tutor.id,
-    });
-    invited += 1;
-
-    if (!tutor.email) continue;
-
-    try {
-      const acceptUrl = `${appBaseUrl()}/accept-sale?token=${encodeURIComponent(invite.token)}`;
-      const sent = await sendTutorSaleClaimInvite({
-        to: tutor.email,
-        tutorName: tutor.name,
-        courseName: detail.courseName || 'Course',
-        studentFirstName: detail.studentFirstName,
-        amount: sale.amount,
-        currency: sale.currency,
-        soldAt: sale.soldAt instanceof Date ? sale.soldAt : new Date(sale.soldAt),
-        acceptUrl,
-      });
-      if (sent) {
-        await markInviteEmailed(invite.id);
-        emailed += 1;
-      }
-    } catch (err) {
-      console.error(`[sale-invite] Failed to email tutor ${tutor.id} for sale ${sale.id}`, err);
-    }
+  if (tutors.length === 0) {
+    console.warn(`[sale-assign] No active tutor linked to course ${sale.courseId} for sale ${sale.id}`);
+    return null;
+  }
+  if (tutors.length > 1) {
+    console.warn(
+      `[sale-assign] Course ${sale.courseId} has ${tutors.length} active tutors; assigning first (${tutors[0]!.name}) for sale ${sale.id}`,
+    );
   }
 
-  return { invited, emailed };
+  const tutor = tutors[0]!;
+  const assigned = await assignSaleToTutor({
+    saleId: sale.id,
+    tutorId: tutor.id,
+    commissionPercent: tutor.commissionPercent,
+    assignmentStatus: 'Assigned',
+  });
+
+  if (!assigned) {
+    console.warn(`[sale-assign] Could not auto-assign tutor ${tutor.id} for sale ${sale.id}`);
+    return null;
+  }
+
+  return assigned;
 }
 
 export async function previewSaleAccept(token: string): Promise<SaleAcceptPreview> {

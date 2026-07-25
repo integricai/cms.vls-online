@@ -81,12 +81,14 @@ export async function applyParityDealsToResolved(
   resolved: ResolvedCoursePrice,
   input: {
     ipAddress?: string | null;
+    ignoreVpnBlock?: boolean;
   } = {},
 ): Promise<ResolvedCoursePrice> {
   const regional = await applyParityDealsPricing({
     campaignAmount: resolved.effectiveAmount,
     ipAddress: input.ipAddress,
     fallbackCountryCode: resolved.detectedCountryCode,
+    ignoreVpnBlock: input.ignoreVpnBlock === true,
   });
 
   return {
@@ -106,6 +108,7 @@ export async function resolveCoursePrice(input: {
   campaignCode?: string | null;
   detectedCountryCode?: string | null;
   ipAddress?: string | null;
+  ignoreVpnBlock?: boolean;
 }): Promise<ResolvedCoursePrice> {
   const prices = await listActiveGeoPricesForCourse(input.courseId);
   if (prices.length === 0) {
@@ -114,5 +117,8 @@ export async function resolveCoursePrice(input: {
   const resolved = resolvePriceFromCandidates(prices, input, {
     detectedCountryCode: input.detectedCountryCode ?? null,
   });
-  return applyParityDealsToResolved(resolved, { ipAddress: input.ipAddress });
+  return applyParityDealsToResolved(resolved, {
+    ipAddress: input.ipAddress,
+    ignoreVpnBlock: input.ignoreVpnBlock === true,
+  });
 }

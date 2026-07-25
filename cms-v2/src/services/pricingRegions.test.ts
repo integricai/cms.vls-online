@@ -33,6 +33,15 @@ async function runTests() {
   assert.equal(noPd.effectiveAmount, 133);
   assert.equal(noPd.quotedCountryCode, 'PK');
 
+  // ignoreVpnBlock still needs a ParityDeals quote; without identifier it stays CMS price.
+  const testMode = await applyParityDealsPricing({
+    campaignAmount: 203,
+    ipAddress: null,
+    fallbackCountryCode: 'PK',
+    ignoreVpnBlock: true,
+  });
+  assert.equal(testMode.effectiveAmount, 203);
+
   console.log('paritydeals + paymentRegionalVerification tests passed');
 }
 

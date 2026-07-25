@@ -39,10 +39,22 @@ function normalizeCountry(value: unknown): string | null {
   return /^[A-Z]{2}$/.test(code) ? code : null;
 }
 
+function parseQuoteBody(body: Record<string, unknown>): ParityDealsQuote {
+  return {
+    discountPercentage: parsePercent(body.discountPercentage),
+    countryCode: normalizeCountry(body.countryCode),
+    currencyCode: body.currencyCode != null ? String(body.currencyCode) : null,
+    isVpn: body.isVpn === true,
+    isProxy: body.isProxy === true,
+    isTor: body.isTor === true,
+    couponCode: body.couponCode != null ? String(body.couponCode) : null,
+    raw: body,
+  };
+}
+
 /**
- * Server-side ParityDeals discount lookup.
+ * Server-side ParityDeals discount lookup by visitor IP.
  * Requires PARITYDEALS_PD_IDENTIFIER and the visitor IP.
- * Returns null when not configured or the API call fails (fail open to CMS base price).
  */
 export async function fetchParityDealsQuote(ipAddress: string | null | undefined): Promise<ParityDealsQuote | null> {
   const identifier = pdIdentifier();
@@ -64,16 +76,7 @@ export async function fetchParityDealsQuote(ipAddress: string | null | undefined
       return null;
     }
     const body = await response.json() as Record<string, unknown>;
-    return {
-      discountPercentage: parsePercent(body.discountPercentage),
-      countryCode: normalizeCountry(body.countryCode),
-      currencyCode: body.currencyCode != null ? String(body.currencyCode) : null,
-      isVpn: body.isVpn === true,
-      isProxy: body.isProxy === true,
-      isTor: body.isTor === true,
-      couponCode: body.couponCode != null ? String(body.couponCode) : null,
-      raw: body,
-    };
+    return parseQuoteBody(body);
   } catch (err) {
     console.warn('[paritydeals] Discount API error', err);
     return null;
@@ -81,32 +84,60 @@ export async function fetchParityDealsQuote(ipAddress: string | null | undefined
 }
 
 /**
- * Apply ParityDeals localized discount on top of the CMS campaign/base amount.
- * VPN/proxy/Tor visitors get no regional discount.
+ * Country-based discount lookup (optional staging fallback).
+ * Skipped unless PARITYDEALS_API_KEY is set — primary path is the IP API (no key).
  */
-export async function applyParityDealsPricing(input: {
-  campaignAmount: number;
-  ipAddress?: string | null;
-  fallbackCountryCode?: string | null;
-}): Promise<RegionalPricingApplyResult> {
-  const campaignAmount = input.campaignAmount;
-  const fallbackCountry = normalizeCountry(input.fallbackCountryCode);
+export async function fetchParityDealsQuoteByCountry(
+  countryCode: string | null | undefined,
+): Promise<ParityDealsQuote | null> {
+  const identifier = pdIdentifier();
+  const country = normalizeCountry(countryCode);
+  const apiKey = process.env.PARITYDEALS_API_KEY?.trim();
+  if (!identifier || !country || !apiKey) return null;
 
-  const quote = await fetchParityDealsQuote(input.ipAddress);
-  if (!quote) {
+  const url = new URL('https://api.paritydeals.com/api/v1/deals/country/discount/');
+  url.searchParams.set('pd_identifier', identifier);
+  url.searchParams.set('country_code', country);
+
+  try {
+    const response = await fetchWithTimeout(url.toString(), {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      timeoutMs: 8_000,
+    });
+    if (!response.ok) {
+      console.warn('[paritydeals] Country discount API failed', response.status);
+      return null;
+    }
+    const body = await response.json() as Record<string, unknown>;
+    const quote = parseQuoteBody(body);
     return {
-      effectiveAmount: campaignAmount,
-      regionalPricingApplied: false,
-      geoPricingApplied: false,
-      geoRegionCode: null,
-      geoDiscountPercent: null,
-      quotedCountryCode: fallbackCountry,
-      parityDealsCouponCode: null,
+      ...quote,
+      countryCode: quote.countryCode ?? country,
+      // Country API is explicit — do not treat as VPN-blocked.
+      isVpn: false,
+      isProxy: false,
+      isTor: false,
     };
+  } catch (err) {
+    console.warn('[paritydeals] Country discount API error', err);
+    return null;
   }
+}
 
-  const blocked = quote.isVpn || quote.isProxy || quote.isTor;
-  const quotedCountryCode = quote.countryCode ?? fallbackCountry;
+function applyQuote(
+  campaignAmount: number,
+  quote: ParityDealsQuote,
+  fallbackCountry: string | null,
+  ignoreVpnBlock: boolean,
+): RegionalPricingApplyResult {
+  const blocked = !ignoreVpnBlock && (quote.isVpn || quote.isProxy || quote.isTor);
+  const quotedCountryCode = ignoreVpnBlock
+    ? (fallbackCountry ?? quote.countryCode)
+    : (quote.countryCode ?? fallbackCountry);
 
   if (blocked || quote.discountPercentage <= 0) {
     return {
@@ -131,5 +162,49 @@ export async function applyParityDealsPricing(input: {
     geoDiscountPercent: quote.discountPercentage,
     quotedCountryCode,
     parityDealsCouponCode: quote.couponCode,
+  };
+}
+
+/**
+ * Apply ParityDeals localized discount on top of the CMS campaign/base amount.
+ * VPN/proxy/Tor visitors get no regional discount unless ignoreVpnBlock (staging test only).
+ *
+ * No PARITYDEALS_API_KEY required for the IP discount API (pd_identifier only).
+ * Country API is an optional fallback (uses API key only when configured).
+ */
+export async function applyParityDealsPricing(input: {
+  campaignAmount: number;
+  ipAddress?: string | null;
+  fallbackCountryCode?: string | null;
+  /** Staging ?test=true only — trust Cloudflare country and ignore VPN flags. */
+  ignoreVpnBlock?: boolean;
+}): Promise<RegionalPricingApplyResult> {
+  const campaignAmount = input.campaignAmount;
+  const fallbackCountry = normalizeCountry(input.fallbackCountryCode);
+  const ignoreVpnBlock = input.ignoreVpnBlock === true;
+
+  // Primary path: IP discount API — works with pd_identifier only (no API key).
+  // In staging test mode, VPN/proxy flags are ignored so PK VPN still gets the %.
+  const quote = await fetchParityDealsQuote(input.ipAddress);
+  if (quote && quote.discountPercentage > 0) {
+    return applyQuote(campaignAmount, quote, fallbackCountry, ignoreVpnBlock);
+  }
+
+  // Optional fallback for staging test when IP lookup fails: country discount API.
+  if (ignoreVpnBlock && fallbackCountry) {
+    const byCountry = await fetchParityDealsQuoteByCountry(fallbackCountry);
+    if (byCountry && byCountry.discountPercentage > 0) {
+      return applyQuote(campaignAmount, byCountry, fallbackCountry, true);
+    }
+  }
+
+  return {
+    effectiveAmount: campaignAmount,
+    regionalPricingApplied: false,
+    geoPricingApplied: false,
+    geoRegionCode: null,
+    geoDiscountPercent: null,
+    quotedCountryCode: fallbackCountry,
+    parityDealsCouponCode: null,
   };
 }

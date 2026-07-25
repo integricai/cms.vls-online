@@ -158,6 +158,7 @@ export async function buildCourseDisplayPricing(
     prices: CourseGeoPrice[];
     countryCode?: string | null;
     ipAddress?: string | null;
+    ignoreVpnBlock?: boolean;
   },
   now: Date = new Date(),
 ): Promise<PublishedCoursePricing | null> {
@@ -197,6 +198,7 @@ export async function buildCourseDisplayPricing(
     campaignAmount: plans[0]!.effectiveAmount,
     ipAddress: input.ipAddress,
     fallbackCountryCode: input.countryCode,
+    ignoreVpnBlock: input.ignoreVpnBlock === true,
   });
 
   if (sample.regionalPricingApplied && sample.geoDiscountPercent != null) {
