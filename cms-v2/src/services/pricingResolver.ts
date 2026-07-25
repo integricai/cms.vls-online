@@ -1,7 +1,7 @@
 import type { CourseGeoPrice, ResolvedCoursePrice } from '../../shared/types';
 import { listActiveGeoPricesForCourse } from '../models/courseGeoPrice';
 import { effectiveAmount } from './courseGeoPriceValidation';
-import { applyGeoPricing } from './geoPricing';
+import { applyParityDealsPricing } from './parityDeals';
 
 export class PricingResolutionError extends Error {
   constructor(message: string) {
@@ -26,25 +26,20 @@ function toResolved(
   detectedCountryCode: string | null,
 ): ResolvedCoursePrice {
   const campaignAmount = effectiveAmount(price.amount, price.discountedPrice);
-  const geo = applyGeoPricing({
-    listAmount: price.amount,
-    campaignAmount,
-    countryCode: detectedCountryCode,
-  });
-
   return {
     price,
     matchReason,
-    effectiveAmount: geo.effectiveAmount,
+    effectiveAmount: campaignAmount,
     detectedCountryCode,
-    geoPricingApplied: geo.geoPricingApplied,
-    geoRegionCode: geo.geoRegionCode,
-    geoDiscountPercent: geo.geoDiscountPercent,
+    geoPricingApplied: false,
+    geoRegionCode: null,
+    geoDiscountPercent: null,
   };
 }
 
 /**
- * Resolve the best matching active USD price for a course.
+ * Resolve the best matching active USD price for a course (CMS base / campaign only).
+ * ParityDeals regional discounts are applied separately via applyParityDealsToResolved.
  *
  * Match order:
  * 1. Duration (when provided)
@@ -82,18 +77,42 @@ export function resolvePriceFromCandidates(
   throw new PricingResolutionError('No active price found for this course');
 }
 
+export async function applyParityDealsToResolved(
+  resolved: ResolvedCoursePrice,
+  input: {
+    ipAddress?: string | null;
+  } = {},
+): Promise<ResolvedCoursePrice> {
+  const regional = await applyParityDealsPricing({
+    campaignAmount: resolved.effectiveAmount,
+    ipAddress: input.ipAddress,
+    fallbackCountryCode: resolved.detectedCountryCode,
+  });
+
+  return {
+    ...resolved,
+    effectiveAmount: regional.effectiveAmount,
+    detectedCountryCode: regional.quotedCountryCode ?? resolved.detectedCountryCode,
+    geoPricingApplied: regional.geoPricingApplied,
+    geoRegionCode: regional.geoRegionCode,
+    geoDiscountPercent: regional.geoDiscountPercent,
+  };
+}
+
 export async function resolveCoursePrice(input: {
   courseId: number;
   durationMonths?: number | null;
   /** Reserved for future campaign/discount code matching. */
   campaignCode?: string | null;
   detectedCountryCode?: string | null;
+  ipAddress?: string | null;
 }): Promise<ResolvedCoursePrice> {
   const prices = await listActiveGeoPricesForCourse(input.courseId);
   if (prices.length === 0) {
     throw new PricingResolutionError('No active prices configured for this course');
   }
-  return resolvePriceFromCandidates(prices, input, {
+  const resolved = resolvePriceFromCandidates(prices, input, {
     detectedCountryCode: input.detectedCountryCode ?? null,
   });
+  return applyParityDealsToResolved(resolved, { ipAddress: input.ipAddress });
 }

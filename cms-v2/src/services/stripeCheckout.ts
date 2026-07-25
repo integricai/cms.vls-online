@@ -22,6 +22,9 @@ export async function createStripeCheckoutSession(input: {
   currency: string;
   studentEmail: string | null;
   countryCode?: string | null;
+  /** Manual capture for regional pricing so mismatches can be voided without a refund. */
+  captureMethod?: 'automatic' | 'manual';
+  regionalPricingApplied?: boolean;
 }): Promise<StripeCheckoutSession> {
   const secretKey = stripeSecretKey();
 
@@ -41,6 +44,9 @@ export async function createStripeCheckoutSession(input: {
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
   params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
   params.append('line_items[0][quantity]', '1');
+  if (input.captureMethod === 'manual') {
+    params.append('payment_intent_data[capture_method]', 'manual');
+  }
   appendParam(params, 'customer_email', input.studentEmail);
   params.append('metadata[orderId]', String(input.orderId));
   appendParam(params, 'metadata[paymentOptionId]', input.paymentOptionId);
@@ -50,6 +56,7 @@ export async function createStripeCheckoutSession(input: {
   params.append('metadata[courseTitle]', input.courseTitle);
   appendParam(params, 'metadata[studentEmail]', input.studentEmail);
   appendParam(params, 'metadata[countryCode]', input.countryCode);
+  appendParam(params, 'metadata[regionalPricingApplied]', input.regionalPricingApplied === true ? 'true' : 'false');
 
   const response = await fetchWithTimeout('https://api.stripe.com/v1/checkout/sessions', {
     method: 'POST',
@@ -138,6 +145,26 @@ export async function createStripeRefund(paymentIntentId: string): Promise<{ id:
   params.append('reason', 'requested_by_customer');
   const refund = await stripeApiPost<{ id: string }>('/refunds', params);
   return { id: refund.id };
+}
+
+export async function captureStripePaymentIntent(paymentIntentId: string): Promise<void> {
+  await stripeApiPost(`/payment_intents/${encodeURIComponent(paymentIntentId)}/capture`, new URLSearchParams());
+}
+
+export async function cancelStripePaymentIntent(paymentIntentId: string): Promise<void> {
+  const params = new URLSearchParams();
+  params.append('cancellation_reason', 'abandoned');
+  await stripeApiPost(`/payment_intents/${encodeURIComponent(paymentIntentId)}/cancel`, params);
+}
+
+/** Card issuing country only (no billing-address fallback) for regional pricing checks. */
+export async function fetchCardIssuingCountry(paymentIntentId: string): Promise<string | null> {
+  const intent = await stripeApiGet<StripePaymentIntent>(`/payment_intents/${encodeURIComponent(paymentIntentId)}`, {
+    'expand[]': 'payment_method',
+  });
+  const paymentMethod = typeof intent.payment_method === 'object' ? intent.payment_method : null;
+  const cardCountry = paymentMethod?.card?.country?.trim().toUpperCase();
+  return cardCountry || null;
 }
 
 export function verifyStripeWebhook(rawBody: Buffer, signatureHeader: string | undefined): unknown {

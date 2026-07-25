@@ -311,3 +311,23 @@ export async function markPaymentOrderRefunded(data: {
   `;
   return rowToOrder(rows[0] as DbRow);
 }
+
+/** Voided uncaptured authorization (regional mismatch) — not a Stripe refund. */
+export async function markPaymentOrderCancelled(data: {
+  orderId: number;
+  paymentMethodCountry: string | null;
+  zenlerEnrollmentStatus: string;
+  stripePaymentIntentId?: string | null;
+}): Promise<PaymentOrder> {
+  const rows = await sql`
+    UPDATE payment_orders
+    SET status = 'Cancelled',
+        payment_method_country = ${data.paymentMethodCountry},
+        zenler_enrollment_status = ${data.zenlerEnrollmentStatus},
+        stripe_payment_intent_id = COALESCE(${data.stripePaymentIntentId ?? null}, stripe_payment_intent_id),
+        refunded_at = NOW()
+    WHERE id = ${data.orderId}
+    RETURNING *
+  `;
+  return rowToOrder(rows[0] as DbRow);
+}

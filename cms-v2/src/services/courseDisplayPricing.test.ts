@@ -34,39 +34,42 @@ function geoPrice(partial: Partial<CourseGeoPrice> & Pick<CourseGeoPrice, 'id' |
   };
 }
 
-function run(name: string, fn: () => void): void {
-  try {
-    fn();
-    console.log(`  ✓ ${name}`);
-  } catch (err) {
-    console.error(`  ✗ ${name}`);
-    throw err;
-  }
+function run(name: string, fn: () => void | Promise<void>): Promise<void> {
+  return Promise.resolve()
+    .then(() => fn())
+    .then(() => {
+      console.log(`  ✓ ${name}`);
+    })
+    .catch(err => {
+      console.error(`  ✗ ${name}`);
+      throw err;
+    });
 }
 
+async function main() {
 console.log('courseDisplayPricing tests');
 
-run('August → September and December sessions', () => {
+await run('August → September and December sessions', () => {
   const sessions = getNextAccaExamSessions(new Date('2026-08-15T12:00:00Z'));
   assert.deepStrictEqual(sessions, [{ month: 9, year: 2026 }, { month: 12, year: 2026 }]);
 });
 
-run('October → December and March', () => {
+await run('October → December and March', () => {
   const sessions = getNextAccaExamSessions(new Date('2026-10-01T12:00:00Z'));
   assert.deepStrictEqual(sessions, [{ month: 12, year: 2026 }, { month: 3, year: 2027 }]);
 });
 
-run('January → March and June', () => {
+await run('January → March and June', () => {
   const sessions = getNextAccaExamSessions(new Date('2026-01-10T12:00:00Z'));
   assert.deepStrictEqual(sessions, [{ month: 3, year: 2026 }, { month: 6, year: 2026 }]);
 });
 
-run('months until September from August is 1', () => {
+await run('months until September from August is 1', () => {
   assert.strictEqual(monthsUntilExamSession(9, 2026, new Date('2026-08-15T12:00:00Z')), 1);
 });
 
-run('FA1 dual plans: shorter → September with late 50%, longer → December', () => {
-  const result = buildCourseDisplayPricing({
+await run('FA1 dual plans: shorter → September with late 50%, longer → December', async () => {
+  const result = await buildCourseDisplayPricing({
     zenlerCourseId: '71086',
     courseSlug: 'fa1',
     courseName: 'ACCA FA1',
@@ -113,8 +116,8 @@ run('FA1 dual plans: shorter → September with late 50%, longer → December', 
   assert.strictEqual(session2.badge, 'Best value');
 });
 
-run('single plan has no session labels or late discount', () => {
-  const result = buildCourseDisplayPricing({
+await run('single plan has no session labels or late discount', async () => {
+  const result = await buildCourseDisplayPricing({
     zenlerCourseId: '1',
     courseSlug: 'cima',
     courseName: 'CIMA',
@@ -137,9 +140,15 @@ run('single plan has no session labels or late discount', () => {
   assert.strictEqual(result!.plans[0]!.lateEnrollmentDiscount, false);
 });
 
-run('planDurationSortKey prefers duration_days', () => {
+await run('planDurationSortKey prefers duration_days', () => {
   assert.ok(planDurationSortKey(geoPrice({ id: 1, name: 'Six months', amount: 1, durationDays: 180 }))
     > planDurationSortKey(geoPrice({ id: 2, name: 'Three months', amount: 1, durationDays: 90 })));
 });
 
 console.log('All courseDisplayPricing tests passed.');
+}
+
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

@@ -32,7 +32,7 @@ import { listActiveCourses } from './models/course';
 import { listCoursePrices } from './models/coursePrice';
 import { listActiveGeoPricesByZenlerCourseId } from './models/courseGeoPrice';
 import { buildCourseDisplayPricing } from './services/courseDisplayPricing';
-import { detectCountryFromRequest } from './services/geoDetection';
+import { detectClientIpFromRequest, detectCountryFromRequest } from './services/geoDetection';
 import { refreshGeoPricingCache } from './services/geoPricing';
 import pricingRegionsRouter from './routes/pricingRegions';
 import { listPublicBooks } from './models/book';
@@ -169,13 +169,15 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
     }
 
     const geo = detectCountryFromRequest(req, String(req.query.countryCode ?? ''));
+    const clientIp = detectClientIpFromRequest(req);
 
-    const pricing = buildCourseDisplayPricing({
+    const pricing = await buildCourseDisplayPricing({
       zenlerCourseId: course.zenlerCourseId,
       courseSlug: course.courseSlug,
       courseName: course.courseName,
       prices: course.prices,
       countryCode: geo.countryCode,
+      ipAddress: clientIp,
     });
 
     if (!pricing) {

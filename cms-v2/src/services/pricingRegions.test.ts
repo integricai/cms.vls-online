@@ -1,40 +1,18 @@
 import assert from 'node:assert/strict';
 import {
-  applyGeoPricing,
-  geoPricingRegionsMatch,
-  refreshGeoPricingCache,
-  resolveGeoRegionCode,
-} from './geoPricing';
-import {
+  paymentCountriesMatchExact,
   shouldApplyRegionalPricingAtCheckout,
   shouldVerifyRegionalPricing,
 } from './paymentRegionalVerification';
 import type { PaymentOrder } from '../models/paymentOrder';
+import { applyParityDealsPricing } from './parityDeals';
 
 async function runTests() {
-  await refreshGeoPricingCache();
-
-  assert.equal(resolveGeoRegionCode('IN'), 'SOUTH_ASIA');
-  assert.equal(resolveGeoRegionCode('AE'), 'WEST_ASIA');
-  assert.equal(resolveGeoRegionCode('KE'), 'AFRICA');
-  assert.equal(resolveGeoRegionCode('GB'), null);
-  assert.equal(resolveGeoRegionCode('TH'), null);
-
-  assert.equal(geoPricingRegionsMatch('IN', 'PK'), true);
-  assert.equal(geoPricingRegionsMatch('IN', 'GB'), false);
-  assert.equal(geoPricingRegionsMatch('GB', 'US'), true);
-
-  const southAsia = applyGeoPricing({ listAmount: 190, campaignAmount: 133, countryCode: 'PK' });
-  assert.equal(southAsia.geoPricingApplied, true);
-  assert.equal(southAsia.effectiveAmount, 133);
-
-  const thailand = applyGeoPricing({ listAmount: 190, campaignAmount: 133, countryCode: 'TH' });
-  assert.equal(thailand.geoPricingApplied, false);
-  assert.equal(thailand.effectiveAmount, 133);
-
-  const uk = applyGeoPricing({ listAmount: 190, campaignAmount: 133, countryCode: 'GB' });
-  assert.equal(uk.geoPricingApplied, false);
-  assert.equal(uk.effectiveAmount, 133);
+  assert.equal(paymentCountriesMatchExact('TR', 'TR'), true);
+  assert.equal(paymentCountriesMatchExact('TR', 'GB'), false);
+  assert.equal(paymentCountriesMatchExact('IN', 'PK'), false);
+  assert.equal(paymentCountriesMatchExact(null, 'TR'), false);
+  assert.equal(paymentCountriesMatchExact('TR', null), false);
 
   assert.equal(shouldApplyRegionalPricingAtCheckout({ geoPricingApplied: true }), true);
   assert.equal(shouldApplyRegionalPricingAtCheckout({ geoPricingApplied: false }), false);
@@ -45,7 +23,17 @@ async function runTests() {
   const standardOrder = { regionalPricingApplied: false } as PaymentOrder;
   assert.equal(shouldVerifyRegionalPricing(standardOrder), false);
 
-  console.log('geo pricing + paymentRegionalVerification tests passed');
+  // Without PARITYDEALS_PD_IDENTIFIER / IP, pricing stays at CMS campaign amount.
+  const noPd = await applyParityDealsPricing({
+    campaignAmount: 133,
+    ipAddress: null,
+    fallbackCountryCode: 'PK',
+  });
+  assert.equal(noPd.regionalPricingApplied, false);
+  assert.equal(noPd.effectiveAmount, 133);
+  assert.equal(noPd.quotedCountryCode, 'PK');
+
+  console.log('paritydeals + paymentRegionalVerification tests passed');
 }
 
 runTests().catch(err => {

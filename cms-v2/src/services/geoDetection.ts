@@ -6,6 +6,25 @@ export interface GeoDetectionResult {
   source: 'manual' | 'cloudflare' | 'vercel' | 'header' | 'unknown';
 }
 
+/** Best-effort client IP for ParityDeals server-side discount lookup. */
+export function detectClientIpFromRequest(req: Request): string | null {
+  const cf = String(req.get('cf-connecting-ip') ?? '').trim();
+  if (cf) return cf;
+
+  const realIp = String(req.get('x-real-ip') ?? '').trim();
+  if (realIp) return realIp;
+
+  const forwarded = String(req.get('x-forwarded-for') ?? '')
+    .split(',')
+    .map(part => part.trim())
+    .find(Boolean);
+  if (forwarded) return forwarded;
+
+  const remote = req.socket?.remoteAddress?.trim();
+  if (!remote) return null;
+  return remote.replace(/^::ffff:/, '');
+}
+
 /**
  * Detect visitor country from request headers.
  * Priority: manual override → Cloudflare → Vercel → generic geo headers.

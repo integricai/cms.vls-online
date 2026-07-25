@@ -98,10 +98,13 @@ export default function GeoPricingTab() {
     <div className="p-6">
       <div className="mb-4 max-w-3xl">
         <h2 className="text-base font-semibold text-slate-800">Geo Pricing</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Map ISO country codes to pricing regions. Visitors from mapped countries receive the region
-          discount off the list price (then the lower of geo vs campaign price applies). Countries not
-          listed here use standard course pricing only.
+        <div className="mt-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Regional discounts are now applied by <strong>ParityDeals</strong>. This tab is kept for
+          reference only and is no longer used at checkout or on the price card.
+        </div>
+        <p className="mt-2 text-sm text-slate-500">
+          Legacy region → country mapping (inactive for live pricing). Configure PPP rules in the
+          ParityDeals dashboard instead.
         </p>
       </div>
 

@@ -247,7 +247,7 @@ export async function syncCoursePricingToStoryblok(
 
   const geo = await listActiveGeoPricesByZenlerCourseId(course.zenlerCourseId);
   const pricing = geo
-    ? buildCourseDisplayPricing({
+    ? await buildCourseDisplayPricing({
       zenlerCourseId: geo.zenlerCourseId,
       courseSlug: geo.courseSlug,
       courseName: geo.courseName,

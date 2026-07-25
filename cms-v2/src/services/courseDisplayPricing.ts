@@ -1,6 +1,6 @@
 import type { CourseGeoPrice } from '../../shared/types';
 import { effectiveAmount, roundMoney } from './courseGeoPriceValidation';
-import { applyGeoPricing } from './geoPricing';
+import { applyParityDealsPricing } from './parityDeals';
 /** ACCA exam sittings: March, June, September, December. */
 export const ACCA_EXAM_MONTHS = [3, 6, 9, 12] as const;
 
@@ -117,12 +117,8 @@ function buildPlanFields(
     ? roundMoney(tableDiscount * 0.5)
     : tableDiscount;
 
-  const geo = applyGeoPricing({
-    listAmount: price.amount,
-    campaignAmount,
-    countryCode: options.countryCode ?? null,
-  });
-  const effective = geo.effectiveAmount;
+  // CMS campaign / late-enrollment only — ParityDeals applied in buildCourseDisplayPricing.
+  const effective = campaignAmount;
 
   const compareAt = lateEnrollmentDiscount
     ? tableDiscount
@@ -149,21 +145,22 @@ function buildPlanFields(
     lateEnrollmentDiscount,
     isDefault: price.isDefault,
     badge: options.badge,
-    geoPricingApplied: geo.geoPricingApplied,
-    geoRegionCode: geo.geoRegionCode,
+    geoPricingApplied: false,
+    geoRegionCode: null,
   };
 }
 
-export function buildCourseDisplayPricing(
+export async function buildCourseDisplayPricing(
   input: {
     zenlerCourseId: string;
     courseSlug: string | null;
     courseName: string;
     prices: CourseGeoPrice[];
     countryCode?: string | null;
+    ipAddress?: string | null;
   },
   now: Date = new Date(),
-): PublishedCoursePricing | null {
+): Promise<PublishedCoursePricing | null> {
   const active = input.prices.filter(p => p.isActive);
   if (active.length === 0) return null;
 
@@ -192,6 +189,32 @@ export function buildCourseDisplayPricing(
         badge: index === 1 ? 'Best value' : null,
         countryCode: input.countryCode,
       });
+    });
+  }
+
+  // One ParityDeals lookup per request — apply the same localized % to every plan.
+  const sample = await applyParityDealsPricing({
+    campaignAmount: plans[0]!.effectiveAmount,
+    ipAddress: input.ipAddress,
+    fallbackCountryCode: input.countryCode,
+  });
+
+  if (sample.regionalPricingApplied && sample.geoDiscountPercent != null) {
+    const percent = sample.geoDiscountPercent;
+    plans = plans.map(plan => {
+      const effective = roundMoney(plan.effectiveAmount * (1 - percent / 100));
+      const compareAt = plan.compareAt != null && plan.compareAt > effective
+        ? plan.compareAt
+        : (plan.effectiveAmount > effective ? plan.effectiveAmount : plan.compareAt);
+      return {
+        ...plan,
+        effectiveAmount: effective,
+        compareAt,
+        formatted: formatUsd(effective),
+        formattedCompareAt: compareAt != null ? formatUsd(compareAt) : null,
+        geoPricingApplied: true,
+        geoRegionCode: sample.geoRegionCode,
+      };
     });
   }
 
