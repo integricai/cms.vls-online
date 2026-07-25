@@ -1,7 +1,7 @@
 import type { CourseGeoPrice, ResolvedCoursePrice } from '../../shared/types';
 import { listActiveGeoPricesForCourse } from '../models/courseGeoPrice';
 import { effectiveAmount } from './courseGeoPriceValidation';
-import { applyParityDealsPricing } from './parityDeals';
+import { applyEvenDealsPricing } from './evenDeals';
 
 export class PricingResolutionError extends Error {
   constructor(message: string) {
@@ -39,7 +39,7 @@ function toResolved(
 
 /**
  * Resolve the best matching active USD price for a course (CMS base / campaign only).
- * ParityDeals regional discounts are applied separately via applyParityDealsToResolved.
+ * Evendeals regional discounts are applied separately via applyParityDealsToResolved.
  *
  * Match order:
  * 1. Duration (when provided)
@@ -84,7 +84,7 @@ export async function applyParityDealsToResolved(
     ignoreVpnBlock?: boolean;
   } = {},
 ): Promise<ResolvedCoursePrice> {
-  const regional = await applyParityDealsPricing({
+  const regional = await applyEvenDealsPricing({
     campaignAmount: resolved.effectiveAmount,
     ipAddress: input.ipAddress,
     fallbackCountryCode: resolved.detectedCountryCode,

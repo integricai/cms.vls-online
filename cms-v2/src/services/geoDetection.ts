@@ -6,7 +6,7 @@ export interface GeoDetectionResult {
   source: 'manual' | 'cloudflare' | 'vercel' | 'header' | 'unknown';
 }
 
-/** Best-effort client IP for ParityDeals server-side discount lookup. */
+/** Best-effort client IP for Evendeals server-side discount lookup. */
 export function detectClientIpFromRequest(req: Request): string | null {
   // Explicit hop from vls-api / Next proxy (visitor IP, not the server).
   const forwardedClient = String(req.get('x-vls-client-ip') ?? '').trim();

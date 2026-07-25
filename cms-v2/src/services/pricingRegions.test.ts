@@ -23,7 +23,7 @@ async function runTests() {
   const standardOrder = { regionalPricingApplied: false } as PaymentOrder;
   assert.equal(shouldVerifyRegionalPricing(standardOrder), false);
 
-  // Without PARITYDEALS_PD_IDENTIFIER / IP, pricing stays at CMS campaign amount.
+  // Without EVENDEALS_API_KEY / PRODUCT_ID / IP, pricing stays at CMS campaign amount.
   const noPd = await applyParityDealsPricing({
     campaignAmount: 133,
     ipAddress: null,
@@ -33,7 +33,7 @@ async function runTests() {
   assert.equal(noPd.effectiveAmount, 133);
   assert.equal(noPd.quotedCountryCode, 'PK');
 
-  // ignoreVpnBlock still needs a ParityDeals quote; without identifier it stays CMS price.
+  // ignoreVpnBlock still needs an Evendeals quote; without credentials it stays CMS price.
   const testMode = await applyParityDealsPricing({
     campaignAmount: 203,
     ipAddress: null,
@@ -42,7 +42,7 @@ async function runTests() {
   });
   assert.equal(testMode.effectiveAmount, 203);
 
-  console.log('paritydeals + paymentRegionalVerification tests passed');
+  console.log('evendeals + paymentRegionalVerification tests passed');
 }
 
 runTests().catch(err => {

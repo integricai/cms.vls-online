@@ -9,16 +9,20 @@ function envFlagTrue(value: string | undefined): boolean {
   return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
 }
 
+function envTrim(value: string | undefined): string {
+  return String(value ?? '')
+    .trim()
+    .replace(/^['"]|['"]$/g, '');
+}
+
 /**
- * Staging-only ParityDeals test mode: ignore VPN/proxy blocks and trust Cloudflare country.
- * Enabled only when CMS allows it AND the request opts in (?test=true / header).
+ * Staging-only regional PPP test mode: ignore VPN/proxy blocks and trust Cloudflare country.
+ * Enabled when CMS allows it AND the request opts in (?test=true / header).
  */
 export function isParityDealsTestAllowed(): boolean {
   if (envFlagTrue(process.env.ALLOW_PARITYDEALS_TEST)) return true;
-  const env = String(process.env.CMS_ENV ?? process.env.SITE_ENV ?? '')
-    .trim()
-    .replace(/^['"]|['"]$/g, '')
-    .toLowerCase();
+  if (envFlagTrue(process.env.ALLOW_EVENDEALS_TEST)) return true;
+  const env = envTrim(process.env.CMS_ENV ?? process.env.SITE_ENV).toLowerCase();
   return env === 'staging';
 }
 
@@ -34,15 +38,18 @@ export function isParityDealsTestRequest(req: Request): boolean {
 
 /** Safe diagnostics for publish pricing (no secrets). */
 export function parityDealsRuntimeStatus(req: Request): {
+  provider: 'evendeals';
+  apiKeyConfigured: boolean;
+  productIdConfigured: boolean;
+  /** @deprecated Use apiKeyConfigured / productIdConfigured */
   pdIdentifierConfigured: boolean;
   testAllowed: boolean;
   testRequested: boolean;
   testMode: boolean;
   clientIpPresent: boolean;
 } {
-  const identifier = String(process.env.PARITYDEALS_PD_IDENTIFIER ?? '')
-    .trim()
-    .replace(/^['"]|['"]$/g, '');
+  const apiKeyConfigured = envTrim(process.env.EVENDEALS_API_KEY).length > 0;
+  const productIdConfigured = envTrim(process.env.EVENDEALS_PRODUCT_ID).length > 0;
   const testAllowed = isParityDealsTestAllowed();
   const header = String(req.get('x-vls-parity-test') ?? '').trim().toLowerCase();
   const query = String(req.query.test ?? '').trim().toLowerCase();
@@ -51,7 +58,10 @@ export function parityDealsRuntimeStatus(req: Request): {
   const clientIp = String(req.get('x-vls-client-ip') ?? req.get('cf-connecting-ip') ?? '').trim();
 
   return {
-    pdIdentifierConfigured: identifier.length > 0,
+    provider: 'evendeals',
+    apiKeyConfigured,
+    productIdConfigured,
+    pdIdentifierConfigured: apiKeyConfigured && productIdConfigured,
     testAllowed,
     testRequested,
     testMode: testAllowed && testRequested,

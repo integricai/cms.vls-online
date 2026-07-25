@@ -33,7 +33,7 @@ export function paymentCountriesMatchExact(
   return quoted === payment;
 }
 
-/** Whether checkout used ParityDeals regional pricing that must match the card country. */
+/** Whether checkout used regional PPP pricing that must match the card country. */
 export function shouldVerifyRegionalPricing(order: PaymentOrder): boolean {
   return order.regionalPricingApplied === true;
 }

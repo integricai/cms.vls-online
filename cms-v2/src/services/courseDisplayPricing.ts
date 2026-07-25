@@ -1,6 +1,6 @@
 import type { CourseGeoPrice } from '../../shared/types';
 import { effectiveAmount, roundMoney } from './courseGeoPriceValidation';
-import { applyParityDealsPricing } from './parityDeals';
+import { applyEvenDealsPricing } from './evenDeals';
 /** ACCA exam sittings: March, June, September, December. */
 export const ACCA_EXAM_MONTHS = [3, 6, 9, 12] as const;
 
@@ -117,7 +117,7 @@ function buildPlanFields(
     ? roundMoney(tableDiscount * 0.5)
     : tableDiscount;
 
-  // CMS campaign / late-enrollment only — ParityDeals applied in buildCourseDisplayPricing.
+  // CMS campaign / late-enrollment only — Evendeals applied in buildCourseDisplayPricing.
   const effective = campaignAmount;
 
   const compareAt = lateEnrollmentDiscount
@@ -193,8 +193,8 @@ export async function buildCourseDisplayPricing(
     });
   }
 
-  // One ParityDeals lookup per request — apply the same localized % to every plan.
-  const sample = await applyParityDealsPricing({
+  // One Evendeals lookup per request — apply the same localized % to every plan.
+  const sample = await applyEvenDealsPricing({
     campaignAmount: plans[0]!.effectiveAmount,
     ipAddress: input.ipAddress,
     fallbackCountryCode: input.countryCode,
