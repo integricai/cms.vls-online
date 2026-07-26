@@ -6,6 +6,10 @@ import type {
   CoursePriceImportResult,
   CoursePricingSummary,
 } from '../../../../shared/types';
+import {
+  EVENDEALS_PRODUCT_OPTIONS,
+  evenDealsProductLabel,
+} from '../../../../shared/evenDealsProducts';
 
 type View = 'list' | 'manage' | 'import';
 
@@ -39,6 +43,7 @@ type PriceDraft = {
   examSessionMonth: string;
   examSessionYear: string;
   durationDays: string;
+  evenDeals: string;
   isActive: boolean;
   isDefault: boolean;
   stripePriceId: string;
@@ -54,6 +59,7 @@ function emptyDraft(): PriceDraft {
     examSessionMonth: String(MONTH_OPTIONS[0]!.value),
     examSessionYear: String(CURRENT_YEAR),
     durationDays: '',
+    evenDeals: '',
     isActive: true,
     isDefault: false,
     stripePriceId: '',
@@ -78,6 +84,7 @@ function priceToDraft(price: CourseGeoPrice): PriceDraft {
     examSessionMonth: price.examSessionMonth != null ? String(price.examSessionMonth) : String(MONTH_OPTIONS[0]!.value),
     examSessionYear: price.examSessionYear != null ? String(price.examSessionYear) : String(CURRENT_YEAR),
     durationDays: price.durationDays != null ? String(price.durationDays) : '',
+    evenDeals: price.evenDeals ?? '',
     isActive: price.isActive,
     isDefault: price.isDefault,
     stripePriceId: price.stripePriceId ?? '',
@@ -224,6 +231,7 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
         examSessionYear: draft.pricingMode === 'session' ? Number(draft.examSessionYear) : null,
         durationDays: draft.pricingMode === 'duration' ? Number(draft.durationDays) : null,
         stripePriceId: draft.stripePriceId.trim() || null,
+        evenDeals: draft.evenDeals.trim() || null,
       };
 
       if (editingId) {
@@ -653,6 +661,19 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
               Stripe price ID
               <input className="input mt-1" value={draft.stripePriceId} onChange={e => setDraft(d => ({ ...d, stripePriceId: e.target.value }))} />
             </label>
+            <label className="text-xs text-slate-600">
+              Evendeals
+              <select
+                className="input mt-1"
+                value={draft.evenDeals}
+                onChange={e => setDraft(d => ({ ...d, evenDeals: e.target.value }))}
+              >
+                <option value="">Default (env product)</option>
+                {EVENDEALS_PRODUCT_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
             <div className="flex items-end gap-4 pb-2 text-xs text-slate-700">
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={draft.isActive} onChange={e => setDraft(d => ({ ...d, isActive: e.target.checked }))} />
@@ -688,6 +709,7 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
                 <th className="px-3 py-2">Discount</th>
                 <th className="px-3 py-2">Final price</th>
                 <th className="px-3 py-2">Pricing</th>
+                <th className="px-3 py-2">Evendeals</th>
                 <th className="px-3 py-2">Compare-at</th>
                 <th className="px-3 py-2">Active</th>
                 <th className="px-3 py-2">Default</th>
@@ -697,7 +719,7 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
             <tbody>
               {prices.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-3 py-6 text-center text-slate-500">No prices yet. Add a default price to start.</td>
+                  <td colSpan={10} className="px-3 py-6 text-center text-slate-500">No prices yet. Add a default price to start.</td>
                 </tr>
               )}
               {prices.map(price => (
@@ -707,6 +729,7 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
                   <td className="px-3 py-2">{price.discountPercent != null && price.discountPercent > 0 ? `${price.discountPercent}%` : '—'}</td>
                   <td className="px-3 py-2 font-medium text-emerald-800">{formatMoney(price.effectiveAmount, 'USD')}</td>
                   <td className="px-3 py-2">{formatPricingMode(price)}</td>
+                  <td className="px-3 py-2">{evenDealsProductLabel(price.evenDeals) ?? 'Default'}</td>
                   <td className="px-3 py-2">{formatMoney(price.compareAtAmount, 'USD')}</td>
                   <td className="px-3 py-2">{price.isActive ? 'Yes' : 'No'}</td>
                   <td className="px-3 py-2">{price.isDefault ? 'Yes' : 'No'}</td>
@@ -737,7 +760,7 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
           {!embedded && <h1 className="text-xl font-semibold text-slate-900">Course Pricing</h1>}
           {embedded && <h2 className="text-sm font-bold text-slate-700">Course Pricing</h2>}
           <p className="text-sm text-slate-500">
-            Manage USD prices per course and duration. Regional discounts are handled by ParityDeals.
+            Manage USD prices per course and duration. Regional discounts are handled by Evendeals (per price).
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

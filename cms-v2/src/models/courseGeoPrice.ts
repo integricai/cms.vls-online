@@ -27,6 +27,7 @@ interface DbRow {
   is_active: boolean;
   stripe_price_id: string | null;
   zenler_pricing_code: string | null;
+  evendeals: string | null;
   pricing_mode: CoursePricingMode;
   exam_session_month: number | null;
   exam_session_year: number | null;
@@ -76,6 +77,7 @@ export function rowToCourseGeoPrice(row: DbRow): CourseGeoPrice {
     isActive: row.is_active,
     stripePriceId: row.stripe_price_id,
     zenlerPricingCode: row.zenler_pricing_code,
+    evenDeals: row.evendeals ?? null,
     pricingMode: row.pricing_mode,
     examSessionMonth: row.exam_session_month,
     examSessionYear: row.exam_session_year,
@@ -442,7 +444,7 @@ export async function createGeoPrice(input: CourseGeoPriceInput): Promise<Course
     INSERT INTO course_geo_prices (
       course_id, name, currency, amount, compare_at_amount,
       discount_percent, discounted_price,
-      is_default, is_active, stripe_price_id, zenler_pricing_code,
+      is_default, is_active, stripe_price_id, zenler_pricing_code, evendeals,
       pricing_mode, exam_session_month, exam_session_year, duration_days, duration_months
     ) VALUES (
       ${input.courseId},
@@ -456,6 +458,7 @@ export async function createGeoPrice(input: CourseGeoPriceInput): Promise<Course
       ${isActive},
       ${input.stripePriceId?.trim() || null},
       ${input.zenlerPricingCode?.trim() || null},
+      ${input.evenDeals?.trim() || null},
       ${pricingMode},
       ${pricingMode === 'session' ? (input.examSessionMonth ?? null) : null},
       ${pricingMode === 'session' ? (input.examSessionYear ?? null) : null},
@@ -494,6 +497,9 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
     zenlerPricingCode: input.zenlerPricingCode !== undefined
       ? (input.zenlerPricingCode?.trim() || null)
       : existing.zenlerPricingCode,
+    evenDeals: input.evenDeals !== undefined
+      ? (input.evenDeals?.trim() || null)
+      : existing.evenDeals,
     pricingMode,
     examSessionMonth: pricingMode === 'session' ? (examSessionMonth ?? null) : null,
     examSessionYear: pricingMode === 'session' ? (examSessionYear ?? null) : null,
@@ -519,6 +525,7 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
         is_active = ${nextInput.isActive},
         stripe_price_id = ${nextInput.stripePriceId},
         zenler_pricing_code = ${nextInput.zenlerPricingCode},
+        evendeals = ${nextInput.evenDeals ?? null},
         pricing_mode = ${nextInput.pricingMode},
         exam_session_month = ${nextInput.examSessionMonth},
         exam_session_year = ${nextInput.examSessionYear},

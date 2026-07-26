@@ -1,6 +1,12 @@
 import type { CourseGeoPrice } from '../../shared/types';
 import { effectiveAmount, roundMoney } from './courseGeoPriceValidation';
-import { applyEvenDealsPricing } from './evenDeals';
+import {
+  applyEvenDealsQuote,
+  fetchEvenDealsQuote,
+  resolveEvenDealsProductId,
+  type EvenDealsQuote,
+} from './evenDeals';
+
 /** ACCA exam sittings: March, June, September, December. */
 export const ACCA_EXAM_MONTHS = [3, 6, 9, 12] as const;
 
@@ -193,32 +199,55 @@ export async function buildCourseDisplayPricing(
     });
   }
 
-  // One Evendeals lookup per request — apply the same localized % to every plan.
-  const sample = await applyEvenDealsPricing({
-    campaignAmount: plans[0]!.effectiveAmount,
-    ipAddress: input.ipAddress,
-    fallbackCountryCode: input.countryCode,
-    ignoreVpnBlock: input.ignoreVpnBlock === true,
-  });
+  // Quote once per distinct Evendeals product id (plans may use different deals).
+  const sourcePrices = sorted.length === 1 ? [sorted[0]!] : sorted.slice(0, 2);
+  const quoteCache = new Map<string, EvenDealsQuote | null>();
+  const ignoreVpnBlock = input.ignoreVpnBlock === true;
+  const resolvedPlans: PublishedCoursePricePlan[] = [];
 
-  if (sample.regionalPricingApplied && sample.geoDiscountPercent != null) {
-    const percent = sample.geoDiscountPercent;
-    plans = plans.map(plan => {
-      const effective = roundMoney(plan.effectiveAmount * (1 - percent / 100));
-      const compareAt = plan.compareAt != null && plan.compareAt > effective
-        ? plan.compareAt
-        : (plan.effectiveAmount > effective ? plan.effectiveAmount : plan.compareAt);
-      return {
-        ...plan,
-        effectiveAmount: effective,
-        compareAt,
-        formatted: formatUsd(effective),
-        formattedCompareAt: compareAt != null ? formatUsd(compareAt) : null,
-        geoPricingApplied: true,
-        geoRegionCode: sample.geoRegionCode,
-      };
+  for (let index = 0; index < plans.length; index += 1) {
+    const plan = plans[index]!;
+    const price = sourcePrices[index] ?? sourcePrices[0]!;
+    const productKey = resolveEvenDealsProductId(price.evenDeals) ?? '';
+
+    if (!quoteCache.has(productKey)) {
+      quoteCache.set(productKey, await fetchEvenDealsQuote(input.ipAddress, price.evenDeals));
+    }
+
+    const quote = quoteCache.get(productKey);
+    if (!quote || quote.discountPercentage <= 0) {
+      resolvedPlans.push(plan);
+      continue;
+    }
+
+    const regional = applyEvenDealsQuote(
+      plan.effectiveAmount,
+      quote,
+      input.countryCode ?? null,
+      ignoreVpnBlock,
+    );
+    if (!regional.regionalPricingApplied) {
+      resolvedPlans.push(plan);
+      continue;
+    }
+
+    const effective = regional.effectiveAmount;
+    const compareAt = plan.compareAt != null && plan.compareAt > effective
+      ? plan.compareAt
+      : (plan.effectiveAmount > effective ? plan.effectiveAmount : plan.compareAt);
+
+    resolvedPlans.push({
+      ...plan,
+      effectiveAmount: effective,
+      compareAt,
+      formatted: formatUsd(effective),
+      formattedCompareAt: compareAt != null ? formatUsd(compareAt) : null,
+      geoPricingApplied: true,
+      geoRegionCode: regional.geoRegionCode,
     });
   }
+
+  plans = resolvedPlans;
 
   const defaultPlan = plans.find(p => p.isDefault) ?? plans[0]!;
 

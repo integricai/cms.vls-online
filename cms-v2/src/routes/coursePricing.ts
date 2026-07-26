@@ -54,6 +54,9 @@ function parseBodyInput(body: Record<string, unknown>, courseId: number): Course
     stripePriceId: body.stripePriceId == null || body.stripePriceId === ''
       ? null
       : String(body.stripePriceId),
+    evenDeals: body.evenDeals == null || body.evenDeals === ''
+      ? null
+      : String(body.evenDeals),
     pricingMode,
     examSessionMonth: body.examSessionMonth == null || body.examSessionMonth === ''
       ? null

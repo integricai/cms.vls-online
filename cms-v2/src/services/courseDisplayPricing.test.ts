@@ -22,6 +22,7 @@ function geoPrice(partial: Partial<CourseGeoPrice> & Pick<CourseGeoPrice, 'id' |
     isActive: true,
     stripePriceId: null,
     zenlerPricingCode: null,
+    evenDeals: null,
     pricingMode: 'duration',
     examSessionMonth: null,
     examSessionYear: null,

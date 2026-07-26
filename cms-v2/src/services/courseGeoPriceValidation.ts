@@ -1,4 +1,5 @@
 import type { CoursePricingMode, CourseGeoPriceInput } from '../../shared/types';
+import { isEvenDealsProductId } from '../../shared/evenDealsProducts';
 
 export interface ValidationIssue {
   field?: string;
@@ -102,6 +103,13 @@ export function validateGeoPriceInput(
     }
   }
 
+  if (input.evenDeals != null && String(input.evenDeals).trim() !== '') {
+    const evenDeals = String(input.evenDeals).trim();
+    if (!isEvenDealsProductId(evenDeals)) {
+      issues.push({ field: 'evenDeals', message: 'evendeals must be one of the configured product IDs' });
+    }
+  }
+
   return issues;
 }
 
@@ -127,6 +135,13 @@ export function normalizeGeoPriceInput(input: CourseGeoPriceInput): CourseGeoPri
     isDefault: Boolean(input.isDefault),
     isActive: input.isActive !== false,
     stripePriceId: input.stripePriceId?.trim() || null,
+    ...(input.evenDeals !== undefined
+      ? {
+          evenDeals: input.evenDeals == null || String(input.evenDeals).trim() === ''
+            ? null
+            : String(input.evenDeals).trim(),
+        }
+      : {}),
     pricingMode,
     examSessionMonth: pricingMode === 'session' && Number.isFinite(Number(input.examSessionMonth))
       ? Number(input.examSessionMonth)

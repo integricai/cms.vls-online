@@ -68,6 +68,11 @@ export function parseImportRow(raw: Record<string, unknown>, rowNumber: number):
     examSessionMonth: parseNumber(cell(raw, 'exam_session_month', 'examSessionMonth')),
     examSessionYear: parseNumber(cell(raw, 'exam_session_year', 'examSessionYear')),
     durationDays: parseNumber(cell(raw, 'duration_days', 'durationDays')),
+    evenDeals: (() => {
+      const rawValue = cell(raw, 'evendeals', 'evenDeals', 'even_deals');
+      if (rawValue == null || rawValue === '') return undefined;
+      return String(rawValue).trim() || null;
+    })(),
   };
 }
 
@@ -212,6 +217,7 @@ export async function previewCoursePriceImport(
       isDefault: effectiveFlags.isDefault,
       isActive: effectiveFlags.isActive,
       zenlerPricingCode: parsed.pricingCode ?? null,
+      ...(parsed.evenDeals !== undefined ? { evenDeals: parsed.evenDeals } : {}),
       pricingMode: parsed.pricingMode,
       examSessionMonth: parsed.examSessionMonth,
       examSessionYear: parsed.examSessionYear,
@@ -257,6 +263,7 @@ export async function previewCoursePriceImport(
         discountPercent: input.discountPercent,
         isDefault: effectiveFlags.isDefault,
         isActive: effectiveFlags.isActive,
+        evenDeals: parsed.evenDeals !== undefined ? (input.evenDeals ?? null) : parsed.evenDeals,
         pricingMode: input.pricingMode,
         examSessionMonth: input.examSessionMonth,
         examSessionYear: input.examSessionYear,
@@ -333,6 +340,7 @@ export async function commitCoursePriceImport(
         isDefault: row.price.isDefault ?? false,
         isActive: row.price.isActive ?? true,
         zenlerPricingCode: row.price.pricingCode ?? null,
+        ...(row.price.evenDeals !== undefined ? { evenDeals: row.price.evenDeals } : {}),
         pricingMode: row.price.pricingMode,
         examSessionMonth: row.price.examSessionMonth,
         examSessionYear: row.price.examSessionYear,
@@ -375,12 +383,13 @@ export const PRICING_TEMPLATE_HEADERS = [
   'is_default',
   'is_active',
   'stripe_price_id',
+  'evendeals',
 ] as const;
 
 export const PRICING_TEMPLATE_EXAMPLE_ROWS: string[][] = [
-  ['71086', '78691', 'fa1', 'ACCA FA1', 'Six Months Access', '150.00', '10', '175.00', 'duration', '180', '', '', 'true', 'true', ''],
-  ['71086', '191934', 'fa1', 'ACCA FA1', 'Four Months Access', '130.00', '', '150.00', 'duration', '120', '', '', 'false', 'true', ''],
-  ['12918', '', 'f1', 'ACCA F1', 'November 2026 Session', '349.00', '15', '399.00', 'session', '', '11', '2026', 'true', 'true', ''],
+  ['71086', '78691', 'fa1', 'ACCA FA1', 'Six Months Access', '150.00', '10', '175.00', 'duration', '180', '', '', 'true', 'true', '', '73e50a3e-152a-4d61-b0eb-4229f831bf39'],
+  ['71086', '191934', 'fa1', 'ACCA FA1', 'Four Months Access', '130.00', '', '150.00', 'duration', '120', '', '', 'false', 'true', '', '73e50a3e-152a-4d61-b0eb-4229f831bf39'],
+  ['12918', '', 'f1', 'ACCA F1', 'November 2026 Session', '349.00', '15', '399.00', 'session', '', '11', '2026', 'true', 'true', '', '81318eab-7b83-4b9b-babc-808fc0bc2433'],
 ];
 
 export function buildPricingTemplateCsv(): string {

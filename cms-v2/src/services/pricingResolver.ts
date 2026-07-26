@@ -88,6 +88,7 @@ export async function applyParityDealsToResolved(
     campaignAmount: resolved.effectiveAmount,
     ipAddress: input.ipAddress,
     fallbackCountryCode: resolved.detectedCountryCode,
+    productId: resolved.price.evenDeals,
     ignoreVpnBlock: input.ignoreVpnBlock === true,
   });
 

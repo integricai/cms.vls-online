@@ -32,9 +32,16 @@ function apiKey(): string | null {
   return key || null;
 }
 
-function productId(): string | null {
+function defaultProductId(): string | null {
   const id = envTrim(process.env.EVENDEALS_PRODUCT_ID);
   return id || null;
+}
+
+/** Prefer per-price product id; fall back to EVENDEALS_PRODUCT_ID. */
+export function resolveEvenDealsProductId(productId?: string | null): string | null {
+  const override = String(productId ?? '').trim();
+  if (override) return override;
+  return defaultProductId();
 }
 
 function normalizeCountry(value: unknown): string | null {
@@ -77,11 +84,14 @@ function parseQuoteBody(body: Record<string, unknown>): EvenDealsQuote | null {
 
 /**
  * Server-side Evendeals discount lookup by visitor IP.
- * Requires EVENDEALS_API_KEY + EVENDEALS_PRODUCT_ID (Pro plan).
+ * Requires EVENDEALS_API_KEY and a product id (per-price or EVENDEALS_PRODUCT_ID).
  */
-export async function fetchEvenDealsQuote(ipAddress: string | null | undefined): Promise<EvenDealsQuote | null> {
+export async function fetchEvenDealsQuote(
+  ipAddress: string | null | undefined,
+  productId?: string | null,
+): Promise<EvenDealsQuote | null> {
   const key = apiKey();
-  const product = productId();
+  const product = resolveEvenDealsProductId(productId);
   const ip = String(ipAddress ?? '').trim();
   if (!key || !product || !ip) return null;
 
@@ -113,7 +123,7 @@ export async function fetchEvenDealsQuote(ipAddress: string | null | undefined):
   }
 }
 
-function applyQuote(
+export function applyEvenDealsQuote(
   campaignAmount: number,
   quote: EvenDealsQuote,
   fallbackCountry: string | null,
@@ -158,6 +168,8 @@ export async function applyEvenDealsPricing(input: {
   campaignAmount: number;
   ipAddress?: string | null;
   fallbackCountryCode?: string | null;
+  /** Per-price Evendeals product id; falls back to EVENDEALS_PRODUCT_ID. */
+  productId?: string | null;
   /** Staging ?test=true only — trust Cloudflare country and ignore VPN flags. */
   ignoreVpnBlock?: boolean;
 }): Promise<RegionalPricingApplyResult> {
@@ -165,9 +177,9 @@ export async function applyEvenDealsPricing(input: {
   const fallbackCountry = normalizeCountry(input.fallbackCountryCode);
   const ignoreVpnBlock = input.ignoreVpnBlock === true;
 
-  const quote = await fetchEvenDealsQuote(input.ipAddress);
+  const quote = await fetchEvenDealsQuote(input.ipAddress, input.productId);
   if (quote && quote.discountPercentage > 0) {
-    return applyQuote(campaignAmount, quote, fallbackCountry, ignoreVpnBlock);
+    return applyEvenDealsQuote(campaignAmount, quote, fallbackCountry, ignoreVpnBlock);
   }
 
   return {

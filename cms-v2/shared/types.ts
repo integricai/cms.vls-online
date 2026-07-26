@@ -208,6 +208,8 @@ export interface CourseGeoPrice {
   stripePriceId: string | null;
   /** Zenler payment-option id (bulk import / checkout mapping). */
   zenlerPricingCode: string | null;
+  /** Evendeals product id for localized PPP; null falls back to EVENDEALS_PRODUCT_ID. */
+  evenDeals: string | null;
   pricingMode: CoursePricingMode;
   examSessionMonth: number | null;
   examSessionYear: number | null;
@@ -230,6 +232,8 @@ export type CourseGeoPriceInput = {
   isActive?: boolean;
   stripePriceId?: string | null;
   zenlerPricingCode?: string | null;
+  /** Evendeals product id; null/empty clears selection (env fallback at quote time). */
+  evenDeals?: string | null;
   pricingMode?: CoursePricingMode;
   examSessionMonth?: number | null;
   examSessionYear?: number | null;
@@ -373,6 +377,8 @@ export interface CoursePriceImportRow {
   isDefault?: boolean;
   /** Undefined = not specified in CSV (preserve existing on update). */
   isActive?: boolean;
+  /** Evendeals product UUID; empty/omitted = no per-row override. */
+  evenDeals?: string | null;
   pricingMode?: CoursePricingMode;
   examSessionMonth?: number | null;
   examSessionYear?: number | null;
