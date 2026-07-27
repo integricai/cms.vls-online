@@ -13,35 +13,11 @@ import {
 
 type View = 'list' | 'manage' | 'import';
 
-const MONTH_OPTIONS = [
-  { value: 1, label: 'January' },
-  { value: 2, label: 'February' },
-  { value: 3, label: 'March' },
-  { value: 4, label: 'April' },
-  { value: 5, label: 'May' },
-  { value: 6, label: 'June' },
-  { value: 7, label: 'July' },
-  { value: 8, label: 'August' },
-  { value: 9, label: 'September' },
-  { value: 10, label: 'October' },
-  { value: 11, label: 'November' },
-  { value: 12, label: 'December' },
-];
-
-const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_OPTIONS = Array.from({ length: 11 }, (_, i) => CURRENT_YEAR + i);
-
-type PricingMode = 'session' | 'duration';
-
 type PriceDraft = {
   id?: number;
   name: string;
   amount: string;
   discountPercent: string;
-  compareAtAmount: string;
-  pricingMode: PricingMode;
-  examSessionMonth: string;
-  examSessionYear: string;
   durationDays: string;
   evenDeals: string;
   isActive: boolean;
@@ -54,10 +30,6 @@ function emptyDraft(): PriceDraft {
     name: '',
     amount: '',
     discountPercent: '',
-    compareAtAmount: '',
-    pricingMode: 'duration',
-    examSessionMonth: String(MONTH_OPTIONS[0]!.value),
-    examSessionYear: String(CURRENT_YEAR),
     durationDays: '',
     evenDeals: '',
     isActive: true,
@@ -79,10 +51,6 @@ function priceToDraft(price: CourseGeoPrice): PriceDraft {
     name: price.name,
     amount: String(price.amount),
     discountPercent: price.discountPercent != null ? String(price.discountPercent) : '',
-    compareAtAmount: price.compareAtAmount != null ? String(price.compareAtAmount) : '',
-    pricingMode: price.pricingMode,
-    examSessionMonth: price.examSessionMonth != null ? String(price.examSessionMonth) : String(MONTH_OPTIONS[0]!.value),
-    examSessionYear: price.examSessionYear != null ? String(price.examSessionYear) : String(CURRENT_YEAR),
     durationDays: price.durationDays != null ? String(price.durationDays) : '',
     evenDeals: price.evenDeals ?? '',
     isActive: price.isActive,
@@ -100,13 +68,8 @@ function formatMoney(amount: number | null | undefined, currency: string | null 
   }
 }
 
-function formatPricingMode(price: Pick<CourseGeoPrice, 'pricingMode' | 'examSessionMonth' | 'examSessionYear' | 'durationDays'>): string {
-  if (price.pricingMode === 'session') {
-    if (price.examSessionMonth == null || price.examSessionYear == null) return '—';
-    const monthLabel = MONTH_OPTIONS.find(m => m.value === price.examSessionMonth)?.label ?? String(price.examSessionMonth);
-    return `${monthLabel} ${price.examSessionYear}`;
-  }
-  return price.durationDays != null ? `${price.durationDays} day${price.durationDays === 1 ? '' : 's'}` : '—';
+function formatDuration(durationDays: number | null | undefined): string {
+  return durationDays != null ? `${durationDays} day${durationDays === 1 ? '' : 's'}` : '—';
 }
 
 function formatDate(value: Date | string | null | undefined): string {
@@ -230,14 +193,11 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
       const body = {
         name: draft.name.trim(),
         amount: Number(draft.amount),
-        compareAtAmount: draft.compareAtAmount === '' ? null : Number(draft.compareAtAmount),
         discountPercent: draft.discountPercent === '' ? null : Number(draft.discountPercent),
         isActive: draft.isActive,
         isDefault: draft.isDefault,
-        pricingMode: draft.pricingMode,
-        examSessionMonth: draft.pricingMode === 'session' ? Number(draft.examSessionMonth) : null,
-        examSessionYear: draft.pricingMode === 'session' ? Number(draft.examSessionYear) : null,
-        durationDays: draft.pricingMode === 'duration' ? Number(draft.durationDays) : null,
+        pricingMode: 'duration' as const,
+        durationDays: Number(draft.durationDays),
         stripePriceId: draft.stripePriceId.trim() || null,
         evenDeals: draft.evenDeals.trim() || null,
       };
@@ -502,14 +462,7 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
                               ? `${row.price.discountPercent}%`
                               : '—'}
                           </td>
-                          <td className="py-1 pr-2">
-                            {formatPricingMode({
-                              pricingMode: row.price.pricingMode ?? 'duration',
-                              examSessionMonth: row.price.examSessionMonth ?? null,
-                              examSessionYear: row.price.examSessionYear ?? null,
-                              durationDays: row.price.durationDays ?? null,
-                            })}
-                          </td>
+                          <td className="py-1 pr-2">{formatDuration(row.price.durationDays)}</td>
                           <td className="py-1">{row.price.isDefault ? 'Yes' : 'No'}</td>
                         </tr>
                       ))}
@@ -602,72 +555,16 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
               />
             </label>
             <label className="text-xs text-slate-600">
-              Compare-at amount (USD)
-              <input className="input mt-1" type="number" min="0" step="0.01" value={draft.compareAtAmount} onChange={e => setDraft(d => ({ ...d, compareAtAmount: e.target.value }))} />
+              Duration (Days)
+              <input
+                className="input mt-1"
+                type="number"
+                min="1"
+                step="1"
+                value={draft.durationDays}
+                onChange={e => setDraft(d => ({ ...d, durationDays: e.target.value.replace(/[^0-9]/g, '') }))}
+              />
             </label>
-            <div className="sm:col-span-2 lg:col-span-3">
-              <p className="mb-1 text-xs text-slate-600">Pricing type</p>
-              <div className="flex gap-4 text-xs text-slate-700">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="pricingMode"
-                    checked={draft.pricingMode === 'session'}
-                    onChange={() => setDraft(d => ({ ...d, pricingMode: 'session' }))}
-                  />
-                  Session based
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="pricingMode"
-                    checked={draft.pricingMode === 'duration'}
-                    onChange={() => setDraft(d => ({ ...d, pricingMode: 'duration' }))}
-                  />
-                  Duration based
-                </label>
-              </div>
-            </div>
-            {draft.pricingMode === 'session' ? (
-              <>
-                <label className="text-xs text-slate-600">
-                  Exam session month
-                  <select
-                    className="input mt-1"
-                    value={draft.examSessionMonth}
-                    onChange={e => setDraft(d => ({ ...d, examSessionMonth: e.target.value }))}
-                  >
-                    {MONTH_OPTIONS.map(month => (
-                      <option key={month.value} value={month.value}>{month.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-xs text-slate-600">
-                  Exam session year
-                  <select
-                    className="input mt-1"
-                    value={draft.examSessionYear}
-                    onChange={e => setDraft(d => ({ ...d, examSessionYear: e.target.value }))}
-                  >
-                    {YEAR_OPTIONS.map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                </label>
-              </>
-            ) : (
-              <label className="text-xs text-slate-600">
-                Duration (Days)
-                <input
-                  className="input mt-1"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={draft.durationDays}
-                  onChange={e => setDraft(d => ({ ...d, durationDays: e.target.value.replace(/[^0-9]/g, '') }))}
-                />
-              </label>
-            )}
             <label className="text-xs text-slate-600">
               Stripe price ID
               <input className="input mt-1" value={draft.stripePriceId} onChange={e => setDraft(d => ({ ...d, stripePriceId: e.target.value }))} />
@@ -719,9 +616,8 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
                 <th className="px-3 py-2">List price</th>
                 <th className="px-3 py-2">Discount</th>
                 <th className="px-3 py-2">Final price</th>
-                <th className="px-3 py-2">Pricing</th>
+                <th className="px-3 py-2">Duration</th>
                 <th className="px-3 py-2">Evendeals</th>
-                <th className="px-3 py-2">Compare-at</th>
                 <th className="px-3 py-2">Active</th>
                 <th className="px-3 py-2">Default</th>
                 <th className="px-3 py-2">Actions</th>
@@ -730,7 +626,7 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
             <tbody>
               {prices.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-3 py-6 text-center text-slate-500">No prices yet. Add a default price to start.</td>
+                  <td colSpan={9} className="px-3 py-6 text-center text-slate-500">No prices yet. Add a default price to start.</td>
                 </tr>
               )}
               {prices.map(price => (
@@ -739,9 +635,8 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
                   <td className="px-3 py-2">{formatMoney(price.amount, 'USD')}</td>
                   <td className="px-3 py-2">{price.discountPercent != null && price.discountPercent > 0 ? `${price.discountPercent}%` : '—'}</td>
                   <td className="px-3 py-2 font-medium text-emerald-800">{formatMoney(price.effectiveAmount, 'USD')}</td>
-                  <td className="px-3 py-2">{formatPricingMode(price)}</td>
+                  <td className="px-3 py-2">{formatDuration(price.durationDays)}</td>
                   <td className="px-3 py-2">{evenDealsProductLabel(price.evenDeals) ?? 'Default'}</td>
-                  <td className="px-3 py-2">{formatMoney(price.compareAtAmount, 'USD')}</td>
                   <td className="px-3 py-2">{price.isActive ? 'Yes' : 'No'}</td>
                   <td className="px-3 py-2">{price.isDefault ? 'Yes' : 'No'}</td>
                   <td className="px-3 py-2">

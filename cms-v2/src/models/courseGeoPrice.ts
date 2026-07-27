@@ -116,16 +116,20 @@ export async function listCoursePricingSummaries(search?: string): Promise<Cours
         LEFT JOIN LATERAL (
           SELECT id, name, amount, currency, compare_at_amount, discount_percent, discounted_price, duration_months
           FROM course_geo_prices
-          WHERE course_id = c.id AND is_default = true AND is_active = true
+          WHERE course_id = c.id
+            AND is_default = true
+            AND is_active = true
+            AND pricing_mode = 'duration'
           ORDER BY id ASC
           LIMIT 1
         ) dp ON true
         LEFT JOIN LATERAL (
           SELECT
-            COUNT(*) FILTER (WHERE is_active = true) AS active_price_count,
+            COUNT(*) FILTER (WHERE is_active = true AND pricing_mode = 'duration') AS active_price_count,
             MAX(updated_at) AS updated_at
           FROM course_geo_prices
           WHERE course_id = c.id
+            AND pricing_mode = 'duration'
         ) stats ON true
         WHERE c.name ILIKE ${like}
            OR c.zenler_course_id ILIKE ${like}
@@ -155,16 +159,20 @@ export async function listCoursePricingSummaries(search?: string): Promise<Cours
         LEFT JOIN LATERAL (
           SELECT id, name, amount, currency, compare_at_amount, discount_percent, discounted_price, duration_months
           FROM course_geo_prices
-          WHERE course_id = c.id AND is_default = true AND is_active = true
+          WHERE course_id = c.id
+            AND is_default = true
+            AND is_active = true
+            AND pricing_mode = 'duration'
           ORDER BY id ASC
           LIMIT 1
         ) dp ON true
         LEFT JOIN LATERAL (
           SELECT
-            COUNT(*) FILTER (WHERE is_active = true) AS active_price_count,
+            COUNT(*) FILTER (WHERE is_active = true AND pricing_mode = 'duration') AS active_price_count,
             MAX(updated_at) AS updated_at
           FROM course_geo_prices
           WHERE course_id = c.id
+            AND pricing_mode = 'duration'
         ) stats ON true
         ORDER BY c.sort_order ASC, c.name ASC
       `;
@@ -215,12 +223,13 @@ export async function listGeoPricesForCourse(courseId: number): Promise<CourseGe
     FROM course_geo_prices p
     JOIN courses c ON c.id = p.course_id
     WHERE p.course_id = ${courseId}
+      AND p.pricing_mode = 'duration'
     ORDER BY p.is_default DESC, p.name ASC, p.id ASC
   `;
   return (rows as DbRow[]).map(rowToCourseGeoPrice);
 }
 
-/** All geo prices (including inactive) for CSV export, ordered for stable round-trip edits. */
+/** Duration-based geo prices (including inactive) for CSV export. */
 export async function listAllGeoPricesForExport(): Promise<CourseGeoPrice[]> {
   const rows = await sql`
     SELECT
@@ -230,6 +239,7 @@ export async function listAllGeoPricesForExport(): Promise<CourseGeoPrice[]> {
       c.slug AS course_slug
     FROM course_geo_prices p
     JOIN courses c ON c.id = p.course_id
+    WHERE p.pricing_mode = 'duration'
     ORDER BY c.name ASC, c.id ASC, p.is_default DESC, p.name ASC, p.id ASC
   `;
   return (rows as DbRow[]).map(rowToCourseGeoPrice);
@@ -246,6 +256,7 @@ export async function listActiveGeoPricesForCourse(courseId: number): Promise<Co
     JOIN courses c ON c.id = p.course_id
     WHERE p.course_id = ${courseId}
       AND p.is_active = true
+      AND p.pricing_mode = 'duration'
     ORDER BY p.id ASC
   `;
   return (rows as DbRow[]).map(rowToCourseGeoPrice);
@@ -268,7 +279,7 @@ export async function listActiveGeoPricesByZenlerCourseId(
       c.zenler_course_id,
       c.slug AS course_slug
     FROM courses c
-    JOIN course_geo_prices p ON p.course_id = c.id AND p.is_active = true
+    JOIN course_geo_prices p ON p.course_id = c.id AND p.is_active = true AND p.pricing_mode = 'duration'
     WHERE c.zenler_course_id = ${zenlerCourseId.trim()}
     ORDER BY p.id ASC
   `;
@@ -448,8 +459,7 @@ export async function createGeoPrice(input: CourseGeoPriceInput): Promise<Course
   const isDefault = Boolean(input.isDefault);
   const isActive = input.isActive !== false;
   const discountedPrice = discountedPriceForInput(input);
-  const pricingMode = input.pricingMode ?? 'duration';
-  const durationMonths = deriveLegacyDurationMonths(pricingMode, input.durationDays);
+  const durationMonths = deriveLegacyDurationMonths('duration', input.durationDays);
 
   if (isDefault && isActive) {
     await clearOtherActiveDefaults(input.courseId);
@@ -466,7 +476,7 @@ export async function createGeoPrice(input: CourseGeoPriceInput): Promise<Course
       ${input.name.trim()},
       'USD',
       ${input.amount},
-      ${input.compareAtAmount ?? null},
+      ${null},
       ${input.discountPercent ?? null},
       ${discountedPrice},
       ${isDefault},
@@ -474,10 +484,10 @@ export async function createGeoPrice(input: CourseGeoPriceInput): Promise<Course
       ${input.stripePriceId?.trim() || null},
       ${input.zenlerPricingCode?.trim() || null},
       ${input.evenDeals?.trim() || null},
-      ${pricingMode},
-      ${pricingMode === 'session' ? (input.examSessionMonth ?? null) : null},
-      ${pricingMode === 'session' ? (input.examSessionYear ?? null) : null},
-      ${pricingMode === 'duration' ? (input.durationDays ?? null) : null},
+      ${'duration'},
+      ${null},
+      ${null},
+      ${input.durationDays ?? null},
       ${durationMonths}
     )
     RETURNING *
@@ -492,9 +502,6 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
   const existing = await getGeoPriceById(id);
   if (!existing) return null;
 
-  const pricingMode = input.pricingMode !== undefined ? input.pricingMode : existing.pricingMode;
-  const examSessionMonth = input.examSessionMonth !== undefined ? input.examSessionMonth : existing.examSessionMonth;
-  const examSessionYear = input.examSessionYear !== undefined ? input.examSessionYear : existing.examSessionYear;
   const durationDays = input.durationDays !== undefined ? input.durationDays : existing.durationDays;
 
   const nextInput: CourseGeoPriceInput = {
@@ -502,7 +509,7 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
     name: input.name !== undefined ? String(input.name).trim() : existing.name,
     currency: 'USD',
     amount: input.amount !== undefined ? Number(input.amount) : existing.amount,
-    compareAtAmount: input.compareAtAmount !== undefined ? input.compareAtAmount : existing.compareAtAmount,
+    compareAtAmount: null,
     discountPercent: input.discountPercent !== undefined ? input.discountPercent : existing.discountPercent,
     isDefault: input.isDefault !== undefined ? Boolean(input.isDefault) : existing.isDefault,
     isActive: input.isActive !== undefined ? Boolean(input.isActive) : existing.isActive,
@@ -515,14 +522,14 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
     evenDeals: input.evenDeals !== undefined
       ? (input.evenDeals?.trim() || null)
       : existing.evenDeals,
-    pricingMode,
-    examSessionMonth: pricingMode === 'session' ? (examSessionMonth ?? null) : null,
-    examSessionYear: pricingMode === 'session' ? (examSessionYear ?? null) : null,
-    durationDays: pricingMode === 'duration' ? (durationDays ?? null) : null,
+    pricingMode: 'duration',
+    examSessionMonth: null,
+    examSessionYear: null,
+    durationDays: durationDays ?? null,
   };
 
   const discountedPrice = discountedPriceForInput(nextInput);
-  const durationMonths = deriveLegacyDurationMonths(pricingMode, nextInput.durationDays);
+  const durationMonths = deriveLegacyDurationMonths('duration', nextInput.durationDays);
 
   if (nextInput.isDefault && nextInput.isActive) {
     await clearOtherActiveDefaults(existing.courseId, id);
@@ -533,7 +540,7 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
     SET name = ${nextInput.name},
         currency = 'USD',
         amount = ${nextInput.amount},
-        compare_at_amount = ${nextInput.compareAtAmount},
+        compare_at_amount = ${null},
         discount_percent = ${nextInput.discountPercent ?? null},
         discounted_price = ${discountedPrice},
         is_default = ${nextInput.isDefault},
@@ -541,9 +548,9 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
         stripe_price_id = ${nextInput.stripePriceId},
         zenler_pricing_code = ${nextInput.zenlerPricingCode},
         evendeals = ${nextInput.evenDeals ?? null},
-        pricing_mode = ${nextInput.pricingMode},
-        exam_session_month = ${nextInput.examSessionMonth},
-        exam_session_year = ${nextInput.examSessionYear},
+        pricing_mode = ${'duration'},
+        exam_session_month = ${null},
+        exam_session_year = ${null},
         duration_days = ${nextInput.durationDays},
         duration_months = ${durationMonths},
         updated_at = NOW()
@@ -656,6 +663,7 @@ export async function listActiveCoursesMissingDefaultPrice(): Promise<Array<{ id
         WHERE p.course_id = c.id
           AND p.is_default = true
           AND p.is_active = true
+          AND p.pricing_mode = 'duration'
       )
     ORDER BY c.name ASC
   `;

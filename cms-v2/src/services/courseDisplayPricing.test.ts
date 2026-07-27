@@ -83,9 +83,6 @@ await run('FA1 dual plans: shorter → September with late 50%, longer → Decem
         discountedPrice: 144,
         durationDays: 180,
         isDefault: true,
-        pricingMode: 'session',
-        examSessionMonth: 9,
-        examSessionYear: 2026,
       }),
       geoPrice({
         id: 2,

@@ -102,22 +102,18 @@ run('computes discounted price from percent', () => {
   assert.strictEqual(computeDiscountedPrice(150, null), null);
 });
 
-run('validates amount, discount, compare-at, and session fields', () => {
+run('validates amount, discount, and rejects session pricing', () => {
   const issues = validateGeoPriceInput({
     courseId: 1,
     name: 'Bad',
     amount: 10,
-    compareAtAmount: 5,
     discountPercent: 150,
     pricingMode: 'session',
-    examSessionMonth: 13,
-    examSessionYear: 1999,
+    durationDays: 90,
   });
   const fields = issues.map(i => i.field);
   assert.ok(fields.includes('discountPercent'));
-  assert.ok(fields.includes('compareAtAmount'));
-  assert.ok(fields.includes('examSessionMonth'));
-  assert.ok(fields.includes('examSessionYear'));
+  assert.ok(fields.includes('pricingMode'));
 });
 
 run('accepts a valid USD price input', () => {
@@ -125,7 +121,6 @@ run('accepts a valid USD price input', () => {
     courseId: 1,
     name: '180 Days Access',
     amount: 150,
-    compareAtAmount: 175,
     discountPercent: 10,
     isDefault: true,
     isActive: true,
@@ -137,8 +132,8 @@ run('accepts a valid USD price input', () => {
 
 run('parses CSV import rows', () => {
   const csv = [
-    'zenler_course_id,course_slug,course_title,price_name,amount,discount_percent,compare_at_amount,pricing_mode,duration_days,is_default,is_active',
-    '71086,fa1,ACCA FA1,180 Days Access,150.00,10,175.00,duration,180,true,true',
+    'zenler_course_id,course_slug,course_title,price_name,amount,discount_percent,duration_days,is_default,is_active',
+    '71086,fa1,ACCA FA1,180 Days Access,150.00,10,180,true,true',
   ].join('\n');
   const rows = parseCsvText(csv);
   assert.strictEqual(rows.length, 1);
@@ -149,6 +144,8 @@ run('parses CSV import rows', () => {
   assert.strictEqual(parsed.discountPercent, 10);
   assert.strictEqual(parsed.isDefault, true);
   assert.strictEqual(parsed.durationDays, 180);
+  assert.strictEqual(parsed.pricingMode, 'duration');
+  assert.strictEqual(parsed.compareAtAmount, null);
 });
 
 run('parses discount percent with % suffix', () => {
@@ -178,8 +175,8 @@ run('treats blank is_default as unspecified', () => {
 });
 
 run('scores longer duration higher for auto-default', () => {
-  const short = defaultPriorityScore({ pricingMode: 'duration', durationDays: 120, examSessionMonth: null, examSessionYear: null });
-  const long = defaultPriorityScore({ pricingMode: 'duration', durationDays: 180, examSessionMonth: null, examSessionYear: null });
+  const short = defaultPriorityScore({ durationDays: 120 });
+  const long = defaultPriorityScore({ durationDays: 180 });
   assert.ok(long > short);
 });
 

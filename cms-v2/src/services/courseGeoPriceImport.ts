@@ -48,16 +48,11 @@ function cell(row: Record<string, unknown>, ...keys: string[]): unknown {
   return undefined;
 }
 
-export function defaultPriorityScore(row: Pick<CoursePriceImportRow, 'pricingMode' | 'durationDays' | 'examSessionMonth' | 'examSessionYear'>): number {
-  const duration = row.durationDays ?? 0;
-  const year = row.examSessionYear ?? 0;
-  const month = row.examSessionMonth ?? 0;
-  return duration * 1_000_000 + year * 100 + month;
+export function defaultPriorityScore(row: Pick<CoursePriceImportRow, 'durationDays'>): number {
+  return row.durationDays ?? 0;
 }
 
 export function parseImportRow(raw: Record<string, unknown>, rowNumber: number): CoursePriceImportRow {
-  const pricingModeRaw = String(cell(raw, 'pricing_mode', 'pricingMode') ?? '').trim().toLowerCase();
-  const pricingMode = pricingModeRaw === 'session' ? 'session' : 'duration';
   const isDefault = parseOptionalBoolean(cell(raw, 'is_default', 'isDefault'));
   const isActive = parseOptionalBoolean(cell(raw, 'is_active', 'isActive'));
 
@@ -70,13 +65,13 @@ export function parseImportRow(raw: Record<string, unknown>, rowNumber: number):
     priceName: String(cell(raw, 'price_name', 'priceName', 'name') ?? '').trim(),
     currency: String(cell(raw, 'currency') ?? 'USD').trim().toUpperCase(),
     amount: parseNumber(cell(raw, 'amount')) ?? NaN,
-    compareAtAmount: parseNumber(cell(raw, 'compare_at_amount', 'compareAtAmount')),
+    compareAtAmount: null,
     discountPercent: parseNumber(cell(raw, 'discount_percent', 'discountPercent')),
     isDefault,
     isActive,
-    pricingMode,
-    examSessionMonth: parseNumber(cell(raw, 'exam_session_month', 'examSessionMonth')),
-    examSessionYear: parseNumber(cell(raw, 'exam_session_year', 'examSessionYear')),
+    pricingMode: 'duration',
+    examSessionMonth: null,
+    examSessionYear: null,
     durationDays: parseNumber(cell(raw, 'duration_days', 'durationDays')),
     evenDeals: (() => {
       const rawValue = cell(raw, 'evendeals', 'evenDeals', 'even_deals');
@@ -180,7 +175,18 @@ export async function previewCoursePriceImport(
 
   for (let i = 0; i < rows.length; i += 1) {
     const rowNumber = i + 2; // header is row 1
-    const parsed = parseImportRow(rows[i] ?? {}, rowNumber);
+    const raw = rows[i] ?? {};
+    const pricingModeRaw = String(cell(raw, 'pricing_mode', 'pricingMode') ?? '').trim().toLowerCase();
+    if (pricingModeRaw === 'session') {
+      errors.push({
+        rowNumber,
+        field: 'pricing_mode',
+        message: 'session-based pricing is no longer supported; use duration_days instead',
+      });
+      continue;
+    }
+
+    const parsed = parseImportRow(raw, rowNumber);
 
     if (!parsed.zenlerCourseId && !parsed.courseSlug) {
       errors.push({
@@ -205,10 +211,10 @@ export async function previewCoursePriceImport(
       courseId: course.courseId,
       pricingCode: parsed.pricingCode,
       name: parsed.priceName,
-      pricingMode: parsed.pricingMode ?? 'duration',
+      pricingMode: 'duration',
       durationDays: parsed.durationDays,
-      examSessionMonth: parsed.examSessionMonth,
-      examSessionYear: parsed.examSessionYear,
+      examSessionMonth: null,
+      examSessionYear: null,
     });
 
     const action = existingPrice ? 'update' : 'create';
@@ -222,15 +228,12 @@ export async function previewCoursePriceImport(
       courseId: course.courseId,
       name: parsed.priceName,
       amount: parsed.amount,
-      compareAtAmount: parsed.compareAtAmount,
       discountPercent: parsed.discountPercent,
       isDefault: effectiveFlags.isDefault,
       isActive: effectiveFlags.isActive,
       zenlerPricingCode: parsed.pricingCode ?? null,
       ...(parsed.evenDeals !== undefined ? { evenDeals: parsed.evenDeals } : {}),
-      pricingMode: parsed.pricingMode,
-      examSessionMonth: parsed.examSessionMonth,
-      examSessionYear: parsed.examSessionYear,
+      pricingMode: 'duration',
       durationDays: parsed.durationDays,
     });
 
@@ -345,15 +348,12 @@ export async function commitCoursePriceImport(
         courseId: row.courseId,
         name: row.price.priceName,
         amount: row.price.amount,
-        compareAtAmount: row.price.compareAtAmount,
         discountPercent: row.price.discountPercent,
         isDefault: row.price.isDefault ?? false,
         isActive: row.price.isActive ?? true,
         zenlerPricingCode: row.price.pricingCode ?? null,
         ...(row.price.evenDeals !== undefined ? { evenDeals: row.price.evenDeals } : {}),
-        pricingMode: row.price.pricingMode,
-        examSessionMonth: row.price.examSessionMonth,
-        examSessionYear: row.price.examSessionYear,
+        pricingMode: 'duration',
         durationDays: row.price.durationDays,
       });
       const result = await upsertGeoPriceByKey(input);
@@ -385,11 +385,7 @@ export const PRICING_TEMPLATE_HEADERS = [
   'price_name',
   'amount',
   'discount_percent',
-  'compare_at_amount',
-  'pricing_mode',
   'duration_days',
-  'exam_session_month',
-  'exam_session_year',
   'is_default',
   'is_active',
   'stripe_price_id',
@@ -397,9 +393,9 @@ export const PRICING_TEMPLATE_HEADERS = [
 ] as const;
 
 export const PRICING_TEMPLATE_EXAMPLE_ROWS: string[][] = [
-  ['71086', '78691', 'fa1', 'ACCA FA1', 'Six Months Access', '150.00', '10', '175.00', 'duration', '180', '', '', 'true', 'true', '', '73e50a3e-152a-4d61-b0eb-4229f831bf39'],
-  ['71086', '191934', 'fa1', 'ACCA FA1', 'Four Months Access', '130.00', '', '150.00', 'duration', '120', '', '', 'false', 'true', '', '73e50a3e-152a-4d61-b0eb-4229f831bf39'],
-  ['12918', '', 'f1', 'ACCA F1', 'November 2026 Session', '349.00', '15', '399.00', 'session', '', '11', '2026', 'true', 'true', '', '81318eab-7b83-4b9b-babc-808fc0bc2433'],
+  ['71086', '78691', 'fa1', 'ACCA FA1', 'Six Months Access', '150.00', '10', '180', 'true', 'true', '', '73e50a3e-152a-4d61-b0eb-4229f831bf39'],
+  ['71086', '191934', 'fa1', 'ACCA FA1', 'Four Months Access', '130.00', '', '120', 'false', 'true', '', '73e50a3e-152a-4d61-b0eb-4229f831bf39'],
+  ['12918', '', 'f1', 'ACCA F1', 'Three Months Access', '349.00', '15', '90', 'true', 'true', '', '81318eab-7b83-4b9b-babc-808fc0bc2433'],
 ];
 
 export function buildPricingTemplateCsv(): string {
@@ -423,11 +419,7 @@ export function buildPricingExportCsv(prices: CourseGeoPrice[]): string {
         price.name,
         formatCsvNumber(price.amount),
         formatCsvNumber(price.discountPercent),
-        formatCsvNumber(price.compareAtAmount),
-        price.pricingMode,
         formatCsvNumber(price.durationDays),
-        formatCsvNumber(price.examSessionMonth),
-        formatCsvNumber(price.examSessionYear),
         price.isDefault ? 'true' : 'false',
         price.isActive ? 'true' : 'false',
         price.stripePriceId ?? '',

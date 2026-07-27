@@ -84,10 +84,6 @@ function fixCsv(inputPath: string, outputPath: string): void {
   const normalizedRows = rows.map(row => {
     const record: Record<string, string> = {};
     for (const header of headers) {
-      if (header === 'compare_at_amount') {
-        record[header] = rawCell(row, header) || rawCell(row, 'column_8');
-        continue;
-      }
       record[header] = rawCell(row, header);
     }
     return record;
