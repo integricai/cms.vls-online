@@ -1,4 +1,5 @@
 import type {
+  CourseGeoPrice,
   CourseGeoPriceInput,
   CoursePriceImportPreview,
   CoursePriceImportPreviewRow,
@@ -13,6 +14,15 @@ import {
   upsertGeoPriceByKey,
 } from '../models/courseGeoPrice';
 import { normalizeGeoPriceInput, validateGeoPriceInput } from './courseGeoPriceValidation';
+
+function escapeCsvCell(value: string): string {
+  return /[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+function formatCsvNumber(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return '';
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
 
 function parseOptionalBoolean(value: unknown): boolean | undefined {
   if (value == null || value === '') return undefined;
@@ -395,9 +405,36 @@ export const PRICING_TEMPLATE_EXAMPLE_ROWS: string[][] = [
 export function buildPricingTemplateCsv(): string {
   const lines = [
     PRICING_TEMPLATE_HEADERS.join(','),
-    ...PRICING_TEMPLATE_EXAMPLE_ROWS.map(row =>
-      row.map(value => (/[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value)).join(','),
-    ),
+    ...PRICING_TEMPLATE_EXAMPLE_ROWS.map(row => row.map(escapeCsvCell).join(',')),
+  ];
+  return `${lines.join('\n')}\n`;
+}
+
+/** Serialize live course_geo_prices rows using the same headers as the import template. */
+export function buildPricingExportCsv(prices: CourseGeoPrice[]): string {
+  const lines = [
+    PRICING_TEMPLATE_HEADERS.join(','),
+    ...prices.map(price => {
+      const cells = [
+        price.zenlerCourseId ?? '',
+        price.zenlerPricingCode ?? '',
+        price.courseSlug ?? '',
+        price.courseName ?? '',
+        price.name,
+        formatCsvNumber(price.amount),
+        formatCsvNumber(price.discountPercent),
+        formatCsvNumber(price.compareAtAmount),
+        price.pricingMode,
+        formatCsvNumber(price.durationDays),
+        formatCsvNumber(price.examSessionMonth),
+        formatCsvNumber(price.examSessionYear),
+        price.isDefault ? 'true' : 'false',
+        price.isActive ? 'true' : 'false',
+        price.stripePriceId ?? '',
+        price.evenDeals ?? '',
+      ];
+      return cells.map(escapeCsvCell).join(',');
+    }),
   ];
   return `${lines.join('\n')}\n`;
 }

@@ -132,15 +132,23 @@ function downloadText(filename: string, content: string, mime = 'text/csv;charse
   URL.revokeObjectURL(url);
 }
 
-async function downloadTemplate(): Promise<void> {
+async function downloadCsvFromApi(path: string, filename: string): Promise<void> {
   const token = getToken();
   const base = (import.meta.env.VITE_API_URL ?? '') + '/api';
-  const res = await fetch(`${base}/course-pricing/admin/template`, {
+  const res = await fetch(`${base}${path}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-  if (!res.ok) throw new Error('Failed to download template');
+  if (!res.ok) throw new Error(`Failed to download ${filename}`);
   const text = await res.text();
-  downloadText('course-pricing-template.csv', text);
+  downloadText(filename, text);
+}
+
+async function downloadTemplate(): Promise<void> {
+  await downloadCsvFromApi('/course-pricing/admin/template', 'course-pricing-template.csv');
+}
+
+async function downloadCurrentPrices(): Promise<void> {
+  await downloadCsvFromApi('/course-pricing/admin/export', 'course-pricing-export.csv');
 }
 
 export default function CoursePricing({ embedded = false }: { embedded?: boolean }) {
@@ -338,7 +346,10 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
             <p className="text-sm text-slate-500">Upload CSV/Excel-exported CSV, preview, then confirm.</p>
           </div>
           <div className="flex gap-2">
-            <button className="btn-ghost text-xs" onClick={() => void downloadTemplate()}>
+            <button className="btn-ghost text-xs" onClick={() => void downloadCurrentPrices().catch(err => setError(err instanceof Error ? err.message : 'Download failed'))}>
+              Download current prices
+            </button>
+            <button className="btn-ghost text-xs" onClick={() => void downloadTemplate().catch(err => setError(err instanceof Error ? err.message : 'Download failed'))}>
               Download Template
             </button>
             <button className="btn-ghost text-xs" onClick={() => { setView('list'); setPreview(null); setImportResult(null); }}>
@@ -351,8 +362,8 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
         {message && <div className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</div>}
 
         <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-600">
-          <li>Download the pricing template</li>
-          <li>Fill prices in Excel and save as CSV</li>
+          <li>Download current prices (or the blank template for new rows)</li>
+          <li>Edit prices in Excel and save as CSV</li>
           <li>Paste or upload the file below</li>
           <li>Preview changes and review errors</li>
           <li>Confirm import</li>
@@ -764,7 +775,16 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button className="btn-ghost text-xs" onClick={() => void downloadTemplate()}>
+          <button
+            className="btn-ghost text-xs"
+            onClick={() => void downloadCurrentPrices().catch(err => setError(err instanceof Error ? err.message : 'Download failed'))}
+          >
+            Download current prices
+          </button>
+          <button
+            className="btn-ghost text-xs"
+            onClick={() => void downloadTemplate().catch(err => setError(err instanceof Error ? err.message : 'Download failed'))}
+          >
             Download Template
           </button>
           <button className="btn-ghost text-xs" onClick={() => { setView('import'); setError(''); setMessage(''); }}>

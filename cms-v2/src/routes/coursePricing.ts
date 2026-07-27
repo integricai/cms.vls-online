@@ -7,12 +7,14 @@ import {
   getCourseById,
   getGeoPriceById,
   listActiveCoursesMissingDefaultPrice,
+  listAllGeoPricesForExport,
   listCoursePricingSummaries,
   listGeoPricesForCourse,
   setDefaultGeoPrice,
   updateGeoPrice,
 } from '../models/courseGeoPrice';
 import {
+  buildPricingExportCsv,
   buildPricingTemplateCsv,
   commitCoursePriceImport,
   parseCsvText,
@@ -140,6 +142,18 @@ router.get('/admin/template', authGuard, requireRole('admin', 'editor'), (_req, 
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="course-pricing-template.csv"');
   return res.send(csv);
+});
+
+router.get('/admin/export', authGuard, requireRole('admin', 'editor'), async (_req, res, next) => {
+  try {
+    const prices = await listAllGeoPricesForExport();
+    const csv = buildPricingExportCsv(prices);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="course-pricing-export.csv"');
+    return res.send(csv);
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.get('/admin/courses/:courseId/prices', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {

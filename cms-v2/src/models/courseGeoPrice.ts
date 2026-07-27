@@ -220,6 +220,21 @@ export async function listGeoPricesForCourse(courseId: number): Promise<CourseGe
   return (rows as DbRow[]).map(rowToCourseGeoPrice);
 }
 
+/** All geo prices (including inactive) for CSV export, ordered for stable round-trip edits. */
+export async function listAllGeoPricesForExport(): Promise<CourseGeoPrice[]> {
+  const rows = await sql`
+    SELECT
+      p.*,
+      c.name AS course_name,
+      c.zenler_course_id,
+      c.slug AS course_slug
+    FROM course_geo_prices p
+    JOIN courses c ON c.id = p.course_id
+    ORDER BY c.name ASC, c.id ASC, p.is_default DESC, p.name ASC, p.id ASC
+  `;
+  return (rows as DbRow[]).map(rowToCourseGeoPrice);
+}
+
 export async function listActiveGeoPricesForCourse(courseId: number): Promise<CourseGeoPrice[]> {
   const rows = await sql`
     SELECT
