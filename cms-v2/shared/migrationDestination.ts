@@ -1,7 +1,7 @@
 import type { MigrationTemplate } from './migrationTypes';
 
 export function isCoursePageTemplate(template: MigrationTemplate): boolean {
-  return template === 'course' || template === 'course_dual_price';
+  return template === 'course' || template === 'course_dual_price' || template === 'revision_course';
 }
 
 export function isLevelPageTemplate(template: MigrationTemplate): boolean {

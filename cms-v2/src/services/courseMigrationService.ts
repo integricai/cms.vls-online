@@ -60,6 +60,10 @@ import {
   buildLevelPageStoryblokContent,
   buildLevelPageStructureBody,
 } from './buildLevelPageStoryblokContent';
+import {
+  buildMergedRevisionCourseStoryblokContent,
+  buildRevisionCourseStructureBody,
+} from './buildRevisionCourseStoryblokContent';
 import type { ScrapedLevelPage } from '../../shared/levelPageTypes';
 import { loadCourseTemplateFile } from './courseTemplateParser';
 import { indexTemplateSections, parseTemplateSectionsFromHtml, resolveTemplateSections, sectionHasLiveMatch, isPageBuilderLegalHtml } from './pageSectionExtractor';
@@ -661,7 +665,9 @@ async function buildCourseStoryblokContentAsync(
   presetBloksBySection: Record<string, Record<string, unknown>> | null,
   config: StoryblokConfig | null,
 ): Promise<{ content: Record<string, unknown>; warnings: string[] }> {
-  const base = buildMergedCourseStoryblokContent(scraped, zenlerCourseId, template);
+  const base = template === 'revision_course'
+    ? buildMergedRevisionCourseStoryblokContent(scraped, zenlerCourseId, template)
+    : buildMergedCourseStoryblokContent(scraped, zenlerCourseId, template);
   const blueprint = getMigrationTemplateBlueprint(template);
   const body = Array.isArray(base.body) ? base.body as Record<string, unknown>[] : [];
 
@@ -1354,9 +1360,11 @@ export async function generatePageStructure(
     ? buildMinimalLegalStructureBody(blueprint, presetBloksBySection)
     : isLevelPageTemplate(template)
       ? buildLevelPageStructureBody()
-      : blueprint.sections.map(section => (
-        presetBloksBySection?.[section.key] ?? buildPresetBlokFromSection(blueprint, section)
-      ));
+      : template === 'revision_course'
+        ? buildRevisionCourseStructureBody()
+        : blueprint.sections.map(section => (
+          presetBloksBySection?.[section.key] ?? buildPresetBlokFromSection(blueprint, section)
+        ));
 
   let zenlerCourseId = '';
   if (isCoursePageTemplate(template)) {

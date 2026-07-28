@@ -37,6 +37,7 @@ const TEMPLATE_FILES: Record<MigrationTemplate, string> = {
   course_listing: 'course-listing.html',
   course_dual_price: 'course-dual-price.html',
   qualification_level_page: 'qualification-level-page.html',
+  revision_course: 'revision-course.html',
 };
 
 const DEFAULT_TOKENS: TemplateDesignTokens = {
@@ -208,6 +209,27 @@ function componentForSection(key: string, classes: string[], template: Migration
   else if (template === 'qualification_level_page' && key.includes('faq')) component = 'level_faq_section';
   else if (template === 'qualification_level_page' && (key.includes('cta') || classes.includes('cta-band'))) {
     component = 'level_cta_section';
+  }
+  else if (template === 'revision_course' && key.includes('hero')) component = 'course_hero_layout';
+  else if (template === 'revision_course' && key.includes('stats')) component = 'stats_band';
+  else if (template === 'revision_course' && (key.includes('course-description') || key.includes('about'))) {
+    component = 'course_introduction';
+  }
+  else if (template === 'revision_course' && (key.includes('what-you') || key.includes('learn'))) {
+    component = 'course_learn_section';
+  }
+  else if (template === 'revision_course' && key.includes('syllabus')) component = 'revision_syllabus_section';
+  else if (template === 'revision_course' && key.includes('how-it-works')) component = 'revision_steps_section';
+  else if (template === 'revision_course' && key.includes('course-content')) component = 'course_curriculum';
+  else if (template === 'revision_course' && key.includes('exam')) component = 'revision_exam_format_section';
+  else if (template === 'revision_course' && key.includes('tutor')) component = 'course_tutor_section';
+  else if (template === 'revision_course' && (key.includes('review') || key.includes('testimonial'))) {
+    component = 'testimonials';
+  }
+  else if (template === 'revision_course' && key.includes('faq')) component = 'faq_section';
+  else if (template === 'revision_course' && key.includes('related')) component = 'revision_related_section';
+  else if (template === 'revision_course' && (key.includes('cta') || classes.includes('cta-band'))) {
+    component = 'promotion_section';
   }
   else if (isCoursePageTemplate(template) && key.includes('hero')) component = 'course_hero_layout';
   else if (isCoursePageTemplate(template) && (key.includes('course-description') || key === 'course-description')) {
@@ -930,6 +952,86 @@ export function buildPresetBlokFromSection(
       title_prefix: section.sampleHeading || 'What students say',
       subtitle: section.sampleDescription || '',
       cards: isCourseTemplate ? undefined : [],
+    });
+  }
+
+  if (section.component === 'stats_band') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      items: [{
+        _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+        component: 'stat_item',
+        value: '0',
+        label: section.sampleHeading || 'Stat',
+      }],
+    });
+  }
+
+  if (section.component === 'revision_syllabus_section') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: 'Full coverage',
+      heading_prefix: section.sampleHeading || 'Syllabus areas covered',
+      cards: [{
+        _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+        component: 'revision_syllabus_card',
+        badge: 'A',
+        title: 'Syllabus area',
+        body: section.sampleDescription || 'Add syllabus coverage details.',
+      }],
+    });
+  }
+
+  if (section.component === 'revision_steps_section') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: 'How it works',
+      heading_prefix: section.sampleHeading || 'A revision method built around the exam.',
+      steps: [{
+        _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+        component: 'revision_step_item',
+        number: '1',
+        title: 'Step title',
+        body: section.sampleDescription || 'Describe this revision step.',
+      }],
+    });
+  }
+
+  if (section.component === 'revision_exam_format_section') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: 'Know the exam',
+      heading_prefix: section.sampleHeading || 'Exam format',
+      description: section.sampleDescription || '',
+      facts: [{
+        _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+        component: 'revision_exam_fact',
+        value: '2 hrs',
+        label: 'Computer-based exam',
+      }],
+      rows: [{
+        _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+        component: 'revision_exam_row',
+        title: 'Section A',
+        subtitle: 'Objective test questions',
+        marks: '70 marks',
+      }],
+    });
+  }
+
+  if (section.component === 'revision_related_section') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: 'Keep going',
+      heading_prefix: section.sampleHeading || 'Related courses',
+      cards: [{
+        _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+        component: 'revision_related_card',
+        tag: 'Related',
+        title: 'Related course',
+        body: section.sampleDescription || 'Link to a related course.',
+        link_text: 'View course',
+      }],
     });
   }
 

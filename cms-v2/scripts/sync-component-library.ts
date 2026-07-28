@@ -28,6 +28,7 @@ const TEMPLATES: MigrationTemplate[] = [
   'course_listing',
   'course_dual_price',
   'qualification_level_page',
+  'revision_course',
 ];
 
 function loadEnv(): void {
