@@ -844,10 +844,12 @@ export function buildPresetBlokFromSection(
   }
 
   if (section.component === 'course_introduction') {
+    // Do not seed SBR reference-template sample copy — scraped intro is applied later.
     return sanitizeBlokForStoryblok({
       ...base,
-      title: section.sampleHeading || section.label || 'Exam Paper Overview',
-      paragraph_1: section.sampleDescription || '',
+      title: 'Exam Paper Overview',
+      paragraph_1: '',
+      paragraph_2: '',
       read_more_label: 'Read more',
       read_less_label: 'Read less',
     });

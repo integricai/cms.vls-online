@@ -499,6 +499,25 @@ function enrichCourseStructureBody(
       };
     }
 
+    if (component === 'course_introduction') {
+      const mapped = mapScrapedCourseIntroduction(scraped.courseDescription);
+      if (!mapped) return blok;
+      return {
+        ...blok,
+        title: mapped.title,
+        paragraph_1: mapped.paragraph1,
+        paragraph_2: mapped.paragraph2 || undefined,
+        read_more_label: pickText(
+          typeof blok.read_more_label === 'string' ? blok.read_more_label : undefined,
+          'Read more',
+        ),
+        read_less_label: pickText(
+          typeof blok.read_less_label === 'string' ? blok.read_less_label : undefined,
+          'Read less',
+        ),
+      };
+    }
+
     return blok;
   });
 }
