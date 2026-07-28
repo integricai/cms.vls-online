@@ -873,7 +873,8 @@ export function buildPresetBlokFromSection(
   if (section.component === 'course_curriculum') {
     return sanitizeBlokForStoryblok({
       ...base,
-      course_id: 'COURSE',
+      course_id: '',
+      zenler_course_id: '',
       eyebrow: 'Course content',
       heading_prefix: section.sampleHeading || section.label,
       heading_accent: '',

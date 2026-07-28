@@ -231,10 +231,12 @@ function buildPricingBlok(
 
 function buildCurriculumBlok(zenlerCourseId: string, courseCode: string): Record<string, unknown> | null {
   if (!zenlerCourseId && !courseCode) return null;
+  // Prefer Zenler ID — site slugs change; Zenler IDs are the stable curriculum key.
+  const courseId = zenlerCourseId || courseCode;
   return {
     _uid: blokUid(),
     component: 'course_curriculum',
-    course_code: courseCode,
+    course_id: courseId,
     zenler_course_id: zenlerCourseId,
   };
 }
@@ -458,11 +460,12 @@ function enrichCourseStructureBody(
   zenlerCourseId: string,
   destinationSlug: string,
 ): Record<string, unknown>[] {
+  // Prefer Zenler ID — site slugs change; Zenler IDs are the stable curriculum key.
   const courseRef = pickText(
+    zenlerCourseId,
     scraped.courseCode,
     destinationSlug.toUpperCase(),
     scraped.slug.toUpperCase(),
-    zenlerCourseId,
   );
 
   return body.map(blok => {

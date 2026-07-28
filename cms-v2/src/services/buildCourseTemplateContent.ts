@@ -243,7 +243,8 @@ export function buildCourseStoryblokFromTemplate(
 ): Record<string, unknown> {
   const sourceUrl = options.sourceUrl;
   const zenlerCourseId = options.zenlerCourseId;
-  const courseRef = pickText(options.slug?.toUpperCase(), data.courseCode, zenlerCourseId);
+  // Prefer Zenler ID — site slugs change; Zenler IDs are the stable curriculum key.
+  const courseRef = pickText(zenlerCourseId, data.courseCode, options.slug?.toUpperCase());
 
   const heroLayout = sanitizeBlokForStoryblok({
     _uid: uid(),
