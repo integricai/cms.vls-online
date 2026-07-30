@@ -155,6 +155,11 @@ export default function ContentMigrationTab() {
     [pages, selectedPageId],
   );
 
+  const filteredPages = useMemo(
+    () => pages.filter(page => page.template === template),
+    [pages, template],
+  );
+
   const pageUrl = selectedPage?.originUrl ?? '';
   const hasCredentials = Boolean(storyblokSpaceId.trim() && storyblokAccessToken.trim());
   const isFileSource = contentSource === 'file';
@@ -169,9 +174,11 @@ export default function ContentMigrationTab() {
     try {
       const data = await api.get<MigrationPageRecord[]>('/migration/pages');
       setPages(data);
-      if (!selectedPageId && data.length) {
-        setSelectedPageId(data[0].id);
-      }
+      // Keep current selection when possible; the template-filter effect will snap
+      // Origin URL into the active template group after pages land.
+      setSelectedPageId(current => (
+        current && data.some(page => page.id === current) ? current : data[0]?.id ?? null
+      ));
     } catch (error) {
       setMessage({
         type: 'error',
@@ -180,7 +187,7 @@ export default function ContentMigrationTab() {
     } finally {
       setLoadingPages(false);
     }
-  }, [selectedPageId]);
+  }, []);
 
   useEffect(() => {
     void loadPages();
@@ -248,13 +255,34 @@ export default function ContentMigrationTab() {
 
   useEffect(() => {
     if (!selectedPage) return;
-    setTemplate(selectedPage.template);
+    // Keep the template filter in sync when the user picks a page from the list.
+    setTemplate(current => (
+      selectedPage.template !== current ? selectedPage.template : current
+    ));
     setDestinationSlug(
       selectedPage.destinationSlug?.trim()
       || suggestDestinationSlug(selectedPage.originUrl, selectedPage.template),
     );
     setDestinationTouched(false);
-  }, [selectedPage]);
+  }, [selectedPageId, selectedPage]);
+
+  // When the template filter changes (or pages reload), keep Origin URL inside that filter.
+  useEffect(() => {
+    if (loadingPages || isFileSource) return;
+    if (filteredPages.some(page => page.id === selectedPageId)) return;
+    const nextId = filteredPages[0]?.id ?? null;
+    setSelectedPageId(nextId);
+    setDestinationTouched(false);
+    setScrapeResult(null);
+    setStructureResult(null);
+    setContentResult(null);
+    setComponentDraft(null);
+    setComponentNameText('');
+    setComponentSchemaText('');
+    setComponentTsxText('');
+    setComponentTypeText('');
+    setComponentCreated(null);
+  }, [filteredPages, selectedPageId, loadingPages, isFileSource]);
 
   useEffect(() => {
     setLoadingTemplates(true);
@@ -322,12 +350,19 @@ export default function ContentMigrationTab() {
     try {
       const data = await api.post<PageScanResult>('/migration/pages/scan', { fetchTitles: false });
       setPages(data.pages);
-      if (data.pages.length && !selectedPageId) {
-        setSelectedPageId(data.pages[0].id);
-      }
+      const matching = data.pages.filter(page => page.template === template);
+      const blogCount = data.pages.filter(page => page.template === 'blog').length;
+      setSelectedPageId(current => {
+        if (current && data.pages.some(page => page.id === current && page.template === template)) {
+          return current;
+        }
+        return matching[0]?.id ?? null;
+      });
       setMessage({
         type: 'success',
-        text: `Scan complete. ${data.scanned} pages found (${data.inserted} new, ${data.updated} updated).`,
+        text: `Scan complete. ${data.scanned} pages found (${data.inserted} new, ${data.updated} updated)`
+          + (blogCount ? `, including ${blogCount} blog posts` : '')
+          + `. Showing ${matching.length} for ${MIGRATION_TEMPLATE_LABELS[template]}.`,
       });
     } catch (error) {
       setMessage({
@@ -522,22 +557,46 @@ export default function ContentMigrationTab() {
   }
 
   async function handleTemplateChange(nextTemplate: MigrationTemplate) {
+    if (nextTemplate === template) return;
+
+    const matching = pages.filter(page => page.template === nextTemplate);
     setTemplate(nextTemplate);
-    if (!selectedPage) return;
+    resetPhaseResults();
+
+    // Prefer switching the Origin URL list into pages already tagged with this template.
+    if (matching.length) {
+      const keepSelected = selectedPage && selectedPage.template === nextTemplate
+        ? selectedPage
+        : matching[0];
+      setSelectedPageId(keepSelected.id);
+      if (!destinationTouched) {
+        setDestinationSlug(
+          keepSelected.destinationSlug?.trim()
+          || suggestDestinationSlug(keepSelected.originUrl, nextTemplate),
+        );
+      }
+      return;
+    }
+
+    // No pages for this template yet — reassign the current page so migration can continue.
+    if (!selectedPage) {
+      setSelectedPageId(null);
+      return;
+    }
 
     if (!destinationTouched) {
       setDestinationSlug(suggestDestinationSlug(selectedPage.originUrl, nextTemplate));
     }
 
     try {
-      await api.patch<MigrationPageRecord>(`/migration/pages/${selectedPage.id}`, {
+      const updated = await api.patch<MigrationPageRecord>(`/migration/pages/${selectedPage.id}`, {
         template: nextTemplate,
       });
+      setPages(current => current.map(page => (page.id === updated.id ? updated : page)));
+    } catch {
       setPages(current => current.map(page => (
         page.id === selectedPage.id ? { ...page, template: nextTemplate } : page
       )));
-    } catch {
-      // Non-blocking — selection still works locally
     }
   }
 
@@ -662,33 +721,6 @@ export default function ContentMigrationTab() {
                 </button>
               </div>
 
-              <Field label="Origin URL">
-                <select
-                  className="input"
-                  value={selectedPageId ?? ''}
-                  onChange={event => {
-                    const id = Number(event.target.value);
-                    selectPage(Number.isInteger(id) ? id : null);
-                  }}
-                  disabled={loadingPages || !pages.length}
-                >
-                  {loadingPages ? (
-                    <option value="">Loading pages...</option>
-                  ) : !pages.length ? (
-                    <option value="">Run a site scan to populate pages</option>
-                  ) : (
-                    pages.map(page => (
-                      <option key={page.id} value={page.id}>
-                        {page.path} {page.title ? `— ${page.title}` : ''} [{pageStatusLabel(page)}]
-                      </option>
-                    ))
-                  )}
-                </select>
-                {selectedPage ? (
-                  <p className="mt-1 break-all text-[11px] text-slate-400">{selectedPage.originUrl}</p>
-                ) : null}
-              </Field>
-
               <Field label="Template">
                 <select
                   className="input"
@@ -705,12 +737,42 @@ export default function ContentMigrationTab() {
                   )}
                 </select>
                 <p className="mt-1 text-[11px] text-slate-400">
-                  Course and study notes pages go to <code>courses/</code> (e.g. <code>courses/cima-notes</code>);
+                  Origin URLs below are filtered to this template.
+                  Course and study notes pages go to <code>courses/</code>;
                   blog posts go to <code>blog/</code>; all other templates go to the Storyblok root.
                   {templateReference?.fileName ? (
                     <> Reference HTML: <code>templates/{templateReference.fileName}</code> ({templateReference.sectionCount} sections).</>
                   ) : null}
                 </p>
+              </Field>
+
+              <Field label={`Origin URL (${filteredPages.length}${pages.length ? ` / ${pages.length}` : ''})`}>
+                <select
+                  className="input"
+                  value={selectedPageId ?? ''}
+                  onChange={event => {
+                    const id = Number(event.target.value);
+                    selectPage(Number.isInteger(id) ? id : null);
+                  }}
+                  disabled={loadingPages || !filteredPages.length}
+                >
+                  {loadingPages ? (
+                    <option value="">Loading pages...</option>
+                  ) : !pages.length ? (
+                    <option value="">Run a site scan to populate pages</option>
+                  ) : !filteredPages.length ? (
+                    <option value="">No {MIGRATION_TEMPLATE_LABELS[template]} pages — scan again or pick another template</option>
+                  ) : (
+                    filteredPages.map(page => (
+                      <option key={page.id} value={page.id}>
+                        {page.path} {page.title ? `— ${page.title}` : ''} [{pageStatusLabel(page)}]
+                      </option>
+                    ))
+                  )}
+                </select>
+                {selectedPage ? (
+                  <p className="mt-1 break-all text-[11px] text-slate-400">{selectedPage.originUrl}</p>
+                ) : null}
               </Field>
             </>
           )}
