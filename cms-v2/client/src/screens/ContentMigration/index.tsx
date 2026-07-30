@@ -253,26 +253,20 @@ export default function ContentMigrationTab() {
     }));
   }, [storyblokSpaceId, storyblokAccessToken, storyblokRegion]);
 
-  useEffect(() => {
-    if (!selectedPage) return;
-    // Keep the template filter in sync when the user picks a page from the list.
-    setTemplate(current => (
-      selectedPage.template !== current ? selectedPage.template : current
-    ));
-    setDestinationSlug(
-      selectedPage.destinationSlug?.trim()
-      || suggestDestinationSlug(selectedPage.originUrl, selectedPage.template),
-    );
-    setDestinationTouched(false);
-  }, [selectedPageId, selectedPage]);
-
-  // When the template filter changes (or pages reload), keep Origin URL inside that filter.
+  // Template is the source of truth for the Origin URL filter. When the selection falls
+  // outside the active template group, snap to the first matching page (one-way).
   useEffect(() => {
     if (loadingPages || isFileSource) return;
     if (filteredPages.some(page => page.id === selectedPageId)) return;
-    const nextId = filteredPages[0]?.id ?? null;
-    setSelectedPageId(nextId);
+    const next = filteredPages[0] ?? null;
+    setSelectedPageId(next?.id ?? null);
     setDestinationTouched(false);
+    if (next) {
+      setDestinationSlug(
+        next.destinationSlug?.trim()
+        || suggestDestinationSlug(next.originUrl, next.template),
+      );
+    }
     setScrapeResult(null);
     setStructureResult(null);
     setContentResult(null);
@@ -284,10 +278,13 @@ export default function ContentMigrationTab() {
     setComponentCreated(null);
   }, [filteredPages, selectedPageId, loadingPages, isFileSource]);
 
+  // Load template blueprints once — do not refetch on every template filter change.
   useEffect(() => {
+    let cancelled = false;
     setLoadingTemplates(true);
     api.get<MigrationTemplateOption[]>('/migration/templates')
       .then(templates => {
+        if (cancelled) return;
         const byKey = new Map(templates.map(item => [item.template, item]));
         const merged = (Object.entries(MIGRATION_TEMPLATE_LABELS) as Array<[MigrationTemplate, string]>)
           .map(([value, label]) => byKey.get(value) ?? {
@@ -298,23 +295,31 @@ export default function ContentMigrationTab() {
             sections: [],
           });
         setMigrationTemplates(merged);
-        const match = merged.find(item => item.template === template) ?? null;
-        setTemplateReference(match);
       })
       .catch(() => {
-        const fallback = (Object.entries(MIGRATION_TEMPLATE_LABELS) as Array<[MigrationTemplate, string]>)
-          .map(([value, label]) => ({
-            template: value,
-            label,
-            fileName: '',
-            sectionCount: 0,
-            sections: [],
-          }));
-        setMigrationTemplates(fallback);
-        setTemplateReference(fallback.find(item => item.template === template) ?? null);
+        if (cancelled) return;
+        setMigrationTemplates(
+          (Object.entries(MIGRATION_TEMPLATE_LABELS) as Array<[MigrationTemplate, string]>)
+            .map(([value, label]) => ({
+              template: value,
+              label,
+              fileName: '',
+              sectionCount: 0,
+              sections: [],
+            })),
+        );
       })
-      .finally(() => setLoadingTemplates(false));
-  }, [template]);
+      .finally(() => {
+        if (!cancelled) setLoadingTemplates(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setTemplateReference(migrationTemplates.find(item => item.template === template) ?? null);
+  }, [migrationTemplates, template]);
 
   function credentialsPayload() {
     return {
@@ -613,7 +618,16 @@ export default function ContentMigrationTab() {
   }
 
   function selectPage(id: number | null) {
+    const page = id == null ? null : pages.find(item => item.id === id) ?? null;
     setSelectedPageId(id);
+    if (page) {
+      // User picked a URL — align template filter + destination to that page (explicit action).
+      setTemplate(page.template);
+      setDestinationSlug(
+        page.destinationSlug?.trim()
+        || suggestDestinationSlug(page.originUrl, page.template),
+      );
+    }
     setDestinationTouched(false);
     resetPhaseResults();
   }
