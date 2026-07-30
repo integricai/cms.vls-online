@@ -9,7 +9,10 @@ import {
   toZenlerFetchUrl,
 } from './migrationUrlUtils';
 
-const SITEMAP_URL = 'https://vls-online.com/sitemap/site-urls.xml';
+const SITEMAP_URLS = [
+  'https://vls-online.com/sitemap/site-urls.xml',
+  'https://vls-online.com/sitemap/blog-urls.xml',
+] as const;
 const REQUEST_TIMEOUT_MS = 60_000;
 
 function decodeXmlEntities(value: string): string {
@@ -51,14 +54,17 @@ function isAllowedSiteUrl(urlValue: string): boolean {
     const host = parsed.hostname.toLowerCase();
     if (!ALLOWED_HOSTS.has(host)) return false;
     if (parsed.pathname.match(/\.(xml|json|pdf|jpg|jpeg|png|gif|webp|svg|css|js)$/i)) return false;
+    // Blog index is not a migratable blog_post — only /blog/{slug} posts.
+    const path = parsed.pathname.replace(/\/+$/, '') || '/';
+    if (path === '/blog') return false;
     return true;
   } catch {
     return false;
   }
 }
 
-async function fetchSitemapXml(): Promise<string> {
-  const fetchUrl = toZenlerFetchUrl(new URL(SITEMAP_URL));
+async function fetchSitemapXml(sitemapUrl: string): Promise<string> {
+  const fetchUrl = toZenlerFetchUrl(new URL(sitemapUrl));
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -70,21 +76,56 @@ async function fetchSitemapXml(): Promise<string> {
       },
     });
     if (!response.ok) {
-      throw new CourseMigrationError(`Sitemap returned HTTP ${response.status}`, 502);
+      throw new CourseMigrationError(`Sitemap ${sitemapUrl} returned HTTP ${response.status}`, 502);
     }
     return await response.text();
   } catch (error) {
     if (error instanceof CourseMigrationError) throw error;
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new CourseMigrationError('Sitemap fetch timed out after 60 seconds', 504);
+      throw new CourseMigrationError(`Sitemap fetch timed out after 60 seconds: ${sitemapUrl}`, 504);
     }
     throw new CourseMigrationError(
-      error instanceof Error ? error.message : 'Could not fetch sitemap',
+      error instanceof Error ? error.message : `Could not fetch sitemap: ${sitemapUrl}`,
       502,
     );
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function fetchAllSitemapLocValues(): Promise<string[]> {
+  const results = await Promise.allSettled(SITEMAP_URLS.map(url => fetchSitemapXml(url)));
+  const locValues: string[] = [];
+  const errors: string[] = [];
+
+  for (let index = 0; index < results.length; index += 1) {
+    const result = results[index];
+    const sitemapUrl = SITEMAP_URLS[index];
+    if (result.status === 'fulfilled') {
+      locValues.push(...extractLocValues(result.value));
+      continue;
+    }
+    const message = result.reason instanceof Error ? result.reason.message : String(result.reason);
+    errors.push(`${sitemapUrl}: ${message}`);
+  }
+
+  // Site pages sitemap is required; blog sitemap is required for blog migration but we still
+  // fail clearly if nothing usable was loaded.
+  if (!locValues.length) {
+    throw new CourseMigrationError(
+      `No page URLs were found in the sitemaps.${errors.length ? ` Errors: ${errors.join('; ')}` : ''}`,
+      502,
+    );
+  }
+
+  if (errors.length) {
+    throw new CourseMigrationError(
+      `Some sitemaps failed while scanning: ${errors.join('; ')}`,
+      502,
+    );
+  }
+
+  return locValues;
 }
 
 async function fetchPageTitle(zenlerUrl: string): Promise<string | null> {
@@ -109,9 +150,7 @@ async function fetchPageTitle(zenlerUrl: string): Promise<string | null> {
 }
 
 export async function scanAndStoreMigrationPages(options?: { fetchTitles?: boolean }): Promise<PageScanResult> {
-  const xml = await fetchSitemapXml();
-  const locValues = extractLocValues(xml)
-    .filter(isAllowedSiteUrl);
+  const locValues = (await fetchAllSitemapLocValues()).filter(isAllowedSiteUrl);
 
   if (!locValues.length) {
     throw new CourseMigrationError('No page URLs were found in the sitemap', 502);

@@ -568,7 +568,9 @@ export default function ContentMigrationTab() {
     setTemplate(nextTemplate);
     resetPhaseResults();
 
-    // Prefer switching the Origin URL list into pages already tagged with this template.
+    // Switch Origin URL into pages already tagged with this template.
+    // Never retag the current page just because the new template has an empty list —
+    // that incorrectly converted courses into "blog" when blog URLs were missing.
     if (matching.length) {
       const keepSelected = selectedPage && selectedPage.template === nextTemplate
         ? selectedPage
@@ -583,26 +585,8 @@ export default function ContentMigrationTab() {
       return;
     }
 
-    // No pages for this template yet — reassign the current page so migration can continue.
-    if (!selectedPage) {
-      setSelectedPageId(null);
-      return;
-    }
-
-    if (!destinationTouched) {
-      setDestinationSlug(suggestDestinationSlug(selectedPage.originUrl, nextTemplate));
-    }
-
-    try {
-      const updated = await api.patch<MigrationPageRecord>(`/migration/pages/${selectedPage.id}`, {
-        template: nextTemplate,
-      });
-      setPages(current => current.map(page => (page.id === updated.id ? updated : page)));
-    } catch {
-      setPages(current => current.map(page => (
-        page.id === selectedPage.id ? { ...page, template: nextTemplate } : page
-      )));
-    }
+    setSelectedPageId(null);
+    if (!destinationTouched) setDestinationSlug('');
   }
 
   async function handleDestinationBlur() {
