@@ -51,7 +51,6 @@ function isAllowedSiteUrl(urlValue: string): boolean {
     const host = parsed.hostname.toLowerCase();
     if (!ALLOWED_HOSTS.has(host)) return false;
     if (parsed.pathname.match(/\.(xml|json|pdf|jpg|jpeg|png|gif|webp|svg|css|js)$/i)) return false;
-    if (parsed.pathname.includes('/blog/') && parsed.pathname !== '/blog') return false;
     return true;
   } catch {
     return false;

@@ -31,6 +31,7 @@ export function inferTemplateFromPath(pathname: string): MigrationTemplate {
   const path = pathname.replace(/\/+$/, '').toLowerCase() || '/';
 
   if (path === '/' || path === '/home') return 'home';
+  if (/^\/blog\/.+/.test(path)) return 'blog';
   if (/\/courses\/[^/]*notes/i.test(path)) return 'study_notes';
   if (path.startsWith('/courses/')) return 'course';
   if (/\/(legal|privacy|terms|cookie|gdpr|disclaimer|refund|returns|policy)/.test(path)) return 'legal';

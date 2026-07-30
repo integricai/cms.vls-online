@@ -18,6 +18,7 @@ export const MIGRATION_TEMPLATE_LABELS: Record<MigrationTemplate, string> = {
   course_dual_price: 'Course Dual Price',
   qualification_level_page: 'Qualification Level Page',
   revision_course: 'Revision Course',
+  blog: 'Blog',
 };
 
 /** Templates that always emit every blueprint section, using the HTML reference file when live content is missing. */

@@ -8,6 +8,7 @@ import type {
   MigrationTemplate,
   PageContentFileSummary,
   PageScanResult,
+  ScrapedBlogPost,
   ScrapedCoursePage,
   ScrapedLevelPage,
   ScrapedMigrationPage,
@@ -74,8 +75,12 @@ function isLevelPage(scraped: ScrapedMigrationPage): scraped is ScrapedLevelPage
   return 'paperGroups' in scraped && 'pathwaySteps' in scraped;
 }
 
+function isBlogPage(scraped: ScrapedMigrationPage): scraped is ScrapedBlogPost {
+  return 'kind' in scraped && (scraped as { kind?: string }).kind === 'blog_post';
+}
+
 function isCoursePage(scraped: ScrapedMigrationPage): scraped is ScrapedCoursePage {
-  return 'hero' in scraped;
+  return 'hero' in scraped && !isBlogPage(scraped);
 }
 
 /** api.post rejects with `err.data` set to whatever the backend put in the JSON `data` field — shape varies by error type. */
@@ -557,7 +562,8 @@ export default function ContentMigrationTab() {
   const scraped = scrapeResult?.scraped;
   const levelScraped = scraped && isLevelPage(scraped) ? scraped : null;
   const courseScraped = scraped && isCoursePage(scraped) ? scraped : null;
-  const genericScraped = scraped && !isLevelPage(scraped) && !isCoursePage(scraped) ? scraped : null;
+  const blogScraped = scraped && isBlogPage(scraped) ? scraped : null;
+  const genericScraped = scraped && !isLevelPage(scraped) && !isCoursePage(scraped) && !isBlogPage(scraped) ? scraped : null;
 
   const fullyBlocked = Boolean(
     structureResult && !structureResult.draftStory && structureResult.unmatchedSections.length > 0,
@@ -700,7 +706,7 @@ export default function ContentMigrationTab() {
                 </select>
                 <p className="mt-1 text-[11px] text-slate-400">
                   Course and study notes pages go to <code>courses/</code> (e.g. <code>courses/cima-notes</code>);
-                  all other templates go to the Storyblok root.
+                  blog posts go to <code>blog/</code>; all other templates go to the Storyblok root.
                   {templateReference?.fileName ? (
                     <> Reference HTML: <code>templates/{templateReference.fileName}</code> ({templateReference.sectionCount} sections).</>
                   ) : null}
@@ -1089,6 +1095,68 @@ export default function ContentMigrationTab() {
                   <li key={warning}>{warning}</li>
                 ))}
               </ul>
+            </div>
+          ) : null}
+
+          {blogScraped ? (
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+                <h3 className="text-sm font-bold text-slate-700">Scraped blog content</h3>
+              </div>
+              <div className="space-y-4 p-4 text-xs text-slate-600">
+                <div>
+                  <p className="font-semibold text-slate-700">Post</p>
+                  <p>{blogScraped.title}</p>
+                  <p className="mt-1 text-slate-400">Slug: {blogScraped.slug}</p>
+                  <p className="mt-1 text-slate-400">Topic: {blogScraped.topic}</p>
+                  <p className="mt-1 text-slate-400">Tags: {blogScraped.tags.join(', ') || 'None'}</p>
+                  <p className="mt-1">{blogScraped.excerpt || 'No excerpt found'}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-700">Images ({blogScraped.images.length})</p>
+                  <p className="mt-1 text-slate-400">Featured: {blogScraped.featuredImageUrl || 'Not found'}</p>
+                  {blogScraped.images.length ? (
+                    <ul className="mt-2 list-disc space-y-1 pl-4">
+                      {blogScraped.images.map(image => (
+                        <li key={image.sourceUrl}>
+                          [{image.kind}] {image.alt || 'untitled'} — {image.sourceUrl}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-700">Key takeaways ({blogScraped.keyTakeaways.length})</p>
+                  {blogScraped.keyTakeaways.length ? (
+                    <ul className="mt-1 list-disc space-y-1 pl-4">
+                      {blogScraped.keyTakeaways.map(item => <li key={item}>{item}</li>)}
+                    </ul>
+                  ) : (
+                    <p className="mt-1 text-slate-400">None detected</p>
+                  )}
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-700">FAQ ({blogScraped.faqItems.length})</p>
+                  {blogScraped.faqItems.length ? (
+                    <ul className="mt-1 list-disc space-y-1 pl-4">
+                      {blogScraped.faqItems.map(item => (
+                        <li key={item.question}>
+                          <span className="font-medium">{item.question}</span>
+                          <span className="text-slate-500"> — {item.answerText.slice(0, 160)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-1 text-slate-400">None detected</p>
+                  )}
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-700">Body preview</p>
+                  <p className="mt-1 whitespace-pre-wrap text-slate-500">
+                    {blogScraped.bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 800)}
+                  </p>
+                </div>
+              </div>
             </div>
           ) : null}
 

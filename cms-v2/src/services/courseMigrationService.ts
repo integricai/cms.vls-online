@@ -6,6 +6,7 @@ import type {
   MigrationTemplate,
   PageMigrationRequest,
   PageMigrationResult,
+  ScrapedBlogPost,
   ScrapedCoursePage,
   ScrapedGenericPage,
   ScrapePhaseResult,
@@ -29,9 +30,19 @@ import { CoursePageScrapeError, scrapeCoursePage } from './coursePageScraper';
 import { buildTabBlocksFromPanel } from './courseTabBuilder';
 import { DEFAULT_TRUSTPILOT_CAROUSEL_EMBED } from '../../shared/trustpilotDefaults';
 import { genericBreadcrumbText, scrapeGenericPage } from './pageScraper';
-import { slugifySegment, storyFullSlug, suggestDestinationSlug, usesCoursesFolder, isCoursePageTemplate, isLevelPageTemplate } from '../../shared/migrationDestination';
+import {
+  slugifySegment,
+  storyFullSlug,
+  suggestDestinationSlug,
+  usesCoursesFolder,
+  usesBlogFolder,
+  isBlogPageTemplate,
+  isCoursePageTemplate,
+  isLevelPageTemplate,
+} from '../../shared/migrationDestination';
 import { MIGRATION_TEMPLATE_LABELS, TEMPLATES_WITH_FULL_FALLBACK } from '../../shared/migrationTemplateLabels';
 import {
+  ensureBlogFolder,
   findCoursesFolder,
   getStoryblokComponent,
   StoryblokApiError,
@@ -40,6 +51,11 @@ import {
   verifyStoryblokAccess,
   type StoryblokConfig,
 } from './storyblokClient';
+import { collectBlogScrapeWarnings, scrapeBlogPage } from './blogPageScraper';
+import {
+  buildBlogPostStoryblokContent,
+  buildBlogPostStructureContent,
+} from './buildBlogPostStoryblokContent';
 import {
   applyTemplateStyles,
   buildPresetBlokFromSection,
@@ -574,6 +590,8 @@ async function syncLibrarySafely(
   template: MigrationTemplate,
   warnings: string[],
 ): Promise<{ summary: ComponentLibrarySummary; presetBloksBySection: Record<string, Record<string, unknown>> } | undefined> {
+  if (isBlogPageTemplate(template)) return undefined;
+
   try {
     const librarySync = await syncTemplateComponentLibrary(config, template);
     warnings.push(
@@ -908,6 +926,62 @@ export async function migratePage(input: PageMigrationRequest): Promise<PageMigr
   const fullSlug = storyFullSlug(template, destinationSlug);
   const templateReference = templateReferenceSummary(template);
 
+  if (isBlogPageTemplate(template)) {
+    const scraped = await scrapeBlogPage(input.pageUrl.trim());
+    const warnings = collectBlogScrapeWarnings(scraped);
+
+    if (input.dryRun) {
+      return { template, destinationSlug, fullSlug, scraped, warnings, templateReference };
+    }
+
+    const config = storyblokConfig(input);
+    await verifyStoryblokAccess(config);
+    const missingBlogComponents = await detectMissingBlogComponents(config);
+    if (missingBlogComponents.length) {
+      throw new CourseMigrationError(
+        `Missing Storyblok blog components: ${missingBlogComponents.join(', ')}`,
+        400,
+      );
+    }
+
+    const built = await buildBlogPostStoryblokContent(scraped, config);
+    warnings.push(...built.warnings);
+    const upsert = await upsertStory(config, {
+      name: scraped.title || destinationSlug,
+      slug: destinationSlug,
+      parentId: built.parentFolderId,
+      fullSlug: storyFullSlug(template, destinationSlug, { useBlogFolder: true }),
+      content: built.content,
+      publish: Boolean(input.publish),
+    });
+
+    if (!upsert.created) {
+      warnings.push('An existing Storyblok story was updated for this destination slug.');
+    }
+
+    try {
+      const dbPage = await getMigrationPageByOriginUrl(scraped.sourceUrl);
+      if (dbPage) await markMigrationPageMigrated(dbPage.id, upsert.story.id);
+    } catch (err) {
+      warnings.push(`Story created in Storyblok but migration tracking update failed: ${err instanceof Error ? err.message : 'Unknown database error'}`);
+    }
+
+    return {
+      template,
+      destinationSlug,
+      fullSlug: upsert.story.full_slug,
+      scraped,
+      warnings,
+      templateReference,
+      storyblok: {
+        storyId: upsert.story.id,
+        fullSlug: upsert.story.full_slug,
+        previewUrl: upsert.previewUrl,
+        created: upsert.created,
+      },
+    };
+  }
+
   if (isCoursePageTemplate(template)) {
     const scraped = await scrapeCoursePage(input.pageUrl.trim());
     const zenlerCourseId = await resolveZenlerCourseId(scraped);
@@ -1105,8 +1179,24 @@ function migrationUsesCoursesFolder(page: MigrationPageRecord, template: Migrati
   return usesCoursesFolder(template);
 }
 
+function migrationUsesBlogFolder(page: MigrationPageRecord, template: MigrationTemplate): boolean {
+  if (page.sourceType === 'file') return false;
+  return usesBlogFolder(template);
+}
+
 function rootComponentForTemplate(template: MigrationTemplate): string {
+  if (isBlogPageTemplate(template)) return 'blog_post';
   return isCoursePageTemplate(template) ? 'course_page' : 'page';
+}
+
+async function detectMissingBlogComponents(config: StoryblokConfig): Promise<string[]> {
+  const required = ['blog_post', 'blog_takeaway_item', 'blog_faq_item', 'seo'] as const;
+  const missing: string[] = [];
+  for (const component of required) {
+    const exists = Boolean(await getStoryblokComponent(config, component));
+    if (!exists) missing.push(component);
+  }
+  return missing;
 }
 
 async function detectMissingLevelPageComponents(config: StoryblokConfig): Promise<string[]> {
@@ -1208,6 +1298,14 @@ export async function previewScrapePage(
     return { page: updatedPage ?? page, scraped, warnings };
   }
 
+  if (isBlogPageTemplate(page.template)) {
+    const scraped = await scrapeBlogPage(page.originUrl);
+    const warnings = collectBlogScrapeWarnings(scraped);
+    await saveScrapeResult(pageId, { scraped, warnings });
+    const updatedPage = await getMigrationPageById(pageId);
+    return { page: updatedPage ?? page, scraped, warnings };
+  }
+
   const scraped = await scrapeGenericPage(page.originUrl, page.template);
   const warnings = collectGenericWarnings(scraped);
   await saveScrapeResult(pageId, { scraped, warnings });
@@ -1304,6 +1402,60 @@ export async function generatePageStructure(
   const config = storyblokConfigFromCredentials(credentials);
   await verifyStoryblokAccess(config);
 
+  if (isBlogPageTemplate(template)) {
+    const blogScraped = scrapedRaw as ScrapedBlogPost;
+    const missingBlogComponents = await detectMissingBlogComponents(config);
+    if (missingBlogComponents.length) {
+      return {
+        page,
+        templateReference,
+        missingComponents: missingBlogComponents,
+        unmatchedSections: [],
+        warnings: [
+          `Generate Structure stopped: ${missingBlogComponents.length} blog component(s) are missing in Storyblok. Push blog schemas (blog_post, takeaways, FAQ), then try again.`,
+        ],
+      };
+    }
+
+    const destinationSlug = resolveDestinationSlug(page);
+    const fullSlug = storyFullSlug(template, destinationSlug, { useBlogFolder: true });
+    const blogFolder = await ensureBlogFolder(config);
+    const content = buildBlogPostStructureContent(blogScraped);
+    const upsert = await upsertStory(config, {
+      name: blogScraped.title || page.title || destinationSlug,
+      slug: destinationSlug,
+      parentId: blogFolder.id,
+      fullSlug,
+      content,
+      publish: false,
+    });
+
+    const warnings = [
+      ...collectBlogScrapeWarnings(blogScraped),
+      ...(upsert.created ? [] : ['An existing Storyblok story at this destination was updated with the generated blog structure.']),
+      'Blog structure draft created. Migrate Content will upload all images to Storyblok and fill the full article body.',
+    ];
+
+    await saveStructureResult(pageId, {
+      structure: { templateReference, componentLibrary: null },
+      draftStoryId: upsert.story.id,
+    });
+    const updatedPage = await getMigrationPageById(pageId);
+    return {
+      page: updatedPage ?? page,
+      templateReference,
+      missingComponents: [],
+      unmatchedSections: [],
+      draftStory: {
+        storyId: upsert.story.id,
+        fullSlug: upsert.story.full_slug,
+        previewUrl: upsert.previewUrl,
+        created: upsert.created,
+      },
+      warnings,
+    };
+  }
+
   if (!isCoursePageTemplate(template) && !isLevelPageTemplate(template) && page.customComponentName) {
     return generateCustomComponentStructure(page, pageId, config, template, templateReference, scrapedRaw as ScrapedGenericPage);
   }
@@ -1327,7 +1479,7 @@ export async function generatePageStructure(
   const scraped = scrapedRaw as ScrapedGenericPage;
   const pageBuilderLegal = template === 'legal' && isPageBuilderLegalHtml(scraped.rawHtml ?? '');
 
-  if (!isCoursePageTemplate(template) && !isLevelPageTemplate(template)) {
+  if (!isCoursePageTemplate(template) && !isLevelPageTemplate(template) && !isBlogPageTemplate(template)) {
     const eligibleSections = blueprint.sections.filter(section => section.component !== 'enquiry_form');
     unmatchedSections = pageBuilderLegal ? [] : detectUnmatchedSections(blueprint, scraped);
     if (
@@ -1381,6 +1533,7 @@ export async function generatePageStructure(
 
   const fullSlug = storyFullSlug(template, destinationSlug, {
     useCoursesFolder: migrationUsesCoursesFolder(page, template),
+    useBlogFolder: migrationUsesBlogFolder(page, template),
   });
   const rootComponent = rootComponentForTemplate(template);
 
@@ -1398,6 +1551,8 @@ export async function generatePageStructure(
       );
     }
     parentId = coursesFolder.id;
+  } else if (migrationUsesBlogFolder(page, template)) {
+    parentId = (await ensureBlogFolder(config)).id;
   }
 
   const upsert = await upsertStory(config, {
@@ -1479,12 +1634,20 @@ export async function migratePageContent(
   const destinationSlug = resolveDestinationSlug(page);
   const fullSlug = storyFullSlug(template, destinationSlug, {
     useCoursesFolder: migrationUsesCoursesFolder(page, template),
+    useBlogFolder: migrationUsesBlogFolder(page, template),
   });
 
   let content: Record<string, unknown>;
   let parentId: number | undefined;
 
-  if (isCoursePageTemplate(template)) {
+  if (isBlogPageTemplate(template)) {
+    const scraped = scrapedRaw as ScrapedBlogPost;
+    warnings.push(...collectBlogScrapeWarnings(scraped));
+    const built = await buildBlogPostStoryblokContent(scraped, config);
+    content = built.content;
+    warnings.push(...built.warnings);
+    parentId = built.parentFolderId;
+  } else if (isCoursePageTemplate(template)) {
     const scraped = scrapedRaw as ScrapedCoursePage;
     const zenlerCourseId = await resolveZenlerCourseId(scraped);
     warnings.push(...collectCourseWarnings(scraped, zenlerCourseId));

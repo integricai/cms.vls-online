@@ -21,7 +21,8 @@ export type MigrationTemplate =
   | 'course_listing'
   | 'course_dual_price'
   | 'qualification_level_page'
-  | 'revision_course';
+  | 'revision_course'
+  | 'blog';
 
 export interface MigrationPageRecord {
   id: number;
@@ -366,7 +367,45 @@ export interface ComponentLibrarySummary {
 }
 
 
-export type ScrapedMigrationPage = ScrapedCoursePage | ScrapedGenericPage | ScrapedLevelPage;
+export interface ScrapedBlogImage {
+  sourceUrl: string;
+  alt: string;
+  kind: 'featured' | 'inline' | 'other';
+}
+
+export interface ScrapedBlogPost {
+  kind: 'blog_post';
+  sourceUrl: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  metaTitle: string;
+  metaDescription: string;
+  topic: string;
+  tags: string[];
+  featuredImageUrl: string;
+  publishDate: string;
+  readingTimeMinutes: number | null;
+  bodyHtml: string;
+  keyTakeaways: string[];
+  faqItems: ScrapedFaqItem[];
+  sidebarCta: {
+    heading: string;
+    text: string;
+    label: string;
+    link: string;
+  } | null;
+  midCta: {
+    heading: string;
+    text: string;
+    label: string;
+    link: string;
+  } | null;
+  images: ScrapedBlogImage[];
+  extractionWarnings?: string[];
+}
+
+export type ScrapedMigrationPage = ScrapedCoursePage | ScrapedGenericPage | ScrapedLevelPage | ScrapedBlogPost;
 
 export interface PageMigrationResult {
   template: MigrationTemplate;

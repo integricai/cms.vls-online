@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import type { MigrationTemplate } from '../../shared/migrationTypes';
-import { isCoursePageTemplate } from '../../shared/migrationDestination';
+import { isBlogPageTemplate, isCoursePageTemplate } from '../../shared/migrationDestination';
 import { buildHeroRightBlokFromTemplate } from './buildCourseTemplateContent';
 import { loadCourseTemplateFile } from './courseTemplateParser';
 import type {
@@ -38,6 +38,7 @@ const TEMPLATE_FILES: Record<MigrationTemplate, string> = {
   course_dual_price: 'course-dual-price.html',
   qualification_level_page: 'qualification-level-page.html',
   revision_course: 'revision-course.html',
+  blog: 'blog-post.html',
 };
 
 const DEFAULT_TOKENS: TemplateDesignTokens = {
@@ -463,11 +464,31 @@ function augmentCourseSections(sections: TemplateSectionBlueprint[]): TemplateSe
   return output;
 }
 
+function blogBlueprintSections(tokens: TemplateDesignTokens): TemplateSectionBlueprint[] {
+  const styles = stylesForSection(['section'], tokens, 'content_section');
+  return [
+    { key: 'hero', label: 'Article hero', component: 'blog_post', classes: [], isBand: false, styles, sampleHeading: '', sampleDescription: '' },
+    { key: 'body', label: 'Article body', component: 'blog_post', classes: [], isBand: false, styles, sampleHeading: '', sampleDescription: '' },
+    { key: 'key_takeaways', label: 'Key takeaways', component: 'blog_takeaway_item', classes: [], isBand: false, styles, sampleHeading: '', sampleDescription: '' },
+    { key: 'faq_items', label: 'FAQ', component: 'blog_faq_item', classes: [], isBand: false, styles, sampleHeading: '', sampleDescription: '' },
+  ];
+}
+
 function parseTemplateFile(template: MigrationTemplate, filePath: string): MigrationTemplateBlueprint {
   const html = fs.readFileSync(filePath, 'utf8');
   const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
   const css = styleMatch?.[1] ?? '';
   const tokens = { ...DEFAULT_TOKENS, ...parseCssTokens(css) };
+
+  if (isBlogPageTemplate(template)) {
+    return {
+      template,
+      fileName: path.basename(filePath),
+      filePath,
+      tokens,
+      sections: blogBlueprintSections(tokens),
+    };
+  }
 
   return {
     template,

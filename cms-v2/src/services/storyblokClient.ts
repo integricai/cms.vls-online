@@ -425,6 +425,34 @@ export async function findCoursesFolder(config: StoryblokConfig): Promise<Storyb
   return data.stories?.find(story => story.slug === 'courses') ?? null;
 }
 
+export async function findBlogFolder(config: StoryblokConfig): Promise<StoryblokStoryRef | null> {
+  const direct = await findStoryBySlug(config, 'blog');
+  if (direct) return direct;
+
+  const data = await storyblokRequest<{ stories?: StoryblokStoryRef[] }>(
+    config,
+    'GET',
+    '/stories?folder_only=1&search_term=blog',
+  );
+  return data.stories?.find(story => story.slug === 'blog') ?? null;
+}
+
+/** Find or create the Storyblok `blog` folder used for blog_post stories. */
+export async function ensureBlogFolder(config: StoryblokConfig): Promise<StoryblokStoryRef> {
+  const existing = await findBlogFolder(config);
+  if (existing) return existing;
+
+  const created = await upsertStory(config, {
+    name: 'Blog',
+    slug: 'blog',
+    fullSlug: 'blog',
+    content: { component: 'page', body: [] },
+    isFolder: true,
+    publish: false,
+  });
+  return created.story;
+}
+
 export interface UpsertStoryInput {
   name: string;
   slug: string;
