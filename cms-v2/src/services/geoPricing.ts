@@ -83,17 +83,6 @@ export function resolveGeoRegionCode(countryCode: string | null | undefined): st
   return resolveGeoRegionForCountry(countryCode)?.code ?? null;
 }
 
-/** True when both countries belong to the same configured geo pricing region. */
-export function geoPricingRegionsMatch(
-  quotedCountryCode: string | null | undefined,
-  paymentCountryCode: string | null | undefined,
-): boolean {
-  const quotedRegion = resolveGeoRegionCode(quotedCountryCode);
-  const paymentRegion = resolveGeoRegionCode(paymentCountryCode);
-  if (!quotedRegion) return true;
-  return quotedRegion === paymentRegion;
-}
-
 export function pricingRegionLabel(regionCode: string | null | undefined): string {
   if (!regionCode) return 'standard';
   return cache.regions.find(region => region.code === regionCode)?.label ?? regionCode;

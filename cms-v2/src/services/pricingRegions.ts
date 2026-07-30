@@ -1,5 +1,4 @@
 import {
-  geoPricingRegionsMatch,
   pricingRegionLabel as geoPricingRegionLabel,
   resolveGeoRegionCode,
 } from './geoPricing';
@@ -7,7 +6,6 @@ import {
 export {
   applyGeoPricing,
   countryDisplayName,
-  geoPricingRegionsMatch,
   getGeoPricingRegions,
   refreshGeoPricingCache,
   resolveGeoRegionCode,
@@ -19,13 +17,6 @@ export type PricingRegion = string;
 
 export function resolvePricingRegion(countryCode: string | null | undefined): PricingRegion {
   return resolveGeoRegionCode(countryCode) ?? 'DEFAULT';
-}
-
-export function pricingRegionsMatch(
-  quotedCountryCode: string | null | undefined,
-  paymentCountryCode: string | null | undefined,
-): boolean {
-  return geoPricingRegionsMatch(quotedCountryCode, paymentCountryCode);
 }
 
 export function pricingRegionLabel(region: PricingRegion): string {

@@ -1,5 +1,4 @@
 import { sql } from '../db/client';
-import type { PricingRegion } from '../services/pricingRegions';
 
 export type PaymentOrderStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled' | 'Refunded';
 
@@ -15,9 +14,6 @@ export interface PaymentOrder {
   studentName: string | null;
   studentEmail: string | null;
   countryCode: string | null;
-  quotedPricingRegion: PricingRegion | null;
-  paymentMethodCountry: string | null;
-  regionalPricingApplied: boolean;
   amount: number;
   currency: string;
   durationDays: number | null;
@@ -49,9 +45,6 @@ interface DbRow {
   student_name: string | null;
   student_email: string | null;
   country_code: string | null;
-  quoted_pricing_region: string | null;
-  payment_method_country: string | null;
-  regional_pricing_applied: boolean;
   amount: string;
   currency: string;
   duration_days: number | null;
@@ -84,9 +77,6 @@ function rowToOrder(row: DbRow): PaymentOrder {
     studentName: row.student_name,
     studentEmail: row.student_email,
     countryCode: row.country_code ?? null,
-    quotedPricingRegion: (row.quoted_pricing_region as PricingRegion | null) ?? null,
-    paymentMethodCountry: row.payment_method_country ?? null,
-    regionalPricingApplied: row.regional_pricing_applied ?? false,
     amount: Number(row.amount),
     currency: row.currency,
     durationDays: row.duration_days ?? null,
@@ -118,48 +108,23 @@ export async function createPaymentOrder(data: {
   studentName: string | null;
   studentEmail: string | null;
   countryCode?: string | null;
-  quotedPricingRegion?: PricingRegion | null;
-  regionalPricingApplied?: boolean;
   amount: number;
   currency: string;
   durationDays?: number | null;
   discountPercent?: number | null;
 }): Promise<PaymentOrder> {
-  try {
-    const rows = await sql`
-      INSERT INTO payment_orders
-        (payment_option_id, course_id, course_price_id, customer_id, zenler_course_id, course_title,
-         option_type, student_name, student_email, country_code, quoted_pricing_region,
-         regional_pricing_applied, amount, currency, duration_days, discount_percent)
-      VALUES
-        (${data.paymentOptionId ?? null}, ${data.courseId ?? null}, ${data.coursePriceId ?? null},
-         ${data.customerId ?? null}, ${data.zenlerCourseId}, ${data.courseTitle}, ${data.optionType},
-         ${data.studentName}, ${data.studentEmail}, ${data.countryCode ?? null},
-         ${data.quotedPricingRegion ?? null}, ${data.regionalPricingApplied ?? false},
-         ${data.amount}, ${data.currency}, ${data.durationDays ?? null}, ${data.discountPercent ?? null})
-      RETURNING *
-    `;
-    return rowToOrder(rows[0] as DbRow);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (!/quoted_pricing_region|regional_pricing_applied/i.test(message)) throw err;
-
-    console.warn(
-      '[paymentOrder] Regional pricing columns missing — using legacy insert. Run migration 030_payment_regional_verification.sql.',
-    );
-    const rows = await sql`
-      INSERT INTO payment_orders
-        (payment_option_id, course_id, course_price_id, customer_id, zenler_course_id, course_title,
-         option_type, student_name, student_email, country_code, amount, currency, duration_days, discount_percent)
-      VALUES
-        (${data.paymentOptionId ?? null}, ${data.courseId ?? null}, ${data.coursePriceId ?? null},
-         ${data.customerId ?? null}, ${data.zenlerCourseId}, ${data.courseTitle}, ${data.optionType},
-         ${data.studentName}, ${data.studentEmail}, ${data.countryCode ?? null},
-         ${data.amount}, ${data.currency}, ${data.durationDays ?? null}, ${data.discountPercent ?? null})
-      RETURNING *
-    `;
-    return rowToOrder(rows[0] as DbRow);
-  }
+  const rows = await sql`
+    INSERT INTO payment_orders
+      (payment_option_id, course_id, course_price_id, customer_id, zenler_course_id, course_title,
+       option_type, student_name, student_email, country_code, amount, currency, duration_days, discount_percent)
+    VALUES
+      (${data.paymentOptionId ?? null}, ${data.courseId ?? null}, ${data.coursePriceId ?? null},
+       ${data.customerId ?? null}, ${data.zenlerCourseId}, ${data.courseTitle}, ${data.optionType},
+       ${data.studentName}, ${data.studentEmail}, ${data.countryCode ?? null},
+       ${data.amount}, ${data.currency}, ${data.durationDays ?? null}, ${data.discountPercent ?? null})
+    RETURNING *
+  `;
+  return rowToOrder(rows[0] as DbRow);
 }
 
 export async function attachStripeCheckoutSession(orderId: number, sessionId: string): Promise<void> {
@@ -283,51 +248,4 @@ export async function markOrderEmailsSent(orderId: number, sent: { student?: boo
         END
     WHERE id = ${orderId}
   `;
-}
-
-export async function recordPaymentMethodCountry(orderId: number, paymentMethodCountry: string | null): Promise<void> {
-  await sql`
-    UPDATE payment_orders
-    SET payment_method_country = ${paymentMethodCountry}
-    WHERE id = ${orderId}
-  `;
-}
-
-export async function markPaymentOrderRefunded(data: {
-  orderId: number;
-  stripeRefundId: string;
-  paymentMethodCountry: string | null;
-  zenlerEnrollmentStatus: string;
-}): Promise<PaymentOrder> {
-  const rows = await sql`
-    UPDATE payment_orders
-    SET status = 'Refunded',
-        stripe_refund_id = ${data.stripeRefundId},
-        payment_method_country = ${data.paymentMethodCountry},
-        zenler_enrollment_status = ${data.zenlerEnrollmentStatus},
-        refunded_at = NOW()
-    WHERE id = ${data.orderId}
-    RETURNING *
-  `;
-  return rowToOrder(rows[0] as DbRow);
-}
-
-/** Voided uncaptured authorization (regional mismatch) — not a Stripe refund. */
-export async function markPaymentOrderCancelled(data: {
-  orderId: number;
-  paymentMethodCountry: string | null;
-  zenlerEnrollmentStatus: string;
-  stripePaymentIntentId?: string | null;
-}): Promise<PaymentOrder> {
-  const rows = await sql`
-    UPDATE payment_orders
-    SET status = 'Cancelled',
-        payment_method_country = ${data.paymentMethodCountry},
-        zenler_enrollment_status = ${data.zenlerEnrollmentStatus},
-        stripe_payment_intent_id = COALESCE(${data.stripePaymentIntentId ?? null}, stripe_payment_intent_id),
-        refunded_at = NOW()
-    WHERE id = ${data.orderId}
-    RETURNING *
-  `;
-  return rowToOrder(rows[0] as DbRow);
 }

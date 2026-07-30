@@ -1,5 +1,4 @@
 import type { PaymentOrder } from '../models/paymentOrder';
-import { countryDisplayName } from './pricingRegions';
 import type { ZenlerEnrollmentEmailContext } from './zenlerEnrollmentEnsure';
 import { VLS_SCHOOL_LOGIN_URL } from './schoolAccess';
 
@@ -163,92 +162,6 @@ Payment date/time: ${order.paidAt?.toISOString() ?? ''}`;
 <p><strong>Amount paid:</strong> ${esc(amount)}</p>
 <p><strong>Stripe checkout session ID:</strong> ${esc(order.stripeCheckoutSessionId)}</p>
 <p><strong>Payment date/time:</strong> ${esc(order.paidAt?.toISOString())}</p>`,
-  });
-  return true;
-}
-
-export async function sendRegionalPricingMismatchCancelled(
-  order: PaymentOrder,
-  paymentMethodCountry: string,
-): Promise<boolean> {
-  const to = order.studentEmail ?? order.stripeCustomerEmail;
-  if (!to) return false;
-
-  const name = order.studentName || 'Student';
-  const amount = formatAmount(order);
-  const paymentCountry = countryDisplayName(paymentMethodCountry);
-  const quotedCountry = countryDisplayName(order.countryCode);
-  const supportEmail = process.env.SUPPORT_EMAIL ?? 'support@vls-online.com';
-
-  const text = `Hi ${name},
-
-We could not complete your payment of ${amount} for "${order.courseTitle}".
-
-Our regional pricing requires that the country of your card matches the country used for the regional price at checkout.
-
-At checkout, pricing was quoted for ${quotedCountry}. The card used is registered in ${paymentCountry}, which does not match.
-
-The payment authorization was cancelled — you have not been charged. No course access has been granted.
-
-If you believe this is an error, please contact us at ${supportEmail} with your order reference.
-
-Kind regards,
-VLS Online`;
-
-  await sendEmail({
-    to,
-    subject: 'Payment cancelled — regional pricing verification - VLS Online',
-    text,
-    html: `<p>Hi ${esc(name)},</p>
-<p>We could not complete your payment of <strong>${esc(amount)}</strong> for <strong>${esc(order.courseTitle)}</strong>.</p>
-<p>Our regional pricing requires that the country of your card matches the country used for the regional price at checkout.</p>
-<p>At checkout, pricing was quoted for <strong>${esc(quotedCountry)}</strong>. The card used is registered in <strong>${esc(paymentCountry)}</strong>, which does not match.</p>
-<p>The payment authorization was <strong>cancelled</strong> — you have not been charged. <strong>No course access has been granted.</strong></p>
-<p>If you believe this is an error, please contact us at <a href="mailto:${esc(supportEmail)}">${esc(supportEmail)}</a> with your order reference.</p>
-<p>Kind regards,<br>VLS Online</p>`,
-  });
-  return true;
-}
-
-/** @deprecated Use sendRegionalPricingMismatchCancelled */
-export const sendRegionalPricingMismatchRefund = sendRegionalPricingMismatchCancelled;
-
-export async function sendAdminRegionalMismatchNotification(
-  order: PaymentOrder,
-  paymentMethodCountry: string,
-): Promise<boolean> {
-  const to = process.env.ADMIN_NOTIFICATION_EMAIL;
-  if (!to) return false;
-
-  const amount = formatAmount(order);
-  const text = `Regional pricing mismatch — payment authorization cancelled (not refunded)
-
-Student name: ${order.studentName ?? ''}
-Student email: ${order.studentEmail ?? order.stripeCustomerEmail ?? ''}
-Course title: ${order.courseTitle}
-Amount (not captured): ${amount}
-Quoted country: ${order.countryCode ?? ''}
-Payment method (card) country: ${paymentMethodCountry}
-Order ID: ${order.id}
-Stripe checkout session ID: ${order.stripeCheckoutSessionId ?? ''}
-Stripe payment intent ID: ${order.stripePaymentIntentId ?? ''}
-Enrollment: blocked (regional mismatch)`;
-
-  await sendEmail({
-    to,
-    subject: `Regional pricing mismatch — authorization cancelled - ${order.courseTitle}`,
-    text,
-    html: `<p><strong>Regional pricing mismatch — authorization cancelled</strong></p>
-<p><strong>Student name:</strong> ${esc(order.studentName)}</p>
-<p><strong>Student email:</strong> ${esc(order.studentEmail ?? order.stripeCustomerEmail)}</p>
-<p><strong>Course title:</strong> ${esc(order.courseTitle)}</p>
-<p><strong>Amount (not captured):</strong> ${esc(amount)}</p>
-<p><strong>Quoted country:</strong> ${esc(order.countryCode)}</p>
-<p><strong>Payment method (card) country:</strong> ${esc(paymentMethodCountry)}</p>
-<p><strong>Order ID:</strong> ${esc(order.id)}</p>
-<p><strong>Stripe checkout session ID:</strong> ${esc(order.stripeCheckoutSessionId)}</p>
-<p><strong>Stripe payment intent ID:</strong> ${esc(order.stripePaymentIntentId)}</p>
-<p><strong>Enrollment:</strong> blocked (regional mismatch)</p>`,
   });
   return true;
 }

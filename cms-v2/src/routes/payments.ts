@@ -22,11 +22,6 @@ import {
   detectClientIpFromRequest,
   detectCountryFromRequest,
 } from '../services/geoDetection';
-import {
-  resolveQuotedPricingRegion,
-  shouldApplyRegionalPricingAtCheckout,
-  verifyRegionalPaymentMethod,
-} from '../services/paymentRegionalVerification';
 import { effectiveAmount } from '../services/courseGeoPriceValidation';
 import {
   applyParityDealsToResolved,
@@ -260,10 +255,6 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
     const discountPercent = computeDiscountPercent(resolved.price.amount, resolved.effectiveAmount)
       ?? resolved.price.discountPercent;
 
-    const regionalPricingApplied = shouldApplyRegionalPricingAtCheckout({
-      geoPricingApplied: resolved.geoPricingApplied,
-    });
-
     const order = await createPaymentOrder({
       paymentOptionId: null,
       courseId: course.id,
@@ -275,8 +266,6 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       studentName: customerInput.studentName,
       studentEmail: customerInput.studentEmail,
       countryCode: quotedCountryCode,
-      quotedPricingRegion: resolveQuotedPricingRegion(quotedCountryCode),
-      regionalPricingApplied,
       amount: resolved.effectiveAmount,
       currency: 'USD',
       durationDays: resolved.price.durationDays,
@@ -294,8 +283,6 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       currency: 'USD',
       studentEmail: customerInput.studentEmail,
       countryCode: quotedCountryCode,
-      regionalPricingApplied,
-      captureMethod: regionalPricingApplied ? 'manual' : 'automatic',
     });
     await attachStripeCheckoutSession(order.id, session.id);
 
@@ -311,7 +298,6 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       listAmount: resolved.price.amount,
       currency: 'USD',
       countryCode: quotedCountryCode,
-      regionalPricingApplied,
       matchReason: resolved.matchReason,
     });
   } catch (err) {
@@ -347,7 +333,6 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
         zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
         isNewZenlerUser: order.zenlerUserCreated,
       }),
-      paymentMethodCountry: order.paymentMethodCountry,
       refundedAt: order.refundedAt?.toISOString() ?? null,
     });
   } catch (err) {
@@ -396,15 +381,6 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
     const paymentIntentId = typeof session.payment_intent === 'string'
       ? session.payment_intent
       : existing.stripePaymentIntentId;
-
-    // Regional PPP: verify card country, then capture or void (no refund).
-    if (existing.regionalPricingApplied) {
-      const regionalCheck = await verifyRegionalPaymentMethod(existing, paymentIntentId);
-      if (!regionalCheck.allowed) {
-        res.status(200).json({ ok: true, regionalMismatchCancelled: true });
-        return;
-      }
-    }
 
     let { order, wasAlreadyPaid } = await markPaymentOrderPaid({
       orderId,
