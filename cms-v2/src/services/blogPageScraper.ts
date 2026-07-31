@@ -259,6 +259,11 @@ function stripNoiseFromBody(html: string, title: string): string {
   ));
   next = next
     .replace(/<div\b[^>]*class=["'][^"']*takeaways[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '')
+    // Plain H2/H3 "Key Takeaways" + following list — kept as the dedicated Storyblok field instead.
+    .replace(
+      /<h([2-4])\b[^>]*>\s*Key\s*Takeaways?\s*<\/h\1>\s*(?:<(?:ul|ol)\b[^>]*>[\s\S]*?<\/(?:ul|ol)>\s*)?/gi,
+      '',
+    )
     .replace(/<div\b[^>]*class=["'][^"']*(?:mid-cta|rail-cta|article-foot|share-row|post-meta|topic-pill)[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '')
     .replace(/<div\b[^>]*class=["'][^"']*faq[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '')
     .replace(/<h2\b[^>]*>\s*Frequently asked questions\s*<\/h2>/gi, '')
