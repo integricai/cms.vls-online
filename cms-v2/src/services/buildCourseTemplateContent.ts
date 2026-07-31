@@ -276,8 +276,6 @@ export function buildCourseStoryblokFromTemplate(
         text: item.text,
         icon: item.icon,
       })),
-      schema_breadcrumb_id: `${sourceUrl}#breadcrumb`,
-      schema_faq_section_id: `${sourceUrl}#faq`,
     }],
     right: [buildHeroRightBlokFromTemplate(data)],
   });
@@ -368,7 +366,6 @@ export function buildCourseStoryblokFromTemplate(
     _uid: uid(),
     component: 'faq_section',
     zenler_course_id: zenlerCourseId,
-    schema_id: `${sourceUrl}#faq`,
     eyebrow: data.faqEyebrow,
     heading_prefix: data.faqHeadingPrefix,
     heading_accent: data.faqHeadingAccent,

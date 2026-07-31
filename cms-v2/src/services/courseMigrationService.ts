@@ -108,7 +108,6 @@ function buildTabBlocks(tab: ScrapedTabPanel): Record<string, unknown>[] {
 function buildHeroLayoutBlok(
   scraped: ScrapedCoursePage,
   zenlerCourseId: string,
-  sourceUrl: string,
 ): Record<string, unknown> | null {
   if (!scraped.hero && !scraped.heroRight) return null;
 
@@ -130,9 +129,7 @@ function buildHeroLayoutBlok(
           title: item.title,
           subtitle: item.subtitle,
         })),
-        schema_breadcrumb_id: `${sourceUrl}#breadcrumb`,
         schema_breadcrumbs: schemaBreadcrumbs,
-        schema_faq_section_id: `${sourceUrl}#faq`,
       }]
     : [{
         _uid: blokUid(),
@@ -212,7 +209,6 @@ function buildTabsBlok(scraped: ScrapedCoursePage): Record<string, unknown> | nu
 function buildFaqBlok(
   scraped: ScrapedCoursePage,
   zenlerCourseId: string,
-  sourceUrl: string,
 ): Record<string, unknown> | null {
   if (!scraped.faq?.items.length) return null;
 
@@ -222,7 +218,6 @@ function buildFaqBlok(
     title: scraped.faq.title || 'Frequently Asked Questions',
     icon: scraped.faq.icon || '❔',
     zenler_course_id: zenlerCourseId,
-    schema_id: `${sourceUrl}#faq`,
     items: scraped.faq.items.map(item => ({
       _uid: blokUid(),
       component: 'faq_item',
@@ -300,7 +295,7 @@ function buildCourseStoryblokContent(scraped: ScrapedCoursePage, zenlerCourseId:
   const sourceUrl = scraped.sourceUrl || `https://vls-online.com/courses/${scraped.slug}`;
   const body: Record<string, unknown>[] = [];
 
-  const heroLayout = buildHeroLayoutBlok(scraped, zenlerCourseId, sourceUrl);
+  const heroLayout = buildHeroLayoutBlok(scraped, zenlerCourseId);
   if (heroLayout) body.push(heroLayout);
 
   const introduction = buildIntroductionBlok(scraped);
@@ -312,7 +307,7 @@ function buildCourseStoryblokContent(scraped: ScrapedCoursePage, zenlerCourseId:
   const curriculum = buildCurriculumBlok(zenlerCourseId, scraped.courseCode);
   if (curriculum) body.push(curriculum);
 
-  const faq = buildFaqBlok(scraped, zenlerCourseId, sourceUrl);
+  const faq = buildFaqBlok(scraped, zenlerCourseId);
   if (faq) body.push(faq);
 
   const testimonials = buildTestimonialsBlok(scraped);
@@ -349,7 +344,7 @@ function usesTemplateFallback(template: MigrationTemplate): boolean {
   return TEMPLATES_WITH_FULL_FALLBACK.includes(template);
 }
 
-function buildGenericFaqBlok(scraped: ScrapedGenericPage, sourceUrl: string): Record<string, unknown> | null {
+function buildGenericFaqBlok(scraped: ScrapedGenericPage): Record<string, unknown> | null {
   if (!scraped.faq?.items.length) return null;
 
   return {
@@ -357,7 +352,6 @@ function buildGenericFaqBlok(scraped: ScrapedGenericPage, sourceUrl: string): Re
     component: 'faq_section',
     title: scraped.faq.title || 'Frequently Asked Questions',
     icon: scraped.faq.icon || '❔',
-    schema_id: `${sourceUrl}#faq`,
     items: scraped.faq.items.map(item => ({
       _uid: blokUid(),
       component: 'faq_item',
@@ -404,7 +398,7 @@ function buildGenericStoryblokContent(
     });
   }
 
-  const faq = buildGenericFaqBlok(scraped, sourceUrl);
+  const faq = buildGenericFaqBlok(scraped);
   if (faq) body.push(faq);
 
   const seo = (scraped.title || scraped.metaDescription)
@@ -870,7 +864,7 @@ export async function buildGenericStoryblokContentAsync(
     } else if (section.component === 'enquiry_form') {
       blok = { _uid: blokUid(), component: 'enquiry_form' };
     } else if (section.component === 'faq_section' && scraped.faq?.items?.length) {
-      blok = buildGenericFaqBlok(scraped, sourceUrl);
+      blok = buildGenericFaqBlok(scraped);
     } else if (section.component === 'faq_section' && allowTemplateFallback) {
       blok = buildBlokFromTemplateSection(section, extracted, scraped, { allowTemplateFallback: true });
     } else {

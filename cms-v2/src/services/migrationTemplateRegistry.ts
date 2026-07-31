@@ -538,7 +538,7 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   enquiry_form: ['title', 'subtitle', 'background_color', 'padding_top', 'padding_bottom'],
   faq_section: [
     'title', 'icon', 'eyebrow', 'heading_prefix', 'heading_accent',
-    'items', 'schema_id', 'zenler_course_id', 'background_color', 'padding_top', 'padding_bottom',
+    'items', 'zenler_course_id', 'background_color', 'padding_top', 'padding_bottom',
   ],
   testimonials: [
     'layout', 'score', 'reviews_label', 'rating_bars',
@@ -683,9 +683,10 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
     'breadcrumb', 'zenler_course_id', 'eyebrow', 'meta_items', 'language_label', 'tutor_name', 'tutor_role',
     'tutor_initials', 'stage_mode', 'stage_image', 'stage_caption_title', 'stage_caption_subtitle',
     'video_title', 'video_subtitle', 'video_duration', 'video_url', 'heading', 'description',
-    'qualification_tags', 'pills', 'learn_section_label', 'learn_items',
+    'qualification_tags', 'pills', 'learn_section_label', 'learn_items', 'schema_breadcrumbs',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
+  course_hero_breadcrumb: ['name', 'url'],
   course_hero_right: [
     'pricing_layout', 'session_selector_label', 'cta_text_prefix', 'session_options',
     'section_label', 'price_now', 'price_was', 'price_save', 'price_access', 'price_note',

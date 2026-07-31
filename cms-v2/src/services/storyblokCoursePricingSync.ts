@@ -165,19 +165,6 @@ export function patchCourseStoryPricingContent(
       }
     }
 
-    if (component === 'course_hero') {
-      const defaultPlan = input.pricing.plans.find(plan => plan.isDefault) ?? input.pricing.plans[0]!;
-      const schemaPrice = String(defaultPlan.effectiveAmount);
-      if (blok.schema_price !== schemaPrice) {
-        blok.schema_price = schemaPrice;
-        changed = true;
-      }
-      if (blok.schema_price_currency !== 'USD') {
-        blok.schema_price_currency = 'USD';
-        changed = true;
-      }
-    }
-
     if (component === 'course_hero_right') {
       if (patchHeroRightBlok(blok, input.pricing)) changed = true;
     }
