@@ -513,6 +513,36 @@ export interface BookDiscountCodeBulkInput {
   codes: BookDiscountCodeInput[];
 }
 
+// ── Sitemap / site URLs ───────────────────────────────────────────
+
+export type SitemapGroup = 'pages' | 'courses' | 'blog';
+
+export interface SiteUrlRecord {
+  id: number;
+  path: string;
+  sitemapGroup: SitemapGroup;
+  storyblokFullSlug: string;
+  storyblokStoryId: number | null;
+  title: string;
+  isEnabled: boolean;
+  lastmod: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SitemapAdminData {
+  urls: SiteUrlRecord[];
+  counts: Record<SitemapGroup, { total: number; enabled: number }>;
+  siteOrigin: string;
+  preview: {
+    index: string;
+    pages: string;
+    courses: string;
+    blog: string;
+  };
+  webhookPath: string;
+}
+
 // ── API responses ─────────────────────────────────────────────────
 
 export interface ApiSuccess<T = unknown> {

@@ -4,8 +4,9 @@ import UserManagement from '../UserManagement';
 import Books from '../Books';
 import DiscountCodes from '../DiscountCodes';
 import ContentMigrationTab from '../ContentMigration';
+import SitemapScreen from '../Sitemap';
 
-type Tab = 'menu' | 'contentMigration' | 'books' | 'discountCodes' | 'payments' | 'users';
+type Tab = 'menu' | 'contentMigration' | 'books' | 'discountCodes' | 'sitemap' | 'payments' | 'users';
 
 function PaymentsTab() {
   return (
@@ -21,6 +22,7 @@ const TAB_LABELS: Record<Tab, string> = {
   contentMigration: 'Content Migration',
   books: 'Books',
   discountCodes: 'Discount Codes',
+  sitemap: 'Sitemap',
   payments: 'Payments',
   users: 'Users',
 };
@@ -53,6 +55,7 @@ export default function Settings() {
         {tab === 'contentMigration' && <ContentMigrationTab />}
         {tab === 'books' && <Books />}
         {tab === 'discountCodes' && <DiscountCodes />}
+        {tab === 'sitemap' && <SitemapScreen />}
         {tab === 'payments' && <PaymentsTab />}
         {tab === 'users' && <UserManagement />}
       </div>
