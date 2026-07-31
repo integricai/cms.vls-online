@@ -264,6 +264,11 @@ function stripNoiseFromBody(html: string, title: string): string {
       /<h([2-4])\b[^>]*>\s*Key\s*Takeaways?\s*<\/h\1>\s*(?:<(?:ul|ol)\b[^>]*>[\s\S]*?<\/(?:ul|ol)>\s*)?/gi,
       '',
     )
+    // Inline TOC — left-rail "In this article" already covers navigation.
+    .replace(
+      /<h([2-4])\b[^>]*>\s*Table\s+of\s+Contents\s*<\/h\1>\s*(?:<(?:ul|ol)\b[^>]*>[\s\S]*?<\/(?:ul|ol)>\s*)?/gi,
+      '',
+    )
     .replace(/<div\b[^>]*class=["'][^"']*(?:mid-cta|rail-cta|article-foot|share-row|post-meta|topic-pill)[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '')
     .replace(/<div\b[^>]*class=["'][^"']*faq[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '')
     .replace(/<h2\b[^>]*>\s*Frequently asked questions\s*<\/h2>/gi, '')
