@@ -362,6 +362,42 @@ export interface PricingRegionConfig {
   countries: string[];
 }
 
+/** How duration plans are labelled / rolled for a qualification. */
+export type QualificationOfferType = 'exam_sessions' | 'open';
+
+/**
+ * Maps a qualification (ACCA, CIMA, …) to allowed durations, exam months,
+ * and enrollment cutoff day for rolling session offers.
+ */
+export interface QualificationOfferRule {
+  id: number;
+  qualification: string;
+  offerType: QualificationOfferType;
+  /** Allowed / recommended access lengths in days, ascending (e.g. [90, 180]). */
+  durationDays: number[];
+  /** Calendar months when exams sit (1–12). Empty for open/subscription quals. */
+  examMonths: number[];
+  /**
+   * Last calendar day of the month before a sitting on which that sitting is still offered.
+   * E.g. 12 → Sep sitting closes after 12 Aug. Null = no early cutoff.
+   */
+  cutoffDay: number | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export type QualificationOfferRuleInput = {
+  qualification: string;
+  offerType: QualificationOfferType;
+  durationDays: number[];
+  examMonths: number[];
+  cutoffDay: number | null;
+  isActive?: boolean;
+  sortOrder?: number;
+};
+
 export interface CoursePriceImportRow {
   rowNumber: number;
   zenlerCourseId?: string;

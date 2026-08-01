@@ -269,6 +269,7 @@ export async function listActiveGeoPricesByZenlerCourseId(
   courseName: string;
   zenlerCourseId: string;
   courseSlug: string | null;
+  qualification: string | null;
   prices: CourseGeoPrice[];
 } | null> {
   const rows = await sql`
@@ -277,7 +278,8 @@ export async function listActiveGeoPricesByZenlerCourseId(
       c.id AS course_id,
       c.name AS course_name,
       c.zenler_course_id,
-      c.slug AS course_slug
+      c.slug AS course_slug,
+      c.qualification AS course_qualification
     FROM courses c
     JOIN course_geo_prices p ON p.course_id = c.id AND p.is_active = true AND p.pricing_mode = 'duration'
     WHERE c.zenler_course_id = ${zenlerCourseId.trim()}
@@ -286,12 +288,13 @@ export async function listActiveGeoPricesByZenlerCourseId(
 
   if (!rows.length) return null;
 
-  const first = rows[0] as DbRow & { course_id: number };
+  const first = rows[0] as DbRow & { course_id: number; course_qualification?: string | null };
   return {
     courseId: first.course_id,
     courseName: first.course_name ?? '',
     zenlerCourseId: first.zenler_course_id ?? zenlerCourseId,
     courseSlug: first.course_slug ?? null,
+    qualification: first.course_qualification ?? null,
     prices: (rows as DbRow[]).map(rowToCourseGeoPrice),
   };
 }

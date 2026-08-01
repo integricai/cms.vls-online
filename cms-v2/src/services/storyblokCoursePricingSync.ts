@@ -238,6 +238,7 @@ export async function syncCoursePricingToStoryblok(
       zenlerCourseId: geo.zenlerCourseId,
       courseSlug: geo.courseSlug,
       courseName: geo.courseName,
+      qualification: geo.qualification,
       prices: geo.prices,
     })
     : null;

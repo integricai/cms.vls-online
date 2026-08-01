@@ -37,6 +37,7 @@ import { detectClientIpFromRequest, detectCountryFromRequest } from './services/
 import { isParityDealsTestRequest, parityDealsRuntimeStatus } from './services/parityDealsTest';
 import { refreshGeoPricingCache } from './services/geoPricing';
 import pricingRegionsRouter from './routes/pricingRegions';
+import qualificationOfferRulesRouter from './routes/qualificationOfferRules';
 import { listPublicBooks } from './models/book';
 import { mapActiveCoursesForFinder } from './services/courseFinderPublish';
 
@@ -180,6 +181,7 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
       zenlerCourseId: course.zenlerCourseId,
       courseSlug: course.courseSlug,
       courseName: course.courseName,
+      qualification: course.qualification,
       prices: course.prices,
       countryCode: geo.countryCode,
       ipAddress: clientIp,
@@ -272,6 +274,7 @@ app.use('/api/admin', adminPaymentsRouter);
 app.use('/api/payment-options', paymentOptionsRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/pricing-regions', pricingRegionsRouter);
+app.use('/api/qualification-offer-rules', qualificationOfferRulesRouter);
 app.use('/api/course-pricing', coursePricingRouter);
 app.use('/api/tutors', tutorsRouter);
 app.use('/api/sales', salesRouter);

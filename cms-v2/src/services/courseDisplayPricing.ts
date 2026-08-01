@@ -1,4 +1,4 @@
-import type { CourseGeoPrice } from '../../shared/types';
+import type { CourseGeoPrice, QualificationOfferRule } from '../../shared/types';
 import { effectiveAmount, roundMoney } from './courseGeoPriceValidation';
 import {
   applyEvenDealsQuote,
@@ -6,14 +6,15 @@ import {
   resolveEvenDealsProductId,
   type EvenDealsQuote,
 } from './evenDeals';
+import { getQualificationOfferRuleByQualification } from '../models/qualificationOfferRule';
+import {
+  formatExamSessionTitle,
+  getNextOpenExamSessions,
+  type ExamSession,
+} from './qualificationOfferSessions';
 
-/** ACCA exam sittings: March, June, September, December. */
+/** ACCA exam sittings fallback when no qualification offer rule is configured. */
 export const ACCA_EXAM_MONTHS = [3, 6, 9, 12] as const;
-
-const MONTH_LABELS = [
-  '', 'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-] as const;
 
 export type PublishedCoursePricePlan = {
   id: number;
@@ -59,7 +60,10 @@ export function formatUsd(amount: number): string {
   }).format(amount);
 }
 
-/** Next upcoming ACCA exam sessions from the given date. */
+/**
+ * Legacy helper: next ACCA sittings with no enrollment cutoff
+ * (sitting month still offered until that month starts… kept for tests / fallback).
+ */
 export function getNextAccaExamSessions(
   now: Date = new Date(),
   count = 2,
@@ -87,10 +91,6 @@ export function monthsUntilExamSession(
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
   return (sessionYear - currentYear) * 12 + (sessionMonth - currentMonth);
-}
-
-function sessionTitle(month: number, year: number): string {
-  return `${MONTH_LABELS[month] ?? month} ${year} session`;
 }
 
 /** Infer access length for ordering plans (shorter plan → nearer exam session). */
@@ -131,7 +131,7 @@ function buildPlanFields(
     : strikethroughAmount(price.amount, price.compareAtAmount, effective);
 
   const sessionTitleText = options.sessionMonth != null && options.sessionYear != null
-    ? sessionTitle(options.sessionMonth, options.sessionYear)
+    ? formatExamSessionTitle(options.sessionMonth, options.sessionYear)
     : price.name;
 
   return {
@@ -156,12 +156,42 @@ function buildPlanFields(
   };
 }
 
+type SessionPlanMode =
+  | { mode: 'sessions'; sessions: ExamSession[] }
+  | { mode: 'duration' };
+
+function resolveSessionPlanMode(
+  rule: Pick<QualificationOfferRule, 'offerType' | 'examMonths' | 'cutoffDay'> | null,
+  now: Date,
+  planCount: number,
+): SessionPlanMode {
+  if (rule?.offerType === 'open') {
+    return { mode: 'duration' };
+  }
+
+  if (rule?.offerType === 'exam_sessions') {
+    return {
+      mode: 'sessions',
+      sessions: getNextOpenExamSessions(rule.examMonths, rule.cutoffDay, now, planCount),
+    };
+  }
+
+  // No rule: keep legacy ACCA sitting labels (no cutoff).
+  return {
+    mode: 'sessions',
+    sessions: getNextAccaExamSessions(now, planCount),
+  };
+}
+
 export async function buildCourseDisplayPricing(
   input: {
     zenlerCourseId: string;
     courseSlug: string | null;
     courseName: string;
     prices: CourseGeoPrice[];
+    qualification?: string | null;
+    /** When set, skips DB lookup (tests / preview). */
+    offerRule?: QualificationOfferRule | null;
     countryCode?: string | null;
     ipAddress?: string | null;
     ignoreVpnBlock?: boolean;
@@ -172,7 +202,10 @@ export async function buildCourseDisplayPricing(
   if (active.length === 0) return null;
 
   const sorted = [...active].sort((a, b) => planDurationSortKey(a) - planDurationSortKey(b));
-  const sessions = getNextAccaExamSessions(now, 2);
+
+  const rule = input.offerRule !== undefined
+    ? input.offerRule
+    : await getQualificationOfferRuleByQualification(input.qualification ?? null);
 
   let plans: PublishedCoursePricePlan[];
 
@@ -186,17 +219,30 @@ export async function buildCourseDisplayPricing(
       countryCode: input.countryCode,
     })];
   } else {
-    plans = sorted.slice(0, 2).map((price, index) => {
-      const session = sessions[index] ?? sessions[sessions.length - 1]!;
-      const monthsUntil = monthsUntilExamSession(session.month, session.year, now);
-      return buildPlanFields(price, {
-        sessionMonth: session.month,
-        sessionYear: session.year,
-        applyLateEnrollment: index === 0 && monthsUntil <= 1,
+    const planSlice = sorted.slice(0, 2);
+    const sessionMode = resolveSessionPlanMode(rule, now, planSlice.length);
+
+    if (sessionMode.mode === 'duration' || sessionMode.sessions.length === 0) {
+      plans = planSlice.map((price, index) => buildPlanFields(price, {
+        sessionMonth: null,
+        sessionYear: null,
+        applyLateEnrollment: false,
         badge: index === 1 ? 'Best value' : null,
         countryCode: input.countryCode,
+      }));
+    } else {
+      plans = planSlice.map((price, index) => {
+        const session = sessionMode.sessions[index] ?? sessionMode.sessions[sessionMode.sessions.length - 1]!;
+        const monthsUntil = monthsUntilExamSession(session.month, session.year, now);
+        return buildPlanFields(price, {
+          sessionMonth: session.month,
+          sessionYear: session.year,
+          applyLateEnrollment: index === 0 && monthsUntil <= 1,
+          badge: index === 1 ? 'Best value' : null,
+          countryCode: input.countryCode,
+        });
       });
-    });
+    }
   }
 
   // Quote once per distinct Evendeals product id (plans may use different deals).
