@@ -66,6 +66,13 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
+    group: 'Billing',
+    children: [
+      { to: '/billing/custom-offer', label: 'Custom Payment Offer' },
+      { to: '/billing/offers',       label: 'Offer History' },
+    ],
+  },
+  {
     group: 'Page Builder',
     children: [
       {

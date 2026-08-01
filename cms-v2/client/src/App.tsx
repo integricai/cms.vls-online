@@ -34,6 +34,8 @@ import Team from './screens/Team';
 import Settings from './screens/Settings';
 import Configurations from './screens/Configurations';
 import Sales from './screens/Sales';
+import CustomPaymentOffer from './screens/Billing/CustomPaymentOffer';
+import OfferHistory from './screens/Billing/OfferHistory';
 import AcceptSale from './screens/AcceptSale';
 import Forms from './screens/Forms';
 import FAQ from './screens/FAQ';
@@ -118,6 +120,8 @@ export default function App() {
           <Route path="/settings"          element={<RequireAdmin><Settings /></RequireAdmin>} />
           <Route path="/configurations"   element={<RequireAdmin><Configurations /></RequireAdmin>} />
           <Route path="/sales"            element={<RequireAdmin><Sales /></RequireAdmin>} />
+          <Route path="/billing/custom-offer" element={<RequireAdmin><CustomPaymentOffer /></RequireAdmin>} />
+          <Route path="/billing/offers"       element={<RequireAdmin><OfferHistory /></RequireAdmin>} />
           <Route path="/settings/users"   element={<Navigate to="/settings" replace />} />
           <Route path="/settings/menu"    element={<Navigate to="/settings" replace />} />
           <Route path="/settings/courses" element={<Navigate to="/configurations" replace />} />

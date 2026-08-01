@@ -159,6 +159,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
       <nav className="flex-1 overflow-y-auto py-2 px-2 min-w-[224px]">
         {config
           .filter(g => !g.hidden)
+          .filter(g => g.id !== 'Billing' || isAdmin)
           .map(group => {
             const visible = visibleTopLevel(group);
             if (visible.length === 0) return null;

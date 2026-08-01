@@ -457,6 +457,40 @@ export interface CoursePriceImportResult {
   errors: CoursePriceImportRowError[];
 }
 
+// ── Custom payment offers (admin billing) ─────────────────────────
+
+export interface CustomPaymentOffer {
+  id: number;
+  paymentOrderId: number;
+  courseId: number;
+  courseTitle?: string;
+  createdByUserId: number | null;
+  createdByName?: string | null;
+  studentFirstName: string;
+  studentLastName: string;
+  studentEmail: string;
+  amount: number;
+  currency: string;
+  durationDays: number;
+  discountReason: string;
+  stripeCheckoutSessionId: string | null;
+  checkoutUrl: string | null;
+  emailSentAt: Date | string | null;
+  createdAt: Date | string;
+  orderStatus?: string | null;
+  emailSent?: boolean;
+}
+
+export interface CustomPaymentOfferInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  courseId: number;
+  amount: number;
+  durationDays: number;
+  discountReason: string;
+}
+
 // ── Tutors ────────────────────────────────────────────────────────
 
 export interface Tutor {
