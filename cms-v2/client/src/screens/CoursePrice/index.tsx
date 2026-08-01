@@ -88,6 +88,14 @@ function currencySymbol(currency: string): string {
   return '$';
 }
 
+function currencyCode(currency: string): string {
+  const value = String(currency || '').trim();
+  if (value === '$' || value.toUpperCase() === 'USD') return 'USD';
+  if (value === '€' || value.toUpperCase() === 'EUR') return 'EUR';
+  if (value === '£' || value.toUpperCase() === 'GBP') return 'GBP';
+  return value.toUpperCase() || 'USD';
+}
+
 function withBuyPath(url: string): string {
   const clean = url.replace(/\/+$/, '');
   return clean.endsWith('/buy') ? clean : `${clean}/buy`;
@@ -122,6 +130,7 @@ function applyRecordToCard(
     courseId: record.courseId,
     name: card.name || `${courseName} plan card`,
     title: fillTitle || !card.title ? courseName : card.title,
+    visible: record.isEnabled !== false,
     regularPrice: record.regularPrice,
     regularPrice2: record.regularPrice2,
     discountPercent: record.discountPercent,
@@ -193,7 +202,7 @@ ${initialHtml}
   function money(v){var n=Math.round(num(v,0)*100)/100;return Math.abs(n%1)<.001?String(Math.round(n)):n.toFixed(2);}
   function hex(v,f){return /^#[0-9a-fA-F]{6}$/.test(String(v||"").trim())?String(v).trim():f;}
   function curr(v){var c=String(v||"").toUpperCase();if(c==="USD")return "$";if(c==="GBP")return "£";if(c==="EUR")return "€";return v||"$";}
-  function dbCard(r){if(!r)return null;return Object.assign({},BASE,{visible:r.isEnabled!==false,regularPrice:num(r.regularPrice,0),regularPrice2:num(r.regularPrice2,0),discountPercent:num(r.discountPercent,0),discountPercent2:num(r.discountPercent2,0),currency:curr(r.currency||BASE.currency)});}
+  function dbCard(r){if(!r)return null;return Object.assign({},BASE,{visible:r.isEnabled===undefined?BASE.visible:r.isEnabled!==false,regularPrice:num(r.regularPrice,0),regularPrice2:num(r.regularPrice2,0),discountPercent:num(r.discountPercent,0),discountPercent2:num(r.discountPercent2,0),currency:curr(r.currency||BASE.currency)});}
   function calc(p,i){var r=Math.max(0,num(i===1?p.regularPrice:p.regularPrice2,0)),d=Math.max(0,Math.min(100,num(i===1?p.discountPercent:p.discountPercent2,0))),s=r*(d/100);return{regular:r,discount:d,saving:s,final:Math.max(0,r-s)};}
   function option(p,i){var c=calc(p,i);if(c.regular<=0)return "";var curr=esc(p.currency||"$"),has=c.discount>0&&c.saving>0,title=i===1?(p.plan1Title||"Full Course"):(p.plan2Title||"Complete Package"),sub=i===1?(p.plan1Subtitle||"Complete syllabus, videos & notes"):(p.plan2Subtitle||"Course + live sessions + mock & tutor support"),badge=i===1?(p.plan1Badge||""):(p.plan2Badge||"BEST VALUE");return '<label class="vls-plan-option">'+(badge?'<span class="vls-plan-badge">'+esc(badge)+'</span>':'')+'<input type="radio" name="vls-plan-choice-'+PID+'" '+(i===1?'checked':'')+'><span class="vls-plan-radio"></span><span class="vls-plan-copy"><span class="vls-plan-title">'+esc(title)+'</span><span class="vls-plan-subtitle">'+esc(sub)+'</span></span><span class="vls-plan-price">'+(has?'<span class="vls-plan-regular">'+curr+money(c.regular)+'</span>':'')+'<span class="vls-plan-final">'+curr+money(c.final)+'</span>'+(has?'<span class="vls-plan-save">Save '+curr+money(c.saving)+' ('+money(c.discount)+'% off)</span>':'')+'</span></label>';}
   function render(p){var root=document.getElementById(ROOT);if(!root)return;if(!p||!p.visible){root.style.display="none";return;}root.style.display="";var accent=hex(p.accent,"#204280"),border=hex(p.border,"#d8e0f0"),discountBg=hex(p.discountBg,"#12a85a"),discountTc=hex(p.discountTc,"#fff"),saveBg=hex(p.saveBg,"#ecfdf3"),saveBorder=hex(p.saveBorder,"#b7e4c7"),bg=hex(p.bg,"#fff"),radius=Math.max(0,Math.min(40,parseInt(p.radius,10)||14)),ff=String(p.fontFamily||"Poppins").replace(/['"<>]/g,""),curr=esc(p.currency||"$"),first=calc(p,1).regular>0?calc(p,1):calc(p,2);var css='.vls-plan-card{box-sizing:border-box;width:100%;max-width:300px;background:'+bg+';border:1px solid '+border+';border-top:4px solid '+accent+';border-radius:'+radius+'px;overflow:hidden;font-family:\\''+ff+'\\',Arial,sans-serif;color:#10213d;box-shadow:0 16px 40px rgba(15,23,42,.12)}.vls-plan-card *{box-sizing:border-box}.vls-plan-inner{padding:16px 17px 14px}.vls-plan-eyebrow{display:inline-flex;border-radius:999px;background:#eff6ff;color:#2454d6;padding:7px 11px;font-size:'+(parseInt(p.eyebrowSize,10)||10)+'px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.vls-plan-heading{margin:17px 0 9px;font-size:'+(parseInt(p.titleSize,10)||11)+'px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#23365d}.vls-plan-list{display:grid;gap:10px}.vls-plan-option{position:relative;display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;min-height:92px;border:1px solid #e3e9f4;border-radius:12px;padding:15px 13px;background:#fff;cursor:pointer}.vls-plan-option:has(input:checked){border-color:'+accent+';box-shadow:0 0 0 1px '+accent+',0 10px 24px rgba(32,66,128,.12)}.vls-plan-option input{position:absolute;opacity:0}.vls-plan-radio{width:15px;height:15px;border-radius:999px;border:1px solid #b8c7e1;box-shadow:inset 0 0 0 3px #fff}.vls-plan-option:has(input:checked) .vls-plan-radio{background:'+accent+';border-color:'+accent+'}.vls-plan-title{display:block;font-size:'+(parseInt(p.planTitleSize,10)||13)+'px;font-weight:800;color:#0d1f3c}.vls-plan-subtitle{display:block;font-size:'+(parseInt(p.planSubtitleSize,10)||10)+'px;color:#61708a}.vls-plan-price{display:grid;justify-items:end;gap:3px;min-width:88px}.vls-plan-regular{font-size:13px;font-weight:700;color:#718096;text-decoration:line-through}.vls-plan-final{font-size:'+(parseInt(p.amountSize,10)||31)+'px;font-weight:900;line-height:1;color:#0d2558}.vls-plan-save{border-radius:5px;background:'+discountBg+';color:'+discountTc+';padding:4px 7px;font-size:'+(parseInt(p.discountSize,10)||11)+'px;font-weight:800;white-space:nowrap}.vls-plan-badge{position:absolute;right:10px;top:-9px;border-radius:999px;background:#0d1f4f;color:#fff;padding:4px 8px;font-size:9px;font-weight:800}.vls-plan-guarantee{display:grid;grid-template-columns:28px 1fr;gap:10px;margin-top:24px;border:1px solid '+saveBorder+';background:'+saveBg+';border-radius:9px;padding:11px;color:#0c6b3f}.vls-plan-shield{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:#fff;border:1px solid #cdeed9}.vls-plan-guarantee-title{display:block;font-size:'+(parseInt(p.guaranteeSize,10)||11)+'px;font-weight:800}.vls-plan-guarantee-text{display:block;margin-top:3px;font-size:'+(parseInt(p.bodySize,10)||11)+'px;line-height:1.35;color:#397250}.vls-plan-cta{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;border-radius:8px;background:#0d2b66;color:#fff;text-decoration:none;padding:13px 14px;font-size:'+(parseInt(p.ctaSize,10)||14)+'px;font-weight:800;box-shadow:0 10px 20px rgba(13,43,102,.28)}.vls-plan-checkout{margin:10px 0 0;text-align:center;color:#6c7a92;font-size:10px;font-weight:500}@media(max-width:640px){.vls-plan-card{max-width:none}.vls-plan-option{grid-template-columns:18px 1fr}.vls-plan-price{grid-column:2;justify-items:start}}';root.innerHTML='<style>'+css+'</style><div class="vls-plan-card"><div class="vls-plan-inner">'+(p.eyebrow?'<div class="vls-plan-eyebrow">'+esc(p.eyebrow)+'</div>':'')+'<div class="vls-plan-heading">'+esc(p.title||"Choose your plan")+'</div><div class="vls-plan-list">'+option(p,1)+option(p,2)+'</div><div class="vls-plan-guarantee"><span class="vls-plan-shield">♡</span><span><span class="vls-plan-guarantee-title">'+esc(p.guaranteeTitle||"7-Day Money-Back Guarantee")+'</span><span class="vls-plan-guarantee-text">'+esc(p.guaranteeText||"Not the right fit? Get a full refund within 7 days of registration - no questions asked.")+'</span></span></div><a class="vls-plan-cta" href="'+esc(p.ctaUrl||"#")+'"><span>'+esc(p.ctaText||"Buy Now")+'</span><strong class="vls-plan-cta-price">'+curr+money(first.final)+'</strong><span>→</span></a><div class="vls-plan-checkout">'+esc(p.checkoutText||"Secure checkout - Instant access")+'</div></div></div>';root.querySelectorAll('input[name="vls-plan-choice-'+PID+'"]').forEach(function(input){input.addEventListener("change",function(){var final=input.closest(".vls-plan-option").querySelector(".vls-plan-final"),cta=root.querySelector(".vls-plan-cta-price");if(final&&cta)cta.textContent=final.textContent||"";});});}
@@ -700,11 +709,38 @@ export default function CoursePriceScreen() {
     });
   }
 
+  /** Persist Status (visible) to course_prices.is_enabled so live embeds honor hide/show. */
+  async function persistEnabledStates(priceList: CoursePrice[]): Promise<void> {
+    const records = await api.get<CoursePriceRecord[]>('/courses/prices');
+    const recordByCourseId = new Map((records || []).map(record => [record.courseId, record]));
+    const payload = priceList
+      .filter(card => Number.isInteger(card.courseId))
+      .map(card => {
+        const record = recordByCourseId.get(card.courseId as number);
+        return {
+          courseId: card.courseId,
+          isEnabled: Boolean(card.visible),
+          regularPrice: record?.regularPrice ?? card.regularPrice,
+          regularPrice2: record?.regularPrice2 ?? card.regularPrice2,
+          currency: record?.currency ?? currencyCode(card.currency),
+          discountPercent: record?.discountPercent ?? card.discountPercent,
+          discountPercent2: record?.discountPercent2 ?? card.discountPercent2,
+          sourceUrl: record?.sourceUrl ?? null,
+          rawPriceText: record?.rawPriceText ?? null,
+        };
+      });
+
+    if (payload.length === 0) return;
+    const saved = await api.put<CoursePriceRecord[]>('/courses/prices', { prices: payload });
+    setPriceRecords(saved || []);
+  }
+
   async function saveAndGenerate() {
     if (!active) return;
     setSaving(true);
     setSaved(false);
     try {
+      await persistEnabledStates(prices);
       const refreshed = await refreshMappedPricesFromDb(prices);
       setPrices(refreshed);
       await api.put('/content/vls-course-prices', { prices: refreshed });
@@ -714,6 +750,8 @@ export default function CoursePriceScreen() {
       setPublishError('');
       setInjectCode(buildInjectCode(refreshedActive));
       setActiveTab('html');
+    } catch (error: unknown) {
+      setPublishError(error instanceof Error ? error.message : 'Save failed. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -724,6 +762,7 @@ export default function CoursePriceScreen() {
     setPublishing(true);
     setPublishError('');
     try {
+      await persistEnabledStates(prices);
       const refreshed = await refreshMappedPricesFromDb(prices);
       setPrices(refreshed);
       await api.put('/content/vls-course-prices', { prices: refreshed });
