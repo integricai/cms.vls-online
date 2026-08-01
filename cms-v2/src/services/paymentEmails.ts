@@ -2,7 +2,6 @@ import type { PaymentOrder } from '../models/paymentOrder';
 import type { ZenlerEnrollmentEmailContext } from './zenlerEnrollmentEnsure';
 import { VLS_SCHOOL_LOGIN_URL } from './schoolAccess';
 
-const VLS_LOGO_URL = 'https://vls-online.com/media/vertex-logo-mark.svg';
 const VLS_SITE_URL = 'https://vls-online.com';
 const BRAND = {
   navy: '#0f1e3c',
@@ -17,6 +16,17 @@ const BRAND = {
   pageBg: '#eef2f7',
   font: "Poppins, Arial, Helvetica, sans-serif",
 };
+
+/** Email-safe logo mark (no external image — avoids 404/SVG/client image blocking). */
+function brandLogoMarkHtml(): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
+    <tr>
+      <td width="38" height="38" align="center" valign="middle" style="width:38px;height:38px;background-color:${BRAND.logoBlue};border-radius:10px;font-family:${BRAND.font};font-size:19px;font-weight:700;line-height:38px;color:${BRAND.white};text-align:center;">
+        V
+      </td>
+    </tr>
+  </table>`;
+}
 
 function parseSender(value: string | undefined) {
   const fallback = { email: 'noreply@vls-online.com', name: 'VLS Online' };
@@ -136,7 +146,7 @@ function renderBrandedEmail(input: {
               <table role="presentation" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="vertical-align:middle;padding-right:12px;">
-                    <img src="${VLS_LOGO_URL}" width="38" height="38" alt="VLS" style="display:block;border:0;border-radius:10px;width:38px;height:38px;">
+                    ${brandLogoMarkHtml()}
                   </td>
                   <td style="vertical-align:middle;">
                     <p style="margin:0;font-family:${BRAND.font};font-size:18px;font-weight:700;color:${BRAND.white};line-height:1.2;">VLS Online</p>
