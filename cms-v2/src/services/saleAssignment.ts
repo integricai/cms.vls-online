@@ -1,4 +1,5 @@
 import type { Sale, SaleAcceptPreview } from '../../shared/types';
+import { getPaymentOrder } from '../models/paymentOrder';
 import {
   assignSaleToTutor,
   getSaleById,
@@ -162,6 +163,11 @@ export async function adminAssignSale(saleId: number, tutorId: number): Promise<
   const sale = await getSaleById(saleId);
   if (!sale) return { ok: false, error: 'Sale not found' };
   if (sale.tutorId) return { ok: false, error: 'Sale is already assigned to a tutor' };
+
+  const order = await getPaymentOrder(sale.paymentOrderId);
+  if (order?.status === 'Refunded') {
+    return { ok: false, error: 'Cannot assign a tutor to a refunded sale' };
+  }
 
   const tutor = await getTutorById(tutorId);
   if (!tutor || !tutor.isActive) return { ok: false, error: 'Tutor not found or inactive' };

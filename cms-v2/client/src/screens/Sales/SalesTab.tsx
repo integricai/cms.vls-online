@@ -40,10 +40,26 @@ function statusLabel(sale: SaleListItem): string {
   return 'Assigned';
 }
 
+function paymentLabel(sale: SaleListItem): string {
+  if (sale.paymentStatus === 'Refunded') return 'Refunded';
+  if (sale.paymentStatus === 'Paid') return 'Paid';
+  return sale.paymentStatus || 'Unknown';
+}
+
 function customerLabel(sale: SaleListItem): string {
   const name = [sale.customerFirstName, sale.customerLastName].filter(Boolean).join(' ').trim();
   if (name && sale.customerEmail) return `${name} (${sale.customerEmail})`;
   return name || sale.customerEmail || '—';
+}
+
+function shortStripeId(id: string | null | undefined): string {
+  if (!id) return '—';
+  if (id.length <= 18) return id;
+  return `${id.slice(0, 10)}…${id.slice(-4)}`;
+}
+
+function stripePaymentUrl(paymentIntentId: string): string {
+  return `https://dashboard.stripe.com/payments/${paymentIntentId}`;
 }
 
 export default function SalesTab() {
@@ -56,10 +72,11 @@ export default function SalesTab() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [assigningSaleId, setAssigningSaleId] = useState<number | null>(null);
+  const [refundingSaleId, setRefundingSaleId] = useState<number | null>(null);
   const [selectedTutorId, setSelectedTutorId] = useState<Record<number, number>>({});
 
   const unassignedSales = useMemo(
-    () => sales.filter(sale => !sale.tutorId),
+    () => sales.filter(sale => !sale.tutorId && sale.paymentStatus !== 'Refunded'),
     [sales],
   );
 
@@ -109,12 +126,34 @@ export default function SalesTab() {
     }
   }
 
+  async function refundSale(sale: SaleListItem) {
+    if (sale.paymentStatus === 'Refunded') return;
+    const confirmed = window.confirm(
+      `Refund ${formatMoney(sale.amount, sale.currency)} for ${sale.courseName || `course #${sale.courseId}`}?\n\nThis will create a full refund in Stripe.`,
+    );
+    if (!confirmed) return;
+
+    setRefundingSaleId(sale.id);
+    setError('');
+    setMessage('');
+    try {
+      await api.post(`/sales/${sale.id}/refund`, {});
+      setMessage('Refund processed in Stripe and marked on this sale');
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refund sale');
+    } finally {
+      setRefundingSaleId(null);
+    }
+  }
+
   function tutorsForSale(sale: SaleListItem): Tutor[] {
     const linked = tutors.filter(t => t.courseIds.includes(sale.courseId));
     return linked.length > 0 ? linked : tutors;
   }
 
   function renderAssignControl(sale: SaleListItem) {
+    if (sale.paymentStatus === 'Refunded') return null;
     if (sale.tutorId) return null;
     const options = tutorsForSale(sale);
     return (
@@ -145,16 +184,39 @@ export default function SalesTab() {
     );
   }
 
+  function renderRefundControl(sale: SaleListItem) {
+    if (sale.paymentStatus === 'Refunded') {
+      return (
+        <div className="text-[11px] text-slate-400">
+          {sale.stripeRefundId ? shortStripeId(sale.stripeRefundId) : 'Refunded in Stripe'}
+        </div>
+      );
+    }
+    if (sale.paymentStatus !== 'Paid') return null;
+    return (
+      <button
+        className="btn-danger text-[11px]"
+        disabled={refundingSaleId === sale.id || !sale.stripePaymentIntentId}
+        title={!sale.stripePaymentIntentId ? 'Missing Stripe payment intent ID' : 'Refund in Stripe'}
+        onClick={() => void refundSale(sale)}
+      >
+        {refundingSaleId === sale.id ? 'Refunding…' : 'Refund'}
+      </button>
+    );
+  }
+
   function renderSalesTable(rows: SaleListItem[]) {
     return (
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="w-full min-w-[980px] text-left text-xs">
+        <table className="w-full min-w-[1180px] text-left text-xs">
           <thead className="bg-slate-50 text-slate-500">
             <tr>
               <th className="px-3 py-2">Sold</th>
               <th className="px-3 py-2">Course</th>
               <th className="px-3 py-2">Customer</th>
               <th className="px-3 py-2">Amount</th>
+              <th className="px-3 py-2">Payment</th>
+              <th className="px-3 py-2">Stripe</th>
               <th className="px-3 py-2">Tutor</th>
               <th className="px-3 py-2">Commission</th>
               <th className="px-3 py-2">Status</th>
@@ -163,10 +225,10 @@ export default function SalesTab() {
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={8} className="px-3 py-8 text-center text-slate-500">Loading…</td></tr>
+              <tr><td colSpan={10} className="px-3 py-8 text-center text-slate-500">Loading…</td></tr>
             )}
             {!loading && rows.length === 0 && (
-              <tr><td colSpan={8} className="px-3 py-8 text-center text-slate-500">No sales found.</td></tr>
+              <tr><td colSpan={10} className="px-3 py-8 text-center text-slate-500">No sales found.</td></tr>
             )}
             {!loading && rows.map(sale => (
               <tr key={sale.id} className="border-t border-slate-100 align-top">
@@ -177,11 +239,51 @@ export default function SalesTab() {
                 <td className="px-3 py-2">{sale.courseName || `Course #${sale.courseId}`}</td>
                 <td className="px-3 py-2">{customerLabel(sale)}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.amount, sale.currency)}</td>
+                <td className="px-3 py-2">
+                  <span className={`inline-flex rounded px-2 py-0.5 text-[11px] font-medium ${
+                    sale.paymentStatus === 'Refunded'
+                      ? 'bg-rose-50 text-rose-700'
+                      : sale.paymentStatus === 'Paid'
+                        ? 'bg-sky-50 text-sky-700'
+                        : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {paymentLabel(sale)}
+                  </span>
+                  {sale.refundedAt && (
+                    <div className="mt-1 text-[11px] text-slate-400">
+                      Refunded {formatDate(sale.refundedAt)}
+                    </div>
+                  )}
+                </td>
+                <td className="px-3 py-2">
+                  {sale.stripePaymentIntentId ? (
+                    <div>
+                      <a
+                        href={stripePaymentUrl(sale.stripePaymentIntentId)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-mono text-[11px] text-blue-600 hover:underline"
+                        title={sale.stripePaymentIntentId}
+                      >
+                        {shortStripeId(sale.stripePaymentIntentId)}
+                      </a>
+                      {sale.stripeCheckoutSessionId && (
+                        <div className="mt-0.5 font-mono text-[10px] text-slate-400" title={sale.stripeCheckoutSessionId}>
+                          {shortStripeId(sale.stripeCheckoutSessionId)}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-slate-400">—</span>
+                  )}
+                </td>
                 <td className="px-3 py-2">{sale.tutorName || '—'}</td>
                 <td className="px-3 py-2 whitespace-nowrap">
-                  {sale.commissionAmount != null
-                    ? `${formatMoney(sale.commissionAmount, sale.currency)} (${sale.commissionPercent ?? 0}%)`
-                    : '—'}
+                  {sale.paymentStatus === 'Refunded'
+                    ? '—'
+                    : sale.commissionAmount != null
+                      ? `${formatMoney(sale.commissionAmount, sale.currency)} (${sale.commissionPercent ?? 0}%)`
+                      : '—'}
                 </td>
                 <td className="px-3 py-2">
                   <span className={`inline-flex rounded px-2 py-0.5 text-[11px] font-medium ${
@@ -197,7 +299,12 @@ export default function SalesTab() {
                     </div>
                   )}
                 </td>
-                <td className="px-3 py-2">{renderAssignControl(sale)}</td>
+                <td className="px-3 py-2">
+                  <div className="flex flex-col gap-1">
+                    {renderAssignControl(sale)}
+                    {renderRefundControl(sale)}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -205,6 +312,10 @@ export default function SalesTab() {
       </div>
     );
   }
+
+  const tableRows = view === 'unassigned'
+    ? sales.filter(sale => !sale.tutorId && sale.paymentStatus !== 'Refunded')
+    : sales;
 
   return (
     <div className="p-6">
@@ -232,7 +343,7 @@ export default function SalesTab() {
       {error && <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
       {message && <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</div>}
 
-      {(view === 'overview' || view === 'unassigned') && renderSalesTable(sales)}
+      {(view === 'overview' || view === 'unassigned') && renderSalesTable(tableRows)}
 
       {view === 'byCourse' && (
         <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">

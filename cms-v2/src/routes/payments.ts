@@ -5,9 +5,12 @@ import { splitStudentName, upsertCustomer } from '../models/customer';
 import {
   attachStripeCheckoutSession,
   createPaymentOrder,
+  getPaymentOrder,
   getPaymentOrderByCheckoutSession,
+  getPaymentOrderByPaymentIntent,
   markOrderEmailsSent,
   markPaymentOrderPaid,
+  markPaymentOrderRefunded,
 } from '../models/paymentOrder';
 import {
   createStripeCheckoutSession,
@@ -29,12 +32,78 @@ import {
   resolveCoursePrice,
 } from '../services/pricingResolver';
 import { isParityDealsTestRequest } from '../services/parityDealsTest';
-import { getPaymentOrder } from '../models/paymentOrder';
 import {
   ensureZenlerEnrollmentForPaidOrder,
   runZenlerEnrollmentForPaidOrder,
 } from '../services/zenlerEnrollmentEnsure';
 import { courseAccessUrlForEnrollment } from '../services/schoolAccess';
+
+function extractStripeId(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  if (value && typeof value === 'object' && 'id' in value) {
+    const id = (value as { id?: unknown }).id;
+    if (typeof id === 'string' && id.trim()) return id.trim();
+  }
+  return null;
+}
+
+async function handleCheckoutSessionCompleted(session: Record<string, any>): Promise<void> {
+  const orderId = Number(session.client_reference_id ?? session.metadata?.orderId);
+  if (!Number.isInteger(orderId)) return;
+
+  const existing = await getPaymentOrder(orderId);
+  if (!existing) return;
+  if (existing.status === 'Paid') {
+    await ensureSaleRecordedForPaidOrder(existing);
+    return;
+  }
+  if (existing.status === 'Cancelled' || existing.status === 'Refunded') return;
+
+  const paymentIntentId = extractStripeId(session.payment_intent) ?? existing.stripePaymentIntentId;
+
+  let { order, wasAlreadyPaid } = await markPaymentOrderPaid({
+    orderId,
+    stripeCheckoutSessionId: typeof session.id === 'string' ? session.id : null,
+    stripePaymentIntentId: paymentIntentId,
+    stripeCustomerEmail: session.customer_details?.email ?? session.customer_email ?? null,
+    amountTotal: typeof session.amount_total === 'number' ? session.amount_total : null,
+    currency: typeof session.currency === 'string' ? session.currency : null,
+  });
+
+  if (!wasAlreadyPaid) {
+    const email = order.studentEmail ?? order.stripeCustomerEmail;
+    let enrollmentEmailContext = null;
+    if (email && order.zenlerCourseId) {
+      const enrollmentResult = await runZenlerEnrollmentForPaidOrder(order);
+      order = enrollmentResult.order;
+      enrollmentEmailContext = enrollmentResult.emailContext;
+    }
+
+    const studentSent = await sendStudentPaymentConfirmation(order, enrollmentEmailContext);
+    const adminSent = await sendAdminPaymentNotification(order);
+    await markOrderEmailsSent(order.id, { student: studentSent, admin: adminSent });
+  }
+
+  await ensureSaleRecordedForPaidOrder(order);
+}
+
+async function handleStripeRefundEvent(payload: {
+  paymentIntentId: string | null;
+  refundId: string | null;
+}): Promise<void> {
+  if (!payload.paymentIntentId) return;
+
+  const order = await getPaymentOrderByPaymentIntent(payload.paymentIntentId);
+  if (!order) return;
+  if (order.status === 'Refunded') return;
+  if (order.status !== 'Paid') return;
+
+  await markPaymentOrderRefunded({
+    orderId: order.id,
+    stripeRefundId: payload.refundId,
+    stripePaymentIntentId: payload.paymentIntentId,
+  });
+}
 
 const router = Router();
 
@@ -350,62 +419,37 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
     return;
   }
 
-  if (event.type !== 'checkout.session.completed') {
-    res.status(200).json({ ok: true });
-    return;
-  }
-
   try {
-    const session = event.data?.object ?? {};
-    const orderId = Number(session.client_reference_id ?? session.metadata?.orderId);
-    if (!Number.isInteger(orderId)) {
+    const object = event.data?.object ?? {};
+
+    if (event.type === 'checkout.session.completed') {
+      await handleCheckoutSessionCompleted(object);
       res.status(200).json({ ok: true });
       return;
     }
 
-    const existing = await getPaymentOrder(orderId);
-    if (!existing) {
-      res.status(200).json({ ok: true });
-      return;
-    }
-    if (existing.status === 'Paid') {
-      await ensureSaleRecordedForPaidOrder(existing);
-      res.status(200).json({ ok: true });
-      return;
-    }
-    if (existing.status === 'Cancelled' || existing.status === 'Refunded') {
+    if (event.type === 'charge.refunded') {
+      const refunds = Array.isArray(object.refunds?.data) ? object.refunds.data : [];
+      const latestRefund = refunds[0] ?? null;
+      await handleStripeRefundEvent({
+        paymentIntentId: extractStripeId(object.payment_intent),
+        refundId: extractStripeId(latestRefund?.id ?? latestRefund),
+      });
       res.status(200).json({ ok: true });
       return;
     }
 
-    const paymentIntentId = typeof session.payment_intent === 'string'
-      ? session.payment_intent
-      : existing.stripePaymentIntentId;
-
-    let { order, wasAlreadyPaid } = await markPaymentOrderPaid({
-      orderId,
-      stripeCheckoutSessionId: session.id ?? null,
-      stripePaymentIntentId: paymentIntentId,
-      stripeCustomerEmail: session.customer_details?.email ?? session.customer_email ?? null,
-      amountTotal: typeof session.amount_total === 'number' ? session.amount_total : null,
-      currency: typeof session.currency === 'string' ? session.currency : null,
-    });
-
-    if (!wasAlreadyPaid) {
-      const email = order.studentEmail ?? order.stripeCustomerEmail;
-      let enrollmentEmailContext = null;
-      if (email && order.zenlerCourseId) {
-        const enrollmentResult = await runZenlerEnrollmentForPaidOrder(order);
-        order = enrollmentResult.order;
-        enrollmentEmailContext = enrollmentResult.emailContext;
+    if (event.type === 'refund.created' || event.type === 'refund.updated') {
+      const status = typeof object.status === 'string' ? object.status : '';
+      if (status === 'succeeded') {
+        await handleStripeRefundEvent({
+          paymentIntentId: extractStripeId(object.payment_intent),
+          refundId: extractStripeId(object.id ?? object),
+        });
       }
-
-      const studentSent = await sendStudentPaymentConfirmation(order, enrollmentEmailContext);
-      const adminSent = await sendAdminPaymentNotification(order);
-      await markOrderEmailsSent(order.id, { student: studentSent, admin: adminSent });
+      res.status(200).json({ ok: true });
+      return;
     }
-
-    await ensureSaleRecordedForPaidOrder(order);
 
     res.status(200).json({ ok: true });
   } catch (err) {

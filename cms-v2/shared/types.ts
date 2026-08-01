@@ -278,6 +278,8 @@ export interface Customer {
 
 export type SaleAssignmentStatus = 'AwaitingTutor' | 'Assigned' | 'AdminAssigned';
 
+export type PaymentOrderStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled' | 'Refunded';
+
 export interface Sale {
   id: number;
   customerId: number;
@@ -306,6 +308,12 @@ export interface SaleListItem extends Sale {
   tutorName: string | null;
   inviteCount: number;
   acceptedInviteCount: number;
+  paymentStatus: PaymentOrderStatus | null;
+  stripeCheckoutSessionId: string | null;
+  stripePaymentIntentId: string | null;
+  stripeRefundId: string | null;
+  paidAt: Date | null;
+  refundedAt: Date | null;
 }
 
 export interface SaleCourseSummary {

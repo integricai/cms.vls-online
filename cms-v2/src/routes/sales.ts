@@ -1,7 +1,12 @@
 import { Router } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
 import {
+  getPaymentOrder,
+  markPaymentOrderRefunded,
+} from '../models/paymentOrder';
+import {
   getSaleById,
+  getSaleListItemById,
   listSales,
   summarizeSalesByCourse,
   summarizeSalesByTutor,
@@ -12,6 +17,7 @@ import {
   adminAssignSale,
   previewSaleAccept,
 } from '../services/saleAssignment';
+import { createStripeRefund } from '../services/stripeCheckout';
 
 const router = Router();
 
@@ -122,6 +128,48 @@ router.post('/:id/assign', requireRole('admin', 'editor'), async (req, res, next
     const result = await adminAssignSale(id, tutorId);
     if (!result.ok) return res.status(409).json({ ok: false, error: result.error });
     return res.json({ ok: true, data: result.sale });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/:id/refund', requireRole('admin'), async (req, res, next) => {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, error: 'Invalid sale id' });
+
+    const sale = await getSaleById(id);
+    if (!sale) return res.status(404).json({ ok: false, error: 'Sale not found' });
+
+    const order = await getPaymentOrder(sale.paymentOrderId);
+    if (!order) return res.status(404).json({ ok: false, error: 'Payment order not found' });
+    if (order.status === 'Refunded') {
+      const existing = await getSaleListItemById(id);
+      return res.json({ ok: true, data: existing });
+    }
+    if (order.status !== 'Paid') {
+      return res.status(409).json({ ok: false, error: `Cannot refund a ${order.status.toLowerCase()} payment` });
+    }
+    if (!order.stripePaymentIntentId) {
+      return res.status(409).json({
+        ok: false,
+        error: 'Missing Stripe payment intent ID — refund this payment in Stripe Dashboard, or wait for webhook sync',
+      });
+    }
+
+    const refund = await createStripeRefund({
+      paymentIntentId: order.stripePaymentIntentId,
+      reason: 'requested_by_customer',
+    });
+
+    await markPaymentOrderRefunded({
+      orderId: order.id,
+      stripeRefundId: refund.id,
+      stripePaymentIntentId: refund.paymentIntentId ?? order.stripePaymentIntentId,
+    });
+
+    const updated = await getSaleListItemById(id);
+    return res.json({ ok: true, data: updated });
   } catch (err) {
     next(err);
   }

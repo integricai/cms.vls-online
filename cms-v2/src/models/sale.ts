@@ -1,5 +1,6 @@
 import { sql } from '../db/client';
 import type {
+  PaymentOrderStatus,
   Sale,
   SaleAssignmentStatus,
   SaleCourseSummary,
@@ -35,6 +36,12 @@ interface SaleListDbRow extends SaleDbRow {
   tutor_name: string | null;
   invite_count: string | number;
   accepted_invite_count: string | number;
+  payment_status: PaymentOrderStatus | null;
+  stripe_checkout_session_id: string | null;
+  stripe_payment_intent_id: string | null;
+  stripe_refund_id: string | null;
+  paid_at: Date | null;
+  refunded_at: Date | null;
 }
 
 function num(value: string | number | null | undefined): number | null {
@@ -74,6 +81,12 @@ function rowToSaleListItem(row: SaleListDbRow): SaleListItem {
     tutorName: row.tutor_name,
     inviteCount: Number(row.invite_count ?? 0),
     acceptedInviteCount: Number(row.accepted_invite_count ?? 0),
+    paymentStatus: row.payment_status ?? null,
+    stripeCheckoutSessionId: row.stripe_checkout_session_id ?? null,
+    stripePaymentIntentId: row.stripe_payment_intent_id ?? null,
+    stripeRefundId: row.stripe_refund_id ?? null,
+    paidAt: row.paid_at ?? null,
+    refundedAt: row.refunded_at ?? null,
   };
 }
 
@@ -95,6 +108,41 @@ export async function getSaleById(id: number): Promise<Sale | null> {
 export async function getSaleByPaymentOrderId(paymentOrderId: number): Promise<Sale | null> {
   const rows = await sql`SELECT * FROM sales WHERE payment_order_id = ${paymentOrderId}`;
   return rows[0] ? rowToSale(rows[0] as SaleDbRow) : null;
+}
+
+export async function getSaleListItemById(id: number): Promise<SaleListItem | null> {
+  const rows = await sql`
+    SELECT
+      s.*,
+      c.name AS course_name,
+      cu.email AS customer_email,
+      cu.first_name AS customer_first_name,
+      cu.last_name AS customer_last_name,
+      t.name AS tutor_name,
+      COALESCE(inv.invite_count, 0) AS invite_count,
+      COALESCE(inv.accepted_invite_count, 0) AS accepted_invite_count,
+      po.status AS payment_status,
+      po.stripe_checkout_session_id,
+      po.stripe_payment_intent_id,
+      po.stripe_refund_id,
+      po.paid_at,
+      po.refunded_at
+    FROM sales s
+    LEFT JOIN courses c ON c.id = s.course_id
+    LEFT JOIN customers cu ON cu.id = s.customer_id
+    LEFT JOIN tutors t ON t.id = s.tutor_id
+    LEFT JOIN payment_orders po ON po.id = s.payment_order_id
+    LEFT JOIN LATERAL (
+      SELECT
+        COUNT(*)::int AS invite_count,
+        COUNT(*) FILTER (WHERE accepted_at IS NOT NULL)::int AS accepted_invite_count
+      FROM sale_tutor_invites sti
+      WHERE sti.sale_id = s.id
+    ) inv ON TRUE
+    WHERE s.id = ${id}
+    LIMIT 1
+  `;
+  return rows[0] ? rowToSaleListItem(rows[0] as SaleListDbRow) : null;
 }
 
 export async function createSale(data: {
@@ -144,90 +192,54 @@ export async function listSales(filters: ListSalesFilters = {}): Promise<SaleLis
   const courseId = filters.courseId ?? null;
   const tutorId = filters.tutorId ?? null;
 
-  let rows;
-  if (status === 'Unassigned' || status === 'AwaitingTutor') {
-    rows = await sql`
+  const rows = await sql`
+    SELECT
+      s.*,
+      c.name AS course_name,
+      cu.email AS customer_email,
+      cu.first_name AS customer_first_name,
+      cu.last_name AS customer_last_name,
+      t.name AS tutor_name,
+      COALESCE(inv.invite_count, 0) AS invite_count,
+      COALESCE(inv.accepted_invite_count, 0) AS accepted_invite_count,
+      po.status AS payment_status,
+      po.stripe_checkout_session_id,
+      po.stripe_payment_intent_id,
+      po.stripe_refund_id,
+      po.paid_at,
+      po.refunded_at
+    FROM sales s
+    LEFT JOIN courses c ON c.id = s.course_id
+    LEFT JOIN customers cu ON cu.id = s.customer_id
+    LEFT JOIN tutors t ON t.id = s.tutor_id
+    LEFT JOIN payment_orders po ON po.id = s.payment_order_id
+    LEFT JOIN LATERAL (
       SELECT
-        s.*,
-        c.name AS course_name,
-        cu.email AS customer_email,
-        cu.first_name AS customer_first_name,
-        cu.last_name AS customer_last_name,
-        t.name AS tutor_name,
-        COALESCE(inv.invite_count, 0) AS invite_count,
-        COALESCE(inv.accepted_invite_count, 0) AS accepted_invite_count
-      FROM sales s
-      LEFT JOIN courses c ON c.id = s.course_id
-      LEFT JOIN customers cu ON cu.id = s.customer_id
-      LEFT JOIN tutors t ON t.id = s.tutor_id
-      LEFT JOIN LATERAL (
-        SELECT
-          COUNT(*)::int AS invite_count,
-          COUNT(*) FILTER (WHERE accepted_at IS NOT NULL)::int AS accepted_invite_count
-        FROM sale_tutor_invites sti
-        WHERE sti.sale_id = s.id
-      ) inv ON TRUE
-      WHERE s.tutor_id IS NULL
-        AND (${courseId}::int IS NULL OR s.course_id = ${courseId})
-        AND (${tutorId}::int IS NULL OR s.tutor_id = ${tutorId})
-      ORDER BY s.sold_at DESC, s.id DESC
-    `;
-  } else if (status === 'AssignedAny' || status === 'Assigned' || status === 'AdminAssigned') {
-    const exactStatus = status === 'AssignedAny' ? null : status;
-    rows = await sql`
-      SELECT
-        s.*,
-        c.name AS course_name,
-        cu.email AS customer_email,
-        cu.first_name AS customer_first_name,
-        cu.last_name AS customer_last_name,
-        t.name AS tutor_name,
-        COALESCE(inv.invite_count, 0) AS invite_count,
-        COALESCE(inv.accepted_invite_count, 0) AS accepted_invite_count
-      FROM sales s
-      LEFT JOIN courses c ON c.id = s.course_id
-      LEFT JOIN customers cu ON cu.id = s.customer_id
-      LEFT JOIN tutors t ON t.id = s.tutor_id
-      LEFT JOIN LATERAL (
-        SELECT
-          COUNT(*)::int AS invite_count,
-          COUNT(*) FILTER (WHERE accepted_at IS NOT NULL)::int AS accepted_invite_count
-        FROM sale_tutor_invites sti
-        WHERE sti.sale_id = s.id
-      ) inv ON TRUE
-      WHERE s.tutor_id IS NOT NULL
-        AND (${exactStatus}::text IS NULL OR s.assignment_status = ${exactStatus})
-        AND (${courseId}::int IS NULL OR s.course_id = ${courseId})
-        AND (${tutorId}::int IS NULL OR s.tutor_id = ${tutorId})
-      ORDER BY s.sold_at DESC, s.id DESC
-    `;
-  } else {
-    rows = await sql`
-      SELECT
-        s.*,
-        c.name AS course_name,
-        cu.email AS customer_email,
-        cu.first_name AS customer_first_name,
-        cu.last_name AS customer_last_name,
-        t.name AS tutor_name,
-        COALESCE(inv.invite_count, 0) AS invite_count,
-        COALESCE(inv.accepted_invite_count, 0) AS accepted_invite_count
-      FROM sales s
-      LEFT JOIN courses c ON c.id = s.course_id
-      LEFT JOIN customers cu ON cu.id = s.customer_id
-      LEFT JOIN tutors t ON t.id = s.tutor_id
-      LEFT JOIN LATERAL (
-        SELECT
-          COUNT(*)::int AS invite_count,
-          COUNT(*) FILTER (WHERE accepted_at IS NOT NULL)::int AS accepted_invite_count
-        FROM sale_tutor_invites sti
-        WHERE sti.sale_id = s.id
-      ) inv ON TRUE
-      WHERE (${courseId}::int IS NULL OR s.course_id = ${courseId})
-        AND (${tutorId}::int IS NULL OR s.tutor_id = ${tutorId})
-      ORDER BY s.sold_at DESC, s.id DESC
-    `;
-  }
+        COUNT(*)::int AS invite_count,
+        COUNT(*) FILTER (WHERE accepted_at IS NOT NULL)::int AS accepted_invite_count
+      FROM sale_tutor_invites sti
+      WHERE sti.sale_id = s.id
+    ) inv ON TRUE
+    WHERE (${courseId}::int IS NULL OR s.course_id = ${courseId})
+      AND (${tutorId}::int IS NULL OR s.tutor_id = ${tutorId})
+      AND (
+        ${status}::text = 'All'
+        OR (
+          (${status}::text = 'Unassigned' OR ${status}::text = 'AwaitingTutor')
+          AND s.tutor_id IS NULL
+        )
+        OR (
+          ${status}::text = 'AssignedAny'
+          AND s.tutor_id IS NOT NULL
+        )
+        OR (
+          (${status}::text = 'Assigned' OR ${status}::text = 'AdminAssigned')
+          AND s.tutor_id IS NOT NULL
+          AND s.assignment_status = ${status}
+        )
+      )
+    ORDER BY s.sold_at DESC, s.id DESC
+  `;
 
   return (rows as SaleListDbRow[]).map(rowToSaleListItem);
 }
@@ -244,6 +256,8 @@ export async function summarizeSalesByCourse(): Promise<SaleCourseSummary[]> {
       COALESCE(array_remove(array_agg(DISTINCT s.currency), NULL), ARRAY[]::text[]) AS currencies
     FROM sales s
     LEFT JOIN courses c ON c.id = s.course_id
+    LEFT JOIN payment_orders po ON po.id = s.payment_order_id
+    WHERE COALESCE(po.status, 'Paid') <> 'Refunded'
     GROUP BY s.course_id, c.name
     ORDER BY COUNT(*) DESC, c.name ASC
   `;
@@ -279,7 +293,9 @@ export async function summarizeSalesByTutor(): Promise<SaleTutorSummary[]> {
       COALESCE(array_remove(array_agg(DISTINCT s.currency), NULL), ARRAY[]::text[]) AS currencies
     FROM sales s
     LEFT JOIN tutors t ON t.id = s.tutor_id
+    LEFT JOIN payment_orders po ON po.id = s.payment_order_id
     WHERE s.tutor_id IS NOT NULL
+      AND COALESCE(po.status, 'Paid') <> 'Refunded'
     GROUP BY s.tutor_id, t.name, t.commission_percent
     ORDER BY COALESCE(SUM(s.commission_amount), 0) DESC, t.name ASC
   `;

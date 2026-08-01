@@ -75,6 +75,46 @@ function stripeSecretKey(): string {
   return secretKey;
 }
 
+export async function createStripeRefund(input: {
+  paymentIntentId: string;
+  reason?: 'duplicate' | 'fraudulent' | 'requested_by_customer';
+}): Promise<{ id: string; status: string; paymentIntentId: string | null }> {
+  const secretKey = stripeSecretKey();
+  const params = new URLSearchParams();
+  params.append('payment_intent', input.paymentIntentId);
+  if (input.reason) params.append('reason', input.reason);
+
+  const response = await fetchWithTimeout('https://api.stripe.com/v1/refunds', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${secretKey}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: params,
+    timeoutMs: 20_000,
+  });
+
+  const body = await response.json() as {
+    id?: string;
+    status?: string;
+    payment_intent?: string | { id?: string } | null;
+    error?: { message?: string };
+  };
+  if (!response.ok || !body.id) {
+    throw new Error(body.error?.message ?? `Stripe refund failed (${response.status})`);
+  }
+
+  const paymentIntentId = typeof body.payment_intent === 'string'
+    ? body.payment_intent
+    : body.payment_intent?.id ?? input.paymentIntentId;
+
+  return {
+    id: body.id,
+    status: body.status ?? 'succeeded',
+    paymentIntentId,
+  };
+}
+
 export function verifyStripeWebhook(rawBody: Buffer, signatureHeader: string | undefined): unknown {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!secret) throw new Error('STRIPE_WEBHOOK_SECRET is not configured');

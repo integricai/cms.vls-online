@@ -162,6 +162,16 @@ export async function getPaymentOrderByCheckoutSession(sessionId: string): Promi
   return rows[0] ? rowToOrder(rows[0] as DbRow) : null;
 }
 
+export async function getPaymentOrderByPaymentIntent(paymentIntentId: string): Promise<PaymentOrder | null> {
+  const rows = await sql`
+    SELECT * FROM payment_orders
+    WHERE stripe_payment_intent_id = ${paymentIntentId}
+    ORDER BY id DESC
+    LIMIT 1
+  `;
+  return rows[0] ? rowToOrder(rows[0] as DbRow) : null;
+}
+
 export async function markPaymentOrderPaid(data: {
   orderId: number;
   stripeCheckoutSessionId: string | null;
@@ -172,7 +182,9 @@ export async function markPaymentOrderPaid(data: {
 }): Promise<{ order: PaymentOrder; wasAlreadyPaid: boolean }> {
   const existing = await getPaymentOrder(data.orderId);
   if (!existing) throw new Error('Payment order not found');
-  if (existing.status === 'Paid') return { order: existing, wasAlreadyPaid: true };
+  if (existing.status === 'Paid' || existing.status === 'Refunded') {
+    return { order: existing, wasAlreadyPaid: true };
+  }
 
   const amount = data.amountTotal != null ? data.amountTotal / 100 : existing.amount;
   const currency = data.currency?.toUpperCase() ?? existing.currency;
@@ -204,6 +216,35 @@ export async function markPaymentOrderPaid(data: {
     RETURNING *
   `;
   return { order: rowToOrder(rows[0] as DbRow), wasAlreadyPaid: false };
+}
+
+export async function markPaymentOrderRefunded(data: {
+  orderId: number;
+  stripeRefundId: string | null;
+  stripePaymentIntentId?: string | null;
+}): Promise<{ order: PaymentOrder; wasAlreadyRefunded: boolean }> {
+  const existing = await getPaymentOrder(data.orderId);
+  if (!existing) throw new Error('Payment order not found');
+  if (existing.status === 'Refunded') {
+    return { order: existing, wasAlreadyRefunded: true };
+  }
+  if (existing.status !== 'Paid') {
+    throw new Error(`Cannot refund payment order in status ${existing.status}`);
+  }
+
+  const rows = await sql`
+    UPDATE payment_orders
+    SET status = 'Refunded',
+        stripe_refund_id = COALESCE(${data.stripeRefundId}, stripe_refund_id),
+        stripe_payment_intent_id = COALESCE(
+          ${data.stripePaymentIntentId ?? null},
+          stripe_payment_intent_id
+        ),
+        refunded_at = COALESCE(refunded_at, NOW())
+    WHERE id = ${data.orderId}
+    RETURNING *
+  `;
+  return { order: rowToOrder(rows[0] as DbRow), wasAlreadyRefunded: false };
 }
 
 export async function updateZenlerEnrollment(
