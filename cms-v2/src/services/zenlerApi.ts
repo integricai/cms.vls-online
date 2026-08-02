@@ -134,36 +134,65 @@ export async function findZenlerUserByEmail(email: string): Promise<ZenlerApiUse
   return match ?? null;
 }
 
+export type ZenlerStudentPage = {
+  items: ZenlerApiUser[];
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+/**
+ * Pre-launch backfill helper: fetch one page of Zenler student-role users.
+ * Not intended for ongoing sync after the new website goes live.
+ */
+export async function listZenlerStudentsPage(input: {
+  page?: number;
+  pageSize?: number;
+} = {}): Promise<ZenlerStudentPage> {
+  const page = Math.max(1, Number(input.page ?? 1) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number(input.pageSize ?? 50) || 50));
+
+  const query = new URLSearchParams({
+    limit: String(pageSize),
+    page: String(page),
+  });
+  query.append('role[]', String(ZENLER_ROLE_STUDENT));
+
+  const data = await zenlerFetch<ZenlerUserListData>(`/users?${query.toString()}`);
+  const items = data.items ?? [];
+  const reportedTotalPages = Number(data.pagination?.total_pages ?? 0);
+  let totalPages = reportedTotalPages > 0 ? reportedTotalPages : page;
+  if (!reportedTotalPages && items.length >= pageSize) {
+    // Unknown total — assume at least one more page so the client can continue.
+    totalPages = page + 1;
+  }
+  if (!reportedTotalPages && items.length === 0) {
+    totalPages = Math.max(1, page - 1) || 1;
+  }
+
+  return { items, page, pageSize, totalPages };
+}
+
 /**
  * Pre-launch backfill helper: page all Zenler student-role users.
- * Not intended for ongoing sync after the new website goes live.
+ * Prefer listZenlerStudentsPage for request-safe batching.
  */
 export async function listAllZenlerStudents(): Promise<ZenlerApiUser[]> {
   const users: ZenlerApiUser[] = [];
   const seen = new Set<string>();
   let page = 1;
   let totalPages = 1;
-  const limit = 100;
 
   do {
-    const query = new URLSearchParams({
-      limit: String(limit),
-      page: String(page),
-    });
-    query.append('role[]', String(ZENLER_ROLE_STUDENT));
-
-    const data = await zenlerFetch<ZenlerUserListData>(`/users?${query.toString()}`);
-    const items = data.items ?? [];
-    for (const item of items) {
+    const batch = await listZenlerStudentsPage({ page, pageSize: 100 });
+    for (const item of batch.items) {
       const key = item.id || item.email.trim().toLowerCase();
       if (!key || seen.has(key)) continue;
       seen.add(key);
       users.push(item);
     }
-
-    totalPages = Number(data.pagination?.total_pages ?? page);
-    if (items.length === 0) break;
-    if (items.length < limit && !data.pagination?.total_pages) break;
+    totalPages = batch.totalPages;
+    if (batch.items.length === 0) break;
     page += 1;
   } while (page <= totalPages);
 

@@ -137,24 +137,72 @@ export default function Students() {
 
   async function syncZenler() {
     const confirmed = window.confirm(
-      'Sync all Zenler learners into Students?\n\nThis is for pre-launch backfill. After go-live, new enrollments update students automatically.',
+      'Sync all Zenler learners into Students in batches?\n\nThis is for pre-launch backfill. After go-live, new enrollments update students automatically.',
     );
     if (!confirmed) return;
 
     setSyncing(true);
     setError('');
-    setMessage('');
+    setMessage('Starting Zenler sync…');
+
+    let page = 1;
+    let totals = { fetched: 0, created: 0, updated: 0, skipped: 0 };
+    const collectedErrors: string[] = [];
+
     try {
-      const result = await api.post<ZenlerStudentSyncResult>('/students/sync-zenler', {});
-      setMessage(
-        `Zenler sync complete: fetched ${result.fetched}, created ${result.created}, updated ${result.updated}, skipped ${result.skipped}.`,
-      );
-      if (result.errors?.length) {
-        setError(result.errors.slice(0, 5).join(' | '));
+      while (true) {
+        setMessage(
+          `Syncing Zenler page ${page}… `
+          + `(so far: ${totals.fetched} fetched, ${totals.created} created, ${totals.updated} updated)`,
+        );
+
+        const result = await api.post<ZenlerStudentSyncResult>('/students/sync-zenler', {
+          page,
+          pageSize: 50,
+          totals,
+        });
+
+        totals = result.totals ?? {
+          fetched: totals.fetched + result.fetched,
+          created: totals.created + result.created,
+          updated: totals.updated + result.updated,
+          skipped: totals.skipped + result.skipped,
+        };
+
+        if (result.errors?.length) {
+          for (const err of result.errors) {
+            if (collectedErrors.length < 10) collectedErrors.push(err);
+          }
+        }
+
+        if (result.done || !result.nextPage) {
+          setMessage(
+            `Zenler sync complete: fetched ${totals.fetched}, created ${totals.created}, `
+            + `updated ${totals.updated}, skipped ${totals.skipped} `
+            + `(${result.page}/${result.totalPages || result.page} pages).`,
+          );
+          break;
+        }
+
+        page = result.nextPage;
+        // Brief pause between pages to avoid Zenler/API rate pressure.
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+
+      if (collectedErrors.length) {
+        setError(collectedErrors.slice(0, 5).join(' | '));
       }
       await loadStudents();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Zenler sync failed');
+      setError(
+        (err instanceof Error ? err.message : 'Zenler sync failed')
+        + ` (stopped at page ${page}; synced so far: ${totals.fetched})`,
+      );
+      setMessage(
+        `Partial Zenler sync: fetched ${totals.fetched}, created ${totals.created}, `
+        + `updated ${totals.updated}, skipped ${totals.skipped}. You can run Sync again to continue.`,
+      );
+      await loadStudents();
     } finally {
       setSyncing(false);
     }
@@ -328,7 +376,7 @@ export default function Students() {
               disabled={syncing}
               className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
             >
-              {syncing ? 'Syncing Zenler…' : 'Sync from Zenler'}
+              {syncing ? 'Syncing batches…' : 'Sync from Zenler'}
             </button>
           </div>
         </div>

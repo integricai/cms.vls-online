@@ -346,6 +346,17 @@ export interface ZenlerStudentSyncResult {
   updated: number;
   skipped: number;
   errors: string[];
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  nextPage: number | null;
+  done: boolean;
+  totals: {
+    fetched: number;
+    created: number;
+    updated: number;
+    skipped: number;
+  };
 }
 
 export interface ExamResultPreview {

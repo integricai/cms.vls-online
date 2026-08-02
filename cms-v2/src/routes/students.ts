@@ -9,7 +9,7 @@ import {
   updateExamStatusManual,
 } from '../services/examResultService';
 import { setStudentNewsletterSubscription } from '../services/newsletterService';
-import { syncZenlerStudentsToCustomers } from '../services/zenlerStudentBackfill';
+import { syncZenlerStudentsPage } from '../services/zenlerStudentBackfill';
 
 const router = Router();
 
@@ -135,9 +135,20 @@ router.get('/export', requireRole('admin', 'editor'), async (req, res, next) => 
   }
 });
 
-router.post('/sync-zenler', requireRole('admin'), async (_req, res, next) => {
+router.post('/sync-zenler', requireRole('admin'), async (req, res, next) => {
   try {
-    const result = await syncZenlerStudentsToCustomers();
+    const page = Number(req.body?.page ?? 1);
+    const pageSize = Number(req.body?.pageSize ?? 50);
+    const totals = req.body?.totals && typeof req.body.totals === 'object'
+      ? req.body.totals as {
+        fetched?: number;
+        created?: number;
+        updated?: number;
+        skipped?: number;
+      }
+      : undefined;
+
+    const result = await syncZenlerStudentsPage({ page, pageSize, totals });
     return res.json({ ok: true, data: result });
   } catch (err) {
     next(err);
