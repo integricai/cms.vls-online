@@ -1,5 +1,6 @@
 /**
- * Zenler user create/find + course enrollment after successful payment.
+ * Zenler user create/find + course enrollment after successful payment,
+ * and course unenrollment after refund.
  */
 
 import { randomBytes } from 'crypto';
@@ -9,6 +10,7 @@ import {
   enrollZenlerUserInCourse,
   findZenlerUserByEmail,
   isStudentEnrolledInCourse,
+  unenrollZenlerUserFromCourse,
   zenlerCredentialsConfigured,
 } from './zenlerApi';
 
@@ -24,6 +26,18 @@ export interface ZenlerEnrollmentResult {
   status: 'enrolled' | 'enrolled_new' | 'pending' | 'failed' | 'skipped';
   isNewZenlerUser: boolean;
   temporaryPassword: string | null;
+  message: string;
+}
+
+export interface ZenlerUnenrollmentInput {
+  email?: string | null;
+  zenlerUserId?: string | null;
+  zenlerCourseId: string;
+}
+
+export interface ZenlerUnenrollmentResult {
+  zenlerUserId: string | null;
+  status: 'unenrolled' | 'unenroll_failed' | 'skipped';
   message: string;
 }
 
@@ -116,6 +130,76 @@ export async function enrollStudentInZenlerCourse(
       status: 'failed',
       isNewZenlerUser: false,
       temporaryPassword: null,
+      message,
+    };
+  }
+}
+
+export async function unenrollStudentFromZenlerCourse(
+  input: ZenlerUnenrollmentInput,
+): Promise<ZenlerUnenrollmentResult> {
+  if (!zenlerCredentialsConfigured()) {
+    return {
+      zenlerUserId: input.zenlerUserId ?? null,
+      status: 'skipped',
+      message: 'Zenler API credentials are not configured',
+    };
+  }
+
+  const zenlerCourseId = String(input.zenlerCourseId ?? '').trim();
+  if (!zenlerCourseId) {
+    return {
+      zenlerUserId: input.zenlerUserId ?? null,
+      status: 'skipped',
+      message: 'Zenler course id is required for unenrollment',
+    };
+  }
+
+  try {
+    let zenlerUserId = String(input.zenlerUserId ?? '').trim() || null;
+    if (!zenlerUserId) {
+      const email = String(input.email ?? '').trim().toLowerCase();
+      if (!email) {
+        return {
+          zenlerUserId: null,
+          status: 'unenroll_failed',
+          message: 'Zenler user id or student email is required for unenrollment',
+        };
+      }
+      const existingUser = await findZenlerUserByEmail(email);
+      zenlerUserId = existingUser?.id ?? null;
+      if (!zenlerUserId) {
+        return {
+          zenlerUserId: null,
+          status: 'unenrolled',
+          message: 'Student has no Zenler account — nothing to unenroll',
+        };
+      }
+    }
+
+    const outcome = await unenrollZenlerUserFromCourse({
+      zenlerUserId,
+      zenlerCourseId,
+    });
+
+    return {
+      zenlerUserId,
+      status: 'unenrolled',
+      message: outcome === 'already_unenrolled'
+        ? 'Student was already unenrolled from this Zenler course'
+        : 'Student unenrolled from Zenler course',
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[zenler-unenrollment] failed', {
+      email: input.email,
+      zenlerUserId: input.zenlerUserId,
+      zenlerCourseId,
+      message,
+    });
+    return {
+      zenlerUserId: input.zenlerUserId ?? null,
+      status: 'unenroll_failed',
       message,
     };
   }

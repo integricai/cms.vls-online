@@ -18,6 +18,7 @@ import {
   previewSaleAccept,
 } from '../services/saleAssignment';
 import { createStripeRefund } from '../services/stripeCheckout';
+import { revokeZenlerAccessForRefundedOrder } from '../services/zenlerEnrollmentEnsure';
 
 const router = Router();
 
@@ -144,6 +145,7 @@ router.post('/:id/refund', requireRole('admin'), async (req, res, next) => {
     const order = await getPaymentOrder(sale.paymentOrderId);
     if (!order) return res.status(404).json({ ok: false, error: 'Payment order not found' });
     if (order.status === 'Refunded') {
+      await revokeZenlerAccessForRefundedOrder(order);
       const existing = await getSaleListItemById(id);
       return res.json({ ok: true, data: existing });
     }
@@ -162,11 +164,13 @@ router.post('/:id/refund', requireRole('admin'), async (req, res, next) => {
       reason: 'requested_by_customer',
     });
 
-    await markPaymentOrderRefunded({
+    const { order: refunded } = await markPaymentOrderRefunded({
       orderId: order.id,
       stripeRefundId: refund.id,
       stripePaymentIntentId: refund.paymentIntentId ?? order.stripePaymentIntentId,
     });
+
+    await revokeZenlerAccessForRefundedOrder(refunded);
 
     const updated = await getSaleListItemById(id);
     return res.json({ ok: true, data: updated });

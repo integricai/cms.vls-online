@@ -7,7 +7,10 @@ import {
 import { updateCustomerZenlerUserId } from '../models/customer';
 import { parseZenlerPlanId } from './zenlerApi';
 import { courseAccessUrlForEnrollment } from './schoolAccess';
-import { enrollStudentInZenlerCourse } from './zenlerEnrollment';
+import {
+  enrollStudentInZenlerCourse,
+  unenrollStudentFromZenlerCourse,
+} from './zenlerEnrollment';
 
 const RETRYABLE_STATUSES = new Set<string | null>(['pending', 'failed', 'skipped', null, '']);
 
@@ -66,6 +69,47 @@ export async function ensureZenlerEnrollmentForPaidOrder(order: PaymentOrder) {
 
   const refreshed = await getPaymentOrder(order.id);
   return refreshed ?? order;
+}
+
+/**
+ * After a refund, revoke Zenler access for this order's course only.
+ * Best-effort: never throws; records unenrolled / unenroll_failed on the order.
+ */
+export async function revokeZenlerAccessForRefundedOrder(
+  order: PaymentOrder,
+): Promise<PaymentOrder> {
+  const currentStatus = String(order.zenlerEnrollmentStatus ?? '').toLowerCase();
+  if (currentStatus === 'unenrolled') return order;
+
+  const email = (order.studentEmail ?? order.stripeCustomerEmail)?.trim() ?? null;
+  if (!order.zenlerCourseId?.trim()) {
+    await updateZenlerEnrollment(order.id, {
+      zenlerUserId: order.zenlerUserId,
+      zenlerEnrollmentStatus: 'unenrolled',
+    });
+    return (await getPaymentOrder(order.id)) ?? order;
+  }
+
+  const result = await unenrollStudentFromZenlerCourse({
+    email,
+    zenlerUserId: order.zenlerUserId,
+    zenlerCourseId: order.zenlerCourseId,
+  });
+
+  await updateZenlerEnrollment(order.id, {
+    zenlerUserId: result.zenlerUserId ?? order.zenlerUserId,
+    zenlerEnrollmentStatus: result.status === 'skipped' ? 'unenroll_failed' : result.status,
+  });
+
+  if (result.status === 'unenroll_failed' || result.status === 'skipped') {
+    console.error('[zenler-unenrollment] refund revoke incomplete', {
+      orderId: order.id,
+      status: result.status,
+      message: result.message,
+    });
+  }
+
+  return (await getPaymentOrder(order.id)) ?? order;
 }
 
 /** Run enrollment once and return email context (password only on first successful create). */

@@ -71,8 +71,7 @@ async function zenlerFetch<T>(path: string, options?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    const message = payload?.message ?? raw.slice(0, 300) ?? response.statusText;
-    throw new Error(`Zenler API ${response.status}: ${message}`);
+    throw new Error(`Zenler API ${response.status}: ${formatZenlerErrorMessage(payload, raw || response.statusText)}`);
   }
 
   if (!payload) {
@@ -80,10 +79,26 @@ async function zenlerFetch<T>(path: string, options?: RequestInit): Promise<T> {
   }
 
   if (payload.response_code != null && payload.response_code !== 200) {
-    throw new Error(payload.message ?? `Zenler API error (${payload.response_code})`);
+    throw new Error(formatZenlerErrorMessage(payload, `Zenler API error (${payload.response_code})`));
   }
 
   return payload.data;
+}
+
+function formatZenlerErrorMessage(
+  payload: ZenlerApiResponse<unknown> | null,
+  fallback: string,
+): string {
+  const data = payload?.data;
+  if (data && typeof data === 'object' && 'message' in data) {
+    const nested = String((data as { message?: unknown }).message ?? '').trim();
+    if (nested) return nested;
+  }
+  const top = String(payload?.message ?? '').trim();
+  if (top && top.toLowerCase() !== 'failed') return top;
+  if (top) return top;
+  const raw = fallback.trim();
+  return raw || 'Zenler API error';
 }
 
 export function parseZenlerPlanId(code: string | null | undefined): number | undefined {
@@ -185,6 +200,30 @@ export async function enrollZenlerUserInCourse(input: {
       body: JSON.stringify(body),
     },
   );
+}
+
+export async function unenrollZenlerUserFromCourse(input: {
+  zenlerUserId: string;
+  zenlerCourseId: string;
+}): Promise<'unenrolled' | 'already_unenrolled'> {
+  try {
+    await zenlerFetch<unknown>(
+      `/users/${encodeURIComponent(input.zenlerUserId)}/unenroll`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          course_id: parseZenlerCourseId(input.zenlerCourseId),
+        }),
+      },
+    );
+    return 'unenrolled';
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (/not enrolled/i.test(message)) {
+      return 'already_unenrolled';
+    }
+    throw err;
+  }
 }
 
 export function zenlerCredentialsConfigured(): boolean {

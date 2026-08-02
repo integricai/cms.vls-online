@@ -34,6 +34,7 @@ import {
 import { isParityDealsTestRequest } from '../services/parityDealsTest';
 import {
   ensureZenlerEnrollmentForPaidOrder,
+  revokeZenlerAccessForRefundedOrder,
   runZenlerEnrollmentForPaidOrder,
 } from '../services/zenlerEnrollmentEnsure';
 import { courseAccessUrlForEnrollment } from '../services/schoolAccess';
@@ -95,14 +96,21 @@ async function handleStripeRefundEvent(payload: {
 
   const order = await getPaymentOrderByPaymentIntent(payload.paymentIntentId);
   if (!order) return;
-  if (order.status === 'Refunded') return;
+
+  if (order.status === 'Refunded') {
+    // Admin refund may have marked the order first — still ensure Zenler access is revoked.
+    await revokeZenlerAccessForRefundedOrder(order);
+    return;
+  }
   if (order.status !== 'Paid') return;
 
-  await markPaymentOrderRefunded({
+  const { order: refunded } = await markPaymentOrderRefunded({
     orderId: order.id,
     stripeRefundId: payload.refundId,
     stripePaymentIntentId: payload.paymentIntentId,
   });
+
+  await revokeZenlerAccessForRefundedOrder(refunded);
 }
 
 const router = Router();

@@ -129,7 +129,7 @@ export default function SalesTab() {
   async function refundSale(sale: SaleListItem) {
     if (sale.paymentStatus === 'Refunded') return;
     const confirmed = window.confirm(
-      `Refund ${formatMoney(sale.amount, sale.currency)} for ${sale.courseName || `course #${sale.courseId}`}?\n\nThis will create a full refund in Stripe.`,
+      `Refund ${formatMoney(sale.amount, sale.currency)} for ${sale.courseName || `course #${sale.courseId}`}?\n\nThis will create a full refund in Stripe and revoke the student's access to this course.`,
     );
     if (!confirmed) return;
 
@@ -138,7 +138,7 @@ export default function SalesTab() {
     setMessage('');
     try {
       await api.post(`/sales/${sale.id}/refund`, {});
-      setMessage('Refund processed in Stripe and marked on this sale');
+      setMessage('Refund processed in Stripe, sale marked refunded, and course access revoked');
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to refund sale');
