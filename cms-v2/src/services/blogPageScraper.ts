@@ -1,6 +1,12 @@
 import type { ScrapedBlogImage, ScrapedBlogPost, ScrapedFaqItem } from '../../shared/migrationTypes';
 import { CoursePageScrapeError, fetchPageHtml } from './coursePageScraper';
-import { toPublicOriginUrl } from './migrationUrlUtils';
+import {
+  isAutoSeoHost,
+  isVlsHost,
+  localBlogPath,
+  PUBLIC_SITE_ORIGIN,
+  toPublicOriginUrl,
+} from './migrationUrlUtils';
 import { slugifySegment } from '../../shared/migrationDestination';
 
 const STORYBLOK_TOPICS = [
@@ -208,7 +214,42 @@ function resolveFeaturedImageUrl(
   return fallback?.sourceUrl || '';
 }
 
-function sanitizeBodyHtml(html: string): string {
+function isAutoSeoUrl(value: string): boolean {
+  try {
+    return isAutoSeoHost(new URL(value).hostname);
+  } catch {
+    return /getautoseo\.com/i.test(value);
+  }
+}
+
+function localizeHref(href: string, baseUrl: URL, blogPath: string): string {
+  const trimmed = href.trim();
+  if (!trimmed || trimmed.startsWith('#')) return trimmed;
+  if (trimmed.startsWith('/')) {
+    if (trimmed.startsWith('/blog/') || trimmed === '/blog' || trimmed.startsWith('/courses')) {
+      return trimmed;
+    }
+    return `${PUBLIC_SITE_ORIGIN}${trimmed}`;
+  }
+  try {
+    const parsed = new URL(trimmed, baseUrl);
+    if (isAutoSeoHost(parsed.hostname)) {
+      // Image/download links from AutoSEO must not remain in the published body.
+      if (/\.(?:jpe?g|png|webp|gif|svg)(?:$|\?)/i.test(parsed.pathname) || /\/storage\//i.test(parsed.pathname)) {
+        return '';
+      }
+      return blogPath;
+    }
+    if (isVlsHost(parsed.hostname)) {
+      return `${parsed.pathname}${parsed.search}${parsed.hash}` || '/';
+    }
+    return parsed.href;
+  } catch {
+    return trimmed;
+  }
+}
+
+function sanitizeBodyHtml(html: string, baseUrl: URL, blogPath: string): string {
   const allowed = new Set([
     'section', 'div', 'span', 'h2', 'h3', 'h4', 'p', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
     'strong', 'em', 'b', 'i', 'a', 'img', 'blockquote', 'br', 'figure', 'figcaption', 'hr', 'pre', 'code', 'details', 'summary',
@@ -223,13 +264,18 @@ function sanitizeBodyHtml(html: string): string {
       if (name === 'br' || name === 'hr') return `<${name}>`;
       if (name === 'a') {
         const href = attr(tag, 'href');
-        if (!/^https?:\/\//i.test(href) && !href.startsWith('/') && !href.startsWith('#')) return '<a>';
-        return `<a href="${href.replace(/"/g, '&quot;')}">`;
+        const localized = localizeHref(href, baseUrl, blogPath);
+        if (!localized) return '';
+        if (!/^https?:\/\//i.test(localized) && !localized.startsWith('/') && !localized.startsWith('#')) {
+          return '<a>';
+        }
+        return `<a href="${localized.replace(/"/g, '&quot;')}">`;
       }
       if (name === 'img') {
         const src = imageSource(tag);
         if (!src) return '';
-        return `<img src="${src.replace(/"/g, '&quot;')}" alt="${attr(tag, 'alt').replace(/"/g, '&quot;')}">`;
+        const absolute = canonicalUrl(src, baseUrl);
+        return `<img src="${absolute.replace(/"/g, '&quot;')}" alt="${attr(tag, 'alt').replace(/"/g, '&quot;')}">`;
       }
       return `<${name}>`;
     })
@@ -251,8 +297,31 @@ function materializeBackgroundImages(html: string, baseUrl: URL): string {
   );
 }
 
+function stripAutoSeoToolbar(html: string): string {
+  return html
+    .replace(/<div\b[^>]*>\s*(?:Download|Feedback(?:\s*&amp;?\s*Recreate)?|Recreate|Delete)(?:\s*(?:Download|Feedback(?:\s*&amp;?\s*Recreate)?|Recreate|Delete))+\s*<\/div>/gi, '')
+    .replace(/<p\b[^>]*>\s*(?:Download|Feedback(?:\s*&amp;?\s*Recreate)?|Recreate|Delete)(?:\s*(?:Download|Feedback(?:\s*&amp;?\s*Recreate)?|Recreate|Delete))+\s*<\/p>/gi, '')
+    .replace(/\b(?:Download|Feedback\s*&amp;?\s*Recreate|Feedback\s*&?\s*Recreate|Recreate|Delete)(?:\s+(?:Download|Feedback\s*&amp;?\s*Recreate|Feedback\s*&?\s*Recreate|Recreate|Delete)){1,}\b/gi, '');
+}
+
+function stripAutoSeoPromo(html: string): string {
+  let next = html || '';
+  for (let i = 0; i < 4; i += 1) {
+    const previous = next;
+    next = next
+      .replace(/<h[2-4]\b[^>]*>\s*Want to create content like this\?\s*<\/h[2-4]>\s*(?:<p\b[^>]*>[\s\S]*?<\/p>\s*)?(?:<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>\s*)?/gi, '')
+      .replace(/<p\b[^>]*>\s*AutoSEO helps you[\s\S]*?<\/p>/gi, '')
+      .replace(/<p\b[^>]*>\s*This article was shared from AutoSEO[\s\S]*?<\/p>/gi, '')
+      .replace(/<p\b[^>]*>\s*Powered by AutoSEO[\s\S]*?<\/p>/gi, '')
+      .replace(/<p\b[^>]*>\s*<a\b[\s\S]*?Get Started Free[\s\S]*?<\/a>\s*<\/p>/gi, '')
+      .replace(/<a\b[^>]*>\s*Get Started Free\s*<\/a>/gi, '');
+    if (next === previous) break;
+  }
+  return next;
+}
+
 function stripNoiseFromBody(html: string, title: string): string {
-  let next = html;
+  let next = stripAutoSeoPromo(stripAutoSeoToolbar(html));
   const titleText = stripTags(title).toLowerCase();
   next = next.replace(/^(\s|<!--[\s\S]*?-->)*(<h[1-2]\b[^>]*>[\s\S]*?<\/h[1-2]>)/i, (match, _p, heading: string) => (
     stripTags(heading).toLowerCase() === titleText ? '' : match
@@ -271,23 +340,49 @@ function stripNoiseFromBody(html: string, title: string): string {
     )
     .replace(/<div\b[^>]*class=["'][^"']*(?:mid-cta|rail-cta|article-foot|share-row|post-meta|topic-pill)[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '')
     .replace(/<div\b[^>]*class=["'][^"']*faq[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '')
-    .replace(/<h2\b[^>]*>\s*Frequently asked questions\s*<\/h2>/gi, '')
+    // AutoSEO / VLS FAQ blocks become dedicated Storyblok FAQ items.
+    .replace(
+      /<h([2-4])\b[^>]*>\s*Frequently\s+Asked\s+Questions\s*<\/h\1>[\s\S]*?(?=<h[2]\b|$)/gi,
+      '',
+    )
     .replace(/<h2\b[^>]*>\s*More Articles\s*<\/h2>[\s\S]*?(?=<h2\b|$)/gi, '')
     .replace(/<section\b[^>]*class=["'][^"']*related[^"']*["'][^>]*>[\s\S]*?<\/section>/gi, '')
-    .replace(/<h[2-4]\b[^>]*>\s*Want to create content like this\?\s*<\/h[2-4]>[\s\S]*?(?=<h[2-4]\b|$)/gi, '')
-    .replace(/<p\b[^>]*>\s*(?:AutoSEO|Powered by AutoSEO|This article was shared from AutoSEO)[\s\S]*?<\/p>/gi, '');
+    .replace(/<p\b[^>]*>\s*(?:AutoSEO|Powered by AutoSEO|This article was shared from AutoSEO)[\s\S]*?<\/p>/gi, '')
+    .replace(/<p\b[^>]*>\s*<strong>\s*(?:Search term|Word Count|Created)\s*:?\s*<\/strong>[\s\S]*?<\/p>/gi, '')
+    .replace(/<(?:span|div)\b[^>]*>\s*<strong>\s*(?:Search term|Word Count|Created)\s*:?\s*<\/strong>[\s\S]*?<\/(?:span|div)>/gi, '');
   return next.trim();
 }
 
 function extractTakeaways(html: string): string[] {
   const block = html.match(/<div\b[^>]*class=["'][^"']*takeaways[^"']*["'][^>]*>[\s\S]*?<\/div>/i)?.[0]
-    || html.match(/Key takeaways[\s\S]{0,40}<ul\b[^>]*>[\s\S]*?<\/ul>/i)?.[0]
+    || html.match(/<h([2-4])\b[^>]*>\s*Key\s*Takeaways?\s*<\/h\1>\s*<(?:ul|ol)\b[^>]*>[\s\S]*?<\/(?:ul|ol)>/i)?.[0]
+    || html.match(/Key takeaways[\s\S]{0,80}<(?:ul|ol)\b[^>]*>[\s\S]*?<\/(?:ul|ol)>/i)?.[0]
     || '';
   if (!block) return [];
   return [...block.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi)]
     .map(match => stripTags(match[1]))
     .filter(Boolean)
     .slice(0, 12);
+}
+
+function extractHeadingFaqItems(html: string): ScrapedFaqItem[] {
+  const heading = html.match(/<h([2-4])\b[^>]*>\s*Frequently\s+Asked\s+Questions\s*<\/h\1>/i);
+  if (!heading || heading.index === undefined) return [];
+  const start = heading.index + heading[0].length;
+  const rest = html.slice(start);
+  const nextH2 = rest.search(/<h2\b/i);
+  const section = nextH2 >= 0 ? rest.slice(0, nextH2) : rest;
+  const items: ScrapedFaqItem[] = [];
+  const questionPattern = /<h3\b[^>]*>([\s\S]*?)<\/h3>\s*([\s\S]*?)(?=<h3\b|$)/gi;
+  for (const match of section.matchAll(questionPattern)) {
+    const question = stripTags(match[1] || '');
+    const answerHtml = (match[2] || '').trim();
+    const answerText = stripTags(answerHtml);
+    if (question && answerText) {
+      items.push({ question, answerHtml: answerHtml || answerText, answerText });
+    }
+  }
+  return items;
 }
 
 function extractFaqItems(html: string): ScrapedFaqItem[] {
@@ -302,7 +397,10 @@ function extractFaqItems(html: string): ScrapedFaqItem[] {
       items.push({ question, answerHtml: answerHtml?.trim() || answerText, answerText });
     }
   }
-  if (items.length) return items;
+  if (items.length) return items.slice(0, 20);
+
+  const headingFaqs = extractHeadingFaqItems(html);
+  if (headingFaqs.length) return headingFaqs.slice(0, 20);
 
   // Schema.org FAQ fallback
   const scriptBlocks = [...html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
@@ -344,13 +442,14 @@ function extractCta(
     || '');
   const linkTag = block.match(/<a\b[^>]*>[\s\S]*?<\/a>/i)?.[0] || '';
   const label = stripTags(linkTag);
-  const link = attr(linkTag, 'href');
+  const rawLink = attr(linkTag, 'href');
+  const link = rawLink && !isAutoSeoUrl(rawLink) && rawLink !== '#' ? rawLink : '/courses';
   if (!heading && !label) return null;
   return {
     heading: heading || label,
     text,
     label: label || 'Learn more',
-    link: link && link !== '#' ? link : '/courses',
+    link: link || '/courses',
   };
 }
 
@@ -369,6 +468,12 @@ function extractPublishedDate(html: string): string {
       if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
     }
   }
+  const created = html.match(/<strong>\s*Created:\s*<\/strong>\s*([^<]+)/i)?.[1]
+    || html.match(/Created:\s*([A-Za-z]{3,9}\s+\d{1,2},\s*\d{4})/i)?.[1];
+  if (created) {
+    const parsed = new Date(created.trim());
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  }
   const metaTxt = html.match(/class=["'][^"']*meta-txt[^"']*["'][^>]*>([^<]+)/i)?.[1];
   if (metaTxt) {
     const parsed = new Date(metaTxt.trim());
@@ -377,11 +482,19 @@ function extractPublishedDate(html: string): string {
   return '';
 }
 
-function extractReadingTime(html: string): number | null {
+function extractReadingTime(html: string, bodyHtml = ''): number | null {
   const match = html.match(/(\d+)\s*min(?:ute)?s?\s*read/i);
-  if (!match) return null;
-  const minutes = Number(match[1]);
-  return Number.isFinite(minutes) && minutes > 0 ? minutes : null;
+  if (match) {
+    const minutes = Number(match[1]);
+    if (Number.isFinite(minutes) && minutes > 0) return minutes;
+  }
+  const wordCount = Number(html.match(/Word\s*Count:\s*<\/strong>\s*([\d,]+)/i)?.[1]?.replace(/,/g, '')
+    || html.match(/Word\s*Count:\s*([\d,]+)/i)?.[1]?.replace(/,/g, ''));
+  if (Number.isFinite(wordCount) && wordCount > 0) {
+    return Math.max(1, Math.round(wordCount / 220));
+  }
+  const words = stripTags(bodyHtml).split(/\s+/).filter(Boolean).length;
+  return words > 0 ? Math.max(1, Math.round(words / 220)) : null;
 }
 
 function firstParagraph(html: string): string {
@@ -453,8 +566,27 @@ function mergeImages(...groups: ScrapedBlogImage[][]): ScrapedBlogImage[] {
 function inferSlug(pathname: string, title: string): string {
   const parts = pathname.split('/').filter(Boolean);
   const blogIndex = parts.findIndex(part => part.toLowerCase() === 'blog');
-  const fromPath = blogIndex >= 0 ? parts.slice(blogIndex + 1).join('-') : parts[parts.length - 1];
+  const sharedIndex = parts.findIndex(part => part.toLowerCase() === 'shared');
+  const fromPath = blogIndex >= 0
+    ? parts.slice(blogIndex + 1).join('-')
+    : sharedIndex >= 0 && parts[sharedIndex + 1]
+      ? parts[sharedIndex + 1]
+      : parts[parts.length - 1];
   return slugifySegment(fromPath || title || 'post');
+}
+
+function localizeCtaLink(link: string | undefined): string {
+  if (!link || link === '#' || isAutoSeoUrl(link)) return '/courses';
+  try {
+    const parsed = new URL(link, PUBLIC_SITE_ORIGIN);
+    if (isVlsHost(parsed.hostname)) {
+      return `${parsed.pathname}${parsed.search}${parsed.hash}` || '/courses';
+    }
+    if (parsed.pathname.startsWith('/')) return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    if (link.startsWith('/')) return link;
+  }
+  return '/courses';
 }
 
 export function collectBlogScrapeWarnings(scraped: ScrapedBlogPost): string[] {
@@ -476,28 +608,40 @@ export async function scrapeBlogPage(sourceUrl: string): Promise<ScrapedBlogPost
     throw new CoursePageScrapeError('Invalid blog URL', 400);
   }
 
-  const html = await fetchPageHtml(sourceUrl);
-  const baseUrl = new URL(toPublicOriginUrl(parsed));
+  const html = await fetchPageHtml(sourceUrl, { allowExternal: true });
+  const baseUrl = parsed;
   const warnings: string[] = [];
 
   const title = stripTags(html.match(/<h1\b[^>]*>[\s\S]*?<\/h1>/i)?.[0] || '')
     || meta(html, /<meta\b[^>]*property=["']og:title["'][^>]*>/i)
-    || stripTags(html.match(/<title\b[^>]*>[\s\S]*?<\/title>/i)?.[0] || '');
+    || stripTags(html.match(/<title\b[^>]*>[\s\S]*?<\/title>/i)?.[0] || '')
+      .replace(/\s*[-|]\s*Shared Article\s*$/i, '')
+      .trim();
   if (!title) throw new CoursePageScrapeError('Blog post is missing a title', 422);
+
+  const slug = inferSlug(parsed.pathname, title);
+  const blogPath = localBlogPath(slug);
 
   const shell = chooseArticleHtml(html);
   const rawBody = extractArticleBody(shell);
   const withBgImages = materializeBackgroundImages(rawBody, baseUrl);
-  const sanitized = sanitizeBodyHtml(withBgImages);
+  const sanitized = sanitizeBodyHtml(withBgImages, baseUrl, blogPath);
   const bodyHtml = stripNoiseFromBody(sanitized, title);
   if (stripTags(bodyHtml).length < 120) {
     throw new CoursePageScrapeError('Blog post body content could not be extracted', 422);
   }
 
-  const keyTakeaways = extractTakeaways(shell) || extractTakeaways(html);
-  const faqItems = extractFaqItems(shell).length ? extractFaqItems(shell) : extractFaqItems(html);
-  const sidebarCta = extractCta(html, /<div\b[^>]*class=["'][^"']*rail-cta[^"']*["'][^>]*>[\s\S]*?<\/div>/i);
-  const midCta = extractCta(html, /<div\b[^>]*class=["'][^"']*mid-cta[^"']*["'][^>]*>[\s\S]*?<\/div>/i);
+  const keyTakeaways = extractTakeaways(shell).length ? extractTakeaways(shell) : extractTakeaways(html);
+  const faqFromShell = extractFaqItems(shell);
+  const faqItems = faqFromShell.length ? faqFromShell : extractFaqItems(html);
+  const sidebarCtaRaw = extractCta(html, /<div\b[^>]*class=["'][^"']*rail-cta[^"']*["'][^>]*>[\s\S]*?<\/div>/i);
+  const midCtaRaw = extractCta(html, /<div\b[^>]*class=["'][^"']*mid-cta[^"']*["'][^>]*>[\s\S]*?<\/div>/i);
+  const sidebarCta = sidebarCtaRaw
+    ? { ...sidebarCtaRaw, link: localizeCtaLink(sidebarCtaRaw.link) }
+    : null;
+  const midCta = midCtaRaw
+    ? { ...midCtaRaw, link: localizeCtaLink(midCtaRaw.link) }
+    : null;
 
   const bodyImages = [
     ...extractImgTags(bodyHtml, baseUrl, 'inline'),
@@ -506,12 +650,14 @@ export async function scrapeBlogPage(sourceUrl: string): Promise<ScrapedBlogPost
   const shellImages = [
     ...extractImgTags(shell, baseUrl, 'other'),
     ...extractBackgroundImages(shell, baseUrl),
+    ...extractImgTags(html, baseUrl, 'other'),
   ];
   const featuredImageUrl = resolveFeaturedImageUrl(html, shell, bodyHtml, baseUrl, mergeImages(bodyImages, shellImages));
+  // Keep every discovered image (including screenshots) so they can be uploaded locally to Storyblok.
   const images = mergeImages(
     featuredImageUrl ? [{ sourceUrl: featuredImageUrl, alt: title, kind: 'featured' }] : [],
     bodyImages,
-    shellImages.filter(image => !isScreenshotImageUrl(image.sourceUrl)),
+    shellImages,
   );
 
   const excerpt = meta(html, /<meta\b[^>]*property=["']og:description["'][^>]*>/i)
@@ -523,11 +669,20 @@ export async function scrapeBlogPage(sourceUrl: string): Promise<ScrapedBlogPost
   if (!meta(html, /<meta\b[^>]*property=["']article:section["'][^>]*>/i) && !html.match(/topic-pill/i)) {
     warnings.push(`Inferred topic "${topic}" from article content.`);
   }
+  if (isAutoSeoHost(parsed.hostname)) {
+    warnings.push('Imported from external AutoSEO URL. AutoSEO links were rewritten/removed; images will upload to Storyblok.');
+  }
+  if (!keyTakeaways.length) warnings.push('No key takeaways were found in the source article.');
+  if (!faqItems.length) warnings.push('No FAQ items were found in the source article.');
+
+  const canonicalSourceUrl = isVlsHost(parsed.hostname)
+    ? toPublicOriginUrl(parsed)
+    : parsed.toString();
 
   return {
     kind: 'blog_post',
-    sourceUrl: toPublicOriginUrl(parsed),
-    slug: inferSlug(parsed.pathname, title),
+    sourceUrl: canonicalSourceUrl,
+    slug: slug || inferSlug(parsed.pathname, title),
     title,
     excerpt,
     metaTitle: meta(html, /<meta\b[^>]*property=["']og:title["'][^>]*>/i) || title,
@@ -536,7 +691,7 @@ export async function scrapeBlogPage(sourceUrl: string): Promise<ScrapedBlogPost
     tags,
     featuredImageUrl,
     publishDate: extractPublishedDate(html),
-    readingTimeMinutes: extractReadingTime(html),
+    readingTimeMinutes: extractReadingTime(html, bodyHtml),
     bodyHtml,
     keyTakeaways,
     faqItems,

@@ -3,6 +3,7 @@ import {
   collectRichtextImageSources,
   htmlToStoryblokRichtext,
   rewriteRichtextImageSources,
+  rewriteRichtextLinks,
 } from './htmlToStoryblokRichtext';
 import {
   ensureBlogFolder,
@@ -11,6 +12,7 @@ import {
   type StoryblokUploadedAsset,
 } from './storyblokClient';
 import { slugifySegment } from '../../shared/migrationDestination';
+import { isAutoSeoHost, localBlogPath, PUBLIC_SITE_ORIGIN } from './migrationUrlUtils';
 
 function blokUid(): string {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 12);
@@ -174,7 +176,23 @@ export async function buildBlogPostStoryblokContent(
     });
   }
 
-  const body = rewriteRichtextImageSources(bodyDocDraft, replacements);
+  const blogPath = localBlogPath(slug);
+  let body = rewriteRichtextImageSources(bodyDocDraft, replacements, {
+    dropUnreplacedExternal: true,
+  });
+  body = rewriteRichtextLinks(body, (href) => {
+    const trimmed = href.trim();
+    if (!trimmed || trimmed.startsWith('#')) return trimmed;
+    if (trimmed.startsWith('/')) return trimmed;
+    try {
+      const parsed = new URL(trimmed, PUBLIC_SITE_ORIGIN);
+      if (isAutoSeoHost(parsed.hostname)) return blogPath;
+      return parsed.href;
+    } catch {
+      return trimmed;
+    }
+  });
+
   const featuredAsset = scraped.featuredImageUrl
     ? uploadedBySource.get(scraped.featuredImageUrl) || null
     : null;
@@ -187,7 +205,7 @@ export async function buildBlogPostStoryblokContent(
     .filter(src => !uploadedBySource.has(src) && !isStoryblokAssetUrl(src));
   if (missingInline.length) {
     warnings.push(
-      `${missingInline.length} inline image(s) could not be uploaded and were left on their original URLs or dropped.`,
+      `${missingInline.length} inline image(s) could not be uploaded and were removed so no external source URLs remain.`,
     );
   }
 

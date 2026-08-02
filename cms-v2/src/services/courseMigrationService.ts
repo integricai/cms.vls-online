@@ -22,7 +22,9 @@ import {
   markMigrationPageMigrated,
   saveScrapeResult,
   saveStructureResult,
+  updateMigrationPage,
   updateMigrationPageSource,
+  upsertMigrationPage,
 } from '../models/migrationPage';
 import { listCourses } from '../models/course';
 import { buildSchemaBreadcrumbBloks } from './breadcrumbUtils';
@@ -52,6 +54,7 @@ import {
   type StoryblokConfig,
 } from './storyblokClient';
 import { collectBlogScrapeWarnings, scrapeBlogPage } from './blogPageScraper';
+import { isVlsHost, toZenlerFetchUrl } from './migrationUrlUtils';
 import {
   buildBlogPostStoryblokContent,
   buildBlogPostStructureContent,
@@ -1296,6 +1299,14 @@ export async function previewScrapePage(
     const scraped = await scrapeBlogPage(page.originUrl);
     const warnings = collectBlogScrapeWarnings(scraped);
     await saveScrapeResult(pageId, { scraped, warnings });
+    const suggested = suggestDestinationSlug(page.originUrl, 'blog');
+    const shouldSyncSlug = !page.destinationSlug?.trim()
+      || page.destinationSlug === page.suggestedDestination
+      || page.destinationSlug === suggested;
+    await updateMigrationPage(pageId, {
+      title: scraped.title || page.title,
+      destinationSlug: shouldSyncSlug ? (scraped.slug || suggested) : page.destinationSlug,
+    });
     const updatedPage = await getMigrationPageById(pageId);
     return { page: updatedPage ?? page, scraped, warnings };
   }
@@ -1397,7 +1408,11 @@ export async function generatePageStructure(
   await verifyStoryblokAccess(config);
 
   if (isBlogPageTemplate(template)) {
-    const blogScraped = scrapedRaw as ScrapedBlogPost;
+    const destinationSlug = resolveDestinationSlug(page);
+    const blogScraped = {
+      ...(scrapedRaw as ScrapedBlogPost),
+      slug: destinationSlug,
+    };
     const missingBlogComponents = await detectMissingBlogComponents(config);
     if (missingBlogComponents.length) {
       return {
@@ -1411,7 +1426,6 @@ export async function generatePageStructure(
       };
     }
 
-    const destinationSlug = resolveDestinationSlug(page);
     const fullSlug = storyFullSlug(template, destinationSlug, { useBlogFolder: true });
     const blogFolder = await ensureBlogFolder(config);
     const content = buildBlogPostStructureContent(blogScraped);
@@ -1635,7 +1649,10 @@ export async function migratePageContent(
   let parentId: number | undefined;
 
   if (isBlogPageTemplate(template)) {
-    const scraped = scrapedRaw as ScrapedBlogPost;
+    const scraped = {
+      ...(scrapedRaw as ScrapedBlogPost),
+      slug: destinationSlug,
+    };
     warnings.push(...collectBlogScrapeWarnings(scraped));
     const built = await buildBlogPostStoryblokContent(scraped, config);
     content = built.content;
@@ -1703,6 +1720,52 @@ export async function migratePageContent(
       previewUrl: upsert.previewUrl,
       created: upsert.created,
     },
+  };
+}
+
+/** Register an external public blog URL (e.g. AutoSEO shared article) for Storyblok migration. */
+export async function registerExternalBlogMigrationPage(sourceUrl: string): Promise<ScrapePhaseResult> {
+  let parsed: URL;
+  try {
+    parsed = new URL(sourceUrl.trim());
+  } catch {
+    throw new CourseMigrationError('Invalid blog URL', 400);
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new CourseMigrationError('Only http and https URLs are allowed', 400);
+  }
+
+  const scraped = await scrapeBlogPage(parsed.toString());
+  const originUrl = scraped.sourceUrl || parsed.toString();
+  const destinationSlug = scraped.slug || suggestDestinationSlug(originUrl, 'blog');
+  const path = parsed.pathname.replace(/\/+$/, '') || '/';
+  const zenlerUrl = isVlsHost(parsed.hostname)
+    ? toZenlerFetchUrl(parsed).toString()
+    : originUrl;
+
+  await upsertMigrationPage({
+    originUrl,
+    zenlerUrl,
+    title: scraped.title,
+    path,
+    template: 'blog',
+    suggestedDestination: destinationSlug,
+    destinationSlug,
+  });
+
+  const page = await getMigrationPageByOriginUrl(originUrl);
+  if (!page) {
+    throw new CourseMigrationError('Could not register external blog URL', 500);
+  }
+
+  const warnings = collectBlogScrapeWarnings(scraped);
+  await saveScrapeResult(page.id, { scraped, warnings });
+
+  const updated = await getMigrationPageById(page.id);
+  return {
+    page: updated ?? page,
+    scraped,
+    warnings,
   };
 }
 

@@ -270,8 +270,12 @@ export function htmlToStoryblokRichtext(html: string): StoryblokRichtextDoc {
 export function rewriteRichtextImageSources(
   doc: StoryblokRichtextDoc,
   replacements: Map<string, { src: string; id?: number; alt?: string }>,
+  options?: { dropUnreplacedExternal?: boolean },
 ): StoryblokRichtextDoc {
-  const walk = (node: RichtextNode): RichtextNode => {
+  const dropUnreplacedExternal = Boolean(options?.dropUnreplacedExternal);
+  const isExternalHttp = (value: string) => /^https?:\/\//i.test(value) && !/storyblok\.com/i.test(value);
+
+  const walk = (node: RichtextNode): RichtextNode | null => {
     if (node.type === 'image' && node.attrs?.src) {
       const key = String(node.attrs.src);
       const replacement = replacements.get(key);
@@ -286,9 +290,61 @@ export function rewriteRichtextImageSources(
           },
         };
       }
+      if (dropUnreplacedExternal && isExternalHttp(key)) {
+        return null;
+      }
     }
+
     if (!node.content?.length) return node;
-    return { ...node, content: node.content.map(walk) };
+    const content = node.content
+      .map(walk)
+      .filter((child): child is RichtextNode => Boolean(child));
+    return { ...node, content };
+  };
+
+  return {
+    type: 'doc',
+    content: (doc.content as RichtextNode[])
+      .map(walk)
+      .filter((node): node is RichtextNode => Boolean(node)),
+  };
+}
+
+/** Rewrite or strip link marks that still point at blocked external hosts. */
+export function rewriteRichtextLinks(
+  doc: StoryblokRichtextDoc,
+  rewriteHref: (href: string) => string | null,
+): StoryblokRichtextDoc {
+  const walk = (node: RichtextNode): RichtextNode => {
+    let marks = node.marks;
+    if (marks?.length) {
+      marks = marks
+        .map(mark => {
+          if (mark.type !== 'link') return mark;
+          const href = String(mark.attrs?.href || '');
+          const nextHref = rewriteHref(href);
+          if (!nextHref) return null;
+          return {
+            ...mark,
+            attrs: {
+              ...mark.attrs,
+              href: nextHref,
+              target: nextHref.startsWith('http') ? '_blank' : null,
+              linktype: nextHref.startsWith('http') ? 'url' : 'story',
+            },
+          };
+        })
+        .filter((mark): mark is NonNullable<typeof mark> => Boolean(mark));
+    }
+
+    if (!node.content?.length) {
+      return marks ? { ...node, marks } : node;
+    }
+    return {
+      ...node,
+      marks,
+      content: node.content.map(walk),
+    };
   };
 
   return {

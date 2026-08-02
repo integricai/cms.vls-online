@@ -14,6 +14,7 @@ import type {
 import { breadcrumbTrailText, parseBreadcrumbFromHtml } from './breadcrumbUtils';
 import {
   ALLOWED_HOSTS,
+  isVlsHost,
   toPublicOriginUrl,
   toZenlerFetchUrl,
 } from './migrationUrlUtils';
@@ -22,6 +23,11 @@ import { parseFaq } from './faqParser';
 const MAX_PAGE_BYTES = 4 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 45_000;
 const FETCH_ATTEMPTS = 3;
+
+export type FetchPageHtmlOptions = {
+  /** When true, any public http(s) host is allowed (SSRF-safe). Used for external blog imports. */
+  allowExternal?: boolean;
+};
 
 export class CoursePageScrapeError extends Error {
   status: number;
@@ -86,7 +92,11 @@ function isPrivateIp(ip: string): boolean {
   return true;
 }
 
-async function validateSiteUrl(raw: string, requireCoursePath = true): Promise<URL> {
+async function validateSiteUrl(
+  raw: string,
+  requireCoursePath = true,
+  allowExternal = false,
+): Promise<URL> {
   let parsed: URL;
   try {
     parsed = new URL(raw.trim());
@@ -97,7 +107,7 @@ async function validateSiteUrl(raw: string, requireCoursePath = true): Promise<U
     throw new CoursePageScrapeError('Only http and https URLs are allowed');
   }
   const host = parsed.hostname.toLowerCase();
-  if (!ALLOWED_HOSTS.has(host)) {
+  if (!allowExternal && !ALLOWED_HOSTS.has(host)) {
     throw new CoursePageScrapeError('Only vls-online.com page URLs are allowed');
   }
   if (host === 'localhost' || host.endsWith('.local') || net.isIP(host) && isPrivateIp(host)) {
@@ -161,9 +171,15 @@ async function fetchHtmlOnce(url: URL): Promise<string> {
   }
 }
 
-export async function fetchPageHtml(sourceUrl: string): Promise<string> {
-  const url = await validateSiteUrl(sourceUrl, false);
-  const fetchUrl = toZenlerFetchUrl(url);
+export async function fetchPageHtml(
+  sourceUrl: string,
+  options: FetchPageHtmlOptions = {},
+): Promise<string> {
+  const allowExternal = Boolean(options.allowExternal);
+  const url = await validateSiteUrl(sourceUrl, false, allowExternal);
+  const fetchUrl = allowExternal && !isVlsHost(url.hostname)
+    ? url
+    : toZenlerFetchUrl(url);
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {

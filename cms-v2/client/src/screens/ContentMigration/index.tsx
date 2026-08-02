@@ -149,6 +149,8 @@ export default function ContentMigrationTab() {
   const [selectedPageContentFile, setSelectedPageContentFile] = useState('');
   const [loadingPageContentFiles, setLoadingPageContentFiles] = useState(false);
   const [ensuringPageContentFile, setEnsuringPageContentFile] = useState(false);
+  const [externalBlogUrl, setExternalBlogUrl] = useState('');
+  const [addingExternalBlog, setAddingExternalBlog] = useState(false);
 
   const selectedPage = useMemo(
     () => pages.find(page => page.id === selectedPageId) ?? null,
@@ -346,7 +348,43 @@ export default function ContentMigrationTab() {
   }
 
   function applyPageUpdate(updated: MigrationPageRecord) {
-    setPages(current => current.map(page => (page.id === updated.id ? updated : page)));
+    setPages(current => {
+      const exists = current.some(page => page.id === updated.id);
+      if (!exists) return [...current, updated];
+      return current.map(page => (page.id === updated.id ? updated : page));
+    });
+  }
+
+  async function addExternalBlogUrl() {
+    const sourceUrl = externalBlogUrl.trim();
+    if (!sourceUrl) return;
+    setAddingExternalBlog(true);
+    setMessage(null);
+    try {
+      const data = await api.post<ScrapePhaseResult>('/migration/pages/from-external-url', { sourceUrl });
+      applyPageUpdate(data.page);
+      setTemplate('blog');
+      setSelectedPageId(data.page.id);
+      setDestinationSlug(data.page.destinationSlug || data.page.suggestedDestination);
+      setDestinationTouched(false);
+      setExternalBlogUrl('');
+      setStructureResult(null);
+      setContentResult(null);
+      setScrapeResult(data);
+      setMessage({
+        type: data.warnings.length ? 'warning' : 'success',
+        text: data.warnings.length
+          ? `Imported and scraped with ${data.warnings.length} warning(s). Review the scrape preview, then Generate Structure.`
+          : `External blog URL imported and scraped: ${data.page.title || data.page.originUrl}. Continue with Generate Structure.`,
+      });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Could not import external blog URL.',
+      });
+    } finally {
+      setAddingExternalBlog(false);
+    }
   }
 
   async function scanSitePages() {
@@ -759,7 +797,11 @@ export default function ContentMigrationTab() {
                   ) : !pages.length ? (
                     <option value="">Run a site scan to populate pages</option>
                   ) : !filteredPages.length ? (
-                    <option value="">No {MIGRATION_TEMPLATE_LABELS[template]} pages — scan again or pick another template</option>
+                    <option value="">
+                      {template === 'blog'
+                        ? 'No blog pages yet — paste an external URL below or scan the site'
+                        : `No ${MIGRATION_TEMPLATE_LABELS[template]} pages — scan again or pick another template`}
+                    </option>
                   ) : (
                     filteredPages.map(page => (
                       <option key={page.id} value={page.id}>
@@ -772,6 +814,31 @@ export default function ContentMigrationTab() {
                   <p className="mt-1 break-all text-[11px] text-slate-400">{selectedPage.originUrl}</p>
                 ) : null}
               </Field>
+
+              {template === 'blog' ? (
+                <Field label="Import blog from external URL">
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input
+                      className="input flex-1"
+                      placeholder="https://getautoseo.com/shared/..."
+                      value={externalBlogUrl}
+                      onChange={event => setExternalBlogUrl(event.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="btn-primary justify-center whitespace-nowrap"
+                      disabled={addingExternalBlog || !externalBlogUrl.trim()}
+                      onClick={() => void addExternalBlogUrl()}
+                    >
+                      {addingExternalBlog ? 'Importing...' : 'Import URL'}
+                    </button>
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Paste an AutoSEO shared article (or other public blog URL). Content is scraped into the existing
+                    Storyblok blog layout; images upload locally and AutoSEO links are removed.
+                  </p>
+                </Field>
+              ) : null}
             </>
           )}
 

@@ -10,6 +10,7 @@ import {
   generatePageStructure,
   migratePageContent,
   previewScrapePage,
+  registerExternalBlogMigrationPage,
 } from '../services/courseMigrationService';
 import { confirmComponentCreation, generateComponentDraft } from '../services/componentGenerationService';
 import { isStoryblokApiError, verifyStoryblokAccess } from '../services/storyblokClient';
@@ -66,6 +67,21 @@ router.post('/pages/scan', async (req: Request, res: Response, next: NextFunctio
     const fetchTitles = Boolean((req.body as Record<string, unknown>)?.fetchTitles);
     const result = await scanAndStoreMigrationPages({ fetchTitles });
     return res.json({ ok: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/pages/from-external-url', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const sourceUrl = typeof (req.body as Record<string, unknown>)?.sourceUrl === 'string'
+      ? ((req.body as Record<string, unknown>).sourceUrl as string).trim()
+      : '';
+    if (!sourceUrl) {
+      return res.status(400).json({ ok: false, error: 'sourceUrl is required' });
+    }
+    const page = await registerExternalBlogMigrationPage(sourceUrl);
+    return res.json({ ok: true, data: page });
   } catch (err) {
     next(err);
   }
