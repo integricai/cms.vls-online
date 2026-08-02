@@ -90,7 +90,10 @@ function buildStructureContent(scraped: ScrapedBlogPost): Record<string, unknown
     tags: scraped.tags,
     featured_image: null,
     publish_date: scraped.publishDate || '',
-    reading_time: scraped.readingTimeMinutes ?? '',
+    // Storyblok number fields are validated as numeric strings by the Management API.
+    reading_time: scraped.readingTimeMinutes != null && scraped.readingTimeMinutes > 0
+      ? String(scraped.readingTimeMinutes)
+      : '',
     key_takeaways: [],
     body: { type: 'doc', content: [{ type: 'paragraph' }] },
     faq_items: [],

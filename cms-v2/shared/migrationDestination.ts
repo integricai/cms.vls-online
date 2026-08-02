@@ -49,13 +49,11 @@ export function suggestDestinationSlug(originUrl: string, template: MigrationTem
 
   if (usesBlogFolder(template)) {
     const blogIndex = segments.indexOf('blog');
-    // AutoSEO shared URLs: /shared/{hash} — keep the final path segment as the destination slug.
-    const sharedIndex = segments.indexOf('shared');
+    // Prefer /blog/{seo-slug}. AutoSEO /shared/{hash} is only a temporary fallback until scrape
+    // replaces destinationSlug with a title-based SEO slug.
     const slug = blogIndex >= 0
       ? segments.slice(blogIndex + 1).join('-')
-      : sharedIndex >= 0 && segments[sharedIndex + 1]
-        ? segments[sharedIndex + 1]
-        : segments[segments.length - 1];
+      : segments[segments.length - 1];
     return slugifySegment(slug || 'post');
   }
 

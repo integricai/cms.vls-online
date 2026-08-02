@@ -564,15 +564,16 @@ function mergeImages(...groups: ScrapedBlogImage[][]): ScrapedBlogImage[] {
 }
 
 function inferSlug(pathname: string, title: string): string {
+  // Prefer an SEO-friendly slug from the article title (not AutoSEO /shared/{hash} paths).
+  const fromTitle = slugifySegment(title).slice(0, 100).replace(/-+$/g, '');
+  if (fromTitle) return fromTitle;
+
   const parts = pathname.split('/').filter(Boolean);
   const blogIndex = parts.findIndex(part => part.toLowerCase() === 'blog');
-  const sharedIndex = parts.findIndex(part => part.toLowerCase() === 'shared');
   const fromPath = blogIndex >= 0
     ? parts.slice(blogIndex + 1).join('-')
-    : sharedIndex >= 0 && parts[sharedIndex + 1]
-      ? parts[sharedIndex + 1]
-      : parts[parts.length - 1];
-  return slugifySegment(fromPath || title || 'post');
+    : parts[parts.length - 1];
+  return slugifySegment(fromPath || 'post') || 'post';
 }
 
 function localizeCtaLink(link: string | undefined): string {
