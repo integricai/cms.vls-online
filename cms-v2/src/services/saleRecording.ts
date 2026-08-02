@@ -4,6 +4,7 @@ import {
   getPaymentOrder,
 } from '../models/paymentOrder';
 import { splitStudentName, upsertCustomer } from '../models/customer';
+import { ensureCustomerCourseStatus } from '../models/customerCourseStatus';
 import { createSale, getSaleByPaymentOrderId } from '../models/sale';
 import { autoAssignCourseTutorForSale } from './saleAssignment';
 
@@ -34,6 +35,12 @@ async function createSaleForOrder(order: PaymentOrder) {
   });
 
   try {
+    await ensureCustomerCourseStatus(order.customerId, order.courseId);
+  } catch (err) {
+    console.error(`[sales] Failed to ensure course status for sale ${sale.id}`, err);
+  }
+
+  try {
     const assigned = await autoAssignCourseTutorForSale(sale);
     return assigned ?? sale;
   } catch (err) {
@@ -50,20 +57,22 @@ export async function ensureSaleRecordedForPaidOrder(order: PaymentOrder) {
   if (existing) return existing;
 
   let workingOrder = order;
-  if (!workingOrder.customerId) {
-    const email = (workingOrder.studentEmail ?? workingOrder.stripeCustomerEmail)?.trim().toLowerCase();
-    if (!email) {
-      console.warn('[sales] Paid order has no payer email', order.id);
-      return null;
-    }
+  const email = (workingOrder.studentEmail ?? workingOrder.stripeCustomerEmail)?.trim().toLowerCase();
+  if (!email) {
+    console.warn('[sales] Paid order has no payer email', order.id);
+    return null;
+  }
 
-    const { firstName, lastName } = splitStudentName(workingOrder.studentName);
-    const customer = await upsertCustomer({
-      email,
-      firstName,
-      lastName,
-      countryCode: workingOrder.countryCode,
-    });
+  const { firstName, lastName } = splitStudentName(workingOrder.studentName);
+  const customer = await upsertCustomer({
+    email,
+    firstName,
+    lastName,
+    countryCode: workingOrder.countryCode,
+    source: 'stripe',
+  });
+
+  if (!workingOrder.customerId || workingOrder.customerId !== customer.id) {
     workingOrder = await attachCustomerToPaymentOrder(order.id, customer.id, email);
   }
 

@@ -79,6 +79,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       email,
       firstName,
       lastName,
+      source: 'manual',
     });
 
     const order = await createPaymentOrder({

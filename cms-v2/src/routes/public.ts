@@ -223,4 +223,34 @@ router.get('/bpp-books', async (_req: Request, res: Response, next: NextFunction
   }
 });
 
+router.options('/newsletter/subscribe', (_req, res) => {
+  allowPublicCors(res);
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
+  res.status(204).end();
+});
+
+router.post('/newsletter/subscribe', async (req: Request, res: Response) => {
+  try {
+    allowPublicCors(res);
+    const { subscribeToNewsletter } = await import('../services/newsletterService');
+    const email = String(req.body?.email ?? '').trim();
+    const firstName = String(req.body?.firstName ?? '').trim() || null;
+    const lastName = String(req.body?.lastName ?? '').trim() || null;
+    const result = await subscribeToNewsletter({ email, firstName, lastName });
+    return res.json({
+      ok: true,
+      data: {
+        email: result.email,
+        subscribed: result.subscribed,
+        alreadySubscribed: result.alreadySubscribed,
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unable to subscribe';
+    allowPublicCors(res);
+    return res.status(400).json({ ok: false, error: message });
+  }
+});
+
 export default router;

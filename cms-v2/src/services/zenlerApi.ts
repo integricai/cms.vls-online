@@ -21,6 +21,10 @@ interface ZenlerApiResponse<T> {
 
 interface ZenlerUserListData {
   items: ZenlerApiUser[];
+  pagination?: {
+    total_pages?: number;
+    total_items?: number;
+  };
 }
 
 interface ZenlerEnrollmentListData {
@@ -128,6 +132,42 @@ export async function findZenlerUserByEmail(email: string): Promise<ZenlerApiUse
   const data = await zenlerFetch<ZenlerUserListData>(`/users?${query.toString()}`);
   const match = data.items.find((item) => item.email.trim().toLowerCase() === normalized);
   return match ?? null;
+}
+
+/**
+ * Pre-launch backfill helper: page all Zenler student-role users.
+ * Not intended for ongoing sync after the new website goes live.
+ */
+export async function listAllZenlerStudents(): Promise<ZenlerApiUser[]> {
+  const users: ZenlerApiUser[] = [];
+  const seen = new Set<string>();
+  let page = 1;
+  let totalPages = 1;
+  const limit = 100;
+
+  do {
+    const query = new URLSearchParams({
+      limit: String(limit),
+      page: String(page),
+    });
+    query.append('role[]', String(ZENLER_ROLE_STUDENT));
+
+    const data = await zenlerFetch<ZenlerUserListData>(`/users?${query.toString()}`);
+    const items = data.items ?? [];
+    for (const item of items) {
+      const key = item.id || item.email.trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      users.push(item);
+    }
+
+    totalPages = Number(data.pagination?.total_pages ?? page);
+    if (items.length === 0) break;
+    if (items.length < limit && !data.pagination?.total_pages) break;
+    page += 1;
+  } while (page <= totalPages);
+
+  return users;
 }
 
 export async function createZenlerStudent(input: {

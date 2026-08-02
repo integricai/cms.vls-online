@@ -71,6 +71,28 @@ async function handleCheckoutSessionCompleted(session: Record<string, any>): Pro
     currency: typeof session.currency === 'string' ? session.currency : null,
   });
 
+  // Keep customers current on every paid enrollment (post go-live path).
+  const payerEmail = (
+    order.studentEmail
+    ?? order.stripeCustomerEmail
+    ?? session.customer_details?.email
+    ?? session.customer_email
+    ?? null
+  );
+  if (payerEmail) {
+    const stripeName = typeof session.customer_details?.name === 'string'
+      ? session.customer_details.name
+      : order.studentName;
+    const { firstName, lastName } = splitStudentName(stripeName);
+    await upsertCustomer({
+      email: String(payerEmail).trim().toLowerCase(),
+      firstName,
+      lastName,
+      countryCode: order.countryCode,
+      source: 'stripe',
+    });
+  }
+
   if (!wasAlreadyPaid) {
     const email = order.studentEmail ?? order.stripeCustomerEmail;
     let enrollmentEmailContext = null;
@@ -169,6 +191,7 @@ async function upsertCheckoutCustomer(input: {
     lastName: input.lastName,
     phone: input.phone,
     countryCode: input.countryCode,
+    source: 'stripe',
   });
 }
 

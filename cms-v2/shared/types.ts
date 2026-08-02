@@ -263,6 +263,12 @@ export interface CoursePricingSummary {
   updatedAt: Date | string | null;
 }
 
+export type CustomerSource = 'stripe' | 'zenler_sync' | 'newsletter' | 'manual';
+
+export type ExamStatus = 'unknown' | 'awaiting_result' | 'passed' | 'failed';
+
+export type ExamStatusSource = 'manual' | 'student_link';
+
 export interface Customer {
   id: number;
   email: string;
@@ -272,6 +278,22 @@ export interface Customer {
   countryCode: string | null;
   zenlerUserId: string | null;
   stripeCustomerId: string | null;
+  newsletterSubscribed: boolean;
+  newsletterSubscribedAt: Date | null;
+  mailerliteSubscriberId: string | null;
+  source: CustomerSource | null;
+  lastZenlerSyncedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CustomerCourseStatus {
+  id: number;
+  customerId: number;
+  courseId: number;
+  examStatus: ExamStatus;
+  examStatusUpdatedAt: Date | null;
+  examStatusSource: ExamStatusSource | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -279,6 +301,84 @@ export interface Customer {
 export type SaleAssignmentStatus = 'AwaitingTutor' | 'Assigned' | 'AdminAssigned';
 
 export type PaymentOrderStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled' | 'Refunded';
+
+export interface StudentCourseSummary {
+  courseId: number;
+  courseName: string | null;
+  zenlerCourseId: string | null;
+  paymentStatus: PaymentOrderStatus | null;
+  saleId: number | null;
+  soldAt: Date | null;
+  refundedAt: Date | null;
+  examStatus: ExamStatus;
+  examStatusUpdatedAt: Date | null;
+  examStatusSource: ExamStatusSource | null;
+}
+
+export interface StudentListItem {
+  id: number;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  countryCode: string | null;
+  zenlerUserId: string | null;
+  stripeCustomerId: string | null;
+  newsletterSubscribed: boolean;
+  newsletterSubscribedAt: Date | null;
+  source: CustomerSource | null;
+  lastZenlerSyncedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  purchaseCount: number;
+  refundCount: number;
+  courseNames: string[];
+}
+
+export interface StudentDetail extends StudentListItem {
+  mailerliteSubscriberId: string | null;
+  courses: StudentCourseSummary[];
+}
+
+export interface ZenlerStudentSyncResult {
+  fetched: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+}
+
+export interface ExamResultPreview {
+  customerId: number;
+  courseId: number;
+  courseName: string | null;
+  studentName: string;
+  expiresAt: Date;
+  used: boolean;
+  expired: boolean;
+}
+
+export interface ExamResultSubmitResult {
+  examStatus: ExamStatus;
+  courseName: string | null;
+  studentName: string;
+}
+
+export interface ExamEmailSendResult {
+  customerId: number;
+  courseId: number;
+  email: string;
+  sent: boolean;
+  error?: string;
+}
+
+export interface ExamEmailBulkSendResult {
+  courseId: number;
+  attempted: number;
+  sent: number;
+  failed: number;
+  results: ExamEmailSendResult[];
+}
 
 export interface Sale {
   id: number;
