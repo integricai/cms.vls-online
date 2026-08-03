@@ -9,7 +9,12 @@ import {
   updateExamStatusManual,
 } from '../services/examResultService';
 import { setStudentNewsletterSubscription } from '../services/newsletterService';
-import { syncZenlerStudentsPage } from '../services/zenlerStudentBackfill';
+import {
+  getZenlerStudentSyncStatus,
+  stopZenlerStudentSync,
+  syncZenlerStudentsBatch,
+} from '../services/zenlerStudentBackfill';
+import type { StudentPurchaseFilter } from '../../shared/types';
 
 const router = Router();
 
@@ -69,15 +74,25 @@ router.get('/', requireRole('admin', 'editor'), async (req, res, next) => {
         : 'all'
     ) as 'all' | 'subscribed' | 'unsubscribed';
 
+    const purchaseRaw = String(req.query.hasPurchased ?? 'yes');
+    const hasPurchased = (
+      ['all', 'yes', 'no'].includes(purchaseRaw) ? purchaseRaw : 'yes'
+    ) as StudentPurchaseFilter;
+
     const hasRefund = String(req.query.hasRefund ?? '') === 'true';
     const examStatus = String(req.query.examStatus ?? '').trim() || undefined;
+    const page = Number(req.query.page ?? 1);
+    const pageSize = Number(req.query.pageSize ?? 100);
 
     const students = await listStudents({
       search,
       courseId: courseId ?? undefined,
       newsletter,
+      hasPurchased,
       hasRefund: hasRefund || undefined,
       examStatus,
+      page,
+      pageSize,
     });
     return res.json({ ok: true, data: students });
   } catch (err) {
@@ -88,7 +103,11 @@ router.get('/', requireRole('admin', 'editor'), async (req, res, next) => {
 router.get('/export', requireRole('admin', 'editor'), async (req, res, next) => {
   try {
     const search = String(req.query.search ?? '').trim() || undefined;
-    const students = await listStudents({ search });
+    const purchaseRaw = String(req.query.hasPurchased ?? 'all');
+    const hasPurchased = (
+      ['all', 'yes', 'no'].includes(purchaseRaw) ? purchaseRaw : 'all'
+    ) as StudentPurchaseFilter;
+    const page = await listStudents({ search, hasPurchased, unbounded: true });
 
     const header = [
       'id',
@@ -109,7 +128,7 @@ router.get('/export', requireRole('admin', 'editor'), async (req, res, next) => 
 
     const lines = [
       header.join(','),
-      ...students.map((s) => [
+      ...page.items.map((s) => [
         s.id,
         s.email,
         s.firstName,
@@ -135,20 +154,27 @@ router.get('/export', requireRole('admin', 'editor'), async (req, res, next) => 
   }
 });
 
+router.get('/sync-zenler/status', requireRole('admin'), async (_req, res, next) => {
+  try {
+    return res.json({ ok: true, data: await getZenlerStudentSyncStatus() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/sync-zenler/stop', requireRole('admin'), async (_req, res, next) => {
+  try {
+    return res.json({ ok: true, data: await stopZenlerStudentSync() });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/sync-zenler', requireRole('admin'), async (req, res, next) => {
   try {
-    const page = Number(req.body?.page ?? 1);
+    const action = String(req.body?.action ?? 'continue') === 'restart' ? 'restart' : 'continue';
     const pageSize = Number(req.body?.pageSize ?? 50);
-    const totals = req.body?.totals && typeof req.body.totals === 'object'
-      ? req.body.totals as {
-        fetched?: number;
-        created?: number;
-        updated?: number;
-        skipped?: number;
-      }
-      : undefined;
-
-    const result = await syncZenlerStudentsPage({ page, pageSize, totals });
+    const result = await syncZenlerStudentsBatch({ action, pageSize });
     return res.json({ ok: true, data: result });
   } catch (err) {
     next(err);

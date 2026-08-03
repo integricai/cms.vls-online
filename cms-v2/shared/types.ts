@@ -340,6 +340,34 @@ export interface StudentDetail extends StudentListItem {
   courses: StudentCourseSummary[];
 }
 
+export type StudentSyncStatus = 'idle' | 'running' | 'stopped' | 'failed' | 'completed';
+
+export type StudentPurchaseFilter = 'all' | 'yes' | 'no';
+
+export interface StudentListPage {
+  items: StudentListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface StudentSyncState {
+  status: StudentSyncStatus;
+  lastCompletedPage: number;
+  pageSize: number;
+  totalPages: number | null;
+  fetched: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  lastError: string | null;
+  startedAt: Date | null;
+  completedAt: Date | null;
+  updatedAt: Date;
+  nextPage: number | null;
+}
+
 export interface ZenlerStudentSyncResult {
   fetched: number;
   created: number;
@@ -351,12 +379,14 @@ export interface ZenlerStudentSyncResult {
   totalPages: number;
   nextPage: number | null;
   done: boolean;
+  stopped: boolean;
   totals: {
     fetched: number;
     created: number;
     updated: number;
     skipped: number;
   };
+  syncState: StudentSyncState;
 }
 
 export interface ExamResultPreview {

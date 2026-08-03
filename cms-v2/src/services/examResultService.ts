@@ -166,10 +166,10 @@ export async function sendExamResultEmailsForCourse(courseId: number): Promise<E
   const course = await getCourseById(courseId);
   if (!course) throw new Error('Course not found');
 
-  const students = await listStudents({ courseId });
+  const page = await listStudents({ courseId, hasPurchased: 'all', unbounded: true });
   const results: ExamEmailSendResult[] = [];
 
-  for (const student of students) {
+  for (const student of page.items) {
     results.push(await sendExamResultEmailForStudent({
       customerId: student.id,
       courseId,

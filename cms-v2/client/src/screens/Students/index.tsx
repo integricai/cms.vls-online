@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../api/client';
 import type {
   Course,
@@ -6,6 +6,9 @@ import type {
   ExamStatus,
   StudentDetail,
   StudentListItem,
+  StudentListPage,
+  StudentPurchaseFilter,
+  StudentSyncState,
   ZenlerStudentSyncResult,
 } from '../../../../shared/types';
 
@@ -55,17 +58,25 @@ function toCsv(students: StudentListItem[]): string {
 
 const EXAM_OPTIONS: ExamStatus[] = ['unknown', 'awaiting_result', 'passed', 'failed'];
 
+const LIST_PAGE_SIZE = 100;
+
 export default function Students() {
   const [students, setStudents] = useState<StudentListItem[]>([]);
+  const [listTotal, setListTotal] = useState(0);
+  const [listPage, setListPage] = useState(1);
+  const [listTotalPages, setListTotalPages] = useState(1);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [syncState, setSyncState] = useState<StudentSyncState | null>(null);
+  const stopSyncRef = useRef(false);
   const [bulkSending, setBulkSending] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [search, setSearch] = useState('');
   const [courseId, setCourseId] = useState('');
   const [newsletter, setNewsletter] = useState<'all' | 'subscribed' | 'unsubscribed'>('all');
+  const [hasPurchased, setHasPurchased] = useState<StudentPurchaseFilter>('yes');
   const [hasRefund, setHasRefund] = useState(false);
   const [examFilter, setExamFilter] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -79,25 +90,39 @@ export default function Students() {
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
+    params.set('page', String(listPage));
+    params.set('pageSize', String(LIST_PAGE_SIZE));
+    params.set('hasPurchased', hasPurchased);
     if (search.trim()) params.set('search', search.trim());
     if (courseId) params.set('courseId', courseId);
     if (newsletter !== 'all') params.set('newsletter', newsletter);
     if (hasRefund) params.set('hasRefund', 'true');
     if (examFilter) params.set('examStatus', examFilter);
-    const qs = params.toString();
-    return qs ? `?${qs}` : '';
-  }, [search, courseId, newsletter, hasRefund, examFilter]);
+    return `?${params.toString()}`;
+  }, [listPage, hasPurchased, search, courseId, newsletter, hasRefund, examFilter]);
 
   async function loadStudents() {
     setLoading(true);
     setError('');
     try {
-      const studentData = await api.get<StudentListItem[]>(`/students${query}`);
-      setStudents(studentData ?? []);
+      const page = await api.get<StudentListPage>(`/students${query}`);
+      setStudents(page.items ?? []);
+      setListTotal(page.total ?? 0);
+      setListTotalPages(page.totalPages ?? 1);
+      if (page.page && page.page !== listPage) setListPage(page.page);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load students');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadSyncStatus() {
+    try {
+      const state = await api.get<StudentSyncState>('/students/sync-zenler/status');
+      setSyncState(state);
+    } catch {
+      /* optional on first load */
     }
   }
 
@@ -120,7 +145,12 @@ export default function Students() {
     api.get<Course[]>('/courses')
       .then((data) => setCourses((data ?? []).filter((c) => c.isActive)))
       .catch(() => {/* course filter is optional */});
+    void loadSyncStatus();
   }, []);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [hasPurchased, search, courseId, newsletter, hasRefund, examFilter]);
 
   useEffect(() => {
     void loadStudents();
@@ -135,39 +165,40 @@ export default function Students() {
     void loadDetail(selectedId);
   }, [selectedId]);
 
-  async function syncZenler() {
-    const confirmed = window.confirm(
-      'Sync all Zenler learners into Students in batches?\n\nThis is for pre-launch backfill. After go-live, new enrollments update students automatically.',
-    );
-    if (!confirmed) return;
+  async function runZenlerSync(action: 'continue' | 'restart') {
+    if (action === 'restart') {
+      const confirmed = window.confirm(
+        'Resync ALL Zenler learners from page 1?\n\nThis reprocesses the full list. Prefer Continue sync unless you need a full rebuild.',
+      );
+      if (!confirmed) return;
+    } else if (syncState && syncState.lastCompletedPage > 0 && syncState.status !== 'completed') {
+      const confirmed = window.confirm(
+        `Continue Zenler sync from page ${syncState.lastCompletedPage + 1}?\n\nProgress so far: ${syncState.fetched.toLocaleString()} fetched.`,
+      );
+      if (!confirmed) return;
+    } else {
+      const confirmed = window.confirm(
+        'Sync Zenler learners into Students in batches?\n\nThis is for pre-launch backfill. After go-live, enrollments update students automatically.',
+      );
+      if (!confirmed) return;
+    }
 
+    stopSyncRef.current = false;
     setSyncing(true);
     setError('');
-    setMessage('Starting Zenler sync…');
+    setMessage(action === 'restart' ? 'Restarting Zenler sync from page 1…' : 'Continuing Zenler sync…');
 
-    let page = 1;
-    let totals = { fetched: 0, created: 0, updated: 0, skipped: 0 };
     const collectedErrors: string[] = [];
+    let first = true;
 
     try {
-      while (true) {
-        setMessage(
-          `Syncing Zenler page ${page}… `
-          + `(so far: ${totals.fetched} fetched, ${totals.created} created, ${totals.updated} updated)`,
-        );
-
+      while (!stopSyncRef.current) {
         const result = await api.post<ZenlerStudentSyncResult>('/students/sync-zenler', {
-          page,
+          action: first ? action : 'continue',
           pageSize: 50,
-          totals,
         });
-
-        totals = result.totals ?? {
-          fetched: totals.fetched + result.fetched,
-          created: totals.created + result.created,
-          updated: totals.updated + result.updated,
-          skipped: totals.skipped + result.skipped,
-        };
+        first = false;
+        setSyncState(result.syncState);
 
         if (result.errors?.length) {
           for (const err of result.errors) {
@@ -175,36 +206,52 @@ export default function Students() {
           }
         }
 
-        if (result.done || !result.nextPage) {
-          setMessage(
-            `Zenler sync complete: fetched ${totals.fetched}, created ${totals.created}, `
-            + `updated ${totals.updated}, skipped ${totals.skipped} `
-            + `(${result.page}/${result.totalPages || result.page} pages).`,
-          );
-          break;
-        }
+        const totals = result.totals;
+        setMessage(
+          result.stopped
+            ? `Sync stopped at page ${result.syncState.lastCompletedPage}. `
+              + `Fetched ${totals.fetched.toLocaleString()} so far — use Continue sync to resume.`
+            : result.done
+              ? `Zenler sync complete: fetched ${totals.fetched.toLocaleString()}, `
+                + `created ${totals.created.toLocaleString()}, updated ${totals.updated.toLocaleString()}, `
+                + `skipped ${totals.skipped.toLocaleString()}.`
+              : `Syncing page ${result.page}/${result.totalPages}… `
+                + `(${totals.fetched.toLocaleString()} fetched, ${totals.created.toLocaleString()} created, `
+                + `${totals.updated.toLocaleString()} updated)`,
+        );
 
-        page = result.nextPage;
-        // Brief pause between pages to avoid Zenler/API rate pressure.
+        if (result.stopped || result.done || !result.nextPage) break;
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
 
-      if (collectedErrors.length) {
-        setError(collectedErrors.slice(0, 5).join(' | '));
+      if (stopSyncRef.current) {
+        await api.post<StudentSyncState>('/students/sync-zenler/stop', {});
+        await loadSyncStatus();
+        setMessage((prev) => prev || 'Sync stop requested.');
       }
+
+      if (collectedErrors.length) setError(collectedErrors.slice(0, 5).join(' | '));
       await loadStudents();
+      await loadSyncStatus();
     } catch (err) {
-      setError(
-        (err instanceof Error ? err.message : 'Zenler sync failed')
-        + ` (stopped at page ${page}; synced so far: ${totals.fetched})`,
-      );
-      setMessage(
-        `Partial Zenler sync: fetched ${totals.fetched}, created ${totals.created}, `
-        + `updated ${totals.updated}, skipped ${totals.skipped}. You can run Sync again to continue.`,
-      );
+      await loadSyncStatus();
+      setError(err instanceof Error ? err.message : 'Zenler sync failed');
+      setMessage('Sync interrupted. Use Continue sync to resume from the last saved page.');
       await loadStudents();
     } finally {
       setSyncing(false);
+      stopSyncRef.current = false;
+    }
+  }
+
+  async function stopZenlerSync() {
+    stopSyncRef.current = true;
+    setMessage('Stopping sync after the current page…');
+    try {
+      const state = await api.post<StudentSyncState>('/students/sync-zenler/stop', {});
+      setSyncState(state);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to stop sync');
     }
   }
 
@@ -370,16 +417,47 @@ export default function Students() {
             >
               {bulkSending ? 'Sending…' : 'Email exam links (course)'}
             </button>
-            <button
-              type="button"
-              onClick={() => void syncZenler()}
-              disabled={syncing}
-              className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
-            >
-              {syncing ? 'Syncing batches…' : 'Sync from Zenler'}
-            </button>
+            {syncing ? (
+              <button
+                type="button"
+                onClick={() => void stopZenlerSync()}
+                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
+              >
+                Stop sync
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => void runZenlerSync('continue')}
+                  className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
+                >
+                  {syncState && syncState.lastCompletedPage > 0 && syncState.status !== 'completed'
+                    ? `Continue sync (page ${syncState.lastCompletedPage + 1})`
+                    : 'Sync from Zenler'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void runZenlerSync('restart')}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  title="Start again from page 1"
+                >
+                  Resync all
+                </button>
+              </>
+            )}
           </div>
         </div>
+        {syncState && (syncState.lastCompletedPage > 0 || syncState.status !== 'idle') && (
+          <p className="mt-2 text-xs text-slate-500">
+            Sync status: {syncState.status}
+            {syncState.lastCompletedPage > 0
+              ? ` · last page ${syncState.lastCompletedPage}`
+                + (syncState.totalPages ? `/${syncState.totalPages}` : '')
+              : ''}
+            {syncState.fetched > 0 ? ` · ${syncState.fetched.toLocaleString()} fetched` : ''}
+          </p>
+        )}
       </div>
 
       <div className="flex-1 overflow-auto px-6 py-4">
@@ -431,6 +509,18 @@ export default function Students() {
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs text-slate-500">
+            Purchased
+            <select
+              value={hasPurchased}
+              onChange={(e) => setHasPurchased(e.target.value as StudentPurchaseFilter)}
+              className="w-40 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-800"
+            >
+              <option value="yes">Has purchased</option>
+              <option value="no">No purchase</option>
+              <option value="all">All</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-slate-500">
             Newsletter
             <select
               value={newsletter}
@@ -452,13 +542,40 @@ export default function Students() {
           </label>
         </div>
 
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600">
+          <p>
+            Displaying {students.length.toLocaleString()} of {listTotal.toLocaleString()}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={loading || listPage <= 1}
+              onClick={() => setListPage((p) => Math.max(1, p - 1))}
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-xs text-slate-500">
+              Page {listPage} of {listTotalPages}
+            </span>
+            <button
+              type="button"
+              disabled={loading || listPage >= listTotalPages}
+              onClick={() => setListPage((p) => p + 1)}
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+
         <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
           <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
             {loading ? (
               <p className="px-4 py-6 text-sm text-slate-500">Loading students…</p>
             ) : students.length === 0 ? (
               <p className="px-4 py-6 text-sm text-slate-500">
-                No students yet. Run Sync from Zenler for pre-launch backfill, or wait for enrollments.
+                No students match this filter. Try Purchase = All, or Continue Zenler sync.
               </p>
             ) : (
               <table className="min-w-full text-left text-sm">

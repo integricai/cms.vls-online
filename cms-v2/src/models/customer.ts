@@ -4,6 +4,8 @@ import type {
   CustomerSource,
   StudentDetail,
   StudentListItem,
+  StudentListPage,
+  StudentPurchaseFilter,
 } from '../../shared/types';
 import { listCourseSummariesForCustomer } from './customerCourseStatus';
 
@@ -29,6 +31,7 @@ interface StudentListDbRow extends DbRow {
   purchase_count: string | number;
   refund_count: string | number;
   course_names: string[] | null;
+  total_count?: string | number;
 }
 
 function rowToCustomer(row: DbRow): Customer {
@@ -174,22 +177,35 @@ export type ListStudentsFilters = {
   courseId?: number;
   newsletter?: 'all' | 'subscribed' | 'unsubscribed';
   hasRefund?: boolean;
+  hasPurchased?: StudentPurchaseFilter;
   examStatus?: string;
+  page?: number;
+  pageSize?: number;
+  /** When true, ignore pagination and return all matching rows (admin exports / bulk email). */
+  unbounded?: boolean;
 };
 
-export async function listStudents(filters: ListStudentsFilters = {}): Promise<StudentListItem[]> {
+export async function listStudents(filters: ListStudentsFilters = {}): Promise<StudentListPage> {
   const search = filters.search?.trim().toLowerCase() || null;
   const courseId = filters.courseId ?? null;
   const newsletter = filters.newsletter ?? 'all';
   const hasRefund = filters.hasRefund === true;
+  const hasPurchased = filters.hasPurchased ?? 'all';
   const examStatus = filters.examStatus?.trim() || null;
+  const unbounded = filters.unbounded === true;
+  const pageSize = unbounded
+    ? 100000
+    : Math.min(100, Math.max(1, Number(filters.pageSize ?? 100) || 100));
+  const page = unbounded ? 1 : Math.max(1, Number(filters.page ?? 1) || 1);
+  const offset = (page - 1) * pageSize;
 
   const rows = await sql`
     SELECT
       cu.*,
       COALESCE(stats.purchase_count, 0) AS purchase_count,
       COALESCE(stats.refund_count, 0) AS refund_count,
-      stats.course_names
+      stats.course_names,
+      COUNT(*) OVER() AS total_count
     FROM customers cu
     LEFT JOIN LATERAL (
       SELECT
@@ -228,6 +244,11 @@ export async function listStudents(filters: ListStudentsFilters = {}): Promise<S
       OR COALESCE(stats.refund_count, 0) > 0
     )
     AND (
+      ${hasPurchased}::text = 'all'
+      OR (${hasPurchased}::text = 'yes' AND COALESCE(stats.purchase_count, 0) > 0)
+      OR (${hasPurchased}::text = 'no' AND COALESCE(stats.purchase_count, 0) = 0)
+    )
+    AND (
       ${examStatus}::text IS NULL
       OR EXISTS (
         SELECT 1 FROM customer_course_status ccs2
@@ -236,9 +257,20 @@ export async function listStudents(filters: ListStudentsFilters = {}): Promise<S
       )
     )
     ORDER BY cu.updated_at DESC, cu.id DESC
+    LIMIT ${pageSize} OFFSET ${offset}
   `;
 
-  return (rows as StudentListDbRow[]).map(rowToStudentListItem);
+  const items = (rows as StudentListDbRow[]).map(rowToStudentListItem);
+  const total = rows[0] ? Number((rows[0] as StudentListDbRow).total_count ?? 0) : 0;
+  const totalPages = total > 0 ? Math.ceil(total / pageSize) : 1;
+
+  return {
+    items,
+    page,
+    pageSize,
+    total,
+    totalPages,
+  };
 }
 
 export async function getStudentDetail(id: number): Promise<StudentDetail | null> {
