@@ -324,17 +324,22 @@ export default function Students() {
         const courseLabel = result.courseName
           ? `"${result.courseName}"`
           : `course ${result.courseIndex + 1}`;
+        const skippedCourse = Boolean(result.errors?.some((e) => e.startsWith(`${result.courseName}:`)));
         setMessage(
           result.stopped
-            ? `Enrollment sync stopped at ${courseLabel} page ${result.syncState.lastCompletedPage}. `
+            ? `Enrollment sync stopped at ${courseLabel}. `
               + `Linked ${totals.linked.toLocaleString()} so far — use Continue enrollments to resume.`
             : result.done
               ? `Enrollment sync complete: linked ${totals.linked.toLocaleString()} `
                 + `(${totals.createdCustomers.toLocaleString()} new customers, `
                 + `${totals.skipped.toLocaleString()} skipped) across ${result.totalCourses} courses.`
-              : `Syncing ${courseLabel} page ${result.page}/${result.totalPagesInCourse} `
-                + `(course ${result.courseIndex + 1}/${result.totalCourses})… `
-                + `${totals.linked.toLocaleString()} linked`,
+              : skippedCourse
+                ? `Skipped ${courseLabel} (Zenler report failed) — continuing `
+                  + `(course ${result.courseIndex + 1}/${result.totalCourses}, `
+                  + `${totals.linked.toLocaleString()} linked)…`
+                : `Synced ${courseLabel} `
+                  + `(course ${result.courseIndex + 1}/${result.totalCourses})… `
+                  + `${totals.linked.toLocaleString()} linked`,
         );
 
         if (result.stopped || result.done || result.nextPage == null) break;
@@ -352,8 +357,13 @@ export default function Students() {
       await loadEnrollmentSyncStatus();
     } catch (err) {
       await loadEnrollmentSyncStatus();
-      setError(err instanceof Error ? err.message : 'Enrollment sync failed');
-      setMessage('Enrollment sync interrupted. Use Continue enrollments to resume.');
+      const detail = err instanceof Error ? err.message : 'Enrollment sync failed';
+      setError(detail);
+      setMessage(
+        detail.includes('migrations') || detail.includes('missing')
+          ? `Enrollment sync blocked: ${detail}`
+          : `Enrollment sync interrupted: ${detail}. Use Sync enrollments / Continue enrollments to retry.`,
+      );
       await loadStudents();
     } finally {
       setEnrollmentSyncing(false);

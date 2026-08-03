@@ -17,8 +17,18 @@ import {
 
 const DEFAULT_PAGE_SIZE = 100;
 
-function coursesWithZenlerId(courses: Course[]): Course[] {
-  return courses.filter((c) => String(c.zenlerCourseId ?? '').trim().length > 0);
+function isLikelyJunkCourse(course: Course): boolean {
+  const name = String(course.name ?? '').toLowerCase();
+  return /\btest\b/.test(name) || /\bdraft\b/.test(name);
+}
+
+/** Active CMS courses with a Zenler id; excludes TEST/Draft names when possible. */
+function coursesForEnrollmentSync(courses: Course[]): Course[] {
+  const withId = courses.filter((c) => String(c.zenlerCourseId ?? '').trim().length > 0);
+  const preferred = withId.filter((c) => c.isActive && !isLikelyJunkCourse(c));
+  if (preferred.length > 0) return preferred;
+  const active = withId.filter((c) => c.isActive);
+  return active.length > 0 ? active : withId;
 }
 
 export async function getZenlerEnrollmentSyncStatus() {
@@ -33,8 +43,8 @@ export async function stopZenlerEnrollmentSync() {
 }
 
 /**
- * Backfill one page of Zenler enrollments for the current CMS course.
- * Uses course enrollment reports (not per-student calls) to stay within safe API volume.
+ * Backfill enrollments for one CMS course (Zenler returns the full roster per call).
+ * Broken Zenler course reports are skipped so the overall sync can continue.
  */
 export async function syncZenlerEnrollmentsBatch(input: {
   action?: 'continue' | 'restart';
@@ -50,12 +60,24 @@ export async function syncZenlerEnrollmentsBatch(input: {
     Math.max(1, Number(input.pageSize ?? DEFAULT_PAGE_SIZE) || DEFAULT_PAGE_SIZE),
   );
 
-  const allCourses = coursesWithZenlerId(await listCourses());
+  const allCourses = coursesForEnrollmentSync(await listCourses());
   if (allCourses.length === 0) {
-    throw new Error('No CMS courses with a Zenler course id were found');
+    throw new Error('No active CMS courses with a Zenler course id were found');
   }
 
-  const prior = await getEnrollmentSyncState();
+  let prior;
+  try {
+    prior = await getEnrollmentSyncState();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (/enrollment_sync_state|does not exist|relation/i.test(message)) {
+      throw new Error(
+        'Enrollment sync table is missing. Run database migrations (044_enrollment_sync_state) and retry.',
+      );
+    }
+    throw err;
+  }
+
   if (action === 'continue' && prior.status === 'completed') {
     return {
       fetched: 0,
@@ -91,7 +113,6 @@ export async function syncZenlerEnrollmentsBatch(input: {
   const courseIndex = Math.max(0, state.courseIndex);
   const page = action === 'restart' ? 1 : Math.max(1, state.lastCompletedPage + 1);
 
-  // Finished all courses (index advanced past the last course).
   if (courseIndex >= allCourses.length) {
     const completed = await markEnrollmentSyncProgress({
       status: 'completed',
@@ -148,11 +169,29 @@ export async function syncZenlerEnrollmentsBatch(input: {
       return emptyStoppedResult(latest, pageSize, allCourses.length, course);
     }
 
-    const batch = await listZenlerEnrollmentsPage({
-      zenlerCourseId: course.zenlerCourseId,
-      page,
-      pageSize,
-    });
+    let batch;
+    try {
+      batch = await listZenlerEnrollmentsPage({
+        zenlerCourseId: course.zenlerCourseId,
+        page,
+        pageSize,
+      });
+    } catch (err) {
+      // Skip courses Zenler cannot report (HTML oops / invalid course) and keep going.
+      const message = err instanceof Error ? err.message : String(err);
+      pageResult.skipped += 1;
+      pageResult.errors.push(`${course.name}: ${message}`);
+      return advancePastCourse({
+        allCourses,
+        course,
+        courseIndex,
+        page,
+        pageSize,
+        state,
+        pageResult,
+        totalPagesInCourse: 1,
+      });
+    }
 
     for (const item of batch.items) {
       if (pageResult.fetched > 0 && pageResult.fetched % 25 === 0) {
@@ -214,6 +253,25 @@ export async function syncZenlerEnrollmentsBatch(input: {
       }
     }
 
+    // Zenler usually returns the full roster in one response (totalPages = 1).
+    const courseFinished = batch.items.length === 0
+      || page >= batch.totalPages
+      || batch.totalPages <= 1
+      || batch.items.length < batch.pageSize;
+
+    if (courseFinished) {
+      return advancePastCourse({
+        allCourses,
+        course,
+        courseIndex,
+        page,
+        pageSize,
+        state,
+        pageResult,
+        totalPagesInCourse: batch.totalPages,
+      });
+    }
+
     const totals = {
       fetched: state.fetched + pageResult.fetched,
       linked: state.linked + pageResult.linked,
@@ -221,41 +279,13 @@ export async function syncZenlerEnrollmentsBatch(input: {
       skipped: state.skipped + pageResult.skipped,
     };
 
-    let nextCourseIndex: number | null = courseIndex;
-    let nextPage: number | null = null;
-    let done = false;
-    let savedCourseIndex = courseIndex;
-    let savedPage = page;
-
-    if (batch.items.length === 0 || page >= batch.totalPages || batch.items.length < batch.pageSize) {
-      // Finished this course — advance to next course.
-      const upcoming = courseIndex + 1;
-      if (upcoming >= allCourses.length) {
-        nextCourseIndex = null;
-        nextPage = null;
-        done = true;
-        savedCourseIndex = allCourses.length;
-        savedPage = page;
-      } else {
-        nextCourseIndex = upcoming;
-        nextPage = 1;
-        savedCourseIndex = upcoming;
-        savedPage = 0; // so continue uses page 1
-      }
-    } else {
-      nextPage = page + 1;
-      nextCourseIndex = courseIndex;
-      savedPage = page;
-    }
-
     const after = await getEnrollmentSyncState();
     const stopRequested = after.status === 'stopped';
-
     let syncState = await markEnrollmentSyncProgress({
-      status: stopRequested ? 'stopped' : done ? 'completed' : 'running',
-      courseIndex: savedCourseIndex,
-      courseId: done ? null : (allCourses[savedCourseIndex]?.id ?? course.id),
-      lastCompletedPage: savedPage,
+      status: stopRequested ? 'stopped' : 'running',
+      courseIndex,
+      courseId: course.id,
+      lastCompletedPage: page,
       pageSize,
       totalCourses: allCourses.length,
       totalPagesInCourse: batch.totalPages,
@@ -263,11 +293,9 @@ export async function syncZenlerEnrollmentsBatch(input: {
       linked: totals.linked,
       createdCustomers: totals.createdCustomers,
       skipped: totals.skipped,
+      error: pageResult.errors[0] ?? null,
     });
-
-    if (stopRequested && !done) {
-      syncState = await markEnrollmentSyncStopped();
-    }
+    if (stopRequested) syncState = await markEnrollmentSyncStopped();
 
     return {
       ...pageResult,
@@ -278,20 +306,96 @@ export async function syncZenlerEnrollmentsBatch(input: {
       pageSize,
       totalCourses: allCourses.length,
       totalPagesInCourse: batch.totalPages,
-      nextCourseIndex: syncState.status === 'stopped' ? syncState.courseIndex : nextCourseIndex,
-      nextPage: syncState.status === 'stopped'
-        ? (syncState.lastCompletedPage > 0 ? syncState.lastCompletedPage + 1 : 1)
-        : nextPage,
-      done: syncState.status === 'completed',
+      nextCourseIndex: courseIndex,
+      nextPage: page + 1,
+      done: false,
       stopped: syncState.status === 'stopped',
       totals,
       syncState,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    if (/enrollment_sync_state|does not exist|relation/i.test(message)) {
+      throw new Error(
+        'Enrollment sync table is missing. Run database migrations (044_enrollment_sync_state) and retry.',
+      );
+    }
     await markEnrollmentSyncFailed(message);
     throw err;
   }
+}
+
+async function advancePastCourse(input: {
+  allCourses: Course[];
+  course: Course;
+  courseIndex: number;
+  page: number;
+  pageSize: number;
+  state: Awaited<ReturnType<typeof getEnrollmentSyncState>>;
+  pageResult: {
+    fetched: number;
+    linked: number;
+    createdCustomers: number;
+    skipped: number;
+    errors: string[];
+  };
+  totalPagesInCourse: number;
+}): Promise<EnrollmentSyncResult> {
+  const { allCourses, course, courseIndex, page, pageSize, state, pageResult, totalPagesInCourse } = input;
+  const totals = {
+    fetched: state.fetched + pageResult.fetched,
+    linked: state.linked + pageResult.linked,
+    createdCustomers: state.createdCustomers + pageResult.createdCustomers,
+    skipped: state.skipped + pageResult.skipped,
+  };
+
+  const upcoming = courseIndex + 1;
+  const done = upcoming >= allCourses.length;
+  const savedCourseIndex = done ? allCourses.length : upcoming;
+  const savedPage = done ? page : 0;
+
+  const after = await getEnrollmentSyncState();
+  const stopRequested = after.status === 'stopped';
+
+  let syncState = await markEnrollmentSyncProgress({
+    status: stopRequested ? 'stopped' : done ? 'completed' : 'running',
+    courseIndex: savedCourseIndex,
+    courseId: done ? null : (allCourses[savedCourseIndex]?.id ?? null),
+    lastCompletedPage: savedPage,
+    pageSize,
+    totalCourses: allCourses.length,
+    totalPagesInCourse,
+    fetched: totals.fetched,
+    linked: totals.linked,
+    createdCustomers: totals.createdCustomers,
+    skipped: totals.skipped,
+    error: pageResult.errors[0] ?? null,
+  });
+
+  if (stopRequested && !done) {
+    syncState = await markEnrollmentSyncStopped();
+  }
+
+  return {
+    ...pageResult,
+    courseIndex,
+    courseId: course.id,
+    courseName: course.name,
+    page,
+    pageSize,
+    totalCourses: allCourses.length,
+    totalPagesInCourse,
+    nextCourseIndex: done || syncState.status === 'stopped' ? (done ? null : syncState.courseIndex) : upcoming,
+    nextPage: done
+      ? null
+      : syncState.status === 'stopped'
+        ? (syncState.lastCompletedPage > 0 ? syncState.lastCompletedPage + 1 : 1)
+        : 1,
+    done: syncState.status === 'completed',
+    stopped: syncState.status === 'stopped',
+    totals,
+    syncState,
+  };
 }
 
 async function customerExists(email: string, zenlerUserId: string | null): Promise<boolean> {

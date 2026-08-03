@@ -73,6 +73,13 @@ async function zenlerFetch<T>(path: string, options?: RequestInit): Promise<T> {
   });
 
   const raw = await response.text();
+  if (raw && /^\s*</.test(raw)) {
+    throw new Error(
+      `Zenler API returned an HTML error page for ${path.split('?')[0]} `
+        + '(often a broken/unsupported course report).',
+    );
+  }
+
   let payload: ZenlerApiResponse<T> | null = null;
   try {
     payload = raw ? (JSON.parse(raw) as ZenlerApiResponse<T>) : null;
@@ -232,8 +239,9 @@ export type ZenlerEnrollmentPage = {
 };
 
 /**
- * Fetch one page of enrollments for a Zenler course (report endpoint).
- * Prefer this over per-student checks when backfilling many learners.
+ * Fetch enrollments for a Zenler course (report endpoint).
+ * Zenler's detailed enrollments report usually returns the full list in one shot
+ * (no reliable pagination). Page > 1 is treated as already complete.
  */
 export async function listZenlerEnrollmentsPage(input: {
   zenlerCourseId: string;
@@ -244,11 +252,14 @@ export async function listZenlerEnrollmentsPage(input: {
   const page = Math.max(1, Number(input.page ?? 1) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(input.pageSize ?? 100) || 100));
 
+  // Endpoint returns the full course roster; later pages are empty by design.
+  if (page > 1) {
+    return { items: [], page, pageSize, totalPages: 1 };
+  }
+
   const query = new URLSearchParams({
-    limit: String(pageSize),
-    page: String(page),
     course_id: String(courseId),
-    start_date: '2000-01-01',
+    start_date: '2018-01-01',
     end_date: new Date().toISOString().slice(0, 10),
   });
 
@@ -257,11 +268,10 @@ export async function listZenlerEnrollmentsPage(input: {
   );
   const items = data.items ?? [];
   const reportedTotalPages = Number(data.pagination?.total_pages ?? 0);
-  let totalPages = reportedTotalPages > 0 ? reportedTotalPages : page;
-  if (!reportedTotalPages && items.length >= pageSize) totalPages = page + 1;
-  if (!reportedTotalPages && items.length === 0) totalPages = Math.max(1, page - 1) || 1;
+  // Prefer documented pagination when present; otherwise one shot = done.
+  const totalPages = reportedTotalPages > 0 ? reportedTotalPages : 1;
 
-  return { items, page, pageSize, totalPages };
+  return { items, page: 1, pageSize: Math.max(pageSize, items.length || pageSize), totalPages };
 }
 
 export async function isStudentEnrolledInCourse(input: {
