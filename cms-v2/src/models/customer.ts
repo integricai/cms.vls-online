@@ -204,19 +204,31 @@ export async function listStudents(filters: ListStudentsFilters = {}): Promise<S
       cu.*,
       COALESCE(stats.purchase_count, 0) AS purchase_count,
       COALESCE(stats.refund_count, 0) AS refund_count,
-      stats.course_names,
+      course_stats.course_names,
       COUNT(*) OVER() AS total_count
     FROM customers cu
     LEFT JOIN LATERAL (
       SELECT
         COUNT(*) FILTER (WHERE po.status = 'Paid')::int AS purchase_count,
-        COUNT(*) FILTER (WHERE po.status = 'Refunded')::int AS refund_count,
-        ARRAY_AGG(DISTINCT c.name) FILTER (WHERE c.name IS NOT NULL) AS course_names
+        COUNT(*) FILTER (WHERE po.status = 'Refunded')::int AS refund_count
       FROM sales s
       LEFT JOIN payment_orders po ON po.id = s.payment_order_id
-      LEFT JOIN courses c ON c.id = s.course_id
       WHERE s.customer_id = cu.id
     ) stats ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT ARRAY_AGG(DISTINCT x.name) FILTER (WHERE x.name IS NOT NULL) AS course_names
+      FROM (
+        SELECT c.name
+        FROM sales s
+        JOIN courses c ON c.id = s.course_id
+        WHERE s.customer_id = cu.id
+        UNION
+        SELECT c.name
+        FROM customer_course_status ccs
+        JOIN courses c ON c.id = ccs.course_id
+        WHERE ccs.customer_id = cu.id
+      ) x
+    ) course_stats ON TRUE
     WHERE (
       ${search}::text IS NULL
       OR LOWER(cu.email) LIKE '%' || ${search} || '%'
@@ -245,8 +257,25 @@ export async function listStudents(filters: ListStudentsFilters = {}): Promise<S
     )
     AND (
       ${hasPurchased}::text = 'all'
-      OR (${hasPurchased}::text = 'yes' AND COALESCE(stats.purchase_count, 0) > 0)
-      OR (${hasPurchased}::text = 'no' AND COALESCE(stats.purchase_count, 0) = 0)
+      OR (
+        ${hasPurchased}::text = 'yes'
+        AND (
+          COALESCE(stats.purchase_count, 0) > 0
+          OR EXISTS (
+            SELECT 1 FROM customer_course_status ccs_has
+            WHERE ccs_has.customer_id = cu.id
+          )
+        )
+      )
+      OR (${hasPurchased}::text = 'cms' AND COALESCE(stats.purchase_count, 0) > 0)
+      OR (
+        ${hasPurchased}::text = 'no'
+        AND COALESCE(stats.purchase_count, 0) = 0
+        AND NOT EXISTS (
+          SELECT 1 FROM customer_course_status ccs_no
+          WHERE ccs_no.customer_id = cu.id
+        )
+      )
     )
     AND (
       ${examStatus}::text IS NULL
@@ -279,18 +308,30 @@ export async function getStudentDetail(id: number): Promise<StudentDetail | null
       cu.*,
       COALESCE(stats.purchase_count, 0) AS purchase_count,
       COALESCE(stats.refund_count, 0) AS refund_count,
-      stats.course_names
+      course_stats.course_names
     FROM customers cu
     LEFT JOIN LATERAL (
       SELECT
         COUNT(*) FILTER (WHERE po.status = 'Paid')::int AS purchase_count,
-        COUNT(*) FILTER (WHERE po.status = 'Refunded')::int AS refund_count,
-        ARRAY_AGG(DISTINCT c.name) FILTER (WHERE c.name IS NOT NULL) AS course_names
+        COUNT(*) FILTER (WHERE po.status = 'Refunded')::int AS refund_count
       FROM sales s
       LEFT JOIN payment_orders po ON po.id = s.payment_order_id
-      LEFT JOIN courses c ON c.id = s.course_id
       WHERE s.customer_id = cu.id
     ) stats ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT ARRAY_AGG(DISTINCT x.name) FILTER (WHERE x.name IS NOT NULL) AS course_names
+      FROM (
+        SELECT c.name
+        FROM sales s
+        JOIN courses c ON c.id = s.course_id
+        WHERE s.customer_id = cu.id
+        UNION
+        SELECT c.name
+        FROM customer_course_status ccs
+        JOIN courses c ON c.id = ccs.course_id
+        WHERE ccs.customer_id = cu.id
+      ) x
+    ) course_stats ON TRUE
     WHERE cu.id = ${id}
   `;
 

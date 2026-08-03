@@ -342,7 +342,8 @@ export interface StudentDetail extends StudentListItem {
 
 export type StudentSyncStatus = 'idle' | 'running' | 'stopped' | 'failed' | 'completed';
 
-export type StudentPurchaseFilter = 'all' | 'yes' | 'no';
+/** Course-access filter: yes = CMS purchase OR Zenler course link; cms = Stripe sale only. */
+export type StudentPurchaseFilter = 'all' | 'yes' | 'no' | 'cms';
 
 export interface StudentListPage {
   items: StudentListItem[];
@@ -387,6 +388,50 @@ export interface ZenlerStudentSyncResult {
     skipped: number;
   };
   syncState: StudentSyncState;
+}
+
+export interface EnrollmentSyncState {
+  status: StudentSyncStatus;
+  courseIndex: number;
+  courseId: number | null;
+  lastCompletedPage: number;
+  pageSize: number;
+  totalCourses: number | null;
+  totalPagesInCourse: number | null;
+  fetched: number;
+  linked: number;
+  createdCustomers: number;
+  skipped: number;
+  lastError: string | null;
+  startedAt: Date | null;
+  completedAt: Date | null;
+  updatedAt: Date;
+}
+
+export interface EnrollmentSyncResult {
+  fetched: number;
+  linked: number;
+  createdCustomers: number;
+  skipped: number;
+  errors: string[];
+  courseIndex: number;
+  courseId: number | null;
+  courseName: string | null;
+  page: number;
+  pageSize: number;
+  totalCourses: number;
+  totalPagesInCourse: number;
+  nextCourseIndex: number | null;
+  nextPage: number | null;
+  done: boolean;
+  stopped: boolean;
+  totals: {
+    fetched: number;
+    linked: number;
+    createdCustomers: number;
+    skipped: number;
+  };
+  syncState: EnrollmentSyncState;
 }
 
 export interface ExamResultPreview {

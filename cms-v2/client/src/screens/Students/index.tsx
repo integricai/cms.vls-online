@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../api/client';
 import type {
   Course,
+  EnrollmentSyncResult,
+  EnrollmentSyncState,
   ExamEmailBulkSendResult,
   ExamStatus,
   StudentDetail,
@@ -70,6 +72,9 @@ export default function Students() {
   const [syncing, setSyncing] = useState(false);
   const [syncState, setSyncState] = useState<StudentSyncState | null>(null);
   const stopSyncRef = useRef(false);
+  const [enrollmentSyncing, setEnrollmentSyncing] = useState(false);
+  const [enrollmentSyncState, setEnrollmentSyncState] = useState<EnrollmentSyncState | null>(null);
+  const stopEnrollmentSyncRef = useRef(false);
   const [bulkSending, setBulkSending] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -126,6 +131,15 @@ export default function Students() {
     }
   }
 
+  async function loadEnrollmentSyncStatus() {
+    try {
+      const state = await api.get<EnrollmentSyncState>('/students/sync-enrollments/status');
+      setEnrollmentSyncState(state);
+    } catch {
+      /* optional on first load */
+    }
+  }
+
   async function loadDetail(id: number) {
     setDetailLoading(true);
     try {
@@ -146,6 +160,7 @@ export default function Students() {
       .then((data) => setCourses((data ?? []).filter((c) => c.isActive)))
       .catch(() => {/* course filter is optional */});
     void loadSyncStatus();
+    void loadEnrollmentSyncStatus();
   }, []);
 
   useEffect(() => {
@@ -252,6 +267,108 @@ export default function Students() {
       setSyncState(state);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to stop sync');
+    }
+  }
+
+  async function runEnrollmentSync(action: 'continue' | 'restart') {
+    if (action === 'restart') {
+      const confirmed = window.confirm(
+        'Resync ALL Zenler course enrollments from the first course?\n\n'
+          + 'This walks each CMS course with a Zenler id and links enrolled learners.',
+      );
+      if (!confirmed) return;
+    } else if (
+      enrollmentSyncState
+      && (enrollmentSyncState.courseIndex > 0 || enrollmentSyncState.lastCompletedPage > 0)
+      && enrollmentSyncState.status !== 'completed'
+    ) {
+      const confirmed = window.confirm(
+        `Continue enrollment sync from course ${enrollmentSyncState.courseIndex + 1}`
+          + (enrollmentSyncState.totalCourses ? `/${enrollmentSyncState.totalCourses}` : '')
+          + ` page ${enrollmentSyncState.lastCompletedPage + 1}?\n\n`
+          + `Linked so far: ${enrollmentSyncState.linked.toLocaleString()}.`,
+      );
+      if (!confirmed) return;
+    } else {
+      const confirmed = window.confirm(
+        'Sync Zenler course enrollments into Students?\n\n'
+          + 'Uses course enrollment reports (not per-student calls). Safe for pre-launch backfill.',
+      );
+      if (!confirmed) return;
+    }
+
+    stopEnrollmentSyncRef.current = false;
+    setEnrollmentSyncing(true);
+    setError('');
+    setMessage(action === 'restart' ? 'Restarting enrollment sync…' : 'Continuing enrollment sync…');
+
+    const collectedErrors: string[] = [];
+    let first = true;
+
+    try {
+      while (!stopEnrollmentSyncRef.current) {
+        const result = await api.post<EnrollmentSyncResult>('/students/sync-enrollments', {
+          action: first ? action : 'continue',
+          pageSize: 100,
+        });
+        first = false;
+        setEnrollmentSyncState(result.syncState);
+
+        if (result.errors?.length) {
+          for (const err of result.errors) {
+            if (collectedErrors.length < 10) collectedErrors.push(err);
+          }
+        }
+
+        const totals = result.totals;
+        const courseLabel = result.courseName
+          ? `"${result.courseName}"`
+          : `course ${result.courseIndex + 1}`;
+        setMessage(
+          result.stopped
+            ? `Enrollment sync stopped at ${courseLabel} page ${result.syncState.lastCompletedPage}. `
+              + `Linked ${totals.linked.toLocaleString()} so far — use Continue enrollments to resume.`
+            : result.done
+              ? `Enrollment sync complete: linked ${totals.linked.toLocaleString()} `
+                + `(${totals.createdCustomers.toLocaleString()} new customers, `
+                + `${totals.skipped.toLocaleString()} skipped) across ${result.totalCourses} courses.`
+              : `Syncing ${courseLabel} page ${result.page}/${result.totalPagesInCourse} `
+                + `(course ${result.courseIndex + 1}/${result.totalCourses})… `
+                + `${totals.linked.toLocaleString()} linked`,
+        );
+
+        if (result.stopped || result.done || result.nextPage == null) break;
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+
+      if (stopEnrollmentSyncRef.current) {
+        await api.post<EnrollmentSyncState>('/students/sync-enrollments/stop', {});
+        await loadEnrollmentSyncStatus();
+        setMessage((prev) => prev || 'Enrollment sync stop requested.');
+      }
+
+      if (collectedErrors.length) setError(collectedErrors.slice(0, 5).join(' | '));
+      await loadStudents();
+      await loadEnrollmentSyncStatus();
+    } catch (err) {
+      await loadEnrollmentSyncStatus();
+      setError(err instanceof Error ? err.message : 'Enrollment sync failed');
+      setMessage('Enrollment sync interrupted. Use Continue enrollments to resume.');
+      await loadStudents();
+    } finally {
+      setEnrollmentSyncing(false);
+      stopEnrollmentSyncRef.current = false;
+    }
+  }
+
+  async function stopEnrollmentSync() {
+    stopEnrollmentSyncRef.current = true;
+    setMessage('Stopping enrollment sync after the current page…');
+    try {
+      const state = await api.post<EnrollmentSyncState>('/students/sync-enrollments/stop', {});
+      setEnrollmentSyncState(state);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to stop enrollment sync');
     }
   }
 
@@ -423,26 +540,62 @@ export default function Students() {
                 onClick={() => void stopZenlerSync()}
                 className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
               >
-                Stop sync
+                Stop learners sync
               </button>
             ) : (
               <>
                 <button
                   type="button"
                   onClick={() => void runZenlerSync('continue')}
-                  className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
+                  disabled={enrollmentSyncing}
+                  className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
                 >
                   {syncState && syncState.lastCompletedPage > 0 && syncState.status !== 'completed'
-                    ? `Continue sync (page ${syncState.lastCompletedPage + 1})`
-                    : 'Sync from Zenler'}
+                    ? `Continue learners (page ${syncState.lastCompletedPage + 1})`
+                    : 'Sync learners'}
                 </button>
                 <button
                   type="button"
                   onClick={() => void runZenlerSync('restart')}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  title="Start again from page 1"
+                  disabled={enrollmentSyncing}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  title="Start learners sync again from page 1"
                 >
-                  Resync all
+                  Resync learners
+                </button>
+              </>
+            )}
+            {enrollmentSyncing ? (
+              <button
+                type="button"
+                onClick={() => void stopEnrollmentSync()}
+                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
+              >
+                Stop enrollments
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => void runEnrollmentSync('continue')}
+                  disabled={syncing}
+                  className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600 disabled:opacity-50"
+                  title="Link Zenler course enrollments to students"
+                >
+                  {enrollmentSyncState
+                    && enrollmentSyncState.status !== 'completed'
+                    && (enrollmentSyncState.courseIndex > 0 || enrollmentSyncState.lastCompletedPage > 0)
+                    ? `Continue enrollments`
+                    : 'Sync enrollments'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void runEnrollmentSync('restart')}
+                  disabled={syncing}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  title="Restart enrollment sync from the first course"
+                >
+                  Resync enrollments
                 </button>
               </>
             )}
@@ -450,12 +603,35 @@ export default function Students() {
         </div>
         {syncState && (syncState.lastCompletedPage > 0 || syncState.status !== 'idle') && (
           <p className="mt-2 text-xs text-slate-500">
-            Sync status: {syncState.status}
+            Learners sync: {syncState.status}
             {syncState.lastCompletedPage > 0
               ? ` · last page ${syncState.lastCompletedPage}`
                 + (syncState.totalPages ? `/${syncState.totalPages}` : '')
               : ''}
             {syncState.fetched > 0 ? ` · ${syncState.fetched.toLocaleString()} fetched` : ''}
+          </p>
+        )}
+        {enrollmentSyncState
+          && (enrollmentSyncState.courseIndex > 0
+            || enrollmentSyncState.lastCompletedPage > 0
+            || enrollmentSyncState.status !== 'idle') && (
+          <p className="mt-1 text-xs text-slate-500">
+            Enrollment sync: {enrollmentSyncState.status}
+            {enrollmentSyncState.totalCourses
+              ? ` · course ${Math.min(enrollmentSyncState.courseIndex + 1, enrollmentSyncState.totalCourses)}/${enrollmentSyncState.totalCourses}`
+              : ''}
+            {enrollmentSyncState.lastCompletedPage > 0
+              ? ` · page ${enrollmentSyncState.lastCompletedPage}`
+                + (enrollmentSyncState.totalPagesInCourse
+                  ? `/${enrollmentSyncState.totalPagesInCourse}`
+                  : '')
+              : ''}
+            {enrollmentSyncState.linked > 0
+              ? ` · ${enrollmentSyncState.linked.toLocaleString()} linked`
+              : ''}
+            {enrollmentSyncState.lastError
+              ? ` · error: ${enrollmentSyncState.lastError}`
+              : ''}
           </p>
         )}
       </div>
@@ -509,14 +685,15 @@ export default function Students() {
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs text-slate-500">
-            Purchased
+            Course access
             <select
               value={hasPurchased}
               onChange={(e) => setHasPurchased(e.target.value as StudentPurchaseFilter)}
-              className="w-40 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-800"
+              className="w-44 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-800"
             >
-              <option value="yes">Has purchased</option>
-              <option value="no">No purchase</option>
+              <option value="yes">Has course</option>
+              <option value="cms">CMS purchase only</option>
+              <option value="no">No course</option>
               <option value="all">All</option>
             </select>
           </label>
@@ -575,7 +752,7 @@ export default function Students() {
               <p className="px-4 py-6 text-sm text-slate-500">Loading students…</p>
             ) : students.length === 0 ? (
               <p className="px-4 py-6 text-sm text-slate-500">
-                No students match this filter. Try Purchase = All, or Continue Zenler sync.
+                No students match this filter. Try Course access = All, or run Sync enrollments.
               </p>
             ) : (
               <table className="min-w-full text-left text-sm">

@@ -27,14 +27,20 @@ interface ZenlerUserListData {
   };
 }
 
+export interface ZenlerEnrollmentItem {
+  course_id: number;
+  user_id: string;
+  email: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  course_name?: string | null;
+}
+
 interface ZenlerEnrollmentListData {
-  items: Array<{
-    course_id: number;
-    user_id: string;
-    email: string;
-  }>;
+  items: ZenlerEnrollmentItem[];
   pagination?: {
     total_pages?: number;
+    total_items?: number;
   };
 }
 
@@ -218,34 +224,68 @@ export async function createZenlerStudent(input: {
   return data;
 }
 
+export type ZenlerEnrollmentPage = {
+  items: ZenlerEnrollmentItem[];
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+/**
+ * Fetch one page of enrollments for a Zenler course (report endpoint).
+ * Prefer this over per-student checks when backfilling many learners.
+ */
+export async function listZenlerEnrollmentsPage(input: {
+  zenlerCourseId: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<ZenlerEnrollmentPage> {
+  const courseId = parseZenlerCourseId(input.zenlerCourseId);
+  const page = Math.max(1, Number(input.page ?? 1) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number(input.pageSize ?? 100) || 100));
+
+  const query = new URLSearchParams({
+    limit: String(pageSize),
+    page: String(page),
+    course_id: String(courseId),
+    start_date: '2000-01-01',
+    end_date: new Date().toISOString().slice(0, 10),
+  });
+
+  const data = await zenlerFetch<ZenlerEnrollmentListData>(
+    `/reports/enrollments/detailed?${query.toString()}`,
+  );
+  const items = data.items ?? [];
+  const reportedTotalPages = Number(data.pagination?.total_pages ?? 0);
+  let totalPages = reportedTotalPages > 0 ? reportedTotalPages : page;
+  if (!reportedTotalPages && items.length >= pageSize) totalPages = page + 1;
+  if (!reportedTotalPages && items.length === 0) totalPages = Math.max(1, page - 1) || 1;
+
+  return { items, page, pageSize, totalPages };
+}
+
 export async function isStudentEnrolledInCourse(input: {
   zenlerUserId: string;
   email: string;
   zenlerCourseId: string;
 }): Promise<boolean> {
-  const courseId = parseZenlerCourseId(input.zenlerCourseId);
   const normalizedEmail = input.email.trim().toLowerCase();
   let page = 1;
   let totalPages = 1;
 
   do {
-    const query = new URLSearchParams({
-      limit: '100',
-      page: String(page),
-      course_id: String(courseId),
-      start_date: '2000-01-01',
-      end_date: new Date().toISOString().slice(0, 10),
+    const batch = await listZenlerEnrollmentsPage({
+      zenlerCourseId: input.zenlerCourseId,
+      page,
+      pageSize: 100,
     });
-    const data = await zenlerFetch<ZenlerEnrollmentListData>(
-      `/reports/enrollments/detailed?${query.toString()}`,
-    );
-    const enrolled = data.items.some((item) => {
+    const enrolled = batch.items.some((item) => {
       return item.user_id === input.zenlerUserId
-        || item.email.trim().toLowerCase() === normalizedEmail;
+        || String(item.email ?? '').trim().toLowerCase() === normalizedEmail;
     });
     if (enrolled) return true;
 
-    totalPages = Number(data.pagination?.total_pages ?? 1);
+    totalPages = batch.totalPages;
     page += 1;
   } while (page <= totalPages);
 

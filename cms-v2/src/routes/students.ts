@@ -14,6 +14,11 @@ import {
   stopZenlerStudentSync,
   syncZenlerStudentsBatch,
 } from '../services/zenlerStudentBackfill';
+import {
+  getZenlerEnrollmentSyncStatus,
+  stopZenlerEnrollmentSync,
+  syncZenlerEnrollmentsBatch,
+} from '../services/zenlerEnrollmentBackfill';
 import type { StudentPurchaseFilter } from '../../shared/types';
 
 const router = Router();
@@ -76,7 +81,7 @@ router.get('/', requireRole('admin', 'editor'), async (req, res, next) => {
 
     const purchaseRaw = String(req.query.hasPurchased ?? 'yes');
     const hasPurchased = (
-      ['all', 'yes', 'no'].includes(purchaseRaw) ? purchaseRaw : 'yes'
+      ['all', 'yes', 'no', 'cms'].includes(purchaseRaw) ? purchaseRaw : 'yes'
     ) as StudentPurchaseFilter;
 
     const hasRefund = String(req.query.hasRefund ?? '') === 'true';
@@ -105,7 +110,7 @@ router.get('/export', requireRole('admin', 'editor'), async (req, res, next) => 
     const search = String(req.query.search ?? '').trim() || undefined;
     const purchaseRaw = String(req.query.hasPurchased ?? 'all');
     const hasPurchased = (
-      ['all', 'yes', 'no'].includes(purchaseRaw) ? purchaseRaw : 'all'
+      ['all', 'yes', 'no', 'cms'].includes(purchaseRaw) ? purchaseRaw : 'all'
     ) as StudentPurchaseFilter;
     const page = await listStudents({ search, hasPurchased, unbounded: true });
 
@@ -175,6 +180,33 @@ router.post('/sync-zenler', requireRole('admin'), async (req, res, next) => {
     const action = String(req.body?.action ?? 'continue') === 'restart' ? 'restart' : 'continue';
     const pageSize = Number(req.body?.pageSize ?? 50);
     const result = await syncZenlerStudentsBatch({ action, pageSize });
+    return res.json({ ok: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/sync-enrollments/status', requireRole('admin'), async (_req, res, next) => {
+  try {
+    return res.json({ ok: true, data: await getZenlerEnrollmentSyncStatus() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/sync-enrollments/stop', requireRole('admin'), async (_req, res, next) => {
+  try {
+    return res.json({ ok: true, data: await stopZenlerEnrollmentSync() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/sync-enrollments', requireRole('admin'), async (req, res, next) => {
+  try {
+    const action = String(req.body?.action ?? 'continue') === 'restart' ? 'restart' : 'continue';
+    const pageSize = Number(req.body?.pageSize ?? 100);
+    const result = await syncZenlerEnrollmentsBatch({ action, pageSize });
     return res.json({ ok: true, data: result });
   } catch (err) {
     next(err);
