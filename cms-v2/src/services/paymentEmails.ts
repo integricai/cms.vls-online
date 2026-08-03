@@ -353,6 +353,53 @@ ${p(`If you have any questions, please reply to this email or contact our suppor
   });
 }
 
+export async function sendStudentRefundConfirmation(order: PaymentOrder): Promise<boolean> {
+  const to = order.studentEmail ?? order.stripeCustomerEmail;
+  if (!to) return false;
+
+  const name = order.studentName || 'Student';
+  const option = order.optionType || 'Course payment';
+  const amount = formatAmount(order);
+
+  const text = `Hi ${name},
+
+We have initiated a refund for your VLS Online purchase.
+
+Course: ${order.courseTitle}
+Option: ${option}
+Refund amount: ${amount}
+
+Your course access has been revoked. The refund will be returned to your original payment method and should appear within 5–10 business days, depending on your bank.
+
+If you have any questions, please reply to this email or contact our support team.
+
+Kind regards,
+VLS Online`;
+
+  const bodyHtml = `
+${p(`Hi ${esc(name)},`)}
+${p(`We have initiated a refund for your VLS Online purchase.`)}
+${detailTable([
+    { label: 'Course', value: order.courseTitle },
+    { label: 'Option', value: option },
+    { label: 'Refund amount', value: amount },
+  ])}
+${p(`Your course access has been revoked. The refund will be returned to your original payment method and should appear within <strong>5–10 business days</strong>, depending on your bank.`)}
+${p(`If you have any questions, please reply to this email or contact our support team.`)}`;
+
+  await sendEmail({
+    to,
+    subject: 'Refund confirmation - VLS Online',
+    text,
+    html: renderBrandedEmail({
+      title: 'Refund confirmation',
+      preheader: `Refund initiated for ${order.courseTitle} — ${amount}`,
+      bodyHtml,
+    }),
+  });
+  return true;
+}
+
 export async function sendAdminPaymentNotification(order: PaymentOrder): Promise<boolean> {
   const to = process.env.ADMIN_NOTIFICATION_EMAIL;
   if (!to) return false;

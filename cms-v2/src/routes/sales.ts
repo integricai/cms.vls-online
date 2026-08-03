@@ -17,6 +17,7 @@ import {
   adminAssignSale,
   previewSaleAccept,
 } from '../services/saleAssignment';
+import { sendStudentRefundConfirmation } from '../services/paymentEmails';
 import { createStripeRefund } from '../services/stripeCheckout';
 import { revokeZenlerAccessForRefundedOrder } from '../services/zenlerEnrollmentEnsure';
 
@@ -164,13 +165,21 @@ router.post('/:id/refund', requireRole('admin'), async (req, res, next) => {
       reason: 'requested_by_customer',
     });
 
-    const { order: refunded } = await markPaymentOrderRefunded({
+    const { order: refunded, wasAlreadyRefunded } = await markPaymentOrderRefunded({
       orderId: order.id,
       stripeRefundId: refund.id,
       stripePaymentIntentId: refund.paymentIntentId ?? order.stripePaymentIntentId,
     });
 
     await revokeZenlerAccessForRefundedOrder(refunded);
+
+    if (!wasAlreadyRefunded) {
+      try {
+        await sendStudentRefundConfirmation(refunded);
+      } catch (emailErr) {
+        console.error('[sales] refund confirmation email failed', emailErr);
+      }
+    }
 
     const updated = await getSaleListItemById(id);
     return res.json({ ok: true, data: updated });

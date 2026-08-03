@@ -19,6 +19,7 @@ import {
 import {
   sendAdminPaymentNotification,
   sendStudentPaymentConfirmation,
+  sendStudentRefundConfirmation,
 } from '../services/paymentEmails';
 import { ensureSaleRecordedForPaidOrder } from '../services/saleRecording';
 import {
@@ -126,13 +127,22 @@ async function handleStripeRefundEvent(payload: {
   }
   if (order.status !== 'Paid') return;
 
-  const { order: refunded } = await markPaymentOrderRefunded({
+  const { order: refunded, wasAlreadyRefunded } = await markPaymentOrderRefunded({
     orderId: order.id,
     stripeRefundId: payload.refundId,
     stripePaymentIntentId: payload.paymentIntentId,
   });
 
   await revokeZenlerAccessForRefundedOrder(refunded);
+
+  // Dashboard / external refunds only — Sales admin path emails when it marks Refunded first.
+  if (!wasAlreadyRefunded) {
+    try {
+      await sendStudentRefundConfirmation(refunded);
+    } catch (emailErr) {
+      console.error('[payments] refund confirmation email failed', emailErr);
+    }
+  }
 }
 
 const router = Router();
