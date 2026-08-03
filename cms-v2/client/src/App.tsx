@@ -83,8 +83,8 @@ export default function App() {
           <Route path="/blog-header"       element={<BlogHeader />} />
           <Route path="/footer"            element={<Footer />} />
           <Route path="/banner"            element={<Banner />} />
-          <Route path="/course-price"      element={<CoursePrice />} />
-          <Route path="/course-pricing"    element={<CoursePricing />} />
+          <Route path="/course-price"      element={<RequireAdmin><CoursePrice /></RequireAdmin>} />
+          <Route path="/course-pricing"    element={<RequireAdmin><CoursePricing /></RequireAdmin>} />
           <Route path="/payment-cards"     element={<PaymentCards />} />
           <Route path="/promotion-section" element={<PromotionSection />} />
           <Route path="/contact-footer"    element={<ContactFooter />} />

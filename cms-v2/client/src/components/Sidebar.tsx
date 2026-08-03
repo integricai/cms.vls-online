@@ -11,18 +11,30 @@ import {
 
 const ITEM_LOOKUP = buildItemLookup();
 
+/** Nav item ids that must only appear for admin users. */
+const ADMIN_ONLY_ITEM_IDS = new Set(['/course-price', '/course-pricing']);
+
 function getLabel(id: string): string {
   if (id === '/dashboard') return 'Dashboard';
   return ITEM_LOOKUP.get(id) ?? id;
 }
 
+function isItemVisible(id: string, isAdmin: boolean): boolean {
+  if (id === '/dashboard') return false;
+  if (ADMIN_ONLY_ITEM_IDS.has(id) && !isAdmin) return false;
+  return true;
+}
+
 function visibleTopLevel(
   group: SidebarConfigGroup,
+  isAdmin: boolean,
 ): Array<SidebarConfigItem | SidebarConfigSubGroup> {
   return group.children.filter(child => {
     if (child.hidden) return false;
-    if (child.type === 'item' && child.id === '/dashboard') return false;
-    if (child.type === 'subgroup') return child.children.some(i => !i.hidden);
+    if (child.type === 'item') return isItemVisible(child.id, isAdmin);
+    if (child.type === 'subgroup') {
+      return child.children.some(i => !i.hidden && isItemVisible(i.id, isAdmin));
+    }
     return true;
   });
 }
@@ -87,7 +99,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
   }
 
   function renderSubGroup(sub: SidebarConfigSubGroup) {
-    const visibleItems = sub.children.filter(i => !i.hidden);
+    const visibleItems = sub.children.filter(i => !i.hidden && isItemVisible(i.id, isAdmin));
     if (visibleItems.length === 0) return null;
     const expanded = openSubGroups.has(sub.id);
     return (
@@ -161,7 +173,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
           .filter(g => !g.hidden)
           .filter(g => g.id !== 'Billing' || isAdmin)
           .map(group => {
-            const visible = visibleTopLevel(group);
+            const visible = visibleTopLevel(group, isAdmin);
             if (visible.length === 0) return null;
 
             // Auto-hide group header when only 1 visible child
