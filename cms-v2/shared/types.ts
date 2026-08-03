@@ -576,6 +576,12 @@ export interface QualificationOfferRule {
    * E.g. 12 → Sep sitting closes after 12 Aug. Null = no early cutoff.
    */
   cutoffDay: number | null;
+  /**
+   * Course IDs that receive exam-session labels for this rule.
+   * Empty = all courses with this qualification (legacy).
+   * Non-empty = only listed courses; others show duration/day plan labels.
+   */
+  courseIds: number[];
   isActive: boolean;
   sortOrder: number;
   createdAt: Date | string;
@@ -588,6 +594,7 @@ export type QualificationOfferRuleInput = {
   durationDays: number[];
   examMonths: number[];
   cutoffDay: number | null;
+  courseIds?: number[];
   isActive?: boolean;
   sortOrder?: number;
 };

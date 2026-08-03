@@ -183,6 +183,7 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
       zenlerCourseId: course.zenlerCourseId,
       courseSlug: course.courseSlug,
       courseName: course.courseName,
+      courseId: course.courseId,
       qualification: course.qualification,
       prices: course.prices,
       countryCode: geo.countryCode,

@@ -12,6 +12,7 @@ type DbRow = {
   duration_days: number[] | null;
   exam_months: number[] | null;
   cutoff_day: number | null;
+  course_ids: number[] | null;
   is_active: boolean;
   sort_order: number;
   created_at: Date;
@@ -23,6 +24,15 @@ function asIntArray(value: number[] | null | undefined): number[] {
   return value.map(Number).filter(n => Number.isFinite(n));
 }
 
+function normalizeCourseIds(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(
+    value
+      .map(Number)
+      .filter(n => Number.isInteger(n) && n > 0),
+  )].sort((a, b) => a - b);
+}
+
 function rowToRule(row: DbRow): QualificationOfferRule {
   return {
     id: row.id,
@@ -31,6 +41,7 @@ function rowToRule(row: DbRow): QualificationOfferRule {
     durationDays: asIntArray(row.duration_days),
     examMonths: asIntArray(row.exam_months),
     cutoffDay: row.cutoff_day,
+    courseIds: asIntArray(row.course_ids),
     isActive: row.is_active,
     sortOrder: row.sort_order,
     createdAt: row.created_at,
@@ -58,6 +69,7 @@ export function normalizeOfferRuleInput(input: QualificationOfferRuleInput): Qua
 
   let examMonths: number[] = [];
   let cutoffDay: number | null = null;
+  let courseIds: number[] = [];
 
   if (offerType === 'exam_sessions') {
     examMonths = [...new Set(
@@ -79,6 +91,8 @@ export function normalizeOfferRuleInput(input: QualificationOfferRuleInput): Qua
       }
       cutoffDay = day;
     }
+
+    courseIds = normalizeCourseIds(input.courseIds);
   }
 
   return {
@@ -87,6 +101,7 @@ export function normalizeOfferRuleInput(input: QualificationOfferRuleInput): Qua
     durationDays,
     examMonths,
     cutoffDay,
+    courseIds,
     isActive: input.isActive !== false,
     sortOrder: Number.isFinite(Number(input.sortOrder)) ? Number(input.sortOrder) : 0,
   };
@@ -143,7 +158,7 @@ export async function replaceQualificationOfferRules(
   for (const rule of normalized) {
     await sql`
       INSERT INTO qualification_offer_rules (
-        qualification, offer_type, duration_days, exam_months, cutoff_day, is_active, sort_order
+        qualification, offer_type, duration_days, exam_months, cutoff_day, course_ids, is_active, sort_order
       )
       VALUES (
         ${rule.qualification},
@@ -151,6 +166,7 @@ export async function replaceQualificationOfferRules(
         ${rule.durationDays},
         ${rule.examMonths},
         ${rule.cutoffDay},
+        ${rule.courseIds ?? []},
         ${rule.isActive !== false},
         ${rule.sortOrder ?? 0}
       )

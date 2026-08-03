@@ -40,7 +40,10 @@ function geoPrice(partial: Partial<CourseGeoPrice> & Pick<CourseGeoPrice, 'id' |
   };
 }
 
-function accaRule(cutoffDay: number | null = 12): QualificationOfferRule {
+function accaRule(
+  cutoffDay: number | null = 12,
+  courseIds: number[] = [],
+): QualificationOfferRule {
   return {
     id: 1,
     qualification: 'ACCA',
@@ -48,6 +51,7 @@ function accaRule(cutoffDay: number | null = 12): QualificationOfferRule {
     durationDays: [90, 180],
     examMonths: [3, 6, 9, 12],
     cutoffDay,
+    courseIds,
     isActive: true,
     sortOrder: 10,
     createdAt: new Date(),
@@ -63,6 +67,7 @@ function cimaRule(): QualificationOfferRule {
     durationDays: [180, 365],
     examMonths: [],
     cutoffDay: null,
+    courseIds: [],
     isActive: true,
     sortOrder: 20,
     createdAt: new Date(),
@@ -243,6 +248,66 @@ await run('CIMA dual plans keep duration labels', async () => {
   assert.strictEqual(result!.plans[0]!.sessionMonth, null);
   assert.strictEqual(result!.plans[1]!.sessionTitle, 'Annual');
   assert.strictEqual(result!.plans[1]!.lateEnrollmentDiscount, false);
+});
+
+await run('ACCA allowlist: selected course gets exam sessions', async () => {
+  const result = await buildCourseDisplayPricing({
+    zenlerCourseId: '71086',
+    courseSlug: 'fa1',
+    courseName: 'ACCA FA1',
+    courseId: 42,
+    qualification: 'ACCA',
+    offerRule: accaRule(12, [42, 99]),
+    prices: [
+      geoPrice({ id: 1, name: 'Three months', amount: 120, durationDays: 90, courseId: 42 }),
+      geoPrice({ id: 2, name: 'Six months', amount: 180, durationDays: 180, courseId: 42, isDefault: true }),
+    ],
+  }, new Date('2026-08-12T12:00:00'));
+
+  assert.ok(result);
+  assert.strictEqual(result!.plans[0]!.sessionTitle, 'September 2026 session');
+  assert.strictEqual(result!.plans[1]!.sessionTitle, 'December 2026 session');
+});
+
+await run('ACCA allowlist: non-selected course keeps duration labels', async () => {
+  const result = await buildCourseDisplayPricing({
+    zenlerCourseId: '99999',
+    courseSlug: 'revision-pack',
+    courseName: 'ACCA Revision Pack',
+    courseId: 77,
+    qualification: 'ACCA',
+    offerRule: accaRule(12, [42, 99]),
+    prices: [
+      geoPrice({ id: 1, name: '90 days', amount: 80, durationDays: 90, courseId: 77 }),
+      geoPrice({ id: 2, name: '180 days', amount: 140, durationDays: 180, courseId: 77, isDefault: true }),
+    ],
+  }, new Date('2026-08-12T12:00:00'));
+
+  assert.ok(result);
+  assert.strictEqual(result!.plans[0]!.sessionTitle, '90 days');
+  assert.strictEqual(result!.plans[0]!.sessionMonth, null);
+  assert.strictEqual(result!.plans[0]!.lateEnrollmentDiscount, false);
+  assert.strictEqual(result!.plans[1]!.sessionTitle, '180 days');
+  assert.strictEqual(result!.plans[1]!.sessionMonth, null);
+});
+
+await run('ACCA empty allowlist still applies sessions to all courses', async () => {
+  const result = await buildCourseDisplayPricing({
+    zenlerCourseId: '71086',
+    courseSlug: 'fa1',
+    courseName: 'ACCA FA1',
+    courseId: 42,
+    qualification: 'ACCA',
+    offerRule: accaRule(12, []),
+    prices: [
+      geoPrice({ id: 1, name: 'Three months', amount: 120, durationDays: 90, courseId: 42 }),
+      geoPrice({ id: 2, name: 'Six months', amount: 180, durationDays: 180, courseId: 42, isDefault: true }),
+    ],
+  }, new Date('2026-08-12T12:00:00'));
+
+  assert.ok(result);
+  assert.strictEqual(result!.plans[0]!.sessionTitle, 'September 2026 session');
+  assert.strictEqual(result!.plans[1]!.sessionTitle, 'December 2026 session');
 });
 
 await run('single plan has no session labels or late discount', async () => {

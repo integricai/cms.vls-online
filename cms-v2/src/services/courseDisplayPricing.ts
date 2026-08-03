@@ -160,16 +160,34 @@ type SessionPlanMode =
   | { mode: 'sessions'; sessions: ExamSession[] }
   | { mode: 'duration' };
 
+/**
+ * Empty courseIds = apply exam sessions to all courses under the qualification.
+ * Non-empty = only allowlisted course IDs get sitting labels; others use duration labels.
+ */
+export function courseMatchesExamSessionAllowlist(
+  rule: Pick<QualificationOfferRule, 'courseIds'> | null | undefined,
+  courseId: number | null | undefined,
+): boolean {
+  const allowlist = rule?.courseIds ?? [];
+  if (allowlist.length === 0) return true;
+  if (courseId == null) return false;
+  return allowlist.includes(courseId);
+}
+
 function resolveSessionPlanMode(
-  rule: Pick<QualificationOfferRule, 'offerType' | 'examMonths' | 'cutoffDay'> | null,
+  rule: Pick<QualificationOfferRule, 'offerType' | 'examMonths' | 'cutoffDay' | 'courseIds'> | null,
   now: Date,
   planCount: number,
+  courseId?: number | null,
 ): SessionPlanMode {
   if (rule?.offerType === 'open') {
     return { mode: 'duration' };
   }
 
   if (rule?.offerType === 'exam_sessions') {
+    if (!courseMatchesExamSessionAllowlist(rule, courseId)) {
+      return { mode: 'duration' };
+    }
     return {
       mode: 'sessions',
       sessions: getNextOpenExamSessions(rule.examMonths, rule.cutoffDay, now, planCount),
@@ -189,6 +207,8 @@ export async function buildCourseDisplayPricing(
     courseSlug: string | null;
     courseName: string;
     prices: CourseGeoPrice[];
+    /** CMS course id — used for exam-session allowlist matching. */
+    courseId?: number | null;
     qualification?: string | null;
     /** When set, skips DB lookup (tests / preview). */
     offerRule?: QualificationOfferRule | null;
@@ -207,6 +227,10 @@ export async function buildCourseDisplayPricing(
     ? input.offerRule
     : await getQualificationOfferRuleByQualification(input.qualification ?? null);
 
+  const courseId = input.courseId
+    ?? sorted.find(p => p.courseId != null)?.courseId
+    ?? null;
+
   let plans: PublishedCoursePricePlan[];
 
   if (sorted.length === 1) {
@@ -220,7 +244,7 @@ export async function buildCourseDisplayPricing(
     })];
   } else {
     const planSlice = sorted.slice(0, 2);
-    const sessionMode = resolveSessionPlanMode(rule, now, planSlice.length);
+    const sessionMode = resolveSessionPlanMode(rule, now, planSlice.length, courseId);
 
     if (sessionMode.mode === 'duration' || sessionMode.sessions.length === 0) {
       plans = planSlice.map((price, index) => buildPlanFields(price, {

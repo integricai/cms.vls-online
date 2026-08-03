@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import type {
+  Course,
   QualificationOfferRule,
   QualificationOfferType,
 } from '../../../../shared/types';
@@ -12,6 +13,7 @@ type RuleDraft = {
   durationDaysText: string;
   examMonths: number[];
   cutoffDay: string;
+  courseIds: number[];
   isActive: boolean;
   sortOrder: number;
 };
@@ -53,6 +55,7 @@ function emptyRule(sortOrder: number): RuleDraft {
     durationDaysText: '90, 180',
     examMonths: [3, 6, 9, 12],
     cutoffDay: '12',
+    courseIds: [],
     isActive: true,
     sortOrder,
   };
@@ -75,6 +78,7 @@ function toDraft(rule: QualificationOfferRule): RuleDraft {
     durationDaysText: rule.durationDays.join(', '),
     examMonths: [...rule.examMonths].sort((a, b) => a - b),
     cutoffDay: rule.cutoffDay == null ? '' : String(rule.cutoffDay),
+    courseIds: [...(rule.courseIds ?? [])].sort((a, b) => a - b),
     isActive: rule.isActive,
     sortOrder: rule.sortOrder,
   };
@@ -91,6 +95,7 @@ function toPayload(rule: RuleDraft) {
     cutoffDay: rule.offerType === 'exam_sessions' && cutoffRaw !== ''
       ? Number(cutoffRaw)
       : null,
+    courseIds: rule.offerType === 'exam_sessions' ? rule.courseIds : [],
     isActive: rule.isActive,
     sortOrder: rule.sortOrder,
   };
@@ -106,6 +111,7 @@ function todayInputValue(): string {
 
 export default function QualificationOfferRulesTab() {
   const [rules, setRules] = useState<RuleDraft[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -120,9 +126,13 @@ export default function QualificationOfferRulesTab() {
     setLoading(true);
     setError('');
     try {
-      const data = await api.get<QualificationOfferRule[]>('/qualification-offer-rules');
+      const [data, courseList] = await Promise.all([
+        api.get<QualificationOfferRule[]>('/qualification-offer-rules'),
+        api.get<Course[]>('/courses').catch(() => [] as Course[]),
+      ]);
       const drafts = (data ?? []).map(toDraft);
       setRules(drafts.length > 0 ? drafts : [emptyRule(10)]);
+      setCourses(courseList ?? []);
       setPreviewIndex(0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load offer rules');
@@ -147,6 +157,17 @@ export default function QualificationOfferRulesTab() {
         ? rule.examMonths.filter(m => m !== month)
         : [...rule.examMonths, month].sort((a, b) => a - b);
       return { ...rule, examMonths };
+    }));
+  }
+
+  function toggleCourse(index: number, courseId: number) {
+    setRules(prev => prev.map((rule, i) => {
+      if (i !== index) return rule;
+      const has = rule.courseIds.includes(courseId);
+      const courseIds = has
+        ? rule.courseIds.filter(id => id !== courseId)
+        : [...rule.courseIds, courseId].sort((a, b) => a - b);
+      return { ...rule, courseIds };
     }));
   }
 
@@ -207,6 +228,7 @@ export default function QualificationOfferRulesTab() {
       selectedRule.durationDaysText,
       selectedRule.examMonths.join(','),
       selectedRule.cutoffDay,
+      selectedRule.courseIds.join(','),
       selectedRule.isActive ? '1' : '0',
     ].join('|')
     : '';
@@ -236,7 +258,9 @@ export default function QualificationOfferRulesTab() {
         <p className="mt-1 text-sm text-slate-500">
           Map each qualification to the durations you sell and, for exam-based quals (e.g. ACCA),
           the exam months plus an enrollment cutoff day. Session labels on course prices roll
-          forward automatically from that cutoff.
+          forward automatically from that cutoff. For exam-session rules you can optionally
+          limit which courses show Mar / Jun / Sep / Dec labels; unselected courses keep
+          duration (days) labels from the price tool.
         </p>
       </div>
 
@@ -244,134 +268,201 @@ export default function QualificationOfferRulesTab() {
       {message ? <p className="mb-4 text-sm text-emerald-700">{message}</p> : null}
 
       <div className="space-y-4">
-        {rules.map((rule, index) => (
-          <div key={rule.key} className="rounded-lg border border-slate-200 bg-white p-4">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="text-sm font-semibold text-slate-800">
-                Rule {index + 1}
-                {rule.qualification ? ` — ${rule.qualification}` : ''}
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 text-xs text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={rule.isActive}
-                    onChange={event => updateRule(index, { isActive: event.target.checked })}
-                  />
-                  Active
-                </label>
-                <button
-                  type="button"
-                  className="text-xs text-blue-600 hover:underline"
-                  onClick={() => setPreviewIndex(index)}
-                >
-                  Preview
-                </button>
-                <button
-                  type="button"
-                  className="text-xs text-red-600 hover:underline disabled:opacity-40"
-                  disabled={rules.length <= 1}
-                  onClick={() => removeRule(index)}
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
+        {rules.map((rule, index) => {
+          const qualificationKey = rule.qualification.trim().toLowerCase();
+          const matchingCourses = courses.filter(course => {
+            if (!course.isActive) return false;
+            if (!qualificationKey) return true;
+            return String(course.qualification ?? '').trim().toLowerCase() === qualificationKey;
+          });
+          const courseChoices = matchingCourses.length > 0
+            ? matchingCourses
+            : courses.filter(course => course.isActive);
 
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-              <label className="block text-xs text-slate-600">
-                Qualification
-                <input
-                  className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
-                  placeholder="ACCA"
-                  value={rule.qualification}
-                  onChange={event => updateRule(index, { qualification: event.target.value })}
-                />
-              </label>
-
-              <label className="block text-xs text-slate-600">
-                Offer type
-                <select
-                  className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
-                  value={rule.offerType}
-                  onChange={event => {
-                    const offerType = event.target.value as QualificationOfferType;
-                    updateRule(index, {
-                      offerType,
-                      examMonths: offerType === 'exam_sessions' ? (rule.examMonths.length ? rule.examMonths : [3, 6, 9, 12]) : [],
-                      cutoffDay: offerType === 'exam_sessions' ? (rule.cutoffDay || '12') : '',
-                      durationDaysText: offerType === 'open' && !rule.durationDaysText.trim()
-                        ? '180, 365'
-                        : rule.durationDaysText,
-                    });
-                  }}
-                >
-                  <option value="exam_sessions">Exam sessions</option>
-                  <option value="open">Open / subscription</option>
-                </select>
-              </label>
-
-              <label className="block text-xs text-slate-600">
-                Duration days
-                <input
-                  className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 font-mono text-sm"
-                  placeholder="90, 180"
-                  value={rule.durationDaysText}
-                  onChange={event => updateRule(index, { durationDaysText: event.target.value })}
-                />
-                <span className="mt-1 block text-[11px] text-slate-400">
-                  e.g. 90, 180 or 180, 365
-                </span>
-              </label>
-
-              <label className="block text-xs text-slate-600">
-                Cutoff day
-                <input
-                  type="number"
-                  min={1}
-                  max={28}
-                  className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 text-sm disabled:bg-slate-50"
-                  placeholder="12"
-                  disabled={rule.offerType !== 'exam_sessions'}
-                  value={rule.cutoffDay}
-                  onChange={event => updateRule(index, { cutoffDay: event.target.value })}
-                />
-                <span className="mt-1 block text-[11px] text-slate-400">
-                  Last day of prior month to sell the next sitting
-                </span>
-              </label>
-            </div>
-
-            {rule.offerType === 'exam_sessions' ? (
-              <div className="mt-3">
-                <div className="mb-1.5 text-xs text-slate-600">Exam months</div>
-                <div className="flex flex-wrap gap-2">
-                  {MONTHS.map(month => {
-                    const selected = rule.examMonths.includes(month.value);
-                    return (
-                      <button
-                        key={month.value}
-                        type="button"
-                        onClick={() => toggleMonth(index, month.value)}
-                        className={`rounded border px-2.5 py-1 text-xs font-medium transition ${
-                          selected
-                            ? 'border-blue-600 bg-blue-50 text-blue-700'
-                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        {month.label}
-                      </button>
-                    );
-                  })}
+          return (
+            <div key={rule.key} className="rounded-lg border border-slate-200 bg-white p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm font-semibold text-slate-800">
+                  Rule {index + 1}
+                  {rule.qualification ? ` — ${rule.qualification}` : ''}
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={rule.isActive}
+                      onChange={event => updateRule(index, { isActive: event.target.checked })}
+                    />
+                    Active
+                  </label>
+                  <button
+                    type="button"
+                    className="text-xs text-blue-600 hover:underline"
+                    onClick={() => setPreviewIndex(index)}
+                  >
+                    Preview
+                  </button>
+                  <button
+                    type="button"
+                    className="text-xs text-red-600 hover:underline disabled:opacity-40"
+                    disabled={rules.length <= 1}
+                    onClick={() => removeRule(index)}
+                  >
+                    Remove
+                  </button>
                 </div>
               </div>
-            ) : (
-              <p className="mt-3 text-xs text-slate-500">
-                Students can sit exams any time. Plan labels stay as durations (no exam session titles).
-              </p>
-            )}
-          </div>
-        ))}
+
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                <label className="block text-xs text-slate-600">
+                  Qualification
+                  <input
+                    className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
+                    placeholder="ACCA"
+                    value={rule.qualification}
+                    onChange={event => updateRule(index, { qualification: event.target.value })}
+                  />
+                </label>
+
+                <label className="block text-xs text-slate-600">
+                  Offer type
+                  <select
+                    className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
+                    value={rule.offerType}
+                    onChange={event => {
+                      const offerType = event.target.value as QualificationOfferType;
+                      updateRule(index, {
+                        offerType,
+                        examMonths: offerType === 'exam_sessions' ? (rule.examMonths.length ? rule.examMonths : [3, 6, 9, 12]) : [],
+                        cutoffDay: offerType === 'exam_sessions' ? (rule.cutoffDay || '12') : '',
+                        courseIds: offerType === 'exam_sessions' ? rule.courseIds : [],
+                        durationDaysText: offerType === 'open' && !rule.durationDaysText.trim()
+                          ? '180, 365'
+                          : rule.durationDaysText,
+                      });
+                    }}
+                  >
+                    <option value="exam_sessions">Exam sessions</option>
+                    <option value="open">Open / subscription</option>
+                  </select>
+                </label>
+
+                <label className="block text-xs text-slate-600">
+                  Duration days
+                  <input
+                    className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 font-mono text-sm"
+                    placeholder="90, 180"
+                    value={rule.durationDaysText}
+                    onChange={event => updateRule(index, { durationDaysText: event.target.value })}
+                  />
+                  <span className="mt-1 block text-[11px] text-slate-400">
+                    e.g. 90, 180 or 180, 365
+                  </span>
+                </label>
+
+                <label className="block text-xs text-slate-600">
+                  Cutoff day
+                  <input
+                    type="number"
+                    min={1}
+                    max={28}
+                    className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 text-sm disabled:bg-slate-50"
+                    placeholder="12"
+                    disabled={rule.offerType !== 'exam_sessions'}
+                    value={rule.cutoffDay}
+                    onChange={event => updateRule(index, { cutoffDay: event.target.value })}
+                  />
+                  <span className="mt-1 block text-[11px] text-slate-400">
+                    Last day of prior month to sell the next sitting
+                  </span>
+                </label>
+              </div>
+
+              {rule.offerType === 'exam_sessions' ? (
+                <>
+                  <div className="mt-3">
+                    <div className="mb-1.5 text-xs text-slate-600">Exam months</div>
+                    <div className="flex flex-wrap gap-2">
+                      {MONTHS.map(month => {
+                        const selected = rule.examMonths.includes(month.value);
+                        return (
+                          <button
+                            key={month.value}
+                            type="button"
+                            onClick={() => toggleMonth(index, month.value)}
+                            className={`rounded border px-2.5 py-1 text-xs font-medium transition ${
+                              selected
+                                ? 'border-blue-600 bg-blue-50 text-blue-700'
+                                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                            }`}
+                          >
+                            {month.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-xs text-slate-600">
+                        Course allowlist
+                        <span className="ml-1 font-normal text-slate-400">
+                          ({rule.courseIds.length === 0
+                            ? 'all courses'
+                            : `${rule.courseIds.length} selected`})
+                        </span>
+                      </div>
+                      {rule.courseIds.length > 0 ? (
+                        <button
+                          type="button"
+                          className="text-xs text-blue-600 hover:underline"
+                          onClick={() => updateRule(index, { courseIds: [] })}
+                        >
+                          Clear (apply to all)
+                        </button>
+                      ) : null}
+                    </div>
+                    <p className="mb-2 text-[11px] text-slate-400">
+                      Leave empty to apply exam sessions to every course with this qualification.
+                      Select courses to limit Mar / Jun / Sep / Dec labels to those only — other
+                      courses show duration days from the price tool.
+                    </p>
+                    {courseChoices.length === 0 ? (
+                      <p className="text-xs text-slate-400">No active courses found. Sync courses first.</p>
+                    ) : (
+                      <div className="grid max-h-56 gap-2 overflow-auto sm:grid-cols-2 lg:grid-cols-3">
+                        {courseChoices.map(course => (
+                          <label
+                            key={course.id}
+                            className="flex items-start gap-2 rounded border border-slate-200 px-3 py-2 text-xs text-slate-700"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={rule.courseIds.includes(course.id)}
+                              onChange={() => toggleCourse(index, course.id)}
+                              className="mt-0.5"
+                            />
+                            <span>
+                              <span className="font-medium">{course.name}</span>
+                              {course.slug ? (
+                                <span className="block text-[11px] text-slate-400">{course.slug}</span>
+                              ) : null}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="mt-3 text-xs text-slate-500">
+                  Students can sit exams any time. Plan labels stay as durations (no exam session titles).
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div className="mt-4 flex gap-3">
