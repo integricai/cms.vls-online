@@ -20,7 +20,9 @@ export class MigrationTemplateError extends Error {
   }
 }
 
-const TEMPLATE_FILES: Record<MigrationTemplate, string> = {
+type FileBackedMigrationTemplate = Exclude<MigrationTemplate, 'page_content'>;
+
+const TEMPLATE_FILES: Record<FileBackedMigrationTemplate, string> = {
   home: 'home.html',
   course: 'course.html',
   legal: 'legal.html',
@@ -177,12 +179,37 @@ const PAGE_BODY_COMPONENTS = new Set([
   'level_cta_section',
 ]);
 
+/**
+ * Map an HTML section (comment key + classes) to a Storyblok body component.
+ * Used by template blueprints and by dynamic page-content discovery.
+ */
+export function resolveHtmlSectionComponent(
+  key: string,
+  classes: string[],
+  template: MigrationTemplate = 'page_content',
+): string {
+  return componentForSection(key, classes, template);
+}
+
 function componentForSection(key: string, classes: string[], template: MigrationTemplate): string {
   let component = 'content_section';
 
-  if (template === 'book_meeting' && key.includes('hero')) component = 'book_meeting_hero';
-  else if (template === 'book_meeting' && key.includes('how-it-works')) component = 'step_cards';
-  else if (template === 'book_meeting' && key.includes('alternatives')) component = 'contact_cards';
+  if (
+    (template === 'book_meeting' || template === 'page_content')
+    && (
+      key.includes('booking')
+      || classes.includes('book')
+      || (template === 'book_meeting' && key.includes('hero'))
+    )
+  ) {
+    component = 'book_meeting_hero';
+  }
+  else if ((template === 'book_meeting' || template === 'page_content') && key.includes('how-it-works')) {
+    component = 'step_cards';
+  }
+  else if ((template === 'book_meeting' || template === 'page_content') && key.includes('alternatives')) {
+    component = 'contact_cards';
+  }
   else if (template === 'course_articles' && key.includes('library')) component = 'article_library';
   else if (template === 'live_sessions' && key.includes('hero')) component = 'live_sessions_hero';
   else if (template === 'live_sessions' && (key.includes('schedule') || key.includes('timetable'))) component = 'live_sessions_table';
@@ -502,6 +529,13 @@ function parseTemplateFile(template: MigrationTemplate, filePath: string): Migra
 }
 
 export function getMigrationTemplateBlueprint(template: MigrationTemplate): MigrationTemplateBlueprint {
+  if (template === 'page_content') {
+    throw new MigrationTemplateError(
+      'page_content has no static template file — components are discovered from the page-content HTML during scrape.',
+      400,
+    );
+  }
+
   const cached = templateCache.get(template);
   if (cached) return cached;
 
@@ -517,7 +551,7 @@ export function getMigrationTemplateBlueprint(template: MigrationTemplate): Migr
 }
 
 export function listMigrationTemplateBlueprints(): MigrationTemplateBlueprint[] {
-  return (Object.keys(TEMPLATE_FILES) as MigrationTemplate[]).map(getMigrationTemplateBlueprint);
+  return (Object.keys(TEMPLATE_FILES) as FileBackedMigrationTemplate[]).map(getMigrationTemplateBlueprint);
 }
 
 const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {

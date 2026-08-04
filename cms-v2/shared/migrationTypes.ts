@@ -22,7 +22,9 @@ export type MigrationTemplate =
   | 'course_dual_price'
   | 'qualification_level_page'
   | 'revision_course'
-  | 'blog';
+  | 'blog'
+  /** Arbitrary page-content HTML — components discovered from the file itself. */
+  | 'page_content';
 
 export interface MigrationPageRecord {
   id: number;
@@ -333,6 +335,24 @@ export interface ScrapedCoursePage {
   extractionWarnings?: string[];
 }
 
+export interface PageContentComponentPlanSection {
+  key: string;
+  label: string;
+  component: string;
+  classes: string[];
+  sampleHeading: string;
+  sampleDescription: string;
+}
+
+/** Discovered Storyblok body plan for a page-content HTML file (no static template required). */
+export interface PageContentComponentPlan {
+  source: 'page_content';
+  filename: string;
+  /** Matched known template when HTML aligned with templates/, otherwise page_content. */
+  detectedTemplate: MigrationTemplate;
+  sections: PageContentComponentPlanSection[];
+}
+
 export interface ScrapedGenericPage {
   sourceUrl: string;
   slug: string;
@@ -349,6 +369,8 @@ export interface ScrapedGenericPage {
   sectionMatchSource?: Record<string, 'live' | 'ai'>;
   /** Per blueprint-section-key: AI match confidence (0-1), only present for 'ai' sourced sections. */
   sectionMatchConfidence?: Record<string, number>;
+  /** Present when scraped from page-content/ with dynamic component discovery. */
+  componentPlan?: PageContentComponentPlan;
 }
 
 export interface TemplateReferenceSummary {

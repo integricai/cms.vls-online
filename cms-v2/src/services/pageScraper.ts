@@ -81,7 +81,12 @@ function parseSections(contentHtml: string): ScrapedContentSection[] {
   return sections;
 }
 
-export async function scrapeGenericPage(sourceUrl: string, template?: MigrationTemplate): Promise<ScrapedGenericPage> {
+export async function scrapeGenericPageFromHtml(
+  html: string,
+  sourceUrl: string,
+  template?: MigrationTemplate,
+  options?: { skipAiFallback?: boolean; slugOverride?: string },
+): Promise<ScrapedGenericPage> {
   let parsed: URL;
   try {
     parsed = new URL(sourceUrl.trim());
@@ -90,7 +95,6 @@ export async function scrapeGenericPage(sourceUrl: string, template?: MigrationT
   }
 
   const normalizedUrl = toPublicOriginUrl(parsed);
-  const html = await fetchPageHtml(sourceUrl);
   const mainContent = extractMainContent(html);
 
   const breadcrumbHtml = mainContent.match(/<nav[^>]*aria-label=["']breadcrumb["'][^>]*>([\s\S]*?)<\/nav>/i)?.[1]
@@ -121,7 +125,7 @@ export async function scrapeGenericPage(sourceUrl: string, template?: MigrationT
 
   const pageBuilderLegal = isPageBuilderLegalHtml(html);
 
-  if (template && !pageBuilderLegal) {
+  if (template && template !== 'page_content' && !pageBuilderLegal && !options?.skipAiFallback) {
     const blueprint = getMigrationTemplateBlueprint(template);
     const liveByKey = indexTemplateSections(templateSections);
     const missingSections = blueprint.sections.filter(
@@ -147,7 +151,7 @@ export async function scrapeGenericPage(sourceUrl: string, template?: MigrationT
 
   return {
     sourceUrl: normalizedUrl,
-    slug: inferSlug(parsed.pathname),
+    slug: options?.slugOverride || inferSlug(parsed.pathname),
     title,
     metaDescription,
     breadcrumbItems,
@@ -159,6 +163,18 @@ export async function scrapeGenericPage(sourceUrl: string, template?: MigrationT
     sectionMatchSource,
     sectionMatchConfidence,
   };
+}
+
+export async function scrapeGenericPage(sourceUrl: string, template?: MigrationTemplate): Promise<ScrapedGenericPage> {
+  let parsed: URL;
+  try {
+    parsed = new URL(sourceUrl.trim());
+  } catch {
+    throw new CoursePageScrapeError('Invalid URL');
+  }
+
+  const html = await fetchPageHtml(sourceUrl);
+  return scrapeGenericPageFromHtml(html, toPublicOriginUrl(parsed), template);
 }
 
 export function genericBreadcrumbText(page: ScrapedGenericPage): string {

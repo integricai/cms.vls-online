@@ -306,6 +306,7 @@ export async function upsertPageContentMigrationPage(input: {
   canonicalUrl: string;
   title: string;
   slug: string;
+  template?: MigrationTemplate;
 }): Promise<MigrationPageRecord> {
   await ensureMigrationPagesTable();
 
@@ -321,7 +322,7 @@ export async function upsertPageContentMigrationPage(input: {
     zenlerUrl: input.canonicalUrl,
     title: input.title,
     path,
-    template: 'qualification_level_page',
+    template: input.template ?? 'page_content',
     suggestedDestination: input.slug,
     destinationSlug: input.slug,
   });

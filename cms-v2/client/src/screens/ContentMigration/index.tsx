@@ -227,7 +227,7 @@ export default function ContentMigrationTab() {
         if (cancelled) return;
         applyPageUpdate(page);
         setSelectedPageId(page.id);
-        setTemplate('qualification_level_page');
+        setTemplate(page.template);
         setDestinationSlug(page.destinationSlug || page.suggestedDestination);
         setDestinationTouched(false);
       })
@@ -289,6 +289,7 @@ export default function ContentMigrationTab() {
         if (cancelled) return;
         const byKey = new Map(templates.map(item => [item.template, item]));
         const merged = (Object.entries(MIGRATION_TEMPLATE_LABELS) as Array<[MigrationTemplate, string]>)
+          .filter(([value]) => value !== 'page_content')
           .map(([value, label]) => byKey.get(value) ?? {
             template: value,
             label,
@@ -302,6 +303,7 @@ export default function ContentMigrationTab() {
         if (cancelled) return;
         setMigrationTemplates(
           (Object.entries(MIGRATION_TEMPLATE_LABELS) as Array<[MigrationTemplate, string]>)
+            .filter(([value]) => value !== 'page_content')
             .map(([value, label]) => ({
               template: value,
               label,
@@ -459,6 +461,23 @@ export default function ContentMigrationTab() {
       const data = await api.post<ScrapePhaseResult>(`/migration/pages/${selectedPage.id}/scrape`, payload);
       setScrapeResult(data);
       applyPageUpdate(data.page);
+      setTemplate(data.page.template);
+      const plan = !isLevelPage(data.scraped) && !isCoursePage(data.scraped) && !isBlogPage(data.scraped)
+        ? data.scraped.componentPlan
+        : undefined;
+      if (plan) {
+        setTemplateReference({
+          template: data.page.template,
+          label: MIGRATION_TEMPLATE_LABELS[data.page.template],
+          fileName: plan.filename,
+          sectionCount: plan.sections.length,
+          sections: plan.sections.map(section => ({
+            key: section.key,
+            label: section.label,
+            component: section.component,
+          })),
+        });
+      }
       setMessage({
         type: data.warnings.length ? 'warning' : 'info',
         text: data.warnings.length
@@ -670,9 +689,9 @@ export default function ContentMigrationTab() {
         <h2 className="mb-1 text-sm font-bold text-slate-700">Content Migration</h2>
         <p className="text-xs text-slate-500">
           Scan the live VLS site or scrape local page-content files, then work through the 3 migration phases:
-          Preview Scrape, Generate Structure, Migrate Content. File-based migration is available for
-          <code className="mx-1">qualification_level_page</code> pages in
-          <code className="mx-1">page-content/</code>.
+          Preview Scrape, Generate Structure, Migrate Content. Any HTML in
+          <code className="mx-1">page-content/</code> is listed automatically; level pages keep their
+          dedicated path, and other files discover Storyblok components from the HTML itself.
         </p>
       </div>
 
@@ -740,7 +759,19 @@ export default function ContentMigrationTab() {
               </Field>
 
               <Field label="Template">
-                <input className="input bg-slate-50" value="Course Dual Price" readOnly />
+                <input
+                  className="input bg-slate-50"
+                  value={
+                    selectedPage
+                      ? (MIGRATION_TEMPLATE_LABELS[selectedPage.template] ?? selectedPage.template)
+                      : 'Detecting from HTML…'
+                  }
+                  readOnly
+                />
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Detected from the page-content HTML. Level pages use the qualification template;
+                  everything else uses a dynamic component plan from the file.
+                </p>
               </Field>
             </>
           ) : (
@@ -1149,7 +1180,9 @@ export default function ContentMigrationTab() {
           {(structureResult?.templateReference ?? templateReference) && (
             <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
               <p className="font-semibold text-slate-700">
-                Template reference: templates/{(structureResult?.templateReference ?? templateReference)?.fileName}
+                {(structureResult?.templateReference ?? templateReference)?.template === 'page_content'
+                  ? <>Component plan: page-content/{(structureResult?.templateReference ?? templateReference)?.fileName}</>
+                  : <>Template reference: templates/{(structureResult?.templateReference ?? templateReference)?.fileName}</>}
               </p>
               <ul className="mt-2 space-y-1">
                 {(structureResult?.templateReference ?? templateReference)?.sections.map(section => {
@@ -1540,10 +1573,44 @@ export default function ContentMigrationTab() {
                   </div>
                 ) : null}
 
+                {genericScraped.componentPlan?.sections?.length ? (
+                  <div>
+                    <p className="font-semibold text-slate-700">
+                      Discovered Storyblok components ({genericScraped.componentPlan.sections.length})
+                    </p>
+                    <p className="mt-1 text-slate-400">
+                      From page-content/{genericScraped.componentPlan.filename}
+                      {genericScraped.componentPlan.detectedTemplate !== 'page_content'
+                        ? ` · mapping guided by ${MIGRATION_TEMPLATE_LABELS[genericScraped.componentPlan.detectedTemplate]}`
+                        : ''}
+                    </p>
+                    <ul className="mt-2 space-y-1">
+                      {genericScraped.componentPlan.sections.map(section => (
+                        <li key={section.key} className="rounded border border-slate-200 px-2 py-1">
+                          <span className="font-medium text-slate-700">{section.label}</span>
+                          {' → '}
+                          <code>{section.component}</code>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
                 <div>
-                  <p className="font-semibold text-slate-700">Content sections ({genericScraped.sections?.length ?? 0})</p>
+                  <p className="font-semibold text-slate-700">
+                    Parsed sections ({genericScraped.templateSections?.length ?? genericScraped.sections?.length ?? 0})
+                  </p>
                   <div className="mt-2 space-y-2">
-                    {(genericScraped.sections ?? []).map((section, index) => (
+                    {(genericScraped.templateSections?.length
+                      ? genericScraped.templateSections.map(section => ({
+                          heading: section.headingPrefix || section.key,
+                          bodyText: section.body || section.lead || '',
+                        }))
+                      : (genericScraped.sections ?? []).map(section => ({
+                          heading: section.heading,
+                          bodyText: section.bodyText,
+                        }))
+                    ).map((section, index) => (
                       <div key={`${section.heading}-${index}`} className="rounded border border-slate-200 p-2">
                         {section.heading ? <p className="font-medium text-slate-700">{section.heading}</p> : null}
                         <p className="mt-1 whitespace-pre-wrap text-slate-500">{section.bodyText}</p>

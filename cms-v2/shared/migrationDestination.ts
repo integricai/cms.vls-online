@@ -12,6 +12,11 @@ export function isBlogPageTemplate(template: MigrationTemplate): boolean {
   return template === 'blog';
 }
 
+/** File-based pages whose Storyblok body is discovered from page-content HTML. */
+export function isPageContentTemplate(template: MigrationTemplate): boolean {
+  return template === 'page_content';
+}
+
 /** Storyblok stories for these templates are created under the `courses/` folder. */
 export function usesCoursesFolder(template: MigrationTemplate): boolean {
   return isCoursePageTemplate(template) || template === 'study_notes';

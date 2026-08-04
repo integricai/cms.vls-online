@@ -23,6 +23,7 @@ import {
   upsertPageContentMigrationPage,
 } from '../models/migrationPage';
 import { listPageContentFiles, summarizePageContentFile } from '../services/pageContentFileLoader';
+import { resolvePageContentMigrationTemplate } from '../services/pageContentDynamicMigration';
 import { isMigrationTemplate } from '../services/migrationUrlUtils';
 import { MIGRATION_TEMPLATE_LABELS } from '../../shared/migrationTemplateLabels';
 
@@ -147,11 +148,13 @@ router.post('/page-content/ensure-page', async (req: Request, res: Response, nex
     }
 
     const summary = summarizePageContentFile(filename.trim());
+    const template = resolvePageContentMigrationTemplate(summary.filename);
     const page = await upsertPageContentMigrationPage({
       filename: summary.filename,
       canonicalUrl: summary.canonicalUrl,
       title: summary.title,
       slug: summary.slug,
+      template,
     });
     return res.json({ ok: true, data: page });
   } catch (err) {

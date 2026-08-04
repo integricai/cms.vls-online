@@ -41,6 +41,7 @@ import {
   isBlogPageTemplate,
   isCoursePageTemplate,
   isLevelPageTemplate,
+  isPageContentTemplate,
 } from '../../shared/migrationDestination';
 import { MIGRATION_TEMPLATE_LABELS, TEMPLATES_WITH_FULL_FALLBACK } from '../../shared/migrationTemplateLabels';
 import {
@@ -75,6 +76,14 @@ import { buildBlokFromTemplateSection } from './pageContentBuilder';
 import { buildMergedCourseStoryblokContent, buildHeroRightBlokFromTemplate, mapScrapedCourseIntroduction } from './buildCourseTemplateContent';
 import { hydrateCourseHeroStageImages } from './heroStageImageMigration';
 import { collectLevelPageScrapeWarnings, scrapeLevelPageFile } from './levelPageScraper';
+import {
+  buildDynamicStoryblokContent,
+  buildDynamicStructureBody,
+  looksLikeLevelPage,
+  scrapePageContentFileDynamic,
+  templateReferenceFromPlan,
+} from './pageContentDynamicMigration';
+import { readPageContentFile } from './pageContentFileLoader';
 import {
   buildLevelPageStoryblokContent,
   buildLevelPageStructureBody,
@@ -568,6 +577,16 @@ function normalizeDestinationSlug(raw: string): string {
 }
 
 function templateReferenceSummary(template: MigrationTemplate): TemplateReferenceSummary {
+  if (isPageContentTemplate(template)) {
+    return {
+      template,
+      label: MIGRATION_TEMPLATE_LABELS[template],
+      fileName: '(page-content HTML)',
+      sectionCount: 0,
+      sections: [],
+    };
+  }
+
   const blueprint = getMigrationTemplateBlueprint(template);
   return {
     template,
@@ -587,7 +606,7 @@ async function syncLibrarySafely(
   template: MigrationTemplate,
   warnings: string[],
 ): Promise<{ summary: ComponentLibrarySummary; presetBloksBySection: Record<string, Record<string, unknown>> } | undefined> {
-  if (isBlogPageTemplate(template)) return undefined;
+  if (isBlogPageTemplate(template) || isPageContentTemplate(template)) return undefined;
 
   try {
     const librarySync = await syncTemplateComponentLibrary(config, template);
@@ -1274,16 +1293,31 @@ export async function previewScrapePage(
     if (!filename) {
       throw new CourseMigrationError('Select a page-content file before scraping.', 400);
     }
-    if (page.template !== 'qualification_level_page') {
-      throw new CourseMigrationError('File scraping is only supported for the Qualification Level Page template.', 400);
+
+    const { html } = readPageContentFile(filename);
+
+    if (looksLikeLevelPage(html)) {
+      const scraped = scrapeLevelPageFile(filename);
+      const warnings = collectLevelPageScrapeWarnings(scraped);
+      await saveScrapeResult(pageId, { scraped, warnings });
+      await updateMigrationPageSource(pageId, { sourceType: 'file', pageContentFilename: filename });
+      await updateMigrationPage(pageId, {
+        template: 'qualification_level_page',
+        title: scraped.title || page.title,
+      });
+      const updatedPage = await getMigrationPageById(pageId);
+      return { page: updatedPage ?? page, scraped, warnings };
     }
 
-    const scraped = scrapeLevelPageFile(filename);
-    const warnings = collectLevelPageScrapeWarnings(scraped);
-    await saveScrapeResult(pageId, { scraped, warnings });
+    const dynamic = await scrapePageContentFileDynamic(filename);
+    await saveScrapeResult(pageId, { scraped: dynamic.scraped, warnings: dynamic.warnings });
     await updateMigrationPageSource(pageId, { sourceType: 'file', pageContentFilename: filename });
+    await updateMigrationPage(pageId, {
+      template: dynamic.template,
+      title: dynamic.scraped.title || page.title,
+    });
     const updatedPage = await getMigrationPageById(pageId);
-    return { page: updatedPage ?? page, scraped, warnings };
+    return { page: updatedPage ?? page, scraped: dynamic.scraped, warnings: dynamic.warnings };
   }
 
   if (isCoursePageTemplate(page.template)) {
@@ -1401,11 +1435,86 @@ export async function generatePageStructure(
   }
 
   const template = page.template;
-  const blueprint = getMigrationTemplateBlueprint(template);
-  const templateReference = templateReferenceSummary(template);
+  const scrapedForPlan = scrapedRaw as ScrapedGenericPage;
+  const dynamicPlan = isPageContentTemplate(template) ? scrapedForPlan.componentPlan : undefined;
+  const templateReference = dynamicPlan
+    ? templateReferenceFromPlan(dynamicPlan)
+    : templateReferenceSummary(template);
+  const blueprint = isPageContentTemplate(template)
+    ? null
+    : getMigrationTemplateBlueprint(template);
 
   const config = storyblokConfigFromCredentials(credentials);
   await verifyStoryblokAccess(config);
+
+  if (isPageContentTemplate(template)) {
+    if (!dynamicPlan?.sections?.length) {
+      throw new CourseMigrationError(
+        'No component plan found for this page-content file. Run Preview Scrape again.',
+        400,
+      );
+    }
+
+    const bodyComponents = Array.from(new Set(dynamicPlan.sections.map(section => section.component)));
+    const validation = await validateStoryblokRootBloks(config, 'page', bodyComponents);
+    const missingComponents = [
+      ...validation.missingComponents,
+      ...(!validation.rootExists ? ['page'] : []),
+      ...validation.missingFromWhitelist.map(component => `${component} (not allowed in page body whitelist)`),
+    ];
+    if (missingComponents.length) {
+      return {
+        page,
+        templateReference,
+        missingComponents,
+        unmatchedSections: [],
+        warnings: [
+          `Generate Structure stopped: ${missingComponents.length} component(s) are missing (or not whitelisted) in Storyblok. Create these components/renderers, then try again.`,
+        ],
+      };
+    }
+
+    const destinationSlug = resolveDestinationSlug(page);
+    const body = buildDynamicStructureBody(dynamicPlan);
+    const fullSlug = storyFullSlug(template, destinationSlug);
+
+    const upsert = await upsertStory(config, {
+      name: page.title || destinationSlug,
+      slug: destinationSlug,
+      fullSlug,
+      content: { component: 'page', seo: [], body },
+      publish: false,
+    });
+
+    const warnings = [
+      `Structure built from ${dynamicPlan.sections.length} section(s) discovered in page-content/${dynamicPlan.filename}.`,
+      ...(upsert.created ? [] : ['An existing Storyblok story at this destination was updated with the generated structure.']),
+    ];
+
+    await saveStructureResult(pageId, {
+      structure: { templateReference, componentLibrary: null },
+      draftStoryId: upsert.story.id,
+    });
+
+    const updatedPage = await getMigrationPageById(pageId);
+    return {
+      page: updatedPage ?? page,
+      templateReference,
+      missingComponents: [],
+      unmatchedSections: [],
+      draftStory: {
+        storyId: upsert.story.id,
+        fullSlug: upsert.story.full_slug,
+        previewUrl: upsert.previewUrl,
+        created: upsert.created,
+      },
+      warnings,
+    };
+  }
+
+  if (!blueprint) {
+    throw new CourseMigrationError(`No template blueprint available for "${template}".`, 400);
+  }
 
   if (isBlogPageTemplate(template)) {
     const destinationSlug = resolveDestinationSlug(page);
@@ -1648,7 +1757,18 @@ export async function migratePageContent(
   let content: Record<string, unknown>;
   let parentId: number | undefined;
 
-  if (isBlogPageTemplate(template)) {
+  if (isPageContentTemplate(template)) {
+    const scraped = scrapedRaw as ScrapedGenericPage;
+    const plan = scraped.componentPlan;
+    if (!plan?.sections?.length) {
+      throw new CourseMigrationError(
+        'No component plan found for this page-content file. Run Preview Scrape again.',
+        400,
+      );
+    }
+    warnings.push(...collectGenericWarnings(scraped));
+    content = await buildDynamicStoryblokContent(scraped, plan);
+  } else if (isBlogPageTemplate(template)) {
     const scraped = {
       ...(scrapedRaw as ScrapedBlogPost),
       slug: destinationSlug,
