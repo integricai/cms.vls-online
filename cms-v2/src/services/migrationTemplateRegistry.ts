@@ -634,6 +634,7 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   page_hero_badge: ['title', 'subtitle', 'tone'],
   book_meeting_hero: [
     'free_pill', 'heading_prefix', 'heading_accent', 'lead', 'benefits', 'meta_items',
+    'benefits_heading', 'host_name', 'host_role', 'host_initials', 'trust_text', 'trust_stars', 'alt_links',
     'scheduler_tag', 'scheduler_title', 'scheduler_subtitle', 'scheduler_embed_url',
     'scheduler_placeholder_heading', 'scheduler_placeholder_text', 'scheduler_cta_text', 'scheduler_cta_link',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
@@ -682,7 +683,7 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
   labeled_icon_item: ['icon_key', 'title', 'subtitle'],
-  step_card: ['number', 'title', 'description'],
+  step_card: ['number', 'title', 'description', 'icon_key'],
   article_link_item: ['code', 'title', 'description', 'url'],
   article_topic_group: ['topic_key', 'label', 'color_tone', 'articles'],
   live_session_row: [
@@ -1226,16 +1227,24 @@ export function buildPresetBlokFromSection(
   if (section.component === 'book_meeting_hero') {
     return sanitizeBlokForStoryblok({
       ...base,
-      free_pill: 'Free 15-minute call',
+      free_pill: 'Free consultation',
       heading_prefix: section.sampleHeading || section.label,
       lead: section.sampleDescription || '',
+      benefits_heading: 'What we\'ll cover',
       benefits: [],
       meta_items: [],
-      scheduler_title: 'Book your session',
-      scheduler_subtitle: 'Choose a time that works for you.',
-      scheduler_placeholder_heading: 'Scheduler coming soon',
-      scheduler_placeholder_text: 'Embed your booking calendar link here.',
-      scheduler_cta_text: 'Book now',
+      host_name: 'Your Vertex tutor',
+      host_role: 'Global team · serving students in 88 countries',
+      host_initials: 'VLS',
+      trust_stars: '★★★★★',
+      trust_text: 'Trusted by 50,000+ students since 2007',
+      alt_links: [],
+      scheduler_title: 'Pick a date & time',
+      scheduler_subtitle: 'Free 30-minute consultation with a Vertex tutor',
+      scheduler_embed_url: 'https://calendly.com/vls121/live-handholding-hour',
+      scheduler_placeholder_heading: 'Add your Calendly link',
+      scheduler_placeholder_text: 'Paste your Calendly event URL (or the full inline widget snippet) in the Calendly iframe URL field.',
+      scheduler_cta_text: 'Book your free meeting',
     });
   }
 

@@ -139,14 +139,56 @@ export function parseTutorCard(sectionHtml: string): ScrapedTemplateSection['pro
   return name || bio ? [{ name, role, initials, bio, tags: '', logosNote: '', stats: [] }] : [];
 }
 
+function inferStepIconKey(title: string, index: number): string {
+  const normalized = title.toLowerCase();
+  if (normalized.includes('time') || normalized.includes('pick') || normalized.includes('calendar') || normalized.includes('book')) {
+    return 'calendar';
+  }
+  if (normalized.includes('meet') || normalized.includes('tutor') || normalized.includes('call') || normalized.includes('video')) {
+    return 'video';
+  }
+  if (normalized.includes('start') || normalized.includes('confidence') || normalized.includes('plan') || normalized.includes('enrol')) {
+    return 'check';
+  }
+  return ['calendar', 'video', 'check'][index] || 'checklist';
+}
+
 export function parseStepCards(sectionHtml: string): ScrapedTemplateSection['steps'] {
-  return allMatches(sectionHtml, /<div class="step"[^>]*>[\s\S]*?<span class="num"[^>]*>([\s\S]*?)<\/span>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/gi)
-    .map(match => ({
-      number: stripTemplateTags(match[1]),
-      title: stripTemplateTags(match[2]),
-      description: stripTemplateTags(match[3]),
-    }))
-    .filter(item => item.title);
+  const legacy = allMatches(
+    sectionHtml,
+    /<div class="step"[^>]*>[\s\S]*?<span class="num"[^>]*>([\s\S]*?)<\/span>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/gi,
+  ).map((match, index) => ({
+    number: stripTemplateTags(match[1]),
+    title: stripTemplateTags(match[2]),
+    description: stripTemplateTags(match[3]),
+    iconKey: inferStepIconKey(stripTemplateTags(match[2]), index),
+  }));
+
+  const pageContent = allMatches(
+    sectionHtml,
+    /<div class="step-card"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/gi,
+  ).map((match, index) => {
+    const heading = stripTemplateTags(match[1]);
+    const numberMatch = heading.match(/^(\d+)\.\s*(.*)$/);
+    const number = numberMatch?.[1] ?? String(index + 1).padStart(2, '0');
+    const title = numberMatch?.[2] ?? heading;
+    return {
+      number,
+      title,
+      description: stripTemplateTags(match[2]),
+      iconKey: inferStepIconKey(title, index),
+    };
+  });
+
+  return [...legacy, ...pageContent].filter(item => item.title);
+}
+
+function inferFactIconKey(title: string, index: number): string {
+  const normalized = title.toLowerCase();
+  if (normalized.includes('minute') || normalized.includes('hour') || normalized.includes('duration')) return 'clock';
+  if (normalized.includes('video') || normalized.includes('online') || normalized.includes('call')) return 'video';
+  if (normalized.includes('obligation') || normalized.includes('global') || normalized.includes('world')) return 'globe';
+  return ['clock', 'video', 'globe'][index] || 'check';
 }
 
 export function parseLiveSessions(sectionHtml: string): ScrapedTemplateSection['sessions'] {
@@ -409,18 +451,82 @@ export function parseLegalSectionBlock(sectionHtml: string, anchorId = ''): Part
 }
 
 export function parseBookMeetingHero(sectionHtml: string): Partial<ScrapedTemplateSection> {
+  const factItems = allMatches(sectionHtml, /<span class="fact"[^>]*>([\s\S]*?)<\/span>/gi)
+    .map((match, index) => {
+      const title = stripTemplateTags(match[1].replace(/<svg[\s\S]*?<\/svg>/gi, ''));
+      return { title, subtitle: '', iconKey: inferFactIconKey(title, index) };
+    })
+    .filter(item => item.title);
+
+  const meetMetaItems = allMatches(sectionHtml, /<div class="meet-meta"[^>]*>[\s\S]*?<span>([\s\S]*?)<\/span>/gi)
+    .map((match, index) => {
+      const title = stripTemplateTags(match[1]);
+      return { title, subtitle: '', iconKey: inferFactIconKey(title, index) };
+    })
+    .filter(item => item.title);
+
+  const coverList = sectionHtml.match(/<div class="cover"[^>]*>[\s\S]*?<ul[^>]*>([\s\S]*?)<\/ul>/i)?.[1] ?? '';
+  const coverItems = allMatches(coverList, /<li[^>]*>([\s\S]*?)<\/li>/gi)
+    .map(match => ({
+      title: stripTemplateTags(match[1].replace(/<span class="ck"[\s\S]*?<\/span>/gi, '')),
+      subtitle: '',
+      iconKey: 'check',
+    }))
+    .filter(item => item.title);
+
+  const legacyBenefits = parseLabeledItems(sectionHtml, 'bn').map(item => ({
+    ...item,
+    iconKey: item.iconKey || 'check',
+  }));
+
+  const altBlock = sectionHtml.match(/<div class="alt"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '';
+  const altCards = allMatches(altBlock, /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)
+    .map(match => ({
+      title: stripTemplateTags(match[2].replace(/<svg[\s\S]*?<\/svg>/gi, '')),
+      detail: '',
+      linkText: stripTemplateTags(match[2].replace(/<svg[\s\S]*?<\/svg>/gi, '')),
+      linkUrl: match[1],
+    }))
+    .filter(item => item.title && item.linkUrl);
+
+  const hostName = firstMatch(sectionHtml, /<div class="h-name"[^>]*>([\s\S]*?)<\/div>/i);
+  const hostRole = firstMatch(sectionHtml, /<div class="h-role"[^>]*>([\s\S]*?)<\/div>/i);
+  const hostInitials = firstMatch(sectionHtml, /<span class="h-av"[^>]*>([\s\S]*?)<\/span>/i);
+
   return {
-    freePill: firstMatch(sectionHtml, /<span class="free-pill"[^>]*>[\s\S]*?<\/span>\s*([^<]+)/i)
-      || firstMatch(sectionHtml, /<span class="free-pill"[^>]*>([\s\S]*?)<\/span>/i),
-    labeledItems: parseLabeledItems(sectionHtml, 'bn'),
-    legalMetaItems: allMatches(sectionHtml, /<div class="meet-meta"[^>]*>[\s\S]*?<span>([\s\S]*?)<\/span>/gi)
-      .map(match => ({ title: stripTemplateTags(match[1]), subtitle: '' }))
-      .filter(item => item.title),
-    schedulerTitle: firstMatch(sectionHtml, /<div class="book-card"[^>]*>[\s\S]*?<h2[^>]*>([\s\S]*?)<\/h2>/i),
-    schedulerSubtitle: firstMatch(sectionHtml, /<div class="book-card"[^>]*>[\s\S]*?<h2[^>]*>[\s\S]*?<\/h2>\s*<p[^>]*>([\s\S]*?)<\/p>/i),
-    schedulerPlaceholderHeading: firstMatch(sectionHtml, /<div class="scheduler-placeholder"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>/i),
-    schedulerPlaceholderText: firstMatch(sectionHtml, /<div class="scheduler-placeholder"[^>]*>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/i),
-    schedulerCtaText: firstMatch(sectionHtml, /<div class="scheduler-placeholder"[^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i),
+    freePill: (() => {
+      const pillMatch = sectionHtml.match(/<span class="(?:free-)?pill"[^>]*>([\s\S]*?)<\/span>\s*(?=<h1|<p|<\/div|$)/i)
+        ?? sectionHtml.match(/<span class="(?:free-)?pill"[^>]*>((?:[^<]|<span[\s\S]*?<\/span>)*)<\/span>/i);
+      return stripTemplateTags(pillMatch?.[1] ?? '');
+    })(),
+    labeledItems: coverItems.length ? coverItems : legacyBenefits,
+    legalMetaItems: factItems.length ? factItems : meetMetaItems,
+    checklistHeading: firstMatch(sectionHtml, /<div class="cover"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>/i)
+      || 'What we\'ll cover',
+    contactCards: altCards,
+    sideCard: hostName || hostRole ? {
+      tag: '',
+      title: '',
+      quote: '',
+      authorName: hostName,
+      authorRole: hostRole,
+      authorInitials: hostInitials || 'VLS',
+    } : null,
+    badges: (() => {
+      const trust = firstMatch(sectionHtml, /<div class="trust"[^>]*>([\s\S]*?)<\/div>/i);
+      return trust ? [{ title: trust.replace(/★+/g, '').trim(), subtitle: trust.includes('★') ? '★★★★★' : '' }] : [];
+    })(),
+    schedulerTitle: firstMatch(sectionHtml, /<div class="sched-head"[^>]*>[\s\S]*?<h2[^>]*>([\s\S]*?)<\/h2>/i)
+      || firstMatch(sectionHtml, /<div class="book-card"[^>]*>[\s\S]*?<h2[^>]*>([\s\S]*?)<\/h2>/i)
+      || 'Pick a date & time',
+    schedulerSubtitle: firstMatch(sectionHtml, /<div class="book-card"[^>]*>[\s\S]*?<h2[^>]*>[\s\S]*?<\/h2>\s*<p[^>]*>([\s\S]*?)<\/p>/i)
+      || 'Free 30-minute consultation with a Vertex tutor',
+    schedulerPlaceholderHeading: firstMatch(sectionHtml, /<div class="scheduler-placeholder"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>/i)
+      || 'Calendar loading',
+    schedulerPlaceholderText: firstMatch(sectionHtml, /<div class="scheduler-placeholder"[^>]*>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/i)
+      || 'Paste your Calendly embed URL in Storyblok to show the booking calendar here.',
+    schedulerCtaText: firstMatch(sectionHtml, /<div class="scheduler-placeholder"[^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i)
+      || 'Book your free meeting',
     schedulerCtaLink: sectionHtml.match(/<div class="scheduler-placeholder"[^>]*>[\s\S]*?<a[^>]+href=["']([^"']+)["']/i)?.[1] ?? '',
   };
 }

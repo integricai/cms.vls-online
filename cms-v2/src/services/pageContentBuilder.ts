@@ -459,6 +459,7 @@ export function buildBlokFromTemplateSection(
           number: step.number,
           title: step.title,
           description: step.description,
+          icon_key: step.iconKey || '',
         }))
       : undefined;
 
@@ -564,6 +565,7 @@ export function buildBlokFromTemplateSection(
       ? extracted.labeledItems.map(item => ({
           _uid: uid(),
           component: 'labeled_icon_item',
+          icon_key: item.iconKey || 'check',
           title: item.title,
           subtitle: item.subtitle,
         }))
@@ -572,10 +574,23 @@ export function buildBlokFromTemplateSection(
       ? extracted.legalMetaItems.map(item => ({
           _uid: uid(),
           component: 'labeled_icon_item',
+          icon_key: item.iconKey || '',
           title: item.title,
           subtitle: item.subtitle,
         }))
       : undefined;
+    const altLinks = hasItems(extracted?.contactCards)
+      ? extracted.contactCards.map(card => ({
+          _uid: uid(),
+          component: 'contact_card',
+          title: card.title,
+          detail: card.detail,
+          link_text: card.linkText || card.title,
+          ...(storyblokLink(card.linkUrl) ? { link: storyblokLink(card.linkUrl) } : {}),
+          icon_key: /whatsapp|wa\.me/i.test(`${card.title} ${card.linkUrl}`) ? 'chat' : 'mail',
+        }))
+      : undefined;
+    const trustBadge = extracted?.badges?.[0];
 
     return sanitizeBlokForStoryblok({
       ...base,
@@ -583,14 +598,30 @@ export function buildBlokFromTemplateSection(
       heading_prefix: pickText(extracted?.headingPrefix, section.sampleHeading),
       heading_accent: pickText(extracted?.headingAccent),
       lead: pickText(extracted?.lead, section.sampleDescription, scraped.metaDescription),
-      scheduler_title: pickText(extracted?.schedulerTitle, 'Pick a time that suits you'),
-      scheduler_subtitle: pickText(extracted?.schedulerSubtitle),
-      scheduler_placeholder_heading: pickText(extracted?.schedulerPlaceholderHeading),
-      scheduler_placeholder_text: pickText(extracted?.schedulerPlaceholderText),
+      benefits_heading: pickText(extracted?.checklistHeading, 'What we\'ll cover'),
+      host_name: pickText(extracted?.sideCard?.authorName),
+      host_role: pickText(extracted?.sideCard?.authorRole),
+      host_initials: pickText(extracted?.sideCard?.authorInitials, 'VLS'),
+      trust_text: pickText(trustBadge?.title),
+      trust_stars: pickText(trustBadge?.subtitle, trustBadge?.title ? '★★★★★' : ''),
+      scheduler_title: pickText(extracted?.schedulerTitle, 'Pick a date & time'),
+      scheduler_subtitle: pickText(extracted?.schedulerSubtitle, 'Free 30-minute consultation with a Vertex tutor'),
+      scheduler_embed_url: pickText(
+        extracted?.schedulerCtaLink && /calendly\.com/i.test(extracted.schedulerCtaLink)
+          ? extracted.schedulerCtaLink
+          : '',
+        'https://calendly.com/vls121/live-handholding-hour',
+      ),
+      scheduler_placeholder_heading: pickText(extracted?.schedulerPlaceholderHeading, 'Add your Calendly link'),
+      scheduler_placeholder_text: pickText(
+        extracted?.schedulerPlaceholderText,
+        'Paste your Calendly event URL (or the full inline widget snippet) in the Calendly iframe URL field.',
+      ),
       scheduler_cta_text: pickText(extracted?.schedulerCtaText, 'Book your free meeting'),
       ...(storyblokLink(extracted?.schedulerCtaLink) ? { scheduler_cta_link: storyblokLink(extracted?.schedulerCtaLink) } : {}),
       ...(benefits ? { benefits } : {}),
       ...(metaItems ? { meta_items: metaItems } : {}),
+      ...(altLinks ? { alt_links: altLinks } : {}),
     });
   }
 

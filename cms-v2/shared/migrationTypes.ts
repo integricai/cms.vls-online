@@ -208,7 +208,7 @@ export interface ScrapedTemplateSection {
     logosNote: string;
     stats: Array<{ value: string; label: string }>;
   }>;
-  steps: Array<{ number: string; title: string; description: string }>;
+  steps: Array<{ number: string; title: string; description: string; iconKey?: string }>;
   sessions: Array<{
     tag: string;
     mode: string;
@@ -241,9 +241,9 @@ export interface ScrapedTemplateSection {
     tone: string;
     papers: Array<{ code: string; name: string }>;
   }>;
-  labeledItems: Array<{ title: string; subtitle: string }>;
+  labeledItems: Array<{ title: string; subtitle: string; iconKey?: string }>;
   legalTabs: Array<{ label: string; link: string; active: boolean }>;
-  legalMetaItems: Array<{ title: string; subtitle: string }>;
+  legalMetaItems: Array<{ title: string; subtitle: string; iconKey?: string }>;
   legalTocItems: Array<{ label: string; anchorId: string; number: string }>;
   legalCalloutHeading: string;
   legalTocTitle: string;

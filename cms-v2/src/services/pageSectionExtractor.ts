@@ -199,7 +199,7 @@ function enrichSection(key: string, sectionHtml: string, base: ScrapedTemplateSe
   if (sectionHtml.includes('tutor-card')) {
     enriched.profiles = parseTutorCard(sectionHtml);
   }
-  if (sectionHtml.includes('class="step"')) {
+  if (sectionHtml.includes('class="step"') || sectionHtml.includes('class="step-card"') || sectionHtml.includes('steps-grid')) {
     enriched.steps = parseStepCards(sectionHtml);
   }
   if (sectionHtml.includes('class="sess"')) {
@@ -239,7 +239,13 @@ function enrichSection(key: string, sectionHtml: string, base: ScrapedTemplateSe
   ) {
     Object.assign(enriched, parseLegalSectionBlock(sectionHtml, enriched.anchorId || anchorId));
   }
-  if (key.includes('hero-booking') || sectionHtml.includes('book-card')) {
+  if (
+    key.includes('hero-booking')
+    || key.includes('booking')
+    || sectionHtml.includes('book-card')
+    || sectionHtml.includes('class="facts"')
+    || (sectionHtml.includes('class="book"') && sectionHtml.includes('class="summary"'))
+  ) {
     Object.assign(enriched, parseBookMeetingHero(sectionHtml));
   }
   if (sectionHtml.includes('live-card') && sectionHtml.includes('hero-ticks')) {
