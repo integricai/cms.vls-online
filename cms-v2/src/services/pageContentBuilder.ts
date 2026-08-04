@@ -463,13 +463,17 @@ export function buildBlokFromTemplateSection(
         }))
       : undefined;
 
+    // When step cards exist, omit description entirely — dumping section body
+    // produced the "1. Pick a time Choose a slot..." mash-up under the heading.
     return sanitizeBlokForStoryblok({
       ...base,
       eyebrow: pickText(extracted?.eyebrow, section.label),
       heading_prefix: pickText(extracted?.headingPrefix, section.sampleHeading),
       heading_accent: pickText(extracted?.headingAccent),
-      description: pickText(extracted?.lead, extracted?.body, section.sampleDescription),
-      ...(steps ? { steps } : {}),
+      background_color: '#FFFFFF',
+      ...(steps
+        ? { steps }
+        : { description: pickText(extracted?.lead, section.sampleDescription) }),
     });
   }
 
@@ -595,15 +599,15 @@ export function buildBlokFromTemplateSection(
     return sanitizeBlokForStoryblok({
       ...base,
       free_pill: pickText(extracted?.freePill, 'Free consultation'),
-      heading_prefix: pickText(extracted?.headingPrefix, section.sampleHeading),
-      heading_accent: pickText(extracted?.headingAccent),
+      heading_prefix: pickText(extracted?.headingPrefix, section.sampleHeading, 'Not sure where to start?'),
+      heading_accent: pickText(extracted?.headingAccent, "Let's talk."),
       lead: pickText(extracted?.lead, section.sampleDescription, scraped.metaDescription),
       benefits_heading: pickText(extracted?.checklistHeading, 'What we\'ll cover'),
-      host_name: pickText(extracted?.sideCard?.authorName),
-      host_role: pickText(extracted?.sideCard?.authorRole),
+      host_name: pickText(extracted?.sideCard?.authorName, 'Your Vertex tutor'),
+      host_role: pickText(extracted?.sideCard?.authorRole, 'Global team · serving students in 88 countries'),
       host_initials: pickText(extracted?.sideCard?.authorInitials, 'VLS'),
-      trust_text: pickText(trustBadge?.title),
-      trust_stars: pickText(trustBadge?.subtitle, trustBadge?.title ? '★★★★★' : ''),
+      trust_text: pickText(trustBadge?.title, 'Trusted by 50,000+ students since 2007'),
+      trust_stars: pickText(trustBadge?.subtitle, '★★★★★'),
       scheduler_title: pickText(extracted?.schedulerTitle, 'Pick a date & time'),
       scheduler_subtitle: pickText(extracted?.schedulerSubtitle, 'Free 30-minute consultation with a Vertex tutor'),
       scheduler_embed_url: pickText(
@@ -618,6 +622,10 @@ export function buildBlokFromTemplateSection(
         'Paste your Calendly event URL (or the full inline widget snippet) in the Calendly iframe URL field.',
       ),
       scheduler_cta_text: pickText(extracted?.schedulerCtaText, 'Book your free meeting'),
+      // Solid white from structure styles was wiping the design gradient — keep the light band.
+      background_color: '#F2F6FF',
+      padding_top: 40,
+      padding_bottom: 70,
       ...(storyblokLink(extracted?.schedulerCtaLink) ? { scheduler_cta_link: storyblokLink(extracted?.schedulerCtaLink) } : {}),
       ...(benefits ? { benefits } : {}),
       ...(metaItems ? { meta_items: metaItems } : {}),
@@ -963,9 +971,10 @@ export function buildBlokFromTemplateSection(
       ...base,
       title: pickText(extracted.headingPrefix, section.sampleHeading, 'Frequently Asked Questions'),
       icon: '❔',
-      eyebrow: pickText(extracted.eyebrow, section.label),
-      heading_prefix: pickText(extracted.headingPrefix, section.sampleHeading),
+      eyebrow: pickText(extracted.eyebrow, section.label, 'Good to know'),
+      heading_prefix: pickText(extracted.headingPrefix, section.sampleHeading, 'Booking questions, answered.'),
       heading_accent: pickText(extracted.headingAccent),
+      background_color: '#F2F6FF',
       items: faqItems.length
         ? faqItems.map(item => ({
             _uid: uid(),

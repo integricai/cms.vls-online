@@ -218,19 +218,37 @@ export function buildComponentPlanFromHtml(
   };
 }
 
+function planSectionBackground(component: string, classes: string[]): string {
+  const joined = classes.join(' ').toLowerCase();
+  if (
+    component === 'book_meeting_hero'
+    || component === 'faq_section'
+    || classes.includes('band')
+    || classes.includes('cta-band')
+    || classes.includes('faq-band')
+    || classes.includes('book')
+    || /\bband\b/.test(joined)
+  ) {
+    return '#F2F6FF';
+  }
+  return '#FFFFFF';
+}
+
 export function blueprintFromComponentPlan(plan: PageContentComponentPlan): MigrationTemplateBlueprint {
   const sections: TemplateSectionBlueprint[] = plan.sections.map(section => ({
     key: section.key,
     label: section.label,
     component: section.component,
     classes: section.classes,
-    isBand: section.classes.includes('band'),
+    isBand: section.classes.includes('band')
+      || section.classes.includes('faq-band')
+      || section.classes.includes('book')
+      || section.component === 'book_meeting_hero'
+      || section.component === 'faq_section',
     styles: {
-      background_color: section.classes.includes('band') || section.classes.includes('cta-band')
-        ? '#F2F6FF'
-        : '#FFFFFF',
-      padding_top: 64,
-      padding_bottom: 64,
+      background_color: planSectionBackground(section.component, section.classes),
+      padding_top: section.component === 'book_meeting_hero' ? 40 : 64,
+      padding_bottom: section.component === 'book_meeting_hero' ? 70 : 64,
     },
     sampleHeading: section.sampleHeading,
     sampleDescription: section.sampleDescription,
@@ -336,12 +354,17 @@ export async function buildDynamicStoryblokContent(
 
     let blok: Record<string, unknown> | null = null;
     if (section.component === 'faq_section' && scraped.faq?.items?.length) {
+      const faqItems = (extracted?.faqItems?.length ? extracted.faqItems : scraped.faq.items);
       blok = {
         _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
         component: 'faq_section',
         title: scraped.faq.title || 'Frequently Asked Questions',
         icon: scraped.faq.icon || '❔',
-        items: scraped.faq.items.map(item => ({
+        eyebrow: extracted?.eyebrow || section.label || 'Good to know',
+        heading_prefix: extracted?.headingPrefix || section.sampleHeading || 'Booking questions, answered.',
+        heading_accent: extracted?.headingAccent || '',
+        background_color: '#F2F6FF',
+        items: faqItems.map(item => ({
           _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
           component: 'faq_item',
           answer_type: 'paragraph',

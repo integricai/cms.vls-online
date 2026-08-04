@@ -315,6 +315,7 @@ function parseSectionHtml(key: string, sectionHtml: string, anchorId = ''): Scra
     || firstMatch(sectionHtml, /<p class="vls-eyebrow"[^>]*>([\s\S]*?)<\/p>/i);
   const lead = firstMatch(sectionHtml, /<p[^>]*class="[^"]*hero-lead[^"]*"[^>]*>([\s\S]*?)<\/p>/i)
     || firstMatch(sectionHtml, /<p[^>]*class="[^"]*tpl-lead[^"]*"[^>]*>([\s\S]*?)<\/p>/i)
+    || firstMatch(sectionHtml, /<p[^>]*class="[^"]*\blead\b[^"]*"[^>]*>([\s\S]*?)<\/p>/i)
     || firstMatch(sectionHtml, /<div class="sec-head"[^>]*>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/i);
   const sublead = firstMatch(sectionHtml, /<p class="hero-sub"[^>]*>([\s\S]*?)<\/p>/i);
   const storyColMatch = sectionHtml.match(/<div class="col"[^>]*>([\s\S]*?)<\/div>/i);

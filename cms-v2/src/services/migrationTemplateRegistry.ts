@@ -323,6 +323,22 @@ function stylesForSection(
     };
   }
 
+  if (component === 'book_meeting_hero') {
+    return {
+      background_color: '#F2F6FF',
+      padding_top: 40,
+      padding_bottom: 70,
+    };
+  }
+
+  if (component === 'faq_section' && (classes.includes('faq-band') || classes.some(c => c.includes('band')))) {
+    return {
+      background_color: '#F2F6FF',
+      padding_top: 64,
+      padding_bottom: 64,
+    };
+  }
+
   if (component === 'legal_article') {
     return {
       background_color: '#FFFFFF',
@@ -983,19 +999,53 @@ export function buildPresetBlokFromSection(
   }
 
   if (section.component === 'faq_section') {
+    const isBookMeetingFaq = /book|booking|meeting|consultation/i.test(
+      `${section.key} ${section.label} ${section.sampleHeading}`,
+    );
+    const faqItem = (question: string, answer_paragraph: string) => ({
+      _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+      component: 'faq_item' as const,
+      answer_type: 'paragraph',
+      question,
+      answer_paragraph,
+    });
     return sanitizeBlokForStoryblok({
       ...base,
       title: section.sampleHeading || 'Frequently Asked Questions',
       icon: '❔',
-      eyebrow: section.label,
-      heading_prefix: section.sampleHeading || section.label,
-      items: [{
-        _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
-        component: 'faq_item',
-        answer_type: 'paragraph',
-        question: 'Add your first question here',
-        answer_paragraph: section.sampleDescription || 'Content managers can update FAQ answers after migration.',
-      }],
+      eyebrow: isBookMeetingFaq ? 'Good to know' : section.label,
+      heading_prefix: isBookMeetingFaq
+        ? (section.sampleHeading || 'Booking questions, answered.')
+        : (section.sampleHeading || section.label),
+      heading_accent: '',
+      background_color: isBookMeetingFaq ? '#F2F6FF' : (base.background_color ?? '#FFFFFF'),
+      items: isBookMeetingFaq
+        ? [
+            faqItem(
+              'Is the consultation really free?',
+              'Yes — completely free and with no obligation. It\'s a genuine advisory conversation to help you choose the right path. You only enrol if and when you decide it\'s right for you.',
+            ),
+            faqItem(
+              'How long is the meeting and where does it take place?',
+              'It\'s a 30-minute online video call. Once you book, we\'ll email you a confirmation with a calendar invite and a link to join — no downloads or special software needed.',
+            ),
+            faqItem(
+              'Which qualification should I choose?',
+              'That\'s exactly what the call is for. Whether you\'re weighing up ACCA, CIMA, CMA or CIA, your tutor will look at your background and career goals and recommend the pathway — and starting point — that fits you best.',
+            ),
+            faqItem(
+              'Can I reschedule or cancel?',
+              'Of course. Your confirmation email includes links to reschedule or cancel at any time, so you\'re never locked in. If a slot doesn\'t suit you, just pick another.',
+            ),
+            faqItem(
+              'I\'m in a different timezone — is that a problem?',
+              'Not at all. Our global team serves students across 88 countries, and the calendar shows times in your local timezone automatically. Prefer to message first? Reach us on WhatsApp any time.',
+            ),
+          ]
+        : [faqItem(
+            'Add your first question here',
+            section.sampleDescription || 'Content managers can update FAQ answers after migration.',
+          )],
     });
   }
 
@@ -1225,36 +1275,90 @@ export function buildPresetBlokFromSection(
   }
 
   if (section.component === 'book_meeting_hero') {
+    const item = (title: string, icon_key: string) => ({
+      _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+      component: 'labeled_icon_item' as const,
+      icon_key,
+      title,
+      subtitle: '',
+    });
     return sanitizeBlokForStoryblok({
       ...base,
       free_pill: 'Free consultation',
-      heading_prefix: section.sampleHeading || section.label,
-      lead: section.sampleDescription || '',
+      heading_prefix: 'Not sure where to start?',
+      heading_accent: "Let's talk.",
+      lead: section.sampleDescription
+        || 'Book a free 30-minute online meeting with a Vertex tutor. We\'ll help you find the right course, understand the qualification pathway, and answer any questions before you enrol.',
       benefits_heading: 'What we\'ll cover',
-      benefits: [],
-      meta_items: [],
+      benefits: [
+        item('A personalised course recommendation based on your goals', 'check'),
+        item('Qualification pathway advice — ACCA, CIMA or CMA', 'check'),
+        item('Exam strategy & guidance from an expert tutor', 'check'),
+        item('Honest answers — just a helpful conversation, no pressure', 'check'),
+      ],
+      meta_items: [
+        item('30 minutes', 'clock'),
+        item('Online video call', 'video'),
+        item('No obligation', 'globe'),
+      ],
       host_name: 'Your Vertex tutor',
       host_role: 'Global team · serving students in 88 countries',
       host_initials: 'VLS',
       trust_stars: '★★★★★',
       trust_text: 'Trusted by 50,000+ students since 2007',
-      alt_links: [],
+      alt_links: [
+        {
+          _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+          component: 'contact_card',
+          title: 'Chat on WhatsApp',
+          detail: '',
+          link_text: 'Chat on WhatsApp',
+          icon_key: 'chat',
+          link: { id: '', url: 'https://wa.me/447446426261', linktype: 'url', fieldtype: 'multilink', cached_url: 'https://wa.me/447446426261' },
+        },
+        {
+          _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+          component: 'contact_card',
+          title: 'Email us',
+          detail: '',
+          link_text: 'Email us',
+          icon_key: 'mail',
+          link: { id: '', url: 'mailto:hello@vls-online.com', linktype: 'url', fieldtype: 'multilink', cached_url: 'mailto:hello@vls-online.com' },
+        },
+      ],
       scheduler_title: 'Pick a date & time',
       scheduler_subtitle: 'Free 30-minute consultation with a Vertex tutor',
       scheduler_embed_url: 'https://calendly.com/vls121/live-handholding-hour',
       scheduler_placeholder_heading: 'Add your Calendly link',
       scheduler_placeholder_text: 'Paste your Calendly event URL (or the full inline widget snippet) in the Calendly iframe URL field.',
       scheduler_cta_text: 'Book your free meeting',
+      background_color: '#F2F6FF',
+      padding_top: 40,
+      padding_bottom: 70,
     });
   }
 
   if (section.component === 'step_cards') {
+    const step = (number: string, title: string, description: string, icon_key: string) => ({
+      _uid: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+      component: 'step_card' as const,
+      number,
+      title,
+      description,
+      icon_key,
+    });
     return sanitizeBlokForStoryblok({
       ...base,
-      eyebrow: section.label,
-      heading_prefix: section.sampleHeading || section.label,
-      description: section.sampleDescription || '',
-      steps: [],
+      eyebrow: 'How it works',
+      heading_prefix: section.sampleHeading || 'From booking to breakthrough in three steps.',
+      heading_accent: '',
+      description: '',
+      background_color: '#FFFFFF',
+      steps: [
+        step('1', 'Pick a time', 'Choose a slot that suits you from the calendar. It takes less than a minute and there\'s no cost.', 'calendar'),
+        step('2', 'Meet your tutor', 'Join a friendly 30-minute video call. Tell us your goals and we\'ll map out the right pathway for you.', 'video'),
+        step('3', 'Start with confidence', 'Leave with a clear plan and a personalised course recommendation — enrol when you\'re ready, not before.', 'check'),
+      ],
     });
   }
 
