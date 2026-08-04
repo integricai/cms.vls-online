@@ -33,6 +33,10 @@ export async function createStripeCheckoutSession(input: {
 
   const params = new URLSearchParams();
   params.append('mode', 'payment');
+  // Explicit types so PayPal is always offered (Dashboard dynamic methods can omit it).
+  params.append('payment_method_types[]', 'card');
+  params.append('payment_method_types[]', 'paypal');
+  params.append('payment_method_types[]', 'klarna');
   params.append('success_url', `${siteUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`);
   params.append('cancel_url', `${siteUrl}/payment-cancelled`);
   params.append('billing_address_collection', 'required');
