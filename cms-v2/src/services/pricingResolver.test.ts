@@ -82,7 +82,7 @@ run('throws when no price matches duration', () => {
   );
 });
 
-run('uses discounted price as effective amount', () => {
+run('uses list amount as effective amount (ignores CMS campaign %)', () => {
   const resolved = resolvePriceFromCandidates([
     price({
       id: 1,
@@ -93,7 +93,7 @@ run('uses discounted price as effective amount', () => {
       isDefault: true,
     }),
   ], {});
-  assert.strictEqual(resolved.effectiveAmount, 135);
+  assert.strictEqual(resolved.effectiveAmount, 150);
 });
 
 run('computes discounted price from percent', () => {

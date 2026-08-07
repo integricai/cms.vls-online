@@ -26,7 +26,6 @@ import {
   detectClientIpFromRequest,
   detectCountryFromRequest,
 } from '../services/geoDetection';
-import { effectiveAmount } from '../services/courseGeoPriceValidation';
 import {
   applyParityDealsToResolved,
   PricingResolutionError,
@@ -317,11 +316,11 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
         if (!price || price.courseId !== courseId || !price.isActive) {
           return res.status(404).json({ ok: false, error: 'Course price not found or inactive' });
         }
-        const campaignAmount = effectiveAmount(price.amount, price.discountedPrice);
+        // List amount only — CMS campaign % ignored; Evendeals applied below.
         const base = {
           price,
           matchReason: 'explicit' as const,
-          effectiveAmount: campaignAmount,
+          effectiveAmount: price.amount,
           detectedCountryCode: geo.countryCode,
           geoPricingApplied: false,
           geoRegionCode: null,
@@ -362,8 +361,8 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       countryCode: quotedCountryCode,
     });
 
-    const discountPercent = computeDiscountPercent(resolved.price.amount, resolved.effectiveAmount)
-      ?? resolved.price.discountPercent;
+    // Record only the Evendeals (or other applied) cut vs list — ignore CMS campaign %.
+    const discountPercent = computeDiscountPercent(resolved.price.amount, resolved.effectiveAmount);
 
     const order = await createPaymentOrder({
       paymentOptionId: null,

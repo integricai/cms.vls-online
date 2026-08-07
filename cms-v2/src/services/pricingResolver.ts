@@ -1,6 +1,5 @@
 import type { CourseGeoPrice, ResolvedCoursePrice } from '../../shared/types';
 import { listActiveGeoPricesForCourse } from '../models/courseGeoPrice';
-import { effectiveAmount } from './courseGeoPriceValidation';
 import { applyEvenDealsPricing } from './evenDeals';
 
 export class PricingResolutionError extends Error {
@@ -25,11 +24,11 @@ function toResolved(
   matchReason: ResolvedCoursePrice['matchReason'],
   detectedCountryCode: string | null,
 ): ResolvedCoursePrice {
-  const campaignAmount = effectiveAmount(price.amount, price.discountedPrice);
+  // List amount only — CMS campaign % is ignored; Evendeals applied via applyParityDealsToResolved.
   return {
     price,
     matchReason,
-    effectiveAmount: campaignAmount,
+    effectiveAmount: price.amount,
     detectedCountryCode,
     geoPricingApplied: false,
     geoRegionCode: null,
@@ -38,7 +37,7 @@ function toResolved(
 }
 
 /**
- * Resolve the best matching active USD price for a course (CMS base / campaign only).
+ * Resolve the best matching active USD price for a course (list amount only).
  * Evendeals regional discounts are applied separately via applyParityDealsToResolved.
  *
  * Match order:

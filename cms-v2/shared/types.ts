@@ -201,7 +201,7 @@ export interface CourseGeoPrice {
   compareAtAmount: number | null;
   discountPercent: number | null;
   discountedPrice: number | null;
-  /** Final USD price fed to ParityDeals: discountedPrice ?? amount */
+  /** CMS campaign effective (discountedPrice ?? amount). Checkout/display use list amount + Evendeals only. */
   effectiveAmount: number;
   isDefault: boolean;
   isActive: boolean;
@@ -537,12 +537,12 @@ export interface SaleAcceptPreview {
 export interface ResolvedCoursePrice {
   price: CourseGeoPrice;
   matchReason: 'duration' | 'default' | 'explicit';
-  /** Final USD price for checkout (after campaign + optional ParityDeals discount) */
+  /** Final USD price for checkout (list amount after optional Evendeals discount) */
   effectiveAmount: number;
   detectedCountryCode: string | null;
-  /** True when ParityDeals localized discount was applied (field name kept for API compat). */
+  /** True when Evendeals localized discount was applied (field name kept for API compat). */
   geoPricingApplied: boolean;
-  /** Quoted ISO country from ParityDeals when regional pricing applied. */
+  /** Quoted ISO country from Evendeals when regional pricing applied. */
   geoRegionCode: string | null;
   geoDiscountPercent: number | null;
 }

@@ -145,7 +145,7 @@ await run('months until September from August is 1', () => {
   assert.strictEqual(monthsUntilExamSession(9, 2026, new Date('2026-08-15T12:00:00')), 1);
 });
 
-await run('FA1 with ACCA cutoff 12 on Aug 12: Sep late 50% + Dec', async () => {
+await run('FA1 with ACCA cutoff 12 on Aug 12: Sep + Dec use list amount (no CMS/late discount)', async () => {
   const result = await buildCourseDisplayPricing({
     zenlerCourseId: '71086',
     courseSlug: 'fa1',
@@ -179,19 +179,20 @@ await run('FA1 with ACCA cutoff 12 on Aug 12: Sep late 50% + Dec', async () => {
   const session1 = result!.plans[0]!;
   assert.strictEqual(session1.planName, 'Three months');
   assert.strictEqual(session1.sessionTitle, 'September 2026 session');
-  assert.strictEqual(session1.effectiveAmount, 48);
-  assert.strictEqual(session1.compareAt, 96);
-  assert.strictEqual(session1.lateEnrollmentDiscount, true);
+  assert.strictEqual(session1.effectiveAmount, 120);
+  assert.strictEqual(session1.compareAt, null);
+  assert.strictEqual(session1.discountPercent, null);
+  assert.strictEqual(session1.lateEnrollmentDiscount, false);
 
   const session2 = result!.plans[1]!;
   assert.strictEqual(session2.planName, 'Six months');
   assert.strictEqual(session2.sessionTitle, 'December 2026 session');
-  assert.strictEqual(session2.effectiveAmount, 144);
+  assert.strictEqual(session2.effectiveAmount, 180);
   assert.strictEqual(session2.lateEnrollmentDiscount, false);
   assert.strictEqual(session2.badge, 'Best value');
 });
 
-await run('FA1 with ACCA cutoff 12 on Aug 15: Dec + Mar, no late discount', async () => {
+await run('FA1 with ACCA cutoff 12 on Aug 15: Dec + Mar, list amount only', async () => {
   const result = await buildCourseDisplayPricing({
     zenlerCourseId: '71086',
     courseSlug: 'fa1',
@@ -222,7 +223,7 @@ await run('FA1 with ACCA cutoff 12 on Aug 15: Dec + Mar, no late discount', asyn
   assert.ok(result);
   const session1 = result!.plans[0]!;
   assert.strictEqual(session1.sessionTitle, 'December 2026 session');
-  assert.strictEqual(session1.effectiveAmount, 96);
+  assert.strictEqual(session1.effectiveAmount, 120);
   assert.strictEqual(session1.lateEnrollmentDiscount, false);
 
   const session2 = result!.plans[1]!;
@@ -310,7 +311,7 @@ await run('ACCA empty allowlist still applies sessions to all courses', async ()
   assert.strictEqual(result!.plans[1]!.sessionTitle, 'December 2026 session');
 });
 
-await run('single plan has no session labels or late discount', async () => {
+await run('single plan uses list amount (ignores CMS campaign %)', async () => {
   const result = await buildCourseDisplayPricing({
     zenlerCourseId: '1',
     courseSlug: 'cima',
@@ -331,7 +332,8 @@ await run('single plan has no session labels or late discount', async () => {
   assert.ok(result);
   assert.strictEqual(result!.plans.length, 1);
   assert.strictEqual(result!.plans[0]!.sessionTitle, 'Full access');
-  assert.strictEqual(result!.plans[0]!.effectiveAmount, 180);
+  assert.strictEqual(result!.plans[0]!.effectiveAmount, 200);
+  assert.strictEqual(result!.plans[0]!.discountPercent, null);
   assert.strictEqual(result!.plans[0]!.lateEnrollmentDiscount, false);
 });
 

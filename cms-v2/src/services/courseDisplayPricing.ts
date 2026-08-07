@@ -1,5 +1,4 @@
 import type { CourseGeoPrice, QualificationOfferRule } from '../../shared/types';
-import { effectiveAmount, roundMoney } from './courseGeoPriceValidation';
 import {
   applyEvenDealsQuote,
   fetchEvenDealsQuote,
@@ -112,23 +111,13 @@ function buildPlanFields(
   options: {
     sessionMonth: number | null;
     sessionYear: number | null;
-    applyLateEnrollment: boolean;
     badge: string | null;
     countryCode?: string | null;
   },
 ): PublishedCoursePricePlan {
-  const tableDiscount = effectiveAmount(price.amount, price.discountedPrice);
-  const lateEnrollmentDiscount = options.applyLateEnrollment && options.sessionMonth != null;
-  const campaignAmount = lateEnrollmentDiscount
-    ? roundMoney(tableDiscount * 0.5)
-    : tableDiscount;
-
-  // CMS campaign / late-enrollment only — Evendeals applied in buildCourseDisplayPricing.
-  const effective = campaignAmount;
-
-  const compareAt = lateEnrollmentDiscount
-    ? tableDiscount
-    : strikethroughAmount(price.amount, price.compareAtAmount, effective);
+  // List amount only — Evendeals applied in buildCourseDisplayPricing. No CMS campaign % or late-enrollment cuts.
+  const effective = price.amount;
+  const compareAt = strikethroughAmount(price.amount, price.compareAtAmount, effective);
 
   const sessionTitleText = options.sessionMonth != null && options.sessionYear != null
     ? formatExamSessionTitle(options.sessionMonth, options.sessionYear)
@@ -144,11 +133,11 @@ function buildPlanFields(
     subtitle: price.name,
     amount: price.amount,
     compareAt,
-    discountPercent: price.discountPercent,
+    discountPercent: null,
     effectiveAmount: effective,
     formatted: formatUsd(effective),
     formattedCompareAt: compareAt != null ? formatUsd(compareAt) : null,
-    lateEnrollmentDiscount,
+    lateEnrollmentDiscount: false,
     isDefault: price.isDefault,
     badge: options.badge,
     geoPricingApplied: false,
@@ -238,7 +227,6 @@ export async function buildCourseDisplayPricing(
     plans = [buildPlanFields(only, {
       sessionMonth: null,
       sessionYear: null,
-      applyLateEnrollment: false,
       badge: null,
       countryCode: input.countryCode,
     })];
@@ -250,18 +238,15 @@ export async function buildCourseDisplayPricing(
       plans = planSlice.map((price, index) => buildPlanFields(price, {
         sessionMonth: null,
         sessionYear: null,
-        applyLateEnrollment: false,
         badge: index === 1 ? 'Best value' : null,
         countryCode: input.countryCode,
       }));
     } else {
       plans = planSlice.map((price, index) => {
         const session = sessionMode.sessions[index] ?? sessionMode.sessions[sessionMode.sessions.length - 1]!;
-        const monthsUntil = monthsUntilExamSession(session.month, session.year, now);
         return buildPlanFields(price, {
           sessionMonth: session.month,
           sessionYear: session.year,
-          applyLateEnrollment: index === 0 && monthsUntil <= 1,
           badge: index === 1 ? 'Best value' : null,
           countryCode: input.countryCode,
         });
