@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
 import type {
   MigrationTemplate,
-  StoryblokRegion,
+  StoryblokCredentials,
 } from '../../shared/migrationTypes';
 import {
   CourseMigrationError,
@@ -14,10 +14,10 @@ import {
 } from '../services/courseMigrationService';
 import { confirmComponentCreation, generateComponentDraft } from '../services/componentGenerationService';
 import { isStoryblokApiError, verifyStoryblokAccess } from '../services/storyblokClient';
+import { resolveStoryblokConfigFromEnv } from '../services/storyblokCoursePricingSync';
 import { scanAndStoreMigrationPages } from '../services/pageScanner';
 import { listMigrationTemplateBlueprints, MigrationTemplateError } from '../services/migrationTemplateRegistry';
 import {
-  getMigrationPageById,
   listMigrationPages,
   updateMigrationPage,
   upsertPageContentMigrationPage,
@@ -31,8 +31,17 @@ const router = Router();
 
 router.use(authGuard, requireRole('admin', 'editor'));
 
-function isRegion(value: unknown): value is StoryblokRegion {
-  return value === 'eu' || value === 'us';
+const STORYBLOK_NOT_CONFIGURED =
+  'Storyblok is not configured on the server. Set STORYBLOK_PERSONAL_TOKEN (and optional STORYBLOK_SPACE_ID / STORYBLOK_REGION).';
+
+function resolveMigrationCredentials(): StoryblokCredentials | null {
+  const config = resolveStoryblokConfigFromEnv();
+  if (!config) return null;
+  return {
+    storyblokSpaceId: config.spaceId,
+    storyblokAccessToken: config.accessToken,
+    storyblokRegion: config.region,
+  };
 }
 
 router.get('/templates', async (_req: Request, res: Response, next: NextFunction) => {
@@ -121,13 +130,41 @@ function parsePageId(rawId: string): number {
   return id;
 }
 
-function parseStoryblokCredentials(body: Record<string, unknown>) {
-  return {
-    storyblokSpaceId: typeof body.storyblokSpaceId === 'string' ? body.storyblokSpaceId : '',
-    storyblokAccessToken: typeof body.storyblokAccessToken === 'string' ? body.storyblokAccessToken : '',
-    storyblokRegion: isRegion(body.storyblokRegion) ? body.storyblokRegion : 'eu',
-  };
-}
+router.get('/storyblok/status', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const config = resolveStoryblokConfigFromEnv();
+    if (!config) {
+      return res.json({
+        ok: true,
+        data: { configured: false, spaceId: null, region: null, spaceName: null },
+      });
+    }
+    try {
+      const verified = await verifyStoryblokAccess(config);
+      return res.json({
+        ok: true,
+        data: {
+          configured: true,
+          spaceId: config.spaceId,
+          region: config.region,
+          spaceName: verified.spaceName,
+        },
+      });
+    } catch {
+      return res.json({
+        ok: true,
+        data: {
+          configured: true,
+          spaceId: config.spaceId,
+          region: config.region,
+          spaceName: null,
+        },
+      });
+    }
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.get('/page-content-files', async (_req: Request, res: Response, next: NextFunction) => {
   try {
@@ -177,11 +214,11 @@ router.post('/pages/:id/scrape', async (req: Request, res: Response, next: NextF
 
 router.post('/pages/:id/structure', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parsePageId(req.params.id);
-    const credentials = parseStoryblokCredentials(req.body as Record<string, unknown>);
-    if (!credentials.storyblokSpaceId.trim() || !credentials.storyblokAccessToken.trim()) {
-      return res.status(400).json({ ok: false, error: 'Storyblok space ID and access token are required' });
+    const credentials = resolveMigrationCredentials();
+    if (!credentials) {
+      return res.status(400).json({ ok: false, error: STORYBLOK_NOT_CONFIGURED });
     }
+    const id = parsePageId(req.params.id);
     const result = await generatePageStructure(id, credentials);
     return res.json({ ok: true, data: result });
   } catch (err) {
@@ -191,12 +228,12 @@ router.post('/pages/:id/structure', async (req: Request, res: Response, next: Ne
 
 router.post('/pages/:id/content', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const credentials = resolveMigrationCredentials();
+    if (!credentials) {
+      return res.status(400).json({ ok: false, error: STORYBLOK_NOT_CONFIGURED });
+    }
     const id = parsePageId(req.params.id);
     const body = req.body as Record<string, unknown>;
-    const credentials = parseStoryblokCredentials(body);
-    if (!credentials.storyblokSpaceId.trim() || !credentials.storyblokAccessToken.trim()) {
-      return res.status(400).json({ ok: false, error: 'Storyblok space ID and access token are required' });
-    }
     const result = await migratePageContent(id, { ...credentials, publish: Boolean(body.publish) });
     return res.json({ ok: true, data: result });
   } catch (err) {
@@ -206,11 +243,11 @@ router.post('/pages/:id/content', async (req: Request, res: Response, next: Next
 
 router.post('/pages/:id/generate-component', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parsePageId(req.params.id);
-    const credentials = parseStoryblokCredentials(req.body as Record<string, unknown>);
-    if (!credentials.storyblokSpaceId.trim() || !credentials.storyblokAccessToken.trim()) {
-      return res.status(400).json({ ok: false, error: 'Storyblok space ID and access token are required' });
+    const credentials = resolveMigrationCredentials();
+    if (!credentials) {
+      return res.status(400).json({ ok: false, error: STORYBLOK_NOT_CONFIGURED });
     }
+    const id = parsePageId(req.params.id);
     const result = await generateComponentDraft(id, credentials);
     return res.json({ ok: true, data: result });
   } catch (err) {
@@ -220,12 +257,12 @@ router.post('/pages/:id/generate-component', async (req: Request, res: Response,
 
 router.post('/pages/:id/confirm-component', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const credentials = resolveMigrationCredentials();
+    if (!credentials) {
+      return res.status(400).json({ ok: false, error: STORYBLOK_NOT_CONFIGURED });
+    }
     const id = parsePageId(req.params.id);
     const body = req.body as Record<string, unknown>;
-    const credentials = parseStoryblokCredentials(body);
-    if (!credentials.storyblokSpaceId.trim() || !credentials.storyblokAccessToken.trim()) {
-      return res.status(400).json({ ok: false, error: 'Storyblok space ID and access token are required' });
-    }
     const componentName = typeof body.componentName === 'string' ? body.componentName : '';
     const storyblokSchema = body.storyblokSchema as { components?: unknown } | undefined;
     if (!componentName || !storyblokSchema || !Array.isArray(storyblokSchema.components)) {
@@ -242,18 +279,13 @@ router.post('/pages/:id/confirm-component', async (req: Request, res: Response, 
   }
 });
 
-router.post('/storyblok/verify', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/storyblok/verify', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const body = req.body as Record<string, unknown>;
-    const spaceId = typeof body.storyblokSpaceId === 'string' ? body.storyblokSpaceId.trim() : '';
-    const accessToken = typeof body.storyblokAccessToken === 'string' ? body.storyblokAccessToken.trim() : '';
-    const region = isRegion(body.storyblokRegion) ? body.storyblokRegion : 'eu';
-
-    if (!spaceId || !accessToken) {
-      return res.status(400).json({ ok: false, error: 'Storyblok space ID and access token are required' });
+    const config = resolveStoryblokConfigFromEnv();
+    if (!config) {
+      return res.status(400).json({ ok: false, error: STORYBLOK_NOT_CONFIGURED });
     }
-
-    const result = await verifyStoryblokAccess({ spaceId, accessToken, region });
+    const result = await verifyStoryblokAccess(config);
     return res.json({ ok: true, data: result });
   } catch (err) {
     next(err);

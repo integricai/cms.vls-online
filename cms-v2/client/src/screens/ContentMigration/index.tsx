@@ -20,14 +20,13 @@ import type {
 import { MIGRATION_TEMPLATE_LABELS } from '../../../../shared/migrationTemplateLabels';
 import { storyFullSlug, suggestDestinationSlug, isCoursePageTemplate } from '../../../../shared/migrationDestination';
 
-const STORAGE_KEY = 'vls-content-migration-config';
-
 type MigrationTemplateOption = TemplateReferenceSummary & { label: string };
 
-type SavedConfig = {
-  storyblokSpaceId: string;
-  storyblokAccessToken: string;
-  storyblokRegion: StoryblokRegion;
+type StoryblokStatus = {
+  configured: boolean;
+  spaceId: string | null;
+  region: StoryblokRegion | null;
+  spaceName: string | null;
 };
 
 type StatusMessage = {
@@ -52,23 +51,6 @@ function courseDescriptionPreviewParts(desc: NonNullable<ScrapedCoursePage['cour
     desc.introP2 ? { label: 'Paragraph 2', text: desc.introP2 } : null,
     desc.bodyText ? { label: 'Expanded body', text: desc.bodyText } : null,
   ].filter((part): part is { label: string; text: string } => Boolean(part?.text.trim()));
-}
-
-function loadSavedConfig(): SavedConfig {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return { storyblokSpaceId: '', storyblokAccessToken: '', storyblokRegion: 'eu' };
-    }
-    const parsed = JSON.parse(raw) as SavedConfig;
-    return {
-      storyblokSpaceId: parsed.storyblokSpaceId ?? '',
-      storyblokAccessToken: parsed.storyblokAccessToken ?? '',
-      storyblokRegion: parsed.storyblokRegion === 'us' ? 'us' : 'eu',
-    };
-  } catch {
-    return { storyblokSpaceId: '', storyblokAccessToken: '', storyblokRegion: 'eu' };
-  }
 }
 
 function isLevelPage(scraped: ScrapedMigrationPage): scraped is ScrapedLevelPage {
@@ -111,15 +93,13 @@ function pageStatusLabel(page: MigrationPageRecord): string {
 type ContentSource = 'live' | 'file';
 
 export default function ContentMigrationTab() {
-  const saved = loadSavedConfig();
   const [pages, setPages] = useState<MigrationPageRecord[]>([]);
   const [selectedPageId, setSelectedPageId] = useState<number | null>(null);
   const [template, setTemplate] = useState<MigrationTemplate>('course');
   const [destinationSlug, setDestinationSlug] = useState('');
   const [destinationTouched, setDestinationTouched] = useState(false);
-  const [storyblokSpaceId, setStoryblokSpaceId] = useState(saved.storyblokSpaceId);
-  const [storyblokAccessToken, setStoryblokAccessToken] = useState(saved.storyblokAccessToken);
-  const [storyblokRegion, setStoryblokRegion] = useState<StoryblokRegion>(saved.storyblokRegion);
+  const [storyblokStatus, setStoryblokStatus] = useState<StoryblokStatus | null>(null);
+  const [loadingStoryblokStatus, setLoadingStoryblokStatus] = useState(true);
   const [publish, setPublish] = useState(false);
   const [loadingPages, setLoadingPages] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -163,7 +143,7 @@ export default function ContentMigrationTab() {
   );
 
   const pageUrl = selectedPage?.originUrl ?? '';
-  const hasCredentials = Boolean(storyblokSpaceId.trim() && storyblokAccessToken.trim());
+  const hasCredentials = Boolean(storyblokStatus?.configured);
   const isFileSource = contentSource === 'file';
   const canRunScrape = isFileSource
     ? Boolean(selectedPage && selectedPageContentFile.trim())
@@ -194,6 +174,26 @@ export default function ContentMigrationTab() {
   useEffect(() => {
     void loadPages();
   }, [loadPages]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingStoryblokStatus(true);
+    api.get<StoryblokStatus>('/migration/storyblok/status')
+      .then(status => {
+        if (!cancelled) setStoryblokStatus(status);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStoryblokStatus({ configured: false, spaceId: null, region: null, spaceName: null });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingStoryblokStatus(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (contentSource !== 'file') return;
@@ -246,14 +246,6 @@ export default function ContentMigrationTab() {
       cancelled = true;
     };
   }, [contentSource, selectedPageContentFile]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      storyblokSpaceId,
-      storyblokAccessToken,
-      storyblokRegion,
-    }));
-  }, [storyblokSpaceId, storyblokAccessToken, storyblokRegion]);
 
   // Template is the source of truth for the Origin URL filter. When the selection falls
   // outside the active template group, snap to the first matching page (one-way).
@@ -324,14 +316,6 @@ export default function ContentMigrationTab() {
   useEffect(() => {
     setTemplateReference(migrationTemplates.find(item => item.template === template) ?? null);
   }, [migrationTemplates, template]);
-
-  function credentialsPayload() {
-    return {
-      storyblokSpaceId: storyblokSpaceId.trim(),
-      storyblokAccessToken: storyblokAccessToken.trim(),
-      storyblokRegion,
-    };
-  }
 
   function resetPhaseResults() {
     setScrapeResult(null);
@@ -423,7 +407,13 @@ export default function ContentMigrationTab() {
     setVerifying(true);
     setMessage(null);
     try {
-      const data = await api.post<{ spaceName: string }>('/migration/storyblok/verify', credentialsPayload());
+      const data = await api.post<{ spaceName: string }>('/migration/storyblok/verify', {});
+      setStoryblokStatus(current => ({
+        configured: true,
+        spaceId: current?.spaceId ?? null,
+        region: current?.region ?? null,
+        spaceName: data.spaceName,
+      }));
       setMessage({ type: 'success', text: `Connected to Storyblok space: ${data.spaceName}` });
     } catch (error) {
       setMessage({
@@ -503,7 +493,7 @@ export default function ContentMigrationTab() {
     setContentResult(null);
     resetComponentDraft();
     try {
-      const data = await api.post<StructurePhaseResult>(`/migration/pages/${selectedPage.id}/structure`, credentialsPayload());
+      const data = await api.post<StructurePhaseResult>(`/migration/pages/${selectedPage.id}/structure`, {});
       setStructureResult(data);
       applyPageUpdate(data.page);
       if (data.missingComponents.length) {
@@ -541,7 +531,6 @@ export default function ContentMigrationTab() {
     setMessage(null);
     try {
       const data = await api.post<ContentPhaseResult>(`/migration/pages/${selectedPage.id}/content`, {
-        ...credentialsPayload(),
         publish,
       });
       setContentResult(data);
@@ -567,7 +556,7 @@ export default function ContentMigrationTab() {
     try {
       const data = await api.post<ComponentDraftResult>(
         `/migration/pages/${selectedPage.id}/generate-component`,
-        credentialsPayload(),
+        {},
       );
       setComponentDraft(data);
       setComponentNameText(data.componentName);
@@ -600,7 +589,6 @@ export default function ContentMigrationTab() {
       const data = await api.post<{ page: MigrationPageRecord; componentName: string; created: boolean }>(
         `/migration/pages/${selectedPage.id}/confirm-component`,
         {
-          ...credentialsPayload(),
           componentName: componentNameText.trim(),
           storyblokSchema: parsedSchema,
         },
@@ -896,35 +884,23 @@ export default function ContentMigrationTab() {
             ) : null}
           </Field>
 
-          <Field label="Storyblok space ID">
-            <input
-              className="input"
-              placeholder="123456"
-              value={storyblokSpaceId}
-              onChange={event => setStoryblokSpaceId(event.target.value)}
-            />
-          </Field>
-
-          <Field label="Storyblok personal access token">
-            <input
-              className="input"
-              type="password"
-              placeholder="Personal access token (Management API)"
-              value={storyblokAccessToken}
-              onChange={event => setStoryblokAccessToken(event.target.value)}
-            />
-          </Field>
-
-          <Field label="Storyblok region">
-            <select
-              className="input"
-              value={storyblokRegion}
-              onChange={event => setStoryblokRegion(event.target.value as StoryblokRegion)}
-            >
-              <option value="eu">EU (mapi.storyblok.com)</option>
-              <option value="us">US (api-us.storyblok.com)</option>
-            </select>
-          </Field>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            {loadingStoryblokStatus ? (
+              <p>Checking Storyblok server configuration...</p>
+            ) : hasCredentials ? (
+              <p>
+                Using server Storyblok credentials
+                {storyblokStatus?.spaceName ? `: ${storyblokStatus.spaceName}` : ''}
+                {storyblokStatus?.spaceId ? ` (space ${storyblokStatus.spaceId}` : ''}
+                {storyblokStatus?.region ? `, ${storyblokStatus.region.toUpperCase()})` : storyblokStatus?.spaceId ? ')' : ''}
+                .
+              </p>
+            ) : (
+              <p className="text-amber-700">
+                Storyblok is not configured on the server. Ask an admin to set STORYBLOK_PERSONAL_TOKEN.
+              </p>
+            )}
+          </div>
 
           <label className="flex items-center gap-2 text-xs text-slate-600">
             <input
