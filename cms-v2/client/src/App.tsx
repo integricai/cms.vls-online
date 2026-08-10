@@ -32,6 +32,7 @@ import StepCards from './screens/StepCards';
 import LegalPage from './screens/LegalPage';
 import Team from './screens/Team';
 import Settings from './screens/Settings';
+import ContentMigration from './screens/ContentMigration';
 import Configurations from './screens/Configurations';
 import Sales from './screens/Sales';
 import Students from './screens/Students';
@@ -60,6 +61,11 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 function RequireAdmin({ children }: { children: React.ReactNode }) {
   return getCurrentUser()?.role === 'admin' ? <>{children}</> : <Navigate to="/home-hero" replace />;
+}
+
+function RequireEditor({ children }: { children: React.ReactNode }) {
+  const role = getCurrentUser()?.role;
+  return role === 'admin' || role === 'editor' ? <>{children}</> : <Navigate to="/home-hero" replace />;
 }
 
 export default function App() {
@@ -121,6 +127,7 @@ export default function App() {
           <Route path="/page-desc-with-menu"  element={<PageDescWithMenu />} />
           <Route path="/split-screen-sections" element={<Navigate to="/split-screen/left-hero" replace />} />
           <Route path="/settings"          element={<RequireAdmin><Settings /></RequireAdmin>} />
+          <Route path="/content-migration" element={<RequireEditor><ContentMigration /></RequireEditor>} />
           <Route path="/configurations"   element={<RequireAdmin><Configurations /></RequireAdmin>} />
           <Route path="/sales"            element={<RequireAdmin><Sales /></RequireAdmin>} />
           <Route path="/students"         element={<RequireAdmin><Students /></RequireAdmin>} />

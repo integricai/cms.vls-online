@@ -29,7 +29,7 @@ import { MIGRATION_TEMPLATE_LABELS } from '../../shared/migrationTemplateLabels'
 
 const router = Router();
 
-router.use(authGuard, requireRole('admin'));
+router.use(authGuard, requireRole('admin', 'editor'));
 
 function isRegion(value: unknown): value is StoryblokRegion {
   return value === 'eu' || value === 'us';
