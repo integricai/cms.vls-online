@@ -1,5 +1,11 @@
 {
   "version": 2,
+  "crons": [
+    {
+      "path": "/api/cron/google-ads-conversions",
+      "schedule": "*/5 * * * *"
+    }
+  ],
   "builds": [
     {
       "src": "cms-v2/src/server.ts",

@@ -38,6 +38,7 @@ import {
   runZenlerEnrollmentForPaidOrder,
 } from '../services/zenlerEnrollmentEnsure';
 import { courseAccessUrlForEnrollment } from '../services/schoolAccess';
+import { parseCheckoutAttribution } from '../services/attribution';
 
 function extractStripeId(value: unknown): string | null {
   if (typeof value === 'string' && value.trim()) return value.trim();
@@ -233,6 +234,11 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
     }
 
     const geo = detectCountryFromRequest(req, req.body?.countryCode);
+    const clientIp = detectClientIpFromRequest(req);
+    const attribution = parseCheckoutAttribution(req.body ?? {}, {
+      userAgent: req.get('user-agent'),
+      clientIp,
+    });
     const customerInput = parseCheckoutCustomer(req.body ?? {}, geo.countryCode);
     const customer = await upsertCheckoutCustomer({
       email: customerInput.studentEmail,
@@ -251,10 +257,12 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
       optionType: option.optionType,
       studentName: customerInput.studentName,
       studentEmail: customerInput.studentEmail,
+      studentPhone: customerInput.phone,
       countryCode: geo.countryCode,
       amount,
       currency: option.currency || 'GBP',
       discountPercent: computeDiscountPercent(option.normalPrice, amount),
+      attribution,
     });
 
     const session = await createStripeCheckoutSession({
@@ -352,6 +360,10 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
     }
 
     const quotedCountryCode = resolved.detectedCountryCode ?? geo.countryCode;
+    const attribution = parseCheckoutAttribution(req.body ?? {}, {
+      userAgent: req.get('user-agent'),
+      clientIp,
+    });
     const customerInput = parseCheckoutCustomer(req.body ?? {}, quotedCountryCode);
     const customer = await upsertCheckoutCustomer({
       email: customerInput.studentEmail,
@@ -374,11 +386,13 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       optionType: resolved.price.name,
       studentName: customerInput.studentName,
       studentEmail: customerInput.studentEmail,
+      studentPhone: customerInput.phone,
       countryCode: quotedCountryCode,
       amount: resolved.effectiveAmount,
       currency: 'USD',
       durationDays: resolved.price.durationDays,
       discountPercent,
+      attribution,
     });
 
     const session = await createStripeCheckoutSession({

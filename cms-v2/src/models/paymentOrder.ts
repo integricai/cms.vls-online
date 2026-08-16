@@ -1,4 +1,5 @@
 import { sql } from '../db/client';
+import type { CheckoutAttribution, ConversionUploadStatus } from '../services/attribution';
 
 export type PaymentOrderStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled' | 'Refunded';
 
@@ -13,6 +14,7 @@ export interface PaymentOrder {
   optionType: string | null;
   studentName: string | null;
   studentEmail: string | null;
+  studentPhone: string | null;
   countryCode: string | null;
   amount: number;
   currency: string;
@@ -31,6 +33,25 @@ export interface PaymentOrder {
   createdAt: Date;
   paidAt: Date | null;
   refundedAt: Date | null;
+  gclid: string | null;
+  gbraid: string | null;
+  wbraid: string | null;
+  fbclid: string | null;
+  fbp: string | null;
+  fbc: string | null;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  utmContent: string | null;
+  utmTerm: string | null;
+  landingPage: string | null;
+  attrUserAgent: string | null;
+  attrClientIp: string | null;
+  attrCapturedAt: Date | null;
+  conversionUploadStatus: ConversionUploadStatus;
+  conversionUploadedAt: Date | null;
+  conversionUploadError: string | null;
+  conversionUploadRequestId: string | null;
 }
 
 interface DbRow {
@@ -44,7 +65,9 @@ interface DbRow {
   option_type: string | null;
   student_name: string | null;
   student_email: string | null;
+  student_phone: string | null;
   country_code: string | null;
+  customer_phone: string | null;
   amount: string;
   currency: string;
   duration_days: number | null;
@@ -62,6 +85,25 @@ interface DbRow {
   created_at: Date;
   paid_at: Date | null;
   refunded_at: Date | null;
+  gclid: string | null;
+  gbraid: string | null;
+  wbraid: string | null;
+  fbclid: string | null;
+  fbp: string | null;
+  fbc: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_content: string | null;
+  utm_term: string | null;
+  landing_page: string | null;
+  attr_user_agent: string | null;
+  attr_client_ip: string | null;
+  attr_captured_at: Date | null;
+  conversion_upload_status: ConversionUploadStatus | null;
+  conversion_uploaded_at: Date | null;
+  conversion_upload_error: string | null;
+  conversion_upload_request_id: string | null;
 }
 
 function rowToOrder(row: DbRow): PaymentOrder {
@@ -76,6 +118,7 @@ function rowToOrder(row: DbRow): PaymentOrder {
     optionType: row.option_type,
     studentName: row.student_name,
     studentEmail: row.student_email,
+    studentPhone: row.student_phone ?? row.customer_phone ?? null,
     countryCode: row.country_code ?? null,
     amount: Number(row.amount),
     currency: row.currency,
@@ -94,6 +137,25 @@ function rowToOrder(row: DbRow): PaymentOrder {
     createdAt: row.created_at,
     paidAt: row.paid_at,
     refundedAt: row.refunded_at ?? null,
+    gclid: row.gclid ?? null,
+    gbraid: row.gbraid ?? null,
+    wbraid: row.wbraid ?? null,
+    fbclid: row.fbclid ?? null,
+    fbp: row.fbp ?? null,
+    fbc: row.fbc ?? null,
+    utmSource: row.utm_source ?? null,
+    utmMedium: row.utm_medium ?? null,
+    utmCampaign: row.utm_campaign ?? null,
+    utmContent: row.utm_content ?? null,
+    utmTerm: row.utm_term ?? null,
+    landingPage: row.landing_page ?? null,
+    attrUserAgent: row.attr_user_agent ?? null,
+    attrClientIp: row.attr_client_ip ?? null,
+    attrCapturedAt: row.attr_captured_at ?? null,
+    conversionUploadStatus: row.conversion_upload_status ?? 'pending_upload',
+    conversionUploadedAt: row.conversion_uploaded_at ?? null,
+    conversionUploadError: row.conversion_upload_error ?? null,
+    conversionUploadRequestId: row.conversion_upload_request_id ?? null,
   };
 }
 
@@ -107,21 +169,33 @@ export async function createPaymentOrder(data: {
   optionType: string | null;
   studentName: string | null;
   studentEmail: string | null;
+  studentPhone?: string | null;
   countryCode?: string | null;
   amount: number;
   currency: string;
   durationDays?: number | null;
   discountPercent?: number | null;
+  attribution?: CheckoutAttribution | null;
 }): Promise<PaymentOrder> {
+  const attr = data.attribution;
   const rows = await sql`
     INSERT INTO payment_orders
       (payment_option_id, course_id, course_price_id, customer_id, zenler_course_id, course_title,
-       option_type, student_name, student_email, country_code, amount, currency, duration_days, discount_percent)
+       option_type, student_name, student_email, student_phone, country_code, amount, currency, duration_days, discount_percent,
+       gclid, gbraid, wbraid, fbclid, fbp, fbc,
+       utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+       landing_page, attr_user_agent, attr_client_ip, attr_captured_at)
     VALUES
       (${data.paymentOptionId ?? null}, ${data.courseId ?? null}, ${data.coursePriceId ?? null},
        ${data.customerId ?? null}, ${data.zenlerCourseId}, ${data.courseTitle}, ${data.optionType},
-       ${data.studentName}, ${data.studentEmail}, ${data.countryCode ?? null},
-       ${data.amount}, ${data.currency}, ${data.durationDays ?? null}, ${data.discountPercent ?? null})
+       ${data.studentName}, ${data.studentEmail}, ${data.studentPhone ?? null}, ${data.countryCode ?? null},
+       ${data.amount}, ${data.currency}, ${data.durationDays ?? null}, ${data.discountPercent ?? null},
+       ${attr?.gclid ?? null}, ${attr?.gbraid ?? null}, ${attr?.wbraid ?? null},
+       ${attr?.fbclid ?? null}, ${attr?.fbp ?? null}, ${attr?.fbc ?? null},
+       ${attr?.utmSource ?? null}, ${attr?.utmMedium ?? null}, ${attr?.utmCampaign ?? null},
+       ${attr?.utmContent ?? null}, ${attr?.utmTerm ?? null},
+       ${attr?.landingPage ?? null}, ${attr?.userAgent ?? null}, ${attr?.clientIp ?? null},
+       ${attr?.capturedAt ?? null})
     RETURNING *
   `;
   return rowToOrder(rows[0] as DbRow);
@@ -274,6 +348,45 @@ export async function updateZenlerEnrollment(
       WHERE id = ${orderId}
     `;
   }
+}
+
+export async function listPurchaseConversionsDueForUpload(input: {
+  limit: number;
+  delayHours: number;
+}): Promise<PaymentOrder[]> {
+  const limit = Math.min(Math.max(Math.trunc(input.limit), 1), 200);
+  const delayHours = Math.max(input.delayHours, 0);
+  const rows = await sql`
+    SELECT po.*, cu.phone AS customer_phone
+    FROM payment_orders po
+    LEFT JOIN customers cu ON cu.id = po.customer_id
+    WHERE po.status = 'Paid'
+      AND po.paid_at IS NOT NULL
+      AND po.paid_at <= NOW() - make_interval(hours => ${delayHours})
+      AND COALESCE(po.conversion_upload_status, 'pending_upload') IN ('pending_upload', 'pending')
+    ORDER BY po.paid_at ASC
+    LIMIT ${limit}
+  `;
+  return (rows as DbRow[]).map(rowToOrder);
+}
+
+export async function markConversionUploadResult(input: {
+  orderId: number;
+  status: ConversionUploadStatus;
+  error?: string | null;
+  requestId?: string | null;
+}): Promise<void> {
+  await sql`
+    UPDATE payment_orders
+    SET conversion_upload_status = ${input.status},
+        conversion_uploaded_at = CASE
+          WHEN ${input.status} IN ('uploaded', 'extended_upload') THEN NOW()
+          ELSE conversion_uploaded_at
+        END,
+        conversion_upload_error = ${input.error ?? null},
+        conversion_upload_request_id = COALESCE(${input.requestId ?? null}, conversion_upload_request_id)
+    WHERE id = ${input.orderId}
+  `;
 }
 
 export async function markOrderEmailsSent(orderId: number, sent: { student?: boolean; admin?: boolean }): Promise<void> {
