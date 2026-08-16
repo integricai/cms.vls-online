@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
-import type { ConversionUploadStatus } from '../../shared/types';
+import type { CheckoutEnvironment, ConversionUploadStatus } from '../../shared/types';
 
-export type { ConversionUploadStatus };
+export type { CheckoutEnvironment, ConversionUploadStatus };
 
 const MAX_FIELD_LENGTH = 255;
 
@@ -56,7 +56,61 @@ export type CheckoutAttribution = {
   capturedAt: Date | null;
   userAgent: string | null;
   clientIp: string | null;
+  environment: CheckoutEnvironment;
 };
+
+export function parseCheckoutEnvironment(value: unknown): CheckoutEnvironment | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return normalized === 'staging' || normalized === 'production' ? normalized : null;
+}
+
+function hostnameFromUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return null;
+  }
+}
+
+export function environmentFromHostname(hostname: string | null | undefined): CheckoutEnvironment | null {
+  const host = String(hostname ?? '').split(':')[0].trim().toLowerCase();
+  if (!host) return null;
+  if (host === 'vls-online.com' || host === 'www.vls-online.com') return 'production';
+  if (
+    host === 'staging.vls-online.com'
+    || host === 'preview.vls-online.com'
+    || host === 'localhost'
+    || host === '127.0.0.1'
+    || host.endsWith('.vercel.app')
+  ) {
+    return 'staging';
+  }
+  return null;
+}
+
+/** Prefer an explicit value, then host/origin. Unknown checkouts stay staging. */
+export function resolveCheckoutEnvironment(input: {
+  explicit?: unknown;
+  hostname?: string | null;
+  origin?: string | null;
+  referer?: string | null;
+}): CheckoutEnvironment {
+  const fromExplicit = parseCheckoutEnvironment(input.explicit);
+  if (fromExplicit) return fromExplicit;
+
+  const hosts = [
+    input.hostname,
+    hostnameFromUrl(input.origin),
+    hostnameFromUrl(input.referer),
+  ];
+  for (const host of hosts) {
+    const resolved = environmentFromHostname(host);
+    if (resolved) return resolved;
+  }
+  return 'staging';
+}
 
 export function sanitizeAttributionField(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -74,11 +128,12 @@ function parseCapturedAt(value: unknown): Date | null {
 
 export function parseCheckoutAttribution(
   body: Record<string, unknown>,
-  extras?: { userAgent?: string | null; clientIp?: string | null },
+  extras?: { userAgent?: string | null; clientIp?: string | null; environment?: CheckoutEnvironment | null },
 ): CheckoutAttribution {
   const raw = body.attribution && typeof body.attribution === 'object' && !Array.isArray(body.attribution)
     ? body.attribution as Record<string, unknown>
     : body;
+  const attributionRecord = raw as Record<string, unknown>;
 
   return {
     gclid: sanitizeAttributionField(raw.gclid),
@@ -96,6 +151,9 @@ export function parseCheckoutAttribution(
     capturedAt: parseCapturedAt(raw.capturedAt ?? raw.captured_at),
     userAgent: sanitizeAttributionField(raw.userAgent ?? raw.user_agent ?? extras?.userAgent),
     clientIp: sanitizeAttributionField(raw.clientIp ?? raw.client_ip ?? extras?.clientIp),
+    environment: resolveCheckoutEnvironment({
+      explicit: extras?.environment ?? body.environment ?? attributionRecord.environment,
+    }),
   };
 }
 

@@ -56,6 +56,7 @@ function order(partial: Partial<PaymentOrder>): PaymentOrder {
     utmContent: null,
     utmTerm: null,
     landingPage: '/courses/fa2?gclid=gclid-abc',
+    checkoutEnvironment: 'staging',
     attrUserAgent: 'Mozilla/5.0',
     attrClientIp: '203.0.113.10',
     attrCapturedAt: new Date('2026-08-16T00:50:00.000Z'),

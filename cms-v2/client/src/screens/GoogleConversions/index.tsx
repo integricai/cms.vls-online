@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import type {
+  CheckoutEnvironment,
   ConversionUploadStatus,
   GoogleConversionListItem,
   GoogleConversionListPage,
@@ -14,6 +15,17 @@ const STATUS_OPTIONS: Array<{ value: 'all' | ConversionUploadStatus; label: stri
   { value: 'extended_upload', label: 'Extended upload' },
   { value: 'failed', label: 'Failed' },
 ];
+
+const ENVIRONMENT_OPTIONS: Array<{ value: 'all' | CheckoutEnvironment; label: string }> = [
+  { value: 'all', label: 'All environments' },
+  { value: 'staging', label: 'Staging' },
+  { value: 'production', label: 'Production' },
+];
+
+const ENVIRONMENT_STYLES: Record<CheckoutEnvironment, string> = {
+  staging: 'bg-violet-50 text-violet-800',
+  production: 'bg-slate-100 text-slate-800',
+};
 
 const STATUS_STYLES: Record<ConversionUploadStatus, string> = {
   pending_upload: 'bg-amber-50 text-amber-800',
@@ -73,6 +85,7 @@ export default function GoogleConversions() {
   const [pageSize] = useState(50);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<'all' | ConversionUploadStatus>('all');
+  const [environment, setEnvironment] = useState<'all' | CheckoutEnvironment>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -89,6 +102,7 @@ export default function GoogleConversions() {
         page: String(nextPage),
         pageSize: String(pageSize),
         status,
+        environment,
       });
       if (search.trim()) params.set('search', search.trim());
       const data = await api.get<GoogleConversionListPage>(`/google-conversions?${params}`);
@@ -104,7 +118,7 @@ export default function GoogleConversions() {
 
   useEffect(() => {
     void loadData(1);
-  }, [status]);
+  }, [status, environment]);
 
   async function retryRow(id: number) {
     setRetryingId(id);
@@ -141,7 +155,7 @@ export default function GoogleConversions() {
       <div className="border-b border-slate-200 bg-white px-6 py-4">
         <h1 className="text-lg font-bold text-slate-800">Google Conversions</h1>
         <p className="mt-0.5 text-xs text-slate-500">
-          Paid orders saved for Google Ads upload. Retry ignores the 7-hour delay.
+          Paid orders saved for Google Ads upload. Retry ignores the 7-hour delay. Due uploads send production only.
         </p>
       </div>
 
@@ -167,6 +181,18 @@ export default function GoogleConversions() {
               className="w-44 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-800"
             >
               {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-slate-500">
+            Environment
+            <select
+              value={environment}
+              onChange={(event) => setEnvironment(event.target.value as typeof environment)}
+              className="w-44 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-800"
+            >
+              {ENVIRONMENT_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
@@ -222,6 +248,7 @@ export default function GoogleConversions() {
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-3 py-2 font-semibold">Order</th>
+                <th className="px-3 py-2 font-semibold">Environment</th>
                 <th className="px-3 py-2 font-semibold">Paid at</th>
                 <th className="px-3 py-2 font-semibold">Student</th>
                 <th className="px-3 py-2 font-semibold">Phone</th>
@@ -238,13 +265,18 @@ export default function GoogleConversions() {
             <tbody>
               {items.length === 0 && !loading ? (
                 <tr>
-                  <td colSpan={12} className="px-3 py-8 text-center text-slate-500">
+                  <td colSpan={13} className="px-3 py-8 text-center text-slate-500">
                     No paid conversion rows found.
                   </td>
                 </tr>
               ) : items.map((row) => (
                 <tr key={row.id} className="border-t border-slate-100 align-top">
                   <td className="px-3 py-2 font-medium text-slate-800">#{row.id}</td>
+                  <td className="px-3 py-2">
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize ${ENVIRONMENT_STYLES[row.checkoutEnvironment]}`}>
+                      {row.checkoutEnvironment}
+                    </span>
+                  </td>
                   <td className="whitespace-nowrap px-3 py-2 text-slate-600">{formatDate(row.paidAt)}</td>
                   <td className="px-3 py-2 text-slate-700">
                     <div>{row.studentName || '—'}</div>

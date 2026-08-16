@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
 import { listPaidConversionOrders, type PaymentOrder } from '../models/paymentOrder';
 import type {
+  CheckoutEnvironment,
   ConversionUploadStatus,
   GoogleConversionListItem,
   GoogleConversionListPage,
@@ -27,6 +28,7 @@ function toIso(value: Date | null): string | null {
 function toListItem(order: PaymentOrder): GoogleConversionListItem {
   return {
     id: order.id,
+    checkoutEnvironment: order.checkoutEnvironment,
     paidAt: toIso(order.paidAt),
     studentName: order.studentName,
     studentEmail: order.studentEmail ?? order.stripeCustomerEmail,
@@ -55,12 +57,19 @@ router.get('/', async (req, res, next) => {
         ? statusRaw
         : 'all'
     ) as ConversionUploadStatus | 'all';
+    const environmentRaw = String(req.query.environment ?? 'all');
+    const environment = (
+      ['all', 'staging', 'production'].includes(environmentRaw)
+        ? environmentRaw
+        : 'all'
+    ) as CheckoutEnvironment | 'all';
     const page = Number(req.query.page ?? 1);
     const pageSize = Number(req.query.pageSize ?? 50);
 
     const result = await listPaidConversionOrders({
       search,
       uploadStatus,
+      environment,
       page,
       pageSize,
     });

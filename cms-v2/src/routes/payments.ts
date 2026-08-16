@@ -38,7 +38,7 @@ import {
   runZenlerEnrollmentForPaidOrder,
 } from '../services/zenlerEnrollmentEnsure';
 import { courseAccessUrlForEnrollment } from '../services/schoolAccess';
-import { parseCheckoutAttribution } from '../services/attribution';
+import { parseCheckoutAttribution, resolveCheckoutEnvironment } from '../services/attribution';
 
 function extractStripeId(value: unknown): string | null {
   if (typeof value === 'string' && value.trim()) return value.trim();
@@ -235,9 +235,15 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
 
     const geo = detectCountryFromRequest(req, req.body?.countryCode);
     const clientIp = detectClientIpFromRequest(req);
+    const environment = resolveCheckoutEnvironment({
+      explicit: req.body?.environment ?? req.body?.attribution?.environment,
+      origin: req.get('origin'),
+      referer: req.get('referer'),
+    });
     const attribution = parseCheckoutAttribution(req.body ?? {}, {
       userAgent: req.get('user-agent'),
       clientIp,
+      environment,
     });
     const customerInput = parseCheckoutCustomer(req.body ?? {}, geo.countryCode);
     const customer = await upsertCheckoutCustomer({
@@ -263,6 +269,7 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
       currency: option.currency || 'GBP',
       discountPercent: computeDiscountPercent(option.normalPrice, amount),
       attribution,
+      environment,
     });
 
     const session = await createStripeCheckoutSession({
@@ -360,9 +367,15 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
     }
 
     const quotedCountryCode = resolved.detectedCountryCode ?? geo.countryCode;
+    const environment = resolveCheckoutEnvironment({
+      explicit: req.body?.environment ?? req.body?.attribution?.environment,
+      origin: req.get('origin'),
+      referer: req.get('referer'),
+    });
     const attribution = parseCheckoutAttribution(req.body ?? {}, {
       userAgent: req.get('user-agent'),
       clientIp,
+      environment,
     });
     const customerInput = parseCheckoutCustomer(req.body ?? {}, quotedCountryCode);
     const customer = await upsertCheckoutCustomer({
@@ -393,6 +406,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       durationDays: resolved.price.durationDays,
       discountPercent,
       attribution,
+      environment,
     });
 
     const session = await createStripeCheckoutSession({

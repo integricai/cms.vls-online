@@ -1,5 +1,5 @@
 import { sql } from '../db/client';
-import type { CheckoutAttribution, ConversionUploadStatus } from '../services/attribution';
+import type { CheckoutAttribution, CheckoutEnvironment, ConversionUploadStatus } from '../services/attribution';
 
 export type PaymentOrderStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled' | 'Refunded';
 
@@ -45,6 +45,7 @@ export interface PaymentOrder {
   utmContent: string | null;
   utmTerm: string | null;
   landingPage: string | null;
+  checkoutEnvironment: CheckoutEnvironment;
   attrUserAgent: string | null;
   attrClientIp: string | null;
   attrCapturedAt: Date | null;
@@ -97,6 +98,7 @@ interface DbRow {
   utm_content: string | null;
   utm_term: string | null;
   landing_page: string | null;
+  checkout_environment: CheckoutEnvironment | null;
   attr_user_agent: string | null;
   attr_client_ip: string | null;
   attr_captured_at: Date | null;
@@ -149,6 +151,7 @@ function rowToOrder(row: DbRow): PaymentOrder {
     utmContent: row.utm_content ?? null,
     utmTerm: row.utm_term ?? null,
     landingPage: row.landing_page ?? null,
+    checkoutEnvironment: row.checkout_environment === 'production' ? 'production' : 'staging',
     attrUserAgent: row.attr_user_agent ?? null,
     attrClientIp: row.attr_client_ip ?? null,
     attrCapturedAt: row.attr_captured_at ?? null,
@@ -176,15 +179,19 @@ export async function createPaymentOrder(data: {
   durationDays?: number | null;
   discountPercent?: number | null;
   attribution?: CheckoutAttribution | null;
+  environment?: CheckoutEnvironment | null;
 }): Promise<PaymentOrder> {
   const attr = data.attribution;
+  const environment = data.environment
+    ?? attr?.environment
+    ?? 'staging';
   const rows = await sql`
     INSERT INTO payment_orders
       (payment_option_id, course_id, course_price_id, customer_id, zenler_course_id, course_title,
        option_type, student_name, student_email, student_phone, country_code, amount, currency, duration_days, discount_percent,
        gclid, gbraid, wbraid, fbclid, fbp, fbc,
        utm_source, utm_medium, utm_campaign, utm_content, utm_term,
-       landing_page, attr_user_agent, attr_client_ip, attr_captured_at)
+       landing_page, checkout_environment, attr_user_agent, attr_client_ip, attr_captured_at)
     VALUES
       (${data.paymentOptionId ?? null}, ${data.courseId ?? null}, ${data.coursePriceId ?? null},
        ${data.customerId ?? null}, ${data.zenlerCourseId}, ${data.courseTitle}, ${data.optionType},
@@ -194,7 +201,7 @@ export async function createPaymentOrder(data: {
        ${attr?.fbclid ?? null}, ${attr?.fbp ?? null}, ${attr?.fbc ?? null},
        ${attr?.utmSource ?? null}, ${attr?.utmMedium ?? null}, ${attr?.utmCampaign ?? null},
        ${attr?.utmContent ?? null}, ${attr?.utmTerm ?? null},
-       ${attr?.landingPage ?? null}, ${attr?.userAgent ?? null}, ${attr?.clientIp ?? null},
+       ${attr?.landingPage ?? null}, ${environment}, ${attr?.userAgent ?? null}, ${attr?.clientIp ?? null},
        ${attr?.capturedAt ?? null})
     RETURNING *
   `;
@@ -364,11 +371,13 @@ export async function getPaymentOrderForConversion(id: number): Promise<PaymentO
 export async function listPaidConversionOrders(input: {
   search?: string;
   uploadStatus?: ConversionUploadStatus | 'all';
+  environment?: CheckoutEnvironment | 'all';
   page?: number;
   pageSize?: number;
 }): Promise<{ items: PaymentOrder[]; total: number; page: number; pageSize: number }> {
   const search = input.search?.trim().toLowerCase() || null;
   const uploadStatus = input.uploadStatus && input.uploadStatus !== 'all' ? input.uploadStatus : 'all';
+  const environment = input.environment && input.environment !== 'all' ? input.environment : 'all';
   const page = Math.max(1, Math.trunc(input.page ?? 1));
   const pageSize = Math.min(100, Math.max(1, Math.trunc(input.pageSize ?? 50)));
   const offset = (page - 1) * pageSize;
@@ -390,6 +399,10 @@ export async function listPaidConversionOrders(input: {
       AND (
         ${uploadStatus}::text = 'all'
         OR COALESCE(po.conversion_upload_status, 'pending_upload') = ${uploadStatus}
+      )
+      AND (
+        ${environment}::text = 'all'
+        OR COALESCE(po.checkout_environment, 'staging') = ${environment}
       )
     ORDER BY po.paid_at DESC NULLS LAST, po.id DESC
     LIMIT ${pageSize} OFFSET ${offset}
@@ -417,6 +430,7 @@ export async function listPurchaseConversionsDueForUpload(input: {
     WHERE po.status = 'Paid'
       AND po.paid_at IS NOT NULL
       AND po.paid_at <= NOW() - make_interval(hours => ${delayHours})
+      AND COALESCE(po.checkout_environment, 'staging') = 'production'
       AND COALESCE(po.conversion_upload_status, 'pending_upload') IN ('pending_upload', 'pending')
     ORDER BY po.paid_at ASC
     LIMIT ${limit}

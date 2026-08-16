@@ -4,6 +4,7 @@ import {
   hashPhoneForAds,
   normalizePhoneE164,
   parseCheckoutAttribution,
+  resolveCheckoutEnvironment,
   resolveConversionUploadAction,
   sanitizeAttributionField,
 } from './attribution';
@@ -41,6 +42,15 @@ run('parses nested attribution and request extras', () => {
   assert.strictEqual(parsed.userAgent, 'Mozilla/5.0');
   assert.strictEqual(parsed.clientIp, '203.0.113.10');
   assert.ok(parsed.capturedAt instanceof Date);
+  assert.strictEqual(parsed.environment, 'staging');
+});
+
+run('resolves checkout environment from host and explicit value', () => {
+  assert.strictEqual(resolveCheckoutEnvironment({ explicit: 'production' }), 'production');
+  assert.strictEqual(resolveCheckoutEnvironment({ hostname: 'www.vls-online.com' }), 'production');
+  assert.strictEqual(resolveCheckoutEnvironment({ hostname: 'staging.vls-online.com' }), 'staging');
+  assert.strictEqual(resolveCheckoutEnvironment({ origin: 'https://preview.vls-online.com/buy' }), 'staging');
+  assert.strictEqual(resolveCheckoutEnvironment({}), 'staging');
 });
 
 run('hashes email the way Google Ads expects', () => {

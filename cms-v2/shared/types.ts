@@ -312,8 +312,11 @@ export type ConversionUploadStatus =
   | 'extended_upload'
   | 'failed';
 
+export type CheckoutEnvironment = 'staging' | 'production';
+
 export interface GoogleConversionListItem {
   id: number;
+  checkoutEnvironment: CheckoutEnvironment;
   paidAt: string | null;
   studentName: string | null;
   studentEmail: string | null;
