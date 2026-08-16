@@ -43,6 +43,9 @@ function parseBodyInput(body: Record<string, unknown>, courseId: number): Course
   return normalizeGeoPriceInput({
     courseId,
     name: String(body.name ?? body.priceName ?? ''),
+    priceSubtitle: body.priceSubtitle == null || body.priceSubtitle === ''
+      ? null
+      : String(body.priceSubtitle),
     amount: Number(body.amount),
     discountPercent: body.discountPercent == null || body.discountPercent === ''
       ? null

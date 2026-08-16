@@ -196,6 +196,8 @@ export interface CourseGeoPrice {
   zenlerCourseId?: string;
   courseSlug?: string | null;
   name: string;
+  /** Secondary line under the price title on course pages. */
+  priceSubtitle: string | null;
   currency: string;
   amount: number;
   compareAtAmount: number | null;
@@ -224,6 +226,8 @@ export type CourseGeoPriceInput = {
   id?: number;
   courseId: number;
   name: string;
+  /** Secondary line under the price title; null/empty clears. */
+  priceSubtitle?: string | null;
   currency?: string;
   amount: number;
   compareAtAmount?: number | null;

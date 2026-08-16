@@ -18,6 +18,7 @@ interface DbRow {
   zenler_course_id?: string;
   course_slug?: string | null;
   name: string;
+  price_subtitle: string | null;
   currency: string;
   amount: string;
   compare_at_amount: string | null;
@@ -67,6 +68,7 @@ export function rowToCourseGeoPrice(row: DbRow): CourseGeoPrice {
     zenlerCourseId: row.zenler_course_id,
     courseSlug: row.course_slug,
     name: row.name,
+    priceSubtitle: row.price_subtitle?.trim() || null,
     currency: row.currency,
     amount,
     compareAtAmount: row.compare_at_amount != null ? Number(row.compare_at_amount) : null,
@@ -470,13 +472,14 @@ export async function createGeoPrice(input: CourseGeoPriceInput): Promise<Course
 
   const rows = await sql`
     INSERT INTO course_geo_prices (
-      course_id, name, currency, amount, compare_at_amount,
+      course_id, name, price_subtitle, currency, amount, compare_at_amount,
       discount_percent, discounted_price,
       is_default, is_active, stripe_price_id, zenler_pricing_code, evendeals,
       pricing_mode, exam_session_month, exam_session_year, duration_days, duration_months
     ) VALUES (
       ${input.courseId},
       ${input.name.trim()},
+      ${input.priceSubtitle?.trim() || null},
       'USD',
       ${input.amount},
       ${null},
@@ -510,6 +513,9 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
   const nextInput: CourseGeoPriceInput = {
     courseId: existing.courseId,
     name: input.name !== undefined ? String(input.name).trim() : existing.name,
+    priceSubtitle: input.priceSubtitle !== undefined
+      ? (input.priceSubtitle?.trim() || null)
+      : existing.priceSubtitle,
     currency: 'USD',
     amount: input.amount !== undefined ? Number(input.amount) : existing.amount,
     compareAtAmount: null,
@@ -541,6 +547,7 @@ export async function updateGeoPrice(id: number, input: Partial<CourseGeoPriceIn
   const rows = await sql`
     UPDATE course_geo_prices
     SET name = ${nextInput.name},
+        price_subtitle = ${nextInput.priceSubtitle ?? null},
         currency = 'USD',
         amount = ${nextInput.amount},
         compare_at_amount = ${null},

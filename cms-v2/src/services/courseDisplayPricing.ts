@@ -130,7 +130,7 @@ function buildPlanFields(
     sessionTitle: sessionTitleText,
     sessionMonth: options.sessionMonth,
     sessionYear: options.sessionYear,
-    subtitle: price.name,
+    subtitle: price.priceSubtitle?.trim() || 'Complete course with tutor support',
     amount: price.amount,
     compareAt,
     discountPercent: null,

@@ -13,6 +13,7 @@ function price(partial: Partial<CourseGeoPrice> & Pick<CourseGeoPrice, 'id' | 'n
   const discountedPrice = partial.discountedPrice ?? null;
   return {
     courseId: 1,
+    priceSubtitle: null,
     currency: 'USD',
     compareAtAmount: null,
     discountPercent: null,

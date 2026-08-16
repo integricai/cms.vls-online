@@ -16,6 +16,7 @@ type View = 'list' | 'manage' | 'import';
 type PriceDraft = {
   id?: number;
   name: string;
+  priceSubtitle: string;
   amount: string;
   discountPercent: string;
   durationDays: string;
@@ -25,9 +26,12 @@ type PriceDraft = {
   stripePriceId: string;
 };
 
+const DEFAULT_PRICE_SUBTITLE = 'Complete course with tutor support';
+
 function emptyDraft(): PriceDraft {
   return {
     name: '',
+    priceSubtitle: DEFAULT_PRICE_SUBTITLE,
     amount: '',
     discountPercent: '',
     durationDays: '',
@@ -49,6 +53,7 @@ function priceToDraft(price: CourseGeoPrice): PriceDraft {
   return {
     id: price.id,
     name: price.name,
+    priceSubtitle: price.priceSubtitle ?? DEFAULT_PRICE_SUBTITLE,
     amount: String(price.amount),
     discountPercent: price.discountPercent != null ? String(price.discountPercent) : '',
     durationDays: price.durationDays != null ? String(price.durationDays) : '',
@@ -192,6 +197,7 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
     try {
       const body = {
         name: draft.name.trim(),
+        priceSubtitle: draft.priceSubtitle.trim() || null,
         amount: Number(draft.amount),
         discountPercent: draft.discountPercent === '' ? null : Number(draft.discountPercent),
         isActive: draft.isActive,
@@ -526,7 +532,19 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <label className="text-xs text-slate-600">
               Price name
-              <input className="input mt-1" value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} />
+              <input className="input mt-1" value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} placeholder="e.g. Six months Access" />
+            </label>
+            <label className="text-xs text-slate-600 sm:col-span-2 lg:col-span-2">
+              Price subtitle
+              <input
+                className="input mt-1"
+                value={draft.priceSubtitle}
+                onChange={e => setDraft(d => ({ ...d, priceSubtitle: e.target.value }))}
+                placeholder={DEFAULT_PRICE_SUBTITLE}
+              />
+              <span className="mt-1 block text-[11px] text-slate-400">
+                Shown under the session title (or price name for open courses).
+              </span>
             </label>
             <label className="text-xs text-slate-600">
               List price (USD)
@@ -613,6 +631,7 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
             <thead className="bg-slate-50 text-slate-500">
               <tr>
                 <th className="px-3 py-2">Price name</th>
+                <th className="px-3 py-2">Subtitle</th>
                 <th className="px-3 py-2">List price</th>
                 <th className="px-3 py-2">Discount</th>
                 <th className="px-3 py-2">Final price</th>
@@ -626,12 +645,13 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
             <tbody>
               {prices.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-3 py-6 text-center text-slate-500">No prices yet. Add a default price to start.</td>
+                  <td colSpan={10} className="px-3 py-6 text-center text-slate-500">No prices yet. Add a default price to start.</td>
                 </tr>
               )}
               {prices.map(price => (
                 <tr key={price.id} className="border-t border-slate-100">
                   <td className="px-3 py-2 font-medium text-slate-800">{price.name}</td>
+                  <td className="px-3 py-2 text-slate-600">{price.priceSubtitle || '—'}</td>
                   <td className="px-3 py-2">{formatMoney(price.amount, 'USD')}</td>
                   <td className="px-3 py-2">{price.discountPercent != null && price.discountPercent > 0 ? `${price.discountPercent}%` : '—'}</td>
                   <td className="px-3 py-2 font-medium text-emerald-800">{formatMoney(price.effectiveAmount, 'USD')}</td>

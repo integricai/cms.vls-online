@@ -18,6 +18,7 @@ function geoPrice(partial: Partial<CourseGeoPrice> & Pick<CourseGeoPrice, 'id' |
   const discountedPrice = partial.discountedPrice ?? null;
   return {
     courseId: 1,
+    priceSubtitle: null,
     currency: 'USD',
     compareAtAmount: null,
     discountPercent: partial.discountPercent ?? null,
@@ -179,6 +180,7 @@ await run('FA1 with ACCA cutoff 12 on Aug 12: Sep + Dec use list amount (no CMS/
   const session1 = result!.plans[0]!;
   assert.strictEqual(session1.planName, 'Three months');
   assert.strictEqual(session1.sessionTitle, 'September 2026 session');
+  assert.strictEqual(session1.subtitle, 'Complete course with tutor support');
   assert.strictEqual(session1.effectiveAmount, 120);
   assert.strictEqual(session1.compareAt, null);
   assert.strictEqual(session1.discountPercent, null);

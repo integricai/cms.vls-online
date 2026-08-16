@@ -96,6 +96,9 @@ export function normalizeGeoPriceInput(input: CourseGeoPriceInput): CourseGeoPri
     ...input,
     courseId: Number(input.courseId),
     name: String(input.name).trim(),
+    priceSubtitle: input.priceSubtitle == null || String(input.priceSubtitle).trim() === ''
+      ? null
+      : String(input.priceSubtitle).trim(),
     currency: 'USD',
     amount,
     compareAtAmount: null,
