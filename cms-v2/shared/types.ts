@@ -306,6 +306,49 @@ export type SaleAssignmentStatus = 'AwaitingTutor' | 'Assigned' | 'AdminAssigned
 
 export type PaymentOrderStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled' | 'Refunded';
 
+export type ConversionUploadStatus =
+  | 'pending_upload'
+  | 'uploaded'
+  | 'extended_upload'
+  | 'failed';
+
+export interface GoogleConversionListItem {
+  id: number;
+  paidAt: string | null;
+  studentName: string | null;
+  studentEmail: string | null;
+  studentPhone: string | null;
+  courseTitle: string;
+  amount: number;
+  currency: string;
+  conversionUploadStatus: ConversionUploadStatus;
+  gclid: string | null;
+  gbraid: string | null;
+  wbraid: string | null;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  conversionUploadedAt: string | null;
+  conversionUploadError: string | null;
+}
+
+export interface GoogleConversionListPage {
+  items: GoogleConversionListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface GoogleConversionUploadResult {
+  configured: boolean;
+  selected: number;
+  uploaded: number;
+  extendedUpload: number;
+  failed: number;
+  requestId: string | null;
+  message?: string;
+}
+
 export interface StudentCourseSummary {
   courseId: number;
   courseName: string | null;

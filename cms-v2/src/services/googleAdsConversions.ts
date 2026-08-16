@@ -13,6 +13,7 @@
  */
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 import {
+  getPaymentOrderForConversion,
   listPurchaseConversionsDueForUpload,
   markConversionUploadResult,
   type PaymentOrder,
@@ -164,7 +165,7 @@ async function ingestEvents(config: GoogleAdsConfig, events: Record<string, unkn
   return payload.requestId ?? null;
 }
 
-export async function uploadDuePurchaseConversions(): Promise<PurchaseUploadResult> {
+export async function uploadPurchaseOrders(orders: PaymentOrder[]): Promise<PurchaseUploadResult> {
   const config = readGoogleAdsConfig();
   if (!config) {
     return {
@@ -178,14 +179,9 @@ export async function uploadDuePurchaseConversions(): Promise<PurchaseUploadResu
     };
   }
 
-  const due = await listPurchaseConversionsDueForUpload({
-    limit: PURCHASE_UPLOAD_BATCH_SIZE,
-    delayHours: PURCHASE_UPLOAD_DELAY_HOURS,
-  });
-
   const uploadable: Array<{ order: PaymentOrder; status: 'uploaded' | 'extended_upload' }> = [];
   let failed = 0;
-  for (const order of due) {
+  for (const order of orders) {
     const decision = resolveConversionUploadAction({
       gclid: order.gclid,
       gbraid: order.gbraid,
@@ -209,7 +205,7 @@ export async function uploadDuePurchaseConversions(): Promise<PurchaseUploadResu
   if (uploadable.length === 0) {
     return {
       configured: true,
-      selected: due.length,
+      selected: orders.length,
       uploaded: 0,
       extendedUpload: 0,
       failed,
@@ -226,7 +222,7 @@ export async function uploadDuePurchaseConversions(): Promise<PurchaseUploadResu
     })));
     return {
       configured: true,
-      selected: due.length,
+      selected: orders.length,
       uploaded: uploadable.filter(item => item.status === 'uploaded').length,
       extendedUpload: uploadable.filter(item => item.status === 'extended_upload').length,
       failed,
@@ -242,7 +238,7 @@ export async function uploadDuePurchaseConversions(): Promise<PurchaseUploadResu
     })));
     return {
       configured: true,
-      selected: due.length,
+      selected: orders.length,
       uploaded: 0,
       extendedUpload: 0,
       failed,
@@ -250,4 +246,26 @@ export async function uploadDuePurchaseConversions(): Promise<PurchaseUploadResu
       message,
     };
   }
+}
+
+export async function uploadDuePurchaseConversions(): Promise<PurchaseUploadResult> {
+  const due = await listPurchaseConversionsDueForUpload({
+    limit: PURCHASE_UPLOAD_BATCH_SIZE,
+    delayHours: PURCHASE_UPLOAD_DELAY_HOURS,
+  });
+  return uploadPurchaseOrders(due);
+}
+
+export async function uploadSinglePurchaseConversion(orderId: number): Promise<PurchaseUploadResult> {
+  const order = await getPaymentOrderForConversion(orderId);
+  if (!order) throw new Error('Payment order not found');
+  if (order.status !== 'Paid') throw new Error('Only paid orders can be uploaded to Google Ads');
+
+  await markConversionUploadResult({
+    orderId: order.id,
+    status: 'pending_upload',
+    error: null,
+  });
+
+  return uploadPurchaseOrders([{ ...order, conversionUploadStatus: 'pending_upload' }]);
 }

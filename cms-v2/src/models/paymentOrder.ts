@@ -350,6 +350,60 @@ export async function updateZenlerEnrollment(
   }
 }
 
+export async function getPaymentOrderForConversion(id: number): Promise<PaymentOrder | null> {
+  const rows = await sql`
+    SELECT po.*, cu.phone AS customer_phone
+    FROM payment_orders po
+    LEFT JOIN customers cu ON cu.id = po.customer_id
+    WHERE po.id = ${id}
+    LIMIT 1
+  `;
+  return rows[0] ? rowToOrder(rows[0] as DbRow) : null;
+}
+
+export async function listPaidConversionOrders(input: {
+  search?: string;
+  uploadStatus?: ConversionUploadStatus | 'all';
+  page?: number;
+  pageSize?: number;
+}): Promise<{ items: PaymentOrder[]; total: number; page: number; pageSize: number }> {
+  const search = input.search?.trim().toLowerCase() || null;
+  const uploadStatus = input.uploadStatus && input.uploadStatus !== 'all' ? input.uploadStatus : 'all';
+  const page = Math.max(1, Math.trunc(input.page ?? 1));
+  const pageSize = Math.min(100, Math.max(1, Math.trunc(input.pageSize ?? 50)));
+  const offset = (page - 1) * pageSize;
+
+  const rows = await sql`
+    SELECT po.*, cu.phone AS customer_phone, COUNT(*) OVER()::int AS total_count
+    FROM payment_orders po
+    LEFT JOIN customers cu ON cu.id = po.customer_id
+    WHERE po.status = 'Paid'
+      AND (
+        ${search}::text IS NULL
+        OR po.id::text = ${search}
+        OR LOWER(COALESCE(po.student_email, '')) LIKE '%' || ${search} || '%'
+        OR LOWER(COALESCE(po.stripe_customer_email, '')) LIKE '%' || ${search} || '%'
+        OR LOWER(COALESCE(po.student_name, '')) LIKE '%' || ${search} || '%'
+        OR LOWER(COALESCE(po.course_title, '')) LIKE '%' || ${search} || '%'
+        OR LOWER(COALESCE(po.gclid, '')) LIKE '%' || ${search} || '%'
+      )
+      AND (
+        ${uploadStatus}::text = 'all'
+        OR COALESCE(po.conversion_upload_status, 'pending_upload') = ${uploadStatus}
+      )
+    ORDER BY po.paid_at DESC NULLS LAST, po.id DESC
+    LIMIT ${pageSize} OFFSET ${offset}
+  `;
+
+  const total = Number((rows[0] as { total_count?: number } | undefined)?.total_count ?? 0);
+  return {
+    items: (rows as DbRow[]).map(rowToOrder),
+    total,
+    page,
+    pageSize,
+  };
+}
+
 export async function listPurchaseConversionsDueForUpload(input: {
   limit: number;
   delayHours: number;

@@ -36,6 +36,7 @@ import ContentMigration from './screens/ContentMigration';
 import Configurations from './screens/Configurations';
 import Sales from './screens/Sales';
 import Students from './screens/Students';
+import GoogleConversions from './screens/GoogleConversions';
 import CustomPaymentOffer from './screens/Billing/CustomPaymentOffer';
 import OfferHistory from './screens/Billing/OfferHistory';
 import AcceptSale from './screens/AcceptSale';
@@ -131,6 +132,7 @@ export default function App() {
           <Route path="/configurations"   element={<RequireAdmin><Configurations /></RequireAdmin>} />
           <Route path="/sales"            element={<RequireAdmin><Sales /></RequireAdmin>} />
           <Route path="/students"         element={<RequireAdmin><Students /></RequireAdmin>} />
+          <Route path="/google-conversions" element={<RequireAdmin><GoogleConversions /></RequireAdmin>} />
           <Route path="/billing/custom-offer" element={<RequireAdmin><CustomPaymentOffer /></RequireAdmin>} />
           <Route path="/billing/offers"       element={<RequireAdmin><OfferHistory /></RequireAdmin>} />
           <Route path="/settings/users"   element={<Navigate to="/settings" replace />} />

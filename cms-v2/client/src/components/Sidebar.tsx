@@ -324,6 +324,22 @@ export default function Sidebar({ isOpen, onClose }: Props) {
               Sales
             </NavLink>
             <NavLink
+              to="/google-conversions"
+              title="Google Conversions"
+              className={({ isActive }) =>
+                `mb-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? 'bg-brand text-white'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`
+              }
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path d="M3 3a1 1 0 000 2h1.22l.305 1.222a.998.998 0 00.01.042l1.358 5.43-.893.892C3.74 13.846 4.632 16 6.414 16H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 5H5.28l-.31-1.243A1 1 0 004 3H3z" />
+              </svg>
+              Google Conversions
+            </NavLink>
+            <NavLink
               to="/students"
               title="Students"
               className={({ isActive }) =>

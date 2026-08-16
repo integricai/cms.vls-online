@@ -1,12 +1,9 @@
 import { createHash } from 'crypto';
+import type { ConversionUploadStatus } from '../../shared/types';
+
+export type { ConversionUploadStatus };
 
 const MAX_FIELD_LENGTH = 255;
-
-export type ConversionUploadStatus =
-  | 'pending_upload'
-  | 'uploaded'
-  | 'extended_upload'
-  | 'failed';
 
 const CALLING_CODES: Record<string, string> = {
   GB: '44',
