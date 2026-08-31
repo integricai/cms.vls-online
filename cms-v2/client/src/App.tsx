@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { getCurrentUser, getToken } from './api/client';
+import { canManageContent, getCurrentUser, getToken } from './api/client';
 import Layout from './components/Layout';
 import Dashboard from './screens/Dashboard';
 import Login from './screens/Login';
@@ -32,7 +32,7 @@ import StepCards from './screens/StepCards';
 import LegalPage from './screens/LegalPage';
 import Team from './screens/Team';
 import Settings from './screens/Settings';
-import ContentMigration from './screens/ContentMigration';
+import ContentManagement from './screens/ContentManagement';
 import Configurations from './screens/Configurations';
 import Sales from './screens/Sales';
 import Students from './screens/Students';
@@ -65,8 +65,7 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
 }
 
 function RequireEditor({ children }: { children: React.ReactNode }) {
-  const role = getCurrentUser()?.role;
-  return role === 'admin' || role === 'editor' ? <>{children}</> : <Navigate to="/home-hero" replace />;
+  return canManageContent(getCurrentUser()?.role) ? <>{children}</> : <Navigate to="/home-hero" replace />;
 }
 
 export default function App() {
@@ -128,7 +127,8 @@ export default function App() {
           <Route path="/page-desc-with-menu"  element={<PageDescWithMenu />} />
           <Route path="/split-screen-sections" element={<Navigate to="/split-screen/left-hero" replace />} />
           <Route path="/settings"          element={<RequireAdmin><Settings /></RequireAdmin>} />
-          <Route path="/content-migration" element={<RequireEditor><ContentMigration /></RequireEditor>} />
+          <Route path="/content-management" element={<RequireEditor><ContentManagement /></RequireEditor>} />
+          <Route path="/content-migration" element={<Navigate to="/content-management" replace />} />
           <Route path="/configurations"   element={<RequireAdmin><Configurations /></RequireAdmin>} />
           <Route path="/sales"            element={<RequireAdmin><Sales /></RequireAdmin>} />
           <Route path="/students"         element={<RequireAdmin><Students /></RequireAdmin>} />
@@ -137,7 +137,7 @@ export default function App() {
           <Route path="/billing/offers"       element={<RequireAdmin><OfferHistory /></RequireAdmin>} />
           <Route path="/settings/users"   element={<Navigate to="/settings" replace />} />
           <Route path="/settings/menu"    element={<Navigate to="/settings" replace />} />
-          <Route path="/settings/courses" element={<Navigate to="/configurations" replace />} />
+          <Route path="/settings/courses" element={<Navigate to="/content-management?tab=courses" replace />} />
           <Route path="/settings/tutors"  element={<Navigate to="/configurations" replace />} />
           <Route path="/settings/sales"   element={<Navigate to="/sales" replace />} />
         </Route>

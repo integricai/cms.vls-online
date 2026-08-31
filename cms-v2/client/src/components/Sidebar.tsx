@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { clearToken, getCurrentUser } from '../api/client';
+import { canManageContent, clearToken, getCurrentUser } from '../api/client';
 import { useSidebarConfig } from '../contexts/sidebarConfig';
 import {
   buildItemLookup,
@@ -51,7 +51,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
   const location = useLocation();
   const currentUser = getCurrentUser();
   const isAdmin = currentUser?.role === 'admin';
-  const canMigrateContent = isAdmin || currentUser?.role === 'editor';
+  const canAccessContentManagement = canManageContent(currentUser?.role);
 
   useEffect(() => {
     for (const group of config) {
@@ -241,10 +241,10 @@ export default function Sidebar({ isOpen, onClose }: Props) {
           </svg>
           Dashboard
         </NavLink>
-        {canMigrateContent && (
+        {canAccessContentManagement && (
           <NavLink
-            to="/content-migration"
-            title="Content Migration"
+            to="/content-management"
+            title="Content Management"
             className={({ isActive }) =>
               `mb-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition ${
                 isActive
@@ -257,7 +257,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
               <path d="M8 2a1 1 0 000 2h2a1 1 0 100-2H8z" />
               <path d="M3 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v6h-4.586l1.293-1.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L10.414 13H15v3a2 2 0 01-2 2H5a2 2 0 01-2-2V5zM15 11h2a1 1 0 110 2h-2v-2z" />
             </svg>
-            Content Migration
+            Content Management
           </NavLink>
         )}
         {isAdmin && (

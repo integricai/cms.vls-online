@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import MenuManagement from '../MenuManagement';
 import UserManagement from '../UserManagement';
-import Books from '../Books';
 import DiscountCodes from '../DiscountCodes';
-import ContentMigrationTab from '../ContentMigration';
 import SitemapScreen from '../Sitemap';
 
-type Tab = 'menu' | 'contentMigration' | 'books' | 'discountCodes' | 'sitemap' | 'payments' | 'users';
+type Tab = 'menu' | 'discountCodes' | 'sitemap' | 'payments' | 'users';
 
 function PaymentsTab() {
   return (
@@ -19,8 +17,6 @@ function PaymentsTab() {
 
 const TAB_LABELS: Record<Tab, string> = {
   menu: 'Menu Settings',
-  contentMigration: 'Content Migration',
-  books: 'Books',
   discountCodes: 'Discount Codes',
   sitemap: 'Sitemap',
   payments: 'Payments',
@@ -52,8 +48,6 @@ export default function Settings() {
       </div>
       <div className="flex-1 overflow-auto">
         {tab === 'menu' && <MenuManagement />}
-        {tab === 'contentMigration' && <ContentMigrationTab />}
-        {tab === 'books' && <Books />}
         {tab === 'discountCodes' && <DiscountCodes />}
         {tab === 'sitemap' && <SitemapScreen />}
         {tab === 'payments' && <PaymentsTab />}

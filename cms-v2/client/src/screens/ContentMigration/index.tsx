@@ -674,7 +674,7 @@ export default function ContentMigrationTab() {
   return (
     <div className="p-6">
       <div className="mb-6 max-w-4xl">
-        <h2 className="mb-1 text-sm font-bold text-slate-700">Content Migration</h2>
+        <h2 className="mb-1 text-sm font-bold text-slate-700">Page Migration</h2>
         <p className="text-xs text-slate-500">
           Scan the live VLS site or scrape local page-content files, then work through the 3 migration phases:
           Preview Scrape, Generate Structure, Migrate Content. Any HTML in

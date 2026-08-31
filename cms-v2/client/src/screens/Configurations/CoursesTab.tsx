@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client';
+import { api, getCurrentUser } from '../../api/client';
 
 type Course = {
   id: number;
@@ -36,6 +36,7 @@ type SyncResult = {
 };
 
 function CoursesTab() {
+  const isAdmin = getCurrentUser()?.role === 'admin';
   const [courses, setCourses] = useState<Course[]>([]);
   const [options, setOptions] = useState<Record<CourseDropdownKind, string[]>>({
     qualification: [],
@@ -310,14 +311,16 @@ function CoursesTab() {
         available as dropdown options when configuring payment cards.
       </p>
 
-      <div className="mb-4 flex gap-2">
-        <button onClick={sync} disabled={syncing} className="btn-primary">
-          {syncing ? 'Syncing…' : '↻ Sync Courses from Zenler'}
-        </button>
-        <button onClick={runDebug} disabled={debugging} className="btn-ghost text-xs">
-          {debugging ? 'Fetching…' : '🔍 Debug raw response'}
-        </button>
-      </div>
+      {isAdmin && (
+        <div className="mb-4 flex gap-2">
+          <button onClick={sync} disabled={syncing} className="btn-primary">
+            {syncing ? 'Syncing…' : '↻ Sync Courses from Zenler'}
+          </button>
+          <button onClick={runDebug} disabled={debugging} className="btn-ghost text-xs">
+            {debugging ? 'Fetching…' : '🔍 Debug raw response'}
+          </button>
+        </div>
+      )}
 
       <div className="mb-5 rounded-xl border border-slate-200 bg-white p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
@@ -367,7 +370,11 @@ function CoursesTab() {
         </button>
       </div>
       {!loading && courses.length === 0 && (
-        <p className="text-xs text-slate-400">No courses synced yet. Click "Sync Courses from Zenler" above.</p>
+        <p className="text-xs text-slate-400">
+          {isAdmin
+            ? 'No courses synced yet. Click "Sync Courses from Zenler" above.'
+            : 'No courses synced yet. Ask an admin to sync courses from Zenler.'}
+        </p>
       )}
       {!loading && courses.length > 0 && (
         <div className="overflow-auto rounded-lg border border-slate-200 bg-white">

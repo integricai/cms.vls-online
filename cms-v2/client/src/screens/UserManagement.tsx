@@ -11,7 +11,7 @@ type FormState = {
 
 const ACCESS_OPTIONS: Array<{ value: AccessLevel; label: string }> = [
   { value: 'admin', label: 'Admin' },
-  { value: 'editor', label: 'Write' },
+  { value: 'editor', label: 'Content Manager' },
   { value: 'viewer', label: 'Read' },
 ];
 
@@ -119,7 +119,7 @@ export default function UserManagement() {
     <div className="flex h-full flex-col bg-slate-50">
       <div className="border-b border-slate-200 bg-white px-6 py-5">
         <h1 className="text-lg font-bold text-slate-900">User Management</h1>
-        <p className="mt-1 text-sm text-slate-500">Add users, block access, remove users, and assign Admin, Write, or Read access.</p>
+        <p className="mt-1 text-sm text-slate-500">Add users, block access, remove users, and assign Admin, Content Manager, or Read access.</p>
       </div>
 
       <div className="grid flex-1 grid-cols-[420px_1fr] overflow-hidden">

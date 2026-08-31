@@ -31,6 +31,11 @@ export function getCurrentUser(): CurrentUser | null {
   }
 }
 
+/** Admins and content managers (`editor`) can use Content Management. */
+export function canManageContent(role?: AccessLevel | null): boolean {
+  return role === 'admin' || role === 'editor';
+}
+
 export function setCurrentUser(user: CurrentUser): void {
   localStorage.setItem('cms_user', JSON.stringify(user));
 }
