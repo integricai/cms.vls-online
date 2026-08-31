@@ -1,6 +1,7 @@
 import { fetchZenlerCourses } from './zenlerCourseService';
 import { deactivateCoursesNotIn, upsertCourse } from '../models/course';
 import type { CourseSyncResult } from '../../shared/types';
+import { syncCourseSalesPageUrlsFromStoryblok } from './courseSalesPageUrlSync';
 import { syncCmsCoursesStoryblokDatasource } from './storyblokCmsCoursesDatasource';
 
 /**
@@ -46,6 +47,20 @@ export async function syncCoursesFromZenler(): Promise<CourseSyncResult> {
     };
   }
 
+  let salesPageUrls: CourseSyncResult['salesPageUrls'];
+  try {
+    salesPageUrls = await syncCourseSalesPageUrlsFromStoryblok();
+  } catch (err) {
+    salesPageUrls = {
+      ok: false,
+      scanned: 0,
+      updated: 0,
+      unchanged: 0,
+      unmatched: 0,
+      error: err instanceof Error ? err.message : 'Storyblok sales-page URL sync failed',
+    };
+  }
+
   return {
     fetched: zenlerCourses.length,
     inserted,
@@ -53,5 +68,6 @@ export async function syncCoursesFromZenler(): Promise<CourseSyncResult> {
     deactivated,
     syncedAt: new Date().toISOString(),
     storyblokDatasource,
+    salesPageUrls,
   };
 }

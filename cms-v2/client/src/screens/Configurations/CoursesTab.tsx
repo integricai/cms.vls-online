@@ -41,6 +41,14 @@ type SyncResult = {
     deleted: number;
     error?: string;
   };
+  salesPageUrls?: {
+    ok: boolean;
+    scanned: number;
+    updated: number;
+    unchanged: number;
+    unmatched: number;
+    error?: string;
+  };
 };
 
 type PageUrlImportResult = {
@@ -433,6 +441,11 @@ function CoursesTab() {
             ? syncResult.storyblokDatasource.ok
               ? ` · Storyblok dropdown ${syncResult.storyblokDatasource.created} created, ${syncResult.storyblokDatasource.updated} updated`
               : ` · Storyblok dropdown failed: ${syncResult.storyblokDatasource.error ?? 'unknown error'}`
+            : null}
+          {syncResult.salesPageUrls
+            ? syncResult.salesPageUrls.ok
+              ? ` · Sales page URLs ${syncResult.salesPageUrls.updated} updated, ${syncResult.salesPageUrls.unchanged} already set`
+              : ` · Sales page URL pull failed: ${syncResult.salesPageUrls.error ?? 'unknown error'}`
             : null}
         </div>
       )}

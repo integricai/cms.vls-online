@@ -154,6 +154,14 @@ export interface CourseSyncResult {
     deleted: number;
     error?: string;
   };
+  salesPageUrls?: {
+    ok: boolean;
+    scanned: number;
+    updated: number;
+    unchanged: number;
+    unmatched: number;
+    error?: string;
+  };
 }
 
 export interface CoursePageUrlImportError {
