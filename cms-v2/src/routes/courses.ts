@@ -9,6 +9,8 @@ import {
   replaceCourseDropdownOptions,
   updateCourseAdminMetadata,
 } from '../models/course';
+import { buildCoursePageUrlCsv, importCoursePageUrlsFromCsv, normalizeCoursePageUrl } from '../services/coursePageUrlImport';
+import type { CoursePageUrlImportResult } from '../../shared/types';
 import {
   createPaymentCard,
   deletePaymentCard,
@@ -169,6 +171,30 @@ router.put('/dropdown-options', requireRole('admin', 'editor'), async (req: Requ
   }
 });
 
+router.get('/export', requireRole('admin', 'editor'), async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const csv = buildCoursePageUrlCsv(await listCourses());
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="cms-courses.csv"');
+    return res.send(csv);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/import-page-urls', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const csv = typeof req.body?.csv === 'string' ? req.body.csv : '';
+    if (!csv.trim()) {
+      return res.status(400).json({ ok: false, error: 'Provide csv text' });
+    }
+    const result: CoursePageUrlImportResult = await importCoursePageUrlsFromCsv(csv);
+    return res.json({ ok: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.put('/reorder/order', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const ids = Array.isArray(req.body.ids)
@@ -204,6 +230,9 @@ router.put('/:id', requireRole('admin', 'editor'), async (req: Request, res: Res
           ? req.body.courseLevels.map((level: unknown) => String(level).trim()).filter(Boolean)
           : []),
       courseOption: req.body.courseOption === undefined ? undefined : (req.body.courseOption || null),
+      coursePageUrl: req.body.coursePageUrl === undefined
+        ? undefined
+        : normalizeCoursePageUrl(req.body.coursePageUrl),
     });
 
     if (!course) return res.status(404).json({ ok: false, error: 'Course not found' });

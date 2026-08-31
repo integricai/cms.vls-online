@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/google-ads-conversions",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/zenler-courses",
+      "schedule": "0 1 * * *"
     }
   ],
   "builds": [

@@ -263,6 +263,93 @@ export async function createStoryblokComponent(
   return data.component;
 }
 
+export async function updateStoryblokComponent(
+  config: StoryblokConfig,
+  componentId: number,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  await storyblokRequest(config, 'PUT', `/components/${componentId}`, { component: patch });
+}
+
+export interface StoryblokDatasource {
+  id: number;
+  name: string;
+  slug: string;
+}
+
+export interface StoryblokDatasourceEntry {
+  id: number;
+  name: string;
+  value: string;
+  datasource_id: number;
+}
+
+export async function listStoryblokDatasources(config: StoryblokConfig): Promise<StoryblokDatasource[]> {
+  const data = await storyblokRequest<{ datasources?: StoryblokDatasource[] }>(config, 'GET', '/datasources');
+  return data.datasources ?? [];
+}
+
+export async function createStoryblokDatasource(
+  config: StoryblokConfig,
+  input: { name: string; slug: string },
+): Promise<StoryblokDatasource> {
+  const data = await storyblokRequest<{ datasource: StoryblokDatasource }>(
+    config,
+    'POST',
+    '/datasources',
+    { datasource: input },
+  );
+  return data.datasource;
+}
+
+export async function listStoryblokDatasourceEntries(
+  config: StoryblokConfig,
+  datasourceId: number,
+): Promise<StoryblokDatasourceEntry[]> {
+  const entries: StoryblokDatasourceEntry[] = [];
+  for (let page = 1; page <= 50; page += 1) {
+    const data = await storyblokRequest<{ datasource_entries?: StoryblokDatasourceEntry[] }>(
+      config,
+      'GET',
+      `/datasource_entries?datasource_id=${datasourceId}&per_page=100&page=${page}`,
+    );
+    const batch = data.datasource_entries ?? [];
+    entries.push(...batch);
+    if (batch.length < 100) break;
+  }
+  return entries;
+}
+
+export async function createStoryblokDatasourceEntry(
+  config: StoryblokConfig,
+  input: { datasourceId: number; name: string; value: string },
+): Promise<StoryblokDatasourceEntry> {
+  const data = await storyblokRequest<{ datasource_entry: StoryblokDatasourceEntry }>(
+    config,
+    'POST',
+    '/datasource_entries',
+    { datasource_entry: { datasource_id: input.datasourceId, name: input.name, value: input.value } },
+  );
+  return data.datasource_entry;
+}
+
+export async function updateStoryblokDatasourceEntry(
+  config: StoryblokConfig,
+  entryId: number,
+  input: { name: string; value: string },
+): Promise<void> {
+  await storyblokRequest(config, 'PUT', `/datasource_entries/${entryId}`, {
+    datasource_entry: { name: input.name, value: input.value },
+  });
+}
+
+export async function deleteStoryblokDatasourceEntry(
+  config: StoryblokConfig,
+  entryId: number,
+): Promise<void> {
+  await storyblokRequest(config, 'DELETE', `/datasource_entries/${entryId}`);
+}
+
 export async function validateStoryblokRootBloks(
   config: StoryblokConfig,
   rootComponent: string,

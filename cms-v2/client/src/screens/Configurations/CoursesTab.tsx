@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { api, getCurrentUser } from '../../api/client';
+import { useEffect, useRef, useState } from 'react';
+import { api, getCurrentUser, getToken } from '../../api/client';
 
 type Course = {
   id: number;
@@ -14,6 +14,7 @@ type Course = {
   courseLevel: string | null;
   courseLevels: string[];
   courseOption: string | null;
+  coursePageUrl: string | null;
   lastSyncedAt: string | null;
 };
 
@@ -33,7 +34,41 @@ type SyncResult = {
   updated: number;
   deactivated: number;
   syncedAt: string;
+  storyblokDatasource?: {
+    ok: boolean;
+    created: number;
+    updated: number;
+    deleted: number;
+    error?: string;
+  };
 };
+
+type PageUrlImportResult = {
+  updated: number;
+  cleared: number;
+  skipped: number;
+  errors: Array<{ rowNumber: number; zenlerCourseId: string; message: string }>;
+};
+
+function downloadText(filename: string, content: string): void {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function downloadCoursesCsv(): Promise<void> {
+  const token = getToken();
+  const base = (import.meta.env.VITE_API_URL ?? '') + '/api';
+  const res = await fetch(`${base}/courses/export`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error('Failed to download courses CSV');
+  downloadText('cms-courses.csv', await res.text());
+}
 
 function CoursesTab() {
   const isAdmin = getCurrentUser()?.role === 'admin';
@@ -54,6 +89,9 @@ function CoursesTab() {
   const [debugging, setDebugging] = useState(false);
   const [orderDirty, setOrderDirty] = useState(false);
   const [draggingCourseId, setDraggingCourseId] = useState<number | null>(null);
+  const [importingCsv, setImportingCsv] = useState(false);
+  const [importResult, setImportResult] = useState<PageUrlImportResult | null>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     Promise.all([
@@ -144,6 +182,7 @@ function CoursesTab() {
         courseLevel: course.courseLevel,
         courseLevels: course.courseLevels || [],
         courseOption: course.courseOption,
+        coursePageUrl: course.coursePageUrl,
       });
       patchCourse(course.id, saved);
     } catch (e) {
@@ -239,6 +278,24 @@ function CoursesTab() {
     }
   }
 
+  async function importPageUrlCsv(file: File) {
+    setImportingCsv(true);
+    setImportResult(null);
+    setSyncError(null);
+    try {
+      const csv = await file.text();
+      const result = await api.post<PageUrlImportResult>('/courses/import-page-urls', { csv });
+      setImportResult(result);
+      const fresh = await api.get<Course[]>('/courses');
+      setCourses(fresh || []);
+    } catch (e) {
+      setSyncError((e instanceof Error ? e.message : null) || 'CSV import failed.');
+    } finally {
+      setImportingCsv(false);
+      if (csvInputRef.current) csvInputRef.current.value = '';
+    }
+  }
+
   function updateOption(kind: CourseDropdownKind, index: number, value: string) {
     setOptions(prev => ({
       ...prev,
@@ -311,16 +368,44 @@ function CoursesTab() {
         available as dropdown options when configuring payment cards.
       </p>
 
-      {isAdmin && (
-        <div className="mb-4 flex gap-2">
-          <button onClick={sync} disabled={syncing} className="btn-primary">
-            {syncing ? 'Syncing…' : '↻ Sync Courses from Zenler'}
-          </button>
-          <button onClick={runDebug} disabled={debugging} className="btn-ghost text-xs">
-            {debugging ? 'Fetching…' : '🔍 Debug raw response'}
-          </button>
-        </div>
-      )}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {isAdmin && (
+          <>
+            <button onClick={sync} disabled={syncing} className="btn-primary">
+              {syncing ? 'Syncing…' : '↻ Sync Courses from Zenler'}
+            </button>
+            <button onClick={runDebug} disabled={debugging} className="btn-ghost text-xs">
+              {debugging ? 'Fetching…' : '🔍 Debug raw response'}
+            </button>
+          </>
+        )}
+        <button
+          onClick={() => downloadCoursesCsv().catch(err => setSyncError(err instanceof Error ? err.message : 'Download failed.'))}
+          className="btn-ghost text-xs"
+        >
+          Download CSV
+        </button>
+        <button
+          onClick={() => csvInputRef.current?.click()}
+          disabled={importingCsv}
+          className="btn-ghost text-xs"
+        >
+          {importingCsv ? 'Importing…' : 'Upload CSV'}
+        </button>
+        <input
+          ref={csvInputRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          onChange={event => {
+            const file = event.target.files?.[0];
+            if (file) void importPageUrlCsv(file);
+          }}
+        />
+      </div>
+      <p className="mb-4 text-xs text-slate-400">
+        CSV updates <code>course_page_url</code> only, matched by <code>zenler_course_id</code>.
+      </p>
 
       <div className="mb-5 rounded-xl border border-slate-200 bg-white p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
@@ -344,6 +429,30 @@ function CoursesTab() {
           Sync complete — <strong>{syncResult.fetched}</strong> fetched ·{' '}
           <strong>{syncResult.inserted}</strong> new · <strong>{syncResult.updated}</strong> updated ·{' '}
           <strong>{syncResult.deactivated}</strong> deactivated
+          {syncResult.storyblokDatasource
+            ? syncResult.storyblokDatasource.ok
+              ? ` · Storyblok dropdown ${syncResult.storyblokDatasource.created} created, ${syncResult.storyblokDatasource.updated} updated`
+              : ` · Storyblok dropdown failed: ${syncResult.storyblokDatasource.error ?? 'unknown error'}`
+            : null}
+        </div>
+      )}
+      {importResult && (
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          CSV import — <strong>{importResult.updated}</strong> updated ·{' '}
+          <strong>{importResult.cleared}</strong> cleared ·{' '}
+          <strong>{importResult.skipped}</strong> unchanged
+          {importResult.errors.length > 0 && (
+            <ul className="mt-2 list-disc pl-5 text-xs text-red-700">
+              {importResult.errors.slice(0, 8).map(error => (
+                <li key={`${error.rowNumber}-${error.zenlerCourseId}`}>
+                  Row {error.rowNumber}{error.zenlerCourseId ? ` (${error.zenlerCourseId})` : ''}: {error.message}
+                </li>
+              ))}
+              {importResult.errors.length > 8 && (
+                <li>…and {importResult.errors.length - 8} more</li>
+              )}
+            </ul>
+          )}
         </div>
       )}
       {syncError && (
@@ -384,6 +493,7 @@ function CoursesTab() {
                 <th className="px-3 py-2 font-semibold">Sort</th>
                 <th className="px-3 py-2 font-semibold">Name</th>
                 <th className="px-3 py-2 font-semibold">Zenler ID</th>
+                <th className="px-3 py-2 font-semibold">Course page URL</th>
                 <th className="px-3 py-2 font-semibold">Status</th>
                 <th className="px-3 py-2 font-semibold">Enabled</th>
                 <th className="px-3 py-2 font-semibold">Enable in Banner</th>
@@ -427,6 +537,14 @@ function CoursesTab() {
                   </td>
                   <td className="px-3 py-2 font-medium text-slate-700">{c.name}</td>
                   <td className="px-3 py-2 text-slate-400">{c.zenlerCourseId}</td>
+                  <td className="px-3 py-2">
+                    <input
+                      className="input h-8 min-w-52 text-xs"
+                      placeholder="/courses/fa1"
+                      value={c.coursePageUrl ?? ''}
+                      onChange={event => patchCourse(c.id, { coursePageUrl: event.target.value || null })}
+                    />
+                  </td>
                   <td className="px-3 py-2 text-slate-400">{c.status ?? '—'}</td>
                   <td className="px-3 py-2">
                     <input

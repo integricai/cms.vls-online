@@ -5,8 +5,8 @@ import { neon } from '@neondatabase/serverless';
 
 const CONFIG_KEY = 'vls-course-finder-banner-config';
 
-function publicCourseUrl(zenlerUrl, slug) {
-  const raw = zenlerUrl || (slug ? `/courses/${slug}` : '#');
+function publicCourseUrl(coursePageUrl, zenlerUrl, slug) {
+  const raw = coursePageUrl || zenlerUrl || (slug ? `/courses/${slug}` : '#');
   return String(raw).replace('https://vls.newzenler.com', 'https://vls-online.com');
 }
 
@@ -22,7 +22,8 @@ function mapCourseRow(row) {
     category: row.category || '',
     level: row.level || '',
     status: row.status || '',
-    url: publicCourseUrl(row.zenler_url, row.slug),
+    url: publicCourseUrl(row.course_page_url, row.zenler_url, row.slug),
+    coursePageUrl: row.course_page_url || '',
     sortOrder: row.sort_order || 0,
     qualification: row.qualification || '',
     courseLevel: row.course_level || '',
@@ -53,7 +54,7 @@ export default async function handler(req, res) {
     const [courseRows, configRows] = await Promise.all([
       sql`
         SELECT c.id, c.name, c.slug, c.category, c.level, c.status, c.zenler_url,
-               c.sort_order, c.qualification, c.course_level, c.course_option,
+               c.course_page_url, c.sort_order, c.qualification, c.course_level, c.course_option,
                c.is_active, c.enable_in_banner, c.enable_in_navigation,
                COALESCE(
                  array_remove(array_agg(cl.level ORDER BY cl.sort_order ASC, cl.level ASC), NULL),

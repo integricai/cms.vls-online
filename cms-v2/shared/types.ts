@@ -86,6 +86,8 @@ export interface Course {
   courseLevel: string | null;
   courseLevels: string[];
   courseOption: string | null;
+  /** Public sales-page path or URL (e.g. /courses/fa1). Not overwritten by Zenler sync. */
+  coursePageUrl: string | null;
   lastSyncedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -145,6 +147,26 @@ export interface CourseSyncResult {
   updated: number;
   deactivated: number;
   syncedAt: string;
+  storyblokDatasource?: {
+    ok: boolean;
+    created: number;
+    updated: number;
+    deleted: number;
+    error?: string;
+  };
+}
+
+export interface CoursePageUrlImportError {
+  rowNumber: number;
+  zenlerCourseId: string;
+  message: string;
+}
+
+export interface CoursePageUrlImportResult {
+  updated: number;
+  cleared: number;
+  skipped: number;
+  errors: CoursePageUrlImportError[];
 }
 
 export interface ScrapedCoursePrice {

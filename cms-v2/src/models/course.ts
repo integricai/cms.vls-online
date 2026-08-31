@@ -18,6 +18,7 @@ interface DbRow {
   course_level: string | null;
   course_levels?: string[];
   course_option: string | null;
+  course_page_url: string | null;
   last_synced_at: Date | null;
   created_at: Date;
   updated_at: Date;
@@ -51,6 +52,7 @@ function rowToCourse(row: DbRow): Course {
     courseLevel: row.course_level,
     courseLevels: row.course_levels ?? (row.course_level ? [row.course_level] : []),
     courseOption: row.course_option,
+    coursePageUrl: row.course_page_url ?? null,
     lastSyncedAt: row.last_synced_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -164,6 +166,7 @@ export async function updateCourseAdminMetadata(
     courseLevel?: string | null;
     courseLevels?: string[];
     courseOption?: string | null;
+    coursePageUrl?: string | null;
   },
 ): Promise<Course | null> {
   const existingRows = await sql`SELECT * FROM courses WHERE id = ${id} LIMIT 1`;
@@ -179,6 +182,7 @@ export async function updateCourseAdminMetadata(
         qualification = ${data.qualification === undefined ? existing.qualification : data.qualification},
         course_level  = ${data.courseLevel === undefined ? existing.course_level : data.courseLevel},
         course_option = ${data.courseOption === undefined ? existing.course_option : data.courseOption},
+        course_page_url = ${data.coursePageUrl === undefined ? existing.course_page_url : data.coursePageUrl},
         updated_at    = NOW()
     WHERE id = ${id}
     RETURNING *
@@ -247,6 +251,20 @@ export async function replaceCourseDropdownOptions(
   }
 
   return listCourseDropdownOptions();
+}
+
+export async function updateCoursePageUrlByZenlerId(
+  zenlerCourseId: string,
+  coursePageUrl: string | null,
+): Promise<Course | null> {
+  const rows = await sql`
+    UPDATE courses
+    SET course_page_url = ${coursePageUrl},
+        updated_at = NOW()
+    WHERE zenler_course_id = ${zenlerCourseId}
+    RETURNING *
+  `;
+  return rows[0] ? rowToCourse(rows[0] as DbRow) : null;
 }
 
 export async function deactivateCoursesNotIn(activeZenlerIds: string[]): Promise<number> {

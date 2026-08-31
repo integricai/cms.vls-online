@@ -8,6 +8,7 @@ export interface CourseFinderEmbedCourse {
   level: string;
   status: string;
   url: string;
+  coursePageUrl: string;
   sortOrder: number;
   qualification: string;
   courseLevel: string;
@@ -18,8 +19,12 @@ export interface CourseFinderEmbedCourse {
   enableInNavigation: boolean;
 }
 
-export function publicCourseUrl(zenlerUrl: string | null, slug: string | null): string {
-  const raw = zenlerUrl || (slug ? `/courses/${slug}` : '#');
+export function publicCourseUrl(
+  zenlerUrl: string | null,
+  slug: string | null,
+  coursePageUrl?: string | null,
+): string {
+  const raw = coursePageUrl || zenlerUrl || (slug ? `/courses/${slug}` : '#');
   return raw.replace('https://vls.newzenler.com', 'https://vls-online.com');
 }
 
@@ -33,7 +38,8 @@ export function mapActiveCoursesForFinder(courses: Course[]): CourseFinderEmbedC
       category: course.category || '',
       level: course.level || '',
       status: course.status || '',
-      url: publicCourseUrl(course.zenlerUrl, course.slug),
+      url: publicCourseUrl(course.zenlerUrl, course.slug, course.coursePageUrl),
+      coursePageUrl: course.coursePageUrl || '',
       sortOrder: course.sortOrder || 0,
       qualification: course.qualification || '',
       courseLevel: course.courseLevel || '',
