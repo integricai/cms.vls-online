@@ -344,6 +344,80 @@ await run('planDurationSortKey prefers duration_days', () => {
     > planDurationSortKey(geoPrice({ id: 2, name: 'Three months', amount: 1, durationDays: 90 })));
 });
 
+await run('India visitor sees INR with charged-as USD; amount stays USD', async () => {
+  const result = await buildCourseDisplayPricing({
+    zenlerCourseId: '1',
+    courseSlug: 'cima',
+    courseName: 'CIMA',
+    offerRule: null,
+    countryCode: 'IN',
+    fxRates: { INR: 83 },
+    prices: [
+      geoPrice({ id: 10, name: 'Full access', amount: 89, durationDays: 365 }),
+    ],
+  }, new Date('2026-08-15T12:00:00'));
+
+  assert.ok(result);
+  assert.strictEqual(result!.currency, 'USD');
+  assert.strictEqual(result!.amount, 89);
+  assert.strictEqual(result!.displayCurrency, 'INR');
+  assert.strictEqual(result!.fxApplied, true);
+  assert.strictEqual(result!.formattedChargeUsd, 'Charged as $89 USD');
+  assert.match(result!.formatted, /7,387|₹/);
+  assert.strictEqual(result!.plans[0]!.effectiveAmount, 89);
+});
+
+await run('Pakistan visitor sees PKR; US visitor stays on USD', async () => {
+  const pk = await buildCourseDisplayPricing({
+    zenlerCourseId: '1',
+    courseSlug: 'cima',
+    courseName: 'CIMA',
+    offerRule: null,
+    countryCode: 'PK',
+    fxRates: { PKR: 278 },
+    prices: [geoPrice({ id: 10, name: 'Full access', amount: 89, durationDays: 365 })],
+  }, new Date('2026-08-15T12:00:00'));
+
+  assert.ok(pk);
+  assert.strictEqual(pk!.displayCurrency, 'PKR');
+  assert.strictEqual(pk!.fxApplied, true);
+  assert.strictEqual(pk!.formattedChargeUsd, 'Charged as $89 USD');
+  assert.strictEqual(pk!.amount, 89);
+
+  const us = await buildCourseDisplayPricing({
+    zenlerCourseId: '1',
+    courseSlug: 'cima',
+    courseName: 'CIMA',
+    offerRule: null,
+    countryCode: 'US',
+    fxRates: { INR: 83 },
+    prices: [geoPrice({ id: 10, name: 'Full access', amount: 89, durationDays: 365 })],
+  }, new Date('2026-08-15T12:00:00'));
+
+  assert.ok(us);
+  assert.strictEqual(us!.displayCurrency, 'USD');
+  assert.strictEqual(us!.fxApplied, false);
+  assert.strictEqual(us!.formattedChargeUsd, null);
+  assert.strictEqual(us!.formatted, '$89');
+});
+
+await run('missing FX rate falls back to USD', async () => {
+  const result = await buildCourseDisplayPricing({
+    zenlerCourseId: '1',
+    courseSlug: 'cima',
+    courseName: 'CIMA',
+    offerRule: null,
+    countryCode: 'IN',
+    fxRates: {},
+    prices: [geoPrice({ id: 10, name: 'Full access', amount: 89, durationDays: 365 })],
+  }, new Date('2026-08-15T12:00:00'));
+
+  assert.ok(result);
+  assert.strictEqual(result!.displayCurrency, 'USD');
+  assert.strictEqual(result!.fxApplied, false);
+  assert.strictEqual(result!.formatted, '$89');
+});
+
 console.log('All courseDisplayPricing tests passed.');
 }
 

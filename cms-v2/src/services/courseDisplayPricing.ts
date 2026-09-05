@@ -11,6 +11,8 @@ import {
   getNextOpenExamSessions,
   type ExamSession,
 } from './qualificationOfferSessions';
+import { BANK_FX_NOTE, currencyForCountry, localizeDisplayMoney } from './displayCurrency';
+import { getUsdRates, rateForCurrency } from './fxRates';
 
 /** ACCA exam sittings fallback when no qualification offer rule is configured. */
 export const ACCA_EXAM_MONTHS = [3, 6, 9, 12] as const;
@@ -29,6 +31,10 @@ export type PublishedCoursePricePlan = {
   effectiveAmount: number;
   formatted: string;
   formattedCompareAt: string | null;
+  /** Present when the card shows local currency. Checkout remains USD. */
+  formattedChargeUsd: string | null;
+  displayCurrency: string;
+  fxApplied: boolean;
   lateEnrollmentDiscount: boolean;
   isDefault: boolean;
   badge: string | null;
@@ -40,9 +46,14 @@ export type PublishedCoursePricing = {
   zenlerCourseId: string;
   courseSlug: string | null;
   courseName: string;
+  /** Charge currency — Stripe/PayPal always receive this. */
   currency: 'USD';
+  displayCurrency: string;
+  fxApplied: boolean;
+  fxNote: string | null;
+  formattedChargeUsd: string | null;
   plans: PublishedCoursePricePlan[];
-  /** Top-level quote for single-plan courses or default plan. */
+  /** Top-level quote for single-plan courses or default plan. Amounts stay USD. */
   amount: number;
   compareAt: number | null;
   formatted: string;
@@ -137,6 +148,9 @@ function buildPlanFields(
     effectiveAmount: effective,
     formatted: formatUsd(effective),
     formattedCompareAt: compareAt != null ? formatUsd(compareAt) : null,
+    formattedChargeUsd: null,
+    displayCurrency: 'USD',
+    fxApplied: false,
     lateEnrollmentDiscount: false,
     isDefault: price.isDefault,
     badge: options.badge,
@@ -204,6 +218,8 @@ export async function buildCourseDisplayPricing(
     countryCode?: string | null;
     ipAddress?: string | null;
     ignoreVpnBlock?: boolean;
+    /** Injected USD FX rates for tests. Production fetches and caches rates. */
+    fxRates?: Record<string, number> | null;
   },
   now: Date = new Date(),
 ): Promise<PublishedCoursePricing | null> {
@@ -302,7 +318,7 @@ export async function buildCourseDisplayPricing(
     });
   }
 
-  plans = resolvedPlans;
+  plans = await applyLocalDisplayCurrency(resolvedPlans, input.countryCode, input.fxRates);
 
   const defaultPlan = plans.find(p => p.isDefault) ?? plans[0]!;
 
@@ -311,10 +327,39 @@ export async function buildCourseDisplayPricing(
     courseSlug: input.courseSlug,
     courseName: input.courseName,
     currency: 'USD',
+    displayCurrency: defaultPlan.displayCurrency,
+    fxApplied: defaultPlan.fxApplied,
+    fxNote: defaultPlan.fxApplied ? BANK_FX_NOTE : null,
+    formattedChargeUsd: defaultPlan.formattedChargeUsd,
     plans,
     amount: defaultPlan.effectiveAmount,
     compareAt: defaultPlan.compareAt,
     formatted: defaultPlan.formatted,
     formattedCompareAt: defaultPlan.formattedCompareAt,
   };
+}
+
+async function applyLocalDisplayCurrency(
+  plans: PublishedCoursePricePlan[],
+  countryCode: string | null | undefined,
+  injectedRates?: Record<string, number> | null,
+): Promise<PublishedCoursePricePlan[]> {
+  const displayCurrency = currencyForCountry(countryCode);
+  if (displayCurrency === 'USD') return plans;
+
+  const rates = injectedRates !== undefined ? injectedRates : await getUsdRates();
+  const rate = rateForCurrency(rates, displayCurrency);
+  if (rate == null) return plans;
+
+  return plans.map(plan => {
+    const localized = localizeDisplayMoney(plan.effectiveAmount, plan.compareAt, displayCurrency, rate);
+    return {
+      ...plan,
+      formatted: localized.formatted,
+      formattedCompareAt: localized.formattedCompareAt,
+      formattedChargeUsd: localized.formattedChargeUsd,
+      displayCurrency: localized.displayCurrency,
+      fxApplied: localized.fxApplied,
+    };
+  });
 }
