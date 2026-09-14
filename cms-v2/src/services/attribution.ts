@@ -81,6 +81,7 @@ export function environmentFromHostname(hostname: string | null | undefined): Ch
   if (
     host === 'staging.vls-online.com'
     || host === 'preview.vls-online.com'
+    || host === 'prod.vls-online.com'
     || host === 'localhost'
     || host === '127.0.0.1'
     || host.endsWith('.vercel.app')

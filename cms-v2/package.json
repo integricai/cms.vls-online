@@ -21,6 +21,7 @@
     "test:course-scraper": "ts-node src/services/coursePageScraper.test.ts",
     "test:course-template": "ts-node src/services/buildCourseTemplateContent.test.ts",
     "test:attribution": "ts-node src/services/attribution.test.ts",
+    "test:checkout-site-url": "ts-node src/services/checkoutSiteUrl.test.ts",
     "test:google-ads-conversions": "ts-node src/services/googleAdsConversions.test.ts"
   },
   "dependencies": {

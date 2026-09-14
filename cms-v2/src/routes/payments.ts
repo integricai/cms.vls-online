@@ -170,6 +170,14 @@ function computeDiscountPercent(listAmount: number, effectiveAmount: number): nu
   return Math.round((1 - effectiveAmount / listAmount) * 10000) / 100;
 }
 
+function parseCheckoutReturnOrigin(req: Request): string | undefined {
+  const body = req.body && typeof req.body === 'object'
+    ? req.body as Record<string, unknown>
+    : {};
+  const candidate = body.returnOrigin ?? body.origin ?? req.get('origin');
+  return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : undefined;
+}
+
 function parseCheckoutCustomer(body: Record<string, unknown>, countryCode: string | null) {
   const studentEmail = parseOptionalText(body.studentEmail);
   const studentName = parseOptionalText(body.studentName);
@@ -279,10 +287,11 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
       zenlerCourseId: option.zenlerCourseId,
       courseTitle: option.courseName ?? option.title,
       paymentCardTitle: option.title,
-      amount,
-      currency: option.currency || 'GBP',
-      studentEmail: customerInput.studentEmail,
-    });
+        amount,
+        currency: option.currency || 'GBP',
+        studentEmail: customerInput.studentEmail,
+        returnOrigin: parseCheckoutReturnOrigin(req),
+      });
     await attachStripeCheckoutSession(order.id, session.id);
 
     return res.json({ checkoutUrl: session.url });
@@ -418,9 +427,10 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       paymentCardTitle: `${course.name} — ${resolved.price.name}`,
       amount: resolved.effectiveAmount,
       currency: 'USD',
-      studentEmail: customerInput.studentEmail,
-      countryCode: quotedCountryCode,
-    });
+        studentEmail: customerInput.studentEmail,
+        countryCode: quotedCountryCode,
+        returnOrigin: parseCheckoutReturnOrigin(req),
+      });
     await attachStripeCheckoutSession(order.id, session.id);
 
     if (!session.url) {

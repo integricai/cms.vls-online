@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { resolveCheckoutSiteUrl } from './checkoutSiteUrl';
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
 export interface StripeCheckoutSession {
@@ -22,10 +23,11 @@ export async function createStripeCheckoutSession(input: {
   currency: string;
   studentEmail: string | null;
   countryCode?: string | null;
+  returnOrigin?: string | null;
 }): Promise<StripeCheckoutSession> {
   const secretKey = stripeSecretKey();
 
-  const siteUrl = (process.env.PUBLIC_SITE_URL ?? 'https://vls-online.com').replace(/\/+$/, '');
+  const siteUrl = resolveCheckoutSiteUrl(input.returnOrigin);
   const unitAmount = Math.round(input.amount * 100);
   if (!Number.isInteger(unitAmount) || unitAmount <= 0) {
     throw new Error('Payment amount must be greater than zero');
