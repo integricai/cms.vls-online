@@ -116,6 +116,37 @@ app.post('/api/publish-header', authGuard, requireRole('admin', 'editor'), async
   }
 });
 
+app.options('/api/publish-header-v2', (_req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.status(204).end();
+});
+
+app.get('/api/publish-header-v2', async (_req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const row = await getContent('vls-header-v2-config');
+    const data = row?.data && typeof row.data === 'object' ? row.data as { config?: unknown } : {};
+    return res.json({ config: data.config ?? null });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post('/api/publish-header-v2', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const config = req.body?.config ?? null;
+    const row = await upsertContent('vls-header-v2-config', { config }, req.user!.userId);
+    return res.json({ ok: true, data: row, config });
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.options('/api/publish-course-finder-banner', (_req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');

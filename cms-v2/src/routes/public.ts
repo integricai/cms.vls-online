@@ -12,6 +12,11 @@ const COURSE_FINDER_BANNER_RUNTIME = readFileSync(
   'utf8',
 );
 
+const FOOTER_V2_UPDATER_SCRIPT = readFileSync(
+  join(__dirname, '../assets/footer-v2-updater.js'),
+  'utf8',
+);
+
 const PUBLIC_CONTENT_TTL_MS = 60_000;
 const PUBLIC_CONTENT_STALE_MS = 30 * 60_000;
 
@@ -187,6 +192,36 @@ router.get('/footer', async (_req: Request, res: Response, next: NextFunction) =
   } catch (err) {
     next(err);
   }
+});
+
+router.options('/footer-v2', (_req, res) => {
+  allowPublicCors(res);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.status(204).end();
+});
+
+router.get('/footer-v2', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = await getPublicContentData('vls-footer-v2');
+    allowPublicCors(res);
+    setPublicJsonCache(res);
+    return res.json({ footer: data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.options('/footer-v2-updater.js', (_req, res) => {
+  allowPublicCors(res);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.status(204).end();
+});
+
+router.get('/footer-v2-updater.js', (_req: Request, res: Response) => {
+  allowPublicCors(res);
+  res.setHeader('Cache-Control', 'no-store');
+  res.type('application/javascript');
+  res.send(FOOTER_V2_UPDATER_SCRIPT);
 });
 
 router.options('/blog', (_req, res) => {

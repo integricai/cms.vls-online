@@ -37,6 +37,12 @@ export const DEFAULTS = {
   headerSubTitle:  { size: 12, color: '#204280', weight: '500', letterSpacing: 0.04 },
   headerCta:       { size: 14, color: '#ffffff', weight: '500', letterSpacing: 0    },
   headerMenu:      { size: 16, color: '#204280', weight: '500', letterSpacing: 0    },
+  headerV2SiteTitle: { size: 18, color: '#0e2a57', weight: '700', letterSpacing: -0.01 },
+  headerV2SubTitle:  { size: 10, color: '#3d4a63', weight: '600', letterSpacing: 0.22 },
+  headerV2SignIn:    { size: 15, color: '#0e2a57', weight: '500', letterSpacing: 0    },
+  headerV2Enrol:     { size: 15, color: '#ffffff', weight: '500', letterSpacing: 0    },
+  footerV2About:     { size: 15, color: '#a4b4d6', weight: '400', letterSpacing: 0    },
+  footerV2Rating:    { size: 14, color: '#a4b4d6', weight: '400', letterSpacing: 0    },
   // Contact Footer
   cfLabel:     { size: 11, color: '#1a56a3', weight: '600', letterSpacing: 0.12 },
   cfCompany:   { size: 22, color: '#1a1a1a', weight: '700', letterSpacing: 0    },

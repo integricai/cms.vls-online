@@ -330,6 +330,18 @@ export interface FooterData {
   copyright: FooterCopyright;
 }
 
+export interface FooterV2Data extends FooterData {
+  aboutText: TextValue;
+  ratingText: TextValue;
+  ratingValue: number;
+  logoUrl: string;
+  logoAlt: string;
+  logoLink: string;
+  siteTitle: TextValue;
+  subTitle: TextValue;
+  siteBaseUrl: string;
+}
+
 // ── Header ────────────────────────────────────────────────────────────────────
 
 export interface HeaderCta {
@@ -373,6 +385,23 @@ export interface HeaderConfig {
   ctas: HeaderCta[];
   menuItems: HeaderMenuItem[];
   useZenMenu: boolean;
+}
+
+export interface HeaderV2Config {
+  logoUrl: string;
+  logoAlt: string;
+  logoLink: string;
+  siteTitle: TextValue;
+  subTitle: TextValue;
+  siteBaseUrl: string;
+  signInLabel: TextValue;
+  signInUrl: string;
+  signInNewTab: boolean;
+  enrolLabel: TextValue;
+  enrolUrl: string;
+  enrolBg: string;
+  enrolTextColor: string;
+  enrolNewTab: boolean;
 }
 
 // ── Contact Footer ────────────────────────────────────────────────────────────

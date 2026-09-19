@@ -7,8 +7,10 @@ import ResetPassword from './screens/ResetPassword';
 import HomeHero from './screens/HomeHero';
 import AboutUs from './screens/AboutUs';
 import Header from './screens/Header';
+import HeaderV2 from './screens/HeaderV2';
 import BlogHeader from './screens/BlogHeader';
 import Footer from './screens/Footer';
+import FooterV2 from './screens/FooterV2';
 import Banner from './screens/Banner';
 import CoursePrice from './screens/CoursePrice';
 import CoursePricing from './screens/CoursePricing';
@@ -86,8 +88,10 @@ export default function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard"         element={<Dashboard />} />
           <Route path="/header"            element={<Header />} />
+          <Route path="/header-v2"         element={<HeaderV2 />} />
           <Route path="/blog-header"       element={<BlogHeader />} />
           <Route path="/footer"            element={<Footer />} />
+          <Route path="/footer-v2"         element={<FooterV2 />} />
           <Route path="/banner"            element={<Banner />} />
           <Route path="/course-price"      element={<RequireAdmin><CoursePrice /></RequireAdmin>} />
           <Route path="/course-pricing"    element={<RequireAdmin><CoursePricing /></RequireAdmin>} />
