@@ -1,4 +1,5 @@
 import type { FooterV2Data } from '../../types/cms';
+import { useV2BrandMark } from '../../utils/brand';
 import { escapeHtml, normalize, textStyle } from '../../utils/text';
 
 const SOCIAL_ICONS: Record<string, string> = {
@@ -35,19 +36,17 @@ export function buildFooterV2Markup(data: FooterV2Data, uid: string, publicFoote
   const siteTitle = normalize(data.siteTitle, 'headerV2SiteTitle');
   const subTitle = normalize(data.subTitle, 'headerV2SubTitle');
   const logoLink = escapeHtml(absUrl(data.logoLink || '/', siteBase));
-  const hasLogo = Boolean((data.logoUrl || '').trim());
-  const brandInner = hasLogo
-    ? `<img src="${escapeHtml(data.logoUrl)}" alt="${escapeHtml(data.logoAlt || 'Vertex Learning Solutions')}" class="vlsft2-logo">`
-    : `<span class="vlsft2-mark" aria-hidden="true">V</span>`;
+  const brandInner = useV2BrandMark(data.logoUrl)
+    ? `<span class="vlsft2-mark" aria-hidden="true">v</span>`
+    : `<img src="${escapeHtml(data.logoUrl)}" alt="${escapeHtml(data.logoAlt || 'Vertex Learning Solutions')}" class="vlsft2-logo">`;
 
   const css = `.block.footer-style.parrot.zenstyle.footer-block,.block.parrot.zenstyle.footers{display:none!important;}`
     + `.vlsft2{background:#0e2a57;color:#c5d2ec;font-family:Poppins,sans-serif;padding:40px 0 36px;width:100%;}`
     + `.vlsft2-inner{max-width:1200px;margin:0 auto;padding:0 40px;box-sizing:border-box;}`
     + `.vlsft2-intro{margin-bottom:20px;}`
     + `.vlsft2-brand{display:flex;align-items:center;gap:12px;text-decoration:none!important;margin-bottom:12px;}`
-    + `.vlsft2-logo,.vlsft2-mark{width:38px;height:38px;border-radius:10px;flex-shrink:0;}`
-    + `.vlsft2-logo{object-fit:cover;display:block;}`
-    + `.vlsft2-mark{background:#fff;color:#0e2a57;font-weight:700;font-size:19px;display:grid;place-items:center;}`
+    + `.vlsft2-logo{width:38px;height:38px;border-radius:10px;object-fit:cover;display:block;flex-shrink:0;}`
+    + `.vlsft2-mark{width:38px;height:38px;border-radius:10px;background:#fff;color:#0e2a57;font-weight:700;font-size:19px;line-height:1;display:grid;place-items:center;flex-shrink:0;text-transform:none;}`
     + `.vlsft2-brand-text{display:flex;flex-direction:column;}`
     + `.vlsft2-name{color:#fff;font-weight:700;font-size:18px;line-height:1;}`
     + `.vlsft2-sub{color:#8399c4;font-size:9.5px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;margin-top:3px;}`

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import type { FooterData, FooterLink, FooterSection, FooterSocial, FooterV2Data, HeaderConfig, TextValue } from '../../types/cms';
 import { normalize } from '../../utils/text';
+import { resolveV2LogoUrl } from '../../utils/brand';
 import { generateFooterV2Html } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
@@ -75,7 +76,7 @@ function fromFooterV1(raw: FooterData, header?: HeaderConfig | null): FooterV2Da
   return {
     ...base,
     ...footer,
-    logoUrl: header?.logoUrl || base.logoUrl,
+    logoUrl: resolveV2LogoUrl(header?.logoUrl),
     logoAlt: header?.logoAlt || base.logoAlt,
     logoLink: header?.logoLink || base.logoLink,
     siteTitle: header?.siteTitle ? normalize(header.siteTitle, 'headerV2SiteTitle') : base.siteTitle,
@@ -128,7 +129,7 @@ export default function FooterV2Screen() {
         ? raw
         : raw?.footer;
       if (savedV2 && (savedV2.sections || savedV2.aboutText)) {
-        setData({ ...makeDefault(), ...hydrateFooter(savedV2), ...savedV2 });
+        setData({ ...makeDefault(), ...hydrateFooter(savedV2), ...savedV2, logoUrl: resolveV2LogoUrl(savedV2.logoUrl) });
         return;
       }
       let v1Raw = v1?.data as FooterData & { footer?: FooterData };
@@ -239,8 +240,9 @@ export default function FooterV2Screen() {
             <input className="input" value={data.siteBaseUrl}
               onChange={e => patch(d => ({ ...d, siteBaseUrl: e.target.value }))} />
           </Field>
-          <Field label="Logo image URL">
-            <input className="input" value={data.logoUrl} onChange={e => patch(d => ({ ...d, logoUrl: e.target.value }))} />
+          <Field label="Logo image URL" hint="Leave empty to use the inverted white v mark on navy">
+            <input className="input" value={data.logoUrl} placeholder="Leave empty for the v mark"
+              onChange={e => patch(d => ({ ...d, logoUrl: e.target.value }))} />
           </Field>
           <RichTextField label="Site title" value={asTV(data.siteTitle, 'headerV2SiteTitle')}
             defaultKey="headerV2SiteTitle" onChange={v => patch(d => ({ ...d, siteTitle: v }))} />

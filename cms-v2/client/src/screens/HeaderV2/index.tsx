@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import type { HeaderConfig, HeaderV2Config, TextValue } from '../../types/cms';
 import { normalize } from '../../utils/text';
+import { resolveV2LogoUrl } from '../../utils/brand';
 import { generateHeaderV2Html } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
@@ -41,7 +42,7 @@ function fromHeaderV1(cfg: HeaderConfig): HeaderV2Config {
   const enrol = (cfg.ctas || []).find(c => c !== signIn) ?? (cfg.ctas || [])[0];
   return {
     ...base,
-    logoUrl: cfg.logoUrl || base.logoUrl,
+    logoUrl: resolveV2LogoUrl(cfg.logoUrl),
     logoAlt: cfg.logoAlt || base.logoAlt,
     logoLink: cfg.logoLink || base.logoLink,
     siteTitle: cfg.siteTitle ? normalize(cfg.siteTitle, 'headerV2SiteTitle') : base.siteTitle,
@@ -74,7 +75,7 @@ export default function HeaderV2Screen() {
     ]).then(([v2, v1]) => {
       const savedConfig = v2?.data?.config;
       if (savedConfig && (savedConfig.logoUrl !== undefined || savedConfig.siteTitle)) {
-        setCfg({ ...makeDefault(), ...savedConfig });
+        setCfg({ ...makeDefault(), ...savedConfig, logoUrl: resolveV2LogoUrl(savedConfig.logoUrl) });
         return;
       }
       const v1Config = v1?.data?.config;
@@ -149,8 +150,8 @@ export default function HeaderV2Screen() {
               onChange={e => update({ siteBaseUrl: e.target.value })} />
           </Field>
 
-          <Field label="Logo image URL">
-            <input className="input" value={cfg.logoUrl} placeholder="https://..."
+          <Field label="Logo image URL" hint="Leave empty to use the blue rounded v mark from staging">
+            <input className="input" value={cfg.logoUrl} placeholder="Leave empty for the blue v mark"
               onChange={e => update({ logoUrl: e.target.value })} />
           </Field>
           <Field label="Alt text">
