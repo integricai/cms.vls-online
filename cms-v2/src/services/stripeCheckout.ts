@@ -1,4 +1,6 @@
 import crypto from 'crypto';
+import type { CheckoutEnvironment } from '../../shared/types';
+import { resolveCheckoutEnvironment } from './attribution';
 import { resolveCheckoutSiteUrl } from './checkoutSiteUrl';
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
@@ -23,9 +25,13 @@ export async function createStripeCheckoutSession(input: {
   currency: string;
   studentEmail: string | null;
   countryCode?: string | null;
+  paymentMethodTypes?: string[];
   returnOrigin?: string | null;
+  environment?: CheckoutEnvironment | null;
 }): Promise<StripeCheckoutSession> {
-  const secretKey = stripeSecretKey();
+  const environment = input.environment
+    ?? resolveCheckoutEnvironment({ origin: input.returnOrigin });
+  const secretKey = stripeSecretKeyForEnvironment(environment);
 
   const siteUrl = resolveCheckoutSiteUrl(input.returnOrigin);
   const unitAmount = Math.round(input.amount * 100);
@@ -33,12 +39,16 @@ export async function createStripeCheckoutSession(input: {
     throw new Error('Payment amount must be greater than zero');
   }
 
+  const paymentMethodTypes = input.paymentMethodTypes?.length
+    ? input.paymentMethodTypes
+    : ['card', 'paypal', 'klarna'];
+
   const params = new URLSearchParams();
   params.append('mode', 'payment');
-  // Explicit types so PayPal is always offered (Dashboard dynamic methods can omit it).
-  params.append('payment_method_types[]', 'card');
-  params.append('payment_method_types[]', 'paypal');
-  params.append('payment_method_types[]', 'klarna');
+  // Explicit types so Dashboard dynamic methods cannot omit card/Klarna/PayPal.
+  for (const method of paymentMethodTypes) {
+    params.append('payment_method_types[]', method);
+  }
   params.append('success_url', `${siteUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`);
   params.append('cancel_url', `${siteUrl}/payment-cancelled`);
   params.append('billing_address_collection', 'required');
@@ -75,17 +85,50 @@ export async function createStripeCheckoutSession(input: {
   return { id: body.id, url: body.url ?? null };
 }
 
-function stripeSecretKey(): string {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
+export function stripeSecretKeyForEnvironment(
+  environment?: CheckoutEnvironment | null,
+): string {
+  if (environment === 'production') {
+    const liveKey = process.env.STRIPE_SECRET_KEY_LIVE?.trim();
+    if (!liveKey) throw new Error('STRIPE_SECRET_KEY_LIVE is not configured');
+    return liveKey;
+  }
+  const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
   if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not configured');
   return secretKey;
+}
+
+function webhookSecrets(): string[] {
+  return [
+    process.env.STRIPE_WEBHOOK_SECRET_LIVE,
+    process.env.STRIPE_WEBHOOK_SECRET,
+  ]
+    .map((value) => String(value ?? '').trim())
+    .filter(Boolean);
+}
+
+function verifyStripeSignature(rawBody: Buffer, signatureHeader: string, secret: string): boolean {
+  const parts = Object.fromEntries(signatureHeader.split(',').map(part => {
+    const [key, value] = part.split('=', 2);
+    return [key, value];
+  }));
+  const timestamp = parts.t;
+  const signature = parts.v1;
+  if (!timestamp || !signature) return false;
+
+  const signedPayload = `${timestamp}.${rawBody.toString('utf8')}`;
+  const expected = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
+  const actual = Buffer.from(signature, 'hex');
+  const wanted = Buffer.from(expected, 'hex');
+  return actual.length === wanted.length && crypto.timingSafeEqual(actual, wanted);
 }
 
 export async function createStripeRefund(input: {
   paymentIntentId: string;
   reason?: 'duplicate' | 'fraudulent' | 'requested_by_customer';
+  environment?: CheckoutEnvironment | null;
 }): Promise<{ id: string; status: string; paymentIntentId: string | null }> {
-  const secretKey = stripeSecretKey();
+  const secretKey = stripeSecretKeyForEnvironment(input.environment);
   const params = new URLSearchParams();
   params.append('payment_intent', input.paymentIntentId);
   if (input.reason) params.append('reason', input.reason);
@@ -122,25 +165,14 @@ export async function createStripeRefund(input: {
 }
 
 export function verifyStripeWebhook(rawBody: Buffer, signatureHeader: string | undefined): unknown {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!secret) throw new Error('STRIPE_WEBHOOK_SECRET is not configured');
+  const secrets = webhookSecrets();
+  if (secrets.length === 0) {
+    throw new Error('STRIPE_WEBHOOK_SECRET or STRIPE_WEBHOOK_SECRET_LIVE is not configured');
+  }
   if (!signatureHeader) throw new Error('Missing Stripe signature');
 
-  const parts = Object.fromEntries(signatureHeader.split(',').map(part => {
-    const [key, value] = part.split('=', 2);
-    return [key, value];
-  }));
-  const timestamp = parts.t;
-  const signature = parts.v1;
-  if (!timestamp || !signature) throw new Error('Invalid Stripe signature');
-
-  const signedPayload = `${timestamp}.${rawBody.toString('utf8')}`;
-  const expected = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
-  const actual = Buffer.from(signature, 'hex');
-  const wanted = Buffer.from(expected, 'hex');
-  if (actual.length !== wanted.length || !crypto.timingSafeEqual(actual, wanted)) {
-    throw new Error('Invalid Stripe signature');
-  }
+  const matched = secrets.some((secret) => verifyStripeSignature(rawBody, signatureHeader, secret));
+  if (!matched) throw new Error('Invalid Stripe signature');
 
   return JSON.parse(rawBody.toString('utf8')) as unknown;
 }

@@ -21,8 +21,16 @@
     "test:course-scraper": "ts-node src/services/coursePageScraper.test.ts",
     "test:course-template": "ts-node src/services/buildCourseTemplateContent.test.ts",
     "test:attribution": "ts-node src/services/attribution.test.ts",
+    "test:stripe-checkout": "ts-node src/services/stripeCheckout.test.ts",
     "test:checkout-site-url": "ts-node src/services/checkoutSiteUrl.test.ts",
-    "test:google-ads-conversions": "ts-node src/services/googleAdsConversions.test.ts"
+    "test:google-ads-conversions": "ts-node src/services/googleAdsConversions.test.ts",
+    "test:payments": "ts-node src/services/payments/provider.test.ts",
+    "test:notes-curriculum": "ts-node src/services/notesCurriculumBackfill.test.ts",
+    "backfill-notes-curriculum": "npx tsx scripts/backfill-notes-curriculum.ts",
+    "test:notes-links": "ts-node src/services/notesUrlRewrite.test.ts",
+    "test:free-enrol": "ts-node src/services/freeEnrol.test.ts",
+    "sync-zenler-courses": "npx tsx scripts/sync-zenler-courses.ts",
+    "backfill-notes-links": "npx tsx scripts/backfill-notes-links.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.9.5",

@@ -49,9 +49,9 @@ run('resolves checkout environment from host and explicit value', () => {
   assert.strictEqual(resolveCheckoutEnvironment({ explicit: 'production' }), 'production');
   assert.strictEqual(resolveCheckoutEnvironment({ hostname: 'www.vls-online.com' }), 'production');
   assert.strictEqual(resolveCheckoutEnvironment({ hostname: 'staging.vls-online.com' }), 'staging');
-  assert.strictEqual(resolveCheckoutEnvironment({ hostname: 'prod.vls-online.com' }), 'staging');
+  assert.strictEqual(resolveCheckoutEnvironment({ hostname: 'prod.vls-online.com' }), 'production');
   assert.strictEqual(resolveCheckoutEnvironment({ origin: 'https://preview.vls-online.com/buy' }), 'staging');
-  assert.strictEqual(resolveCheckoutEnvironment({ origin: 'https://prod.vls-online.com' }), 'staging');
+  assert.strictEqual(resolveCheckoutEnvironment({ origin: 'https://prod.vls-online.com' }), 'production');
   assert.strictEqual(resolveCheckoutEnvironment({}), 'staging');
 });
 
