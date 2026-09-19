@@ -3,8 +3,9 @@ import MenuManagement from '../MenuManagement';
 import UserManagement from '../UserManagement';
 import DiscountCodes from '../DiscountCodes';
 import SitemapScreen from '../Sitemap';
+import SiteCache from './SiteCache';
 
-type Tab = 'menu' | 'discountCodes' | 'sitemap' | 'payments' | 'users';
+type Tab = 'menu' | 'discountCodes' | 'sitemap' | 'cache' | 'payments' | 'users';
 
 function PaymentsTab() {
   return (
@@ -19,6 +20,7 @@ const TAB_LABELS: Record<Tab, string> = {
   menu: 'Menu Settings',
   discountCodes: 'Discount Codes',
   sitemap: 'Sitemap',
+  cache: 'Cache',
   payments: 'Payments',
   users: 'Users',
 };
@@ -50,6 +52,7 @@ export default function Settings() {
         {tab === 'menu' && <MenuManagement />}
         {tab === 'discountCodes' && <DiscountCodes />}
         {tab === 'sitemap' && <SitemapScreen />}
+        {tab === 'cache' && <SiteCache />}
         {tab === 'payments' && <PaymentsTab />}
         {tab === 'users' && <UserManagement />}
       </div>

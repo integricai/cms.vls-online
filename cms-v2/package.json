@@ -24,6 +24,7 @@
     "test:stripe-checkout": "ts-node src/services/stripeCheckout.test.ts",
     "test:checkout-site-url": "ts-node src/services/checkoutSiteUrl.test.ts",
     "test:google-ads-conversions": "ts-node src/services/googleAdsConversions.test.ts",
+    "test:site-cache": "ts-node src/services/siteCache.test.ts",
     "test:payments": "ts-node src/services/payments/provider.test.ts",
     "test:notes-curriculum": "ts-node src/services/notesCurriculumBackfill.test.ts",
     "backfill-notes-curriculum": "npx tsx scripts/backfill-notes-curriculum.ts",

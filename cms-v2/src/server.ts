@@ -28,6 +28,7 @@ import migrationRouter from './routes/migration';
 import sitemapRouter from './routes/sitemap';
 import cronRouter from './routes/cron';
 import googleConversionsRouter from './routes/googleConversions';
+import siteCacheRouter from './routes/siteCache';
 import { sendErrorAlert } from './utils/errorAlert';
 import { getContent, upsertContent } from './models/content';
 import { listBlogPosts } from './models/blog';
@@ -293,6 +294,7 @@ app.use('/api/sitemap', sitemapRouter);
 app.use('/api/public', publicRouter);
 app.use('/api/cron', cronRouter);
 app.use('/api/google-conversions', googleConversionsRouter);
+app.use('/api/site-cache', siteCacheRouter);
 
 app.get('/blog', async (_req, res, next) => {
   try {
