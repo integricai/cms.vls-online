@@ -135,7 +135,7 @@ router.post('/:id/assign', requireRole('admin', 'editor'), async (req, res, next
   }
 });
 
-router.post('/:id/refund', requireRole('admin'), async (req, res, next) => {
+router.post('/:id/refund', requireRole('admin'), async (req, res) => {
   try {
     const id = parseId(req.params.id);
     if (!id) return res.status(400).json({ ok: false, error: 'Invalid sale id' });
@@ -163,6 +163,7 @@ router.post('/:id/refund', requireRole('admin'), async (req, res, next) => {
     const refund = await createStripeRefund({
       paymentIntentId: order.stripePaymentIntentId,
       reason: 'requested_by_customer',
+      environment: order.checkoutEnvironment,
     });
 
     const { order: refunded, wasAlreadyRefunded } = await markPaymentOrderRefunded({
@@ -184,7 +185,11 @@ router.post('/:id/refund', requireRole('admin'), async (req, res, next) => {
     const updated = await getSaleListItemById(id);
     return res.json({ ok: true, data: updated });
   } catch (err) {
-    next(err);
+    console.error('[sales] refund failed', err);
+    const message = err instanceof Error && err.message.trim()
+      ? err.message
+      : 'Refund failed';
+    return res.status(502).json({ ok: false, error: message });
   }
 });
 
