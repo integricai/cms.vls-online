@@ -7,6 +7,7 @@ export interface CourseFinderCourse {
   level: string | null;
   status: string | null;
   zenlerUrl: string | null;
+  coursePageUrl?: string | null;
   isActive: boolean;
   sortOrder?: number;
   qualification?: string | null;
@@ -139,8 +140,7 @@ export function normalizeCourseFinderConfig(config?: Partial<CourseFinderConfig>
 }
 
 function publicCourseUrl(course: CourseFinderCourse): string {
-  const raw = course.zenlerUrl || (course.slug ? `/courses/${course.slug}` : '#');
-  return raw.replace('https://vls.newzenler.com', 'https://vls-online.com');
+  return course.coursePageUrl?.trim() || '#';
 }
 
 function escapeScriptJson(value: unknown): string {

@@ -64,8 +64,7 @@ type EmbeddedCourse = {
 };
 
 function publicCourseUrl(course: CourseFinderCourse): string {
-  const raw = course.zenlerUrl || (course.slug ? `/courses/${course.slug}` : '#');
-  return raw.replace('https://vls.newzenler.com', 'https://vls-online.com');
+  return course.coursePageUrl?.trim() || '#';
 }
 
 function mapCoursesForEmbed(courses: CourseFinderCourse[]): EmbeddedCourse[] {

@@ -19,13 +19,10 @@ export interface CourseFinderEmbedCourse {
   enableInNavigation: boolean;
 }
 
-export function publicCourseUrl(
-  zenlerUrl: string | null,
-  slug: string | null,
-  coursePageUrl?: string | null,
-): string {
-  const raw = coursePageUrl || zenlerUrl || (slug ? `/courses/${slug}` : '#');
-  return raw.replace('https://vls.newzenler.com', 'https://vls-online.com');
+/** Public course path from the CMS. Zenler page URLs are not used. */
+export function publicCourseUrl(coursePageUrl?: string | null): string {
+  const raw = String(coursePageUrl ?? '').trim();
+  return raw || '#';
 }
 
 export function mapActiveCoursesForFinder(courses: Course[]): CourseFinderEmbedCourse[] {
@@ -38,7 +35,7 @@ export function mapActiveCoursesForFinder(courses: Course[]): CourseFinderEmbedC
       category: course.category || '',
       level: course.level || '',
       status: course.status || '',
-      url: publicCourseUrl(course.zenlerUrl, course.slug, course.coursePageUrl),
+      url: publicCourseUrl(course.coursePageUrl),
       coursePageUrl: course.coursePageUrl || '',
       sortOrder: course.sortOrder || 0,
       qualification: course.qualification || '',

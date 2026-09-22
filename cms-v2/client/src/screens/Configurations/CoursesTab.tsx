@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, getCurrentUser, getToken } from '../../api/client';
+import { api, canManageContent, getCurrentUser, getToken } from '../../api/client';
 
 type Course = {
   id: number;
@@ -58,6 +58,42 @@ type PageUrlImportResult = {
   errors: Array<{ rowNumber: number; zenlerCourseId: string; message: string }>;
 };
 
+type UrlChangeSummary = {
+  queued: number;
+  rewriting: number;
+  ready: number;
+  failed: number;
+};
+
+type UrlChangeFailure = {
+  id: number;
+  courseName: string;
+  fromPath: string;
+  toPath: string;
+  error: string | null;
+};
+
+type UrlChangeApplyResult = {
+  planned: number;
+  enqueued: number;
+  alreadyQueued: number;
+  unchanged: number;
+  renamed: number;
+  storiesRewritten: number;
+  linksRewritten: number;
+  rewriteFinished: boolean;
+  summary: UrlChangeSummary;
+  errors: string[];
+  warnings: string[];
+};
+
+type UrlChangePublishResult = {
+  published: number;
+  cloudflareItems: number;
+  summary: UrlChangeSummary;
+  message?: string;
+};
+
 function downloadText(filename: string, content: string): void {
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -79,6 +115,7 @@ async function downloadCoursesCsv(): Promise<void> {
 }
 
 function CoursesTab() {
+  const canEdit = canManageContent(getCurrentUser()?.role);
   const isAdmin = getCurrentUser()?.role === 'admin';
   const [courses, setCourses] = useState<Course[]>([]);
   const [options, setOptions] = useState<Record<CourseDropdownKind, string[]>>({
@@ -99,6 +136,12 @@ function CoursesTab() {
   const [draggingCourseId, setDraggingCourseId] = useState<number | null>(null);
   const [importingCsv, setImportingCsv] = useState(false);
   const [importResult, setImportResult] = useState<PageUrlImportResult | null>(null);
+  const [urlSummary, setUrlSummary] = useState<UrlChangeSummary>({ queued: 0, rewriting: 0, ready: 0, failed: 0 });
+  const [urlFailures, setUrlFailures] = useState<UrlChangeFailure[]>([]);
+  const [urlLastError, setUrlLastError] = useState<string | null>(null);
+  const [applyingUrls, setApplyingUrls] = useState(false);
+  const [publishingRedirects, setPublishingRedirects] = useState(false);
+  const [urlMessage, setUrlMessage] = useState<string | null>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -112,7 +155,19 @@ function CoursesTab() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+    if (canEdit) void loadUrlChanges();
+  }, [canEdit]);
+
+  async function loadUrlChanges() {
+    try {
+      const data = await api.get<{ summary: UrlChangeSummary; failures: UrlChangeFailure[]; lastError: string | null }>('/courses/url-changes');
+      setUrlSummary(data.summary);
+      setUrlFailures(data.failures || []);
+      setUrlLastError(data.lastError);
+    } catch {
+      // The queue is optional until the migration has run.
+    }
+  }
 
   function groupOptions(rows: CourseDropdownOption[]): Record<CourseDropdownKind, string[]> {
     return {
@@ -120,6 +175,49 @@ function CoursesTab() {
       level: rows.filter(row => row.kind === 'level').map(row => row.value),
       course_option: rows.filter(row => row.kind === 'course_option').map(row => row.value),
     };
+  }
+
+  async function applyUrlChanges() {
+    setApplyingUrls(true);
+    setUrlMessage(null);
+    setSyncError(null);
+    try {
+      const result = await api.post<UrlChangeApplyResult>('/courses/url-changes/apply', {});
+      setUrlSummary(result.summary);
+      const parts = [
+        `${result.renamed} story slug${result.renamed === 1 ? '' : 's'} updated`,
+        `${result.linksRewritten} link${result.linksRewritten === 1 ? '' : 's'} rewritten`,
+        result.rewriteFinished ? 'link pass finished' : 'link pass still running',
+      ];
+      if (result.summary.queued + result.summary.rewriting > 0) {
+        parts.push('the scheduled job will finish the rest');
+      }
+      setUrlMessage(parts.join(' · '));
+      if (result.errors.length || result.warnings.length) {
+        setSyncError([...result.errors, ...result.warnings].join(' · '));
+      }
+      await loadUrlChanges();
+    } catch (e) {
+      setSyncError((e instanceof Error ? e.message : null) || 'Course URL update failed.');
+    } finally {
+      setApplyingUrls(false);
+    }
+  }
+
+  async function publishRedirects() {
+    setPublishingRedirects(true);
+    setUrlMessage(null);
+    setSyncError(null);
+    try {
+      const result = await api.post<UrlChangePublishResult>('/courses/url-changes/publish-redirects', {});
+      setUrlSummary(result.summary);
+      setUrlMessage(result.message || `Published ${result.published} redirect${result.published === 1 ? '' : 's'} to Cloudflare (${result.cloudflareItems} new list item${result.cloudflareItems === 1 ? '' : 's'}).`);
+      await loadUrlChanges();
+    } catch (e) {
+      setSyncError((e instanceof Error ? e.message : null) || 'Redirect publish failed.');
+    } finally {
+      setPublishingRedirects(false);
+    }
   }
 
   async function sync() {
@@ -412,8 +510,51 @@ function CoursesTab() {
         />
       </div>
       <p className="mb-4 text-xs text-slate-400">
-        CSV updates <code>course_page_url</code> only, matched by <code>zenler_course_id</code>.
+        CSV updates <code>course_page_url</code> only, matched by <code>zenler_course_id</code>. Saving a course page URL stores it in the CMS. It does not change the live Storyblok slug until you apply URL changes.
       </p>
+
+      {canEdit && (
+        <div className="mb-5 rounded-xl border border-slate-200 bg-white p-4">
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-700">Course URLs</h3>
+              <p className="mt-1 max-w-3xl text-xs text-slate-500">
+                Apply URL changes renames each Storyblok course story to the saved Course page URL and rewrites links that still point at the old path, including hub and landing pages. A job runs every five minutes to finish anything this request cannot. Old URLs 404 once the slug changes. Publish redirects sends those 301s to Cloudflare.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={applyUrlChanges} disabled={applyingUrls || publishingRedirects} className="btn-primary">
+                {applyingUrls ? 'Applying…' : 'Apply URL changes'}
+              </button>
+              <button
+                onClick={publishRedirects}
+                disabled={publishingRedirects || applyingUrls || urlSummary.ready === 0}
+                className="btn-ghost"
+              >
+                {publishingRedirects ? 'Publishing…' : 'Publish redirects'}
+              </button>
+            </div>
+          </div>
+          <p className="text-xs text-slate-500">
+            Queued {urlSummary.queued} · Updating links {urlSummary.rewriting} · Ready to publish {urlSummary.ready} · Failed {urlSummary.failed}
+          </p>
+          {urlMessage && (
+            <p className="mt-2 text-xs text-green-800">{urlMessage}</p>
+          )}
+          {urlLastError && (
+            <p className="mt-2 text-xs text-amber-700">{urlLastError}</p>
+          )}
+          {urlFailures.length > 0 && (
+            <ul className="mt-2 list-disc pl-5 text-xs text-red-700">
+              {urlFailures.slice(0, 8).map(failure => (
+                <li key={failure.id}>
+                  {failure.courseName}: {failure.fromPath} → {failure.toPath}. {failure.error}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="mb-5 rounded-xl border border-slate-200 bg-white p-4">
         <div className="mb-3 flex items-center justify-between gap-3">

@@ -109,7 +109,8 @@ export async function syncCourseSalesPageUrlsFromStoryblok(
     }
 
     const pageUrl = storyblokSlugToPath(story.full_slug);
-    if ((course.coursePageUrl ?? null) === pageUrl) {
+    // CMS course_page_url is the source of truth once an editor has set it.
+    if (course.coursePageUrl) {
       unchanged += 1;
       continue;
     }

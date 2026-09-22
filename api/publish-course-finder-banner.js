@@ -5,9 +5,9 @@ import { neon } from '@neondatabase/serverless';
 
 const CONFIG_KEY = 'vls-course-finder-banner-config';
 
-function publicCourseUrl(coursePageUrl, zenlerUrl, slug) {
-  const raw = coursePageUrl || zenlerUrl || (slug ? `/courses/${slug}` : '#');
-  return String(raw).replace('https://vls.newzenler.com', 'https://vls-online.com');
+function publicCourseUrl(coursePageUrl) {
+  const raw = String(coursePageUrl || '').trim();
+  return raw || '#';
 }
 
 function mapCourseRow(row) {
@@ -22,7 +22,7 @@ function mapCourseRow(row) {
     category: row.category || '',
     level: row.level || '',
     status: row.status || '',
-    url: publicCourseUrl(row.course_page_url, row.zenler_url, row.slug),
+    url: publicCourseUrl(row.course_page_url),
     coursePageUrl: row.course_page_url || '',
     sortOrder: row.sort_order || 0,
     qualification: row.qualification || '',

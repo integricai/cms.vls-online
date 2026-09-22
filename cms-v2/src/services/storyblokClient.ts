@@ -451,6 +451,29 @@ export async function listStories(
   return stories;
 }
 
+export async function listStoriesPage(
+  config: StoryblokConfig,
+  query: Record<string, string | number | boolean | undefined>,
+  page: number,
+  perPage: number,
+): Promise<{ stories: StoryblokStoryRecord[]; done: boolean }> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== '' && key !== 'page' && key !== 'per_page') {
+      params.set(key, String(value));
+    }
+  }
+  params.set('page', String(page));
+  params.set('per_page', String(perPage));
+  const data = await storyblokRequest<{ stories?: StoryblokStoryRecord[] }>(
+    config,
+    'GET',
+    `/stories?${params.toString()}`,
+  );
+  const stories = data.stories ?? [];
+  return { stories, done: stories.length < perPage };
+}
+
 export async function updateStoryById(
   config: StoryblokConfig,
   storyId: number,
