@@ -30,6 +30,7 @@
     "backfill-notes-curriculum": "npx tsx scripts/backfill-notes-curriculum.ts",
     "test:notes-links": "ts-node src/services/notesUrlRewrite.test.ts",
     "test:course-urls": "ts-node src/services/courseUrlRewrite.test.ts",
+    "test:sales-page-urls": "ts-node src/services/courseSalesPageUrlSync.test.ts",
     "test:free-enrol": "ts-node src/services/freeEnrol.test.ts",
     "sync-zenler-courses": "npx tsx scripts/sync-zenler-courses.ts",
     "backfill-notes-links": "npx tsx scripts/backfill-notes-links.ts"

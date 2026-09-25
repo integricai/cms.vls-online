@@ -11,7 +11,9 @@ import { syncCmsCoursesStoryblokDatasource } from './storyblokCmsCoursesDatasour
  * - New ZenlerCourseId → INSERT
  * - Existing ZenlerCourseId → UPDATE (name, slug, category, level, status, url)
  * - Courses previously synced but absent from latest Zenler response → mark is_active = false (never deleted)
- * - Admin fields (flags, taxonomy, coursePageUrl) are never overwritten
+ * - Admin fields (flags, taxonomy) are never overwritten by the Zenler upsert
+ * - zenler_url keeps the Zenler website address and is not the public course URL
+ * - coursePageUrl is replaced from the matching Storyblok course page slug
  */
 export async function syncCoursesFromZenler(): Promise<CourseSyncResult> {
   const zenlerCourses = await fetchZenlerCourses();
@@ -57,6 +59,8 @@ export async function syncCoursesFromZenler(): Promise<CourseSyncResult> {
       updated: 0,
       unchanged: 0,
       unmatched: 0,
+      missing: [],
+      conflicts: [],
       error: err instanceof Error ? err.message : 'Storyblok sales-page URL sync failed',
     };
   }

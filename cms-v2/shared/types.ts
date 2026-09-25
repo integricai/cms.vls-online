@@ -141,6 +141,12 @@ export interface PublicPaymentOption {
   buttonText: string;
 }
 
+export interface CourseSalesPageUrlIssue {
+  zenlerCourseId: string;
+  name: string;
+  detail: string;
+}
+
 export interface CourseSyncResult {
   fetched: number;
   inserted: number;
@@ -160,6 +166,8 @@ export interface CourseSyncResult {
     updated: number;
     unchanged: number;
     unmatched: number;
+    missing: CourseSalesPageUrlIssue[];
+    conflicts: CourseSalesPageUrlIssue[];
     error?: string;
   };
 }

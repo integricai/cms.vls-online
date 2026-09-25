@@ -47,6 +47,8 @@ type SyncResult = {
     updated: number;
     unchanged: number;
     unmatched: number;
+    missing?: Array<{ zenlerCourseId: string; name: string; detail: string }>;
+    conflicts?: Array<{ zenlerCourseId: string; name: string; detail: string }>;
     error?: string;
   };
 };
@@ -93,6 +95,27 @@ type UrlChangePublishResult = {
   summary: UrlChangeSummary;
   message?: string;
 };
+
+function namedIssues(
+  issues: Array<{ name: string }> | undefined,
+): string {
+  const names = (issues ?? []).map(issue => issue.name);
+  if (names.length <= 8) return names.join(', ');
+  return `${names.slice(0, 8).join(', ')}, and ${names.length - 8} more`;
+}
+
+function salesPageUrlSummary(result: NonNullable<SyncResult['salesPageUrls']>): string {
+  const parts = [
+    `Sales page URLs ${result.updated} updated, ${result.unchanged} unchanged`,
+  ];
+  if (result.missing?.length) {
+    parts.push(`${result.missing.length} with no Storyblok page (${namedIssues(result.missing)})`);
+  }
+  if (result.conflicts?.length) {
+    parts.push(`${result.conflicts.length} matched more than one page (${namedIssues(result.conflicts)})`);
+  }
+  return parts.join(' · ');
+}
 
 function downloadText(filename: string, content: string): void {
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
@@ -585,7 +608,7 @@ function CoursesTab() {
             : null}
           {syncResult.salesPageUrls
             ? syncResult.salesPageUrls.ok
-              ? ` · Sales page URLs ${syncResult.salesPageUrls.updated} updated, ${syncResult.salesPageUrls.unchanged} already set`
+              ? ` · ${salesPageUrlSummary(syncResult.salesPageUrls)}`
               : ` · Sales page URL pull failed: ${syncResult.salesPageUrls.error ?? 'unknown error'}`
             : null}
         </div>
