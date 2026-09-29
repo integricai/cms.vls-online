@@ -2,71 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { getCurrentUser } from '../../api/client';
 import Field from '../../components/Field';
-import type { Course, CoursePaymentCard, CourseSyncResult } from '../../../../shared/types';
-
-// ── Sync panel ────────────────────────────────────────────────────
-
-function SyncPanel({ onSynced }: { onSynced: () => void }) {
-  const [syncing, setSyncing] = useState(false);
-  const [result, setResult] = useState<CourseSyncResult | null>(null);
-  const [error, setError] = useState('');
-
-  async function handleSync() {
-    setSyncing(true);
-    setError('');
-    setResult(null);
-    try {
-      const data = await api.post<CourseSyncResult>('/courses/sync', {});
-      setResult(data);
-      onSynced();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Sync failed. Please try again.');
-    } finally {
-      setSyncing(false);
-    }
-  }
-
-  return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-semibold text-slate-800">Sync Courses from Zenler</p>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Fetches all courses from Zenler and updates the local database. Runs server-side only.
-          </p>
-        </div>
-        <button
-          onClick={handleSync}
-          disabled={syncing}
-          className="btn-primary ml-4 shrink-0 text-xs"
-        >
-          {syncing ? 'Syncing…' : '↻ Sync Now'}
-        </button>
-      </div>
-
-      {error && (
-        <div className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-          {error}
-        </div>
-      )}
-
-      {result && (
-        <div className="mt-3 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-          <p className="font-semibold">Sync complete</p>
-          <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5 sm:grid-cols-4">
-            <span>Fetched: <strong>{result.fetched}</strong></span>
-            <span>Inserted: <strong>{result.inserted}</strong></span>
-            <span>Updated: <strong>{result.updated}</strong></span>
-            <span>Deactivated: <strong>{result.deactivated}</strong></span>
-          </div>
-          <p className="mt-1 text-emerald-700">
-            Last sync: {new Date(result.syncedAt).toLocaleString()}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
+import type { Course, CoursePaymentCard } from '../../../../shared/types';
 
 // ── Empty form state ──────────────────────────────────────────────
 
@@ -101,10 +37,10 @@ function CardForm({
   return (
     <div className="space-y-0">
       <p className="section-label">Course</p>
-      <Field label="Zenler Course" hint="Courses are fetched server-side from Zenler and synced locally">
+      <Field label="Zenler Course" hint="Courses are stored in the CMS">
         {courses.length === 0 ? (
           <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            No active courses found. Refresh Zenler courses first.
+            No active courses found. Add a course in Content Management first.
           </p>
         ) : (
           <select
@@ -403,13 +339,6 @@ export default function PaymentCardsScreen() {
 
         {/* ── Left panel ── */}
         <div className="flex w-[460px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white">
-
-          {/* Sync panel (admin only) */}
-          {isAdmin && (
-            <div className="shrink-0 border-b border-slate-100 px-5 py-4">
-              <SyncPanel onSynced={loadData} />
-            </div>
-          )}
 
           {/* Card list */}
           <div className="shrink-0 border-b border-slate-100 px-5 py-3">

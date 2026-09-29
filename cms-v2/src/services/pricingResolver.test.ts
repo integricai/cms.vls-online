@@ -117,6 +117,41 @@ run('validates amount, discount, and rejects session pricing', () => {
   assert.ok(fields.includes('pricingMode'));
 });
 
+run('accepts a free price of zero and a 100 percent discount', () => {
+  const free = validateGeoPriceInput({
+    courseId: 1,
+    name: 'Free access',
+    amount: 0,
+    pricingMode: 'duration',
+    durationDays: 180,
+  });
+  assert.strictEqual(free.length, 0);
+
+  const fullyDiscounted = validateGeoPriceInput({
+    courseId: 1,
+    name: 'Free access',
+    amount: 50,
+    discountPercent: 100,
+    pricingMode: 'duration',
+    durationDays: 180,
+  });
+  assert.strictEqual(fullyDiscounted.length, 0);
+  assert.strictEqual(computeDiscountedPrice(50, 100), 0);
+  assert.strictEqual(effectiveAmount(50, 0), 0);
+  assert.strictEqual(effectiveAmount(0, null), 0);
+});
+
+run('rejects a negative price', () => {
+  const issues = validateGeoPriceInput({
+    courseId: 1,
+    name: 'Bad',
+    amount: -1,
+    pricingMode: 'duration',
+    durationDays: 30,
+  });
+  assert.ok(issues.some(issue => issue.field === 'amount'));
+});
+
 run('accepts a valid USD price input', () => {
   const issues = validateGeoPriceInput({
     courseId: 1,

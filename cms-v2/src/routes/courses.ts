@@ -1,6 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
 import {
+  createManualCourse,
+  getCourseByZenlerCourseId,
   listActiveCourses,
   listBannerCourses,
   listCourseDropdownOptions,
@@ -18,7 +20,7 @@ import {
   updatePaymentCard,
 } from '../models/coursePaymentCard';
 import { listCoursePrices, upsertCoursePrices, upsertScrapedCoursePrices } from '../models/coursePrice';
-import { syncCoursesFromZenler } from '../services/courseSyncService';
+import { syncCourseSalesPageUrlsFromStoryblok } from '../services/courseSalesPageUrlSync';
 import { scrapeActiveCoursePrices } from '../services/coursePriceScraper';
 import { applyCourseUrlChanges, publishCourseRedirects } from '../services/courseUrlApply';
 import { getCourseUrlRewriteState, listRecentCourseUrlFailures, summarizeCourseUrlChanges } from '../models/courseUrlChange';
@@ -27,33 +29,16 @@ const router = Router();
 
 router.use(authGuard);
 
-// ── Debug: returns raw first-page Zenler response (admin only) ──────────────
-
-router.get('/zenler-debug', requireRole('admin'), async (_req: Request, res: Response) => {
-  const apiKey = process.env.ZENLER_API_KEY;
-  const accountName = process.env.ZENLER_ACCOUNT_NAME;
-  if (!apiKey || !accountName) return res.status(500).json({ ok: false, error: 'Zenler env vars missing' });
-  const url = `https://${accountName.toLowerCase()}.newzenler.com/api/v1/courses?page=1`;
+router.post('/sync-storyblok-urls', requireRole('admin', 'editor'), async (_req: Request, res: Response) => {
   try {
-    const r = await fetch(url, {
-      headers: { 'X-API-KEY': apiKey, 'X-Account-Name': accountName, 'Accept': 'application/json' },
-    });
-    const body = await r.json();
-    return res.json({ ok: true, status: r.status, data: body });
-  } catch (err) {
-    return res.status(502).json({ ok: false, error: String(err) });
-  }
-});
-
-// ── Course sync (admin only) ──────────────────────────────────────
-
-router.post('/sync', requireRole('admin'), async (_req: Request, res: Response) => {
-  try {
-    const result = await syncCoursesFromZenler();
+    const result = await syncCourseSalesPageUrlsFromStoryblok();
+    if (!result.ok) {
+      return res.status(502).json({ ok: false, error: result.error ?? 'Storyblok URL sync failed' });
+    }
     return res.json({ ok: true, data: result });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Sync failed';
-    console.error('[course-sync]', err);
+    const message = err instanceof Error ? err.message : 'Storyblok URL sync failed';
+    console.error('[storyblok-url-sync]', err);
     return res.status(502).json({ ok: false, error: message });
   }
 });
@@ -243,6 +228,66 @@ router.put('/reorder/order', requireRole('admin', 'editor'), async (req: Request
     const courses = await listCourses();
     return res.json({ ok: true, data: courses });
   } catch (err) {
+    next(err);
+  }
+});
+
+function requiredText(value: unknown): string {
+  return String(value ?? '').trim();
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  const error = err as { code?: string; cause?: { code?: string } };
+  return error.code === '23505' || error.cause?.code === '23505';
+}
+
+router.post('/', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const name = requiredText(req.body.name);
+    const zenlerCourseId = requiredText(req.body.zenlerCourseId);
+    const coursePageUrl = normalizeCoursePageUrl(req.body.coursePageUrl);
+    const qualification = requiredText(req.body.qualification);
+    const courseOption = requiredText(req.body.courseOption);
+    const rawLevels: unknown[] = Array.isArray(req.body.courseLevels) ? req.body.courseLevels : [];
+    const courseLevels: string[] = Array.from(new Set(
+      rawLevels.map(level => String(level).trim()).filter(level => level.length > 0),
+    ));
+
+    const missing: string[] = [];
+    if (!name) missing.push('course name');
+    if (!zenlerCourseId) missing.push('Zenler ID');
+    if (!coursePageUrl) missing.push('Storyblok URL');
+    if (!qualification) missing.push('qualification');
+    if (courseLevels.length === 0) missing.push('level');
+    if (!courseOption) missing.push('course option');
+    if (missing.length > 0) {
+      return res.status(400).json({ ok: false, error: `Required: ${missing.join(', ')}` });
+    }
+    if (!coursePageUrl) {
+      return res.status(400).json({ ok: false, error: 'Required: Storyblok URL' });
+    }
+
+    const existing = await getCourseByZenlerCourseId(zenlerCourseId);
+    if (existing) {
+      return res.status(409).json({ ok: false, error: 'A course with this Zenler ID already exists' });
+    }
+
+    const course = await createManualCourse({
+      name,
+      zenlerCourseId,
+      coursePageUrl,
+      qualification,
+      courseLevels,
+      courseOption,
+      isActive: req.body.isActive !== false,
+      enableInBanner: req.body.enableInBanner === true,
+      enableInNavigation: req.body.enableInNavigation === true,
+    });
+    return res.status(201).json({ ok: true, data: course });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      return res.status(409).json({ ok: false, error: 'A course with this Zenler ID already exists' });
+    }
     next(err);
   }
 });

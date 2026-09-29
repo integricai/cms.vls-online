@@ -16,7 +16,7 @@ export function computeDiscountedPrice(amount: number, discountPercent: number |
 }
 
 export function effectiveAmount(amount: number, discountedPrice: number | null | undefined): number {
-  return discountedPrice != null && discountedPrice > 0 ? discountedPrice : amount;
+  return discountedPrice != null && discountedPrice >= 0 ? discountedPrice : amount;
 }
 
 export function deriveLegacyDurationMonths(
@@ -49,8 +49,8 @@ export function validateGeoPriceInput(
   }
 
   const amount = Number(input.amount);
-  if (!Number.isFinite(amount) || amount <= 0) {
-    issues.push({ field: 'amount', message: 'amount must be greater than 0' });
+  if (!Number.isFinite(amount) || amount < 0) {
+    issues.push({ field: 'amount', message: 'amount must be 0 or greater' });
   }
 
   if (input.discountPercent != null && input.discountPercent !== undefined) {
@@ -59,8 +59,8 @@ export function validateGeoPriceInput(
       issues.push({ field: 'discountPercent', message: 'discount must be between 0 and 100' });
     } else if (Number.isFinite(amount) && discountPercent > 0) {
       const discounted = computeDiscountedPrice(amount, discountPercent);
-      if (discounted != null && discounted <= 0) {
-        issues.push({ field: 'discountPercent', message: 'discount results in a non-positive price' });
+      if (discounted != null && discounted < 0) {
+        issues.push({ field: 'discountPercent', message: 'discount results in a negative price' });
       }
     }
   }

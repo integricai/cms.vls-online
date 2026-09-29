@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, getToken } from '../../api/client';
 import type {
   CourseGeoPrice,
@@ -133,6 +133,10 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [validationMissing, setValidationMissing] = useState<Array<{ id: number; name: string }>>([]);
+  const [deleteTarget, setDeleteTarget] = useState<CoursePricingSummary | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const deleteInputRef = useRef<HTMLInputElement>(null);
 
   // Import state
   const [csvText, setCsvText] = useState('');
@@ -161,6 +165,68 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
   useEffect(() => {
     if (view === 'list') void loadSummaries();
   }, [view, loadSummaries]);
+
+  useEffect(() => {
+    if (!deleteTarget) return;
+    deleteInputRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !deleting) {
+        setDeleteTarget(null);
+        setDeleteConfirmText('');
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [deleteTarget, deleting]);
+
+  const openDelete = (row: CoursePricingSummary) => {
+    setError('');
+    setMessage('');
+    setDeleteConfirmText('');
+    setDeleteTarget(row);
+  };
+
+  const closeDelete = () => {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteConfirmText('');
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget || deleteConfirmText !== 'delete' || deleting) return;
+    setDeleting(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await api.delete<{
+        id: number;
+        storyblokWarning: string | null;
+        deletedStorySlugs: string[];
+        storyblokConfigured: boolean;
+      }>(
+        `/course-pricing/admin/courses/${deleteTarget.courseId}`,
+      );
+      const title = deleteTarget.courseTitle;
+      const pages = result.deletedStorySlugs ?? [];
+      const pageNote = !result.storyblokConfigured
+        ? ''
+        : pages.length > 0
+          ? ` Removed the Storyblok course page ${pages.join(', ')}.`
+          : ' No linked Storyblok course page was found.';
+      setDeleteTarget(null);
+      setDeleteConfirmText('');
+      setMessage(
+        result.storyblokWarning
+          ? `Deleted ${title}.${pageNote} Storyblok cleanup was incomplete: ${result.storyblokWarning}`
+          : `Deleted ${title}.${pageNote}`,
+      );
+      await loadSummaries();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete course');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const openManage = async (courseId: number, title: string) => {
     setError('');
@@ -778,18 +844,72 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
                 </td>
                 <td className="px-3 py-2">{formatDate(row.updatedAt)}</td>
                 <td className="px-3 py-2">
-                  <button
-                    className="btn-primary text-[11px]"
-                    onClick={() => void openManage(row.courseId, row.courseTitle)}
-                  >
-                    Manage Prices
-                  </button>
+                  <div className="flex flex-wrap gap-1">
+                    <button
+                      className="btn-primary text-[11px]"
+                      onClick={() => void openManage(row.courseId, row.courseTitle)}
+                    >
+                      Manage Prices
+                    </button>
+                    <button
+                      className="btn-danger text-[11px]"
+                      onClick={() => openDelete(row)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={closeDelete}>
+          <div
+            className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-lg"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-course-title"
+            onClick={event => event.stopPropagation()}
+          >
+            <h2 id="delete-course-title" className="text-base font-semibold text-slate-900">Delete course</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Permanently delete <strong>{deleteTarget.courseTitle}</strong> ({deleteTarget.zenlerCourseId})?
+              This also removes its prices and any Storyblok course page linked to this course. This cannot be undone.
+            </p>
+            <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor="delete-course-confirm">
+              Type delete to confirm
+            </label>
+            <input
+              id="delete-course-confirm"
+              ref={deleteInputRef}
+              className="input mt-1"
+              value={deleteConfirmText}
+              autoComplete="off"
+              disabled={deleting}
+              onChange={event => setDeleteConfirmText(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter') void confirmDelete();
+              }}
+            />
+            {error && (
+              <div className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+            )}
+            <div className="mt-4 flex justify-end gap-2">
+              <button className="btn-ghost text-xs" onClick={closeDelete} disabled={deleting}>Cancel</button>
+              <button
+                className="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50"
+                disabled={deleteConfirmText !== 'delete' || deleting}
+                onClick={() => void confirmDelete()}
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

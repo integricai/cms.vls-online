@@ -365,7 +365,7 @@ function CoursePriceForm({
       <Field label="Zenler Course" hint="Links this price card to a local course record">
         {courses.length === 0 ? (
           <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            No active courses. Go to <strong>Payment Cards</strong> and run "Sync Courses from Zenler" first.
+            No active courses. Add a course in Content Management first.
           </p>
         ) : (
           <select

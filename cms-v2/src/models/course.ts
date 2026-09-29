@@ -267,6 +267,15 @@ export async function updateCoursePageUrlByZenlerId(
   return rows[0] ? rowToCourse(rows[0] as DbRow) : null;
 }
 
+export async function deleteCourse(id: number): Promise<boolean> {
+  const rows = await sql`
+    DELETE FROM courses
+    WHERE id = ${id}
+    RETURNING id
+  `;
+  return rows.length > 0;
+}
+
 export async function deactivateCoursesNotIn(activeZenlerIds: string[]): Promise<number> {
   if (activeZenlerIds.length === 0) {
     const rows = await sql`

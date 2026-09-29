@@ -28,29 +28,16 @@ type CourseDropdownOption = {
   isActive: boolean;
 };
 
-type SyncResult = {
-  fetched: number;
-  inserted: number;
-  updated: number;
-  deactivated: number;
-  syncedAt: string;
-  storyblokDatasource?: {
-    ok: boolean;
-    created: number;
-    updated: number;
-    deleted: number;
-    error?: string;
-  };
-  salesPageUrls?: {
-    ok: boolean;
-    scanned: number;
-    updated: number;
-    unchanged: number;
-    unmatched: number;
-    missing?: Array<{ zenlerCourseId: string; name: string; detail: string }>;
-    conflicts?: Array<{ zenlerCourseId: string; name: string; detail: string }>;
-    error?: string;
-  };
+type NewCourseDraft = {
+  name: string;
+  zenlerCourseId: string;
+  coursePageUrl: string;
+  qualification: string;
+  courseLevels: string[];
+  courseOption: string;
+  isActive: boolean;
+  enableInBanner: boolean;
+  enableInNavigation: boolean;
 };
 
 type PageUrlImportResult = {
@@ -96,17 +83,24 @@ type UrlChangePublishResult = {
   message?: string;
 };
 
-function namedIssues(
-  issues: Array<{ name: string }> | undefined,
-): string {
+type StoryblokUrlSyncResult = {
+  scanned: number;
+  updated: number;
+  unchanged: number;
+  unmatched: number;
+  missing?: Array<{ name: string }>;
+  conflicts?: Array<{ name: string }>;
+};
+
+function namedIssues(issues: Array<{ name: string }> | undefined): string {
   const names = (issues ?? []).map(issue => issue.name);
   if (names.length <= 8) return names.join(', ');
   return `${names.slice(0, 8).join(', ')}, and ${names.length - 8} more`;
 }
 
-function salesPageUrlSummary(result: NonNullable<SyncResult['salesPageUrls']>): string {
+function storyblokUrlSummary(result: StoryblokUrlSyncResult): string {
   const parts = [
-    `Sales page URLs ${result.updated} updated, ${result.unchanged} unchanged`,
+    `Storyblok URLs ${result.updated} updated, ${result.unchanged} unchanged`,
   ];
   if (result.missing?.length) {
     parts.push(`${result.missing.length} with no Storyblok page (${namedIssues(result.missing)})`);
@@ -115,6 +109,31 @@ function salesPageUrlSummary(result: NonNullable<SyncResult['salesPageUrls']>): 
     parts.push(`${result.conflicts.length} matched more than one page (${namedIssues(result.conflicts)})`);
   }
   return parts.join(' · ');
+}
+
+function emptyNewCourse(): NewCourseDraft {
+  return {
+    name: '',
+    zenlerCourseId: '',
+    coursePageUrl: '',
+    qualification: '',
+    courseLevels: [],
+    courseOption: '',
+    isActive: true,
+    enableInBanner: false,
+    enableInNavigation: false,
+  };
+}
+
+function newCourseMissing(draft: NewCourseDraft): string[] {
+  const missing: string[] = [];
+  if (!draft.name.trim()) missing.push('course name');
+  if (!draft.zenlerCourseId.trim()) missing.push('Zenler ID');
+  if (!draft.coursePageUrl.trim()) missing.push('Storyblok URL');
+  if (!draft.qualification.trim()) missing.push('qualification');
+  if (draft.courseLevels.length === 0) missing.push('level');
+  if (!draft.courseOption.trim()) missing.push('course option');
+  return missing;
 }
 
 function downloadText(filename: string, content: string): void {
@@ -139,7 +158,6 @@ async function downloadCoursesCsv(): Promise<void> {
 
 function CoursesTab() {
   const canEdit = canManageContent(getCurrentUser()?.role);
-  const isAdmin = getCurrentUser()?.role === 'admin';
   const [courses, setCourses] = useState<Course[]>([]);
   const [options, setOptions] = useState<Record<CourseDropdownKind, string[]>>({
     qualification: [],
@@ -147,14 +165,12 @@ function CoursesTab() {
     course_option: [],
   });
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
   const [savingOptions, setSavingOptions] = useState(false);
   const [savingCourseId, setSavingCourseId] = useState<number | null>(null);
-  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+  const [creatingCourse, setCreatingCourse] = useState(false);
+  const [newCourse, setNewCourse] = useState<NewCourseDraft | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [debugData, setDebugData] = useState<string | null>(null);
-  const [debugging, setDebugging] = useState(false);
   const [orderDirty, setOrderDirty] = useState(false);
   const [draggingCourseId, setDraggingCourseId] = useState<number | null>(null);
   const [importingCsv, setImportingCsv] = useState(false);
@@ -162,6 +178,7 @@ function CoursesTab() {
   const [urlSummary, setUrlSummary] = useState<UrlChangeSummary>({ queued: 0, rewriting: 0, ready: 0, failed: 0 });
   const [urlFailures, setUrlFailures] = useState<UrlChangeFailure[]>([]);
   const [urlLastError, setUrlLastError] = useState<string | null>(null);
+  const [syncingStoryblokUrls, setSyncingStoryblokUrls] = useState(false);
   const [applyingUrls, setApplyingUrls] = useState(false);
   const [publishingRedirects, setPublishingRedirects] = useState(false);
   const [urlMessage, setUrlMessage] = useState<string | null>(null);
@@ -198,6 +215,22 @@ function CoursesTab() {
       level: rows.filter(row => row.kind === 'level').map(row => row.value),
       course_option: rows.filter(row => row.kind === 'course_option').map(row => row.value),
     };
+  }
+
+  async function syncStoryblokUrls() {
+    setSyncingStoryblokUrls(true);
+    setUrlMessage(null);
+    setSyncError(null);
+    try {
+      const result = await api.post<StoryblokUrlSyncResult>('/courses/sync-storyblok-urls', {});
+      const fresh = await api.get<Course[]>('/courses');
+      setCourses(fresh || []);
+      setUrlMessage(storyblokUrlSummary(result));
+    } catch (e) {
+      setSyncError((e instanceof Error ? e.message : null) || 'Storyblok URL sync failed.');
+    } finally {
+      setSyncingStoryblokUrls(false);
+    }
   }
 
   async function applyUrlChanges() {
@@ -243,30 +276,38 @@ function CoursesTab() {
     }
   }
 
-  async function sync() {
-    setSyncing(true); setSyncResult(null); setSyncError(null);
-    try {
-      const result = await api.post<SyncResult>('/courses/sync', {});
-      setSyncResult(result);
-      const fresh = await api.get<Course[]>('/courses');
-      setCourses(fresh || []);
-      setOrderDirty(false);
-    } catch (e) {
-      setSyncError((e instanceof Error ? e.message : null) || 'Sync failed.');
-    } finally {
-      setSyncing(false);
-    }
+  function patchNewCourse(update: Partial<NewCourseDraft>) {
+    setNewCourse(current => current ? { ...current, ...update } : current);
   }
 
-  async function runDebug() {
-    setDebugging(true); setDebugData(null);
+  async function createCourse() {
+    if (!newCourse) return;
+    const missing = newCourseMissing(newCourse);
+    if (missing.length > 0) {
+      setSyncError(`Required: ${missing.join(', ')}`);
+      return;
+    }
+    setCreatingCourse(true);
+    setSyncError(null);
     try {
-      const raw = await api.get<unknown>('/courses/zenler-debug');
-      setDebugData(JSON.stringify(raw, null, 2));
+      const saved = await api.post<Course>('/courses', {
+        name: newCourse.name.trim(),
+        zenlerCourseId: newCourse.zenlerCourseId.trim(),
+        coursePageUrl: newCourse.coursePageUrl.trim(),
+        qualification: newCourse.qualification.trim(),
+        courseLevel: newCourse.courseLevels[0],
+        courseLevels: newCourse.courseLevels,
+        courseOption: newCourse.courseOption.trim(),
+        isActive: newCourse.isActive,
+        enableInBanner: newCourse.enableInBanner,
+        enableInNavigation: newCourse.enableInNavigation,
+      });
+      setCourses(prev => [...prev, saved].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name)));
+      setNewCourse(null);
     } catch (e) {
-      setDebugData('Error: ' + (e instanceof Error ? e.message : String(e)));
+      setSyncError((e instanceof Error ? e.message : null) || 'Course create failed.');
     } finally {
-      setDebugging(false);
+      setCreatingCourse(false);
     }
   }
 
@@ -491,23 +532,12 @@ function CoursesTab() {
 
   return (
     <div className="p-6">
-      <h2 className="mb-1 text-sm font-bold text-slate-700">Zenler Course Sync</h2>
+      <h2 className="mb-1 text-sm font-bold text-slate-700">Courses</h2>
       <p className="mb-3 text-xs text-slate-500">
-        Sync courses from your Zenler school into the local database. Synced courses become
-        available as dropdown options when configuring payment cards.
+        Add a course, or update course page URLs from a CSV. A course page URL is the Storyblok path, for example /courses/fa1.
       </p>
 
       <div className="mb-4 flex flex-wrap gap-2">
-        {isAdmin && (
-          <>
-            <button onClick={sync} disabled={syncing} className="btn-primary">
-              {syncing ? 'Syncing…' : '↻ Sync Courses from Zenler'}
-            </button>
-            <button onClick={runDebug} disabled={debugging} className="btn-ghost text-xs">
-              {debugging ? 'Fetching…' : '🔍 Debug raw response'}
-            </button>
-          </>
-        )}
         <button
           onClick={() => downloadCoursesCsv().catch(err => setSyncError(err instanceof Error ? err.message : 'Download failed.'))}
           className="btn-ghost text-xs"
@@ -542,16 +572,23 @@ function CoursesTab() {
             <div>
               <h3 className="text-sm font-bold text-slate-700">Course URLs</h3>
               <p className="mt-1 max-w-3xl text-xs text-slate-500">
-                Apply URL changes renames each Storyblok course story to the saved Course page URL and rewrites links that still point at the old path, including hub and landing pages. A job runs every five minutes to finish anything this request cannot. Old URLs 404 once the slug changes. Publish redirects sends those 301s to Cloudflare.
+                Sync Storyblok Url copies each Storyblok course page path into the CMS. Apply URL changes renames each Storyblok course story to the saved Course page URL and rewrites links that still point at the old path, including hub and landing pages. A job runs every five minutes to finish anything this request cannot. Old URLs 404 once the slug changes. Publish redirects sends those 301s to Cloudflare.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button onClick={applyUrlChanges} disabled={applyingUrls || publishingRedirects} className="btn-primary">
+              <button
+                onClick={() => void syncStoryblokUrls()}
+                disabled={syncingStoryblokUrls || applyingUrls || publishingRedirects}
+                className="btn-primary"
+              >
+                {syncingStoryblokUrls ? 'Syncing…' : 'Sync Storyblok Url'}
+              </button>
+              <button onClick={applyUrlChanges} disabled={syncingStoryblokUrls || applyingUrls || publishingRedirects} className="btn-primary">
                 {applyingUrls ? 'Applying…' : 'Apply URL changes'}
               </button>
               <button
                 onClick={publishRedirects}
-                disabled={publishingRedirects || applyingUrls || urlSummary.ready === 0}
+                disabled={publishingRedirects || applyingUrls || syncingStoryblokUrls || urlSummary.ready === 0}
                 className="btn-ghost"
               >
                 {publishingRedirects ? 'Publishing…' : 'Publish redirects'}
@@ -596,23 +633,6 @@ function CoursesTab() {
         </div>
       </div>
 
-      {syncResult && (
-        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-          Sync complete — <strong>{syncResult.fetched}</strong> fetched ·{' '}
-          <strong>{syncResult.inserted}</strong> new · <strong>{syncResult.updated}</strong> updated ·{' '}
-          <strong>{syncResult.deactivated}</strong> deactivated
-          {syncResult.storyblokDatasource
-            ? syncResult.storyblokDatasource.ok
-              ? ` · Storyblok dropdown ${syncResult.storyblokDatasource.created} created, ${syncResult.storyblokDatasource.updated} updated`
-              : ` · Storyblok dropdown failed: ${syncResult.storyblokDatasource.error ?? 'unknown error'}`
-            : null}
-          {syncResult.salesPageUrls
-            ? syncResult.salesPageUrls.ok
-              ? ` · ${salesPageUrlSummary(syncResult.salesPageUrls)}`
-              : ` · Sales page URL pull failed: ${syncResult.salesPageUrls.error ?? 'unknown error'}`
-            : null}
-        </div>
-      )}
       {importResult && (
         <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
           CSV import — <strong>{importResult.updated}</strong> updated ·{' '}
@@ -637,30 +657,104 @@ function CoursesTab() {
           {syncError}
         </div>
       )}
-      {debugData && (
-        <div className="mb-4">
-          <p className="mb-1 text-xs font-semibold text-slate-500">Raw Zenler API response (page 1):</p>
-          <pre className="overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-700 max-h-96">
-            {debugData}
-          </pre>
-        </div>
-      )}
 
       <h3 className="mb-2 text-sm font-bold text-slate-700">
         {loading ? 'Loading courses…' : `${courses.length} Course${courses.length !== 1 ? 's' : ''}`}
       </h3>
       <div className="mb-3 flex items-center justify-between gap-3">
         <p className="text-xs text-slate-500">Drag rows to sort. Enabled, banner, and navigation toggles save immediately; save each row after changing dropdowns.</p>
-        <button onClick={saveOrder} disabled={!orderDirty || savingOrder} className="btn-primary">
-          {savingOrder ? 'Saving...' : orderDirty ? 'Save Course Order' : 'Order Saved'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {canEdit && (
+            <button
+              onClick={() => { setSyncError(null); setNewCourse(emptyNewCourse()); }}
+              disabled={newCourse != null}
+              className="btn-primary"
+            >
+              Add a course
+            </button>
+          )}
+          <button onClick={saveOrder} disabled={!orderDirty || savingOrder} className="btn-primary">
+            {savingOrder ? 'Saving...' : orderDirty ? 'Save Course Order' : 'Order Saved'}
+          </button>
+        </div>
       </div>
-      {!loading && courses.length === 0 && (
-        <p className="text-xs text-slate-400">
-          {isAdmin
-            ? 'No courses synced yet. Click "Sync Courses from Zenler" above.'
-            : 'No courses synced yet. Ask an admin to sync courses from Zenler.'}
-        </p>
+      {!loading && courses.length === 0 && !newCourse && (
+        <p className="text-xs text-slate-400">No courses yet. Click &quot;Add a course&quot; to create one.</p>
+      )}
+      {newCourse && (
+        <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4">
+          <h3 className="text-sm font-bold text-slate-700">New course</h3>
+          <p className="mt-1 text-xs text-slate-500">Every field is required. Save stays off until Zenler ID, Storyblok URL, and the other fields are filled in.</p>
+          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <label className="text-xs text-slate-600">
+              Course name
+              <input className="input mt-1" value={newCourse.name} onChange={event => patchNewCourse({ name: event.target.value })} />
+            </label>
+            <label className="text-xs text-slate-600">
+              Zenler ID
+              <input className="input mt-1" value={newCourse.zenlerCourseId} onChange={event => patchNewCourse({ zenlerCourseId: event.target.value })} />
+            </label>
+            <label className="text-xs text-slate-600">
+              Storyblok URL
+              <input className="input mt-1" placeholder="/courses/fa1" value={newCourse.coursePageUrl} onChange={event => patchNewCourse({ coursePageUrl: event.target.value })} />
+            </label>
+            <label className="text-xs text-slate-600">
+              Qualification
+              <select className="input mt-1" value={newCourse.qualification} onChange={event => patchNewCourse({ qualification: event.target.value })}>
+                <option value="">Select...</option>
+                {options.qualification.map(value => <option key={value} value={value}>{value}</option>)}
+              </select>
+            </label>
+            <label className="text-xs text-slate-600">
+              Level
+              <select
+                multiple
+                className="input mt-1 min-h-20 py-1"
+                value={newCourse.courseLevels}
+                onChange={event => patchNewCourse({ courseLevels: selectedValues(event.currentTarget) })}
+              >
+                {options.level.map(value => <option key={value} value={value}>{value}</option>)}
+              </select>
+              <span className="mt-1 block text-[10px] text-slate-400">Hold Ctrl/Cmd to select multiple.</span>
+            </label>
+            <label className="text-xs text-slate-600">
+              Course option
+              <select className="input mt-1" value={newCourse.courseOption} onChange={event => patchNewCourse({ courseOption: event.target.value })}>
+                <option value="">Select...</option>
+                {options.course_option.map(value => <option key={value} value={value}>{value}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-700">
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={newCourse.isActive} onChange={event => patchNewCourse({ isActive: event.target.checked })} />
+              Enabled
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={newCourse.enableInBanner} onChange={event => patchNewCourse({ enableInBanner: event.target.checked })} />
+              Enable in banner
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={newCourse.enableInNavigation} onChange={event => patchNewCourse({ enableInNavigation: event.target.checked })} />
+              Show in navigation
+            </label>
+          </div>
+          {newCourseMissing(newCourse).length > 0 && (
+            <p className="mt-3 text-xs text-amber-700">Still required: {newCourseMissing(newCourse).join(', ')}</p>
+          )}
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={() => void createCourse()}
+              disabled={creatingCourse || newCourseMissing(newCourse).length > 0}
+              className="btn-primary text-xs"
+            >
+              {creatingCourse ? 'Saving...' : 'Save course'}
+            </button>
+            <button onClick={() => setNewCourse(null)} disabled={creatingCourse} className="btn-ghost text-xs">
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
       {!loading && courses.length > 0 && (
         <div className="overflow-auto rounded-lg border border-slate-200 bg-white">
