@@ -6,10 +6,6 @@
       "schedule": "*/5 * * * *"
     },
     {
-      "path": "/api/cron/zenler-courses",
-      "schedule": "0 1 * * *"
-    },
-    {
       "path": "/api/cron/course-url-changes",
       "schedule": "*/5 * * * *"
     }

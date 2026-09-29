@@ -147,31 +147,6 @@ export interface CourseSalesPageUrlIssue {
   detail: string;
 }
 
-export interface CourseSyncResult {
-  fetched: number;
-  inserted: number;
-  updated: number;
-  deactivated: number;
-  syncedAt: string;
-  storyblokDatasource?: {
-    ok: boolean;
-    created: number;
-    updated: number;
-    deleted: number;
-    error?: string;
-  };
-  salesPageUrls?: {
-    ok: boolean;
-    scanned: number;
-    updated: number;
-    unchanged: number;
-    unmatched: number;
-    missing: CourseSalesPageUrlIssue[];
-    conflicts: CourseSalesPageUrlIssue[];
-    error?: string;
-  };
-}
-
 export interface CoursePageUrlImportError {
   rowNumber: number;
   zenlerCourseId: string;
