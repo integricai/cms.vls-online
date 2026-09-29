@@ -155,6 +155,67 @@ export async function upsertCourse(data: {
   return { course: rowToCourse(row), wasInserted: row.was_inserted };
 }
 
+function slugifyCourseName(name: string): string {
+  const slug = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return slug || 'course';
+}
+
+export async function createManualCourse(data: {
+  zenlerCourseId: string;
+  name: string;
+  coursePageUrl: string;
+  qualification: string;
+  courseLevels: string[];
+  courseOption: string;
+  isActive: boolean;
+  enableInBanner: boolean;
+  enableInNavigation: boolean;
+}): Promise<Course> {
+  const levels = Array.from(new Set(data.courseLevels.map(level => level.trim()).filter(Boolean)));
+  const rows = await sql`
+    INSERT INTO courses (
+      zenler_course_id,
+      name,
+      slug,
+      status,
+      is_active,
+      enable_in_banner,
+      enable_in_navigation,
+      sort_order,
+      qualification,
+      course_level,
+      course_option,
+      course_page_url
+    )
+    VALUES (
+      ${data.zenlerCourseId},
+      ${data.name},
+      ${slugifyCourseName(data.name)},
+      'manual',
+      ${data.isActive},
+      ${data.enableInBanner},
+      ${data.enableInNavigation},
+      (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM courses),
+      ${data.qualification},
+      ${levels[0] ?? null},
+      ${data.courseOption},
+      ${data.coursePageUrl}
+    )
+    RETURNING *
+  `;
+  const created = rows[0] as DbRow;
+  for (let index = 0; index < levels.length; index++) {
+    await sql`
+      INSERT INTO course_levels (course_id, level, sort_order)
+      VALUES (${created.id}, ${levels[index]}, ${(index + 1) * 10})
+      ON CONFLICT (course_id, level) DO UPDATE
+        SET sort_order = EXCLUDED.sort_order
+    `;
+  }
+  const fresh = (await listCourses()).find(course => course.id === created.id);
+  return fresh ?? rowToCourse(created);
+}
+
 export async function updateCourseAdminMetadata(
   id: number,
   data: {
