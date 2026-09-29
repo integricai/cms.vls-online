@@ -190,3 +190,22 @@ export async function syncCmsCoursesStoryblokDatasource(
 
   return { ok: true, created, updated, deleted };
 }
+
+/** Drops one course from the Storyblok CMS course dropdown. No-op when Storyblok is not configured. */
+export async function removeCmsCourseDatasourceEntry(zenlerCourseId: string): Promise<void> {
+  const value = zenlerCourseId.trim();
+  if (!value) return;
+
+  const config = resolveStoryblokConfigFromEnv();
+  if (!config) return;
+
+  const datasource = (await listStoryblokDatasources(config))
+    .find(item => item.slug === CMS_COURSES_DATASOURCE_SLUG);
+  if (!datasource) return;
+
+  const entries = await listStoryblokDatasourceEntries(config, datasource.id);
+  const match = entries.find(entry => entry.value === value);
+  if (!match) return;
+
+  await deleteStoryblokDatasourceEntry(config, match.id);
+}

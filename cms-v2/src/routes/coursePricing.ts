@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
 import type { CourseGeoPriceInput } from '../../shared/types';
+import { deleteCourse } from '../models/course';
 import {
   createGeoPrice,
   deactivateGeoPrice,
@@ -13,6 +14,8 @@ import {
   setDefaultGeoPrice,
   updateGeoPrice,
 } from '../models/courseGeoPrice';
+import { deleteLinkedCourseStories } from '../services/courseStoryDelete';
+import { removeCmsCourseDatasourceEntry } from '../services/storyblokCmsCoursesDatasource';
 import {
   buildPricingExportCsv,
   buildPricingTemplateCsv,
@@ -37,6 +40,13 @@ function parseDurationMonths(value: unknown): number | null {
 function parseCourseId(value: unknown): number | null {
   const id = Number(value);
   return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function isForeignKeyViolation(err: unknown): boolean {
+  return typeof err === 'object'
+    && err !== null
+    && 'code' in err
+    && (err as { code?: string }).code === '23503';
 }
 
 function parseBodyInput(body: Record<string, unknown>, courseId: number): CourseGeoPriceInput {
@@ -144,6 +154,63 @@ router.get('/admin/export', authGuard, requireRole('admin', 'editor'), async (_r
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="course-pricing-export.csv"');
     return res.send(csv);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/admin/courses/:courseId', authGuard, requireRole('admin'), async (req, res, next) => {
+  try {
+    const courseId = parseCourseId(req.params.courseId);
+    if (!courseId) return res.status(400).json({ ok: false, error: 'Invalid course id' });
+
+    const course = await getCourseById(courseId);
+    if (!course) return res.status(404).json({ ok: false, error: 'Course not found' });
+
+    try {
+      const deleted = await deleteCourse(courseId);
+      if (!deleted) return res.status(404).json({ ok: false, error: 'Course not found' });
+    } catch (err) {
+      if (isForeignKeyViolation(err)) {
+        return res.status(409).json({
+          ok: false,
+          error: 'This course cannot be deleted because it has sales, payments, or payment offers.',
+        });
+      }
+      throw err;
+    }
+
+    let storyblokWarning: string | null = null;
+    let deletedStorySlugs: string[] = [];
+    let storyblokConfigured = false;
+    try {
+      await removeCmsCourseDatasourceEntry(course.zenlerCourseId);
+    } catch (err) {
+      storyblokWarning = err instanceof Error
+        ? err.message
+        : 'The course was deleted, but it could not be removed from the Storyblok course list.';
+    }
+
+    try {
+      const stories = await deleteLinkedCourseStories(course.zenlerCourseId);
+      deletedStorySlugs = stories.deletedSlugs;
+      storyblokConfigured = stories.configured;
+      if (stories.error) {
+        storyblokWarning = storyblokWarning
+          ? `${storyblokWarning} ${stories.error}`
+          : stories.error;
+      }
+    } catch (err) {
+      const message = err instanceof Error
+        ? err.message
+        : 'The course was deleted, but its Storyblok course page could not be removed.';
+      storyblokWarning = storyblokWarning ? `${storyblokWarning} ${message}` : message;
+    }
+
+    return res.json({
+      ok: true,
+      data: { id: courseId, storyblokWarning, deletedStorySlugs, storyblokConfigured },
+    });
   } catch (err) {
     next(err);
   }

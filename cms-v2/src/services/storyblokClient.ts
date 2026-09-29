@@ -404,6 +404,18 @@ export interface StoryblokStoryRecord extends StoryblokStoryRef {
   content?: Record<string, unknown>;
 }
 
+export async function deleteStoryById(
+  config: StoryblokConfig,
+  storyId: number,
+): Promise<void> {
+  try {
+    await storyblokRequest(config, 'DELETE', `/stories/${storyId}`);
+  } catch (err) {
+    if (isStoryblokApiError(err) && err.status === 404) return;
+    throw err;
+  }
+}
+
 export async function getStoryById(
   config: StoryblokConfig,
   storyId: number,
