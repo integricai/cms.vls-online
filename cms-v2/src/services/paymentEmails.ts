@@ -400,6 +400,75 @@ ${p(`If you have any questions, please reply to this email or contact our suppor
   return true;
 }
 
+export async function sendFreeEnrolConfirmation(input: {
+  studentEmail: string;
+  studentName: string;
+  courseTitle: string;
+  accessUrl: string;
+  isNewZenlerUser: boolean;
+  temporaryPassword: string | null;
+}): Promise<boolean> {
+  const to = input.studentEmail.trim();
+  if (!to) return false;
+
+  const name = input.studentName.trim() || 'Student';
+  const loginUrl = input.accessUrl || VLS_SCHOOL_LOGIN_URL;
+
+  let accessText = '';
+  let accessHtml = '';
+
+  if (input.isNewZenlerUser && input.temporaryPassword) {
+    accessText = `
+Access your quizzes at: ${loginUrl}
+Email: ${to}
+Temporary password: ${input.temporaryPassword}
+
+Please log in and change your password after your first sign-in. Your free quizzes will appear under My Courses.
+
+`;
+    accessHtml = `
+${p(`Please use the button below to access your free quizzes.`)}
+${ctaButton(loginUrl, 'Access your quizzes')}
+${p(`<strong style="color:${BRAND.navy};">Email:</strong> ${esc(to)}<br>
+<strong style="color:${BRAND.navy};">Temporary password:</strong> ${esc(input.temporaryPassword)}`)}
+${p(`Please log in and change your password after your first sign-in. Your free quizzes will appear under <strong>My Courses</strong>.`)}`;
+  } else {
+    accessText = `
+Access your quizzes at: ${loginUrl}
+Sign in with your existing VLS school account. Your free quizzes will appear under My Courses.
+
+`;
+    accessHtml = `
+${p(`Please use the button below to access your free quizzes.`)}
+${ctaButton(loginUrl, 'Access your quizzes')}
+${p(`Sign in with your existing VLS school account. Your free quizzes will appear under <strong>My Courses</strong>.`)}`;
+  }
+
+  const text = `Hi ${name},
+
+You are enrolled on ${input.courseTitle}. There is no charge.
+${accessText}
+Kind regards,
+VLS Online`;
+
+  const bodyHtml = `
+${p(`Hi ${esc(name)},`)}
+${p(`You are enrolled on <strong>${esc(input.courseTitle)}</strong>. There is no charge.`)}
+${accessHtml}`;
+
+  await sendEmail({
+    to,
+    subject: `You're enrolled — ${input.courseTitle}`,
+    text,
+    html: renderBrandedEmail({
+      title: 'Free quiz enrolment',
+      preheader: `You are enrolled on ${input.courseTitle}`,
+      bodyHtml,
+    }),
+  });
+  return true;
+}
+
 export async function sendAdminPaymentNotification(order: PaymentOrder): Promise<boolean> {
   const to = process.env.ADMIN_NOTIFICATION_EMAIL;
   if (!to) return false;
