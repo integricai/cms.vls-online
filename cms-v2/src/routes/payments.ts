@@ -1,26 +1,26 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { getPaymentCard } from '../models/coursePaymentCard';
-import { getCourseById, getGeoPriceById } from '../models/courseGeoPrice';
+import { getGeoPriceById } from '../models/courseGeoPrice';
+import { getCourseById as getCmsCourseById } from '../models/course';
 import { splitStudentName, upsertCustomer } from '../models/customer';
 import {
-  attachStripeCheckoutSession,
+  attachCheckoutSession,
   createPaymentOrder,
-  getPaymentOrder,
-  getPaymentOrderByCheckoutSession,
-  getPaymentOrderByPaymentIntent,
-  markOrderEmailsSent,
-  markPaymentOrderPaid,
-  markPaymentOrderRefunded,
+  getPaymentOrderByCheckoutId,
+  paymentOrderPayerEmail,
 } from '../models/paymentOrder';
 import {
-  createStripeCheckoutSession,
-  verifyStripeWebhook,
-} from '../services/stripeCheckout';
+  capturePendingProviderCheckout,
+  fulfillPaidCheckout,
+  fulfillRefund,
+} from '../services/payments/fulfillment';
+import { getPaymentProvider, listEnabledPaymentProviders } from '../services/payments/registry';
 import {
-  sendAdminPaymentNotification,
-  sendStudentPaymentConfirmation,
-  sendStudentRefundConfirmation,
-} from '../services/paymentEmails';
+  customerSourceForProvider,
+  parsePaymentProviderId,
+  type CreateCheckoutInput,
+  type PaymentProviderId,
+} from '../services/payments/types';
 import { ensureSaleRecordedForPaidOrder } from '../services/saleRecording';
 import {
   detectClientIpFromRequest,
@@ -32,118 +32,16 @@ import {
   resolveCoursePrice,
 } from '../services/pricingResolver';
 import { isParityDealsTestRequest } from '../services/parityDealsTest';
-import {
-  ensureZenlerEnrollmentForPaidOrder,
-  revokeZenlerAccessForRefundedOrder,
-  runZenlerEnrollmentForPaidOrder,
-} from '../services/zenlerEnrollmentEnsure';
+import { ensureZenlerEnrollmentForPaidOrder } from '../services/zenlerEnrollmentEnsure';
 import { courseAccessUrlForEnrollment } from '../services/schoolAccess';
 import { parseCheckoutAttribution, resolveCheckoutEnvironment } from '../services/attribution';
-
-function extractStripeId(value: unknown): string | null {
-  if (typeof value === 'string' && value.trim()) return value.trim();
-  if (value && typeof value === 'object' && 'id' in value) {
-    const id = (value as { id?: unknown }).id;
-    if (typeof id === 'string' && id.trim()) return id.trim();
-  }
-  return null;
-}
-
-async function handleCheckoutSessionCompleted(session: Record<string, any>): Promise<void> {
-  const orderId = Number(session.client_reference_id ?? session.metadata?.orderId);
-  if (!Number.isInteger(orderId)) return;
-
-  const existing = await getPaymentOrder(orderId);
-  if (!existing) return;
-  if (existing.status === 'Paid') {
-    await ensureSaleRecordedForPaidOrder(existing);
-    return;
-  }
-  if (existing.status === 'Cancelled' || existing.status === 'Refunded') return;
-
-  const paymentIntentId = extractStripeId(session.payment_intent) ?? existing.stripePaymentIntentId;
-
-  let { order, wasAlreadyPaid } = await markPaymentOrderPaid({
-    orderId,
-    stripeCheckoutSessionId: typeof session.id === 'string' ? session.id : null,
-    stripePaymentIntentId: paymentIntentId,
-    stripeCustomerEmail: session.customer_details?.email ?? session.customer_email ?? null,
-    amountTotal: typeof session.amount_total === 'number' ? session.amount_total : null,
-    currency: typeof session.currency === 'string' ? session.currency : null,
-  });
-
-  // Keep customers current on every paid enrollment (post go-live path).
-  const payerEmail = (
-    order.studentEmail
-    ?? order.stripeCustomerEmail
-    ?? session.customer_details?.email
-    ?? session.customer_email
-    ?? null
-  );
-  if (payerEmail) {
-    const stripeName = typeof session.customer_details?.name === 'string'
-      ? session.customer_details.name
-      : order.studentName;
-    const { firstName, lastName } = splitStudentName(stripeName);
-    await upsertCustomer({
-      email: String(payerEmail).trim().toLowerCase(),
-      firstName,
-      lastName,
-      countryCode: order.countryCode,
-      source: 'stripe',
-    });
-  }
-
-  if (!wasAlreadyPaid) {
-    const email = order.studentEmail ?? order.stripeCustomerEmail;
-    let enrollmentEmailContext = null;
-    if (email && order.zenlerCourseId) {
-      const enrollmentResult = await runZenlerEnrollmentForPaidOrder(order);
-      order = enrollmentResult.order;
-      enrollmentEmailContext = enrollmentResult.emailContext;
-    }
-
-    const studentSent = await sendStudentPaymentConfirmation(order, enrollmentEmailContext);
-    const adminSent = await sendAdminPaymentNotification(order);
-    await markOrderEmailsSent(order.id, { student: studentSent, admin: adminSent });
-  }
-
-  await ensureSaleRecordedForPaidOrder(order);
-}
-
-async function handleStripeRefundEvent(payload: {
-  paymentIntentId: string | null;
-  refundId: string | null;
-}): Promise<void> {
-  if (!payload.paymentIntentId) return;
-
-  const order = await getPaymentOrderByPaymentIntent(payload.paymentIntentId);
-  if (!order) return;
-
-  if (order.status === 'Refunded') {
-    // Admin refund may have marked the order first — still ensure Zenler access is revoked.
-    await revokeZenlerAccessForRefundedOrder(order);
-    return;
-  }
-  if (order.status !== 'Paid') return;
-
-  const { order: refunded, wasAlreadyRefunded } = await markPaymentOrderRefunded({
-    orderId: order.id,
-    stripeRefundId: payload.refundId,
-    stripePaymentIntentId: payload.paymentIntentId,
-  });
-
-  await revokeZenlerAccessForRefundedOrder(refunded);
-
-  // Dashboard / external refunds only — Sales admin path emails when it marks Refunded first.
-  if (!wasAlreadyRefunded) {
-    try {
-      await sendStudentRefundConfirmation(refunded);
-    } catch (emailErr) {
-      console.error('[payments] refund confirmation email failed', emailErr);
-    }
-  }
-}
+import { freeEnrolHandler } from './freeEnrol';
+import {
+  MultiCourseAccessError,
+  parseAccessZenlerCourseIds,
+  parseComboStorySlug,
+  validateMultiCourseAccessSelection,
+} from '../services/multiCourseAccess';
 
 const router = Router();
 
@@ -168,6 +66,10 @@ function computeDiscountPercent(listAmount: number, effectiveAmount: number): nu
   if (!Number.isFinite(listAmount) || listAmount <= 0) return null;
   if (!Number.isFinite(effectiveAmount) || effectiveAmount >= listAmount) return null;
   return Math.round((1 - effectiveAmount / listAmount) * 10000) / 100;
+}
+
+function parseRequestedProvider(body: Record<string, unknown>): PaymentProviderId {
+  return parsePaymentProviderId(body.provider ?? body.paymentProvider);
 }
 
 function parseCheckoutReturnOrigin(req: Request): string | undefined {
@@ -201,6 +103,7 @@ async function upsertCheckoutCustomer(input: {
   lastName: string | null;
   phone: string | null;
   countryCode: string | null;
+  provider: PaymentProviderId;
 }) {
   if (!input.email) return null;
   return upsertCustomer({
@@ -209,9 +112,86 @@ async function upsertCheckoutCustomer(input: {
     lastName: input.lastName,
     phone: input.phone,
     countryCode: input.countryCode,
-    source: 'stripe',
+    source: customerSourceForProvider(input.provider),
   });
 }
+
+async function startProviderCheckout(
+  providerId: PaymentProviderId,
+  input: CreateCheckoutInput,
+): Promise<{ checkoutUrl: string; checkoutId: string; provider: PaymentProviderId }> {
+  const provider = getPaymentProvider(providerId);
+  const session = await provider.createCheckout(input);
+  await attachCheckoutSession(input.orderId, {
+    provider: session.provider,
+    checkoutId: session.checkoutId,
+  });
+  return session;
+}
+
+function webhookHeaders(req: Request): Record<string, string | undefined> {
+  return {
+    'stripe-signature': req.get('stripe-signature') ?? undefined,
+    'paypal-auth-algo': req.get('paypal-auth-algo') ?? undefined,
+    'paypal-cert-url': req.get('paypal-cert-url') ?? undefined,
+    'paypal-transmission-id': req.get('paypal-transmission-id') ?? undefined,
+    'paypal-transmission-sig': req.get('paypal-transmission-sig') ?? undefined,
+    'paypal-transmission-time': req.get('paypal-transmission-time') ?? undefined,
+  };
+}
+
+async function handleProviderWebhook(providerId: PaymentProviderId, req: Request, res: Response): Promise<void> {
+  let event;
+  try {
+    event = await getPaymentProvider(providerId).parseWebhook(req.body as Buffer, webhookHeaders(req));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Invalid webhook';
+    res.status(400).json({ ok: false, error: message });
+    return;
+  }
+
+  try {
+    if (event.type === 'checkout.completed') {
+      if (event.provider === 'paypal' && event.checkoutId && !event.paymentId) {
+        const captured = await getPaymentProvider('paypal').captureCheckout?.(event.checkoutId);
+        if (captured?.completed) {
+          event = {
+            ...event,
+            paymentId: captured.paymentId,
+            customerEmail: event.customerEmail ?? captured.customerEmail,
+            customerName: event.customerName ?? captured.customerName,
+            amountMinor: event.amountMinor ?? captured.amountMinor,
+            currency: event.currency ?? captured.currency,
+          };
+        }
+      }
+      await fulfillPaidCheckout(event);
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    if (event.type === 'refund.completed') {
+      await fulfillRefund(event);
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    console.error(`[${providerId}-webhook]`, err);
+    res.status(500).json({ ok: false, error: 'Webhook handling failed' });
+  }
+}
+
+router.post('/enrol-free', freeEnrolHandler);
+
+router.get('/providers', (_req: Request, res: Response) => {
+  res.json({
+    ok: true,
+    providers: listEnabledPaymentProviders(),
+    defaultProvider: 'stripe',
+  });
+});
 
 /** Legacy payment-card checkout (course_payment_cards). */
 router.post('/create-checkout-session', async (req: Request, res: Response, next: NextFunction) => {
@@ -241,6 +221,7 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
       return res.status(400).json({ ok: false, error: 'Payment option price is invalid' });
     }
 
+    const providerId = parseRequestedProvider(req.body ?? {});
     const geo = detectCountryFromRequest(req, req.body?.countryCode);
     const clientIp = detectClientIpFromRequest(req);
     const environment = resolveCheckoutEnvironment({
@@ -260,6 +241,7 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
       lastName: customerInput.lastName,
       phone: customerInput.phone,
       countryCode: geo.countryCode,
+      provider: providerId,
     });
 
     const order = await createPaymentOrder({
@@ -278,23 +260,28 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
       discountPercent: computeDiscountPercent(option.normalPrice, amount),
       attribution,
       environment,
+      provider: providerId,
     });
 
-    const session = await createStripeCheckoutSession({
+    const session = await startProviderCheckout(providerId, {
       orderId: order.id,
       paymentOptionId: option.id,
       courseId: option.courseId,
       zenlerCourseId: option.zenlerCourseId,
       courseTitle: option.courseName ?? option.title,
       paymentCardTitle: option.title,
-        amount,
-        currency: option.currency || 'GBP',
-        studentEmail: customerInput.studentEmail,
-        returnOrigin: parseCheckoutReturnOrigin(req),
-      });
-    await attachStripeCheckoutSession(order.id, session.id);
+      amount,
+      currency: option.currency || 'GBP',
+      studentEmail: customerInput.studentEmail,
+      returnOrigin: parseCheckoutReturnOrigin(req),
+      environment,
+    });
 
-    return res.json({ checkoutUrl: session.url });
+    return res.json({
+      checkoutUrl: session.checkoutUrl,
+      provider: session.provider,
+      checkoutId: session.checkoutId,
+    });
   } catch (err) {
     next(err);
   }
@@ -304,6 +291,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
   try {
     const explicitPriceId = parsePositiveInt(req.body?.coursePriceId);
     let courseId = parsePositiveInt(req.body?.courseId);
+    const providerId = parseRequestedProvider(req.body ?? {});
 
     if (!courseId && explicitPriceId) {
       const priceRow = await getGeoPriceById(explicitPriceId);
@@ -317,7 +305,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       return res.status(400).json({ ok: false, error: 'courseId or coursePriceId is required' });
     }
 
-    const course = await getCourseById(courseId);
+    const course = await getCmsCourseById(courseId);
     if (!course || !course.isActive) {
       return res.status(404).json({ ok: false, error: 'Course not found or inactive' });
     }
@@ -340,7 +328,6 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
         if (!price || price.courseId !== courseId || !price.isActive) {
           return res.status(404).json({ ok: false, error: 'Course price not found or inactive' });
         }
-        // List amount only — CMS campaign % ignored; Evendeals applied below.
         const base = {
           price,
           matchReason: 'explicit' as const,
@@ -393,10 +380,27 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       lastName: customerInput.lastName,
       phone: customerInput.phone,
       countryCode: quotedCountryCode,
+      provider: providerId,
     });
 
-    // Record only the Evendeals (or other applied) cut vs list — ignore CMS campaign %.
     const discountPercent = computeDiscountPercent(resolved.price.amount, resolved.effectiveAmount);
+
+    const requestedAccessIds = parseAccessZenlerCourseIds(req.body ?? {});
+    let accessZenlerCourseIds: string[] | null = null;
+    if (requestedAccessIds.length > 0) {
+      try {
+        accessZenlerCourseIds = await validateMultiCourseAccessSelection({
+          bundleCourseId: course.id,
+          accessZenlerCourseIds: requestedAccessIds,
+          comboStorySlug: parseComboStorySlug(req.body ?? {}),
+        });
+      } catch (err) {
+        if (err instanceof MultiCourseAccessError) {
+          return res.status(err.status).json({ ok: false, error: err.message });
+        }
+        throw err;
+      }
+    }
 
     const order = await createPaymentOrder({
       paymentOptionId: null,
@@ -404,6 +408,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       coursePriceId: resolved.price.id,
       customerId: customer?.id ?? null,
       zenlerCourseId: course.zenlerCourseId,
+      accessZenlerCourseIds,
       courseTitle: course.name,
       optionType: resolved.price.name,
       studentName: customerInput.studentName,
@@ -416,9 +421,10 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       discountPercent,
       attribution,
       environment,
+      provider: providerId,
     });
 
-    const session = await createStripeCheckoutSession({
+    const session = await startProviderCheckout(providerId, {
       orderId: order.id,
       courseId: course.id,
       coursePriceId: resolved.price.id,
@@ -427,18 +433,16 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       paymentCardTitle: `${course.name} — ${resolved.price.name}`,
       amount: resolved.effectiveAmount,
       currency: 'USD',
-        studentEmail: customerInput.studentEmail,
-        countryCode: quotedCountryCode,
-        returnOrigin: parseCheckoutReturnOrigin(req),
-      });
-    await attachStripeCheckoutSession(order.id, session.id);
-
-    if (!session.url) {
-      return res.status(502).json({ ok: false, error: 'Stripe did not return a checkout URL' });
-    }
+      studentEmail: customerInput.studentEmail,
+      countryCode: quotedCountryCode,
+      returnOrigin: parseCheckoutReturnOrigin(req),
+      environment,
+    });
 
     return res.json({
-      checkoutUrl: session.url,
+      checkoutUrl: session.checkoutUrl,
+      provider: session.provider,
+      checkoutId: session.checkoutId,
       orderId: order.id,
       coursePriceId: resolved.price.id,
       amount: resolved.effectiveAmount,
@@ -448,17 +452,28 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       matchReason: resolved.matchReason,
     });
   } catch (err) {
+    if (err instanceof MultiCourseAccessError) {
+      return res.status(err.status).json({ ok: false, error: err.message });
+    }
     next(err);
   }
 }
 
 router.get('/status', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const sessionId = String(req.query.session_id ?? '').trim();
+    const sessionId = String(req.query.session_id ?? req.query.token ?? req.query.checkout_id ?? '').trim();
     if (!sessionId) return res.status(400).json({ ok: false, error: 'session_id is required' });
 
-    let order = await getPaymentOrderByCheckoutSession(sessionId);
+    let order = await getPaymentOrderByCheckoutId(sessionId);
     if (!order) return res.status(404).json({ ok: false, error: 'Payment order not found' });
+
+    if (order.status === 'Pending') {
+      try {
+        order = await capturePendingProviderCheckout(order);
+      } catch (err) {
+        console.error('[payments] capture on status failed', err);
+      }
+    }
 
     if (order.status === 'Paid') {
       await ensureSaleRecordedForPaidOrder(order);
@@ -467,13 +482,14 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
 
     return res.json({
       status: order.status,
+      provider: order.provider,
       courseTitle: order.courseTitle,
       optionType: order.optionType,
       amount: order.amount,
       currency: order.currency,
       countryCode: order.countryCode,
       coursePriceId: order.coursePriceId,
-      studentEmail: order.studentEmail ?? order.stripeCustomerEmail,
+      studentEmail: paymentOrderPayerEmail(order),
       zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
       isNewZenlerUser: order.zenlerUserCreated,
       courseAccessUrl: courseAccessUrlForEnrollment({
@@ -488,52 +504,11 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
 });
 
 export async function stripeWebhookHandler(req: Request, res: Response): Promise<void> {
-  let event: any;
-  try {
-    event = verifyStripeWebhook(req.body as Buffer, req.get('stripe-signature'));
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Invalid webhook';
-    res.status(400).json({ ok: false, error: message });
-    return;
-  }
+  await handleProviderWebhook('stripe', req, res);
+}
 
-  try {
-    const object = event.data?.object ?? {};
-
-    if (event.type === 'checkout.session.completed') {
-      await handleCheckoutSessionCompleted(object);
-      res.status(200).json({ ok: true });
-      return;
-    }
-
-    if (event.type === 'charge.refunded') {
-      const refunds = Array.isArray(object.refunds?.data) ? object.refunds.data : [];
-      const latestRefund = refunds[0] ?? null;
-      await handleStripeRefundEvent({
-        paymentIntentId: extractStripeId(object.payment_intent),
-        refundId: extractStripeId(latestRefund?.id ?? latestRefund),
-      });
-      res.status(200).json({ ok: true });
-      return;
-    }
-
-    if (event.type === 'refund.created' || event.type === 'refund.updated') {
-      const status = typeof object.status === 'string' ? object.status : '';
-      if (status === 'succeeded') {
-        await handleStripeRefundEvent({
-          paymentIntentId: extractStripeId(object.payment_intent),
-          refundId: extractStripeId(object.id ?? object),
-        });
-      }
-      res.status(200).json({ ok: true });
-      return;
-    }
-
-    res.status(200).json({ ok: true });
-  } catch (err) {
-    console.error('[stripe-webhook]', err);
-    res.status(500).json({ ok: false, error: 'Webhook handling failed' });
-  }
+export async function paypalWebhookHandler(req: Request, res: Response): Promise<void> {
+  await handleProviderWebhook('paypal', req, res);
 }
 
 export default router;

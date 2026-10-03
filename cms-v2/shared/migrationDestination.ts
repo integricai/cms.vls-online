@@ -1,5 +1,9 @@
 import type { MigrationTemplate } from './migrationTypes';
 
+export function isMultiCoursePageTemplate(template: MigrationTemplate): boolean {
+  return template === 'multi_course';
+}
+
 export function isCoursePageTemplate(template: MigrationTemplate): boolean {
   return template === 'course' || template === 'course_dual_price' || template === 'revision_course';
 }
@@ -19,7 +23,7 @@ export function isPageContentTemplate(template: MigrationTemplate): boolean {
 
 /** Storyblok stories for these templates are created under the `courses/` folder. */
 export function usesCoursesFolder(template: MigrationTemplate): boolean {
-  return isCoursePageTemplate(template) || template === 'study_notes';
+  return isCoursePageTemplate(template) || isMultiCoursePageTemplate(template) || template === 'study_notes';
 }
 
 /** Storyblok stories for blog posts are created under the `blog/` folder. */

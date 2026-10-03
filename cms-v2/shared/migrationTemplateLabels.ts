@@ -18,6 +18,7 @@ export const MIGRATION_TEMPLATE_LABELS: Record<MigrationTemplate, string> = {
   course_dual_price: 'Course Dual Price',
   qualification_level_page: 'Qualification Level Page',
   revision_course: 'Revision Course',
+  multi_course: 'Multi-course combo',
   blog: 'Blog',
   page_content: 'Page Content (dynamic)',
 };

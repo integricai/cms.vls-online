@@ -14,6 +14,64 @@ import {
 
 const RETRYABLE_STATUSES = new Set<string | null>(['pending', 'failed', 'skipped', null, '']);
 
+function zenlerCourseIdsForAccess(order: PaymentOrder): string[] {
+  const access = (order.accessZenlerCourseIds ?? [])
+    .map((id) => String(id).trim())
+    .filter((id) => /^\d+$/.test(id));
+  if (access.length) return access;
+  const primary = String(order.zenlerCourseId ?? '').trim();
+  return /^\d+$/.test(primary) ? [primary] : [];
+}
+
+async function enrollOrderCourses(order: PaymentOrder) {
+  const email = (order.studentEmail ?? order.stripeCustomerEmail)?.trim();
+  const courseIds = zenlerCourseIdsForAccess(order);
+  if (!email || courseIds.length === 0) {
+    return {
+      zenlerUserId: null as string | null,
+      status: 'failed' as const,
+      isNewZenlerUser: false,
+      temporaryPassword: null as string | null,
+    };
+  }
+
+  const planId = await resolvePlanId(order);
+  let zenlerUserId: string | null = order.zenlerUserId;
+  let isNewZenlerUser = false;
+  let temporaryPassword: string | null = null;
+  let lastStatus = 'failed';
+
+  for (const zenlerCourseId of courseIds) {
+    const enrollment = await enrollStudentInZenlerCourse({
+      email,
+      name: order.studentName,
+      zenlerCourseId,
+      zenlerPlanId: planId,
+    });
+    lastStatus = enrollment.status;
+    if (enrollment.zenlerUserId) zenlerUserId = enrollment.zenlerUserId;
+    if (enrollment.isNewZenlerUser) {
+      isNewZenlerUser = true;
+      temporaryPassword = enrollment.temporaryPassword;
+    }
+    if (!enrollment.status.startsWith('enrolled')) {
+      return {
+        zenlerUserId,
+        status: enrollment.status,
+        isNewZenlerUser,
+        temporaryPassword,
+      };
+    }
+  }
+
+  return {
+    zenlerUserId,
+    status: lastStatus.startsWith('enrolled') ? lastStatus : 'enrolled',
+    isNewZenlerUser,
+    temporaryPassword,
+  };
+}
+
 async function resolvePlanId(order: PaymentOrder): Promise<number | undefined> {
   if (!order.coursePriceId) return undefined;
   const price = await getGeoPriceById(order.coursePriceId);
@@ -48,14 +106,9 @@ export async function ensureZenlerEnrollmentForPaidOrder(order: PaymentOrder) {
   if (!RETRYABLE_STATUSES.has(order.zenlerEnrollmentStatus)) return order;
 
   const email = (order.studentEmail ?? order.stripeCustomerEmail)?.trim();
-  if (!email || !order.zenlerCourseId) return order;
+  if (!email || zenlerCourseIdsForAccess(order).length === 0) return order;
 
-  const enrollment = await enrollStudentInZenlerCourse({
-    email,
-    name: order.studentName,
-    zenlerCourseId: order.zenlerCourseId,
-    zenlerPlanId: await resolvePlanId(order),
-  });
+  const enrollment = await enrollOrderCourses(order);
 
   await updateZenlerEnrollment(order.id, {
     zenlerUserId: enrollment.zenlerUserId,
@@ -82,7 +135,8 @@ export async function revokeZenlerAccessForRefundedOrder(
   if (currentStatus === 'unenrolled') return order;
 
   const email = (order.studentEmail ?? order.stripeCustomerEmail)?.trim() ?? null;
-  if (!order.zenlerCourseId?.trim()) {
+  const courseIds = zenlerCourseIdsForAccess(order);
+  if (courseIds.length === 0) {
     await updateZenlerEnrollment(order.id, {
       zenlerUserId: order.zenlerUserId,
       zenlerEnrollmentStatus: 'unenrolled',
@@ -90,24 +144,30 @@ export async function revokeZenlerAccessForRefundedOrder(
     return (await getPaymentOrder(order.id)) ?? order;
   }
 
-  const result = await unenrollStudentFromZenlerCourse({
-    email,
-    zenlerUserId: order.zenlerUserId,
-    zenlerCourseId: order.zenlerCourseId,
-  });
+  let zenlerUserId = order.zenlerUserId;
+  let aggregateStatus = 'unenrolled';
+  for (const zenlerCourseId of courseIds) {
+    const result = await unenrollStudentFromZenlerCourse({
+      email,
+      zenlerUserId,
+      zenlerCourseId,
+    });
+    if (result.zenlerUserId) zenlerUserId = result.zenlerUserId;
+    if (result.status === 'unenroll_failed' || result.status === 'skipped') {
+      aggregateStatus = 'unenroll_failed';
+      console.error('[zenler-unenrollment] refund revoke incomplete', {
+        orderId: order.id,
+        zenlerCourseId,
+        status: result.status,
+        message: result.message,
+      });
+    }
+  }
 
   await updateZenlerEnrollment(order.id, {
-    zenlerUserId: result.zenlerUserId ?? order.zenlerUserId,
-    zenlerEnrollmentStatus: result.status === 'skipped' ? 'unenroll_failed' : result.status,
+    zenlerUserId,
+    zenlerEnrollmentStatus: aggregateStatus,
   });
-
-  if (result.status === 'unenroll_failed' || result.status === 'skipped') {
-    console.error('[zenler-unenrollment] refund revoke incomplete', {
-      orderId: order.id,
-      status: result.status,
-      message: result.message,
-    });
-  }
 
   return (await getPaymentOrder(order.id)) ?? order;
 }
@@ -117,7 +177,7 @@ export async function runZenlerEnrollmentForPaidOrder(
   order: PaymentOrder,
 ): Promise<{ order: PaymentOrder; emailContext: ZenlerEnrollmentEmailContext | null }> {
   const email = (order.studentEmail ?? order.stripeCustomerEmail)?.trim();
-  if (!email || !order.zenlerCourseId) {
+  if (!email || zenlerCourseIdsForAccess(order).length === 0) {
     return { order, emailContext: null };
   }
 
@@ -126,12 +186,7 @@ export async function runZenlerEnrollmentForPaidOrder(
     return { order, emailContext: emailContextFromOrder(order) };
   }
 
-  const enrollment = await enrollStudentInZenlerCourse({
-    email,
-    name: order.studentName,
-    zenlerCourseId: order.zenlerCourseId,
-    zenlerPlanId: await resolvePlanId(order),
-  });
+  const enrollment = await enrollOrderCourses(order);
 
   await updateZenlerEnrollment(order.id, {
     zenlerUserId: enrollment.zenlerUserId,
@@ -145,7 +200,7 @@ export async function runZenlerEnrollmentForPaidOrder(
 
   const refreshed = (await getPaymentOrder(order.id)) ?? order;
 
-  if (!enrollment.status.startsWith('enrolled')) {
+  if (!String(enrollment.status).startsWith('enrolled')) {
     return { order: refreshed, emailContext: null };
   }
 

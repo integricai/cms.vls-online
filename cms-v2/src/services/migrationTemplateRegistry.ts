@@ -40,6 +40,7 @@ const TEMPLATE_FILES: Record<FileBackedMigrationTemplate, string> = {
   course_dual_price: 'course-dual-price.html',
   qualification_level_page: 'qualification-level-page.html',
   revision_course: 'revision-course.html',
+  multi_course: 'multi-course.html',
   blog: 'blog-post.html',
 };
 
@@ -163,20 +164,23 @@ const PAGE_BODY_COMPONENTS = new Set([
   'article_library',
   'live_sessions_hero',
   'live_sessions_table',
+  'contact_hero',
   'contact_page_section',
   'legal_hero',
   'legal_article',
   'legal_section',
   'hero_with_video',
   'course_hero_layout',
+  'course_curriculum',
+  'zenler_curriculum',
   'level_page_hero',
   'level_intro_section',
   'level_pathway_section',
   'level_papers_section',
   'level_why_section',
   'level_reviews_section',
-  'level_faq_section',
-  'level_cta_section',
+  'faq_section',
+  'promotion_section',
 ]);
 
 /**
@@ -213,10 +217,16 @@ function componentForSection(key: string, classes: string[], template: Migration
   else if (template === 'course_articles' && key.includes('library')) component = 'article_library';
   else if (template === 'live_sessions' && key.includes('hero')) component = 'live_sessions_hero';
   else if (template === 'live_sessions' && (key.includes('schedule') || key.includes('timetable'))) component = 'live_sessions_table';
+  else if (template === 'contact_us' && key.includes('hero')) component = 'contact_hero';
   else if (template === 'contact_us' && key.includes('contact')) component = 'contact_page_section';
   else if (template === 'study_notes' && key.includes('hero')) component = 'course_hero_layout';
   else if (template === 'study_notes' && key.includes('covered')) component = 'icon_card_grid';
-  else if (template === 'study_notes' && key.includes('contents')) component = 'feature_cards_v2';
+  else if (
+    template === 'study_notes'
+    && (key.includes('contents') || key.includes('course-content') || key.includes('curriculum'))
+  ) {
+    component = 'course_curriculum';
+  }
   else if (template === 'study_notes' && (key.includes('why-notes') || key.includes('how-to-use'))) component = 'content_section';
   else if (template === 'study_notes' && key.includes('related')) component = 'feature_cards_v2';
   else if (template === 'study_notes' && (key.includes('acca-notes-table') || key.includes('notes-table'))) component = 'article_library';
@@ -234,9 +244,9 @@ function componentForSection(key: string, classes: string[], template: Migration
   else if (template === 'qualification_level_page' && key.includes('paper')) component = 'level_papers_section';
   else if (template === 'qualification_level_page' && key.includes('why')) component = 'level_why_section';
   else if (template === 'qualification_level_page' && key.includes('review')) component = 'level_reviews_section';
-  else if (template === 'qualification_level_page' && key.includes('faq')) component = 'level_faq_section';
+  else if (template === 'qualification_level_page' && key.includes('faq')) component = 'faq_section';
   else if (template === 'qualification_level_page' && (key.includes('cta') || classes.includes('cta-band'))) {
-    component = 'level_cta_section';
+    component = 'promotion_section';
   }
   else if (template === 'revision_course' && key.includes('hero')) component = 'course_hero_layout';
   else if (template === 'revision_course' && key.includes('stats')) component = 'stats_band';
@@ -580,7 +590,7 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   ],
   promotion_section: [
     'name', 'eyebrow', 'title', 'title_accent', 'subtitle', 'cta_text', 'cta_link',
-    'secondary_cta_text', 'secondary_cta_link',
+    'secondary_cta_text', 'secondary_cta_link', 'keep_editor_links', 'legacy_key',
     'background_color', 'button_background',
     'padding_left', 'padding_right', 'padding_top', 'padding_bottom', 'font_size',
   ],
@@ -673,12 +683,17 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
     'eyebrow', 'heading_prefix', 'heading_accent', 'description', 'sessions', 'note_heading', 'note_text',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
+  contact_hero: [
+    'eyebrow', 'heading_prefix', 'heading_accent', 'lead',
+    'breadcrumb_home_label', 'breadcrumb_current_label', 'quick_cards',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
   contact_page_section: [
-    'form', 'sidebar',
+    'form', 'sidebar', 'trust_text', 'trust_link_text', 'trust_link',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
   ],
   contact_form: [
-    'form_title', 'submit_text', 'thank_you_title', 'thank_you_description', 'recipients',
+    'form_title', 'form_subtitle', 'submit_text', 'thank_you_title', 'thank_you_description', 'recipients',
     'enquiry_options', 'show_phone_field', 'show_country_code', 'enable_turnstile',
     'message_rows', 'message_min_height',
     'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
@@ -708,7 +723,7 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   ],
   support_hours_row: ['day', 'hours'],
   contact_info_sidebar: [
-    'info_heading', 'info_items', 'hours_heading', 'hours_rows', 'hours_note', 'socials_heading', 'socials',
+    'info_heading', 'org_name', 'info_items', 'hours_heading', 'hours_rows', 'hours_note', 'socials_heading', 'socials',
   ],
   legal_tab: ['label', 'link', 'active'],
   legal_table_row: ['col_a', 'col_b'],
@@ -729,6 +744,11 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   ],
   platform_feature: ['title', 'description'],
   platform_device_tag: ['label'],
+  course_curriculum: [
+    'course_id', 'zenler_course_id', 'eyebrow', 'heading_prefix', 'heading_accent',
+    'section_title', 'submeta_items', 'show_lesson_durations', 'sync_note',
+    'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size',
+  ],
   course_hero_layout: ['left', 'right', 'layout_ratio', 'background_color', 'padding_top', 'padding_bottom', 'padding_left', 'padding_right', 'font_size'],
   course_hero: [
     'breadcrumb', 'zenler_course_id', 'eyebrow', 'meta_items', 'language_label', 'tutor_name', 'tutor_role',
@@ -781,8 +801,6 @@ const BLOK_FIELD_ALLOWLIST: Record<string, string[]> = {
   ],
   level_rating_bar: ['label', 'percent'],
   level_review_card: ['stars', 'quote', 'initials', 'name', 'role'],
-  level_faq_section: ['eyebrow', 'heading_prefix', 'heading_accent', 'items'],
-  level_faq_item: ['question', 'answer_html'],
   level_cta_section: [
     'eyebrow', 'heading_prefix', 'heading_accent', 'body',
     'primary_cta_text', 'primary_cta_link', 'secondary_cta_text', 'secondary_cta_link',
@@ -1159,6 +1177,18 @@ export function buildPresetBlokFromSection(
 
   if (section.component === 'enquiry_form') {
     return sanitizeBlokForStoryblok(base);
+  }
+
+  if (section.component === 'contact_hero') {
+    return sanitizeBlokForStoryblok({
+      ...base,
+      eyebrow: "We're here to help",
+      heading_prefix: section.sampleHeading || 'Get in touch with',
+      heading_accent: 'Vertex.',
+      lead: section.sampleDescription || '',
+      breadcrumb_home_label: 'Home',
+      breadcrumb_current_label: 'Contact Us',
+    });
   }
 
   if (section.component === 'page_hero') {

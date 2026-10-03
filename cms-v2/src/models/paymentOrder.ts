@@ -1,5 +1,6 @@
 import { sql } from '../db/client';
 import type { CheckoutAttribution, CheckoutEnvironment, ConversionUploadStatus } from '../services/attribution';
+import { parsePaymentProviderId, type PaymentProviderId } from '../services/payments/types';
 
 export type PaymentOrderStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled' | 'Refunded';
 
@@ -10,6 +11,7 @@ export interface PaymentOrder {
   coursePriceId: number | null;
   customerId: number | null;
   zenlerCourseId: string;
+  accessZenlerCourseIds: string[];
   courseTitle: string;
   optionType: string | null;
   studentName: string | null;
@@ -21,6 +23,11 @@ export interface PaymentOrder {
   durationDays: number | null;
   discountPercent: number | null;
   status: PaymentOrderStatus;
+  provider: PaymentProviderId;
+  providerCheckoutId: string | null;
+  providerPaymentId: string | null;
+  providerRefundId: string | null;
+  providerCustomerEmail: string | null;
   stripeCheckoutSessionId: string | null;
   stripePaymentIntentId: string | null;
   stripeRefundId: string | null;
@@ -62,6 +69,7 @@ interface DbRow {
   course_price_id: number | null;
   customer_id: number | null;
   zenler_course_id: string;
+  access_zenler_course_ids: string[] | null;
   course_title: string;
   option_type: string | null;
   student_name: string | null;
@@ -74,6 +82,11 @@ interface DbRow {
   duration_days: number | null;
   discount_percent: string | null;
   status: PaymentOrderStatus;
+  provider?: string | null;
+  provider_checkout_id?: string | null;
+  provider_payment_id?: string | null;
+  provider_refund_id?: string | null;
+  provider_customer_email?: string | null;
   stripe_checkout_session_id: string | null;
   stripe_payment_intent_id: string | null;
   stripe_refund_id: string | null;
@@ -116,6 +129,7 @@ function rowToOrder(row: DbRow): PaymentOrder {
     coursePriceId: row.course_price_id ?? null,
     customerId: row.customer_id ?? null,
     zenlerCourseId: row.zenler_course_id,
+    accessZenlerCourseIds: row.access_zenler_course_ids ?? [],
     courseTitle: row.course_title,
     optionType: row.option_type,
     studentName: row.student_name,
@@ -127,6 +141,11 @@ function rowToOrder(row: DbRow): PaymentOrder {
     durationDays: row.duration_days ?? null,
     discountPercent: row.discount_percent != null ? Number(row.discount_percent) : null,
     status: row.status,
+    provider: parsePaymentProviderId(row.provider),
+    providerCheckoutId: row.provider_checkout_id ?? row.stripe_checkout_session_id ?? null,
+    providerPaymentId: row.provider_payment_id ?? row.stripe_payment_intent_id ?? null,
+    providerRefundId: row.provider_refund_id ?? row.stripe_refund_id ?? null,
+    providerCustomerEmail: row.provider_customer_email ?? row.stripe_customer_email ?? null,
     stripeCheckoutSessionId: row.stripe_checkout_session_id,
     stripePaymentIntentId: row.stripe_payment_intent_id,
     stripeRefundId: row.stripe_refund_id ?? null,
@@ -168,6 +187,7 @@ export async function createPaymentOrder(data: {
   coursePriceId?: number | null;
   customerId?: number | null;
   zenlerCourseId: string;
+  accessZenlerCourseIds?: string[] | null;
   courseTitle: string;
   optionType: string | null;
   studentName: string | null;
@@ -180,23 +200,27 @@ export async function createPaymentOrder(data: {
   discountPercent?: number | null;
   attribution?: CheckoutAttribution | null;
   environment?: CheckoutEnvironment | null;
+  provider?: PaymentProviderId | null;
 }): Promise<PaymentOrder> {
   const attr = data.attribution;
   const environment = data.environment
     ?? attr?.environment
     ?? 'staging';
+  const provider = parsePaymentProviderId(data.provider);
   const rows = await sql`
     INSERT INTO payment_orders
-      (payment_option_id, course_id, course_price_id, customer_id, zenler_course_id, course_title,
+      (payment_option_id, course_id, course_price_id, customer_id, zenler_course_id, access_zenler_course_ids, course_title,
        option_type, student_name, student_email, student_phone, country_code, amount, currency, duration_days, discount_percent,
+       provider,
        gclid, gbraid, wbraid, fbclid, fbp, fbc,
        utm_source, utm_medium, utm_campaign, utm_content, utm_term,
        landing_page, checkout_environment, attr_user_agent, attr_client_ip, attr_captured_at)
     VALUES
       (${data.paymentOptionId ?? null}, ${data.courseId ?? null}, ${data.coursePriceId ?? null},
-       ${data.customerId ?? null}, ${data.zenlerCourseId}, ${data.courseTitle}, ${data.optionType},
+       ${data.customerId ?? null}, ${data.zenlerCourseId}, ${data.accessZenlerCourseIds ?? null}, ${data.courseTitle}, ${data.optionType},
        ${data.studentName}, ${data.studentEmail}, ${data.studentPhone ?? null}, ${data.countryCode ?? null},
        ${data.amount}, ${data.currency}, ${data.durationDays ?? null}, ${data.discountPercent ?? null},
+       ${provider},
        ${attr?.gclid ?? null}, ${attr?.gbraid ?? null}, ${attr?.wbraid ?? null},
        ${attr?.fbclid ?? null}, ${attr?.fbp ?? null}, ${attr?.fbc ?? null},
        ${attr?.utmSource ?? null}, ${attr?.utmMedium ?? null}, ${attr?.utmCampaign ?? null},
@@ -208,12 +232,22 @@ export async function createPaymentOrder(data: {
   return rowToOrder(rows[0] as DbRow);
 }
 
-export async function attachStripeCheckoutSession(orderId: number, sessionId: string): Promise<void> {
+export async function attachCheckoutSession(
+  orderId: number,
+  data: { provider: PaymentProviderId; checkoutId: string },
+): Promise<void> {
+  const stripeSessionId = data.provider === 'stripe' ? data.checkoutId : null;
   await sql`
     UPDATE payment_orders
-    SET stripe_checkout_session_id = ${sessionId}
+    SET provider = ${data.provider},
+        provider_checkout_id = ${data.checkoutId},
+        stripe_checkout_session_id = COALESCE(${stripeSessionId}, stripe_checkout_session_id)
     WHERE id = ${orderId}
   `;
+}
+
+export async function attachStripeCheckoutSession(orderId: number, sessionId: string): Promise<void> {
+  await attachCheckoutSession(orderId, { provider: 'stripe', checkoutId: sessionId });
 }
 
 export async function attachCustomerToPaymentOrder(
@@ -225,7 +259,8 @@ export async function attachCustomerToPaymentOrder(
     UPDATE payment_orders
     SET customer_id = ${customerId},
         student_email = COALESCE(student_email, ${studentEmail ?? null}),
-        stripe_customer_email = COALESCE(stripe_customer_email, ${studentEmail ?? null})
+        stripe_customer_email = COALESCE(stripe_customer_email, ${studentEmail ?? null}),
+        provider_customer_email = COALESCE(provider_customer_email, ${studentEmail ?? null})
     WHERE id = ${orderId}
     RETURNING *
   `;
@@ -238,28 +273,70 @@ export async function getPaymentOrder(id: number): Promise<PaymentOrder | null> 
   return rows[0] ? rowToOrder(rows[0] as DbRow) : null;
 }
 
+export async function getPaymentOrderByCheckoutId(
+  checkoutId: string,
+  provider?: PaymentProviderId | null,
+): Promise<PaymentOrder | null> {
+  const rows = provider
+    ? await sql`
+        SELECT * FROM payment_orders
+        WHERE (provider_checkout_id = ${checkoutId} OR stripe_checkout_session_id = ${checkoutId})
+          AND provider = ${provider}
+        ORDER BY id DESC
+        LIMIT 1
+      `
+    : await sql`
+        SELECT * FROM payment_orders
+        WHERE provider_checkout_id = ${checkoutId}
+           OR stripe_checkout_session_id = ${checkoutId}
+        ORDER BY id DESC
+        LIMIT 1
+      `;
+  return rows[0] ? rowToOrder(rows[0] as DbRow) : null;
+}
+
 export async function getPaymentOrderByCheckoutSession(sessionId: string): Promise<PaymentOrder | null> {
-  const rows = await sql`SELECT * FROM payment_orders WHERE stripe_checkout_session_id = ${sessionId}`;
+  return getPaymentOrderByCheckoutId(sessionId);
+}
+
+export async function getPaymentOrderByPaymentId(
+  paymentId: string,
+  provider?: PaymentProviderId | null,
+): Promise<PaymentOrder | null> {
+  const rows = provider
+    ? await sql`
+        SELECT * FROM payment_orders
+        WHERE (provider_payment_id = ${paymentId} OR stripe_payment_intent_id = ${paymentId})
+          AND provider = ${provider}
+        ORDER BY id DESC
+        LIMIT 1
+      `
+    : await sql`
+        SELECT * FROM payment_orders
+        WHERE provider_payment_id = ${paymentId}
+           OR stripe_payment_intent_id = ${paymentId}
+        ORDER BY id DESC
+        LIMIT 1
+      `;
   return rows[0] ? rowToOrder(rows[0] as DbRow) : null;
 }
 
 export async function getPaymentOrderByPaymentIntent(paymentIntentId: string): Promise<PaymentOrder | null> {
-  const rows = await sql`
-    SELECT * FROM payment_orders
-    WHERE stripe_payment_intent_id = ${paymentIntentId}
-    ORDER BY id DESC
-    LIMIT 1
-  `;
-  return rows[0] ? rowToOrder(rows[0] as DbRow) : null;
+  return getPaymentOrderByPaymentId(paymentIntentId, 'stripe');
 }
 
 export async function markPaymentOrderPaid(data: {
   orderId: number;
-  stripeCheckoutSessionId: string | null;
-  stripePaymentIntentId: string | null;
-  stripeCustomerEmail: string | null;
-  amountTotal: number | null;
-  currency: string | null;
+  provider?: PaymentProviderId | null;
+  checkoutId?: string | null;
+  paymentId?: string | null;
+  customerEmail?: string | null;
+  amountMinor?: number | null;
+  currency?: string | null;
+  stripeCheckoutSessionId?: string | null;
+  stripePaymentIntentId?: string | null;
+  stripeCustomerEmail?: string | null;
+  amountTotal?: number | null;
 }): Promise<{ order: PaymentOrder; wasAlreadyPaid: boolean }> {
   const existing = await getPaymentOrder(data.orderId);
   if (!existing) throw new Error('Payment order not found');
@@ -267,14 +344,22 @@ export async function markPaymentOrderPaid(data: {
     return { order: existing, wasAlreadyPaid: true };
   }
 
-  const amount = data.amountTotal != null ? data.amountTotal / 100 : existing.amount;
+  const provider = parsePaymentProviderId(data.provider ?? existing.provider);
+  const checkoutId = data.checkoutId ?? data.stripeCheckoutSessionId ?? existing.providerCheckoutId;
+  const paymentId = data.paymentId ?? data.stripePaymentIntentId ?? existing.providerPaymentId;
+  const customerEmail = data.customerEmail ?? data.stripeCustomerEmail ?? existing.providerCustomerEmail;
+  const amountMinor = data.amountMinor ?? data.amountTotal ?? null;
+  const amount = amountMinor != null ? amountMinor / 100 : existing.amount;
   const currency = data.currency?.toUpperCase() ?? existing.currency;
+  const stripeCheckoutId = provider === 'stripe' ? checkoutId : existing.stripeCheckoutSessionId;
+  const stripePaymentId = provider === 'stripe' ? paymentId : existing.stripePaymentIntentId;
+  const stripeCustomerEmail = provider === 'stripe' ? customerEmail : existing.stripeCustomerEmail;
 
-  if (data.amountTotal != null) {
+  if (amountMinor != null) {
     const expectedCents = Math.round(existing.amount * 100);
-    if (expectedCents !== data.amountTotal) {
+    if (expectedCents !== amountMinor) {
       throw new Error(
-        `Payment amount mismatch: expected ${expectedCents} cents, got ${data.amountTotal}`,
+        `Payment amount mismatch: expected ${expectedCents} cents, got ${amountMinor}`,
       );
     }
   }
@@ -287,9 +372,13 @@ export async function markPaymentOrderPaid(data: {
   const rows = await sql`
     UPDATE payment_orders
     SET status = 'Paid',
-        stripe_checkout_session_id = ${data.stripeCheckoutSessionId ?? existing.stripeCheckoutSessionId},
-        stripe_payment_intent_id = ${data.stripePaymentIntentId},
-        stripe_customer_email = ${data.stripeCustomerEmail ?? existing.stripeCustomerEmail},
+        provider = ${provider},
+        provider_checkout_id = ${checkoutId},
+        provider_payment_id = ${paymentId},
+        provider_customer_email = ${customerEmail},
+        stripe_checkout_session_id = ${stripeCheckoutId},
+        stripe_payment_intent_id = ${stripePaymentId},
+        stripe_customer_email = ${stripeCustomerEmail},
         amount = ${amount},
         currency = ${currency},
         paid_at = COALESCE(paid_at, NOW())
@@ -301,7 +390,10 @@ export async function markPaymentOrderPaid(data: {
 
 export async function markPaymentOrderRefunded(data: {
   orderId: number;
-  stripeRefundId: string | null;
+  provider?: PaymentProviderId | null;
+  refundId?: string | null;
+  paymentId?: string | null;
+  stripeRefundId?: string | null;
   stripePaymentIntentId?: string | null;
 }): Promise<{ order: PaymentOrder; wasAlreadyRefunded: boolean }> {
   const existing = await getPaymentOrder(data.orderId);
@@ -313,14 +405,20 @@ export async function markPaymentOrderRefunded(data: {
     throw new Error(`Cannot refund payment order in status ${existing.status}`);
   }
 
+  const provider = parsePaymentProviderId(data.provider ?? existing.provider);
+  const refundId = data.refundId ?? data.stripeRefundId ?? existing.providerRefundId;
+  const paymentId = data.paymentId ?? data.stripePaymentIntentId ?? existing.providerPaymentId;
+  const stripeRefundId = provider === 'stripe' ? refundId : existing.stripeRefundId;
+  const stripePaymentId = provider === 'stripe' ? paymentId : existing.stripePaymentIntentId;
+
   const rows = await sql`
     UPDATE payment_orders
     SET status = 'Refunded',
-        stripe_refund_id = COALESCE(${data.stripeRefundId}, stripe_refund_id),
-        stripe_payment_intent_id = COALESCE(
-          ${data.stripePaymentIntentId ?? null},
-          stripe_payment_intent_id
-        ),
+        provider = ${provider},
+        provider_refund_id = COALESCE(${refundId}, provider_refund_id),
+        provider_payment_id = COALESCE(${paymentId}, provider_payment_id),
+        stripe_refund_id = COALESCE(${stripeRefundId}, stripe_refund_id),
+        stripe_payment_intent_id = COALESCE(${stripePaymentId}, stripe_payment_intent_id),
         refunded_at = COALESCE(refunded_at, NOW())
     WHERE id = ${data.orderId}
     RETURNING *
@@ -392,6 +490,7 @@ export async function listPaidConversionOrders(input: {
         OR po.id::text = ${search}
         OR LOWER(COALESCE(po.student_email, '')) LIKE '%' || ${search} || '%'
         OR LOWER(COALESCE(po.stripe_customer_email, '')) LIKE '%' || ${search} || '%'
+        OR LOWER(COALESCE(po.provider_customer_email, '')) LIKE '%' || ${search} || '%'
         OR LOWER(COALESCE(po.student_name, '')) LIKE '%' || ${search} || '%'
         OR LOWER(COALESCE(po.course_title, '')) LIKE '%' || ${search} || '%'
         OR LOWER(COALESCE(po.gclid, '')) LIKE '%' || ${search} || '%'
@@ -455,6 +554,22 @@ export async function markConversionUploadResult(input: {
         conversion_upload_request_id = COALESCE(${input.requestId ?? null}, conversion_upload_request_id)
     WHERE id = ${input.orderId}
   `;
+}
+
+export function paymentOrderPayerEmail(order: PaymentOrder): string | null {
+  return order.studentEmail ?? order.providerCustomerEmail ?? order.stripeCustomerEmail ?? null;
+}
+
+export function paymentOrderCheckoutId(order: PaymentOrder): string | null {
+  return order.providerCheckoutId ?? order.stripeCheckoutSessionId ?? null;
+}
+
+export function paymentOrderPaymentId(order: PaymentOrder): string | null {
+  return order.providerPaymentId ?? order.stripePaymentIntentId ?? null;
+}
+
+export function paymentOrderRefundId(order: PaymentOrder): string | null {
+  return order.providerRefundId ?? order.stripeRefundId ?? null;
 }
 
 export async function markOrderEmailsSent(orderId: number, sent: { student?: boolean; admin?: boolean }): Promise<void> {

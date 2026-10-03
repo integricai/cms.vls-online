@@ -22,6 +22,7 @@ export type MigrationTemplate =
   | 'course_dual_price'
   | 'qualification_level_page'
   | 'revision_course'
+  | 'multi_course'
   | 'blog'
   /** Arbitrary page-content HTML — components discovered from the file itself. */
   | 'page_content';
@@ -363,6 +364,8 @@ export interface ScrapedGenericPage {
   templateSections: ScrapedTemplateSection[];
   faq: ScrapedCoursePage['faq'];
   extractionWarnings?: string[];
+  /** Zenler course ID when the page is a notes/course sales page. */
+  zenlerCourseId?: string;
   /** Full fetched page HTML, kept so a fully-blocked page can later be re-analyzed for Generate Component. */
   rawHtml?: string;
   /** Per blueprint-section-key: whether that section's content came from the regex parser or the AI fallback. */

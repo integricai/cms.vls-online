@@ -40,6 +40,7 @@ import {
   usesBlogFolder,
   isBlogPageTemplate,
   isCoursePageTemplate,
+  isMultiCoursePageTemplate,
   isLevelPageTemplate,
   isPageContentTemplate,
 } from '../../shared/migrationDestination';
@@ -73,6 +74,8 @@ import {
 } from './storyblokComponentLibrary';
 import { hydrateTeamProfilePhotos } from './teamProfilePhotoMigration';
 import { buildBlokFromTemplateSection } from './pageContentBuilder';
+import { patchNotesStoryCurriculum } from './notesCurriculumBackfill';
+import { inferZenlerCourseIdFromHtml } from './zenlerCourseId';
 import { buildMergedCourseStoryblokContent, buildHeroRightBlokFromTemplate, mapScrapedCourseIntroduction } from './buildCourseTemplateContent';
 import { hydrateCourseHeroStageImages } from './heroStageImageMigration';
 import { collectLevelPageScrapeWarnings, scrapeLevelPageFile } from './levelPageScraper';
@@ -92,6 +95,10 @@ import {
   buildMergedRevisionCourseStoryblokContent,
   buildRevisionCourseStructureBody,
 } from './buildRevisionCourseStoryblokContent';
+import {
+  buildMultiCourseStoryblokContent,
+  buildMultiCourseStructureBody,
+} from './buildMultiCourseStoryblokContent';
 import type { ScrapedLevelPage } from '../../shared/levelPageTypes';
 import { loadCourseTemplateFile } from './courseTemplateParser';
 import { indexTemplateSections, parseTemplateSectionsFromHtml, resolveTemplateSections, sectionHasLiveMatch, isPageBuilderLegalHtml } from './pageSectionExtractor';
@@ -909,7 +916,18 @@ export async function buildGenericStoryblokContentAsync(
     return buildGenericStoryblokContent(scraped, template);
   }
 
-  const finalBody = template === 'legal' ? collapseLegalBody(body) : body;
+  let finalBody = template === 'legal' ? collapseLegalBody(body) : body;
+
+  if (template === 'study_notes') {
+    const zenlerCourseId = scraped.zenlerCourseId?.trim()
+      || inferZenlerCourseIdFromHtml(scraped.rawHtml ?? '');
+    if (zenlerCourseId) {
+      const patched = patchNotesStoryCurriculum({ body: finalBody }, zenlerCourseId);
+      finalBody = Array.isArray(patched.content.body)
+        ? patched.content.body as Record<string, unknown>[]
+        : finalBody;
+    }
+  }
 
   const seo = (scraped.title || scraped.metaDescription)
     ? [{
@@ -1149,8 +1167,8 @@ const LEVEL_PAGE_TOP_LEVEL_COMPONENTS = [
   'level_papers_section',
   'level_why_section',
   'level_reviews_section',
-  'level_faq_section',
-  'level_cta_section',
+  'faq_section',
+  'promotion_section',
 ];
 
 /** Nestable children — must exist in Storyblok but are not page.body whitelist entries. */
@@ -1168,7 +1186,7 @@ const LEVEL_PAGE_NESTABLE_COMPONENTS = [
   'level_why_item',
   'level_rating_bar',
   'level_review_card',
-  'level_faq_item',
+  'faq_item',
 ];
 
 function collectLevelPageWarnings(scraped: ScrapedLevelPage): string[] {
@@ -1202,6 +1220,7 @@ function migrationUsesBlogFolder(page: MigrationPageRecord, template: MigrationT
 
 function rootComponentForTemplate(template: MigrationTemplate): string {
   if (isBlogPageTemplate(template)) return 'blog_post';
+  if (isMultiCoursePageTemplate(template)) return 'multi_course_page';
   return isCoursePageTemplate(template) ? 'course_page' : 'page';
 }
 
@@ -1631,16 +1650,20 @@ export async function generatePageStructure(
       ? buildLevelPageStructureBody()
       : template === 'revision_course'
         ? buildRevisionCourseStructureBody()
-        : blueprint.sections.map(section => (
+        : isMultiCoursePageTemplate(template)
+          ? buildMultiCourseStructureBody()
+          : blueprint.sections.map(section => (
           presetBloksBySection?.[section.key] ?? buildPresetBlokFromSection(blueprint, section)
         ));
 
   let zenlerCourseId = '';
-  if (isCoursePageTemplate(template)) {
+  if (isCoursePageTemplate(template) || isMultiCoursePageTemplate(template)) {
     const courseScraped = scrapedRaw as ScrapedCoursePage;
     zenlerCourseId = await resolveZenlerCourseId(courseScraped);
-    body = enrichCourseStructureBody(body as Record<string, unknown>[], courseScraped, zenlerCourseId, destinationSlug);
-    body = applySessionPricingHeroRight(body as Record<string, unknown>[], template);
+    if (isCoursePageTemplate(template)) {
+      body = enrichCourseStructureBody(body as Record<string, unknown>[], courseScraped, zenlerCourseId, destinationSlug);
+      body = applySessionPricingHeroRight(body as Record<string, unknown>[], template);
+    }
     if (!zenlerCourseId) {
       warnings.push(
         'Zenler course ID was not found in the scrape or CMS course list. Structure was generated with blank zenler_course_id — set it in Storyblok before migrating pricing/curriculum.',
@@ -1654,9 +1677,14 @@ export async function generatePageStructure(
   });
   const rootComponent = rootComponentForTemplate(template);
 
-  const content: Record<string, unknown> = isCoursePageTemplate(template)
-    ? { component: rootComponent, title: page.title || destinationSlug, zenler_course_id: zenlerCourseId, seo: [], body }
-    : { component: rootComponent, seo: [], body };
+  const content: Record<string, unknown> = isMultiCoursePageTemplate(template)
+    ? buildMultiCourseStoryblokContent(
+      { ...(scrapedRaw as ScrapedCoursePage), slug: destinationSlug },
+      zenlerCourseId,
+    )
+    : isCoursePageTemplate(template)
+      ? { component: rootComponent, title: page.title || destinationSlug, zenler_course_id: zenlerCourseId, seo: [], body }
+      : { component: rootComponent, seo: [], body };
 
   let parentId: number | undefined;
   if (migrationUsesCoursesFolder(page, template)) {
@@ -1778,6 +1806,21 @@ export async function migratePageContent(
     content = built.content;
     warnings.push(...built.warnings);
     parentId = built.parentFolderId;
+  } else if (isMultiCoursePageTemplate(template)) {
+    const scraped = scrapedRaw as ScrapedCoursePage;
+    const zenlerCourseId = await resolveZenlerCourseId(scraped);
+    warnings.push(...collectCourseWarnings(scraped, zenlerCourseId));
+    content = buildMultiCourseStoryblokContent(scraped, zenlerCourseId);
+    if (migrationUsesCoursesFolder(page, template)) {
+      const coursesFolder = await findCoursesFolder(config);
+      if (!coursesFolder) {
+        throw new CourseMigrationError(
+          'Could not find a Storyblok folder with slug "courses". Create the courses folder first.',
+          404,
+        );
+      }
+      parentId = coursesFolder.id;
+    }
   } else if (isCoursePageTemplate(template)) {
     const scraped = scrapedRaw as ScrapedCoursePage;
     const zenlerCourseId = await resolveZenlerCourseId(scraped);

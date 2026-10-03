@@ -118,6 +118,19 @@ export async function getCourseByZenlerCourseId(zenlerCourseId: string): Promise
   return rows[0] ? rowToCourse(rows[0] as DbRow) : null;
 }
 
+export async function getCourseById(id: number): Promise<Course | null> {
+  const rows = await sql`
+    SELECT c.*,
+      COALESCE(array_remove(array_agg(cl.level ORDER BY cl.sort_order ASC, cl.level ASC), NULL), ARRAY[]::text[]) AS course_levels
+    FROM courses c
+    LEFT JOIN course_levels cl ON cl.course_id = c.id
+    WHERE c.id = ${id}
+    GROUP BY c.id
+    LIMIT 1
+  `;
+  return rows[0] ? rowToCourse(rows[0] as DbRow) : null;
+}
+
 export async function upsertCourse(data: {
   zenlerCourseId: string;
   name: string;

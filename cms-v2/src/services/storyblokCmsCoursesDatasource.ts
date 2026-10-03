@@ -30,6 +30,12 @@ const CMS_COURSE_FIELD_COMPONENTS: Array<{
     description: SALES_PAGE_REQUIRED_MESSAGE,
   },
   {
+    name: 'multi_course_page',
+    required: true,
+    displayName: 'CMS Course (combo price)',
+    description: SALES_PAGE_REQUIRED_MESSAGE,
+  },
+  {
     name: 'course_hero',
     required: true,
     displayName: 'CMS Course',
