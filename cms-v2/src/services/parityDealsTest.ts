@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import { detectClientIpFromRequest } from './geoDetection';
 
 /** Normalize env flags that may include accidental quotes/spaces from Vercel. */
 function envFlagTrue(value: string | undefined): boolean {
@@ -55,7 +56,7 @@ export function parityDealsRuntimeStatus(req: Request): {
   const query = String(req.query.test ?? '').trim().toLowerCase();
   const testRequested = header === '1' || header === 'true' || header === 'yes'
     || query === 'true' || query === '1' || query === 'yes';
-  const clientIp = String(req.get('x-vls-client-ip') ?? req.get('cf-connecting-ip') ?? '').trim();
+  const clientIp = detectClientIpFromRequest(req) ?? '';
 
   return {
     provider: 'evendeals',

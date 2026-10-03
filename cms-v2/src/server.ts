@@ -209,7 +209,7 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
       return res.status(404).json({ ok: false, error: 'No active prices found for this course' });
     }
 
-    const geo = detectCountryFromRequest(req, String(req.query.countryCode ?? ''));
+    const geo = detectCountryFromRequest(req);
     const clientIp = detectClientIpFromRequest(req);
     const parityStatus = parityDealsRuntimeStatus(req);
     const parityTest = isParityDealsTestRequest(req);

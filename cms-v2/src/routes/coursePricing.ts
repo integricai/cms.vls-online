@@ -82,7 +82,7 @@ router.get('/resolve', async (req: Request, res: Response, next: NextFunction) =
     const courseId = parseCourseId(req.query.courseId);
     if (!courseId) return res.status(400).json({ ok: false, error: 'courseId is required' });
 
-    const geo = detectCountryFromRequest(req, String(req.query.countryCode ?? ''));
+    const geo = detectCountryFromRequest(req);
     const campaignCode = String(req.query.campaignCode ?? '').trim() || null;
     const durationMonths = parseDurationMonths(req.query.durationMonths);
 
@@ -109,7 +109,7 @@ router.get('/resolve', async (req: Request, res: Response, next: NextFunction) =
 });
 
 router.get('/geo', (req: Request, res: Response) => {
-  const geo = detectCountryFromRequest(req, String(req.query.countryCode ?? ''));
+  const geo = detectCountryFromRequest(req);
   return res.json({ ok: true, data: geo });
 });
 

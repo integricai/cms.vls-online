@@ -222,7 +222,7 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
     }
 
     const providerId = parseRequestedProvider(req.body ?? {});
-    const geo = detectCountryFromRequest(req, req.body?.countryCode);
+    const geo = detectCountryFromRequest(req);
     const clientIp = detectClientIpFromRequest(req);
     const environment = resolveCheckoutEnvironment({
       explicit: req.body?.environment ?? req.body?.attribution?.environment,
@@ -310,7 +310,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       return res.status(404).json({ ok: false, error: 'Course not found or inactive' });
     }
 
-    const geo = detectCountryFromRequest(req, req.body?.countryCode);
+    const geo = detectCountryFromRequest(req);
     const clientIp = detectClientIpFromRequest(req);
     const parityTest = isParityDealsTestRequest(req)
       || req.body?.parityDealsTest === true
