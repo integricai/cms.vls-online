@@ -4,4 +4,4 @@ ALTER TABLE payment_orders
   ADD COLUMN IF NOT EXISTS access_zenler_course_ids TEXT[] DEFAULT NULL;
 
 COMMENT ON COLUMN payment_orders.access_zenler_course_ids IS
-  'Zenler course IDs to enroll after payment (multi-course combo); pricing uses zenler_course_id on the order.';
+  'Zenler course IDs to enroll after payment (multi-course combo). Pricing uses zenler_course_id on the order.';
