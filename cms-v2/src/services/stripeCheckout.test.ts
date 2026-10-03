@@ -39,30 +39,87 @@ run('uses live secret for production checkouts', () => {
   assert.strictEqual(stripeSecretKeyForEnvironment(null), 'sk_test_sandbox');
 });
 
+function withDeploymentEnv(
+  env: { CMS_ENV?: string; SITE_ENV?: string; VERCEL_ENV?: string },
+  fn: () => void,
+): void {
+  const previous = {
+    CMS_ENV: process.env.CMS_ENV,
+    SITE_ENV: process.env.SITE_ENV,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+  };
+  for (const key of Object.keys(previous) as Array<keyof typeof previous>) {
+    const next = env[key];
+    if (next === undefined) delete process.env[key];
+    else process.env[key] = next;
+  }
+  try {
+    fn();
+  } finally {
+    for (const key of Object.keys(previous) as Array<keyof typeof previous>) {
+      const prior = previous[key];
+      if (prior === undefined) delete process.env[key];
+      else process.env[key] = prior;
+    }
+  }
+}
+
 run('treats prod.vls-online.com origin as production', () => {
-  assert.strictEqual(
-    stripeSecretKeyForEnvironment(resolveCheckoutEnvironment({ origin: 'https://prod.vls-online.com' })),
-    'sk_live_prod',
-  );
+  withDeploymentEnv({}, () => {
+    assert.strictEqual(
+      stripeSecretKeyForEnvironment(resolveCheckoutEnvironment({ origin: 'https://prod.vls-online.com' })),
+      'sk_live_prod',
+    );
+  });
 });
 
 run('accepts either live or sandbox webhook signatures', () => {
-  const payload = JSON.stringify({ id: 'evt_1', type: 'checkout.session.completed' });
-  const body = Buffer.from(payload);
+  withDeploymentEnv({}, () => {
+    const livePayload = JSON.stringify({ id: 'evt_1', livemode: true, type: 'checkout.session.completed' });
+    const liveEvent = verifyStripeWebhook(Buffer.from(livePayload), signedHeader(livePayload, 'whsec_live')) as { id?: string };
+    assert.strictEqual(liveEvent.id, 'evt_1');
 
-  const liveEvent = verifyStripeWebhook(body, signedHeader(payload, 'whsec_live')) as { id?: string };
-  assert.strictEqual(liveEvent.id, 'evt_1');
+    const testPayload = JSON.stringify({ id: 'evt_1', livemode: false, type: 'checkout.session.completed' });
+    const testEvent = verifyStripeWebhook(Buffer.from(testPayload), signedHeader(testPayload, 'whsec_test')) as { id?: string };
+    assert.strictEqual(testEvent.id, 'evt_1');
+  });
+});
 
-  const testEvent = verifyStripeWebhook(body, signedHeader(payload, 'whsec_test')) as { id?: string };
-  assert.strictEqual(testEvent.id, 'evt_1');
+run('rejects a webhook whose livemode does not match the signing secret', () => {
+  withDeploymentEnv({}, () => {
+    const payload = JSON.stringify({ id: 'evt_3', livemode: true });
+    assert.throws(
+      () => verifyStripeWebhook(Buffer.from(payload), signedHeader(payload, 'whsec_test')),
+      /Stripe livemode does not match the webhook secret/,
+    );
+  });
+});
+
+run('production deployment ignores the test webhook secret', () => {
+  withDeploymentEnv({ VERCEL_ENV: 'production', SITE_ENV: 'staging' }, () => {
+    const testPayload = JSON.stringify({ id: 'evt_live', livemode: false });
+    assert.throws(
+      () => verifyStripeWebhook(Buffer.from(testPayload), signedHeader(testPayload, 'whsec_test')),
+      /Invalid Stripe signature/,
+    );
+
+    const livePayload = JSON.stringify({ id: 'evt_live', livemode: true });
+    const liveEvent = verifyStripeWebhook(
+      Buffer.from(livePayload),
+      signedHeader(livePayload, 'whsec_live'),
+    ) as { id?: string };
+    assert.strictEqual(liveEvent.id, 'evt_live');
+  });
 });
 
 run('rejects an unknown webhook signature', () => {
-  const payload = JSON.stringify({ id: 'evt_2' });
-  assert.throws(
-    () => verifyStripeWebhook(Buffer.from(payload), signedHeader(payload, 'whsec_other')),
-    /Invalid Stripe signature/,
-  );
+  withDeploymentEnv({}, () => {
+    const payload = JSON.stringify({ id: 'evt_2' });
+    assert.throws(
+      () => verifyStripeWebhook(Buffer.from(payload), signedHeader(payload, 'whsec_other')),
+      /Invalid Stripe signature/,
+    );
+  });
 });
 
 if (previous.secret === undefined) delete process.env.STRIPE_SECRET_KEY;

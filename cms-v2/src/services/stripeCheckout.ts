@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import type { CheckoutEnvironment } from '../../shared/types';
-import { resolveCheckoutEnvironment } from './attribution';
+import { isProductionCheckoutDeployment, resolveCheckoutEnvironment } from './attribution';
 import { resolveCheckoutSiteUrl } from './checkoutSiteUrl';
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
@@ -29,8 +29,9 @@ export async function createStripeCheckoutSession(input: {
   returnOrigin?: string | null;
   environment?: CheckoutEnvironment | null;
 }): Promise<StripeCheckoutSession> {
-  const environment = input.environment
-    ?? resolveCheckoutEnvironment({ origin: input.returnOrigin });
+  const environment = isProductionCheckoutDeployment()
+    ? 'production'
+    : (input.environment ?? resolveCheckoutEnvironment({ origin: input.returnOrigin }));
   const secretKey = stripeSecretKeyForEnvironment(environment);
 
   const siteUrl = resolveCheckoutSiteUrl(input.returnOrigin);
@@ -98,13 +99,40 @@ export function stripeSecretKeyForEnvironment(
   return secretKey;
 }
 
-function webhookSecrets(): string[] {
-  return [
-    process.env.STRIPE_WEBHOOK_SECRET_LIVE,
-    process.env.STRIPE_WEBHOOK_SECRET,
-  ]
-    .map((value) => String(value ?? '').trim())
-    .filter(Boolean);
+function trimmedEnv(value: string | undefined): string {
+  return String(value ?? '').trim();
+}
+
+let warnedIgnoredTestWebhookSecret = false;
+
+/**
+ * Production accepts only the live webhook secret.
+ * Do not set STRIPE_WEBHOOK_SECRET (the test secret) on production; it is ignored.
+ */
+function webhookSecrets(): Array<{ secret: string; livemode: boolean }> {
+  const live = trimmedEnv(process.env.STRIPE_WEBHOOK_SECRET_LIVE);
+  const test = trimmedEnv(process.env.STRIPE_WEBHOOK_SECRET);
+  const production = isProductionCheckoutDeployment();
+  if (production && test && !warnedIgnoredTestWebhookSecret) {
+    warnedIgnoredTestWebhookSecret = true;
+    console.warn(
+      '[stripe] STRIPE_WEBHOOK_SECRET is set on a production deployment and is ignored. Use STRIPE_WEBHOOK_SECRET_LIVE only.',
+    );
+  }
+  const secrets: Array<{ secret: string; livemode: boolean }> = [];
+  if (live) secrets.push({ secret: live, livemode: true });
+  if (!production && test && test !== live) {
+    secrets.push({ secret: test, livemode: false });
+  }
+  return secrets;
+}
+
+export function stripeEventLivemode(event: unknown): boolean | null {
+  if (!event || typeof event !== 'object') return null;
+  const payload = event as { livemode?: unknown; data?: { object?: { livemode?: unknown } } };
+  if (typeof payload.livemode === 'boolean') return payload.livemode;
+  if (typeof payload.data?.object?.livemode === 'boolean') return payload.data.object.livemode;
+  return null;
 }
 
 function verifyStripeSignature(rawBody: Buffer, signatureHeader: string, secret: string): boolean {
@@ -167,12 +195,21 @@ export async function createStripeRefund(input: {
 export function verifyStripeWebhook(rawBody: Buffer, signatureHeader: string | undefined): unknown {
   const secrets = webhookSecrets();
   if (secrets.length === 0) {
-    throw new Error('STRIPE_WEBHOOK_SECRET or STRIPE_WEBHOOK_SECRET_LIVE is not configured');
+    throw new Error(
+      isProductionCheckoutDeployment()
+        ? 'STRIPE_WEBHOOK_SECRET_LIVE is not configured'
+        : 'STRIPE_WEBHOOK_SECRET or STRIPE_WEBHOOK_SECRET_LIVE is not configured',
+    );
   }
   if (!signatureHeader) throw new Error('Missing Stripe signature');
 
-  const matched = secrets.some((secret) => verifyStripeSignature(rawBody, signatureHeader, secret));
+  const matched = secrets.find((entry) => verifyStripeSignature(rawBody, signatureHeader, entry.secret));
   if (!matched) throw new Error('Invalid Stripe signature');
 
-  return JSON.parse(rawBody.toString('utf8')) as unknown;
+  const event = JSON.parse(rawBody.toString('utf8')) as unknown;
+  const livemode = stripeEventLivemode(event);
+  if (livemode !== null && livemode !== matched.livemode) {
+    throw new Error('Stripe livemode does not match the webhook secret');
+  }
+  return event;
 }

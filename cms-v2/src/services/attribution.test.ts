@@ -29,30 +29,75 @@ run('sanitizes empty and unsafe values', () => {
 });
 
 run('parses nested attribution and request extras', () => {
-  const parsed = parseCheckoutAttribution({
-    attribution: {
-      gclid: ' gclid-1 ',
-      utm_source: 'google',
-      capturedAt: '2026-08-16T08:00:00.000Z',
-    },
-  }, { userAgent: 'Mozilla/5.0', clientIp: '203.0.113.10' });
+  withDeploymentEnv({}, () => {
+    const parsed = parseCheckoutAttribution({
+      attribution: {
+        gclid: ' gclid-1 ',
+        utm_source: 'google',
+        capturedAt: '2026-08-16T08:00:00.000Z',
+      },
+    }, { userAgent: 'Mozilla/5.0', clientIp: '203.0.113.10' });
 
-  assert.strictEqual(parsed.gclid, 'gclid-1');
-  assert.strictEqual(parsed.utmSource, 'google');
-  assert.strictEqual(parsed.userAgent, 'Mozilla/5.0');
-  assert.strictEqual(parsed.clientIp, '203.0.113.10');
-  assert.ok(parsed.capturedAt instanceof Date);
-  assert.strictEqual(parsed.environment, 'staging');
+    assert.strictEqual(parsed.gclid, 'gclid-1');
+    assert.strictEqual(parsed.utmSource, 'google');
+    assert.strictEqual(parsed.userAgent, 'Mozilla/5.0');
+    assert.strictEqual(parsed.clientIp, '203.0.113.10');
+    assert.ok(parsed.capturedAt instanceof Date);
+    assert.strictEqual(parsed.environment, 'staging');
+  });
 });
 
+function withDeploymentEnv(
+  env: { CMS_ENV?: string; SITE_ENV?: string; VERCEL_ENV?: string },
+  fn: () => void,
+): void {
+  const previous = {
+    CMS_ENV: process.env.CMS_ENV,
+    SITE_ENV: process.env.SITE_ENV,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+  };
+  for (const key of Object.keys(previous) as Array<keyof typeof previous>) {
+    const next = env[key];
+    if (next === undefined) delete process.env[key];
+    else process.env[key] = next;
+  }
+  try {
+    fn();
+  } finally {
+    for (const key of Object.keys(previous) as Array<keyof typeof previous>) {
+      const prior = previous[key];
+      if (prior === undefined) delete process.env[key];
+      else process.env[key] = prior;
+    }
+  }
+}
+
 run('resolves checkout environment from host and explicit value', () => {
-  assert.strictEqual(resolveCheckoutEnvironment({ explicit: 'production' }), 'production');
-  assert.strictEqual(resolveCheckoutEnvironment({ hostname: 'www.vls-online.com' }), 'production');
-  assert.strictEqual(resolveCheckoutEnvironment({ hostname: 'staging.vls-online.com' }), 'staging');
-  assert.strictEqual(resolveCheckoutEnvironment({ hostname: 'prod.vls-online.com' }), 'production');
-  assert.strictEqual(resolveCheckoutEnvironment({ origin: 'https://preview.vls-online.com/buy' }), 'staging');
-  assert.strictEqual(resolveCheckoutEnvironment({ origin: 'https://prod.vls-online.com' }), 'production');
-  assert.strictEqual(resolveCheckoutEnvironment({}), 'staging');
+  withDeploymentEnv({}, () => {
+    assert.strictEqual(resolveCheckoutEnvironment({ explicit: 'production' }), 'production');
+    assert.strictEqual(resolveCheckoutEnvironment({ hostname: 'www.vls-online.com' }), 'production');
+    assert.strictEqual(resolveCheckoutEnvironment({ hostname: 'staging.vls-online.com' }), 'staging');
+    assert.strictEqual(resolveCheckoutEnvironment({ hostname: 'prod.vls-online.com' }), 'production');
+    assert.strictEqual(resolveCheckoutEnvironment({ origin: 'https://preview.vls-online.com/buy' }), 'staging');
+    assert.strictEqual(resolveCheckoutEnvironment({ origin: 'https://prod.vls-online.com' }), 'production');
+    assert.strictEqual(resolveCheckoutEnvironment({}), 'staging');
+  });
+});
+
+run('production deployment ignores the visitor environment', () => {
+  withDeploymentEnv({ VERCEL_ENV: 'production', SITE_ENV: 'staging' }, () => {
+    assert.strictEqual(resolveCheckoutEnvironment({
+      explicit: 'staging',
+      hostname: 'staging.vls-online.com',
+      origin: 'https://staging.vls-online.com',
+      referer: 'https://staging.vls-online.com/buy',
+    }), 'production');
+    assert.strictEqual(parseCheckoutAttribution({ environment: 'staging' }).environment, 'production');
+  });
+
+  withDeploymentEnv({ CMS_ENV: 'production' }, () => {
+    assert.strictEqual(resolveCheckoutEnvironment({ explicit: 'staging' }), 'production');
+  });
 });
 
 run('hashes email the way Google Ads expects', () => {

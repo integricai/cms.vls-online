@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { formatPaypalAmount, mapPaypalWebhookEvent, paypalAmountToMinor } from './paypalProvider';
-import { mapStripeWebhookEvent } from './stripeProvider';
+import { assertStripeLivemodeMatchesOrder, mapStripeWebhookEvent, stripeLivemodeMatchesOrder } from './stripeProvider';
 import { parsePaymentProviderId } from './types';
 
 function run(name: string, fn: () => void): void {
@@ -60,6 +60,18 @@ run('maps Stripe checkout.session.completed', () => {
     amountMinor: 19900,
     currency: 'usd',
   });
+});
+
+run('matches Stripe livemode to the order environment', () => {
+  assert.strictEqual(stripeLivemodeMatchesOrder(true, 'production'), true);
+  assert.strictEqual(stripeLivemodeMatchesOrder(false, 'staging'), true);
+  assert.strictEqual(stripeLivemodeMatchesOrder(false, 'production'), false);
+  assert.strictEqual(stripeLivemodeMatchesOrder(true, 'staging'), false);
+  assert.strictEqual(stripeLivemodeMatchesOrder(null, 'production'), false);
+  assert.throws(
+    () => assertStripeLivemodeMatchesOrder(false, 'production'),
+    /Stripe livemode does not match the order environment/,
+  );
 });
 
 run('maps Stripe refund.updated only when succeeded', () => {

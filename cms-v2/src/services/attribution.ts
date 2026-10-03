@@ -74,6 +74,24 @@ function hostnameFromUrl(value: string | null | undefined): string | null {
   }
 }
 
+function normalizedDeploymentValue(value: string | undefined): string {
+  return String(value ?? '')
+    .trim()
+    .replace(/^['"]|['"]$/g, '')
+    .toLowerCase();
+}
+
+/**
+ * Live Vercel deploys always charge with live Stripe.
+ * SITE_ENV=staging is also set on the pre-cutover production site to hide it
+ * from search engines, so that flag must not let a visitor select test mode.
+ */
+export function isProductionCheckoutDeployment(): boolean {
+  const named = normalizedDeploymentValue(process.env.CMS_ENV ?? process.env.SITE_ENV);
+  if (named === 'production') return true;
+  return normalizedDeploymentValue(process.env.VERCEL_ENV) === 'production';
+}
+
 export function environmentFromHostname(hostname: string | null | undefined): CheckoutEnvironment | null {
   const host = String(hostname ?? '').split(':')[0].trim().toLowerCase();
   if (!host) return null;
@@ -96,13 +114,18 @@ export function environmentFromHostname(hostname: string | null | undefined): Ch
   return null;
 }
 
-/** Prefer an explicit value, then host/origin. Unknown checkouts stay staging. */
+/**
+ * Prefer an explicit value, then host/origin. Unknown checkouts stay staging.
+ * A production deployment ignores the request body and always uses live mode.
+ */
 export function resolveCheckoutEnvironment(input: {
   explicit?: unknown;
   hostname?: string | null;
   origin?: string | null;
   referer?: string | null;
 }): CheckoutEnvironment {
+  if (isProductionCheckoutDeployment()) return 'production';
+
   const fromExplicit = parseCheckoutEnvironment(input.explicit);
   if (fromExplicit) return fromExplicit;
 
