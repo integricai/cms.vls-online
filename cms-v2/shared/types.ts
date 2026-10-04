@@ -280,7 +280,9 @@ export interface CoursePricingSummary {
   updatedAt: Date | string | null;
 }
 
-export type CustomerSource = 'stripe' | 'zenler_sync' | 'newsletter' | 'manual';
+export type CustomerSource = 'stripe' | 'paypal' | 'zenler_sync' | 'newsletter' | 'manual';
+
+export type PaymentProviderId = 'stripe' | 'paypal';
 
 export type ExamStatus = 'unknown' | 'awaiting_result' | 'passed' | 'failed';
 
@@ -558,6 +560,10 @@ export interface SaleListItem extends Sale {
   inviteCount: number;
   acceptedInviteCount: number;
   paymentStatus: PaymentOrderStatus | null;
+  provider: PaymentProviderId | null;
+  providerCheckoutId: string | null;
+  providerPaymentId: string | null;
+  providerRefundId: string | null;
   stripeCheckoutSessionId: string | null;
   stripePaymentIntentId: string | null;
   stripeRefundId: string | null;

@@ -1,6 +1,13 @@
 import assert from 'assert';
-import { formatPaypalAmount, mapPaypalWebhookEvent, paypalAmountToMinor } from './paypalProvider';
+import {
+  assertPaypalEnvForProduction,
+  formatPaypalAmount,
+  mapPaypalWebhookEvent,
+  paypalAmountToMinor,
+  paypalApiBase,
+} from './paypalProvider';
 import { assertStripeLivemodeMatchesOrder, mapStripeWebhookEvent, stripeLivemodeMatchesOrder } from './stripeProvider';
+import { getPaymentProvider, listEnabledPaymentProviders } from './registry';
 import { parsePaymentProviderId } from './types';
 
 function run(name: string, fn: () => void): void {
@@ -14,6 +21,17 @@ function run(name: string, fn: () => void): void {
 }
 
 console.log('payment provider tests');
+
+run('keeps PayPal inside Stripe and blocks direct PayPal checkout', () => {
+  withPaypalEnv({
+    PAYPAL_CLIENT_ID: 'client',
+    PAYPAL_CLIENT_SECRET: 'secret',
+    PAYPAL_ENV: 'live',
+  }, () => {
+    assert.deepStrictEqual(listEnabledPaymentProviders(), ['stripe']);
+    assert.throws(() => getPaymentProvider('paypal'), /Direct PayPal checkout is disabled/);
+  });
+});
 
 run('parses known providers and rejects unknown ones', () => {
   assert.strictEqual(parsePaymentProviderId(undefined), 'stripe');
@@ -93,7 +111,7 @@ run('maps Stripe refund.updated only when succeeded', () => {
   });
 });
 
-run('maps PayPal capture completed onto the shared paid event', () => {
+run('legacy direct PayPal mapper: capture completed is the paid event', () => {
   const event = mapPaypalWebhookEvent({
     event_type: 'PAYMENT.CAPTURE.COMPLETED',
     resource: {
@@ -117,7 +135,28 @@ run('maps PayPal capture completed onto the shared paid event', () => {
   });
 });
 
-run('maps PayPal refunded capture onto the shared refund event', () => {
+run('legacy direct PayPal mapper: order approval is not a payment', () => {
+  const event = mapPaypalWebhookEvent({
+    event_type: 'CHECKOUT.ORDER.APPROVED',
+    resource: {
+      id: '5O190127TN364715T',
+      intent: 'CAPTURE',
+      status: 'APPROVED',
+      custom_id: '41',
+      purchase_units: [{
+        custom_id: '41',
+        amount: { currency_code: 'USD', value: '199.00' },
+      }],
+    },
+  });
+  assert.deepStrictEqual(event, {
+    type: 'ignored',
+    provider: 'paypal',
+    reason: 'CHECKOUT.ORDER.APPROVED',
+  });
+});
+
+run('legacy direct PayPal mapper: refunded capture is the refund event', () => {
   const event = mapPaypalWebhookEvent({
     event_type: 'PAYMENT.CAPTURE.REFUNDED',
     resource: {
@@ -133,5 +172,78 @@ run('maps PayPal refunded capture onto the shared refund event', () => {
     paymentId: 'CAP-1',
     refundId: 'REF-1',
     checkoutId: '5O190127TN364715T',
+  });
+});
+
+function withPaypalEnv(
+  env: Record<string, string | undefined>,
+  fn: () => void,
+): void {
+  const keys = [
+    'PAYPAL_ENV',
+    'PAYPAL_MODE',
+    'PAYPAL_CLIENT_ID',
+    'PAYPAL_CLIENT_SECRET',
+    'CMS_ENV',
+    'SITE_ENV',
+    'VERCEL_ENV',
+  ];
+  const previous: Record<string, string | undefined> = {};
+  for (const key of keys) previous[key] = process.env[key];
+  for (const key of keys) delete process.env[key];
+  for (const [key, value] of Object.entries(env)) {
+    if (value == null) delete process.env[key];
+    else process.env[key] = value;
+  }
+  try {
+    fn();
+  } finally {
+    for (const key of keys) {
+      if (previous[key] == null) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  }
+}
+
+run('uses the PayPal sandbox unless the environment is live', () => {
+  withPaypalEnv({}, () => {
+    assert.strictEqual(paypalApiBase(), 'https://api-m.sandbox.paypal.com');
+  });
+  withPaypalEnv({ PAYPAL_ENV: 'live' }, () => {
+    assert.strictEqual(paypalApiBase(), 'https://api-m.paypal.com');
+  });
+});
+
+run('refuses to start PayPal in production unless PAYPAL_ENV is live', () => {
+  withPaypalEnv({
+    VERCEL_ENV: 'production',
+    PAYPAL_CLIENT_ID: 'client',
+    PAYPAL_CLIENT_SECRET: 'secret',
+  }, () => {
+    assert.throws(() => assertPaypalEnvForProduction(), /PAYPAL_ENV must be live in production/);
+    assert.throws(() => paypalApiBase(), /PAYPAL_ENV must be live in production/);
+  });
+
+  withPaypalEnv({
+    VERCEL_ENV: 'production',
+    PAYPAL_ENV: 'sandbox',
+    PAYPAL_CLIENT_ID: 'client',
+    PAYPAL_CLIENT_SECRET: 'secret',
+  }, () => {
+    assert.throws(() => assertPaypalEnvForProduction(), /PAYPAL_ENV must be live in production/);
+  });
+
+  withPaypalEnv({
+    VERCEL_ENV: 'production',
+    PAYPAL_ENV: 'live',
+    PAYPAL_CLIENT_ID: 'client',
+    PAYPAL_CLIENT_SECRET: 'secret',
+  }, () => {
+    assert.doesNotThrow(() => assertPaypalEnvForProduction());
+    assert.strictEqual(paypalApiBase(), 'https://api-m.paypal.com');
+  });
+
+  withPaypalEnv({ VERCEL_ENV: 'production' }, () => {
+    assert.doesNotThrow(() => assertPaypalEnvForProduction());
   });
 });

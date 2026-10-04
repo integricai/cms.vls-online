@@ -1,4 +1,5 @@
 import { resolveCheckoutSiteUrl } from '../checkoutSiteUrl';
+import { isProductionCheckoutDeployment } from '../attribution';
 import { fetchWithTimeout } from '../../utils/fetchWithTimeout';
 import type {
   CaptureCheckoutResult,
@@ -24,9 +25,30 @@ export function isPaypalConfigured(): boolean {
   return Boolean(process.env.PAYPAL_CLIENT_ID?.trim() && process.env.PAYPAL_CLIENT_SECRET?.trim());
 }
 
+/** Explicit PayPal environment. Unset stays sandbox outside production. */
+export function paypalEnvName(): string {
+  return (process.env.PAYPAL_ENV ?? process.env.PAYPAL_MODE ?? '').trim().toLowerCase();
+}
+
+export function isPaypalLiveEnv(): boolean {
+  const env = paypalEnvName();
+  return env === 'live' || env === 'production';
+}
+
+/**
+ * A production deployment must not fall through to PayPal sandbox.
+ * PayPal that is not configured is left alone so Stripe-only production can start.
+ */
+export function assertPaypalEnvForProduction(): void {
+  if (!isProductionCheckoutDeployment() || !isPaypalConfigured()) return;
+  if (!isPaypalLiveEnv()) {
+    throw new Error('PAYPAL_ENV must be live in production');
+  }
+}
+
 export function paypalApiBase(): string {
-  const env = (process.env.PAYPAL_ENV ?? process.env.PAYPAL_MODE ?? 'sandbox').trim().toLowerCase();
-  if (env === 'live' || env === 'production') return 'https://api-m.paypal.com';
+  assertPaypalEnvForProduction();
+  if (isPaypalLiveEnv()) return 'https://api-m.paypal.com';
   return 'https://api-m.sandbox.paypal.com';
 }
 
@@ -162,7 +184,8 @@ export function mapPaypalWebhookEvent(event: unknown): ProviderWebhookEvent {
   const eventType = typeof payload.event_type === 'string' ? payload.event_type : '';
   const resource = asRecord(payload.resource);
 
-  if (eventType === 'CHECKOUT.ORDER.APPROVED' || eventType === 'PAYMENT.CAPTURE.COMPLETED') {
+  // Approval only means the buyer consented. Funds are taken on capture, which can still fail.
+  if (eventType === 'PAYMENT.CAPTURE.COMPLETED') {
     const amount = extractAmount(resource);
     const payer = extractPayer(resource);
     const relatedOrderId = textOrNull(resource.supplementary_data?.related_ids?.order_id);
@@ -170,12 +193,8 @@ export function mapPaypalWebhookEvent(event: unknown): ProviderWebhookEvent {
       type: 'checkout.completed',
       provider: 'paypal',
       orderId: extractOrderIdFromCustom(resource),
-      checkoutId: eventType === 'PAYMENT.CAPTURE.COMPLETED'
-        ? relatedOrderId ?? extractOrderId(resource)
-        : extractOrderId(resource),
-      paymentId: eventType === 'PAYMENT.CAPTURE.COMPLETED'
-        ? textOrNull(resource.id)
-        : extractCaptureId(resource),
+      checkoutId: relatedOrderId ?? extractOrderId(resource),
+      paymentId: textOrNull(resource.id),
       customerEmail: payer.email,
       customerName: payer.name,
       amountMinor: amount.amountMinor,
@@ -258,11 +277,6 @@ async function verifyPaypalWebhook(rawBody: Buffer, headers: Record<string, stri
   return webhookEvent;
 }
 
-function approvalUrl(order: { links?: Array<{ rel?: string; href?: string }> }): string | null {
-  const link = order.links?.find(item => item.rel === 'approve' || item.rel === 'payer-action');
-  return textOrNull(link?.href);
-}
-
 export async function capturePaypalOrder(checkoutId: string): Promise<CaptureCheckoutResult> {
   const existing = await paypalRequest<Record<string, any>>(`/v2/checkout/orders/${encodeURIComponent(checkoutId)}`);
   const status = textOrNull(existing.status);
@@ -288,29 +302,12 @@ export async function capturePaypalOrder(checkoutId: string): Promise<CaptureChe
   };
 }
 
+/** Direct checkout disabled, legacy refund only. Webhooks do not call this provider. */
 export const paypalProvider: IPaymentProvider = {
   id: 'paypal',
 
-  async createCheckout(input: CreateCheckoutInput) {
-    if (!isPaypalConfigured()) {
-      throw new Error('PayPal is not configured');
-    }
-    const order = await paypalRequest<{ id?: string; links?: Array<{ rel?: string; href?: string }> }>(
-      '/v2/checkout/orders',
-      {
-        method: 'POST',
-        body: JSON.stringify(buildCreateOrderBody(input)),
-      },
-    );
-    const checkoutUrl = approvalUrl(order);
-    if (!order.id || !checkoutUrl) {
-      throw new Error('PayPal did not return a checkout URL');
-    }
-    return {
-      provider: 'paypal' as const,
-      checkoutId: order.id,
-      checkoutUrl,
-    };
+  async createCheckout(_input: CreateCheckoutInput): Promise<never> {
+    throw new Error('Direct PayPal checkout is disabled');
   },
 
   async refund(input: RefundInput): Promise<RefundResult> {
@@ -337,8 +334,8 @@ export const paypalProvider: IPaymentProvider = {
   captureCheckout: capturePaypalOrder,
 
   dashboardPaymentUrl(paymentId: string) {
-    const env = (process.env.PAYPAL_ENV ?? process.env.PAYPAL_MODE ?? 'sandbox').trim().toLowerCase();
-    const host = env === 'live' || env === 'production'
+    assertPaypalEnvForProduction();
+    const host = isPaypalLiveEnv()
       ? 'https://www.paypal.com'
       : 'https://www.sandbox.paypal.com';
     return `${host}/activity/payment/${paymentId}`;

@@ -14,7 +14,7 @@ import {
   fulfillPaidCheckout,
   fulfillRefund,
 } from '../services/payments/fulfillment';
-import { getPaymentProvider, listEnabledPaymentProviders } from '../services/payments/registry';
+import { getPaymentProvider, isPaymentProviderEnabled, listEnabledPaymentProviders } from '../services/payments/registry';
 import {
   customerSourceForProvider,
   parsePaymentProviderId,
@@ -70,6 +70,12 @@ function computeDiscountPercent(listAmount: number, effectiveAmount: number): nu
 
 function parseRequestedProvider(body: Record<string, unknown>): PaymentProviderId {
   return parsePaymentProviderId(body.provider ?? body.paymentProvider);
+}
+
+function rejectDisabledProvider(providerId: PaymentProviderId, res: Response): boolean {
+  if (isPaymentProviderEnabled(providerId)) return false;
+  res.status(400).json({ ok: false, error: 'Direct PayPal checkout is disabled' });
+  return true;
 }
 
 function parseCheckoutReturnOrigin(req: Request): string | undefined {
@@ -152,18 +158,11 @@ async function handleProviderWebhook(providerId: PaymentProviderId, req: Request
 
   try {
     if (event.type === 'checkout.completed') {
-      if (event.provider === 'paypal' && event.checkoutId && !event.paymentId) {
-        const captured = await getPaymentProvider('paypal').captureCheckout?.(event.checkoutId);
-        if (captured?.completed) {
-          event = {
-            ...event,
-            paymentId: captured.paymentId,
-            customerEmail: event.customerEmail ?? captured.customerEmail,
-            customerName: event.customerName ?? captured.customerName,
-            amountMinor: event.amountMinor ?? captured.amountMinor,
-            currency: event.currency ?? captured.currency,
-          };
-        }
+      // PayPal enrolment follows PAYMENT.CAPTURE.COMPLETED only. An approved order
+      // has no capture id yet, and a failed capture must not enrol the student.
+      if (event.provider === 'paypal' && !event.paymentId) {
+        res.status(200).json({ ok: true });
+        return;
       }
       await fulfillPaidCheckout(event);
       res.status(200).json({ ok: true });
@@ -222,6 +221,7 @@ router.post('/create-checkout-session', async (req: Request, res: Response, next
     }
 
     const providerId = parseRequestedProvider(req.body ?? {});
+    if (rejectDisabledProvider(providerId, res)) return;
     const geo = detectCountryFromRequest(req);
     const clientIp = detectClientIpFromRequest(req);
     const environment = resolveCheckoutEnvironment({
@@ -292,6 +292,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
     const explicitPriceId = parsePositiveInt(req.body?.coursePriceId);
     let courseId = parsePositiveInt(req.body?.courseId);
     const providerId = parseRequestedProvider(req.body ?? {});
+    if (rejectDisabledProvider(providerId, res)) return;
 
     if (!courseId && explicitPriceId) {
       const priceRow = await getGeoPriceById(explicitPriceId);
@@ -509,8 +510,9 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
   await handleProviderWebhook('stripe', req, res);
 }
 
-export async function paypalWebhookHandler(req: Request, res: Response): Promise<void> {
-  await handleProviderWebhook('paypal', req, res);
+export async function paypalWebhookHandler(_req: Request, res: Response): Promise<void> {
+  // Direct checkout disabled. This endpoint does not enrol or refund; legacy refunds go through sales.
+  res.status(200).json({ ok: true });
 }
 
 export default router;

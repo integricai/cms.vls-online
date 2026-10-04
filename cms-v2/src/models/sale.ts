@@ -37,6 +37,10 @@ interface SaleListDbRow extends SaleDbRow {
   invite_count: string | number;
   accepted_invite_count: string | number;
   payment_status: PaymentOrderStatus | null;
+  provider: string | null;
+  provider_checkout_id: string | null;
+  provider_payment_id: string | null;
+  provider_refund_id: string | null;
   stripe_checkout_session_id: string | null;
   stripe_payment_intent_id: string | null;
   stripe_refund_id: string | null;
@@ -82,6 +86,10 @@ function rowToSaleListItem(row: SaleListDbRow): SaleListItem {
     inviteCount: Number(row.invite_count ?? 0),
     acceptedInviteCount: Number(row.accepted_invite_count ?? 0),
     paymentStatus: row.payment_status ?? null,
+    provider: row.provider === 'paypal' ? 'paypal' : row.provider === 'stripe' ? 'stripe' : (row.stripe_payment_intent_id || row.stripe_checkout_session_id ? 'stripe' : null),
+    providerCheckoutId: row.provider_checkout_id ?? row.stripe_checkout_session_id ?? null,
+    providerPaymentId: row.provider_payment_id ?? row.stripe_payment_intent_id ?? null,
+    providerRefundId: row.provider_refund_id ?? row.stripe_refund_id ?? null,
     stripeCheckoutSessionId: row.stripe_checkout_session_id ?? null,
     stripePaymentIntentId: row.stripe_payment_intent_id ?? null,
     stripeRefundId: row.stripe_refund_id ?? null,
@@ -122,6 +130,10 @@ export async function getSaleListItemById(id: number): Promise<SaleListItem | nu
       COALESCE(inv.invite_count, 0) AS invite_count,
       COALESCE(inv.accepted_invite_count, 0) AS accepted_invite_count,
       po.status AS payment_status,
+      po.provider,
+      po.provider_checkout_id,
+      po.provider_payment_id,
+      po.provider_refund_id,
       po.stripe_checkout_session_id,
       po.stripe_payment_intent_id,
       po.stripe_refund_id,
@@ -203,6 +215,10 @@ export async function listSales(filters: ListSalesFilters = {}): Promise<SaleLis
       COALESCE(inv.invite_count, 0) AS invite_count,
       COALESCE(inv.accepted_invite_count, 0) AS accepted_invite_count,
       po.status AS payment_status,
+      po.provider,
+      po.provider_checkout_id,
+      po.provider_payment_id,
+      po.provider_refund_id,
       po.stripe_checkout_session_id,
       po.stripe_payment_intent_id,
       po.stripe_refund_id,

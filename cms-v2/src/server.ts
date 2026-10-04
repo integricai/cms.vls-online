@@ -15,7 +15,7 @@ import booksRouter from './routes/books';
 import bookDiscountCodesRouter from './routes/bookDiscountCodes';
 import adminPaymentsRouter from './routes/adminPayments';
 import paymentOptionsRouter from './routes/paymentOptions';
-import paymentsRouter, { stripeWebhookHandler } from './routes/payments';
+import paymentsRouter, { paypalWebhookHandler, stripeWebhookHandler } from './routes/payments';
 import { freeEnrolHandler } from './routes/freeEnrol';
 import coursePricingRouter from './routes/coursePricing';
 import tutorsRouter from './routes/tutors';
@@ -58,6 +58,8 @@ app.use(cors({
 }));
 
 app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler);
+app.post('/api/payments/webhook/stripe', express.raw({ type: 'application/json' }), stripeWebhookHandler);
+app.post('/api/payments/webhook/paypal', express.raw({ type: 'application/json' }), paypalWebhookHandler);
 
 app.use(express.json({ limit: '10mb' }));
 

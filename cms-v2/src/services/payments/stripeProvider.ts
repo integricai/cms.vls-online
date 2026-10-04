@@ -6,7 +6,6 @@ import {
   stripeEventLivemode,
   verifyStripeWebhook,
 } from '../stripeCheckout';
-import { isPaypalConfigured } from './paypalProvider';
 import type {
   CheckoutCompletedEvent,
   CreateCheckoutInput,
@@ -123,10 +122,7 @@ export const stripeProvider: IPaymentProvider = {
   async createCheckout(input: CreateCheckoutInput) {
     const session = await createStripeCheckoutSession({
       ...input,
-      // Native PayPal replaces Stripe's PayPal button when configured.
-      paymentMethodTypes: isPaypalConfigured()
-        ? ['card', 'klarna']
-        : ['card', 'paypal', 'klarna'],
+      paymentMethodTypes: ['card', 'paypal', 'klarna'],
     });
     if (!session.url) {
       throw new Error('Stripe did not return a checkout URL');

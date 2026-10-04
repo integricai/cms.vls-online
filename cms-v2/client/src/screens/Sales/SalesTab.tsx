@@ -52,14 +52,25 @@ function customerLabel(sale: SaleListItem): string {
   return name || sale.customerEmail || '—';
 }
 
-function shortStripeId(id: string | null | undefined): string {
+function shortProcessorId(id: string | null | undefined): string {
   if (!id) return '—';
   if (id.length <= 18) return id;
   return `${id.slice(0, 10)}…${id.slice(-4)}`;
 }
 
-function stripePaymentUrl(paymentIntentId: string): string {
-  return `https://dashboard.stripe.com/payments/${paymentIntentId}`;
+/** Historical direct PayPal sales only. New PayPal payments are Stripe and stay labelled Stripe. */
+function processorLabel(sale: SaleListItem): string {
+  return sale.provider === 'paypal' ? 'PayPal' : 'Stripe';
+}
+
+function processorPaymentUrl(sale: SaleListItem): string | null {
+  const paymentId = sale.providerPaymentId ?? sale.stripePaymentIntentId;
+  if (!paymentId) return null;
+  // Legacy direct PayPal receipt. Stripe PayPal payments use the Stripe dashboard link below.
+  if (sale.provider === 'paypal') {
+    return `https://www.paypal.com/activity/payment/${paymentId}`;
+  }
+  return `https://dashboard.stripe.com/payments/${paymentId}`;
 }
 
 export default function SalesTab() {
@@ -129,7 +140,7 @@ export default function SalesTab() {
   async function refundSale(sale: SaleListItem) {
     if (sale.paymentStatus === 'Refunded') return;
     const confirmed = window.confirm(
-      `Refund ${formatMoney(sale.amount, sale.currency)} for ${sale.courseName || `course #${sale.courseId}`}?\n\nThis will create a full refund in Stripe and revoke the student's access to this course.`,
+      `Refund ${formatMoney(sale.amount, sale.currency)} for ${sale.courseName || `course #${sale.courseId}`}?\n\nThis will create a full refund in ${processorLabel(sale)} and revoke the student's access to this course.`,
     );
     if (!confirmed) return;
 
@@ -138,7 +149,7 @@ export default function SalesTab() {
     setMessage('');
     try {
       await api.post(`/sales/${sale.id}/refund`, {});
-      setMessage('Refund processed in Stripe, sale marked refunded, and course access revoked');
+      setMessage(`Refund processed in ${processorLabel(sale)}, sale marked refunded, and course access revoked`);
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to refund sale');
@@ -188,7 +199,9 @@ export default function SalesTab() {
     if (sale.paymentStatus === 'Refunded') {
       return (
         <div className="text-[11px] text-slate-400">
-          {sale.stripeRefundId ? shortStripeId(sale.stripeRefundId) : 'Refunded in Stripe'}
+          {(sale.providerRefundId ?? sale.stripeRefundId)
+            ? shortProcessorId(sale.providerRefundId ?? sale.stripeRefundId)
+            : `Refunded in ${processorLabel(sale)}`}
         </div>
       );
     }
@@ -196,8 +209,10 @@ export default function SalesTab() {
     return (
       <button
         className="btn-danger text-[11px]"
-        disabled={refundingSaleId === sale.id || !sale.stripePaymentIntentId}
-        title={!sale.stripePaymentIntentId ? 'Missing Stripe payment intent ID' : 'Refund in Stripe'}
+        disabled={refundingSaleId === sale.id || !(sale.providerPaymentId ?? sale.stripePaymentIntentId)}
+        title={!(sale.providerPaymentId ?? sale.stripePaymentIntentId)
+          ? 'Missing processor payment ID'
+          : `Refund in ${processorLabel(sale)}`}
         onClick={() => void refundSale(sale)}
       >
         {refundingSaleId === sale.id ? 'Refunding…' : 'Refund'}
@@ -216,7 +231,7 @@ export default function SalesTab() {
               <th className="px-3 py-2">Customer</th>
               <th className="px-3 py-2">Amount</th>
               <th className="px-3 py-2">Payment</th>
-              <th className="px-3 py-2">Stripe</th>
+              <th className="px-3 py-2">Processor</th>
               <th className="px-3 py-2">Tutor</th>
               <th className="px-3 py-2">Commission</th>
               <th className="px-3 py-2">Status</th>
@@ -256,20 +271,21 @@ export default function SalesTab() {
                   )}
                 </td>
                 <td className="px-3 py-2">
-                  {sale.stripePaymentIntentId ? (
+                  {(sale.providerPaymentId ?? sale.stripePaymentIntentId) ? (
                     <div>
+                      <div className="text-[10px] uppercase tracking-wide text-slate-400">{processorLabel(sale)}</div>
                       <a
-                        href={stripePaymentUrl(sale.stripePaymentIntentId)}
+                        href={processorPaymentUrl(sale) ?? '#'}
                         target="_blank"
                         rel="noreferrer"
                         className="font-mono text-[11px] text-blue-600 hover:underline"
-                        title={sale.stripePaymentIntentId}
+                        title={sale.providerPaymentId ?? sale.stripePaymentIntentId ?? ''}
                       >
-                        {shortStripeId(sale.stripePaymentIntentId)}
+                        {shortProcessorId(sale.providerPaymentId ?? sale.stripePaymentIntentId)}
                       </a>
-                      {sale.stripeCheckoutSessionId && (
-                        <div className="mt-0.5 font-mono text-[10px] text-slate-400" title={sale.stripeCheckoutSessionId}>
-                          {shortStripeId(sale.stripeCheckoutSessionId)}
+                      {(sale.providerCheckoutId ?? sale.stripeCheckoutSessionId) && (
+                        <div className="mt-0.5 font-mono text-[10px] text-slate-400" title={sale.providerCheckoutId ?? sale.stripeCheckoutSessionId ?? ''}>
+                          {shortProcessorId(sale.providerCheckoutId ?? sale.stripeCheckoutSessionId)}
                         </div>
                       )}
                     </div>

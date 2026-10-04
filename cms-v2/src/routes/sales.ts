@@ -3,6 +3,7 @@ import { authGuard, requireRole } from '../middleware/authGuard';
 import {
   getPaymentOrder,
   markPaymentOrderRefunded,
+  paymentOrderPaymentId,
 } from '../models/paymentOrder';
 import {
   getSaleById,
@@ -18,7 +19,7 @@ import {
   previewSaleAccept,
 } from '../services/saleAssignment';
 import { sendStudentRefundConfirmation } from '../services/paymentEmails';
-import { createStripeRefund } from '../services/stripeCheckout';
+import { getPaymentRefundProvider } from '../services/payments/registry';
 import { revokeZenlerAccessForRefundedOrder } from '../services/zenlerEnrollmentEnsure';
 
 const router = Router();
@@ -153,23 +154,26 @@ router.post('/:id/refund', requireRole('admin'), async (req, res) => {
     if (order.status !== 'Paid') {
       return res.status(409).json({ ok: false, error: `Cannot refund a ${order.status.toLowerCase()} payment` });
     }
-    if (!order.stripePaymentIntentId) {
+    const paymentId = paymentOrderPaymentId(order);
+    if (!paymentId) {
       return res.status(409).json({
         ok: false,
-        error: 'Missing Stripe payment intent ID — refund this payment in Stripe Dashboard, or wait for webhook sync',
+        error: 'Missing processor payment ID — refund this payment in the provider dashboard, or wait for webhook sync',
       });
     }
 
-    const refund = await createStripeRefund({
-      paymentIntentId: order.stripePaymentIntentId,
+    // Direct checkout disabled, legacy refund only. Stripe orders refund through Stripe, including Stripe PayPal.
+    const refund = await getPaymentRefundProvider(order.provider).refund({
+      paymentId,
       reason: 'requested_by_customer',
       environment: order.checkoutEnvironment,
     });
 
     const { order: refunded, wasAlreadyRefunded } = await markPaymentOrderRefunded({
       orderId: order.id,
-      stripeRefundId: refund.id,
-      stripePaymentIntentId: refund.paymentIntentId ?? order.stripePaymentIntentId,
+      provider: order.provider,
+      refundId: refund.refundId,
+      paymentId: refund.paymentId ?? paymentId,
     });
 
     await revokeZenlerAccessForRefundedOrder(refunded);

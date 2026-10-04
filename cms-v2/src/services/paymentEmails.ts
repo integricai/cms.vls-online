@@ -193,7 +193,7 @@ export async function sendStudentPaymentConfirmation(
   order: PaymentOrder,
   access?: ZenlerEnrollmentEmailContext | null,
 ): Promise<boolean> {
-  const to = order.studentEmail ?? order.stripeCustomerEmail;
+  const to = order.studentEmail ?? order.providerCustomerEmail ?? order.stripeCustomerEmail;
   if (!to) return false;
 
   const name = order.studentName || 'Student';
@@ -354,7 +354,7 @@ ${p(`If you have any questions, please reply to this email or contact our suppor
 }
 
 export async function sendStudentRefundConfirmation(order: PaymentOrder): Promise<boolean> {
-  const to = order.studentEmail ?? order.stripeCustomerEmail;
+  const to = order.studentEmail ?? order.providerCustomerEmail ?? order.stripeCustomerEmail;
   if (!to) return false;
 
   const name = order.studentName || 'Student';
@@ -475,11 +475,12 @@ export async function sendAdminPaymentNotification(order: PaymentOrder): Promise
 
   const amount = formatAmount(order);
   const text = `Student name: ${order.studentName ?? ''}
-Student email: ${order.studentEmail ?? order.stripeCustomerEmail ?? ''}
+Student email: ${order.studentEmail ?? order.providerCustomerEmail ?? order.stripeCustomerEmail ?? ''}
 Course title: ${order.courseTitle}
 Option type: ${order.optionType ?? ''}
 Amount paid: ${amount}
-Stripe checkout session ID: ${order.stripeCheckoutSessionId ?? ''}
+Provider: ${order.provider}
+Checkout ID: ${order.providerCheckoutId ?? order.stripeCheckoutSessionId ?? ''}
 Payment date/time: ${order.paidAt?.toISOString() ?? ''}`;
 
   await sendEmail({
@@ -487,11 +488,12 @@ Payment date/time: ${order.paidAt?.toISOString() ?? ''}`;
     subject: `New course payment received - ${order.courseTitle}`,
     text,
     html: `<p><strong>Student name:</strong> ${esc(order.studentName)}</p>
-<p><strong>Student email:</strong> ${esc(order.studentEmail ?? order.stripeCustomerEmail)}</p>
+<p><strong>Student email:</strong> ${esc(order.studentEmail ?? order.providerCustomerEmail ?? order.stripeCustomerEmail)}</p>
 <p><strong>Course title:</strong> ${esc(order.courseTitle)}</p>
 <p><strong>Option type:</strong> ${esc(order.optionType)}</p>
 <p><strong>Amount paid:</strong> ${esc(amount)}</p>
-<p><strong>Stripe checkout session ID:</strong> ${esc(order.stripeCheckoutSessionId)}</p>
+<p><strong>Provider:</strong> ${esc(order.provider)}</p>
+<p><strong>Checkout ID:</strong> ${esc(order.providerCheckoutId ?? order.stripeCheckoutSessionId)}</p>
 <p><strong>Payment date/time:</strong> ${esc(order.paidAt?.toISOString())}</p>`,
   });
   return true;

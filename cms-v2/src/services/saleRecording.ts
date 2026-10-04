@@ -57,7 +57,7 @@ export async function ensureSaleRecordedForPaidOrder(order: PaymentOrder) {
   if (existing) return existing;
 
   let workingOrder = order;
-  const email = (workingOrder.studentEmail ?? workingOrder.stripeCustomerEmail)?.trim().toLowerCase();
+  const email = (workingOrder.studentEmail ?? workingOrder.providerCustomerEmail ?? workingOrder.stripeCustomerEmail)?.trim().toLowerCase();
   if (!email) {
     console.warn('[sales] Paid order has no payer email', order.id);
     return null;
@@ -69,7 +69,7 @@ export async function ensureSaleRecordedForPaidOrder(order: PaymentOrder) {
     firstName,
     lastName,
     countryCode: workingOrder.countryCode,
-    source: 'stripe',
+    source: workingOrder.provider === 'paypal' ? 'paypal' : 'stripe',
   });
 
   if (!workingOrder.customerId || workingOrder.customerId !== customer.id) {
