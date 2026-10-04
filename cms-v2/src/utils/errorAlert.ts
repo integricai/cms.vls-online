@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import { createSystemLog } from '../models/systemLog';
 
 const ALERT_TO = process.env.ERROR_ALERT_TO ?? 'nadir.khan@integricai.co.uk';
 const MS_URL = 'https://api.mailersend.com/v1/email';
@@ -59,10 +60,37 @@ function requestDetails(req?: Request) {
     url: req.originalUrl,
     ip: req.ip,
     userAgent: req.get('user-agent'),
-    body: redact(req.body),
+    body: Buffer.isBuffer(req.body) ? `[raw ${req.body.length} bytes]` : redact(req.body),
     query: redact(req.query),
     params: redact(req.params),
   };
+}
+
+async function persistSystemLog(input: {
+  area: string;
+  explanation: string;
+  error: unknown;
+  req?: Request;
+  extra?: Record<string, unknown>;
+}): Promise<void> {
+  const details = errorDetails(input.error);
+  const request = requestDetails(input.req);
+  await createSystemLog({
+    level: 'error',
+    area: input.area,
+    explanation: input.explanation,
+    errorName: details.name,
+    errorMessage: details.message,
+    errorStack: details.stack || null,
+    requestMethod: typeof request.method === 'string' ? request.method : null,
+    requestUrl: typeof request.url === 'string' ? request.url : null,
+    requestIp: typeof request.ip === 'string' ? request.ip : null,
+    extra: {
+      environment: process.env.NODE_ENV ?? 'development',
+      request: request,
+      extra: redact(input.extra ?? {}),
+    },
+  });
 }
 
 export async function sendErrorAlert(input: {
@@ -72,6 +100,10 @@ export async function sendErrorAlert(input: {
   req?: Request;
   extra?: Record<string, unknown>;
 }): Promise<void> {
+  await persistSystemLog(input).catch(err => {
+    console.error('[alert] failed to persist system log', err);
+  });
+
   const apiKey = process.env.MAILERSEND_API_KEY;
   if (!apiKey) {
     console.error('[alert] MAILERSEND_API_KEY is not configured; unable to send error alert');

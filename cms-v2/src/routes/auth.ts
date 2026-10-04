@@ -11,6 +11,7 @@ import {
   updatePasswordHash,
 } from '../models/user';
 import { sendPasswordResetEmail } from './email';
+import { loginIdentityRateLimit, loginIpRateLimit } from '../middleware/rateLimit';
 import type { LoginRequest, PasswordResetConfirm, PasswordResetRequest } from '../../shared/types';
 
 const router = Router();
@@ -74,7 +75,7 @@ router.get('/captcha', (_req: Request, res: Response) => {
 });
 
 // POST /auth/login
-router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/login', loginIpRateLimit, loginIdentityRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, username, password } = req.body as LoginRequest;
     const login = (username ?? email ?? '').trim();

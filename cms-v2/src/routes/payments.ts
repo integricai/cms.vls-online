@@ -45,6 +45,12 @@ import {
   validateMultiCourseAccessSelection,
 } from '../services/multiCourseAccess';
 import { resolveConfiguredComboZenlerCourseIds } from '../services/multiCourseStoryblokAllowlist';
+import {
+  checkoutSessionRateLimit,
+  freeEnrolEmailRateLimit,
+  freeEnrolIpRateLimit,
+} from '../middleware/rateLimit';
+import { sendErrorAlert } from '../utils/errorAlert';
 
 const router = Router();
 
@@ -187,11 +193,18 @@ async function handleProviderWebhook(providerId: PaymentProviderId, req: Request
     res.status(200).json({ ok: true });
   } catch (err) {
     console.error(`[${providerId}-webhook]`, err);
+    await sendErrorAlert({
+      area: `${providerId} webhook handling failed`,
+      explanation: `A verified ${providerId} webhook was accepted but fulfillment failed. Stripe/PayPal will retry; check Settings > Logs for the payload details.`,
+      error: err,
+      req,
+      extra: { provider: providerId },
+    }).catch(alertErr => console.error('[alert] failed to send webhook alert', alertErr));
     res.status(500).json({ ok: false, error: 'Webhook handling failed' });
   }
 }
 
-router.post('/enrol-free', freeEnrolHandler);
+router.post('/enrol-free', freeEnrolIpRateLimit, freeEnrolEmailRateLimit, freeEnrolHandler);
 
 router.get('/providers', (_req: Request, res: Response) => {
   res.json({
@@ -202,7 +215,7 @@ router.get('/providers', (_req: Request, res: Response) => {
 });
 
 /** Legacy payment-card checkout (course_payment_cards). */
-router.post('/create-checkout-session', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const courseId = parsePositiveInt(req.body?.courseId);
     const coursePriceId = parsePositiveInt(req.body?.coursePriceId);

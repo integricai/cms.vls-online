@@ -30,7 +30,10 @@ import sitemapRouter from './routes/sitemap';
 import cronRouter from './routes/cron';
 import googleConversionsRouter from './routes/googleConversions';
 import siteCacheRouter from './routes/siteCache';
+import systemLogsRouter from './routes/systemLogs';
+import contactRouter from './routes/contact';
 import { sendErrorAlert } from './utils/errorAlert';
+import { freeEnrolEmailRateLimit, freeEnrolIpRateLimit } from './middleware/rateLimit';
 import { getContent, upsertContent } from './models/content';
 import { listBlogPosts } from './models/blog';
 import { getBlogAsset } from './models/blogAsset';
@@ -302,6 +305,7 @@ app.get('/api/turnstile-site-key', (_req, res) => {
   return res.json({ ok: true, siteKey });
 });
 
+app.use('/api/submit-form', contactRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/snippets', snippetsRouter);
 app.use('/api/content', contentRouter);
@@ -312,8 +316,14 @@ app.use('/api/books', booksRouter);
 app.use('/api/book-discount-codes', bookDiscountCodesRouter);
 app.use('/api/admin', adminPaymentsRouter);
 app.use('/api/payment-options', paymentOptionsRouter);
-app.post('/api/payments/enrol-free', freeEnrolHandler);
+app.post(
+  '/api/payments/enrol-free',
+  freeEnrolIpRateLimit,
+  freeEnrolEmailRateLimit,
+  freeEnrolHandler,
+);
 app.use('/api/payments', paymentsRouter);
+app.use('/api/system-logs', systemLogsRouter);
 app.use('/api/pricing-regions', pricingRegionsRouter);
 app.use('/api/qualification-offer-rules', qualificationOfferRulesRouter);
 app.use('/api/course-pricing', coursePricingRouter);
@@ -413,22 +423,32 @@ app.use((err: Error, req: express.Request, res: express.Response, _next: express
   res.status(500).json({ ok: false, error: message });
 });
 
+function fatalProcessError(area: string, explanation: string, error: unknown): void {
+  console.error(`[${area}]`, error);
+  const alert = sendErrorAlert({ area, explanation, error }).catch(alertErr => {
+    console.error('[alert] failed to send fatal process alert', alertErr);
+  });
+  const timeout = setTimeout(() => process.exit(1), 4000);
+  alert.finally(() => {
+    clearTimeout(timeout);
+    process.exit(1);
+  });
+}
+
 process.on('unhandledRejection', reason => {
-  console.error('[unhandledRejection]', reason);
-  sendErrorAlert({
-    area: 'CMS API unhandled rejection',
-    explanation: 'A promise rejected without being handled. The API process may be unstable.',
-    error: reason,
-  }).catch(alertErr => console.error('[alert] failed to send unhandled rejection alert', alertErr));
+  fatalProcessError(
+    'CMS API unhandled rejection',
+    'A promise rejected without being handled. The API will exit so Vercel can start a clean process.',
+    reason,
+  );
 });
 
 process.on('uncaughtException', err => {
-  console.error('[uncaughtException]', err);
-  sendErrorAlert({
-    area: 'CMS API uncaught exception',
-    explanation: 'An uncaught exception reached the process boundary. The API process may crash or restart.',
-    error: err,
-  }).catch(alertErr => console.error('[alert] failed to send uncaught exception alert', alertErr));
+  fatalProcessError(
+    'CMS API uncaught exception',
+    'An uncaught exception reached the process boundary. The API will exit so Vercel can start a clean process.',
+    err,
+  );
 });
 
 // ── Start ─────────────────────────────────────────────────────────

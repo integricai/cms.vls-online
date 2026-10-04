@@ -2,7 +2,8 @@
 // Sends notification to admin emails + thank-you to submitter via MailerSend API
 
 import { sendErrorAlert } from './_error-alert.js';
-import { verifyTurnstileToken } from './_turnstile.js';
+import { verifyTurnstileToken, getClientIp } from './_turnstile.js';
+import { enforceRateLimits } from './_rate-limit.js';
 
 function esc(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -45,6 +46,12 @@ export default async function handler(req, res) {
   if (!firstName.trim() || !email.trim()) {
     return res.status(400).json({ error: 'First name and email are required' });
   }
+
+  const allowed = await enforceRateLimits(res, [
+    { bucket: `contact:ip:${getClientIp(req) || 'unknown'}`, limit: 5, windowMs: 60 * 60 * 1000 },
+    { bucket: `contact-email:${email.trim().toLowerCase()}`, limit: 3, windowMs: 60 * 60 * 1000 },
+  ]);
+  if (!allowed) return;
 
   const turnstile = await verifyTurnstileToken(turnstileToken, req);
   if (!turnstile.ok) {

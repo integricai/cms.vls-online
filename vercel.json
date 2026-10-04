@@ -52,7 +52,7 @@
     }
   ],
   "routes": [
-    { "src": "/api/submit-form",         "dest": "api/submit-form.js"         },
+    { "src": "/api/submit-form",         "dest": "cms-v2/src/server.ts"       },
     { "src": "/api/submit-report",       "dest": "api/submit-report.js"       },
     { "src": "/api/publish-banner",      "dest": "api/publish-banner.js"      },
     { "src": "/api/publish-course-prices", "dest": "api/publish-course-prices.js" },

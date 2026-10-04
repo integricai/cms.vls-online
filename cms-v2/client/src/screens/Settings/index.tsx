@@ -4,8 +4,9 @@ import UserManagement from '../UserManagement';
 import DiscountCodes from '../DiscountCodes';
 import SitemapScreen from '../Sitemap';
 import SiteCache from './SiteCache';
+import SystemLogs from './SystemLogs';
 
-type Tab = 'menu' | 'discountCodes' | 'sitemap' | 'cache' | 'payments' | 'users';
+type Tab = 'menu' | 'discountCodes' | 'sitemap' | 'cache' | 'logs' | 'payments' | 'users';
 
 function PaymentsTab() {
   return (
@@ -21,6 +22,7 @@ const TAB_LABELS: Record<Tab, string> = {
   discountCodes: 'Discount Codes',
   sitemap: 'Sitemap',
   cache: 'Cache',
+  logs: 'Logs',
   payments: 'Payments',
   users: 'Users',
 };
@@ -33,7 +35,7 @@ export default function Settings() {
       <div className="border-b border-slate-200 bg-white px-6 py-4">
         <h1 className="text-lg font-bold text-slate-800">Admin Settings</h1>
       </div>
-      <div className="flex border-b border-slate-200 bg-white px-6">
+      <div className="flex flex-wrap border-b border-slate-200 bg-white px-6">
         {(Object.keys(TAB_LABELS) as Tab[]).map(t => (
           <button
             key={t}
@@ -53,6 +55,7 @@ export default function Settings() {
         {tab === 'discountCodes' && <DiscountCodes />}
         {tab === 'sitemap' && <SitemapScreen />}
         {tab === 'cache' && <SiteCache />}
+        {tab === 'logs' && <SystemLogs />}
         {tab === 'payments' && <PaymentsTab />}
         {tab === 'users' && <UserManagement />}
       </div>
