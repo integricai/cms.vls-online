@@ -38,6 +38,7 @@ import { parseCheckoutAttribution, resolveCheckoutEnvironment } from '../service
 import { freeEnrolHandler } from './freeEnrol';
 import {
   MultiCourseAccessError,
+  assertBundleCheckoutHasSelection,
   parseAccessZenlerCourseIds,
   parseComboStorySlug,
   validateMultiCourseAccessSelection,
@@ -389,20 +390,25 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
     const discountPercent = computeDiscountPercent(resolved.price.amount, resolved.effectiveAmount);
 
     const requestedAccessIds = parseAccessZenlerCourseIds(req.body ?? {});
+    const comboStorySlug = parseComboStorySlug(req.body ?? {});
     let accessZenlerCourseIds: string[] | null = null;
-    if (requestedAccessIds.length > 0) {
-      try {
+    try {
+      assertBundleCheckoutHasSelection({
+        comboStorySlug,
+        accessZenlerCourseIds: requestedAccessIds,
+      });
+      if (requestedAccessIds.length > 0) {
         accessZenlerCourseIds = await validateMultiCourseAccessSelection({
           bundleCourseId: course.id,
           accessZenlerCourseIds: requestedAccessIds,
-          comboStorySlug: parseComboStorySlug(req.body ?? {}),
+          comboStorySlug,
         });
-      } catch (err) {
-        if (err instanceof MultiCourseAccessError) {
-          return res.status(err.status).json({ ok: false, error: err.message });
-        }
-        throw err;
       }
+    } catch (err) {
+      if (err instanceof MultiCourseAccessError) {
+        return res.status(err.status).json({ ok: false, error: err.message });
+      }
+      throw err;
     }
 
     const order = await createPaymentOrder({

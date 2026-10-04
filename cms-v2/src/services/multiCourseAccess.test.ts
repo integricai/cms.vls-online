@@ -1,6 +1,10 @@
 import assert from 'assert';
 import { extractMultiCoursePaperZenlerIds } from './multiCourseStoryblokAllowlist';
-import { parseAccessZenlerCourseIds } from './multiCourseAccess';
+import {
+  assertBundleCheckoutHasSelection,
+  MultiCourseAccessError,
+  parseAccessZenlerCourseIds,
+} from './multiCourseAccess';
 
 function run(name: string, fn: () => void): void {
   try {
@@ -19,6 +23,32 @@ run('parseAccessZenlerCourseIds from array', () => {
     parseAccessZenlerCourseIds({ accessZenlerCourseIds: ['111', '222', '111'] }),
     ['111', '222'],
   );
+});
+
+run('combo checkout without a selection is rejected', () => {
+  assert.throws(
+    () => assertBundleCheckoutHasSelection({
+      comboStorySlug: 'courses/acca-combo',
+      accessZenlerCourseIds: [],
+    }),
+    (err: unknown) => err instanceof MultiCourseAccessError
+      && err.status === 400
+      && /select the courses/i.test(err.message),
+  );
+});
+
+run('single-course checkout does not require a selection', () => {
+  assert.doesNotThrow(() => assertBundleCheckoutHasSelection({
+    comboStorySlug: '',
+    accessZenlerCourseIds: [],
+  }));
+});
+
+run('combo checkout with a selection is allowed through', () => {
+  assert.doesNotThrow(() => assertBundleCheckoutHasSelection({
+    comboStorySlug: 'courses/acca-combo',
+    accessZenlerCourseIds: ['111', '222'],
+  }));
 });
 
 run('extract paper zenler ids from story content', () => {

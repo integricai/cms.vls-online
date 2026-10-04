@@ -39,6 +39,23 @@ export function parseComboStorySlug(body: Record<string, unknown>): string {
   return slug;
 }
 
+/**
+ * A combo-pack checkout names its Storyblok page. That checkout must also name
+ * the papers to enrol. Without a selection, fulfillment enrols the bundle's own
+ * Zenler course.
+ */
+export function assertBundleCheckoutHasSelection(input: {
+  comboStorySlug?: string | null;
+  accessZenlerCourseIds?: string[] | null;
+}): void {
+  if (!normalizeComboStorySlug(input.comboStorySlug)) return;
+  if ((input.accessZenlerCourseIds?.length ?? 0) > 0) return;
+  throw new MultiCourseAccessError(
+    'Select the courses included in this combo pack before checkout.',
+    400,
+  );
+}
+
 /** Validate picker selection using Zenler IDs configured on the Storyblok multi-course page. */
 export async function validateMultiCourseAccessSelection(input: {
   bundleCourseId: number;
