@@ -135,20 +135,50 @@ export function stripeEventLivemode(event: unknown): boolean | null {
   return null;
 }
 
-function verifyStripeSignature(rawBody: Buffer, signatureHeader: string, secret: string): boolean {
-  const parts = Object.fromEntries(signatureHeader.split(',').map(part => {
-    const [key, value] = part.split('=', 2);
-    return [key, value];
-  }));
-  const timestamp = parts.t;
-  const signature = parts.v1;
-  if (!timestamp || !signature) return false;
+/** Stripe's default replay window. Payloads signed earlier than this are rejected. */
+export const STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300;
+
+function parseStripeSignatureHeader(signatureHeader: string): { timestamp: string | null; signatures: string[] } {
+  let timestamp: string | null = null;
+  const signatures: string[] = [];
+  // Secret rotation sends several v1 values. Keeping only the last one drops a still-valid signature.
+  for (const part of signatureHeader.split(',')) {
+    const separator = part.indexOf('=');
+    if (separator <= 0) continue;
+    const key = part.slice(0, separator).trim();
+    const value = part.slice(separator + 1).trim();
+    if (!value) continue;
+    if (key === 't') timestamp = value;
+    else if (key === 'v1') signatures.push(value);
+  }
+  return { timestamp, signatures };
+}
+
+function matchStripeSignature(
+  rawBody: Buffer,
+  signatureHeader: string,
+  secret: string,
+): 'match' | 'stale' | 'mismatch' {
+  const { timestamp, signatures } = parseStripeSignatureHeader(signatureHeader);
+  if (!timestamp || !/^\d+$/.test(timestamp) || signatures.length === 0) return 'mismatch';
 
   const signedPayload = `${timestamp}.${rawBody.toString('utf8')}`;
-  const expected = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
-  const actual = Buffer.from(signature, 'hex');
-  const wanted = Buffer.from(expected, 'hex');
-  return actual.length === wanted.length && crypto.timingSafeEqual(actual, wanted);
+  const expectedHex = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
+  const expected = Buffer.from(expectedHex, 'hex');
+
+  let matched = false;
+  for (const signature of signatures) {
+    if (!/^[0-9a-f]+$/i.test(signature) || signature.length !== expectedHex.length) continue;
+    const actual = Buffer.from(signature, 'hex');
+    if (actual.length === expected.length && crypto.timingSafeEqual(actual, expected)) {
+      matched = true;
+    }
+  }
+  if (!matched) return 'mismatch';
+
+  const ageSeconds = Math.floor(Date.now() / 1000) - Number(timestamp);
+  if (ageSeconds > STRIPE_WEBHOOK_TOLERANCE_SECONDS) return 'stale';
+  return 'match';
 }
 
 export async function createStripeRefund(input: {
@@ -203,7 +233,17 @@ export function verifyStripeWebhook(rawBody: Buffer, signatureHeader: string | u
   }
   if (!signatureHeader) throw new Error('Missing Stripe signature');
 
-  const matched = secrets.find((entry) => verifyStripeSignature(rawBody, signatureHeader, entry.secret));
+  let matched: { secret: string; livemode: boolean } | undefined;
+  for (const entry of secrets) {
+    const result = matchStripeSignature(rawBody, signatureHeader, entry.secret);
+    if (result === 'stale') {
+      throw new Error('Stripe webhook timestamp is outside the tolerance window');
+    }
+    if (result === 'match') {
+      matched = entry;
+      break;
+    }
+  }
   if (!matched) throw new Error('Invalid Stripe signature');
 
   const event = JSON.parse(rawBody.toString('utf8')) as unknown;

@@ -53,13 +53,31 @@ run('converts PayPal amounts to minor units', () => {
   assert.strictEqual(paypalAmountToMinor('1500', 'JPY'), 1500);
 });
 
-run('maps Stripe checkout.session.completed', () => {
+run('maps Stripe checkout.session.completed only when payment_status is paid', () => {
+  const unpaid = mapStripeWebhookEvent({
+    type: 'checkout.session.completed',
+    data: {
+      object: {
+        id: 'cs_test',
+        client_reference_id: '41',
+        payment_status: 'unpaid',
+        payment_intent: { id: 'pi_test' },
+      },
+    },
+  });
+  assert.deepStrictEqual(unpaid, {
+    type: 'ignored',
+    provider: 'stripe',
+    reason: 'checkout.session.completed:unpaid',
+  });
+
   const event = mapStripeWebhookEvent({
     type: 'checkout.session.completed',
     data: {
       object: {
         id: 'cs_test',
         client_reference_id: '41',
+        payment_status: 'paid',
         payment_intent: { id: 'pi_test' },
         amount_total: 19900,
         currency: 'usd',
@@ -77,6 +95,73 @@ run('maps Stripe checkout.session.completed', () => {
     customerName: 'Ada Lovelace',
     amountMinor: 19900,
     currency: 'usd',
+  });
+});
+
+run('maps Stripe async payment success, failure, and expiry', () => {
+  const succeeded = mapStripeWebhookEvent({
+    type: 'checkout.session.async_payment_succeeded',
+    data: {
+      object: {
+        id: 'cs_async',
+        client_reference_id: '41',
+        payment_status: 'paid',
+        payment_intent: 'pi_async',
+        amount_total: 19900,
+        currency: 'usd',
+        customer_details: { email: 'a@b.com', name: 'Ada Lovelace' },
+      },
+    },
+  });
+  assert.deepStrictEqual(succeeded, {
+    type: 'checkout.completed',
+    provider: 'stripe',
+    orderId: 41,
+    checkoutId: 'cs_async',
+    paymentId: 'pi_async',
+    customerEmail: 'a@b.com',
+    customerName: 'Ada Lovelace',
+    amountMinor: 19900,
+    currency: 'usd',
+  });
+
+  const failed = mapStripeWebhookEvent({
+    type: 'checkout.session.async_payment_failed',
+    data: {
+      object: {
+        id: 'cs_async',
+        client_reference_id: '41',
+        payment_status: 'unpaid',
+        payment_intent: 'pi_async',
+      },
+    },
+  });
+  assert.deepStrictEqual(failed, {
+    type: 'checkout.closed',
+    provider: 'stripe',
+    orderId: 41,
+    checkoutId: 'cs_async',
+    paymentId: 'pi_async',
+    status: 'Failed',
+  });
+
+  const expired = mapStripeWebhookEvent({
+    type: 'checkout.session.expired',
+    data: {
+      object: {
+        id: 'cs_expired',
+        client_reference_id: '41',
+        payment_status: 'unpaid',
+      },
+    },
+  });
+  assert.deepStrictEqual(expired, {
+    type: 'checkout.closed',
+    provider: 'stripe',
+    orderId: 41,
+    checkoutId: 'cs_expired',
+    paymentId: null,
+    status: 'Cancelled',
   });
 });
 

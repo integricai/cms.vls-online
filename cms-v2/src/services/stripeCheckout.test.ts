@@ -1,7 +1,11 @@
 import assert from 'assert';
 import crypto from 'crypto';
 import { resolveCheckoutEnvironment } from './attribution';
-import { stripeSecretKeyForEnvironment, verifyStripeWebhook } from './stripeCheckout';
+import {
+  STRIPE_WEBHOOK_TOLERANCE_SECONDS,
+  stripeSecretKeyForEnvironment,
+  verifyStripeWebhook,
+} from './stripeCheckout';
 
 function run(name: string, fn: () => void): void {
   try {
@@ -25,8 +29,7 @@ process.env.STRIPE_SECRET_KEY_LIVE = 'sk_live_prod';
 process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test';
 process.env.STRIPE_WEBHOOK_SECRET_LIVE = 'whsec_live';
 
-function signedHeader(payload: string, secret: string): string {
-  const timestamp = '1710000000';
+function signedHeader(payload: string, secret: string, timestamp = Math.floor(Date.now() / 1000)): string {
   const signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${payload}`).digest('hex');
   return `t=${timestamp},v1=${signature}`;
 }
@@ -109,6 +112,33 @@ run('production deployment ignores the test webhook secret', () => {
       signedHeader(livePayload, 'whsec_live'),
     ) as { id?: string };
     assert.strictEqual(liveEvent.id, 'evt_live');
+  });
+});
+
+run('rejects a replayed webhook outside the tolerance window', () => {
+  withDeploymentEnv({}, () => {
+    const payload = JSON.stringify({ id: 'evt_old', livemode: false });
+    const stale = Math.floor(Date.now() / 1000) - STRIPE_WEBHOOK_TOLERANCE_SECONDS - 60;
+    assert.throws(
+      () => verifyStripeWebhook(Buffer.from(payload), signedHeader(payload, 'whsec_test', stale)),
+      /Stripe webhook timestamp is outside the tolerance window/,
+    );
+  });
+});
+
+run('accepts any v1 signature when the header carries several', () => {
+  withDeploymentEnv({}, () => {
+    const payload = JSON.stringify({ id: 'evt_multi', livemode: false });
+    const timestamp = Math.floor(Date.now() / 1000);
+    const valid = crypto.createHmac('sha256', 'whsec_test').update(`${timestamp}.${payload}`).digest('hex');
+    const other = 'ab'.repeat(32);
+    const header = `t=${timestamp},v1=${valid},v1=${other}`;
+    const event = verifyStripeWebhook(Buffer.from(payload), header) as { id?: string };
+    assert.strictEqual(event.id, 'evt_multi');
+
+    const reversed = `t=${timestamp},v1=${other},v1=${valid}`;
+    const reversedEvent = verifyStripeWebhook(Buffer.from(payload), reversed) as { id?: string };
+    assert.strictEqual(reversedEvent.id, 'evt_multi');
   });
 });
 

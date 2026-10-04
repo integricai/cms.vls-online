@@ -401,6 +401,26 @@ export async function markPaymentOrderPaid(data: {
   return { order: rowToOrder(paid), wasAlreadyPaid: false };
 }
 
+/** Pending → Failed or Cancelled. Paid and refunded orders are left unchanged. */
+export async function closePendingPaymentOrder(data: {
+  orderId: number;
+  status: 'Failed' | 'Cancelled';
+}): Promise<PaymentOrder> {
+  const rows = await sql`
+    UPDATE payment_orders
+    SET status = ${data.status}
+    WHERE id = ${data.orderId}
+      AND status = 'Pending'
+    RETURNING *
+  `;
+  const closed = rows[0] as DbRow | undefined;
+  if (closed) return rowToOrder(closed);
+
+  const current = await getPaymentOrder(data.orderId);
+  if (!current) throw new Error('Payment order not found');
+  return current;
+}
+
 export async function markPaymentOrderRefunded(data: {
   orderId: number;
   provider?: PaymentProviderId | null;

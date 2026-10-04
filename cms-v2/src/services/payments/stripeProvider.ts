@@ -52,7 +52,7 @@ async function findStripeOrder(mapped: ProviderWebhookEvent): Promise<PaymentOrd
   if (mapped.type === 'ignored') return null;
   // Loaded on demand so mapping tests do not open the database.
   const orders = await import('../../models/paymentOrder');
-  if (mapped.type === 'checkout.completed') {
+  if (mapped.type === 'checkout.completed' || mapped.type === 'checkout.closed') {
     if (Number.isInteger(mapped.orderId) && (mapped.orderId ?? 0) > 0) {
       const byId = await orders.getPaymentOrder(mapped.orderId as number);
       if (byId) return byId;
@@ -68,24 +68,49 @@ async function findStripeOrder(mapped: ProviderWebhookEvent): Promise<PaymentOrd
   return null;
 }
 
+function sessionOrderId(object: Record<string, any>): number | null {
+  const orderId = Number(object.client_reference_id ?? object.metadata?.orderId);
+  return Number.isInteger(orderId) ? orderId : null;
+}
+
+function checkoutCompletedFromSession(object: Record<string, any>): CheckoutCompletedEvent {
+  return {
+    type: 'checkout.completed',
+    provider: 'stripe',
+    orderId: sessionOrderId(object),
+    checkoutId: typeof object.id === 'string' ? object.id : null,
+    paymentId: extractStripeId(object.payment_intent),
+    customerEmail: object.customer_details?.email ?? object.customer_email ?? null,
+    customerName: typeof object.customer_details?.name === 'string' ? object.customer_details.name : null,
+    amountMinor: typeof object.amount_total === 'number' ? object.amount_total : null,
+    currency: typeof object.currency === 'string' ? object.currency : null,
+  };
+}
+
 export function mapStripeWebhookEvent(event: unknown): ProviderWebhookEvent {
   const payload = asRecord(event);
   const type = typeof payload.type === 'string' ? payload.type : '';
   const object = asRecord(payload.data?.object);
 
-  if (type === 'checkout.session.completed') {
-    const completed: CheckoutCompletedEvent = {
-      type: 'checkout.completed',
+  // Delayed methods (bank debit, etc.) emit completed while payment_status is still unpaid.
+  // Enrolment waits for paid, which arrives on this event or on async_payment_succeeded.
+  if (type === 'checkout.session.completed' || type === 'checkout.session.async_payment_succeeded') {
+    const paymentStatus = typeof object.payment_status === 'string' ? object.payment_status : '';
+    if (paymentStatus !== 'paid') {
+      return { type: 'ignored', provider: 'stripe', reason: `${type}:${paymentStatus || 'unpaid'}` };
+    }
+    return checkoutCompletedFromSession(object);
+  }
+
+  if (type === 'checkout.session.async_payment_failed' || type === 'checkout.session.expired') {
+    return {
+      type: 'checkout.closed',
       provider: 'stripe',
-      orderId: Number(object.client_reference_id ?? object.metadata?.orderId),
+      orderId: sessionOrderId(object),
       checkoutId: typeof object.id === 'string' ? object.id : null,
       paymentId: extractStripeId(object.payment_intent),
-      customerEmail: object.customer_details?.email ?? object.customer_email ?? null,
-      customerName: typeof object.customer_details?.name === 'string' ? object.customer_details.name : null,
-      amountMinor: typeof object.amount_total === 'number' ? object.amount_total : null,
-      currency: typeof object.currency === 'string' ? object.currency : null,
+      status: type === 'checkout.session.expired' ? 'Cancelled' : 'Failed',
     };
-    return completed;
   }
 
   if (type === 'charge.refunded') {

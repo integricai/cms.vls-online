@@ -1,6 +1,7 @@
 import { splitStudentName, upsertCustomer } from '../../models/customer';
 import {
   claimOrderEmailSend,
+  closePendingPaymentOrder,
   getPaymentOrder,
   getPaymentOrderByCheckoutId,
   getPaymentOrderByPaymentId,
@@ -28,9 +29,17 @@ import {
   type ZenlerEnrollmentEmailContext,
 } from '../zenlerEnrollmentEnsure';
 import { getPaymentProvider } from './registry';
-import { customerSourceForProvider, type CheckoutCompletedEvent, type PaymentProviderId, type RefundCompletedEvent } from './types';
+import {
+  customerSourceForProvider,
+  type CheckoutClosedEvent,
+  type CheckoutCompletedEvent,
+  type PaymentProviderId,
+  type RefundCompletedEvent,
+} from './types';
 
-async function resolveOrderForCheckout(event: CheckoutCompletedEvent): Promise<PaymentOrder | null> {
+async function resolveOrderForCheckout(
+  event: Pick<CheckoutCompletedEvent, 'orderId' | 'checkoutId' | 'paymentId' | 'provider'>,
+): Promise<PaymentOrder | null> {
   if (Number.isInteger(event.orderId) && event.orderId! > 0) {
     const byId = await getPaymentOrder(event.orderId!);
     if (byId) return byId;
@@ -209,7 +218,7 @@ export async function fulfillPaidCheckout(event: CheckoutCompletedEvent): Promis
   if (existing.status === 'Paid') {
     return reconcilePaidOrder(existing);
   }
-  if (existing.status === 'Cancelled' || existing.status === 'Refunded') return existing;
+  if (existing.status === 'Cancelled' || existing.status === 'Failed' || existing.status === 'Refunded') return existing;
 
   let { order, wasAlreadyPaid } = await markPaymentOrderPaid({
     orderId: existing.id,
@@ -253,6 +262,15 @@ export async function fulfillPaidCheckout(event: CheckoutCompletedEvent): Promis
     throw new Error(`Zenler enrolment incomplete for order ${order.id}; student confirmation held`);
   }
   return order;
+}
+
+export async function closeAbandonedCheckout(event: CheckoutClosedEvent): Promise<PaymentOrder | null> {
+  const existing = await resolveOrderForCheckout(event);
+  if (!existing || existing.status !== 'Pending') return existing;
+  return closePendingPaymentOrder({
+    orderId: existing.id,
+    status: event.status,
+  });
 }
 
 export async function fulfillRefund(event: RefundCompletedEvent): Promise<PaymentOrder | null> {

@@ -12,6 +12,7 @@ import {
 } from '../models/paymentOrder';
 import {
   capturePendingProviderCheckout,
+  closeAbandonedCheckout,
   fulfillPaidCheckout,
   fulfillRefund,
   reconcilePaidOrder,
@@ -173,6 +174,12 @@ async function handleProviderWebhook(providerId: PaymentProviderId, req: Request
 
     if (event.type === 'refund.completed') {
       await fulfillRefund(event);
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    if (event.type === 'checkout.closed') {
+      await closeAbandonedCheckout(event);
       res.status(200).json({ ok: true });
       return;
     }

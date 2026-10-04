@@ -58,6 +58,16 @@ export interface RefundCompletedEvent {
   checkoutId?: string | null;
 }
 
+/** Async payment failed, or the Checkout Session expired before payment. */
+export interface CheckoutClosedEvent {
+  type: 'checkout.closed';
+  provider: PaymentProviderId;
+  orderId: number | null;
+  checkoutId: string | null;
+  paymentId: string | null;
+  status: 'Failed' | 'Cancelled';
+}
+
 export interface IgnoredWebhookEvent {
   type: 'ignored';
   provider: PaymentProviderId;
@@ -66,6 +76,7 @@ export interface IgnoredWebhookEvent {
 
 export type ProviderWebhookEvent =
   | CheckoutCompletedEvent
+  | CheckoutClosedEvent
   | RefundCompletedEvent
   | IgnoredWebhookEvent;
 
