@@ -43,6 +43,7 @@ import {
   parseComboStorySlug,
   validateMultiCourseAccessSelection,
 } from '../services/multiCourseAccess';
+import { resolveConfiguredComboZenlerCourseIds } from '../services/multiCourseStoryblokAllowlist';
 
 const router = Router();
 
@@ -391,11 +392,14 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
 
     const requestedAccessIds = parseAccessZenlerCourseIds(req.body ?? {});
     const comboStorySlug = parseComboStorySlug(req.body ?? {});
+    const configuredComboZenlerCourseIds = await resolveConfiguredComboZenlerCourseIds();
     let accessZenlerCourseIds: string[] | null = null;
     try {
       assertBundleCheckoutHasSelection({
         comboStorySlug,
         accessZenlerCourseIds: requestedAccessIds,
+        zenlerCourseId: course.zenlerCourseId,
+        configuredComboZenlerCourseIds,
       });
       if (requestedAccessIds.length > 0) {
         accessZenlerCourseIds = await validateMultiCourseAccessSelection({

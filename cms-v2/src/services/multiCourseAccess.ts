@@ -39,16 +39,33 @@ export function parseComboStorySlug(body: Record<string, unknown>): string {
   return slug;
 }
 
+/** True when this CMS course is a combo price course, independent of the request slug. */
+export function isComboPricingCourse(input: {
+  zenlerCourseId?: string | null;
+  configuredComboZenlerCourseIds?: Iterable<string> | null;
+}): boolean {
+  const id = String(input.zenlerCourseId ?? '').trim();
+  if (!/^\d+$/.test(id)) return false;
+  for (const configured of input.configuredComboZenlerCourseIds ?? []) {
+    if (String(configured).trim() === id) return true;
+  }
+  return false;
+}
+
 /**
- * A combo-pack checkout names its Storyblok page. That checkout must also name
- * the papers to enrol. Without a selection, fulfillment enrols the bundle's own
- * Zenler course.
+ * A combo checkout must name the papers to enrol. The combo page slug is one
+ * signal; the course's Zenler ID matching a configured combo price course is
+ * the other. Without a selection, fulfillment enrols the bundle's own Zenler course.
  */
 export function assertBundleCheckoutHasSelection(input: {
   comboStorySlug?: string | null;
   accessZenlerCourseIds?: string[] | null;
+  zenlerCourseId?: string | null;
+  configuredComboZenlerCourseIds?: Iterable<string> | null;
 }): void {
-  if (!normalizeComboStorySlug(input.comboStorySlug)) return;
+  const comboCheckout = Boolean(normalizeComboStorySlug(input.comboStorySlug))
+    || isComboPricingCourse(input);
+  if (!comboCheckout) return;
   if ((input.accessZenlerCourseIds?.length ?? 0) > 0) return;
   throw new MultiCourseAccessError(
     'Select the courses included in this combo pack before checkout.',

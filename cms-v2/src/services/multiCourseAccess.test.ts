@@ -1,7 +1,12 @@
 import assert from 'assert';
-import { extractMultiCoursePaperZenlerIds } from './multiCourseStoryblokAllowlist';
+import {
+  comboPricingZenlerIdFromStoryContent,
+  comboZenlerIdsFromEnv,
+  extractMultiCoursePaperZenlerIds,
+} from './multiCourseStoryblokAllowlist';
 import {
   assertBundleCheckoutHasSelection,
+  isComboPricingCourse,
   MultiCourseAccessError,
   parseAccessZenlerCourseIds,
 } from './multiCourseAccess';
@@ -41,7 +46,43 @@ run('single-course checkout does not require a selection', () => {
   assert.doesNotThrow(() => assertBundleCheckoutHasSelection({
     comboStorySlug: '',
     accessZenlerCourseIds: [],
+    zenlerCourseId: '999',
+    configuredComboZenlerCourseIds: ['165390'],
   }));
+});
+
+run('combo course without a slug or selection is rejected', () => {
+  assert.throws(
+    () => assertBundleCheckoutHasSelection({
+      comboStorySlug: '',
+      accessZenlerCourseIds: [],
+      zenlerCourseId: '165390',
+      configuredComboZenlerCourseIds: ['165390'],
+    }),
+    (err: unknown) => err instanceof MultiCourseAccessError && err.status === 400,
+  );
+});
+
+run('configured combo zenler ids come from the env list and combo page content', () => {
+  assert.deepStrictEqual(comboZenlerIdsFromEnv('165390, 165390 42'), ['165390', '42']);
+  assert.strictEqual(
+    comboPricingZenlerIdFromStoryContent({
+      component: 'multi_course_page',
+      zenler_course_id: { value: '165390', name: 'Combo' },
+    }),
+    '165390',
+  );
+  assert.strictEqual(
+    comboPricingZenlerIdFromStoryContent({
+      component: 'course_page',
+      zenler_course_id: '165390',
+    }),
+    '',
+  );
+  assert.strictEqual(isComboPricingCourse({
+    zenlerCourseId: '165390',
+    configuredComboZenlerCourseIds: ['165390'],
+  }), true);
 });
 
 run('combo checkout with a selection is allowed through', () => {
