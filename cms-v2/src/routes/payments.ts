@@ -31,7 +31,7 @@ import {
   PricingResolutionError,
   resolveCoursePrice,
 } from '../services/pricingResolver';
-import { isParityDealsTestRequest } from '../services/parityDealsTest';
+import { isParityDealsTestAllowed, isParityDealsTestRequest } from '../services/parityDealsTest';
 import { ensureZenlerEnrollmentForPaidOrder } from '../services/zenlerEnrollmentEnsure';
 import { courseAccessUrlForEnrollment } from '../services/schoolAccess';
 import { parseCheckoutAttribution, resolveCheckoutEnvironment } from '../services/attribution';
@@ -312,9 +312,11 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
 
     const geo = detectCountryFromRequest(req);
     const clientIp = detectClientIpFromRequest(req);
-    const parityTest = isParityDealsTestRequest(req)
+    const parityTest = isParityDealsTestAllowed() && (
+      isParityDealsTestRequest(req)
       || req.body?.parityDealsTest === true
-      || String(req.body?.test ?? '').toLowerCase() === 'true';
+      || String(req.body?.test ?? '').toLowerCase() === 'true'
+    );
     const campaignCode = String(req.body?.campaignCode ?? '').trim() || null;
     const durationRaw = Number(req.body?.durationMonths);
     const durationMonths = Number.isInteger(durationRaw) && durationRaw >= 1 && durationRaw <= 6
