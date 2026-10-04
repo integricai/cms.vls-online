@@ -117,6 +117,16 @@ function strikethroughAmount(listAmount: number, compareAt: number | null, effec
   return null;
 }
 
+/** Prefer the Evendeals quoted country when a regional discount was applied. */
+export function resolveDisplayCountry(
+  headerCountry: string | null | undefined,
+  plans: Array<{ geoRegionCode: string | null }>,
+): string | null {
+  return plans.find(plan => plan.geoRegionCode)?.geoRegionCode
+    ?? headerCountry
+    ?? null;
+}
+
 function buildPlanFields(
   price: CourseGeoPrice,
   options: {
@@ -318,7 +328,11 @@ export async function buildCourseDisplayPricing(
     });
   }
 
-  plans = await applyLocalDisplayCurrency(resolvedPlans, input.countryCode, input.fxRates);
+  plans = await applyLocalDisplayCurrency(
+    resolvedPlans,
+    resolveDisplayCountry(input.countryCode, resolvedPlans),
+    input.fxRates,
+  );
 
   const defaultPlan = plans.find(p => p.isDefault) ?? plans[0]!;
 

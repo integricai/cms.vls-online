@@ -6,6 +6,7 @@ import {
   getNextAccaExamSessions,
   monthsUntilExamSession,
   planDurationSortKey,
+  resolveDisplayCountry,
 } from './courseDisplayPricing';
 import {
   getNextOpenExamSessions,
@@ -416,6 +417,12 @@ await run('missing FX rate falls back to USD', async () => {
   assert.strictEqual(result!.displayCurrency, 'USD');
   assert.strictEqual(result!.fxApplied, false);
   assert.strictEqual(result!.formatted, '$89');
+});
+
+await run('resolveDisplayCountry prefers Evendeals quoted country', () => {
+  assert.strictEqual(resolveDisplayCountry('US', [{ geoRegionCode: 'PK' }]), 'PK');
+  assert.strictEqual(resolveDisplayCountry('IN', [{ geoRegionCode: null }]), 'IN');
+  assert.strictEqual(resolveDisplayCountry(null, [{ geoRegionCode: null }]), null);
 });
 
 console.log('All courseDisplayPricing tests passed.');
