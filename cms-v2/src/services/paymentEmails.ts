@@ -1,6 +1,6 @@
 import type { PaymentOrder } from '../models/paymentOrder';
 import type { ZenlerEnrollmentEmailContext } from './zenlerEnrollmentEnsure';
-import { VLS_SCHOOL_LOGIN_URL } from './schoolAccess';
+import { VLS_SCHOOL_LOGIN_URL, VLS_SCHOOL_PASSWORD_RESET_URL } from './schoolAccess';
 
 const VLS_SITE_URL = 'https://vls-online.com';
 const BRAND = {
@@ -189,6 +189,80 @@ function renderBrandedEmail(input: {
 </html>`;
 }
 
+export function studentPaymentAccessInstructions(input: {
+  email: string;
+  access?: ZenlerEnrollmentEmailContext | null;
+}): { text: string; html: string } {
+  const to = input.email;
+  const access = input.access;
+  const loginUrl = access?.courseAccessUrl ?? VLS_SCHOOL_LOGIN_URL;
+
+  if (access?.zenlerEnrollmentStatus.startsWith('enrolled')) {
+    if (access.isNewZenlerUser && access.temporaryPassword) {
+      return {
+        text: `
+Access your course at: ${loginUrl}
+Email: ${to}
+Temporary password: ${access.temporaryPassword}
+
+Please log in and change your password after your first sign-in. Your enrolled course will appear under My Courses.
+
+`,
+        html: `
+${p(`Please use the button below to access your course.`)}
+${ctaButton(loginUrl, 'Access your course')}
+${p(`<strong style="color:${BRAND.navy};">Email:</strong> ${esc(to)}<br>
+<strong style="color:${BRAND.navy};">Temporary password:</strong> ${esc(access.temporaryPassword)}`)}
+${p(`Please log in and change your password after your first sign-in. Your enrolled course will appear under <strong>My Courses</strong>.`)}`,
+      };
+    }
+
+    if (access.isNewZenlerUser) {
+      return {
+        text: `
+We created a VLS school account for ${to}, but this message does not include a temporary password.
+
+Set your password at: ${VLS_SCHOOL_PASSWORD_RESET_URL}
+Use the same email address you used for payment.
+
+Then sign in at: ${loginUrl}
+Your enrolled course will appear under My Courses.
+
+`,
+        html: `
+${p(`We created a VLS school account for <strong>${esc(to)}</strong>, but this message does not include a temporary password.`)}
+${p(`Set your password with the button below, using the same email address you used for payment.`)}
+${ctaButton(VLS_SCHOOL_PASSWORD_RESET_URL, 'Set your password')}
+${p(`Then sign in at <a href="${esc(loginUrl)}" style="color:${BRAND.navySoft};">${esc(loginUrl)}</a>. Your enrolled course will appear under <strong>My Courses</strong>.`)}`,
+      };
+    }
+
+    return {
+      text: `
+Access your course at: ${loginUrl}
+Sign in with your existing VLS school account. Your enrolled course will appear under My Courses.
+
+`,
+      html: `
+${p(`Please use the button below to access your course.`)}
+${ctaButton(loginUrl, 'Access your course')}
+${p(`Sign in with your existing VLS school account. Your enrolled course will appear under <strong>My Courses</strong>.`)}`,
+    };
+  }
+
+  return {
+    text: `
+Access your course at: ${loginUrl}
+If you are a new student, create your account at https://school.vls-online.com/register using the same email address you used for payment.
+
+`,
+    html: `
+${p(`Please use the button below to access your course.`)}
+${ctaButton(loginUrl, 'Access your course')}
+${p(`If you are a new student, create your account at <a href="https://school.vls-online.com/register" style="color:${BRAND.navySoft};">school.vls-online.com/register</a> using the same email address you used for payment.`)}`,
+  };
+}
+
 export async function sendStudentPaymentConfirmation(
   order: PaymentOrder,
   access?: ZenlerEnrollmentEmailContext | null,
@@ -199,49 +273,7 @@ export async function sendStudentPaymentConfirmation(
   const name = order.studentName || 'Student';
   const option = order.optionType || 'Course payment';
   const amount = formatAmount(order);
-  const loginUrl = access?.courseAccessUrl ?? VLS_SCHOOL_LOGIN_URL;
-
-  let accessText = '';
-  let accessHtml = '';
-
-  if (access?.zenlerEnrollmentStatus.startsWith('enrolled')) {
-    if (access.isNewZenlerUser && access.temporaryPassword) {
-      accessText = `
-Access your course at: ${loginUrl}
-Email: ${to}
-Temporary password: ${access.temporaryPassword}
-
-Please log in and change your password after your first sign-in. Your enrolled course will appear under My Courses.
-
-`;
-      accessHtml = `
-${p(`Please use the button below to access your course.`)}
-${ctaButton(loginUrl, 'Access your course')}
-${p(`<strong style="color:${BRAND.navy};">Email:</strong> ${esc(to)}<br>
-<strong style="color:${BRAND.navy};">Temporary password:</strong> ${esc(access.temporaryPassword)}`)}
-${p(`Please log in and change your password after your first sign-in. Your enrolled course will appear under <strong>My Courses</strong>.`)}`;
-    } else {
-      accessText = `
-Access your course at: ${loginUrl}
-Sign in with your existing VLS school account. Your enrolled course will appear under My Courses.
-
-`;
-      accessHtml = `
-${p(`Please use the button below to access your course.`)}
-${ctaButton(loginUrl, 'Access your course')}
-${p(`Sign in with your existing VLS school account. Your enrolled course will appear under <strong>My Courses</strong>.`)}`;
-    }
-  } else {
-    accessText = `
-Access your course at: ${loginUrl}
-If you are a new student, create your account at https://school.vls-online.com/register using the same email address you used for payment.
-
-`;
-      accessHtml = `
-${p(`Please use the button below to access your course.`)}
-${ctaButton(loginUrl, 'Access your course')}
-${p(`If you are a new student, create your account at <a href="https://school.vls-online.com/register" style="color:${BRAND.navySoft};">school.vls-online.com/register</a> using the same email address you used for payment.`)}`;
-  }
+  const accessInstructions = studentPaymentAccessInstructions({ email: to, access });
 
   const text = `Hi ${name},
 
@@ -254,7 +286,7 @@ Option: ${option}
 Amount paid: ${amount}
 
 Your payment has been confirmed.
-${accessText}
+${accessInstructions.text}
 Kind regards,
 VLS Online`;
 
@@ -268,7 +300,7 @@ ${detailTable([
     { label: 'Amount paid', value: amount },
   ])}
 ${p(`Your payment has been confirmed.`)}
-${accessHtml}`;
+${accessInstructions.html}`;
 
   await sendEmail({
     to,

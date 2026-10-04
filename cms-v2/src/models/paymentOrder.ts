@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { sql } from '../db/client';
 import type { CheckoutAttribution, CheckoutEnvironment, ConversionUploadStatus } from '../services/attribution';
 import { parsePaymentProviderId, type PaymentProviderId } from '../services/payments/types';
@@ -463,7 +464,10 @@ export async function updateZenlerEnrollment(
       UPDATE payment_orders
       SET zenler_user_id = ${data.zenlerUserId},
           zenler_enrollment_status = ${data.zenlerEnrollmentStatus},
-          zenler_user_created = COALESCE(${data.zenlerUserCreated ?? null}, zenler_user_created)
+          zenler_user_created = CASE
+            WHEN ${data.zenlerUserCreated === true} THEN true
+            ELSE zenler_user_created
+          END
       WHERE id = ${orderId}
     `;
   } catch (err) {
@@ -540,6 +544,64 @@ export async function listPaidConversionOrders(input: {
   };
 }
 
+/**
+ * Paid orders whose Zenler enrolment or confirmation emails did not finish.
+ * Limited to a recent paid_at window so historical rows with null send
+ * timestamps are not emailed again. Never-attempted rows come first, then
+ * the least recently attempted, so persistent failures rotate out of the batch.
+ */
+export async function listPaidOrdersNeedingReconciliation(input: {
+  limit: number;
+  minAgeMinutes: number;
+  lookbackDays: number;
+  includeAdminEmail: boolean;
+}): Promise<PaymentOrder[]> {
+  const limit = Math.min(Math.max(Math.trunc(input.limit), 1), 50);
+  const minAgeMinutes = Math.max(Math.trunc(input.minAgeMinutes), 0);
+  const lookbackDays = Math.max(Math.trunc(input.lookbackDays), 1);
+  const includeAdminEmail = input.includeAdminEmail;
+
+  const rows = await sql`
+    SELECT po.*
+    FROM payment_orders po
+    WHERE po.status = 'Paid'
+      AND po.paid_at IS NOT NULL
+      AND po.paid_at <= NOW() - make_interval(mins => ${minAgeMinutes})
+      AND po.paid_at >= NOW() - make_interval(days => ${lookbackDays})
+      AND (
+        (
+          po.confirmation_email_sent_at IS NULL
+          AND length(btrim(COALESCE(po.student_email, po.provider_customer_email, po.stripe_customer_email, ''))) > 0
+        )
+        OR (
+          ${includeAdminEmail}::boolean
+          AND po.admin_email_sent_at IS NULL
+        )
+        OR (
+          (
+            po.zenler_enrollment_status IS NULL
+            OR po.zenler_enrollment_status IN ('pending', 'failed', 'skipped', '')
+          )
+          AND length(btrim(COALESCE(po.student_email, po.stripe_customer_email, ''))) > 0
+          AND (
+            EXISTS (
+              SELECT 1
+              FROM unnest(COALESCE(po.access_zenler_course_ids, ARRAY[]::text[])) AS cid
+              WHERE btrim(cid) ~ '^[0-9]+$'
+            )
+            OR (
+              COALESCE(cardinality(po.access_zenler_course_ids), 0) = 0
+              AND btrim(COALESCE(po.zenler_course_id, '')) ~ '^[0-9]+$'
+            )
+          )
+        )
+      )
+    ORDER BY po.fulfillment_attempted_at ASC NULLS FIRST, po.paid_at ASC
+    LIMIT ${limit}
+  `;
+  return (rows as DbRow[]).map(rowToOrder);
+}
+
 export async function listPurchaseConversionsDueForUpload(input: {
   limit: number;
   delayHours: number;
@@ -596,17 +658,104 @@ export function paymentOrderRefundId(order: PaymentOrder): string | null {
   return order.providerRefundId ?? order.stripeRefundId ?? null;
 }
 
-export async function markOrderEmailsSent(orderId: number, sent: { student?: boolean; admin?: boolean }): Promise<void> {
+/** Long enough to cover a live send, short enough that a crashed claim is retried. */
+const EMAIL_CLAIM_MINUTES = 2;
+
+/**
+ * Take an expiring claim. The sent timestamp stays null until delivery succeeds.
+ * A crashed process leaves the claim to expire so a later attempt can send.
+ * Returns the claim token, or null when another live claim already owns the send.
+ */
+export async function claimOrderEmailSend(orderId: number, kind: 'student' | 'admin'): Promise<string | null> {
+  const claimMinutes = EMAIL_CLAIM_MINUTES;
+  const token = randomUUID();
+  const rows = kind === 'student'
+    ? await sql`
+        UPDATE payment_orders
+        SET confirmation_email_claim_until = NOW() + make_interval(mins => ${claimMinutes}),
+            confirmation_email_claim_token = ${token}
+        WHERE id = ${orderId}
+          AND confirmation_email_sent_at IS NULL
+          AND (
+            confirmation_email_claim_until IS NULL
+            OR confirmation_email_claim_until < NOW()
+          )
+        RETURNING id
+      `
+    : await sql`
+        UPDATE payment_orders
+        SET admin_email_claim_until = NOW() + make_interval(mins => ${claimMinutes}),
+            admin_email_claim_token = ${token}
+        WHERE id = ${orderId}
+          AND admin_email_sent_at IS NULL
+          AND (
+            admin_email_claim_until IS NULL
+            OR admin_email_claim_until < NOW()
+          )
+        RETURNING id
+      `;
+  return rows.length > 0 ? token : null;
+}
+
+export async function markOrderEmailSent(
+  orderId: number,
+  kind: 'student' | 'admin',
+  claimToken: string,
+): Promise<void> {
+  if (kind === 'student') {
+    await sql`
+      UPDATE payment_orders
+      SET confirmation_email_sent_at = NOW(),
+          confirmation_email_claim_until = NULL,
+          confirmation_email_claim_token = NULL
+      WHERE id = ${orderId}
+        AND confirmation_email_sent_at IS NULL
+        AND confirmation_email_claim_token = ${claimToken}
+    `;
+    return;
+  }
   await sql`
     UPDATE payment_orders
-    SET confirmation_email_sent_at = CASE
-          WHEN ${sent.student === true} THEN COALESCE(confirmation_email_sent_at, NOW())
-          ELSE confirmation_email_sent_at
-        END,
-        admin_email_sent_at = CASE
-          WHEN ${sent.admin === true} THEN COALESCE(admin_email_sent_at, NOW())
-          ELSE admin_email_sent_at
-        END
+    SET admin_email_sent_at = NOW(),
+        admin_email_claim_until = NULL,
+        admin_email_claim_token = NULL
+    WHERE id = ${orderId}
+      AND admin_email_sent_at IS NULL
+      AND admin_email_claim_token = ${claimToken}
+  `;
+}
+
+export async function releaseOrderEmailSend(
+  orderId: number,
+  kind: 'student' | 'admin',
+  claimToken: string,
+): Promise<void> {
+  if (kind === 'student') {
+    await sql`
+      UPDATE payment_orders
+      SET confirmation_email_claim_until = NULL,
+          confirmation_email_claim_token = NULL
+      WHERE id = ${orderId}
+        AND confirmation_email_sent_at IS NULL
+        AND confirmation_email_claim_token = ${claimToken}
+    `;
+    return;
+  }
+  await sql`
+    UPDATE payment_orders
+    SET admin_email_claim_until = NULL,
+        admin_email_claim_token = NULL
+    WHERE id = ${orderId}
+      AND admin_email_sent_at IS NULL
+      AND admin_email_claim_token = ${claimToken}
+  `;
+}
+
+/** Move this order behind others that have not been attempted yet. */
+export async function markFulfillmentAttempted(orderId: number): Promise<void> {
+  await sql`
+    UPDATE payment_orders
+    SET fulfillment_attempted_at = NOW()
     WHERE id = ${orderId}
   `;
 }

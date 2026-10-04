@@ -6,6 +6,7 @@ export const VLS_SCHOOL_BASE_URL = (
 
 export const VLS_SCHOOL_LOGIN_URL = `${VLS_SCHOOL_BASE_URL}/login`;
 export const VLS_SCHOOL_REGISTER_URL = `${VLS_SCHOOL_BASE_URL}/register`;
+export const VLS_SCHOOL_PASSWORD_RESET_URL = `${VLS_SCHOOL_BASE_URL}/password/reset`;
 
 export function courseAccessUrlForEnrollment(input: {
   zenlerEnrollmentStatus?: string | null;

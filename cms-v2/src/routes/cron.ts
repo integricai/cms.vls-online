@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { uploadDuePurchaseConversions } from '../services/googleAdsConversions';
 import { drainCourseUrlChanges, publishCourseRedirects } from '../services/courseUrlApply';
 import { summarizeCourseUrlChanges } from '../models/courseUrlChange';
+import { reconcileIncompletePaidOrders } from '../services/payments/fulfillment';
 
 const router = Router();
 
@@ -18,6 +19,8 @@ router.get('/course-url-changes', handleCourseUrlChanges);
 router.post('/course-url-changes', handleCourseUrlChanges);
 router.get('/course-redirects', handleCourseRedirects);
 router.post('/course-redirects', handleCourseRedirects);
+router.get('/payment-reconciliation', handlePaymentReconciliation);
+router.post('/payment-reconciliation', handlePaymentReconciliation);
 
 async function handlePurchaseUpload(req: Request, res: Response): Promise<void> {
   if (!cronAuthorized(req)) {
@@ -49,6 +52,23 @@ async function handleCourseUrlChanges(req: Request, res: Response): Promise<void
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Course URL update failed';
     console.error('[cron/course-url-changes]', err);
+    res.status(500).json({ ok: false, error: message });
+  }
+}
+
+async function handlePaymentReconciliation(req: Request, res: Response): Promise<void> {
+  if (!cronAuthorized(req)) {
+    res.status(401).json({ ok: false, error: 'Unauthorized' });
+    return;
+  }
+
+  try {
+    const result = await reconcileIncompletePaidOrders();
+    const ok = result.failed === 0;
+    res.status(ok ? 200 : 502).json({ ok, data: result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Payment reconciliation failed';
+    console.error('[cron/payment-reconciliation]', err);
     res.status(500).json({ ok: false, error: message });
   }
 }

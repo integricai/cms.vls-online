@@ -23,6 +23,20 @@ function zenlerCourseIdsForAccess(order: PaymentOrder): string[] {
   return /^\d+$/.test(primary) ? [primary] : [];
 }
 
+export function orderUsesZenlerAccess(order: PaymentOrder): boolean {
+  return zenlerCourseIdsForAccess(order).length > 0;
+}
+
+/** Paid Zenler order whose student access email must wait for a successful enrolment. */
+export function zenlerAccessStillBlockingStudentEmail(order: PaymentOrder): boolean {
+  if (!orderUsesZenlerAccess(order)) return false;
+  const email = (order.studentEmail ?? order.stripeCustomerEmail)?.trim();
+  if (!email) return false;
+  const status = String(order.zenlerEnrollmentStatus ?? '').toLowerCase();
+  if (status.startsWith('enrolled')) return false;
+  return RETRYABLE_STATUSES.has(order.zenlerEnrollmentStatus);
+}
+
 async function enrollOrderCourses(order: PaymentOrder) {
   const email = (order.studentEmail ?? order.stripeCustomerEmail)?.trim();
   const courseIds = zenlerCourseIdsForAccess(order);
@@ -85,9 +99,16 @@ export type ZenlerEnrollmentEmailContext = {
   zenlerEnrollmentStatus: string;
 };
 
+export function enrollmentEmailContextForOrder(order: PaymentOrder): ZenlerEnrollmentEmailContext | null {
+  if (!String(order.zenlerEnrollmentStatus ?? '').toLowerCase().startsWith('enrolled')) return null;
+  return emailContextFromOrder(order);
+}
+
 function emailContextFromOrder(order: PaymentOrder): ZenlerEnrollmentEmailContext {
   return {
     isNewZenlerUser: order.zenlerUserCreated,
+    // Retries do not have the original temporary password. The confirmation
+    // email sends password-reset instructions instead of an existing-account login.
     temporaryPassword: null,
     courseAccessUrl: courseAccessUrlForEnrollment({
       zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
@@ -97,16 +118,46 @@ function emailContextFromOrder(order: PaymentOrder): ZenlerEnrollmentEmailContex
   };
 }
 
+function emailContextFromEnrollment(enrollment: {
+  status: string;
+  isNewZenlerUser: boolean;
+  temporaryPassword: string | null;
+}): ZenlerEnrollmentEmailContext | null {
+  if (!String(enrollment.status).startsWith('enrolled')) return null;
+  return {
+    isNewZenlerUser: enrollment.isNewZenlerUser,
+    temporaryPassword: enrollment.temporaryPassword,
+    courseAccessUrl: courseAccessUrlForEnrollment({
+      zenlerEnrollmentStatus: enrollment.status,
+      isNewZenlerUser: enrollment.isNewZenlerUser,
+    }),
+    zenlerEnrollmentStatus: enrollment.status,
+  };
+}
+
+export type ZenlerEnrollmentEnsureResult = {
+  order: PaymentOrder;
+  emailContext: ZenlerEnrollmentEmailContext | null;
+};
+
 /** Enroll a paid order in Zenler when webhook or status backfill runs. */
-export async function ensureZenlerEnrollmentForPaidOrder(order: PaymentOrder) {
-  if (order.status !== 'Paid') return order;
+export async function ensureZenlerEnrollmentForPaidOrder(
+  order: PaymentOrder,
+): Promise<ZenlerEnrollmentEnsureResult> {
+  if (order.status !== 'Paid') return { order, emailContext: null };
 
   const currentStatus = String(order.zenlerEnrollmentStatus ?? '').toLowerCase();
-  if (currentStatus.startsWith('enrolled')) return order;
-  if (!RETRYABLE_STATUSES.has(order.zenlerEnrollmentStatus)) return order;
+  if (currentStatus.startsWith('enrolled')) {
+    return { order, emailContext: emailContextFromOrder(order) };
+  }
+  if (!RETRYABLE_STATUSES.has(order.zenlerEnrollmentStatus)) {
+    return { order, emailContext: null };
+  }
 
   const email = (order.studentEmail ?? order.stripeCustomerEmail)?.trim();
-  if (!email || zenlerCourseIdsForAccess(order).length === 0) return order;
+  if (!email || zenlerCourseIdsForAccess(order).length === 0) {
+    return { order, emailContext: null };
+  }
 
   const enrollment = await enrollOrderCourses(order);
 
@@ -120,8 +171,8 @@ export async function ensureZenlerEnrollmentForPaidOrder(order: PaymentOrder) {
     await updateCustomerZenlerUserId(order.customerId, enrollment.zenlerUserId);
   }
 
-  const refreshed = await getPaymentOrder(order.id);
-  return refreshed ?? order;
+  const refreshed = (await getPaymentOrder(order.id)) ?? order;
+  return { order: refreshed, emailContext: emailContextFromEnrollment(enrollment) };
 }
 
 /**
@@ -199,21 +250,5 @@ export async function runZenlerEnrollmentForPaidOrder(
   }
 
   const refreshed = (await getPaymentOrder(order.id)) ?? order;
-
-  if (!String(enrollment.status).startsWith('enrolled')) {
-    return { order: refreshed, emailContext: null };
-  }
-
-  return {
-    order: refreshed,
-    emailContext: {
-      isNewZenlerUser: enrollment.isNewZenlerUser,
-      temporaryPassword: enrollment.temporaryPassword,
-      courseAccessUrl: courseAccessUrlForEnrollment({
-        zenlerEnrollmentStatus: enrollment.status,
-        isNewZenlerUser: enrollment.isNewZenlerUser,
-      }),
-      zenlerEnrollmentStatus: enrollment.status,
-    },
-  };
+  return { order: refreshed, emailContext: emailContextFromEnrollment(enrollment) };
 }

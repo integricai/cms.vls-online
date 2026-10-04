@@ -6,6 +6,7 @@ import { splitStudentName, upsertCustomer } from '../models/customer';
 import {
   attachCheckoutSession,
   createPaymentOrder,
+  getPaymentOrder,
   getPaymentOrderByCheckoutId,
   paymentOrderPayerEmail,
 } from '../models/paymentOrder';
@@ -13,6 +14,7 @@ import {
   capturePendingProviderCheckout,
   fulfillPaidCheckout,
   fulfillRefund,
+  reconcilePaidOrder,
 } from '../services/payments/fulfillment';
 import { getPaymentProvider, isPaymentProviderEnabled, listEnabledPaymentProviders } from '../services/payments/registry';
 import {
@@ -21,7 +23,7 @@ import {
   type CreateCheckoutInput,
   type PaymentProviderId,
 } from '../services/payments/types';
-import { ensureSaleRecordedForPaidOrder } from '../services/saleRecording';
+import { parseCheckoutAttribution, resolveCheckoutEnvironment } from '../services/attribution';
 import {
   detectClientIpFromRequest,
   detectCountryFromRequest,
@@ -32,9 +34,7 @@ import {
   resolveCoursePrice,
 } from '../services/pricingResolver';
 import { isParityDealsTestAllowed, isParityDealsTestRequest } from '../services/parityDealsTest';
-import { ensureZenlerEnrollmentForPaidOrder } from '../services/zenlerEnrollmentEnsure';
 import { courseAccessUrlForEnrollment } from '../services/schoolAccess';
-import { parseCheckoutAttribution, resolveCheckoutEnvironment } from '../services/attribution';
 import { freeEnrolHandler } from './freeEnrol';
 import {
   MultiCourseAccessError,
@@ -489,8 +489,12 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
     }
 
     if (order.status === 'Paid') {
-      await ensureSaleRecordedForPaidOrder(order);
-      order = await ensureZenlerEnrollmentForPaidOrder(order);
+      try {
+        order = await reconcilePaidOrder(order);
+      } catch (err) {
+        console.error('[payments] status reconcile failed', err);
+        order = (await getPaymentOrder(order.id)) ?? order;
+      }
     }
 
     return res.json({
