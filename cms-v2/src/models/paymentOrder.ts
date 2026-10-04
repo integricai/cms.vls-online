@@ -369,6 +369,8 @@ export async function markPaymentOrderPaid(data: {
     );
   }
 
+  // Claim Pending → Paid in one statement. A concurrent webhook and /status
+  // both see Pending on the read above; only the update that matches wins.
   const rows = await sql`
     UPDATE payment_orders
     SET status = 'Paid',
@@ -383,9 +385,19 @@ export async function markPaymentOrderPaid(data: {
         currency = ${currency},
         paid_at = COALESCE(paid_at, NOW())
     WHERE id = ${data.orderId}
+      AND status = 'Pending'
     RETURNING *
   `;
-  return { order: rowToOrder(rows[0] as DbRow), wasAlreadyPaid: false };
+  const paid = rows[0] as DbRow | undefined;
+  if (!paid) {
+    const current = await getPaymentOrder(data.orderId);
+    if (!current) throw new Error('Payment order not found');
+    if (current.status === 'Paid' || current.status === 'Refunded') {
+      return { order: current, wasAlreadyPaid: true };
+    }
+    throw new Error(`Cannot mark payment order paid in status ${current.status}`);
+  }
+  return { order: rowToOrder(paid), wasAlreadyPaid: false };
 }
 
 export async function markPaymentOrderRefunded(data: {
@@ -411,6 +423,8 @@ export async function markPaymentOrderRefunded(data: {
   const stripeRefundId = provider === 'stripe' ? refundId : existing.stripeRefundId;
   const stripePaymentId = provider === 'stripe' ? paymentId : existing.stripePaymentIntentId;
 
+  // Claim Paid → Refunded in one statement so concurrent refund calls
+  // cannot both send the confirmation email.
   const rows = await sql`
     UPDATE payment_orders
     SET status = 'Refunded',
@@ -421,9 +435,19 @@ export async function markPaymentOrderRefunded(data: {
         stripe_payment_intent_id = COALESCE(${stripePaymentId}, stripe_payment_intent_id),
         refunded_at = COALESCE(refunded_at, NOW())
     WHERE id = ${data.orderId}
+      AND status = 'Paid'
     RETURNING *
   `;
-  return { order: rowToOrder(rows[0] as DbRow), wasAlreadyRefunded: false };
+  const refunded = rows[0] as DbRow | undefined;
+  if (!refunded) {
+    const current = await getPaymentOrder(data.orderId);
+    if (!current) throw new Error('Payment order not found');
+    if (current.status === 'Refunded') {
+      return { order: current, wasAlreadyRefunded: true };
+    }
+    throw new Error(`Cannot refund payment order in status ${current.status}`);
+  }
+  return { order: rowToOrder(refunded), wasAlreadyRefunded: false };
 }
 
 export async function updateZenlerEnrollment(
