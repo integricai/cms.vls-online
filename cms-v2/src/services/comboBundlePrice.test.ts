@@ -71,6 +71,21 @@ run('session prices are summed for the sitting the student picks', () => {
   );
 });
 
+run('session titles without month/year still count as sittings', () => {
+  const quote = quoteComboCharge([
+    [
+      plan({ amount: 220, sessionTitle: 'December 2026 session' }),
+      plan({ amount: 250, sessionTitle: 'March 2027 session' }),
+    ],
+    [
+      plan({ amount: 220, sessionTitle: 'December 2026 session' }),
+      plan({ amount: 260, sessionTitle: 'March 2027 session' }),
+    ],
+  ], { month: 3, year: 2027 });
+  assert.strictEqual(quote.listAmountUsd, 510);
+  assert.strictEqual(quote.chargeAmountUsd, 331.5);
+});
+
 run('only sittings shared by every session course are offered', () => {
   const sessions = sharedComboSessions([
     [

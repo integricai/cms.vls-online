@@ -38,12 +38,52 @@ export function comboDiscountedAmount(listAmountUsd: number): number {
   return roundComboMoney(listAmountUsd * (1 - COMBO_DISCOUNT_PERCENT / 100));
 }
 
-function isSessionPlan(plan: ComboPlanAmount): boolean {
-  return plan.sessionMonth != null
+const MONTH_BY_NAME: Record<string, number> = {
+  january: 1, jan: 1,
+  february: 2, feb: 2,
+  march: 3, mar: 3,
+  april: 4, apr: 4,
+  may: 5,
+  june: 6, jun: 6,
+  july: 7, jul: 7,
+  august: 8, aug: 8,
+  september: 9, sept: 9, sep: 9,
+  october: 10, oct: 10,
+  november: 11, nov: 11,
+  december: 12, dec: 12,
+};
+
+function parseExamSessionFromText(text: string | null | undefined): { month: number; year: number } | null {
+  const raw = text?.trim();
+  if (!raw) return null;
+  const match = raw.match(/\b([a-z]+)\s+(\d{4})\b/i);
+  if (!match) return null;
+  const month = MONTH_BY_NAME[match[1].toLowerCase()];
+  const year = Number(match[2]);
+  if (!month || !Number.isInteger(year) || year < 2000) return null;
+  return { month, year };
+}
+
+function planSessionIdentity(plan: ComboPlanAmount): { month: number; year: number } | null {
+  if (
+    plan.sessionMonth != null
     && plan.sessionYear != null
     && plan.sessionMonth >= 1
     && plan.sessionMonth <= 12
-    && plan.sessionYear >= 2000;
+    && plan.sessionYear >= 2000
+  ) {
+    return { month: plan.sessionMonth, year: plan.sessionYear };
+  }
+  return parseExamSessionFromText(plan.sessionTitle);
+}
+
+function isSessionPlan(plan: ComboPlanAmount): boolean {
+  return planSessionIdentity(plan) != null;
+}
+
+function sessionsMatch(plan: ComboPlanAmount, month: number, year: number): boolean {
+  const identity = planSessionIdentity(plan);
+  return identity != null && identity.month === month && identity.year === year;
 }
 
 /** Exam sittings shared by every selected course that has sessions. */
@@ -54,15 +94,18 @@ export function sharedComboSessions(
   if (sessionCourses.length === 0) return [];
 
   const [first, ...rest] = sessionCourses;
-  const shared = first.filter(isSessionPlan).filter(plan => rest.every(plans => (
-    plans.some(other => other.sessionMonth === plan.sessionMonth && other.sessionYear === plan.sessionYear)
-  )));
+  const shared = first.filter(isSessionPlan).filter(plan => {
+    const identity = planSessionIdentity(plan);
+    if (!identity) return false;
+    return rest.every(plans => plans.some(other => sessionsMatch(other, identity.month, identity.year)));
+  });
 
   const seen = new Set<string>();
   const sessions: Array<{ month: number; year: number; title: string }> = [];
   for (const plan of shared) {
-    const month = plan.sessionMonth!;
-    const year = plan.sessionYear!;
+    const identity = planSessionIdentity(plan);
+    if (!identity) continue;
+    const { month, year } = identity;
     const key = `${year}-${month}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -108,9 +151,7 @@ export function quoteComboCharge(
     const plan = sessionPlans.length > 0
       ? (
         chosenSession
-          ? sessionPlans.find(item => (
-            item.sessionMonth === chosenSession.month && item.sessionYear === chosenSession.year
-          ))
+          ? sessionPlans.find(item => sessionsMatch(item, chosenSession.month, chosenSession.year))
           : null
       ) ?? plans.find(item => item.isDefault) ?? plans[0]
       : plans.find(item => item.isDefault) ?? plans[0];
