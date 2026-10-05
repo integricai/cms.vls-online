@@ -84,14 +84,25 @@ run('only sittings shared by every session course are offered', () => {
   assert.deepStrictEqual(sessions.map(item => `${item.month}-${item.year}`), ['3-2027']);
 });
 
-run('a sitting that is not shared is rejected', () => {
-  assert.throws(
-    () => quoteComboCharge([
-      [plan({ amount: 40, sessionMonth: 12, sessionYear: 2026, sessionTitle: 'December 2026 session' })],
-      [plan({ amount: 40, sessionMonth: 12, sessionYear: 2026, sessionTitle: 'December 2026 session' })],
-    ], { month: 6, year: 2027 }),
-    (err: unknown) => err instanceof ComboBundlePriceError && /exam session/i.test(err.message),
-  );
+run('an unknown sitting falls back to the earliest shared session', () => {
+  const quote = quoteComboCharge([
+    [plan({ amount: 40, sessionMonth: 12, sessionYear: 2026, sessionTitle: 'December 2026 session' })],
+    [plan({ amount: 40, sessionMonth: 12, sessionYear: 2026, sessionTitle: 'December 2026 session' })],
+  ], { month: 6, year: 2027 });
+  assert.strictEqual(quote.sessionTitle, 'December 2026 session');
+  assert.strictEqual(quote.chargeAmountUsd, 52);
+});
+
+run('missing sitting picks the earliest shared session automatically', () => {
+  const quote = quoteComboCharge([
+    [
+      plan({ amount: 100, sessionMonth: 12, sessionYear: 2026, sessionTitle: 'December 2026 session', isDefault: true }),
+      plan({ amount: 80, sessionMonth: 3, sessionYear: 2027, sessionTitle: 'March 2027 session' }),
+    ],
+    [plan({ amount: 50 })],
+  ], null);
+  assert.strictEqual(quote.sessionTitle, 'December 2026 session');
+  assert.strictEqual(quote.listAmountUsd, 150);
 });
 
 run('fewer than two courses is rejected', () => {

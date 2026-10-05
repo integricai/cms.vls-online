@@ -94,9 +94,8 @@ export function quoteComboCharge(
     !chosenSession
     || !sessions.some(item => item.month === chosenSession!.month && item.year === chosenSession!.year)
   ) {
-    throw new ComboBundlePriceError(
-      'Choose an exam session that is available for every selected course.',
-    );
+    // No separate session picker — use the nearest shared sitting every selected session course offers.
+    chosenSession = { month: sessions[0].month, year: sessions[0].year };
   }
 
   const sessionTitle = chosenSession
@@ -107,9 +106,13 @@ export function quoteComboCharge(
   for (const plans of courses) {
     const sessionPlans = plans.filter(isSessionPlan);
     const plan = sessionPlans.length > 0
-      ? sessionPlans.find(item => (
-        item.sessionMonth === chosenSession!.month && item.sessionYear === chosenSession!.year
-      ))
+      ? (
+        chosenSession
+          ? sessionPlans.find(item => (
+            item.sessionMonth === chosenSession.month && item.sessionYear === chosenSession.year
+          ))
+          : null
+      ) ?? plans.find(item => item.isDefault) ?? plans[0]
       : plans.find(item => item.isDefault) ?? plans[0];
     if (!plan || !Number.isFinite(plan.amount)) {
       throw new ComboBundlePriceError('Pricing is unavailable for one of the selected courses.');
