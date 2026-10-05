@@ -149,6 +149,7 @@ export async function resolveMultiCourseAllowlistFromStorySlug(
 
   const allowlist = extractMultiCoursePaperZenlerIds(content);
   const comboZenlerCourseId = zenlerIdFromComboStoryField(content.zenler_course_id);
+  // Kept for older callers. Checkout allows any selection from 2 through the allowlist.
   const rawCount = Number(content.selection_count);
   const selectionCount = Number.isInteger(rawCount) && rawCount >= 1 ? rawCount : 2;
 

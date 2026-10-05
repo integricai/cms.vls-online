@@ -8,7 +8,7 @@ import {
   createPaymentOrder,
   getPaymentOrder,
   getPaymentOrderByCheckoutId,
-  paymentOrderPayerEmail,
+  type PaymentOrder,
 } from '../models/paymentOrder';
 import {
   capturePendingProviderCheckout,
@@ -45,6 +45,7 @@ import {
   validateMultiCourseAccessSelection,
 } from '../services/multiCourseAccess';
 import { resolveConfiguredComboZenlerCourseIds } from '../services/multiCourseStoryblokAllowlist';
+import { ComboBundlePriceError, priceComboAccessSelection } from '../services/comboBundlePrice';
 import {
   checkoutSessionRateLimit,
   freeEnrolEmailRateLimit,
@@ -69,6 +70,14 @@ function parsePositiveInt(value: unknown): number | null {
 function parseOptionalText(value: unknown): string | null {
   const text = String(value ?? '').trim();
   return text || null;
+}
+
+function parseExamSession(body: Record<string, unknown>): { month: number; year: number } | null {
+  const month = Number(body.sessionMonth);
+  const year = Number(body.sessionYear);
+  if (!Number.isInteger(month) || month < 1 || month > 12) return null;
+  if (!Number.isInteger(year) || year < 2000 || year > 2100) return null;
+  return { month, year };
 }
 
 function computeDiscountPercent(listAmount: number, effectiveAmount: number): number | null {
@@ -408,7 +417,10 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       provider: providerId,
     });
 
-    const discountPercent = computeDiscountPercent(resolved.price.amount, resolved.effectiveAmount);
+    let chargeAmount = resolved.effectiveAmount;
+    let listAmount = resolved.price.amount;
+    let discountPercent = computeDiscountPercent(listAmount, chargeAmount);
+    let optionType = resolved.price.name;
 
     const requestedAccessIds = parseAccessZenlerCourseIds(req.body ?? {});
     const comboStorySlug = parseComboStorySlug(req.body ?? {});
@@ -427,9 +439,20 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
           accessZenlerCourseIds: requestedAccessIds,
           comboStorySlug,
         });
+        const comboQuote = await priceComboAccessSelection({
+          zenlerCourseIds: accessZenlerCourseIds,
+          session: parseExamSession(req.body ?? {}),
+          countryCode: quotedCountryCode,
+          ipAddress: clientIp,
+          ignoreVpnBlock: parityTest,
+        });
+        chargeAmount = comboQuote.chargeAmountUsd;
+        listAmount = comboQuote.listAmountUsd;
+        discountPercent = comboQuote.discountPercent;
+        if (comboQuote.sessionTitle) optionType = comboQuote.sessionTitle;
       }
     } catch (err) {
-      if (err instanceof MultiCourseAccessError) {
+      if (err instanceof MultiCourseAccessError || err instanceof ComboBundlePriceError) {
         return res.status(err.status).json({ ok: false, error: err.message });
       }
       throw err;
@@ -443,12 +466,12 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       zenlerCourseId: course.zenlerCourseId,
       accessZenlerCourseIds,
       courseTitle: course.name,
-      optionType: resolved.price.name,
+      optionType,
       studentName: customerInput.studentName,
       studentEmail: customerInput.studentEmail,
       studentPhone: customerInput.phone,
       countryCode: quotedCountryCode,
-      amount: resolved.effectiveAmount,
+      amount: chargeAmount,
       currency: 'USD',
       durationDays: resolved.price.durationDays,
       discountPercent,
@@ -463,8 +486,8 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       coursePriceId: resolved.price.id,
       zenlerCourseId: course.zenlerCourseId,
       courseTitle: course.name,
-      paymentCardTitle: `${course.name} — ${resolved.price.name}`,
-      amount: resolved.effectiveAmount,
+      paymentCardTitle: `${course.name} — ${optionType}`,
+      amount: chargeAmount,
       currency: 'USD',
       studentEmail: customerInput.studentEmail,
       countryCode: quotedCountryCode,
@@ -478,63 +501,93 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       checkoutId: session.checkoutId,
       orderId: order.id,
       coursePriceId: resolved.price.id,
-      amount: resolved.effectiveAmount,
-      listAmount: resolved.price.amount,
+      amount: chargeAmount,
+      listAmount,
       currency: 'USD',
       countryCode: quotedCountryCode,
       matchReason: resolved.matchReason,
     });
   } catch (err) {
-    if (err instanceof MultiCourseAccessError) {
+    if (err instanceof MultiCourseAccessError || err instanceof ComboBundlePriceError) {
       return res.status(err.status).json({ ok: false, error: err.message });
     }
     next(err);
   }
 }
 
-router.get('/status', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const sessionId = String(req.query.session_id ?? req.query.token ?? req.query.checkout_id ?? '').trim();
-    if (!sessionId) return res.status(400).json({ ok: false, error: 'session_id is required' });
+function checkoutSessionId(value: unknown): string {
+  return String(value ?? '').trim();
+}
 
-    let order = await getPaymentOrderByCheckoutId(sessionId);
-    if (!order) return res.status(404).json({ ok: false, error: 'Payment order not found' });
-
-    if (order.status === 'Pending') {
-      try {
-        order = await capturePendingProviderCheckout(order);
-      } catch (err) {
-        console.error('[payments] capture on status failed', err);
-      }
-    }
-
-    if (order.status === 'Paid') {
-      try {
-        order = await reconcilePaidOrder(order);
-      } catch (err) {
-        console.error('[payments] status reconcile failed', err);
-        order = (await getPaymentOrder(order.id)) ?? order;
-      }
-    }
-
-    return res.json({
-      status: order.status,
-      provider: order.provider,
-      courseTitle: order.courseTitle,
-      optionType: order.optionType,
-      amount: order.amount,
-      currency: order.currency,
-      countryCode: order.countryCode,
-      coursePriceId: order.coursePriceId,
-      studentEmail: paymentOrderPayerEmail(order),
+/** Status the return page may show. The payer email stays in the order record and the logs. */
+function publicPaymentStatus(order: PaymentOrder) {
+  return {
+    status: order.status,
+    provider: order.provider,
+    courseTitle: order.courseTitle,
+    optionType: order.optionType,
+    amount: order.amount,
+    currency: order.currency,
+    countryCode: order.countryCode,
+    coursePriceId: order.coursePriceId,
+    zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
+    isNewZenlerUser: order.zenlerUserCreated,
+    courseAccessUrl: courseAccessUrlForEnrollment({
       zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
       isNewZenlerUser: order.zenlerUserCreated,
-      courseAccessUrl: courseAccessUrlForEnrollment({
-        zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
-        isNewZenlerUser: order.zenlerUserCreated,
-      }),
-      refundedAt: order.refundedAt?.toISOString() ?? null,
-    });
+    }),
+    refundedAt: order.refundedAt?.toISOString() ?? null,
+  };
+}
+
+async function paymentStatusForSession(sessionId: string, confirm: boolean): Promise<PaymentOrder | null> {
+  let order = await getPaymentOrderByCheckoutId(sessionId);
+  if (!order) return null;
+
+  if (!confirm) return order;
+
+  if (order.status === 'Pending') {
+    try {
+      order = await capturePendingProviderCheckout(order);
+    } catch (err) {
+      console.error('[payments] capture on status failed', err);
+    }
+  }
+
+  if (order.status === 'Paid') {
+    try {
+      order = await reconcilePaidOrder(order);
+    } catch (err) {
+      console.error('[payments] status reconcile failed', err);
+      order = (await getPaymentOrder(order.id)) ?? order;
+    }
+  }
+
+  return order;
+}
+
+router.get('/status', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const sessionId = checkoutSessionId(req.query.session_id ?? req.query.token ?? req.query.checkout_id);
+    if (!sessionId) return res.status(400).json({ ok: false, error: 'session_id is required' });
+
+    const order = await paymentStatusForSession(sessionId, false);
+    if (!order) return res.status(404).json({ ok: false, error: 'Payment order not found' });
+    return res.json(publicPaymentStatus(order));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/status', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
+    const sessionId = checkoutSessionId(body.session_id ?? body.sessionId ?? body.token ?? body.checkout_id);
+    if (!sessionId) return res.status(400).json({ ok: false, error: 'session_id is required' });
+
+    const order = await paymentStatusForSession(sessionId, true);
+    if (!order) return res.status(404).json({ ok: false, error: 'Payment order not found' });
+    return res.json(publicPaymentStatus(order));
   } catch (err) {
     next(err);
   }

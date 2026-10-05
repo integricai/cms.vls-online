@@ -6,6 +6,7 @@ import {
 } from './multiCourseStoryblokAllowlist';
 import {
   assertBundleCheckoutHasSelection,
+  assertComboSelectionSize,
   isComboPricingCourse,
   MultiCourseAccessError,
   parseAccessZenlerCourseIds,
@@ -90,6 +91,19 @@ run('combo checkout with a selection is allowed through', () => {
     comboStorySlug: 'courses/acca-combo',
     accessZenlerCourseIds: ['111', '222'],
   }));
+});
+
+run('combo selection allows 2 through every listed course', () => {
+  assert.doesNotThrow(() => assertComboSelectionSize(2, 6));
+  assert.doesNotThrow(() => assertComboSelectionSize(6, 6));
+  assert.throws(
+    () => assertComboSelectionSize(1, 6),
+    (err: unknown) => err instanceof MultiCourseAccessError && /at least 2/i.test(err.message),
+  );
+  assert.throws(
+    () => assertComboSelectionSize(7, 6),
+    (err: unknown) => err instanceof MultiCourseAccessError && /up to 6/i.test(err.message),
+  );
 });
 
 run('extract paper zenler ids from story content', () => {

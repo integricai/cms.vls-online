@@ -1,0 +1,104 @@
+import assert from 'assert';
+import {
+  comboDiscountedAmount,
+  ComboBundlePriceError,
+  quoteComboCharge,
+  sharedComboSessions,
+  type ComboPlanAmount,
+} from './comboBundlePrice';
+
+function plan(partial: Partial<ComboPlanAmount> & Pick<ComboPlanAmount, 'amount'>): ComboPlanAmount {
+  return {
+    sessionMonth: null,
+    sessionYear: null,
+    sessionTitle: 'Full access',
+    isDefault: true,
+    ...partial,
+  };
+}
+
+function run(name: string, fn: () => void): void {
+  try {
+    fn();
+    console.log(`  ✓ ${name}`);
+  } catch (err) {
+    console.error(`  ✗ ${name}`);
+    throw err;
+  }
+}
+
+console.log('comboBundlePrice tests');
+
+run('35% off a summed total rounds to cents', () => {
+  assert.strictEqual(comboDiscountedAmount(180), 117);
+  assert.strictEqual(comboDiscountedAmount(99.98), 64.99);
+});
+
+run('courses without sessions sum their default prices', () => {
+  const quote = quoteComboCharge([
+    [plan({ amount: 100, isDefault: true }), plan({ amount: 140, isDefault: false, sessionTitle: 'Annual' })],
+    [plan({ amount: 80 })],
+  ], { month: 12, year: 2026 });
+  assert.strictEqual(quote.listAmountUsd, 180);
+  assert.strictEqual(quote.chargeAmountUsd, 117);
+  assert.strictEqual(quote.discountPercent, 35);
+  assert.strictEqual(quote.sessionTitle, null);
+});
+
+run('session prices are summed for the sitting the student picks', () => {
+  const december = plan({
+    amount: 100,
+    sessionMonth: 12,
+    sessionYear: 2026,
+    sessionTitle: 'December 2026 session',
+    isDefault: true,
+  });
+  const march = plan({
+    amount: 80,
+    sessionMonth: 3,
+    sessionYear: 2027,
+    sessionTitle: 'March 2027 session',
+    isDefault: false,
+  });
+  const open = plan({ amount: 50, sessionTitle: 'On demand' });
+  const quote = quoteComboCharge([[december, march], [open]], { month: 3, year: 2027 });
+  assert.strictEqual(quote.listAmountUsd, 130);
+  assert.strictEqual(quote.chargeAmountUsd, 84.5);
+  assert.strictEqual(quote.sessionTitle, 'March 2027 session');
+  assert.deepStrictEqual(
+    sharedComboSessions([[december, march], [open]]).map(item => item.month),
+    [12, 3],
+  );
+});
+
+run('only sittings shared by every session course are offered', () => {
+  const sessions = sharedComboSessions([
+    [
+      plan({ amount: 1, sessionMonth: 12, sessionYear: 2026, sessionTitle: 'December 2026 session' }),
+      plan({ amount: 1, sessionMonth: 3, sessionYear: 2027, sessionTitle: 'March 2027 session' }),
+    ],
+    [
+      plan({ amount: 1, sessionMonth: 3, sessionYear: 2027, sessionTitle: 'March 2027 session' }),
+    ],
+  ]);
+  assert.deepStrictEqual(sessions.map(item => `${item.month}-${item.year}`), ['3-2027']);
+});
+
+run('a sitting that is not shared is rejected', () => {
+  assert.throws(
+    () => quoteComboCharge([
+      [plan({ amount: 40, sessionMonth: 12, sessionYear: 2026, sessionTitle: 'December 2026 session' })],
+      [plan({ amount: 40, sessionMonth: 12, sessionYear: 2026, sessionTitle: 'December 2026 session' })],
+    ], { month: 6, year: 2027 }),
+    (err: unknown) => err instanceof ComboBundlePriceError && /exam session/i.test(err.message),
+  );
+});
+
+run('fewer than two courses is rejected', () => {
+  assert.throws(
+    () => quoteComboCharge([[plan({ amount: 40 })]], null),
+    (err: unknown) => err instanceof ComboBundlePriceError,
+  );
+});
+
+console.log('comboBundlePrice tests passed');

@@ -1,3 +1,4 @@
+import { COMBO_MIN_COURSES } from './comboBundlePrice';
 import { getCourseById as getCmsCourseById } from '../models/course';
 import {
   normalizeComboStorySlug,
@@ -73,6 +74,22 @@ export function assertBundleCheckoutHasSelection(input: {
   );
 }
 
+/** Students pick at least two papers, up to every paper configured on the combo page. */
+export function assertComboSelectionSize(count: number, allowlistLength: number): void {
+  if (count < COMBO_MIN_COURSES) {
+    throw new MultiCourseAccessError(
+      `Select at least ${COMBO_MIN_COURSES} courses for this combo pack.`,
+      400,
+    );
+  }
+  if (count > allowlistLength) {
+    throw new MultiCourseAccessError(
+      `You can select up to ${allowlistLength} courses for this combo pack.`,
+      400,
+    );
+  }
+}
+
 /** Validate picker selection using Zenler IDs configured on the Storyblok multi-course page. */
 export async function validateMultiCourseAccessSelection(input: {
   bundleCourseId: number;
@@ -108,14 +125,8 @@ export async function validateMultiCourseAccessSelection(input: {
     );
   }
 
-  const required = story.selectionCount;
   const ids = normalizeZenlerIds(input.accessZenlerCourseIds);
-  if (ids.length !== required) {
-    throw new MultiCourseAccessError(
-      `Select exactly ${required} courses for this combo pack.`,
-      400,
-    );
-  }
+  assertComboSelectionSize(ids.length, story.allowlist.length);
 
   const invalid = ids.filter((id) => !story.allowlist.includes(id));
   if (invalid.length) {

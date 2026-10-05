@@ -11,7 +11,7 @@ import {
   getNextOpenExamSessions,
   type ExamSession,
 } from './qualificationOfferSessions';
-import { BANK_FX_NOTE, currencyForCountry, localizeDisplayMoney } from './displayCurrency';
+import { BANK_FX_NOTE, convertUsdAmount, currencyForCountry, localizeDisplayMoney } from './displayCurrency';
 import { getUsdRates, rateForCurrency } from './fxRates';
 
 /** ACCA exam sittings fallback when no qualification offer rule is configured. */
@@ -33,6 +33,8 @@ export type PublishedCoursePricePlan = {
   formattedCompareAt: string | null;
   /** Present when the card shows local currency. Checkout remains USD. */
   formattedChargeUsd: string | null;
+  /** Numeric amount in displayCurrency. Checkout still uses effectiveAmount in USD. */
+  displayAmount: number;
   displayCurrency: string;
   fxApplied: boolean;
   lateEnrollmentDiscount: boolean;
@@ -52,6 +54,7 @@ export type PublishedCoursePricing = {
   fxApplied: boolean;
   fxNote: string | null;
   formattedChargeUsd: string | null;
+  displayAmount: number;
   plans: PublishedCoursePricePlan[];
   /** Top-level quote for single-plan courses or default plan. Amounts stay USD. */
   amount: number;
@@ -159,6 +162,7 @@ function buildPlanFields(
     formatted: formatUsd(effective),
     formattedCompareAt: compareAt != null ? formatUsd(compareAt) : null,
     formattedChargeUsd: null,
+    displayAmount: effective,
     displayCurrency: 'USD',
     fxApplied: false,
     lateEnrollmentDiscount: false,
@@ -320,6 +324,7 @@ export async function buildCourseDisplayPricing(
     resolvedPlans.push({
       ...plan,
       effectiveAmount: effective,
+      displayAmount: effective,
       compareAt,
       formatted: formatUsd(effective),
       formattedCompareAt: compareAt != null ? formatUsd(compareAt) : null,
@@ -345,6 +350,7 @@ export async function buildCourseDisplayPricing(
     fxApplied: defaultPlan.fxApplied,
     fxNote: defaultPlan.fxApplied ? BANK_FX_NOTE : null,
     formattedChargeUsd: defaultPlan.formattedChargeUsd,
+    displayAmount: defaultPlan.displayAmount,
     plans,
     amount: defaultPlan.effectiveAmount,
     compareAt: defaultPlan.compareAt,
@@ -372,6 +378,7 @@ async function applyLocalDisplayCurrency(
       formatted: localized.formatted,
       formattedCompareAt: localized.formattedCompareAt,
       formattedChargeUsd: localized.formattedChargeUsd,
+      displayAmount: convertUsdAmount(plan.effectiveAmount, rate),
       displayCurrency: localized.displayCurrency,
       fxApplied: localized.fxApplied,
     };
