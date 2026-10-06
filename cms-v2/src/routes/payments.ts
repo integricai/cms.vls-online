@@ -72,6 +72,21 @@ function parseOptionalText(value: unknown): string | null {
   return text || null;
 }
 
+function parsePaperCoursePriceIds(body: Record<string, unknown>): Record<string, number> {
+  const raw = body.paperPlans ?? body.coursePriceIds;
+  if (!Array.isArray(raw)) return {};
+  const ids: Record<string, number> = {};
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const record = item as Record<string, unknown>;
+    const zenlerCourseId = String(record.zenlerCourseId ?? record.zenler_course_id ?? '').trim();
+    const coursePriceId = Number(record.coursePriceId ?? record.course_price_id);
+    if (!/^\d+$/.test(zenlerCourseId) || !Number.isInteger(coursePriceId) || coursePriceId <= 0) continue;
+    ids[zenlerCourseId] = coursePriceId;
+  }
+  return ids;
+}
+
 function parseExamSession(body: Record<string, unknown>): { month: number; year: number } | null {
   const month = Number(body.sessionMonth);
   const year = Number(body.sessionYear);
@@ -443,6 +458,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
         const comboQuote = await priceComboAccessSelection({
           zenlerCourseIds: accessZenlerCourseIds,
           session: parseExamSession(req.body ?? {}),
+          coursePriceIds: parsePaperCoursePriceIds(req.body ?? {}),
           countryCode: quotedCountryCode,
           ipAddress: clientIp,
           ignoreVpnBlock: parityTest,

@@ -26,6 +26,7 @@ export type ComboPlanAmount = {
   sessionYear: number | null;
   sessionTitle: string;
   isDefault: boolean;
+  coursePriceId?: number | null;
 };
 
 export type ComboChargeQuote = {
@@ -233,6 +234,8 @@ function localComboCharge(chosen: ComboPlanAmount[]): { amount: number; list: nu
 export async function priceComboAccessSelection(input: {
   zenlerCourseIds: string[];
   session: { month: number; year: number } | null;
+  /** Sitting the student picked for each paper, by Zenler course id. */
+  coursePriceIds?: Record<string, number> | null;
   countryCode: string | null;
   ipAddress: string | null;
   ignoreVpnBlock: boolean;
@@ -263,7 +266,12 @@ export async function priceComboAccessSelection(input: {
     if (!pricing || pricing.plans.length === 0) {
       throw new ComboBundlePriceError('Pricing is unavailable for one of the selected courses.');
     }
-    return pricing.plans.map(plan => ({
+    const wanted = input.coursePriceIds?.[zenlerCourseId];
+    const plans = wanted
+      ? pricing.plans.filter(plan => plan.coursePriceId === wanted)
+      : pricing.plans;
+    const source = plans.length > 0 ? plans : pricing.plans;
+    return source.map(plan => ({
       amount: plan.amount,
       effectiveAmount: plan.effectiveAmount,
       displayAmount: plan.displayAmount,
@@ -273,6 +281,7 @@ export async function priceComboAccessSelection(input: {
       sessionYear: plan.sessionYear,
       sessionTitle: plan.sessionTitle,
       isDefault: plan.isDefault,
+      coursePriceId: plan.coursePriceId,
     }));
   }));
 
