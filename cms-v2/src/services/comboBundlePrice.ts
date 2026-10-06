@@ -15,8 +15,10 @@ export class ComboBundlePriceError extends Error {
 }
 
 export type ComboPlanAmount = {
-  /** USD amount the student would pay for this plan on its own. */
+  /** Catalogue USD price before Evendeals. */
   amount: number;
+  /** Price after Evendeals. Display FX is applied to this, not to the catalogue price. */
+  effectiveAmount?: number | null;
   displayAmount?: number | null;
   displayCurrency?: string | null;
   fxApplied?: boolean;
@@ -199,14 +201,30 @@ const ZERO_DECIMAL = new Set([
  * When every paper is shown in the same local currency, discount that sum and
  * charge Stripe in that currency. Otherwise charge the USD total.
  */
+/** Local catalogue price: Evendeals is ignored, then the same FX rate is applied to the list price. */
+function catalogueLocalAmount(plan: ComboPlanAmount): number | null {
+  if (plan.displayAmount == null || !Number.isFinite(plan.displayAmount)) return null;
+  const currency = (plan.displayCurrency || 'USD').toUpperCase();
+  if (currency === 'USD' || ZERO_DECIMAL.has(currency)) return null;
+  const effective = plan.effectiveAmount ?? plan.amount;
+  if (effective > 0 && effective < plan.amount) {
+    return roundComboMoney(plan.amount * (plan.displayAmount / effective));
+  }
+  return plan.displayAmount;
+}
+
 function localComboCharge(chosen: ComboPlanAmount[]): { amount: number; list: number; currency: string } | null {
   const currencies = new Set(chosen.map(plan => (plan.displayCurrency || 'USD').toUpperCase()));
   if (currencies.size !== 1) return null;
   const currency = [...currencies][0]!;
   if (currency === 'USD' || ZERO_DECIMAL.has(currency)) return null;
-  if (!chosen.every(plan => plan.displayAmount != null && Number.isFinite(plan.displayAmount))) return null;
-  if (!chosen.some(plan => plan.fxApplied === true || plan.displayAmount !== plan.amount)) return null;
-  const list = roundComboMoney(chosen.reduce((sum, plan) => sum + plan.displayAmount!, 0));
+  let list = 0;
+  for (const plan of chosen) {
+    const local = catalogueLocalAmount(plan);
+    if (local == null) return null;
+    list += local;
+  }
+  list = roundComboMoney(list);
   const amount = comboDiscountedAmount(list);
   if (!(amount > 0)) return null;
   return { amount, list, currency };
@@ -246,7 +264,8 @@ export async function priceComboAccessSelection(input: {
       throw new ComboBundlePriceError('Pricing is unavailable for one of the selected courses.');
     }
     return pricing.plans.map(plan => ({
-      amount: plan.effectiveAmount,
+      amount: plan.amount,
+      effectiveAmount: plan.effectiveAmount,
       displayAmount: plan.displayAmount,
       displayCurrency: plan.displayCurrency,
       fxApplied: plan.fxApplied,

@@ -34,16 +34,17 @@ run('35% off a summed total rounds to cents', () => {
   assert.strictEqual(comboDiscountedAmount(99.98), 64.99);
 });
 
-run('local display prices are the Stripe charge', () => {
-  const paper = (amount: number) => plan({
-    amount: 91,
-    displayAmount: amount,
+run('Evendeals is ignored and 35% comes off the catalogue price', () => {
+  const paper = plan({
+    amount: 130,
+    effectiveAmount: 91,
+    displayAmount: 68.84,
     displayCurrency: 'GBP',
     fxApplied: true,
   });
-  const quote = quoteComboCharge([[paper(98.34)], [paper(98.34)]], null);
-  assert.strictEqual(quote.listAmountUsd, 182);
-  assert.strictEqual(quote.chargeAmountUsd, 118.3);
+  const quote = quoteComboCharge([[paper], [{ ...paper }]], null);
+  assert.strictEqual(quote.listAmountUsd, 260);
+  assert.strictEqual(quote.chargeAmountUsd, 169);
   assert.strictEqual(quote.listAmount, 196.68);
   assert.strictEqual(quote.chargeAmount, 127.84);
   assert.strictEqual(quote.chargeCurrency, 'GBP');
