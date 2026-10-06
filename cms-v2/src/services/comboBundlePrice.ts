@@ -55,7 +55,7 @@ const MONTH_BY_NAME: Record<string, number> = {
 
 function parseExamSessionFromText(text: string | null | undefined): { month: number; year: number } | null {
   const raw = text?.trim();
-  if (!raw) return null;
+  if (!raw || !/\bsession\b/i.test(raw)) return null;
   const match = raw.match(/\b([a-z]+)\s+(\d{4})\b/i);
   if (!match) return null;
   const month = MONTH_BY_NAME[match[1].toLowerCase()];
