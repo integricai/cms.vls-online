@@ -17,6 +17,9 @@ export class ComboBundlePriceError extends Error {
 export type ComboPlanAmount = {
   /** USD amount the student would pay for this plan on its own. */
   amount: number;
+  displayAmount?: number | null;
+  displayCurrency?: string | null;
+  fxApplied?: boolean;
   sessionMonth: number | null;
   sessionYear: number | null;
   sessionTitle: string;
@@ -26,6 +29,11 @@ export type ComboPlanAmount = {
 export type ComboChargeQuote = {
   listAmountUsd: number;
   chargeAmountUsd: number;
+  /** Amount Stripe should collect, in chargeCurrency. */
+  chargeAmount: number;
+  chargeCurrency: string;
+  /** Pre-discount total in chargeCurrency. */
+  listAmount: number;
   discountPercent: number;
   sessionTitle: string | null;
 };
@@ -145,6 +153,7 @@ export function quoteComboCharge(
     ? sessions.find(item => item.month === chosenSession!.month && item.year === chosenSession!.year)?.title ?? null
     : null;
 
+  const chosen: ComboPlanAmount[] = [];
   let list = 0;
   for (const plans of courses) {
     const sessionPlans = plans.filter(isSessionPlan);
@@ -158,6 +167,7 @@ export function quoteComboCharge(
     if (!plan || !Number.isFinite(plan.amount)) {
       throw new ComboBundlePriceError('Pricing is unavailable for one of the selected courses.');
     }
+    chosen.push(plan);
     list += plan.amount;
   }
 
@@ -167,12 +177,39 @@ export function quoteComboCharge(
     throw new ComboBundlePriceError('Pricing is unavailable for this selection.');
   }
 
+  const local = localComboCharge(chosen);
   return {
     listAmountUsd,
     chargeAmountUsd,
+    chargeAmount: local?.amount ?? chargeAmountUsd,
+    chargeCurrency: local?.currency ?? 'USD',
+    listAmount: local?.list ?? listAmountUsd,
     discountPercent: COMBO_DISCOUNT_PERCENT,
     sessionTitle,
   };
+}
+
+/** Stripe zero-decimal currencies. Payment confirmation treats minor units as cents. */
+const ZERO_DECIMAL = new Set([
+  'BIF', 'CLP', 'DJF', 'GNF', 'ISK', 'JPY', 'KMF', 'KRW', 'PYG', 'RWF',
+  'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
+]);
+
+/**
+ * When every paper is shown in the same local currency, discount that sum and
+ * charge Stripe in that currency. Otherwise charge the USD total.
+ */
+function localComboCharge(chosen: ComboPlanAmount[]): { amount: number; list: number; currency: string } | null {
+  const currencies = new Set(chosen.map(plan => (plan.displayCurrency || 'USD').toUpperCase()));
+  if (currencies.size !== 1) return null;
+  const currency = [...currencies][0]!;
+  if (currency === 'USD' || ZERO_DECIMAL.has(currency)) return null;
+  if (!chosen.every(plan => plan.displayAmount != null && Number.isFinite(plan.displayAmount))) return null;
+  if (!chosen.some(plan => plan.fxApplied === true || plan.displayAmount !== plan.amount)) return null;
+  const list = roundComboMoney(chosen.reduce((sum, plan) => sum + plan.displayAmount!, 0));
+  const amount = comboDiscountedAmount(list);
+  if (!(amount > 0)) return null;
+  return { amount, list, currency };
 }
 
 export async function priceComboAccessSelection(input: {
@@ -210,6 +247,9 @@ export async function priceComboAccessSelection(input: {
     }
     return pricing.plans.map(plan => ({
       amount: plan.effectiveAmount,
+      displayAmount: plan.displayAmount,
+      displayCurrency: plan.displayCurrency,
+      fxApplied: plan.fxApplied,
       sessionMonth: plan.sessionMonth,
       sessionYear: plan.sessionYear,
       sessionTitle: plan.sessionTitle,

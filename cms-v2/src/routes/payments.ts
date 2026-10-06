@@ -419,6 +419,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
 
     let chargeAmount = resolved.effectiveAmount;
     let listAmount = resolved.price.amount;
+    let chargeCurrency = 'USD';
     let discountPercent = computeDiscountPercent(listAmount, chargeAmount);
     let optionType = resolved.price.name;
 
@@ -446,8 +447,9 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
           ipAddress: clientIp,
           ignoreVpnBlock: parityTest,
         });
-        chargeAmount = comboQuote.chargeAmountUsd;
-        listAmount = comboQuote.listAmountUsd;
+        chargeAmount = comboQuote.chargeAmount;
+        listAmount = comboQuote.listAmount;
+        chargeCurrency = comboQuote.chargeCurrency;
         discountPercent = comboQuote.discountPercent;
         if (comboQuote.sessionTitle) optionType = comboQuote.sessionTitle;
       }
@@ -472,7 +474,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       studentPhone: customerInput.phone,
       countryCode: quotedCountryCode,
       amount: chargeAmount,
-      currency: 'USD',
+      currency: chargeCurrency,
       durationDays: resolved.price.durationDays,
       discountPercent,
       attribution,
@@ -488,7 +490,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       courseTitle: course.name,
       paymentCardTitle: `${course.name} — ${optionType}`,
       amount: chargeAmount,
-      currency: 'USD',
+      currency: chargeCurrency,
       studentEmail: customerInput.studentEmail,
       countryCode: quotedCountryCode,
       returnOrigin: parseCheckoutReturnOrigin(req),
@@ -503,7 +505,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       coursePriceId: resolved.price.id,
       amount: chargeAmount,
       listAmount,
-      currency: 'USD',
+      currency: chargeCurrency,
       countryCode: quotedCountryCode,
       matchReason: resolved.matchReason,
     });

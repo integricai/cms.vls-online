@@ -34,6 +34,21 @@ run('35% off a summed total rounds to cents', () => {
   assert.strictEqual(comboDiscountedAmount(99.98), 64.99);
 });
 
+run('local display prices are the Stripe charge', () => {
+  const paper = (amount: number) => plan({
+    amount: 91,
+    displayAmount: amount,
+    displayCurrency: 'GBP',
+    fxApplied: true,
+  });
+  const quote = quoteComboCharge([[paper(98.34)], [paper(98.34)]], null);
+  assert.strictEqual(quote.listAmountUsd, 182);
+  assert.strictEqual(quote.chargeAmountUsd, 118.3);
+  assert.strictEqual(quote.listAmount, 196.68);
+  assert.strictEqual(quote.chargeAmount, 127.84);
+  assert.strictEqual(quote.chargeCurrency, 'GBP');
+});
+
 run('courses without sessions sum their default prices', () => {
   const quote = quoteComboCharge([
     [plan({ amount: 100, isDefault: true }), plan({ amount: 140, isDefault: false, sessionTitle: 'Annual' })],
