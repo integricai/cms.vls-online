@@ -34,6 +34,13 @@ run('35% off a summed total rounds to cents', () => {
   assert.strictEqual(comboDiscountedAmount(99.98), 64.99);
 });
 
+run('custom discount percent applies to the list total', () => {
+  assert.strictEqual(comboDiscountedAmount(200, 20), 160);
+  const quote = quoteComboCharge([[plan({ amount: 100 })], [plan({ amount: 100 })]], null, 20);
+  assert.strictEqual(quote.discountPercent, 20);
+  assert.strictEqual(quote.chargeAmountUsd, 160);
+});
+
 run('Evendeals is ignored and 35% comes off the catalogue price', () => {
   const paper = plan({
     amount: 130,

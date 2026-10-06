@@ -1,9 +1,20 @@
 import { listActiveGeoPricesByZenlerCourseId } from '../models/courseGeoPrice';
 import { buildCourseDisplayPricing } from './courseDisplayPricing';
+import { loadMultiCourseStoryContent } from './multiCourseStoryblokAllowlist';
 
-/** Standard combo discount applied to the sum of the selected course prices. */
-export const COMBO_DISCOUNT_PERCENT = 35;
+/** Default when Storyblok combo_discount_percent is missing or invalid. */
+export const DEFAULT_COMBO_DISCOUNT_PERCENT = 35;
+/** @deprecated Use DEFAULT_COMBO_DISCOUNT_PERCENT or Storyblok field. */
+export const COMBO_DISCOUNT_PERCENT = DEFAULT_COMBO_DISCOUNT_PERCENT;
 export const COMBO_MIN_COURSES = 2;
+
+export function resolveComboDiscountPercent(value: unknown): number {
+  const parsed = typeof value === 'string' ? parseFloat(value.trim()) : Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed >= 100) {
+    return DEFAULT_COMBO_DISCOUNT_PERCENT;
+  }
+  return Math.round(parsed * 100) / 100;
+}
 
 export class ComboBundlePriceError extends Error {
   status: number;
@@ -45,8 +56,15 @@ export function roundComboMoney(amount: number): number {
   return Math.round(amount * 100) / 100;
 }
 
-export function comboDiscountedAmount(listAmountUsd: number): number {
-  return roundComboMoney(listAmountUsd * (1 - COMBO_DISCOUNT_PERCENT / 100));
+export function comboDiscountedAmount(
+  listAmountUsd: number,
+  discountPercent: number = DEFAULT_COMBO_DISCOUNT_PERCENT,
+): number {
+  const rate = discountPercent / 100;
+  if (!Number.isFinite(rate) || rate <= 0 || rate >= 1) {
+    return roundComboMoney(listAmountUsd * (1 - DEFAULT_COMBO_DISCOUNT_PERCENT / 100));
+  }
+  return roundComboMoney(listAmountUsd * (1 - rate));
 }
 
 const MONTH_BY_NAME: Record<string, number> = {
@@ -133,6 +151,7 @@ export function sharedComboSessions(
 export function quoteComboCharge(
   courses: ComboPlanAmount[][],
   session: { month: number; year: number } | null,
+  discountPercent: number = DEFAULT_COMBO_DISCOUNT_PERCENT,
 ): ComboChargeQuote {
   if (courses.length < COMBO_MIN_COURSES) {
     throw new ComboBundlePriceError(
@@ -175,19 +194,19 @@ export function quoteComboCharge(
   }
 
   const listAmountUsd = roundComboMoney(list);
-  const chargeAmountUsd = comboDiscountedAmount(listAmountUsd);
+  const chargeAmountUsd = comboDiscountedAmount(listAmountUsd, discountPercent);
   if (!(chargeAmountUsd > 0)) {
     throw new ComboBundlePriceError('Pricing is unavailable for this selection.');
   }
 
-  const local = localComboCharge(chosen);
+  const local = localComboCharge(chosen, discountPercent);
   return {
     listAmountUsd,
     chargeAmountUsd,
     chargeAmount: local?.amount ?? chargeAmountUsd,
     chargeCurrency: local?.currency ?? 'USD',
     listAmount: local?.list ?? listAmountUsd,
-    discountPercent: COMBO_DISCOUNT_PERCENT,
+    discountPercent,
     sessionTitle,
   };
 }
@@ -214,7 +233,10 @@ function catalogueLocalAmount(plan: ComboPlanAmount): number | null {
   return plan.displayAmount;
 }
 
-function localComboCharge(chosen: ComboPlanAmount[]): { amount: number; list: number; currency: string } | null {
+function localComboCharge(
+  chosen: ComboPlanAmount[],
+  discountPercent: number,
+): { amount: number; list: number; currency: string } | null {
   const currencies = new Set(chosen.map(plan => (plan.displayCurrency || 'USD').toUpperCase()));
   if (currencies.size !== 1) return null;
   const currency = [...currencies][0]!;
@@ -226,7 +248,7 @@ function localComboCharge(chosen: ComboPlanAmount[]): { amount: number; list: nu
     list += local;
   }
   list = roundComboMoney(list);
-  const amount = comboDiscountedAmount(list);
+  const amount = comboDiscountedAmount(list, discountPercent);
   if (!(amount > 0)) return null;
   return { amount, list, currency };
 }
@@ -236,6 +258,7 @@ export async function priceComboAccessSelection(input: {
   session: { month: number; year: number } | null;
   /** Sitting the student picked for each paper, by Zenler course id. */
   coursePriceIds?: Record<string, number> | null;
+  comboStorySlug?: string | null;
   countryCode: string | null;
   ipAddress: string | null;
   ignoreVpnBlock: boolean;
@@ -285,5 +308,14 @@ export async function priceComboAccessSelection(input: {
     }));
   }));
 
-  return quoteComboCharge(courses, input.session);
+  let discountPercent = DEFAULT_COMBO_DISCOUNT_PERCENT;
+  const slug = String(input.comboStorySlug ?? '').trim();
+  if (slug) {
+    const storyContent = await loadMultiCourseStoryContent(slug);
+    if (storyContent?.component === 'multi_course_page') {
+      discountPercent = resolveComboDiscountPercent(storyContent.combo_discount_percent);
+    }
+  }
+
+  return quoteComboCharge(courses, input.session, discountPercent);
 }

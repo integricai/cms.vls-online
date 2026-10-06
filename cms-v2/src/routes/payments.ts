@@ -459,6 +459,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
           zenlerCourseIds: accessZenlerCourseIds,
           session: parseExamSession(req.body ?? {}),
           coursePriceIds: parsePaperCoursePriceIds(req.body ?? {}),
+          comboStorySlug,
           countryCode: quotedCountryCode,
           ipAddress: clientIp,
           ignoreVpnBlock: parityTest,
