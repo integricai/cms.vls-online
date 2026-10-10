@@ -10,7 +10,8 @@ export const COMBO_MIN_COURSES = 2;
 
 export function resolveComboDiscountPercent(value: unknown): number {
   const parsed = typeof value === 'string' ? parseFloat(value.trim()) : Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0 || parsed >= 100) {
+  // 0 is a real Storyblok setting: no combo discount. Only a missing or unusable value falls back.
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed >= 100) {
     return DEFAULT_COMBO_DISCOUNT_PERCENT;
   }
   return Math.round(parsed * 100) / 100;
@@ -61,7 +62,7 @@ export function comboDiscountedAmount(
   discountPercent: number = DEFAULT_COMBO_DISCOUNT_PERCENT,
 ): number {
   const rate = discountPercent / 100;
-  if (!Number.isFinite(rate) || rate <= 0 || rate >= 1) {
+  if (!Number.isFinite(rate) || rate < 0 || rate >= 1) {
     return roundComboMoney(listAmountUsd * (1 - DEFAULT_COMBO_DISCOUNT_PERCENT / 100));
   }
   return roundComboMoney(listAmountUsd * (1 - rate));

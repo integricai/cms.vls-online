@@ -3,6 +3,7 @@ import {
   comboDiscountedAmount,
   ComboBundlePriceError,
   quoteComboCharge,
+  resolveComboDiscountPercent,
   sharedComboSessions,
   type ComboPlanAmount,
 } from './comboBundlePrice';
@@ -39,6 +40,17 @@ run('custom discount percent applies to the list total', () => {
   const quote = quoteComboCharge([[plan({ amount: 100 })], [plan({ amount: 100 })]], null, 20);
   assert.strictEqual(quote.discountPercent, 20);
   assert.strictEqual(quote.chargeAmountUsd, 160);
+});
+
+run('a Storyblok discount of 0 charges the full list total', () => {
+  assert.strictEqual(resolveComboDiscountPercent(0), 0);
+  assert.strictEqual(resolveComboDiscountPercent('0'), 0);
+  assert.strictEqual(resolveComboDiscountPercent(''), 35);
+  assert.strictEqual(comboDiscountedAmount(180, 0), 180);
+  const quote = quoteComboCharge([[plan({ amount: 15 })], [plan({ amount: 15 })]], null, 0);
+  assert.strictEqual(quote.discountPercent, 0);
+  assert.strictEqual(quote.listAmountUsd, 30);
+  assert.strictEqual(quote.chargeAmountUsd, 30);
 });
 
 run('Evendeals is ignored and 35% comes off the catalogue price', () => {
