@@ -130,7 +130,7 @@ export default function HeaderV2Screen() {
         <div className="sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4">
           <h1 className="text-base font-bold text-slate-900">Header</h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Staging top bar only — logo, Sign in, Enrol. Paste into Zenler school header. No navigation menu.
+            Staging top bar — logo, Sign in, and Enrol. Leave a label or URL empty and that link is left out of the HTML. No navigation menu.
           </p>
         </div>
 
