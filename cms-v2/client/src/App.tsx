@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { canManageContent, getCurrentUser, getToken } from './api/client';
 import Layout from './components/Layout';
 import Dashboard from './screens/Dashboard';
@@ -7,13 +7,10 @@ import ResetPassword from './screens/ResetPassword';
 import HomeHero from './screens/HomeHero';
 import AboutUs from './screens/AboutUs';
 import Header from './screens/Header';
-import HeaderV2 from './screens/HeaderV2';
 import BlogHeader from './screens/BlogHeader';
 import Footer from './screens/Footer';
-import FooterV2 from './screens/FooterV2';
 import Banner from './screens/Banner';
 import CoursePrice from './screens/CoursePrice';
-import CoursePricing from './screens/CoursePricing';
 import PaymentCards from './screens/PaymentCards';
 import PromotionSection from './screens/PromotionSection';
 import ContactFooter from './screens/ContactFooter';
@@ -33,14 +30,13 @@ import FeatureCardsV4 from './screens/FeatureCardsV4';
 import StepCards from './screens/StepCards';
 import LegalPage from './screens/LegalPage';
 import Team from './screens/Team';
-import Settings from './screens/Settings';
-import ContentManagement from './screens/ContentManagement';
+import SettingsPage from './screens/Settings/Page';
 import Configurations from './screens/Configurations';
 import Sales from './screens/Sales';
 import Students from './screens/Students';
 import GoogleConversions from './screens/GoogleConversions';
-import CustomPaymentOffer from './screens/Billing/CustomPaymentOffer';
-import OfferHistory from './screens/Billing/OfferHistory';
+import ContentMigrationPage from './screens/ContentMigration/Page';
+import CoursesPage from './screens/Courses/Page';
 import AcceptSale from './screens/AcceptSale';
 import ExamResult from './screens/ExamResult';
 import Forms from './screens/Forms';
@@ -49,7 +45,6 @@ import Events from './screens/Events';
 import Articles from './screens/Articles';
 import Blog from './screens/Blog';
 import BppBooks from './screens/BppBooks';
-import DiscountCodes from './screens/DiscountCodes';
 import BookAMeeting from './screens/BookAMeeting';
 import FullScreenSections from './screens/FullScreenSections';
 import SplitScreenSections from './screens/SplitScreenSections';
@@ -62,12 +57,30 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return getToken() ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
+function vaultHome(): string {
+  return canManageContent(getCurrentUser()?.role)
+    ? '/content-migration'
+    : '/content-migration?tab=global';
+}
+
 function RequireAdmin({ children }: { children: React.ReactNode }) {
-  return getCurrentUser()?.role === 'admin' ? <>{children}</> : <Navigate to="/home-hero" replace />;
+  return getCurrentUser()?.role === 'admin' ? <>{children}</> : <Navigate to={vaultHome()} replace />;
 }
 
 function RequireEditor({ children }: { children: React.ReactNode }) {
-  return canManageContent(getCurrentUser()?.role) ? <>{children}</> : <Navigate to="/home-hero" replace />;
+  return canManageContent(getCurrentUser()?.role) ? <>{children}</> : <Navigate to={vaultHome()} replace />;
+}
+
+function VaultHome() {
+  return <Navigate to={vaultHome()} replace />;
+}
+
+function LegacyContentRedirect() {
+  const [params] = useSearchParams();
+  const tab = params.get('tab');
+  if (tab === 'books') return <Navigate to="/content-migration?tab=books" replace />;
+  if (tab === 'courses') return <Navigate to="/courses" replace />;
+  return <Navigate to="/content-migration" replace />;
 }
 
 export default function App() {
@@ -85,16 +98,16 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route index element={<VaultHome />} />
           <Route path="/dashboard"         element={<Dashboard />} />
           <Route path="/header"            element={<Header />} />
-          <Route path="/header-v2"         element={<HeaderV2 />} />
+          <Route path="/header-v2"         element={<Navigate to="/content-migration?tab=global" replace />} />
           <Route path="/blog-header"       element={<BlogHeader />} />
           <Route path="/footer"            element={<Footer />} />
-          <Route path="/footer-v2"         element={<FooterV2 />} />
+          <Route path="/footer-v2"         element={<Navigate to="/content-migration?tab=global&global=footer" replace />} />
           <Route path="/banner"            element={<Banner />} />
           <Route path="/course-price"      element={<RequireAdmin><CoursePrice /></RequireAdmin>} />
-          <Route path="/course-pricing"    element={<RequireAdmin><CoursePricing /></RequireAdmin>} />
+          <Route path="/course-pricing"    element={<Navigate to="/courses?tab=prices" replace />} />
           <Route path="/payment-cards"     element={<PaymentCards />} />
           <Route path="/promotion-section" element={<PromotionSection />} />
           <Route path="/contact-footer"    element={<ContactFooter />} />
@@ -124,24 +137,32 @@ export default function App() {
           <Route path="/articles"              element={<Articles />} />
           <Route path="/blog"                  element={<Blog />} />
           <Route path="/bpp-books"             element={<BppBooks />} />
-          <Route path="/discount-codes"        element={<DiscountCodes />} />
+          <Route path="/discount-codes"        element={<Navigate to="/content-migration?tab=books&booksTab=discounts" replace />} />
           <Route path="/book-a-meeting"        element={<BookAMeeting />} />
           <Route path="/full-screen/:type"     element={<FullScreenSections />} />
           <Route path="/split-screen/:type"    element={<SplitScreenSections />} />
           <Route path="/page-desc-with-menu"  element={<PageDescWithMenu />} />
           <Route path="/split-screen-sections" element={<Navigate to="/split-screen/left-hero" replace />} />
-          <Route path="/settings"          element={<RequireAdmin><Settings /></RequireAdmin>} />
-          <Route path="/content-management" element={<RequireEditor><ContentManagement /></RequireEditor>} />
-          <Route path="/content-migration" element={<Navigate to="/content-management" replace />} />
+          <Route path="/blog-migration"    element={<Navigate to="/content-migration" replace />} />
+          <Route path="/books"             element={<Navigate to="/content-migration?tab=books" replace />} />
+          <Route path="/courses"           element={<RequireAdmin><CoursesPage /></RequireAdmin>} />
+          <Route path="/prices-configuration" element={<Navigate to="/courses?tab=configuration" replace />} />
+          <Route path="/settings"          element={<RequireAdmin><SettingsPage /></RequireAdmin>} />
+          <Route path="/settings/logs"     element={<Navigate to="/settings?tab=logs" replace />} />
+          <Route path="/settings/cache"    element={<Navigate to="/settings?tab=cache" replace />} />
+          <Route path="/settings/sitemap"  element={<Navigate to="/settings?tab=sitemap" replace />} />
+          <Route path="/settings/users"    element={<Navigate to="/settings?tab=users" replace />} />
+          <Route path="/settings/menu"     element={<Navigate to="/settings?tab=logs" replace />} />
+          <Route path="/content-management" element={<LegacyContentRedirect />} />
+          <Route path="/content-migration" element={<ContentMigrationPage />} />
           <Route path="/configurations"   element={<RequireAdmin><Configurations /></RequireAdmin>} />
+          <Route path="/sales/payments"   element={<Navigate to="/sales?tab=payments" replace />} />
           <Route path="/sales"            element={<RequireAdmin><Sales /></RequireAdmin>} />
           <Route path="/students"         element={<RequireAdmin><Students /></RequireAdmin>} />
           <Route path="/google-conversions" element={<RequireAdmin><GoogleConversions /></RequireAdmin>} />
-          <Route path="/billing/custom-offer" element={<RequireAdmin><CustomPaymentOffer /></RequireAdmin>} />
-          <Route path="/billing/offers"       element={<RequireAdmin><OfferHistory /></RequireAdmin>} />
-          <Route path="/settings/users"   element={<Navigate to="/settings" replace />} />
-          <Route path="/settings/menu"    element={<Navigate to="/settings" replace />} />
-          <Route path="/settings/courses" element={<Navigate to="/content-management?tab=courses" replace />} />
+          <Route path="/billing/custom-offer" element={<Navigate to="/sales?tab=custom-offer" replace />} />
+          <Route path="/billing/offers"       element={<Navigate to="/sales?tab=transactions" replace />} />
+          <Route path="/settings/courses" element={<Navigate to="/courses" replace />} />
           <Route path="/settings/tutors"  element={<Navigate to="/configurations" replace />} />
           <Route path="/settings/sales"   element={<Navigate to="/sales" replace />} />
         </Route>

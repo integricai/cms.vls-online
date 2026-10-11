@@ -15,12 +15,9 @@ import type {
   ScrapePhaseResult,
   StoryblokRegion,
   StructurePhaseResult,
-  TemplateReferenceSummary,
 } from '../../../../shared/migrationTypes';
 import { MIGRATION_TEMPLATE_LABELS } from '../../../../shared/migrationTemplateLabels';
-import { storyFullSlug, suggestDestinationSlug, isCoursePageTemplate } from '../../../../shared/migrationDestination';
-
-type MigrationTemplateOption = TemplateReferenceSummary & { label: string };
+import { storyFullSlug, suggestDestinationSlug } from '../../../../shared/migrationDestination';
 
 type StoryblokStatus = {
   configured: boolean;
@@ -95,7 +92,7 @@ type ContentSource = 'live' | 'file';
 export default function ContentMigrationTab() {
   const [pages, setPages] = useState<MigrationPageRecord[]>([]);
   const [selectedPageId, setSelectedPageId] = useState<number | null>(null);
-  const [template, setTemplate] = useState<MigrationTemplate>('course');
+  const [template, setTemplate] = useState<MigrationTemplate>('blog');
   const [destinationSlug, setDestinationSlug] = useState('');
   const [destinationTouched, setDestinationTouched] = useState(false);
   const [storyblokStatus, setStoryblokStatus] = useState<StoryblokStatus | null>(null);
@@ -108,9 +105,6 @@ export default function ContentMigrationTab() {
   const [migratingContent, setMigratingContent] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [message, setMessage] = useState<StatusMessage | null>(null);
-  const [migrationTemplates, setMigrationTemplates] = useState<MigrationTemplateOption[]>([]);
-  const [loadingTemplates, setLoadingTemplates] = useState(true);
-  const [templateReference, setTemplateReference] = useState<TemplateReferenceSummary | null>(null);
 
   const [scrapeResult, setScrapeResult] = useState<ScrapePhaseResult | null>(null);
   const [structureResult, setStructureResult] = useState<StructurePhaseResult | null>(null);
@@ -145,6 +139,10 @@ export default function ContentMigrationTab() {
   const pageUrl = selectedPage?.originUrl ?? '';
   const hasCredentials = Boolean(storyblokStatus?.configured);
   const isFileSource = contentSource === 'file';
+
+  useEffect(() => {
+    if (!isFileSource && template !== 'blog') setTemplate('blog');
+  }, [isFileSource, template]);
   const canRunScrape = isFileSource
     ? Boolean(selectedPage && selectedPageContentFile.trim())
     : Boolean(pageUrl.trim());
@@ -272,51 +270,6 @@ export default function ContentMigrationTab() {
     setComponentCreated(null);
   }, [filteredPages, selectedPageId, loadingPages, isFileSource]);
 
-  // Load template blueprints once — do not refetch on every template filter change.
-  useEffect(() => {
-    let cancelled = false;
-    setLoadingTemplates(true);
-    api.get<MigrationTemplateOption[]>('/migration/templates')
-      .then(templates => {
-        if (cancelled) return;
-        const byKey = new Map(templates.map(item => [item.template, item]));
-        const merged = (Object.entries(MIGRATION_TEMPLATE_LABELS) as Array<[MigrationTemplate, string]>)
-          .filter(([value]) => value !== 'page_content')
-          .map(([value, label]) => byKey.get(value) ?? {
-            template: value,
-            label,
-            fileName: '',
-            sectionCount: 0,
-            sections: [],
-          });
-        setMigrationTemplates(merged);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setMigrationTemplates(
-          (Object.entries(MIGRATION_TEMPLATE_LABELS) as Array<[MigrationTemplate, string]>)
-            .filter(([value]) => value !== 'page_content')
-            .map(([value, label]) => ({
-              template: value,
-              label,
-              fileName: '',
-              sectionCount: 0,
-              sections: [],
-            })),
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingTemplates(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    setTemplateReference(migrationTemplates.find(item => item.template === template) ?? null);
-  }, [migrationTemplates, template]);
-
   function resetPhaseResults() {
     setScrapeResult(null);
     setStructureResult(null);
@@ -380,7 +333,6 @@ export default function ContentMigrationTab() {
       const data = await api.post<PageScanResult>('/migration/pages/scan', { fetchTitles: false });
       setPages(data.pages);
       const matching = data.pages.filter(page => page.template === template);
-      const blogCount = data.pages.filter(page => page.template === 'blog').length;
       setSelectedPageId(current => {
         if (current && data.pages.some(page => page.id === current && page.template === template)) {
           return current;
@@ -389,9 +341,7 @@ export default function ContentMigrationTab() {
       });
       setMessage({
         type: 'success',
-        text: `Scan complete. ${data.scanned} pages found (${data.inserted} new, ${data.updated} updated)`
-          + (blogCount ? `, including ${blogCount} blog posts` : '')
-          + `. Showing ${matching.length} for ${MIGRATION_TEMPLATE_LABELS[template]}.`,
+        text: `Scan complete. ${data.scanned} pages found (${data.inserted} new, ${data.updated} updated). ${matching.length} blog posts are listed.`,
       });
     } catch (error) {
       setMessage({
@@ -451,23 +401,7 @@ export default function ContentMigrationTab() {
       const data = await api.post<ScrapePhaseResult>(`/migration/pages/${selectedPage.id}/scrape`, payload);
       setScrapeResult(data);
       applyPageUpdate(data.page);
-      setTemplate(data.page.template);
-      const plan = !isLevelPage(data.scraped) && !isCoursePage(data.scraped) && !isBlogPage(data.scraped)
-        ? data.scraped.componentPlan
-        : undefined;
-      if (plan) {
-        setTemplateReference({
-          template: data.page.template,
-          label: MIGRATION_TEMPLATE_LABELS[data.page.template],
-          fileName: plan.filename,
-          sectionCount: plan.sections.length,
-          sections: plan.sections.map(section => ({
-            key: section.key,
-            label: section.label,
-            component: section.component,
-          })),
-        });
-      }
+      setTemplate(isFileSource ? data.page.template : 'blog');
       setMessage({
         type: data.warnings.length ? 'warning' : 'info',
         text: data.warnings.length
@@ -606,34 +540,6 @@ export default function ContentMigrationTab() {
     }
   }
 
-  async function handleTemplateChange(nextTemplate: MigrationTemplate) {
-    if (nextTemplate === template) return;
-
-    const matching = pages.filter(page => page.template === nextTemplate);
-    setTemplate(nextTemplate);
-    resetPhaseResults();
-
-    // Switch Origin URL into pages already tagged with this template.
-    // Never retag the current page just because the new template has an empty list —
-    // that incorrectly converted courses into "blog" when blog URLs were missing.
-    if (matching.length) {
-      const keepSelected = selectedPage && selectedPage.template === nextTemplate
-        ? selectedPage
-        : matching[0];
-      setSelectedPageId(keepSelected.id);
-      if (!destinationTouched) {
-        setDestinationSlug(
-          keepSelected.destinationSlug?.trim()
-          || suggestDestinationSlug(keepSelected.originUrl, nextTemplate),
-        );
-      }
-      return;
-    }
-
-    setSelectedPageId(null);
-    if (!destinationTouched) setDestinationSlug('');
-  }
-
   async function handleDestinationBlur() {
     if (!selectedPage || !destinationSlug.trim()) return;
     try {
@@ -674,12 +580,10 @@ export default function ContentMigrationTab() {
   return (
     <div className="p-6">
       <div className="mb-6 max-w-4xl">
-        <h2 className="mb-1 text-sm font-bold text-slate-700">Page Migration</h2>
+        <h2 className="mb-1 text-sm font-bold text-slate-700">Blog Migration</h2>
         <p className="text-xs text-slate-500">
-          Scan the live VLS site or scrape local page-content files, then work through the 3 migration phases:
-          Preview Scrape, Generate Structure, Migrate Content. Any HTML in
-          <code className="mx-1">page-content/</code> is listed automatically; level pages keep their
-          dedicated path, and other files discover Storyblok components from the HTML itself.
+          Scan the live VLS site or import a public blog URL, then work through the 3 migration phases:
+          Preview Scrape, Generate Structure, Migrate Content. Posts are written to the Storyblok blog layout.
         </p>
       </div>
 
@@ -694,6 +598,7 @@ export default function ContentMigrationTab() {
                   checked={contentSource === 'live'}
                   onChange={() => {
                     setContentSource('live');
+                    setTemplate('blog');
                     resetPhaseResults();
                   }}
                 />
@@ -746,21 +651,6 @@ export default function ContentMigrationTab() {
                 ) : null}
               </Field>
 
-              <Field label="Template">
-                <input
-                  className="input bg-slate-50"
-                  value={
-                    selectedPage
-                      ? (MIGRATION_TEMPLATE_LABELS[selectedPage.template] ?? selectedPage.template)
-                      : 'Detecting from HTML…'
-                  }
-                  readOnly
-                />
-                <p className="mt-1 text-[11px] text-slate-400">
-                  Detected from the page-content HTML. Level pages use the qualification template;
-                  everything else uses a dynamic component plan from the file.
-                </p>
-              </Field>
             </>
           ) : (
             <>
@@ -776,32 +666,7 @@ export default function ContentMigrationTab() {
                 </button>
               </div>
 
-              <Field label="Template">
-                <select
-                  className="input"
-                  value={template}
-                  onChange={event => void handleTemplateChange(event.target.value as MigrationTemplate)}
-                  disabled={loadingTemplates || !migrationTemplates.length}
-                >
-                  {loadingTemplates ? (
-                    <option value="">Loading templates...</option>
-                  ) : (
-                    migrationTemplates.map(item => (
-                      <option key={item.template} value={item.template}>{item.label}</option>
-                    ))
-                  )}
-                </select>
-                <p className="mt-1 text-[11px] text-slate-400">
-                  Origin URLs below are filtered to this template.
-                  Course and study notes pages go to <code>courses/</code>;
-                  blog posts go to <code>blog/</code>; all other templates go to the Storyblok root.
-                  {templateReference?.fileName ? (
-                    <> Reference HTML: <code>templates/{templateReference.fileName}</code> ({templateReference.sectionCount} sections).</>
-                  ) : null}
-                </p>
-              </Field>
-
-              <Field label={`Origin URL (${filteredPages.length}${pages.length ? ` / ${pages.length}` : ''})`}>
+              <Field label={`Origin URL (${filteredPages.length})`}>
                 <select
                   className="input"
                   value={selectedPageId ?? ''}
@@ -816,11 +681,7 @@ export default function ContentMigrationTab() {
                   ) : !pages.length ? (
                     <option value="">Run a site scan to populate pages</option>
                   ) : !filteredPages.length ? (
-                    <option value="">
-                      {template === 'blog'
-                        ? 'No blog pages yet — paste an external URL below or scan the site'
-                        : `No ${MIGRATION_TEMPLATE_LABELS[template]} pages — scan again or pick another template`}
-                    </option>
+                    <option value="">No blog pages yet — paste an external URL below or scan the site</option>
                   ) : (
                     filteredPages.map(page => (
                       <option key={page.id} value={page.id}>
@@ -1149,43 +1010,6 @@ export default function ContentMigrationTab() {
                 {structureResult.componentLibrary.presets.map(preset => (
                   <li key={preset.fullSlug}>{preset.fullSlug} → {preset.component}</li>
                 ))}
-              </ul>
-            </div>
-          )}
-
-          {(structureResult?.templateReference ?? templateReference) && (
-            <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
-              <p className="font-semibold text-slate-700">
-                {(structureResult?.templateReference ?? templateReference)?.template === 'page_content'
-                  ? <>Component plan: page-content/{(structureResult?.templateReference ?? templateReference)?.fileName}</>
-                  : <>Template reference: templates/{(structureResult?.templateReference ?? templateReference)?.fileName}</>}
-              </p>
-              <ul className="mt-2 space-y-1">
-                {(structureResult?.templateReference ?? templateReference)?.sections.map(section => {
-                  const refTemplate = (structureResult?.templateReference ?? templateReference)?.template;
-                  const isCourseTemplate = isCoursePageTemplate(template)
-                    || (refTemplate != null && isCoursePageTemplate(refTemplate));
-                  const source = genericScraped?.sectionMatchSource?.[section.key];
-                  const confidence = genericScraped?.sectionMatchConfidence?.[section.key];
-                  return (
-                    <li key={section.key} className="flex items-center gap-2">
-                      <span>{section.label} → {section.component}</span>
-                      {isCourseTemplate ? (
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
-                          Course blueprint
-                        </span>
-                      ) : source === 'live' ? (
-                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Live match</span>
-                      ) : source === 'ai' ? (
-                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
-                          AI-matched{confidence !== undefined ? ` · ${Math.round(confidence * 100)}% confidence` : ''}
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">Unmatched</span>
-                      )}
-                    </li>
-                  );
-                })}
               </ul>
             </div>
           )}

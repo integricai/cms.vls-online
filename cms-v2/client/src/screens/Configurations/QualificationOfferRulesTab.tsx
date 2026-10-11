@@ -254,7 +254,7 @@ export default function QualificationOfferRulesTab() {
   return (
     <div className="p-6">
       <div className="mb-4 max-w-3xl">
-        <h2 className="text-base font-semibold text-slate-800">Qualification Offer Rules</h2>
+        <h2 className="text-base font-semibold text-slate-800">Prices configuration</h2>
         <p className="mt-1 text-sm text-slate-500">
           Map each qualification to the durations you sell and, for exam-based quals (e.g. ACCA),
           the exam months plus an enrollment cutoff day. Session labels on course prices roll

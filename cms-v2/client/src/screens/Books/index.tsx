@@ -222,7 +222,7 @@ export default function BooksScreen() {
       <div className="shrink-0 border-b border-slate-200 bg-white px-5 py-4">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-base font-bold text-slate-900">Books</h1>
+            <h1 className="text-base font-bold text-slate-900">Book collection</h1>
             <p className="mt-0.5 text-xs text-slate-400">
               Books are managed directly in the CMS database. This table is the source of truth for the BPP Books component.
             </p>

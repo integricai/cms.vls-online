@@ -219,7 +219,7 @@ export default function FooterV2Screen() {
     <div className="flex h-full">
       <div className="w-[460px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
         <div className="sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4">
-          <h1 className="text-base font-bold text-slate-900">Footer V2</h1>
+          <h1 className="text-base font-bold text-slate-900">Footer</h1>
           <p className="text-xs text-slate-400 mt-0.5">
             Staging navy footer with about text, circular socials, and star rating. Paste into Zenler school footer.
           </p>

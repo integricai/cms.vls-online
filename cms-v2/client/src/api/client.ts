@@ -31,7 +31,7 @@ export function getCurrentUser(): CurrentUser | null {
   }
 }
 
-/** Admins and content managers (`editor`) can use Content Management. */
+/** Admins and content managers (`editor`) can use Vertex Vault content tools. */
 export function canManageContent(role?: AccessLevel | null): boolean {
   return role === 'admin' || role === 'editor';
 }

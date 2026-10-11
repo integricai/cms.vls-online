@@ -128,7 +128,7 @@ export default function HeaderV2Screen() {
     <div className="flex h-full">
       <div className="w-[480px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
         <div className="sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4">
-          <h1 className="text-base font-bold text-slate-900">Header V2</h1>
+          <h1 className="text-base font-bold text-slate-900">Header</h1>
           <p className="text-xs text-slate-400 mt-0.5">
             Staging top bar only — logo, Sign in, Enrol. Paste into Zenler school header. No navigation menu.
           </p>

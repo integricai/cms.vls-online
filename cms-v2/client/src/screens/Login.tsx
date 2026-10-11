@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, setCurrentUser, setToken, type CurrentUser } from '../api/client';
+import { api, canManageContent, setCurrentUser, setToken, type CurrentUser } from '../api/client';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -20,7 +20,7 @@ export default function Login() {
       const data = await api.post<{ token: string; user: CurrentUser }>('/auth/login', { username, password });
       setToken(data.token);
       setCurrentUser(data.user);
-      navigate('/dashboard');
+      navigate(canManageContent(data.user.role) ? '/content-migration' : '/content-migration?tab=global');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -53,7 +53,7 @@ export default function Login() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-900 px-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-xl">
-        <h1 className="mb-1 text-xl font-bold text-slate-900">VLS CMS</h1>
+        <h1 className="mb-1 text-xl font-bold text-slate-900">Vertex Vault</h1>
         <p className="mb-6 text-sm text-slate-500">
           {mode === 'login' ? 'Sign in to your account' : 'Reset your account password'}
         </p>

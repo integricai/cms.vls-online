@@ -749,8 +749,8 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
     <div className={shellClass}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          {!embedded && <h1 className="text-xl font-semibold text-slate-900">Course Pricing</h1>}
-          {embedded && <h2 className="text-sm font-bold text-slate-700">Course Pricing</h2>}
+          {!embedded && <h1 className="text-xl font-semibold text-slate-900">Prices</h1>}
+          {embedded && <h2 className="text-sm font-bold text-slate-700">Prices</h2>}
           <p className="text-sm text-slate-500">
             Manage USD prices per course and duration. Regional discounts are handled by Evendeals (per price).
           </p>

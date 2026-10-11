@@ -8,8 +8,8 @@ type Tab = 'tutors' | 'coursePricing' | 'offerRules' | 'geoPricing';
 
 const TAB_LABELS: Record<Tab, string> = {
   tutors: 'Tutors',
-  coursePricing: 'Course Pricing',
-  offerRules: 'Offer Rules',
+  coursePricing: 'Prices',
+  offerRules: 'Prices configuration',
   geoPricing: 'Geo Pricing',
 };
 
@@ -21,7 +21,7 @@ export default function Configurations() {
       <div className="border-b border-slate-200 bg-white px-6 py-4">
         <h1 className="text-lg font-bold text-slate-800">Configurations</h1>
         <p className="mt-0.5 text-xs text-slate-500">
-          Manage tutors, course pricing, qualification offer rules, and geo pricing.
+          Manage tutors, prices, price configuration, and geo pricing.
         </p>
       </div>
       <div className="flex border-b border-slate-200 bg-white px-6">
