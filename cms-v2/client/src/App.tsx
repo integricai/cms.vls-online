@@ -67,10 +67,6 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
   return getCurrentUser()?.role === 'admin' ? <>{children}</> : <Navigate to={vaultHome()} replace />;
 }
 
-function RequireEditor({ children }: { children: React.ReactNode }) {
-  return canManageContent(getCurrentUser()?.role) ? <>{children}</> : <Navigate to={vaultHome()} replace />;
-}
-
 function VaultHome() {
   return <Navigate to={vaultHome()} replace />;
 }
