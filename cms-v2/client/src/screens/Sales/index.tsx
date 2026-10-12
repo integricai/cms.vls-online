@@ -2,12 +2,13 @@ import { useSearchParams } from 'react-router-dom';
 import PageTabs from '../../components/PageTabs';
 import CustomPaymentOffer from '../Billing/CustomPaymentOffer';
 import OfferHistory from '../Billing/OfferHistory';
+import Banner from '../Banner';
 import SalesTab from './SalesTab';
 
-type SalesTabId = 'overview' | 'payments' | 'custom-offer' | 'transactions';
+type SalesTabId = 'overview' | 'payments' | 'custom-offer' | 'transactions' | 'banners';
 
 function isSalesTab(value: string | null): value is SalesTabId {
-  return value === 'payments' || value === 'custom-offer' || value === 'transactions' || value === 'overview';
+  return value === 'payments' || value === 'custom-offer' || value === 'transactions' || value === 'overview' || value === 'banners';
 }
 
 function PaymentsTab() {
@@ -38,6 +39,7 @@ export default function Sales() {
           { id: 'payments', label: 'Payments' },
           { id: 'custom-offer', label: 'Custom Payment Offer' },
           { id: 'transactions', label: 'Previous transactions' },
+          { id: 'banners', label: 'Banners' },
         ]}
         value={tab}
         onChange={setTab}
@@ -50,6 +52,7 @@ export default function Sales() {
         ) : null}
         {tab === 'custom-offer' ? <CustomPaymentOffer /> : null}
         {tab === 'transactions' ? <OfferHistory /> : null}
+        {tab === 'banners' ? <Banner /> : null}
         {tab === 'overview' ? (
           <div className="flex h-full flex-col">
             <div className="border-b border-slate-200 bg-white px-6 py-4">

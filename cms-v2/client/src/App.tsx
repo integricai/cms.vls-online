@@ -9,7 +9,6 @@ import AboutUs from './screens/AboutUs';
 import Header from './screens/Header';
 import BlogHeader from './screens/BlogHeader';
 import Footer from './screens/Footer';
-import Banner from './screens/Banner';
 import CoursePrice from './screens/CoursePrice';
 import PaymentCards from './screens/PaymentCards';
 import PromotionSection from './screens/PromotionSection';
@@ -101,7 +100,7 @@ export default function App() {
           <Route path="/blog-header"       element={<BlogHeader />} />
           <Route path="/footer"            element={<Footer />} />
           <Route path="/footer-v2"         element={<Navigate to="/content-migration?tab=global&global=footer" replace />} />
-          <Route path="/banner"            element={<Banner />} />
+          <Route path="/banner"            element={<Navigate to="/sales?tab=banners" replace />} />
           <Route path="/course-price"      element={<RequireAdmin><CoursePrice /></RequireAdmin>} />
           <Route path="/course-pricing"    element={<Navigate to="/courses?tab=prices" replace />} />
           <Route path="/payment-cards"     element={<PaymentCards />} />
