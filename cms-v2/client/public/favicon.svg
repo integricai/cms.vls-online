@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Vertex Vault">
+  <defs>
+    <clipPath id="vault-mark">
+      <rect width="32" height="32" rx="8"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#vault-mark)">
+    <rect width="32" height="32" fill="#0f172a"/>
+    <path fill="#ffffff" d="M6.8 7.1h4.7L16 17.4 20.5 7.1h4.7L17.6 23.2h-3.2z"/>
+    <rect y="27.5" width="32" height="4.5" fill="#E0B44A"/>
+  </g>
+</svg>
