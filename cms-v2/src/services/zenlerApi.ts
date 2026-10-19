@@ -95,7 +95,9 @@ async function zenlerFetch<T>(path: string, options?: RequestInit): Promise<T> {
     throw new Error('Zenler API returned an empty response');
   }
 
-  if (payload.response_code != null && payload.response_code !== 200) {
+  // Create-user returns response_code 201 ("People added successfully"). Treating
+  // that as a failure skipped course enrolment for every new student.
+  if (payload.response_code != null && payload.response_code !== 200 && payload.response_code !== 201) {
     throw new Error(formatZenlerErrorMessage(payload, `Zenler API error (${payload.response_code})`));
   }
 
