@@ -12,9 +12,7 @@ export function courseAccessUrlForEnrollment(input: {
   zenlerEnrollmentStatus?: string | null;
   isNewZenlerUser?: boolean;
 }): string {
-  const status = String(input.zenlerEnrollmentStatus ?? '').toLowerCase();
-  if (status.startsWith('enrolled')) {
-    return VLS_SCHOOL_LOGIN_URL;
-  }
+  // A new buyer is created in Zenler before they leave checkout, so enrolment
+  // success still sends them to register. Returning buyers sign in.
   return input.isNewZenlerUser ? VLS_SCHOOL_REGISTER_URL : VLS_SCHOOL_LOGIN_URL;
 }
