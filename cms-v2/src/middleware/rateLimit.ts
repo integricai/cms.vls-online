@@ -180,15 +180,17 @@ export const loginIdentityRateLimit = rateLimit({
   },
 });
 
+// One student can enrol in all three free quiz courses and retry.
+// The IP cap is shared, so an office or classroom is not blocked at 5.
 export const freeEnrolIpRateLimit = rateLimit({
   name: 'enrol-free',
-  limit: 5,
+  limit: 30,
   windowMs: 60 * 60 * 1000,
 });
 
 export const freeEnrolEmailRateLimit = rateLimit({
   name: 'enrol-free-email',
-  limit: 3,
+  limit: 10,
   windowMs: 60 * 60 * 1000,
   keyFrom: req => {
     const body = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
