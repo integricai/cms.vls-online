@@ -77,10 +77,12 @@ export async function enrollStudentInZenlerCourse(
     ? input.zenlerPlanId
     : undefined;
 
+  let zenlerUserId: string | null = null;
+  let isNewZenlerUser = false;
+  let temporaryPassword: string | null = null;
+
   try {
     let existingUser = await findZenlerUserByEmail(email);
-    let isNewZenlerUser = false;
-    let temporaryPassword: string | null = null;
 
     if (!existingUser) {
       const { firstName, lastName } = splitStudentName(input.name);
@@ -94,7 +96,7 @@ export async function enrollStudentInZenlerCourse(
       isNewZenlerUser = true;
     }
 
-    const zenlerUserId = existingUser.id;
+    zenlerUserId = existingUser.id;
     const alreadyEnrolled = await isStudentEnrolledInCourse({
       zenlerUserId,
       email,
@@ -126,10 +128,10 @@ export async function enrollStudentInZenlerCourse(
       message,
     });
     return {
-      zenlerUserId: null,
+      zenlerUserId,
       status: 'failed',
-      isNewZenlerUser: false,
-      temporaryPassword: null,
+      isNewZenlerUser,
+      temporaryPassword: isNewZenlerUser ? temporaryPassword : null,
       message,
     };
   }

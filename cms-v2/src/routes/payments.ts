@@ -15,6 +15,7 @@ import {
   closeAbandonedCheckout,
   fulfillPaidCheckout,
   fulfillRefund,
+  isStudentConfirmationEmailError,
   reconcilePaidOrder,
 } from '../services/payments/fulfillment';
 import { getPaymentProvider, isPaymentProviderEnabled, listEnabledPaymentProviders } from '../services/payments/registry';
@@ -539,7 +540,8 @@ function checkoutSessionId(value: unknown): string {
 }
 
 /** Status the return page may show. The payer email stays in the order record and the logs. */
-function publicPaymentStatus(order: PaymentOrder) {
+function publicPaymentStatus(order: PaymentOrder, confirmationEmailFailed = false) {
+  const confirmationEmailSent = order.confirmationEmailSentAt != null;
   return {
     status: order.status,
     provider: order.provider,
@@ -555,15 +557,20 @@ function publicPaymentStatus(order: PaymentOrder) {
       zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
       isNewZenlerUser: order.zenlerUserCreated,
     }),
+    confirmationEmailSent,
+    confirmationEmailFailed: !confirmationEmailSent && confirmationEmailFailed,
     refundedAt: order.refundedAt?.toISOString() ?? null,
   };
 }
 
-async function paymentStatusForSession(sessionId: string, confirm: boolean): Promise<PaymentOrder | null> {
+async function paymentStatusForSession(
+  sessionId: string,
+  confirm: boolean,
+): Promise<{ order: PaymentOrder; confirmationEmailFailed: boolean } | null> {
   let order = await getPaymentOrderByCheckoutId(sessionId);
   if (!order) return null;
 
-  if (!confirm) return order;
+  if (!confirm) return { order, confirmationEmailFailed: false };
 
   if (order.status === 'Pending') {
     try {
@@ -573,16 +580,18 @@ async function paymentStatusForSession(sessionId: string, confirm: boolean): Pro
     }
   }
 
+  let confirmationEmailFailed = false;
   if (order.status === 'Paid') {
     try {
       order = await reconcilePaidOrder(order);
     } catch (err) {
       console.error('[payments] status reconcile failed', err);
+      confirmationEmailFailed = isStudentConfirmationEmailError(err);
       order = (await getPaymentOrder(order.id)) ?? order;
     }
   }
 
-  return order;
+  return { order, confirmationEmailFailed };
 }
 
 router.get('/status', async (req: Request, res: Response, next: NextFunction) => {
@@ -590,9 +599,9 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
     const sessionId = checkoutSessionId(req.query.session_id ?? req.query.token ?? req.query.checkout_id);
     if (!sessionId) return res.status(400).json({ ok: false, error: 'session_id is required' });
 
-    const order = await paymentStatusForSession(sessionId, false);
-    if (!order) return res.status(404).json({ ok: false, error: 'Payment order not found' });
-    return res.json(publicPaymentStatus(order));
+    const result = await paymentStatusForSession(sessionId, false);
+    if (!result) return res.status(404).json({ ok: false, error: 'Payment order not found' });
+    return res.json(publicPaymentStatus(result.order, result.confirmationEmailFailed));
   } catch (err) {
     next(err);
   }
@@ -604,9 +613,9 @@ router.post('/status', async (req: Request, res: Response, next: NextFunction) =
     const sessionId = checkoutSessionId(body.session_id ?? body.sessionId ?? body.token ?? body.checkout_id);
     if (!sessionId) return res.status(400).json({ ok: false, error: 'session_id is required' });
 
-    const order = await paymentStatusForSession(sessionId, true);
-    if (!order) return res.status(404).json({ ok: false, error: 'Payment order not found' });
-    return res.json(publicPaymentStatus(order));
+    const result = await paymentStatusForSession(sessionId, true);
+    if (!result) return res.status(404).json({ ok: false, error: 'Payment order not found' });
+    return res.json(publicPaymentStatus(result.order, result.confirmationEmailFailed));
   } catch (err) {
     next(err);
   }

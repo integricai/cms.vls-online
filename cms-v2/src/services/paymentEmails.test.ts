@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { studentPaymentAccessInstructions } from './paymentEmails';
-import { VLS_SCHOOL_LOGIN_URL, VLS_SCHOOL_PASSWORD_RESET_URL } from './schoolAccess';
+import { enrollmentStatusBlocksAccessEmail, VLS_SCHOOL_LOGIN_URL, VLS_SCHOOL_PASSWORD_RESET_URL } from './schoolAccess';
 
 const login = VLS_SCHOOL_LOGIN_URL;
 
@@ -50,6 +50,46 @@ run('tells a new student how to set a password when the retry has none', () => {
   assert.doesNotMatch(message.text, /existing VLS school account/);
   assert.doesNotMatch(message.html, /existing VLS school account/);
   assert.doesNotMatch(message.text, /Temporary password:/);
+});
+
+run('keeps the temporary password when enrolment failed after the account was created', () => {
+  const message = studentPaymentAccessInstructions({
+    email: 'ada@vls-online.com',
+    access: {
+      isNewZenlerUser: true,
+      temporaryPassword: 'temp-secret',
+      courseAccessUrl: login,
+      zenlerEnrollmentStatus: 'failed',
+    },
+  });
+  assert.match(message.text, /Temporary password: temp-secret/);
+  assert.doesNotMatch(message.text, /existing VLS school account/);
+});
+
+run('sends password-reset instructions when a new account has no password left', () => {
+  const message = studentPaymentAccessInstructions({
+    email: 'ada@vls-online.com',
+    access: {
+      isNewZenlerUser: true,
+      temporaryPassword: null,
+      courseAccessUrl: login,
+      zenlerEnrollmentStatus: 'failed',
+    },
+  });
+  assert.match(message.text, /Set your password/);
+  assert.match(message.text, /ada@vls-online\.com/);
+  assert.doesNotMatch(message.text, /existing VLS school account/);
+  assert.doesNotMatch(message.text, /Temporary password:/);
+});
+
+run('holds the access email only until enrolment is attempted', () => {
+  assert.equal(enrollmentStatusBlocksAccessEmail(null), true);
+  assert.equal(enrollmentStatusBlocksAccessEmail(''), true);
+  assert.equal(enrollmentStatusBlocksAccessEmail('pending'), true);
+  assert.equal(enrollmentStatusBlocksAccessEmail('failed'), false);
+  assert.equal(enrollmentStatusBlocksAccessEmail('skipped'), false);
+  assert.equal(enrollmentStatusBlocksAccessEmail('enrolled'), false);
+  assert.equal(enrollmentStatusBlocksAccessEmail('enrolled_new'), false);
 });
 
 run('keeps the existing-account instructions for a returning student', () => {

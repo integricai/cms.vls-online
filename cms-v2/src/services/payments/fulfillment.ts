@@ -19,6 +19,7 @@ import {
   sendStudentPaymentConfirmation,
   sendStudentRefundConfirmation,
 } from '../paymentEmails';
+import { courseAccessUrlForEnrollment } from '../schoolAccess';
 import { ensureSaleRecordedForPaidOrder } from '../saleRecording';
 import {
   enrollmentEmailContextForOrder,
@@ -59,6 +60,23 @@ const RECONCILIATION_MIN_AGE_MINUTES = 2;
 const RECONCILIATION_LOOKBACK_DAYS = 14;
 const NEW_USER_PASSWORD_EMAIL_GRACE_MS = 3 * 60 * 1000;
 
+/** Thrown when the course-access confirmation could not be delivered. */
+export class StudentConfirmationEmailError extends Error {
+  constructor() {
+    super('Student confirmation email failed');
+    this.name = 'StudentConfirmationEmailError';
+  }
+}
+
+export function isStudentConfirmationEmailError(err: unknown): boolean {
+  if (err instanceof StudentConfirmationEmailError) return true;
+  return Boolean(
+    err
+    && typeof err === 'object'
+    && (err as { confirmationEmailFailed?: boolean }).confirmationEmailFailed === true,
+  );
+}
+
 /**
  * Paid is stored before Zenler enrolment and confirmation emails. A webhook
  * retry, or the reconciliation cron, has to finish whichever of those did not.
@@ -69,6 +87,7 @@ export async function reconcilePaidOrder(order: PaymentOrder): Promise<PaymentOr
   let current = order;
   let emailContext: ZenlerEnrollmentEmailContext | null = null;
   let failure: unknown = null;
+  let confirmationEmailFailed = false;
 
   try {
     const ensured = await ensureZenlerEnrollmentForPaidOrder(current);
@@ -83,6 +102,7 @@ export async function reconcilePaidOrder(order: PaymentOrder): Promise<PaymentOr
     current = await sendUnsentPaymentEmails(current, emailContext);
   } catch (err) {
     console.error('[payments] payment email retry failed', order.id, err);
+    if (isStudentConfirmationEmailError(err)) confirmationEmailFailed = true;
     if (!failure) failure = err;
   }
 
@@ -97,7 +117,12 @@ export async function reconcilePaidOrder(order: PaymentOrder): Promise<PaymentOr
     failure = new Error(`Zenler enrolment incomplete for order ${current.id}; student confirmation held`);
   }
 
-  if (failure) throw failure;
+  if (failure) {
+    if (confirmationEmailFailed && failure instanceof Error) {
+      (failure as Error & { confirmationEmailFailed?: boolean }).confirmationEmailFailed = true;
+    }
+    throw failure;
+  }
   return current;
 }
 
@@ -105,16 +130,35 @@ function contextForStudentEmail(
   order: PaymentOrder,
   emailContext: ZenlerEnrollmentEmailContext | null,
 ): ZenlerEnrollmentEmailContext | null {
+  const fromOrder = enrollmentEmailContextForOrder(order);
+  if (order.zenlerUserCreated || emailContext?.isNewZenlerUser) {
+    return {
+      isNewZenlerUser: true,
+      temporaryPassword: emailContext?.temporaryPassword ?? null,
+      courseAccessUrl: emailContext?.courseAccessUrl
+        ?? fromOrder?.courseAccessUrl
+        ?? courseAccessUrlForEnrollment({
+          zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
+          isNewZenlerUser: true,
+        }),
+      zenlerEnrollmentStatus: emailContext?.zenlerEnrollmentStatus
+        ?? fromOrder?.zenlerEnrollmentStatus
+        ?? order.zenlerEnrollmentStatus
+        ?? 'enrolled',
+    };
+  }
   if (emailContext && String(emailContext.zenlerEnrollmentStatus).toLowerCase().startsWith('enrolled')) {
     return emailContext;
   }
-  return enrollmentEmailContextForOrder(order);
+  return fromOrder;
 }
 
 function waitingForPasswordHolder(
   order: PaymentOrder,
   emailContext: ZenlerEnrollmentEmailContext | null,
 ): boolean {
+  const status = String(order.zenlerEnrollmentStatus ?? '').toLowerCase();
+  if (status === 'failed' || status === 'skipped') return false;
   const createdNewUser = order.zenlerUserCreated || emailContext?.isNewZenlerUser === true;
   if (!createdNewUser || emailContext?.temporaryPassword) return false;
   if (!order.paidAt) return false;
@@ -165,7 +209,7 @@ async function sendUnsentPaymentEmails(
       await sendClaimedEmail(fresh.id, 'student', () => sendStudentPaymentConfirmation(fresh, access));
     } catch (err) {
       console.error('[payments] student confirmation retry failed', order.id, err);
-      errors.push(err);
+      errors.push(new StudentConfirmationEmailError());
     }
   }
   if (sendAdmin) {
@@ -178,6 +222,8 @@ async function sendUnsentPaymentEmails(
   }
 
   const updated = (await getPaymentOrder(order.id)) ?? fresh;
+  const studentFailure = errors.find((err) => err instanceof StudentConfirmationEmailError);
+  if (studentFailure) throw studentFailure;
   if (errors.length) throw errors[0];
   return updated;
 }

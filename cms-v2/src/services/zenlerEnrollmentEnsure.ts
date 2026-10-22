@@ -6,7 +6,7 @@ import {
 } from '../models/paymentOrder';
 import { updateCustomerZenlerUserId } from '../models/customer';
 import { parseZenlerPlanId } from './zenlerApi';
-import { courseAccessUrlForEnrollment } from './schoolAccess';
+import { courseAccessUrlForEnrollment, enrollmentStatusBlocksAccessEmail } from './schoolAccess';
 import {
   enrollStudentInZenlerCourse,
   unenrollStudentFromZenlerCourse,
@@ -27,14 +27,12 @@ export function orderUsesZenlerAccess(order: PaymentOrder): boolean {
   return zenlerCourseIdsForAccess(order).length > 0;
 }
 
-/** Paid Zenler order whose student access email must wait for a successful enrolment. */
+/** Hold the access email only until the first enrolment attempt finishes. */
 export function zenlerAccessStillBlockingStudentEmail(order: PaymentOrder): boolean {
   if (!orderUsesZenlerAccess(order)) return false;
   const email = (order.studentEmail ?? order.stripeCustomerEmail)?.trim();
   if (!email) return false;
-  const status = String(order.zenlerEnrollmentStatus ?? '').toLowerCase();
-  if (status.startsWith('enrolled')) return false;
-  return RETRYABLE_STATUSES.has(order.zenlerEnrollmentStatus);
+  return enrollmentStatusBlocksAccessEmail(order.zenlerEnrollmentStatus);
 }
 
 async function enrollOrderCourses(order: PaymentOrder) {
@@ -100,7 +98,8 @@ export type ZenlerEnrollmentEmailContext = {
 };
 
 export function enrollmentEmailContextForOrder(order: PaymentOrder): ZenlerEnrollmentEmailContext | null {
-  if (!String(order.zenlerEnrollmentStatus ?? '').toLowerCase().startsWith('enrolled')) return null;
+  const status = String(order.zenlerEnrollmentStatus ?? '').toLowerCase();
+  if (!status.startsWith('enrolled') && !order.zenlerUserCreated) return null;
   return emailContextFromOrder(order);
 }
 
@@ -123,7 +122,8 @@ function emailContextFromEnrollment(enrollment: {
   isNewZenlerUser: boolean;
   temporaryPassword: string | null;
 }): ZenlerEnrollmentEmailContext | null {
-  if (!String(enrollment.status).startsWith('enrolled')) return null;
+  const enrolled = String(enrollment.status).startsWith('enrolled');
+  if (!enrolled && !enrollment.isNewZenlerUser) return null;
   return {
     isNewZenlerUser: enrollment.isNewZenlerUser,
     temporaryPassword: enrollment.temporaryPassword,
