@@ -29,9 +29,8 @@ export async function createStripeCheckoutSession(input: {
   returnOrigin?: string | null;
   environment?: CheckoutEnvironment | null;
 }): Promise<StripeCheckoutSession> {
-  const environment = isProductionCheckoutDeployment()
-    ? 'production'
-    : (input.environment ?? resolveCheckoutEnvironment({ origin: input.returnOrigin }));
+  const environment = input.environment
+    ?? resolveCheckoutEnvironment({ origin: input.returnOrigin });
   const secretKey = stripeSecretKeyForEnvironment(environment);
 
   const siteUrl = resolveCheckoutSiteUrl(input.returnOrigin);
@@ -73,6 +72,7 @@ export async function createStripeCheckoutSession(input: {
     headers: {
       Authorization: `Bearer ${secretKey}`,
       'Content-Type': 'application/x-www-form-urlencoded',
+      'Idempotency-Key': `checkout-session-${input.orderId}`,
     },
     body: params,
     timeoutMs: 20_000,
@@ -103,27 +103,16 @@ function trimmedEnv(value: string | undefined): string {
   return String(value ?? '').trim();
 }
 
-let warnedIgnoredTestWebhookSecret = false;
-
 /**
- * Production accepts only the live webhook secret.
- * Do not set STRIPE_WEBHOOK_SECRET (the test secret) on production; it is ignored.
+ * Live and sandbox webhook secrets are both accepted.
+ * A sandbox event is still rejected for a production order.
  */
 function webhookSecrets(): Array<{ secret: string; livemode: boolean }> {
   const live = trimmedEnv(process.env.STRIPE_WEBHOOK_SECRET_LIVE);
   const test = trimmedEnv(process.env.STRIPE_WEBHOOK_SECRET);
-  const production = isProductionCheckoutDeployment();
-  if (production && test && !warnedIgnoredTestWebhookSecret) {
-    warnedIgnoredTestWebhookSecret = true;
-    console.warn(
-      '[stripe] STRIPE_WEBHOOK_SECRET is set on a production deployment and is ignored. Use STRIPE_WEBHOOK_SECRET_LIVE only.',
-    );
-  }
   const secrets: Array<{ secret: string; livemode: boolean }> = [];
   if (live) secrets.push({ secret: live, livemode: true });
-  if (!production && test && test !== live) {
-    secrets.push({ secret: test, livemode: false });
-  }
+  if (test && test !== live) secrets.push({ secret: test, livemode: false });
   return secrets;
 }
 

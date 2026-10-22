@@ -92,6 +92,15 @@ run('production deployment ignores the visitor environment', () => {
       origin: 'https://staging.vls-online.com',
       referer: 'https://staging.vls-online.com/buy',
     }), 'production');
+    assert.strictEqual(resolveCheckoutEnvironment({
+      origin: 'https://staging.vls-online.com',
+      trustedStagingHost: true,
+    }), 'staging');
+    assert.strictEqual(resolveCheckoutEnvironment({
+      explicit: 'staging',
+      origin: 'https://www.vls-online.com',
+      trustedStagingHost: true,
+    }), 'production');
     assert.strictEqual(parseCheckoutAttribution({ environment: 'staging' }).environment, 'production');
   });
 

@@ -36,6 +36,7 @@ import {
   resolveCoursePrice,
 } from '../services/pricingResolver';
 import { isParityDealsTestAllowed, isParityDealsTestRequest } from '../services/parityDealsTest';
+import { proxySecretMatches } from '../services/proxySecret';
 import { courseAccessUrlForEnrollment } from '../services/schoolAccess';
 import { freeEnrolHandler } from './freeEnrol';
 import {
@@ -110,6 +111,21 @@ function rejectDisabledProvider(providerId: PaymentProviderId, res: Response): b
   if (isPaymentProviderEnabled(providerId)) return false;
   res.status(400).json({ ok: false, error: 'Direct PayPal checkout is disabled' });
   return true;
+}
+
+function checkoutEnvironmentForRequest(req: Request): ReturnType<typeof resolveCheckoutEnvironment> {
+  const body = req.body && typeof req.body === 'object'
+    ? req.body as Record<string, unknown>
+    : {};
+  const attribution = body.attribution && typeof body.attribution === 'object'
+    ? body.attribution as Record<string, unknown>
+    : {};
+  return resolveCheckoutEnvironment({
+    explicit: body.environment ?? attribution.environment,
+    origin: parseCheckoutReturnOrigin(req),
+    referer: req.get('referer'),
+    trustedStagingHost: proxySecretMatches(req.get('x-vls-proxy-secret')),
+  });
 }
 
 function parseCheckoutReturnOrigin(req: Request): string | undefined {
@@ -271,11 +287,7 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
     if (rejectDisabledProvider(providerId, res)) return;
     const geo = detectCountryFromRequest(req);
     const clientIp = detectClientIpFromRequest(req);
-    const environment = resolveCheckoutEnvironment({
-      explicit: req.body?.environment ?? req.body?.attribution?.environment,
-      origin: req.get('origin'),
-      referer: req.get('referer'),
-    });
+    const environment = checkoutEnvironmentForRequest(req);
     const attribution = parseCheckoutAttribution(req.body ?? {}, {
       userAgent: req.get('user-agent'),
       clientIp,
@@ -413,11 +425,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
     }
 
     const quotedCountryCode = resolved.detectedCountryCode ?? geo.countryCode;
-    const environment = resolveCheckoutEnvironment({
-      explicit: req.body?.environment ?? req.body?.attribution?.environment,
-      origin: req.get('origin'),
-      referer: req.get('referer'),
-    });
+    const environment = checkoutEnvironmentForRequest(req);
     const attribution = parseCheckoutAttribution(req.body ?? {}, {
       userAgent: req.get('user-agent'),
       clientIp,

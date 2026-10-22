@@ -115,20 +115,19 @@ export function environmentFromHostname(hostname: string | null | undefined): Ch
 }
 
 /**
- * Prefer an explicit value, then host/origin. Unknown checkouts stay staging.
- * A production deployment ignores the request body and always uses live mode.
+ * A known production host always uses live Stripe.
+ * A known staging host uses the Stripe sandbox only when this CMS deploy is
+ * not production, or when the website proxy has authenticated the request.
+ * A production deploy ignores a bare environment flag, so a direct API call
+ * cannot switch a live purchase into test mode.
  */
 export function resolveCheckoutEnvironment(input: {
   explicit?: unknown;
   hostname?: string | null;
   origin?: string | null;
   referer?: string | null;
+  trustedStagingHost?: boolean;
 }): CheckoutEnvironment {
-  if (isProductionCheckoutDeployment()) return 'production';
-
-  const fromExplicit = parseCheckoutEnvironment(input.explicit);
-  if (fromExplicit) return fromExplicit;
-
   const hosts = [
     input.hostname,
     hostnameFromUrl(input.origin),
@@ -136,8 +135,17 @@ export function resolveCheckoutEnvironment(input: {
   ];
   for (const host of hosts) {
     const resolved = environmentFromHostname(host);
-    if (resolved) return resolved;
+    if (resolved === 'production') return 'production';
+    if (resolved === 'staging') {
+      if (!isProductionCheckoutDeployment() || input.trustedStagingHost) return 'staging';
+      return 'production';
+    }
   }
+
+  if (isProductionCheckoutDeployment()) return 'production';
+
+  const fromExplicit = parseCheckoutEnvironment(input.explicit);
+  if (fromExplicit) return fromExplicit;
   return 'staging';
 }
 

@@ -76,6 +76,31 @@ run('treats prod.vls-online.com origin as production', () => {
   });
 });
 
+run('uses the sandbox key for a trusted staging host on a production deployment', () => {
+  withDeploymentEnv({ VERCEL_ENV: 'production' }, () => {
+    assert.strictEqual(
+      stripeSecretKeyForEnvironment(resolveCheckoutEnvironment({
+        origin: 'https://staging.vls-online.com',
+        trustedStagingHost: true,
+      })),
+      'sk_test_sandbox',
+    );
+    assert.strictEqual(
+      stripeSecretKeyForEnvironment(resolveCheckoutEnvironment({
+        origin: 'https://staging.vls-online.com',
+      })),
+      'sk_live_prod',
+    );
+    assert.strictEqual(
+      stripeSecretKeyForEnvironment(resolveCheckoutEnvironment({
+        origin: 'https://vls-online.com',
+        trustedStagingHost: true,
+      })),
+      'sk_live_prod',
+    );
+  });
+});
+
 run('accepts either live or sandbox webhook signatures', () => {
   withDeploymentEnv({}, () => {
     const livePayload = JSON.stringify({ id: 'evt_1', livemode: true, type: 'checkout.session.completed' });
@@ -98,13 +123,14 @@ run('rejects a webhook whose livemode does not match the signing secret', () => 
   });
 });
 
-run('production deployment ignores the test webhook secret', () => {
+run('production deployment accepts the sandbox webhook and the live webhook', () => {
   withDeploymentEnv({ VERCEL_ENV: 'production', SITE_ENV: 'staging' }, () => {
-    const testPayload = JSON.stringify({ id: 'evt_live', livemode: false });
-    assert.throws(
-      () => verifyStripeWebhook(Buffer.from(testPayload), signedHeader(testPayload, 'whsec_test')),
-      /Invalid Stripe signature/,
-    );
+    const testPayload = JSON.stringify({ id: 'evt_test', livemode: false });
+    const testEvent = verifyStripeWebhook(
+      Buffer.from(testPayload),
+      signedHeader(testPayload, 'whsec_test'),
+    ) as { id?: string };
+    assert.strictEqual(testEvent.id, 'evt_test');
 
     const livePayload = JSON.stringify({ id: 'evt_live', livemode: true });
     const liveEvent = verifyStripeWebhook(
