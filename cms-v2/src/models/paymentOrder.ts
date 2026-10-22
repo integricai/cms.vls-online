@@ -269,6 +269,26 @@ export async function attachCustomerToPaymentOrder(
   return rowToOrder(rows[0] as DbRow);
 }
 
+/** Keep a checkout name when the order was created before the buyer typed one. */
+export async function rememberPaymentOrderStudentName(
+  orderId: number,
+  studentName: string,
+): Promise<PaymentOrder> {
+  const name = studentName.trim();
+  const current = await getPaymentOrder(orderId);
+  if (!current) throw new Error('Payment order not found');
+  if (!name || current.studentName?.trim()) return current;
+
+  const rows = await sql`
+    UPDATE payment_orders
+    SET student_name = ${name}
+    WHERE id = ${orderId}
+      AND (student_name IS NULL OR btrim(student_name) = '')
+    RETURNING *
+  `;
+  return rows[0] ? rowToOrder(rows[0] as DbRow) : current;
+}
+
 export async function getPaymentOrder(id: number): Promise<PaymentOrder | null> {
   const rows = await sql`SELECT * FROM payment_orders WHERE id = ${id}`;
   return rows[0] ? rowToOrder(rows[0] as DbRow) : null;

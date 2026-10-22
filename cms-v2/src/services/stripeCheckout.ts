@@ -13,6 +13,23 @@ function appendParam(params: URLSearchParams, key: string, value: string | numbe
   if (value != null && value !== '') params.append(key, String(value));
 }
 
+/** Required name fields on the Stripe page, beside the email. */
+export function appendStripeStudentNameFields(params: URLSearchParams): void {
+  const fields = [
+    { key: 'first_name', label: 'First name' },
+    { key: 'last_name', label: 'Last name' },
+  ];
+  fields.forEach((field, index) => {
+    params.append(`custom_fields[${index}][key]`, field.key);
+    params.append(`custom_fields[${index}][label][type]`, 'custom');
+    params.append(`custom_fields[${index}][label][custom]`, field.label);
+    params.append(`custom_fields[${index}][type]`, 'text');
+    params.append(`custom_fields[${index}][optional]`, 'false');
+    params.append(`custom_fields[${index}][text][minimum_length]`, '1');
+    params.append(`custom_fields[${index}][text][maximum_length]`, '80');
+  });
+}
+
 export async function createStripeCheckoutSession(input: {
   orderId: number;
   paymentOptionId?: number | null;
@@ -52,6 +69,7 @@ export async function createStripeCheckoutSession(input: {
   params.append('success_url', `${siteUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`);
   params.append('cancel_url', `${siteUrl}/payment-cancelled`);
   params.append('billing_address_collection', 'required');
+  appendStripeStudentNameFields(params);
   params.append('client_reference_id', String(input.orderId));
   params.append('line_items[0][price_data][currency]', input.currency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);

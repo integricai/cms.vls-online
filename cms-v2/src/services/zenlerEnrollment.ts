@@ -49,6 +49,19 @@ function enrollmentStatusFromExisting(isNewUser: boolean): 'enrolled' | 'enrolle
   return isNewUser ? 'enrolled_new' : 'enrolled';
 }
 
+/** Zenler rejects a new account when the last name is blank. */
+export function zenlerStudentNames(
+  name: string | null | undefined,
+  email: string,
+): { firstName: string; lastName: string } {
+  const split = splitStudentName(name);
+  const localPart = email.split('@')[0]?.trim() || 'Student';
+  return {
+    firstName: split.firstName?.trim() || localPart || 'Student',
+    lastName: split.lastName?.trim() || 'Student',
+  };
+}
+
 export async function enrollStudentInZenlerCourse(
   input: ZenlerEnrollmentInput,
 ): Promise<ZenlerEnrollmentResult> {
@@ -85,15 +98,22 @@ export async function enrollStudentInZenlerCourse(
     let existingUser = await findZenlerUserByEmail(email);
 
     if (!existingUser) {
-      const { firstName, lastName } = splitStudentName(input.name);
+      const names = zenlerStudentNames(input.name, email);
       temporaryPassword = generateTemporaryPassword();
-      existingUser = await createZenlerStudent({
-        email,
-        firstName: firstName ?? email.split('@')[0] ?? 'Student',
-        lastName,
-        password: temporaryPassword,
-      });
-      isNewZenlerUser = true;
+      try {
+        existingUser = await createZenlerStudent({
+          email,
+          firstName: names.firstName,
+          lastName: names.lastName,
+          password: temporaryPassword,
+        });
+        isNewZenlerUser = true;
+      } catch (createError) {
+        const recovered = await findZenlerUserByEmail(email).catch(() => null);
+        if (!recovered?.id) throw createError;
+        existingUser = recovered;
+        temporaryPassword = null;
+      }
     }
 
     zenlerUserId = existingUser.id;

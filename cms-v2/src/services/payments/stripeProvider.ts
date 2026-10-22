@@ -73,6 +73,26 @@ function sessionOrderId(object: Record<string, any>): number | null {
   return Number.isInteger(orderId) ? orderId : null;
 }
 
+function customFieldText(object: Record<string, any>, key: string): string {
+  const fields = Array.isArray(object.custom_fields) ? object.custom_fields : [];
+  const field = fields.find((item: { key?: unknown }) => item?.key === key);
+  const value = field?.text?.value;
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+/** First and last name from the Stripe page, then the billing name. */
+export function stripeCheckoutStudentName(object: Record<string, any>): string | null {
+  const combined = [customFieldText(object, 'first_name'), customFieldText(object, 'last_name')]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  if (combined) return combined;
+  const individual = object.customer_details?.individual_name;
+  if (typeof individual === 'string' && individual.trim()) return individual.trim();
+  const billing = object.customer_details?.name;
+  return typeof billing === 'string' && billing.trim() ? billing.trim() : null;
+}
+
 function checkoutCompletedFromSession(object: Record<string, any>): CheckoutCompletedEvent {
   return {
     type: 'checkout.completed',
@@ -81,7 +101,7 @@ function checkoutCompletedFromSession(object: Record<string, any>): CheckoutComp
     checkoutId: typeof object.id === 'string' ? object.id : null,
     paymentId: extractStripeId(object.payment_intent),
     customerEmail: object.customer_details?.email ?? object.customer_email ?? null,
-    customerName: typeof object.customer_details?.name === 'string' ? object.customer_details.name : null,
+    customerName: stripeCheckoutStudentName(object),
     amountMinor: typeof object.amount_total === 'number' ? object.amount_total : null,
     currency: typeof object.currency === 'string' ? object.currency : null,
   };

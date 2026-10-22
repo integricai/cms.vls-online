@@ -9,6 +9,7 @@ import {
   markFulfillmentAttempted,
   markOrderEmailSent,
   markPaymentOrderPaid,
+  rememberPaymentOrderStudentName,
   markPaymentOrderRefunded,
   paymentOrderPayerEmail,
   releaseOrderEmailSend,
@@ -277,9 +278,12 @@ export async function fulfillPaidCheckout(event: CheckoutCompletedEvent): Promis
   });
 
   const payerEmail = paymentOrderPayerEmail(order) ?? event.customerEmail;
+  const payerName = (event.customerName ?? order.studentName ?? '').trim();
+  if (payerName) {
+    order = await rememberPaymentOrderStudentName(order.id, payerName);
+  }
   if (payerEmail) {
-    const payerName = event.customerName ?? order.studentName;
-    const { firstName, lastName } = splitStudentName(payerName);
+    const { firstName, lastName } = splitStudentName(order.studentName ?? payerName);
     await upsertCustomer({
       email: String(payerEmail).trim().toLowerCase(),
       firstName,

@@ -214,6 +214,22 @@ export async function listAllZenlerStudents(): Promise<ZenlerApiUser[]> {
   return users;
 }
 
+export function zenlerCreateStudentBody(input: {
+  email: string;
+  firstName: string;
+  lastName?: string | null;
+  password: string;
+}): Record<string, unknown> {
+  return {
+    first_name: input.firstName.trim() || 'Student',
+    last_name: input.lastName?.trim() || 'Student',
+    email: input.email.trim().toLowerCase(),
+    password: input.password,
+    commission: 0,
+    roles: [ZENLER_ROLE_STUDENT],
+  };
+}
+
 export async function createZenlerStudent(input: {
   email: string;
   firstName: string;
@@ -222,14 +238,11 @@ export async function createZenlerStudent(input: {
 }): Promise<ZenlerApiUser> {
   const data = await zenlerFetch<ZenlerApiUser>('/users', {
     method: 'POST',
-    body: JSON.stringify({
-      first_name: input.firstName,
-      last_name: input.lastName ?? '',
-      email: input.email.trim().toLowerCase(),
-      password: input.password,
-      roles: [ZENLER_ROLE_STUDENT],
-    }),
+    body: JSON.stringify(zenlerCreateStudentBody(input)),
   });
+  if (!data?.id) {
+    throw new Error('Zenler create user did not return a user id');
+  }
   return data;
 }
 

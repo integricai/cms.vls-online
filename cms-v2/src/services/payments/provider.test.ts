@@ -98,6 +98,28 @@ run('maps Stripe checkout.session.completed only when payment_status is paid', (
   });
 });
 
+run('prefers the Stripe first and last name fields over the billing name', () => {
+  const event = mapStripeWebhookEvent({
+    type: 'checkout.session.completed',
+    data: {
+      object: {
+        id: 'cs_named',
+        client_reference_id: '42',
+        payment_status: 'paid',
+        payment_intent: 'pi_named',
+        amount_total: 10400,
+        currency: 'usd',
+        customer_details: { email: 'a@b.com', name: 'Cardholder Name' },
+        custom_fields: [
+          { key: 'first_name', type: 'text', text: { value: ' Ada ' } },
+          { key: 'last_name', type: 'text', text: { value: 'Lovelace' } },
+        ],
+      },
+    },
+  });
+  assert.strictEqual(event.type === 'checkout.completed' ? event.customerName : null, 'Ada Lovelace');
+});
+
 run('maps Stripe async payment success, failure, and expiry', () => {
   const succeeded = mapStripeWebhookEvent({
     type: 'checkout.session.async_payment_succeeded',

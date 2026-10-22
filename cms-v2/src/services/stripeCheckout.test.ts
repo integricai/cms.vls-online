@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { resolveCheckoutEnvironment } from './attribution';
 import {
   STRIPE_WEBHOOK_TOLERANCE_SECONDS,
+  appendStripeStudentNameFields,
   stripeSecretKeyForEnvironment,
   verifyStripeWebhook,
 } from './stripeCheckout';
@@ -166,6 +167,17 @@ run('accepts any v1 signature when the header carries several', () => {
     const reversedEvent = verifyStripeWebhook(Buffer.from(payload), reversed) as { id?: string };
     assert.strictEqual(reversedEvent.id, 'evt_multi');
   });
+});
+
+run('asks Stripe for a required first name and last name', () => {
+  const params = new URLSearchParams();
+  appendStripeStudentNameFields(params);
+  assert.strictEqual(params.get('custom_fields[0][key]'), 'first_name');
+  assert.strictEqual(params.get('custom_fields[0][label][custom]'), 'First name');
+  assert.strictEqual(params.get('custom_fields[0][optional]'), 'false');
+  assert.strictEqual(params.get('custom_fields[1][key]'), 'last_name');
+  assert.strictEqual(params.get('custom_fields[1][label][custom]'), 'Last name');
+  assert.strictEqual(params.get('custom_fields[1][optional]'), 'false');
 });
 
 run('rejects an unknown webhook signature', () => {
