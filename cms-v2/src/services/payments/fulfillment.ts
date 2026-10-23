@@ -21,6 +21,7 @@ import {
   sendStudentRefundConfirmation,
 } from '../paymentEmails';
 import { courseAccessUrlForEnrollment } from '../schoolAccess';
+import { clearStudentPassword } from '../studentPassword';
 import { ensureSaleRecordedForPaidOrder } from '../saleRecording';
 import {
   enrollmentEmailContextForOrder,
@@ -127,15 +128,18 @@ export async function reconcilePaidOrder(order: PaymentOrder): Promise<PaymentOr
   return current;
 }
 
-function contextForStudentEmail(
+async function contextForStudentEmail(
   order: PaymentOrder,
   emailContext: ZenlerEnrollmentEmailContext | null,
-): ZenlerEnrollmentEmailContext | null {
-  const fromOrder = enrollmentEmailContextForOrder(order);
+): Promise<ZenlerEnrollmentEmailContext | null> {
+  const fromOrder = await enrollmentEmailContextForOrder(order);
+  const studentChosePassword = emailContext?.studentChosePassword === true
+    || fromOrder?.studentChosePassword === true;
   if (order.zenlerUserCreated || emailContext?.isNewZenlerUser) {
     return {
       isNewZenlerUser: true,
       temporaryPassword: emailContext?.temporaryPassword ?? null,
+      studentChosePassword,
       courseAccessUrl: emailContext?.courseAccessUrl
         ?? fromOrder?.courseAccessUrl
         ?? courseAccessUrlForEnrollment({
@@ -161,6 +165,7 @@ function waitingForPasswordHolder(
   const status = String(order.zenlerEnrollmentStatus ?? '').toLowerCase();
   if (status === 'failed' || status === 'skipped') return false;
   const createdNewUser = order.zenlerUserCreated || emailContext?.isNewZenlerUser === true;
+  if (emailContext?.studentChosePassword) return false;
   if (!createdNewUser || emailContext?.temporaryPassword) return false;
   if (!order.paidAt) return false;
   return Date.now() - new Date(order.paidAt).getTime() < NEW_USER_PASSWORD_EMAIL_GRACE_MS;
@@ -196,7 +201,7 @@ async function sendUnsentPaymentEmails(
   emailContext: ZenlerEnrollmentEmailContext | null,
 ): Promise<PaymentOrder> {
   const fresh = (await getPaymentOrder(order.id)) ?? order;
-  const access = contextForStudentEmail(fresh, emailContext);
+  const access = await contextForStudentEmail(fresh, emailContext);
   const sendStudent = !fresh.confirmationEmailSentAt
     && !zenlerAccessStillBlockingStudentEmail(fresh)
     && !waitingForPasswordHolder(fresh, access);
@@ -317,10 +322,14 @@ export async function fulfillPaidCheckout(event: CheckoutCompletedEvent): Promis
 export async function closeAbandonedCheckout(event: CheckoutClosedEvent): Promise<PaymentOrder | null> {
   const existing = await resolveOrderForCheckout(event);
   if (!existing || existing.status !== 'Pending') return existing;
-  return closePendingPaymentOrder({
+  const closed = await closePendingPaymentOrder({
     orderId: existing.id,
     status: event.status,
   });
+  await clearStudentPassword(existing.id).catch((err: unknown) => {
+    console.error('[payments] could not clear the stored password', existing.id, err);
+  });
+  return closed;
 }
 
 export async function fulfillRefund(event: RefundCompletedEvent): Promise<PaymentOrder | null> {

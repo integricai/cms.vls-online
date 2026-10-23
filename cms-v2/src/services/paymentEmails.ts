@@ -198,6 +198,23 @@ export function studentPaymentAccessInstructions(input: {
   const access = input.access;
   const loginUrl = access?.courseAccessUrl ?? VLS_SCHOOL_LOGIN_URL;
 
+  if (access?.isNewZenlerUser && access.studentChosePassword && !access.temporaryPassword) {
+    return {
+      text: `
+Sign in at: ${VLS_SCHOOL_LOGIN_URL}
+Email: ${to}
+
+Use the password you chose when you paid. Your enrolled course will appear under My Courses.
+
+`,
+      html: `
+${p(`Please use the button below to sign in to the school.`)}
+${ctaButton(VLS_SCHOOL_LOGIN_URL, 'Log in to the school')}
+${p(`<strong style="color:${BRAND.navy};">Email:</strong> ${esc(to)}`)}
+${p(`Use the password you chose when you paid. Your enrolled course will appear under <strong>My Courses</strong>.`)}`,
+    };
+  }
+
   if (access?.isNewZenlerUser && access.temporaryPassword) {
     return {
       text: `

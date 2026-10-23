@@ -16,6 +16,24 @@ function run(name: string, fn: () => void): void {
 
 console.log('payment email access instructions');
 
+run('tells a new student to sign in with the password they chose', () => {
+  const message = studentPaymentAccessInstructions({
+    email: 'ada@vls-online.com',
+    access: {
+      isNewZenlerUser: true,
+      temporaryPassword: null,
+      studentChosePassword: true,
+      courseAccessUrl: login,
+      zenlerEnrollmentStatus: 'enrolled_new',
+    },
+  });
+  assert.match(message.text, /password you chose when you paid/);
+  assert.match(message.html, /Log in to the school/);
+  assert.doesNotMatch(message.text, /Temporary password:/);
+  assert.doesNotMatch(message.text, /Set your password/);
+  assert.doesNotMatch(message.text, /register/);
+});
+
 run('gives a new student their temporary password on the first email', () => {
   const message = studentPaymentAccessInstructions({
     email: 'ada@vls-online.com',

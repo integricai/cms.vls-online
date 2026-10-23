@@ -52,10 +52,32 @@ import {
   checkoutSessionRateLimit,
   freeEnrolEmailRateLimit,
   freeEnrolIpRateLimit,
+  rateLimit,
 } from '../middleware/rateLimit';
+import { findZenlerUserByEmail, zenlerCredentialsConfigured } from '../services/zenlerApi';
+import { zenlerStudentNames } from '../services/zenlerEnrollment';
+import { schoolSsoUrl } from '../services/schoolSso';
+import { resolveCheckoutSiteUrl } from '../services/checkoutSiteUrl';
+import {
+  normalizeStudentEmail,
+  parseChosenPassword,
+  saveStudentPassword,
+} from '../services/studentPassword';
 import { sendErrorAlert } from '../utils/errorAlert';
 
 const router = Router();
+
+const schoolAccountRateLimit = rateLimit({
+  name: 'school-account',
+  limit: 30,
+  windowMs: 15 * 60 * 1000,
+});
+
+const schoolLoginRateLimit = rateLimit({
+  name: 'school-login',
+  limit: 10,
+  windowMs: 15 * 60 * 1000,
+});
 
 function parsePaymentOptionId(value: unknown): number | null {
   const text = String(value ?? '').trim();
@@ -151,6 +173,51 @@ function parseCheckoutCustomer(body: Record<string, unknown>, countryCode: strin
     phone,
     countryCode,
   };
+}
+
+/**
+ * The new checkout form asks for a password only when the email is new.
+ * Older checkouts omit collectSchoolPassword and keep the temporary-password path.
+ */
+async function prepareSchoolPassword(
+  body: Record<string, unknown>,
+  fallbackEmail: string | null,
+): Promise<{ email: string | null; password: string | null } | { error: string }> {
+  const collecting = body.collectSchoolPassword === true;
+  const email = normalizeStudentEmail(body.studentEmail) ?? (collecting ? null : fallbackEmail);
+  const parsed = parseChosenPassword(body.studentPassword);
+  if (parsed.invalid) return { error: 'Password must be 8 to 72 characters.' };
+  if (!collecting && !parsed.password) return { email: fallbackEmail, password: null };
+  if (!email) return { error: 'Enter the email address for your school account.' };
+
+  let registered: boolean | null = null;
+  if (zenlerCredentialsConfigured()) {
+    try {
+      registered = Boolean(await findZenlerUserByEmail(email));
+    } catch (err) {
+      console.error('[checkout] school account lookup failed', err instanceof Error ? err.message : err);
+      registered = null;
+    }
+  }
+  if (registered === true) return { email, password: null };
+  if (!parsed.password) return { error: 'Choose a password for your new school account.' };
+  return { email, password: parsed.password };
+}
+
+function schoolLoginErrorUrl(req: Request): string {
+  const referer = req.get('referer');
+  if (referer) {
+    try {
+      const url = new URL(referer);
+      const site = resolveCheckoutSiteUrl(url.origin);
+      if (site === `${url.protocol}//${url.host}` && url.pathname.includes('payment-success')) {
+        return url.toString();
+      }
+    } catch {
+      // Fall through to the site home for payment success.
+    }
+  }
+  return `${resolveCheckoutSiteUrl(req.get('origin'))}/payment-success`;
 }
 
 async function upsertCheckoutCustomer(input: {
@@ -255,6 +322,46 @@ router.get('/providers', (_req: Request, res: Response) => {
   });
 });
 
+router.post('/account-status', schoolAccountRateLimit, async (req: Request, res: Response) => {
+  const email = normalizeStudentEmail(req.body?.studentEmail);
+  if (!email) return res.status(400).json({ ok: false, error: 'Enter a valid email address.' });
+  if (!zenlerCredentialsConfigured()) {
+    return res.json({ ok: true, registered: false, lookup: 'unavailable' });
+  }
+  try {
+    const existing = await findZenlerUserByEmail(email);
+    return res.json({ ok: true, registered: Boolean(existing) });
+  } catch (err) {
+    console.error('[checkout] school account lookup failed', err instanceof Error ? err.message : err);
+    return res.json({ ok: true, registered: false, lookup: 'unavailable' });
+  }
+});
+
+router.post('/school-login', schoolLoginRateLimit, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const sessionId = checkoutSessionId(req.body?.session_id ?? req.body?.sessionId ?? req.body?.checkout_id);
+    if (!sessionId) return res.status(400).json({ ok: false, error: 'session_id is required' });
+    const order = await getPaymentOrderByCheckoutId(sessionId);
+    if (!order) return res.status(404).json({ ok: false, error: 'Payment order not found' });
+    const enrolled = String(order.zenlerEnrollmentStatus ?? '').toLowerCase().startsWith('enrolled');
+    if (order.status !== 'Paid' || !enrolled) {
+      return res.status(409).json({ ok: false, error: 'Course access is still being set up.' });
+    }
+    const email = normalizeStudentEmail(order.studentEmail ?? order.providerCustomerEmail ?? order.stripeCustomerEmail);
+    if (!email) return res.status(400).json({ ok: false, error: 'This payment has no school email.' });
+    const names = zenlerStudentNames(order.studentName, email);
+    const url = schoolSsoUrl({
+      firstName: names.firstName,
+      lastName: names.lastName,
+      email,
+      errorUrl: schoolLoginErrorUrl(req),
+    });
+    return res.json({ ok: true, url });
+  } catch (err) {
+    next(err);
+  }
+});
+
 /** Legacy payment-card checkout (course_payment_cards). */
 router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -294,8 +401,12 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       environment,
     });
     const customerInput = parseCheckoutCustomer(req.body ?? {}, geo.countryCode);
+    const schoolPassword = await prepareSchoolPassword(req.body ?? {}, customerInput.studentEmail);
+    if ('error' in schoolPassword) {
+      return res.status(400).json({ ok: false, error: 'invalid_request', message: schoolPassword.error });
+    }
     const customer = await upsertCheckoutCustomer({
-      email: customerInput.studentEmail,
+      email: schoolPassword.email,
       firstName: customerInput.firstName,
       lastName: customerInput.lastName,
       phone: customerInput.phone,
@@ -311,7 +422,7 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       courseTitle: option.courseName ?? option.title,
       optionType: option.optionType,
       studentName: customerInput.studentName,
-      studentEmail: customerInput.studentEmail,
+      studentEmail: schoolPassword.email,
       studentPhone: customerInput.phone,
       countryCode: geo.countryCode,
       amount,
@@ -321,6 +432,7 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       environment,
       provider: providerId,
     });
+    if (schoolPassword.password) await saveStudentPassword(order.id, schoolPassword.password);
 
     const session = await startProviderCheckout(providerId, {
       orderId: order.id,
@@ -331,7 +443,7 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       paymentCardTitle: option.title,
       amount,
       currency: option.currency || 'GBP',
-      studentEmail: customerInput.studentEmail,
+      studentEmail: schoolPassword.email,
       returnOrigin: parseCheckoutReturnOrigin(req),
       environment,
     });
@@ -432,8 +544,12 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       environment,
     });
     const customerInput = parseCheckoutCustomer(req.body ?? {}, quotedCountryCode);
+    const schoolPassword = await prepareSchoolPassword(req.body ?? {}, customerInput.studentEmail);
+    if ('error' in schoolPassword) {
+      return res.status(400).json({ ok: false, error: 'invalid_request', message: schoolPassword.error });
+    }
     const customer = await upsertCheckoutCustomer({
-      email: customerInput.studentEmail,
+      email: schoolPassword.email,
       firstName: customerInput.firstName,
       lastName: customerInput.lastName,
       phone: customerInput.phone,
@@ -496,7 +612,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       courseTitle: course.name,
       optionType,
       studentName: customerInput.studentName,
-      studentEmail: customerInput.studentEmail,
+      studentEmail: schoolPassword.email,
       studentPhone: customerInput.phone,
       countryCode: quotedCountryCode,
       amount: chargeAmount,
@@ -507,6 +623,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       environment,
       provider: providerId,
     });
+    if (schoolPassword.password) await saveStudentPassword(order.id, schoolPassword.password);
 
     const session = await startProviderCheckout(providerId, {
       orderId: order.id,
@@ -517,7 +634,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       paymentCardTitle: `${course.name} — ${optionType}`,
       amount: chargeAmount,
       currency: chargeCurrency,
-      studentEmail: customerInput.studentEmail,
+      studentEmail: schoolPassword.email,
       countryCode: quotedCountryCode,
       returnOrigin: parseCheckoutReturnOrigin(req),
       environment,

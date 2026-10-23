@@ -30,6 +30,51 @@ export function appendStripeStudentNameFields(params: URLSearchParams): void {
   });
 }
 
+/** Lock Checkout to this email. A prefilled customer_email can still be edited. */
+export async function stripeCustomerIdForEmail(
+  email: string,
+  environment?: CheckoutEnvironment | null,
+): Promise<string> {
+  const secretKey = stripeSecretKeyForEnvironment(environment);
+  const query = new URLSearchParams({ email, limit: '1' });
+  const listed = await stripeApiRequest(secretKey, `/customers?${query.toString()}`, { method: 'GET' });
+  const customers = Array.isArray(listed.data) ? listed.data as Array<{ id?: string; email?: string }> : [];
+  const match = customers.find((customer) => customer.email?.trim().toLowerCase() === email.toLowerCase());
+  if (match?.id) return match.id;
+
+  const params = new URLSearchParams();
+  params.set('email', email);
+  const created = await stripeApiRequest(secretKey, '/customers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params,
+  });
+  if (typeof created.id !== 'string' || !created.id) {
+    throw new Error('Stripe did not return a customer id');
+  }
+  return created.id;
+}
+
+async function stripeApiRequest(
+  secretKey: string,
+  path: string,
+  init: RequestInit,
+): Promise<{ id?: string; data?: unknown; error?: { message?: string } }> {
+  const response = await fetchWithTimeout(`https://api.stripe.com/v1${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${secretKey}`,
+      ...(init.headers ?? {}),
+    },
+    timeoutMs: 20_000,
+  });
+  const body = await response.json() as { id?: string; data?: unknown; error?: { message?: string } };
+  if (!response.ok) {
+    throw new Error(body.error?.message ?? `Stripe request failed (${response.status})`);
+  }
+  return body;
+}
+
 export async function createStripeCheckoutSession(input: {
   orderId: number;
   paymentOptionId?: number | null;
@@ -75,7 +120,17 @@ export async function createStripeCheckoutSession(input: {
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
   params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
   params.append('line_items[0][quantity]', '1');
-  appendParam(params, 'customer_email', input.studentEmail);
+  if (input.studentEmail) {
+    try {
+      const customerId = await stripeCustomerIdForEmail(input.studentEmail, environment);
+      params.append('customer', customerId);
+    } catch (err) {
+      console.error('[stripe] could not lock the checkout email', err instanceof Error ? err.message : err);
+      appendParam(params, 'customer_email', input.studentEmail);
+    }
+  } else {
+    appendParam(params, 'customer_email', input.studentEmail);
+  }
   params.append('metadata[orderId]', String(input.orderId));
   appendParam(params, 'metadata[paymentOptionId]', input.paymentOptionId);
   appendParam(params, 'metadata[courseId]', input.courseId);

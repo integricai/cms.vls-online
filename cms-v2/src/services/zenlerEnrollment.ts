@@ -19,6 +19,8 @@ export interface ZenlerEnrollmentInput {
   name: string | null;
   zenlerCourseId: string;
   zenlerPlanId?: number | null;
+  /** Set only for a buyer who does not already have a school account. */
+  password?: string | null;
 }
 
 export interface ZenlerEnrollmentResult {
@@ -26,6 +28,7 @@ export interface ZenlerEnrollmentResult {
   status: 'enrolled' | 'enrolled_new' | 'pending' | 'failed' | 'skipped';
   isNewZenlerUser: boolean;
   temporaryPassword: string | null;
+  studentChosePassword: boolean;
   message: string;
 }
 
@@ -43,6 +46,19 @@ export interface ZenlerUnenrollmentResult {
 
 function generateTemporaryPassword(): string {
   return randomBytes(12).toString('base64url');
+}
+
+/** A chosen password is used as-is. Otherwise Zenler still requires one, so we generate it. */
+export function passwordForNewZenlerAccount(chosen: string | null | undefined): {
+  password: string;
+  studentChosePassword: boolean;
+  temporaryPassword: string | null;
+} {
+  if (chosen) {
+    return { password: chosen, studentChosePassword: true, temporaryPassword: null };
+  }
+  const password = generateTemporaryPassword();
+  return { password, studentChosePassword: false, temporaryPassword: password };
 }
 
 function enrollmentStatusFromExisting(isNewUser: boolean): 'enrolled' | 'enrolled_new' {
@@ -71,6 +87,7 @@ export async function enrollStudentInZenlerCourse(
       status: 'skipped',
       isNewZenlerUser: false,
       temporaryPassword: null,
+      studentChosePassword: false,
       message: 'Zenler API credentials are not configured',
     };
   }
@@ -82,6 +99,7 @@ export async function enrollStudentInZenlerCourse(
       status: 'failed',
       isNewZenlerUser: false,
       temporaryPassword: null,
+      studentChosePassword: false,
       message: 'Student email is required for Zenler enrollment',
     };
   }
@@ -93,19 +111,22 @@ export async function enrollStudentInZenlerCourse(
   let zenlerUserId: string | null = null;
   let isNewZenlerUser = false;
   let temporaryPassword: string | null = null;
+  let studentChosePassword = false;
 
   try {
     let existingUser = await findZenlerUserByEmail(email);
 
     if (!existingUser) {
       const names = zenlerStudentNames(input.name, email);
-      temporaryPassword = generateTemporaryPassword();
+      const chosen = passwordForNewZenlerAccount(input.password);
+      temporaryPassword = chosen.temporaryPassword;
+      studentChosePassword = chosen.studentChosePassword;
       try {
         existingUser = await createZenlerStudent({
           email,
           firstName: names.firstName,
           lastName: names.lastName,
-          password: temporaryPassword,
+          password: chosen.password,
         });
         isNewZenlerUser = true;
       } catch (createError) {
@@ -113,6 +134,7 @@ export async function enrollStudentInZenlerCourse(
         if (!recovered?.id) throw createError;
         existingUser = recovered;
         temporaryPassword = null;
+        studentChosePassword = false;
       }
     }
 
@@ -136,6 +158,7 @@ export async function enrollStudentInZenlerCourse(
       status: enrollmentStatusFromExisting(isNewZenlerUser),
       isNewZenlerUser,
       temporaryPassword,
+      studentChosePassword,
       message: alreadyEnrolled
         ? 'Student was already enrolled in this Zenler course'
         : 'Student enrolled in Zenler course',
@@ -152,6 +175,7 @@ export async function enrollStudentInZenlerCourse(
       status: 'failed',
       isNewZenlerUser,
       temporaryPassword: isNewZenlerUser ? temporaryPassword : null,
+      studentChosePassword: isNewZenlerUser ? studentChosePassword : false,
       message,
     };
   }

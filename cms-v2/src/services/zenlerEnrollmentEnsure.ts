@@ -11,6 +11,12 @@ import {
   enrollStudentInZenlerCourse,
   unenrollStudentFromZenlerCourse,
 } from './zenlerEnrollment';
+import {
+  clearStudentPassword,
+  didStudentChoosePassword,
+  markStudentChosePassword,
+  readStudentPassword,
+} from './studentPassword';
 
 const RETRYABLE_STATUSES = new Set<string | null>(['pending', 'failed', 'skipped', null, '']);
 
@@ -44,13 +50,20 @@ async function enrollOrderCourses(order: PaymentOrder) {
       status: 'failed' as const,
       isNewZenlerUser: false,
       temporaryPassword: null as string | null,
+      studentChosePassword: false,
     };
   }
 
   const planId = await resolvePlanId(order);
+  const chosenPassword = await readStudentPassword(order.id).catch((err: unknown) => {
+    console.error('[zenler-enrollment] could not read the chosen password', order.id, err);
+    return null;
+  });
   let zenlerUserId: string | null = order.zenlerUserId;
   let isNewZenlerUser = false;
   let temporaryPassword: string | null = null;
+  let studentChosePassword = false;
+  let accountReady = false;
   let lastStatus = 'failed';
 
   for (const zenlerCourseId of courseIds) {
@@ -59,6 +72,7 @@ async function enrollOrderCourses(order: PaymentOrder) {
       name: order.studentName,
       zenlerCourseId,
       zenlerPlanId: planId,
+      password: chosenPassword,
     });
     lastStatus = enrollment.status;
     if (enrollment.zenlerUserId) zenlerUserId = enrollment.zenlerUserId;
@@ -66,22 +80,44 @@ async function enrollOrderCourses(order: PaymentOrder) {
       isNewZenlerUser = true;
       temporaryPassword = enrollment.temporaryPassword;
     }
+    if (enrollment.studentChosePassword) studentChosePassword = true;
+    if (enrollment.status.startsWith('enrolled') || enrollment.isNewZenlerUser) accountReady = true;
     if (!enrollment.status.startsWith('enrolled')) {
+      await settleChosenPassword(order.id, { accountReady, studentChosePassword });
       return {
         zenlerUserId,
         status: enrollment.status,
         isNewZenlerUser,
         temporaryPassword,
+        studentChosePassword,
       };
     }
   }
 
-  return {
+  const result = {
     zenlerUserId,
     status: lastStatus.startsWith('enrolled') ? lastStatus : 'enrolled',
     isNewZenlerUser,
     temporaryPassword,
+    studentChosePassword,
   };
+  await settleChosenPassword(order.id, { accountReady: true, studentChosePassword });
+  return result;
+}
+
+async function settleChosenPassword(orderId: number, enrollment: {
+  accountReady: boolean;
+  studentChosePassword: boolean;
+}): Promise<void> {
+  try {
+    if (enrollment.studentChosePassword) {
+      await markStudentChosePassword(orderId);
+      return;
+    }
+    if (enrollment.accountReady) await clearStudentPassword(orderId);
+  } catch (err) {
+    console.error('[zenler-enrollment] could not clear the stored password', orderId, err);
+  }
 }
 
 async function resolvePlanId(order: PaymentOrder): Promise<number | undefined> {
@@ -93,22 +129,29 @@ async function resolvePlanId(order: PaymentOrder): Promise<number | undefined> {
 export type ZenlerEnrollmentEmailContext = {
   isNewZenlerUser: boolean;
   temporaryPassword: string | null;
+  studentChosePassword?: boolean;
   courseAccessUrl: string;
   zenlerEnrollmentStatus: string;
 };
 
-export function enrollmentEmailContextForOrder(order: PaymentOrder): ZenlerEnrollmentEmailContext | null {
+export async function enrollmentEmailContextForOrder(
+  order: PaymentOrder,
+): Promise<ZenlerEnrollmentEmailContext | null> {
   const status = String(order.zenlerEnrollmentStatus ?? '').toLowerCase();
   if (!status.startsWith('enrolled') && !order.zenlerUserCreated) return null;
-  return emailContextFromOrder(order);
+  return await emailContextFromOrder(order);
 }
 
-function emailContextFromOrder(order: PaymentOrder): ZenlerEnrollmentEmailContext {
+async function emailContextFromOrder(order: PaymentOrder): Promise<ZenlerEnrollmentEmailContext> {
+  const studentChosePassword = order.zenlerUserCreated
+    ? await didStudentChoosePassword(order.id).catch(() => false)
+    : false;
   return {
     isNewZenlerUser: order.zenlerUserCreated,
-    // Retries do not have the original temporary password. The confirmation
-    // email sends password-reset instructions instead of an existing-account login.
+    // Retries do not have the original temporary password. A buyer who chose
+    // one at checkout is told to sign in with it. Anyone else gets a reset link.
     temporaryPassword: null,
+    studentChosePassword,
     courseAccessUrl: courseAccessUrlForEnrollment({
       zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
       isNewZenlerUser: order.zenlerUserCreated,
@@ -121,12 +164,14 @@ function emailContextFromEnrollment(enrollment: {
   status: string;
   isNewZenlerUser: boolean;
   temporaryPassword: string | null;
+  studentChosePassword?: boolean;
 }): ZenlerEnrollmentEmailContext | null {
   const enrolled = String(enrollment.status).startsWith('enrolled');
   if (!enrolled && !enrollment.isNewZenlerUser) return null;
   return {
     isNewZenlerUser: enrollment.isNewZenlerUser,
     temporaryPassword: enrollment.temporaryPassword,
+    studentChosePassword: enrollment.studentChosePassword === true,
     courseAccessUrl: courseAccessUrlForEnrollment({
       zenlerEnrollmentStatus: enrollment.status,
       isNewZenlerUser: enrollment.isNewZenlerUser,
@@ -148,7 +193,7 @@ export async function ensureZenlerEnrollmentForPaidOrder(
 
   const currentStatus = String(order.zenlerEnrollmentStatus ?? '').toLowerCase();
   if (currentStatus.startsWith('enrolled')) {
-    return { order, emailContext: emailContextFromOrder(order) };
+    return { order, emailContext: await emailContextFromOrder(order) };
   }
   if (!RETRYABLE_STATUSES.has(order.zenlerEnrollmentStatus)) {
     return { order, emailContext: null };
@@ -234,7 +279,7 @@ export async function runZenlerEnrollmentForPaidOrder(
 
   const currentStatus = String(order.zenlerEnrollmentStatus ?? '').toLowerCase();
   if (currentStatus.startsWith('enrolled')) {
-    return { order, emailContext: emailContextFromOrder(order) };
+    return { order, emailContext: await emailContextFromOrder(order) };
   }
 
   const enrollment = await enrollOrderCourses(order);
