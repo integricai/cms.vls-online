@@ -31,7 +31,7 @@ export function schoolSsoUrl(input: {
 
   const url = new URL(`${VLS_SCHOOL_BASE_URL}/api/sso/v1`);
   url.searchParams.set('token', token);
-  url.searchParams.set('return_to', `${VLS_SCHOOL_BASE_URL}/mycourse`);
+  url.searchParams.set('return_to', `${VLS_SCHOOL_BASE_URL}/mycourses`);
   if (input.errorUrl?.trim()) url.searchParams.set('error_url', input.errorUrl.trim());
   return url.toString();
 }
