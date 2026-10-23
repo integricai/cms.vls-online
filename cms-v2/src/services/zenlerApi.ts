@@ -135,18 +135,47 @@ export function parseZenlerCourseId(courseId: string): number {
   return id;
 }
 
+export function zenlerUserMatchingEmail<T extends { email?: string | null }>(
+  items: T[] | null | undefined,
+  email: string,
+): T | null {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized || !items) return null;
+  return items.find((item) => String(item.email ?? '').trim().toLowerCase() === normalized) ?? null;
+}
+
+/**
+ * Any existing Zenler person with this email already has a school login.
+ * Do not filter by the student role: that filter hides admins, instructors,
+ * and some student records, and checkout then asks for a password it will
+ * not apply. Search is fuzzy, so walk a few pages and accept an exact email only.
+ */
 export async function findZenlerUserByEmail(email: string): Promise<ZenlerApiUser | null> {
   const normalized = email.trim().toLowerCase();
-  const query = new URLSearchParams({
-    limit: '15',
-    page: '1',
-    search: normalized,
-  });
-  query.append('role[]', String(ZENLER_ROLE_STUDENT));
+  if (!normalized) return null;
+  const direct = await scanZenlerUserSearch(normalized, normalized);
+  if (direct) return direct;
+  const localPart = normalized.split('@')[0]?.trim();
+  if (!localPart || localPart === normalized) return null;
+  return scanZenlerUserSearch(localPart, normalized);
+}
 
-  const data = await zenlerFetch<ZenlerUserListData>(`/users?${query.toString()}`);
-  const match = data.items.find((item) => item.email.trim().toLowerCase() === normalized);
-  return match ?? null;
+async function scanZenlerUserSearch(search: string, email: string): Promise<ZenlerApiUser | null> {
+  const pageSize = 100;
+  for (let page = 1; page <= 3; page += 1) {
+    const query = new URLSearchParams({
+      limit: String(pageSize),
+      page: String(page),
+      search,
+    });
+    const data = await zenlerFetch<ZenlerUserListData>(`/users?${query.toString()}`);
+    const items = Array.isArray(data?.items) ? data.items : [];
+    const match = zenlerUserMatchingEmail(items, email);
+    if (match) return match;
+    const totalPages = Number(data?.pagination?.total_pages ?? 1) || 1;
+    if (page >= totalPages || items.length < pageSize) break;
+  }
+  return null;
 }
 
 export type ZenlerStudentPage = {
