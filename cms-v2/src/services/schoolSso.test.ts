@@ -32,7 +32,7 @@ run('builds a two-minute school sign-in link for the paid student', () => {
   assert.equal(claims.email, 'ada@example.com');
   assert.ok((claims.exp ?? 0) >= before + 110);
   assert.ok((claims.exp ?? 0) <= before + 130);
-  assert.equal(url.searchParams.get('return_to'), 'https://school.vls-online.com/mycourses');
+  assert.equal(url.searchParams.get('return_to'), '/mycourses');
   assert.equal(url.searchParams.get('error_url'), 'https://staging.vls-online.com/en/payment-success?session_id=cs_test');
 });
 
