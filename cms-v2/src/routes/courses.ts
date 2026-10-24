@@ -12,6 +12,7 @@ import {
   updateCourseAdminMetadata,
 } from '../models/course';
 import { buildCoursePageUrlCsv, importCoursePageUrlsFromCsv, normalizeCoursePageUrl } from '../services/coursePageUrlImport';
+import { CourseWorkbookError, buildCourseWorkbook, importCourseWorkbook } from '../services/courseWorkbook';
 import type { CoursePageUrlImportResult } from '../../shared/types';
 import {
   createPaymentCard,
@@ -154,6 +155,33 @@ router.put('/dropdown-options', requireRole('admin', 'editor'), async (req: Requ
     });
     return res.json({ ok: true, data: options });
   } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/export-workbook', requireRole('admin', 'editor'), async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const buffer = await buildCourseWorkbook(await listCourses());
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="cms-courses.xlsx"');
+    return res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/import-workbook', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const fileBase64 = typeof req.body?.fileBase64 === 'string' ? req.body.fileBase64 : '';
+    if (!fileBase64.trim()) {
+      return res.status(400).json({ ok: false, error: 'Provide an Excel file' });
+    }
+    const result = await importCourseWorkbook(Buffer.from(fileBase64, 'base64'));
+    return res.json({ ok: true, data: result });
+  } catch (err) {
+    if (err instanceof CourseWorkbookError) {
+      return res.status(400).json({ ok: false, error: err.message });
+    }
     next(err);
   }
 });

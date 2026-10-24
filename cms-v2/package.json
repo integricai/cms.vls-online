@@ -30,6 +30,7 @@
     "backfill-notes-curriculum": "npx tsx scripts/backfill-notes-curriculum.ts",
     "test:notes-links": "ts-node src/services/notesUrlRewrite.test.ts",
     "test:course-urls": "ts-node src/services/courseUrlRewrite.test.ts",
+    "test:course-workbook": "ts-node src/services/courseWorkbook.test.ts",
     "test:sales-page-urls": "ts-node src/services/courseSalesPageUrlSync.test.ts",
     "test:free-enrol": "ts-node src/services/freeEnrol.test.ts",
     "test:rate-limit": "ts-node src/middleware/rateLimit.test.ts",
@@ -42,6 +43,7 @@
     "cheerio": "^1.2.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.9.14"

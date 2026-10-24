@@ -327,6 +327,27 @@ export async function replaceCourseDropdownOptions(
   return listCourseDropdownOptions();
 }
 
+export async function updateCourseWorkbookFieldsByZenlerId(
+  zenlerCourseId: string,
+  data: { name?: string; coursePageUrl?: string | null },
+): Promise<Course | null> {
+  const existingRows = await sql`SELECT * FROM courses WHERE zenler_course_id = ${zenlerCourseId} LIMIT 1`;
+  const existing = existingRows[0] as DbRow | undefined;
+  if (!existing) return null;
+
+  const name = data.name === undefined ? existing.name : data.name;
+  const coursePageUrl = data.coursePageUrl === undefined ? existing.course_page_url : data.coursePageUrl;
+  const rows = await sql`
+    UPDATE courses
+    SET name = ${name},
+        course_page_url = ${coursePageUrl},
+        updated_at = NOW()
+    WHERE zenler_course_id = ${zenlerCourseId}
+    RETURNING *
+  `;
+  return rows[0] ? rowToCourse(rows[0] as DbRow) : null;
+}
+
 export async function updateCoursePageUrlByZenlerId(
   zenlerCourseId: string,
   coursePageUrl: string | null,

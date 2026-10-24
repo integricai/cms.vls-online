@@ -42,6 +42,7 @@ type NewCourseDraft = {
 
 type PageUrlImportResult = {
   updated: number;
+  namesUpdated?: number;
   cleared: number;
   skipped: number;
   errors: Array<{ rowNumber: number; zenlerCourseId: string; message: string }>;
@@ -136,8 +137,7 @@ function newCourseMissing(draft: NewCourseDraft): string[] {
   return missing;
 }
 
-function downloadText(filename: string, content: string): void {
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+function downloadBlob(filename: string, blob: Blob): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -146,14 +146,27 @@ function downloadText(filename: string, content: string): void {
   URL.revokeObjectURL(url);
 }
 
-async function downloadCoursesCsv(): Promise<void> {
+async function downloadCoursesWorkbook(): Promise<void> {
   const token = getToken();
   const base = (import.meta.env.VITE_API_URL ?? '') + '/api';
-  const res = await fetch(`${base}/courses/export`, {
+  const res = await fetch(`${base}/courses/export-workbook`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-  if (!res.ok) throw new Error('Failed to download courses CSV');
-  downloadText('cms-courses.csv', await res.text());
+  if (!res.ok) throw new Error('Failed to download the course workbook');
+  downloadBlob('cms-courses.xlsx', await res.blob());
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error ?? new Error('Could not read the Excel file'));
+    reader.readAsDataURL(file);
+  });
 }
 
 function CoursesTab() {
@@ -173,7 +186,7 @@ function CoursesTab() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [orderDirty, setOrderDirty] = useState(false);
   const [draggingCourseId, setDraggingCourseId] = useState<number | null>(null);
-  const [importingCsv, setImportingCsv] = useState(false);
+  const [importingWorkbook, setImportingWorkbook] = useState(false);
   const [importResult, setImportResult] = useState<PageUrlImportResult | null>(null);
   const [urlSummary, setUrlSummary] = useState<UrlChangeSummary>({ queued: 0, rewriting: 0, ready: 0, failed: 0 });
   const [urlFailures, setUrlFailures] = useState<UrlChangeFailure[]>([]);
@@ -182,7 +195,7 @@ function CoursesTab() {
   const [applyingUrls, setApplyingUrls] = useState(false);
   const [publishingRedirects, setPublishingRedirects] = useState(false);
   const [urlMessage, setUrlMessage] = useState<string | null>(null);
-  const csvInputRef = useRef<HTMLInputElement>(null);
+  const workbookInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     Promise.all([
@@ -448,21 +461,21 @@ function CoursesTab() {
     }
   }
 
-  async function importPageUrlCsv(file: File) {
-    setImportingCsv(true);
+  async function importCourseWorkbook(file: File) {
+    setImportingWorkbook(true);
     setImportResult(null);
     setSyncError(null);
     try {
-      const csv = await file.text();
-      const result = await api.post<PageUrlImportResult>('/courses/import-page-urls', { csv });
+      const fileBase64 = await fileToBase64(file);
+      const result = await api.post<PageUrlImportResult>('/courses/import-workbook', { fileBase64 });
       setImportResult(result);
       const fresh = await api.get<Course[]>('/courses');
       setCourses(fresh || []);
     } catch (e) {
-      setSyncError((e instanceof Error ? e.message : null) || 'CSV import failed.');
+      setSyncError((e instanceof Error ? e.message : null) || 'Excel import failed.');
     } finally {
-      setImportingCsv(false);
-      if (csvInputRef.current) csvInputRef.current.value = '';
+      setImportingWorkbook(false);
+      if (workbookInputRef.current) workbookInputRef.current.value = '';
     }
   }
 
@@ -534,36 +547,36 @@ function CoursesTab() {
     <div className="p-6">
       <h2 className="mb-1 text-sm font-bold text-slate-700">Courses</h2>
       <p className="mb-3 text-xs text-slate-500">
-        Add a course, or update course page URLs from a CSV. A course page URL is the Storyblok path, for example /courses/fa1.
+        Export the course list, fill in missing course URLs or titles, then import the same file. A course URL is the Storyblok path, for example /courses/fa1.
       </p>
 
       <div className="mb-4 flex flex-wrap gap-2">
         <button
-          onClick={() => downloadCoursesCsv().catch(err => setSyncError(err instanceof Error ? err.message : 'Download failed.'))}
+          onClick={() => downloadCoursesWorkbook().catch(err => setSyncError(err instanceof Error ? err.message : 'Download failed.'))}
           className="btn-ghost text-xs"
         >
-          Download CSV
+          Export
         </button>
         <button
-          onClick={() => csvInputRef.current?.click()}
-          disabled={importingCsv}
+          onClick={() => workbookInputRef.current?.click()}
+          disabled={importingWorkbook}
           className="btn-ghost text-xs"
         >
-          {importingCsv ? 'Importing…' : 'Upload CSV'}
+          {importingWorkbook ? 'Importing…' : 'Import'}
         </button>
         <input
-          ref={csvInputRef}
+          ref={workbookInputRef}
           type="file"
-          accept=".csv,text/csv"
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           className="hidden"
           onChange={event => {
             const file = event.target.files?.[0];
-            if (file) void importPageUrlCsv(file);
+            if (file) void importCourseWorkbook(file);
           }}
         />
       </div>
       <p className="mb-4 text-xs text-slate-400">
-        CSV updates <code>course_page_url</code> only, matched by <code>zenler_course_id</code>. Saving a course page URL stores it in the CMS. It does not change the live Storyblok slug until you apply URL changes.
+        The workbook has Zenler course id, course title, and course URL. Import matches each row by Zenler course id and does not change that id. A blank title or URL keeps the current value. Saving a course URL stores it in the vault. It does not change the live Storyblok slug until you apply URL changes.
       </p>
 
       {canEdit && (
@@ -635,8 +648,8 @@ function CoursesTab() {
 
       {importResult && (
         <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-          CSV import — <strong>{importResult.updated}</strong> updated ·{' '}
-          <strong>{importResult.cleared}</strong> cleared ·{' '}
+          Excel import — <strong>{importResult.updated}</strong> URLs updated ·{' '}
+          <strong>{importResult.namesUpdated ?? 0}</strong> titles updated ·{' '}
           <strong>{importResult.skipped}</strong> unchanged
           {importResult.errors.length > 0 && (
             <ul className="mt-2 list-disc pl-5 text-xs text-red-700">

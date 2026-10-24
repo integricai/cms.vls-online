@@ -155,6 +155,7 @@ export interface CoursePageUrlImportError {
 
 export interface CoursePageUrlImportResult {
   updated: number;
+  namesUpdated?: number;
   cleared: number;
   skipped: number;
   errors: CoursePageUrlImportError[];
