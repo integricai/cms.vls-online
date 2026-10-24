@@ -55,6 +55,10 @@ import {
   rateLimit,
 } from '../middleware/rateLimit';
 import { findZenlerUserByEmail, zenlerCredentialsConfigured } from '../services/zenlerApi';
+import {
+  lookupSchoolCourseAccess,
+  resolveAccountStatusCourseIds,
+} from '../services/schoolCourseAccessLookup';
 import { zenlerStudentNames } from '../services/zenlerEnrollment';
 import { schoolSsoUrl } from '../services/schoolSso';
 import { resolveCheckoutSiteUrl } from '../services/checkoutSiteUrl';
@@ -322,18 +326,45 @@ router.get('/providers', (_req: Request, res: Response) => {
   });
 });
 
-router.post('/account-status', schoolAccountRateLimit, async (req: Request, res: Response) => {
+const ALREADY_ENROLLED_MESSAGE = 'This email already has this course. Sign in to the school to open My Courses.';
+
+function grantCourseIds(primaryZenlerCourseId: string | null | undefined, accessIds: string[] | null): string[] {
+  if (accessIds?.length) return accessIds;
+  const primary = String(primaryZenlerCourseId ?? '').trim();
+  return /^\d+$/.test(primary) ? [primary] : [];
+}
+
+/** True when the response has been sent and checkout must stop. */
+async function rejectOwnedCheckout(
+  res: Response,
+  email: string | null,
+  courseIds: string[],
+): Promise<boolean> {
+  if (!email || courseIds.length === 0) return false;
+  try {
+    const access = await lookupSchoolCourseAccess(email, courseIds);
+    if (!access.ownsAll) return false;
+  } catch (err) {
+    console.error('[checkout] school course lookup failed', err instanceof Error ? err.message : err);
+    return false;
+  }
+  res.status(409).json({ ok: false, error: ALREADY_ENROLLED_MESSAGE });
+  return true;
+}
+
+router.post('/account-status', schoolAccountRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   const email = normalizeStudentEmail(req.body?.studentEmail);
   if (!email) return res.status(400).json({ ok: false, error: 'Enter a valid email address.' });
-  if (!zenlerCredentialsConfigured()) {
-    return res.json({ ok: true, registered: false, lookup: 'unavailable' });
-  }
   try {
-    const existing = await findZenlerUserByEmail(email);
-    return res.json({ ok: true, registered: Boolean(existing) });
+    const body = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
+    const courseIds = await resolveAccountStatusCourseIds(body);
+    const access = await lookupSchoolCourseAccess(email, courseIds);
+    return res.json({ ok: true, ...access });
   } catch (err) {
-    console.error('[checkout] school account lookup failed', err instanceof Error ? err.message : err);
-    return res.json({ ok: true, registered: false, lookup: 'unavailable' });
+    if (err instanceof MultiCourseAccessError) {
+      return res.status(err.status).json({ ok: false, error: err.message });
+    }
+    next(err);
   }
 });
 
@@ -413,6 +444,8 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       countryCode: geo.countryCode,
       provider: providerId,
     });
+
+    if (await rejectOwnedCheckout(res, schoolPassword.email, grantCourseIds(option.zenlerCourseId, null))) return;
 
     const order = await createPaymentOrder({
       paymentOptionId: option.id,
@@ -601,6 +634,12 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       }
       throw err;
     }
+
+    if (await rejectOwnedCheckout(
+      res,
+      schoolPassword.email,
+      grantCourseIds(course.zenlerCourseId, accessZenlerCourseIds),
+    )) return;
 
     const order = await createPaymentOrder({
       paymentOptionId: null,
