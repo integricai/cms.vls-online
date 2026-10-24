@@ -3,13 +3,7 @@ export type SitemapGroup = 'pages' | 'courses' | 'blog';
 /** Map Storyblok `full_slug` to the public Next.js path (English, no locale prefix). */
 export function storyblokSlugToPath(fullSlug: string): string {
   const slug = fullSlug.replace(/^\/+|\/+$/g, '');
-  if (slug === 'pages/home' || slug === 'pages' || slug === '') return '/';
-  if (slug === 'blog') return '/blog';
-  if (slug.startsWith('courses/')) return `/${slug}`;
-  if (slug.startsWith('blog/')) return `/${slug}`;
-  if (slug.startsWith('pages/blog/')) {
-    return `/blog/${slug.slice('pages/blog/'.length)}`;
-  }
+  if (!slug || slug === 'home' || slug === 'pages' || slug === 'pages/home') return '/';
   if (slug.startsWith('pages/')) {
     const rest = slug.slice('pages/'.length);
     return rest ? `/${rest}` : '/';
@@ -22,14 +16,18 @@ export function resolveSitemapGroup(fullSlug: string): SitemapGroup | null {
   const slug = fullSlug.replace(/^\/+|\/+$/g, '');
   if (!slug || slug === 'global' || slug.startsWith('global/')) return null;
 
-  // Folder roots with no public page (except blog startpage)
-  if (slug === 'pages' || slug === 'courses') return null;
+  if (slug === 'courses' || slug.startsWith('courses/')) return 'courses';
+  if (
+    slug === 'blog'
+    || slug.startsWith('blog/')
+    || slug === 'pages/blog'
+    || slug.startsWith('pages/blog/')
+  ) {
+    return 'blog';
+  }
 
-  if (slug.startsWith('courses/')) return 'courses';
-  if (slug === 'blog' || slug.startsWith('blog/')) return 'blog';
-  if (slug.startsWith('pages/')) return 'pages';
-
-  return null;
+  // Space-root stories (home, about-us, accadates, …) and anything under pages/.
+  return 'pages';
 }
 
 export function extractNoIndex(content?: Record<string, unknown> | null): boolean {

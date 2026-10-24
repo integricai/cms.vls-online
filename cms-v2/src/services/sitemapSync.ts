@@ -24,8 +24,6 @@ interface StoryblokListStory extends StoryblokStoryRecord {
   created_at?: string | null;
 }
 
-const SYNC_PREFIXES = ['pages/', 'courses/', 'blog'] as const;
-
 function isPublished(story: StoryblokListStory): boolean {
   return Boolean(story.published_at);
 }
@@ -76,31 +74,27 @@ export async function syncSiteUrlsFromStoryblok(config?: StoryblokConfig | null)
   let skipped = 0;
   const seenStoryIds: number[] = [];
 
-  for (const prefix of SYNC_PREFIXES) {
-    const stories = await listStories(resolved, {
-      starts_with: prefix === 'blog' ? 'blog' : prefix,
-      per_page: 100,
-    }) as StoryblokListStory[];
+  // Root stories such as `home` and `about-us` are not under pages/.
+  const stories = await listStories(resolved, { per_page: 100 }) as StoryblokListStory[];
 
-    for (const story of stories) {
-      scanned += 1;
-      if (story.is_folder) {
-        skipped += 1;
-        continue;
-      }
-      if (!isPublished(story)) {
-        skipped += 1;
-        continue;
-      }
+  for (const story of stories) {
+    scanned += 1;
+    if (story.is_folder) {
+      skipped += 1;
+      continue;
+    }
+    if (!isPublished(story)) {
+      skipped += 1;
+      continue;
+    }
 
-      // Bulk sync uses list data (content/no_index applied on webhook publish).
-      const row = await upsertFromStoryblokStory(story, { preserveEnabled: true });
-      if (row) {
-        upserted += 1;
-        if (row.storyblokStoryId != null) seenStoryIds.push(row.storyblokStoryId);
-      } else {
-        skipped += 1;
-      }
+    // Bulk sync uses list data (content/no_index applied on webhook publish).
+    const row = await upsertFromStoryblokStory(story, { preserveEnabled: true });
+    if (row) {
+      upserted += 1;
+      if (row.storyblokStoryId != null) seenStoryIds.push(row.storyblokStoryId);
+    } else {
+      skipped += 1;
     }
   }
 
