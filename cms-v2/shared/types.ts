@@ -544,6 +544,8 @@ export interface Sale {
   durationDays: number;
   soldAt: Date;
   expiryDate: Date;
+  /** ISO 3166-1 alpha-2 country captured for this sale. */
+  countryCode: string | null;
   tutorId: number | null;
   assignmentStatus: SaleAssignmentStatus;
   commissionPercent: number | null;

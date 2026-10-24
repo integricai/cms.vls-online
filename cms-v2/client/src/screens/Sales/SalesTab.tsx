@@ -52,6 +52,22 @@ function customerLabel(sale: SaleListItem): string {
   return name || sale.customerEmail || '—';
 }
 
+const countryNames = typeof Intl.DisplayNames === 'function'
+  ? new Intl.DisplayNames(['en'], { type: 'region' })
+  : null;
+
+function countryLabel(code: string | null | undefined): string {
+  const normalized = code?.trim().toUpperCase();
+  if (!normalized) return '—';
+  try {
+    const name = countryNames?.of(normalized);
+    if (!name || name.toUpperCase() === normalized) return normalized;
+    return name;
+  } catch {
+    return normalized;
+  }
+}
+
 function shortProcessorId(id: string | null | undefined): string {
   if (!id) return '—';
   if (id.length <= 18) return id;
@@ -220,7 +236,10 @@ export default function SalesTab() {
     );
   }
 
-  function renderSalesTable(rows: SaleListItem[]) {
+  function renderSalesTable(rows: SaleListItem[], mode: 'overview' | 'unassigned') {
+    const showCountry = mode === 'overview';
+    const showTutor = mode === 'unassigned';
+    const columnCount = 9 + Number(showCountry) + Number(showTutor);
     return (
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full min-w-[1180px] text-left text-xs">
@@ -229,10 +248,11 @@ export default function SalesTab() {
               <th className="px-3 py-2">Sold</th>
               <th className="px-3 py-2">Course</th>
               <th className="px-3 py-2">Customer</th>
+              {showCountry && <th className="px-3 py-2">Country</th>}
               <th className="px-3 py-2">Amount</th>
               <th className="px-3 py-2">Payment</th>
               <th className="px-3 py-2">Processor</th>
-              <th className="px-3 py-2">Tutor</th>
+              {showTutor && <th className="px-3 py-2">Tutor</th>}
               <th className="px-3 py-2">Commission</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Actions</th>
@@ -240,10 +260,10 @@ export default function SalesTab() {
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={10} className="px-3 py-8 text-center text-slate-500">Loading…</td></tr>
+              <tr><td colSpan={columnCount} className="px-3 py-8 text-center text-slate-500">Loading…</td></tr>
             )}
             {!loading && rows.length === 0 && (
-              <tr><td colSpan={10} className="px-3 py-8 text-center text-slate-500">No sales found.</td></tr>
+              <tr><td colSpan={columnCount} className="px-3 py-8 text-center text-slate-500">No sales found.</td></tr>
             )}
             {!loading && rows.map(sale => (
               <tr key={sale.id} className="border-t border-slate-100 align-top">
@@ -253,6 +273,11 @@ export default function SalesTab() {
                 </td>
                 <td className="px-3 py-2">{sale.courseName || `Course #${sale.courseId}`}</td>
                 <td className="px-3 py-2">{customerLabel(sale)}</td>
+                {showCountry && (
+                  <td className="px-3 py-2 whitespace-nowrap" title={sale.countryCode ?? undefined}>
+                    {countryLabel(sale.countryCode)}
+                  </td>
+                )}
                 <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.amount, sale.currency)}</td>
                 <td className="px-3 py-2">
                   <span className={`inline-flex rounded px-2 py-0.5 text-[11px] font-medium ${
@@ -293,7 +318,7 @@ export default function SalesTab() {
                     <span className="text-slate-400">—</span>
                   )}
                 </td>
-                <td className="px-3 py-2">{sale.tutorName || '—'}</td>
+                {showTutor && <td className="px-3 py-2">{sale.tutorName || '—'}</td>}
                 <td className="px-3 py-2 whitespace-nowrap">
                   {sale.paymentStatus === 'Refunded'
                     ? '—'
@@ -359,7 +384,7 @@ export default function SalesTab() {
       {error && <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
       {message && <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</div>}
 
-      {(view === 'overview' || view === 'unassigned') && renderSalesTable(tableRows)}
+      {(view === 'overview' || view === 'unassigned') && renderSalesTable(tableRows, view)}
 
       {view === 'byCourse' && (
         <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">

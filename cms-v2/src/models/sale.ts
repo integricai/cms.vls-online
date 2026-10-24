@@ -1,4 +1,5 @@
 import { sql } from '../db/client';
+import { isValidIsoCountryCode, normalizeCountryCode } from '../utils/isoCountryCodes';
 import type {
   PaymentOrderStatus,
   Sale,
@@ -20,6 +21,7 @@ export interface SaleDbRow {
   duration_days: number;
   sold_at: Date;
   expiry_date: Date;
+  country_code: string | null;
   tutor_id: number | null;
   assignment_status: SaleAssignmentStatus;
   commission_percent: string | null;
@@ -53,6 +55,11 @@ function num(value: string | number | null | undefined): number | null {
   return Number(value);
 }
 
+function saleCountryCode(value: string | null | undefined): string | null {
+  const code = normalizeCountryCode(value);
+  return code && isValidIsoCountryCode(code) ? code : null;
+}
+
 export function rowToSale(row: SaleDbRow): Sale {
   return {
     id: row.id,
@@ -66,6 +73,7 @@ export function rowToSale(row: SaleDbRow): Sale {
     durationDays: row.duration_days,
     soldAt: row.sold_at,
     expiryDate: row.expiry_date,
+    countryCode: saleCountryCode(row.country_code),
     tutorId: row.tutor_id,
     assignmentStatus: row.assignment_status ?? 'AwaitingTutor',
     commissionPercent: num(row.commission_percent),
@@ -167,13 +175,15 @@ export async function createSale(data: {
   discountPercent: number | null;
   durationDays: number;
   soldAt: Date;
+  countryCode?: string | null;
 }): Promise<Sale> {
   const expiryDate = computeExpiryDate(data.soldAt, data.durationDays);
+  const countryCode = saleCountryCode(data.countryCode);
   const rows = await sql`
     INSERT INTO sales (
       customer_id, course_id, course_price_id, payment_order_id,
       amount, currency, discount_percent, duration_days, sold_at, expiry_date,
-      assignment_status
+      country_code, assignment_status
     )
     VALUES (
       ${data.customerId},
@@ -186,6 +196,7 @@ export async function createSale(data: {
       ${data.durationDays},
       ${data.soldAt},
       ${expiryDate},
+      ${countryCode},
       'AwaitingTutor'
     )
     RETURNING *

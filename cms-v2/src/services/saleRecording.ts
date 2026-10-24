@@ -8,7 +8,7 @@ import { ensureCustomerCourseStatus } from '../models/customerCourseStatus';
 import { createSale, getSaleByPaymentOrderId } from '../models/sale';
 import { autoAssignCourseTutorForSale } from './saleAssignment';
 
-async function createSaleForOrder(order: PaymentOrder) {
+async function createSaleForOrder(order: PaymentOrder, customerCountryCode: string | null) {
   const existing = await getSaleByPaymentOrderId(order.id);
   if (existing) return existing;
 
@@ -32,6 +32,7 @@ async function createSaleForOrder(order: PaymentOrder) {
     discountPercent: order.discountPercent,
     durationDays: order.durationDays,
     soldAt: order.paidAt,
+    countryCode: order.countryCode ?? customerCountryCode,
   });
 
   try {
@@ -76,5 +77,5 @@ export async function ensureSaleRecordedForPaidOrder(order: PaymentOrder) {
     workingOrder = await attachCustomerToPaymentOrder(order.id, customer.id, email);
   }
 
-  return createSaleForOrder(workingOrder);
+  return createSaleForOrder(workingOrder, customer.countryCode);
 }
