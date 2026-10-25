@@ -440,7 +440,7 @@ router.post('/checkout-quote', schoolAccountRateLimit, async (req: Request, res:
     let retakeApplied = false;
     if (retakeCode) {
       if (priced.accessZenlerCourseIds?.length || priced.comboStorySlug) {
-        return res.status(400).json({ ok: false, error: 'A retake code can only be used for a single course.' });
+        return res.status(400).json({ ok: false, error: 'A discount code can only be used for a single course.' });
       }
       const quote = await previewRetakeDiscount({
         code: retakeCode,
@@ -773,7 +773,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
     let retakeQuote: Awaited<ReturnType<typeof previewRetakeDiscount>> | null = null;
     if (retakeCode) {
       if (accessZenlerCourseIds?.length || comboStorySlug) {
-        return res.status(400).json({ ok: false, error: 'A retake code can only be used for a single course.' });
+        return res.status(400).json({ ok: false, error: 'A discount code can only be used for a single course.' });
       }
       try {
         retakeQuote = await previewRetakeDiscount({

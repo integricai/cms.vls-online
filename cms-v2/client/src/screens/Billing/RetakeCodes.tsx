@@ -66,7 +66,7 @@ export default function RetakeCodes() {
         setCourses(courseRows.filter(course => course.zenlerCourseId));
         setCodes(codeRows);
       })
-      .catch(err => setError(err instanceof Error ? err.message : 'Could not load retake codes.'))
+      .catch(err => setError(err instanceof Error ? err.message : 'Could not load discount codes.'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -96,7 +96,7 @@ export default function RetakeCodes() {
       setDiscountValue('');
       await loadCodes();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not generate a retake code.');
+      setError(err instanceof Error ? err.message : 'Could not generate a discount code.');
     } finally {
       setSubmitting(false);
     }
@@ -188,7 +188,7 @@ export default function RetakeCodes() {
           </thead>
           <tbody>
             {codes.length === 0 ? (
-              <tr><td className="px-3 py-4 text-slate-500" colSpan={6}>No retake codes yet.</td></tr>
+              <tr><td className="px-3 py-4 text-slate-500" colSpan={6}>No discount codes yet.</td></tr>
             ) : codes.map(row => (
               <tr key={row.id} className="border-t border-slate-100">
                 <td className="px-3 py-2 font-mono text-xs">{row.code}</td>

@@ -62,15 +62,15 @@ async function loadUsableCode(input: {
   courseId: number;
 }): Promise<RetakeDiscountCode> {
   const code = normalizeRetakeCode(input.code);
-  if (!code) throw new RetakeCodeError('Enter a retake code.');
+  if (!code) throw new RetakeCodeError('Enter a discount code.');
   const row = await getRetakeDiscountCodeByCode(code);
-  if (!row) throw new RetakeCodeError('That retake code was not recognised.');
-  if (row.used) throw new RetakeCodeError('This retake code has already been used.');
+  if (!row) throw new RetakeCodeError('That discount code was not recognised.');
+  if (row.used) throw new RetakeCodeError('This discount code has already been used.');
   if (!retakeEmailsMatch(row.studentEmail, input.email)) {
-    throw new RetakeCodeError('This retake code was issued to a different email address.');
+    throw new RetakeCodeError('This discount code was issued to a different email address.');
   }
   if (row.courseId !== input.courseId) {
-    throw new RetakeCodeError('This retake code is for a different course.');
+    throw new RetakeCodeError('This discount code is for a different course.');
   }
   return row;
 }
@@ -119,7 +119,7 @@ export async function issueRetakeDiscountCode(input: {
       if (!/duplicate|unique/i.test(message) || attempt === 4) throw err;
     }
   }
-  if (!saved) throw new RetakeCodeError('Could not generate a retake code.');
+  if (!saved) throw new RetakeCodeError('Could not generate a discount code.');
 
   let emailSent = false;
   let emailError: string | null = null;
@@ -129,6 +129,7 @@ export async function issueRetakeDiscountCode(input: {
       cc: ccEmail,
       firstName,
       courseName: course.name,
+      coursePageUrl: course.coursePageUrl,
       code: saved.code,
       discountLabel: discountLabel(discount.type, discount.value),
     });
@@ -145,13 +146,15 @@ export async function issueRetakeDiscountCode(input: {
 
 export async function resendRetakeDiscountCode(id: number): Promise<IssuedRetakeCode> {
   const row = await getRetakeDiscountCodeById(id);
-  if (!row) throw new RetakeCodeError('Retake code not found.', 404);
-  if (row.used) throw new RetakeCodeError('This retake code has already been used.');
+  if (!row) throw new RetakeCodeError('Discount code not found.', 404);
+  if (row.used) throw new RetakeCodeError('This discount code has already been used.');
+  const course = await getCourseById(row.courseId);
   await sendRetakeDiscountCodeEmail({
     to: row.studentEmail,
     cc: row.ccEmail || DEFAULT_DISCOUNT_CC_EMAIL,
     firstName: row.firstName,
-    courseName: row.courseName ?? 'your course',
+    courseName: course?.name ?? row.courseName ?? 'your course',
+    coursePageUrl: course?.coursePageUrl,
     code: row.code,
     discountLabel: discountLabel(row.discountType, row.discountValue),
   });
@@ -202,7 +205,7 @@ export async function previewRetakeDiscount(input: {
   };
 }
 
-const RETAKE_CODE_HELD = 'This retake code is already waiting on another payment.';
+const RETAKE_CODE_HELD = 'This discount code is already waiting on another payment.';
 
 /**
  * The first checkout to pay keeps the code. An earlier checkout that never
@@ -217,7 +220,7 @@ export async function holdRetakeCodeForOrder(codeId: number, orderId: number): P
 
   const previous = await getPaymentOrder(previousId);
   if (!previous || previous.status === 'Paid' || previous.status === 'Refunded') {
-    throw new RetakeCodeError('This retake code has already been used.', 409);
+    throw new RetakeCodeError('This discount code has already been used.', 409);
   }
   if (previous.status === 'Pending') {
     const sessionId = paymentOrderCheckoutId(previous);

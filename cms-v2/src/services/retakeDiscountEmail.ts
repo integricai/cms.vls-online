@@ -18,12 +18,44 @@ function parseSender(value: string | undefined) {
   return { ...fallback, email: value.trim() };
 }
 
+const SITE_ORIGIN = 'https://vls-online.com';
+
 function esc(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+/** Public course page for the course selected when the code was issued. */
+export function retakeEnrolUrl(coursePageUrl: string | null | undefined): string | null {
+  const raw = String(coursePageUrl ?? '').trim();
+  if (!raw) return null;
+
+  let path = raw;
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      path = new URL(raw).pathname;
+    } catch {
+      return null;
+    }
+  }
+  if (!path.startsWith('/')) path = `/${path}`;
+  path = path.replace(/\/+$/, '');
+  if (!path.startsWith('/courses/') || path === '/courses') return null;
+  return `${SITE_ORIGIN}${path}`;
+}
+
+function enrolButton(url: string, courseName: string): string {
+  const label = `Enrol to ${courseName}`;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px auto 0;">
+    <tr>
+      <td style="background:${BRAND.logoBlue};border-radius:8px;">
+        <a href="${esc(url)}" style="display:inline-block;padding:12px 22px;font-family:${BRAND.font};font-size:15px;font-weight:700;color:${BRAND.white};text-decoration:none;">${esc(label)}</a>
+      </td>
+    </tr>
+  </table>`;
 }
 
 async function sendEmail(input: { to: string; cc?: string | null; subject: string; text: string; html: string }): Promise<void> {
@@ -65,17 +97,21 @@ export async function sendRetakeDiscountCodeEmail(input: {
   cc?: string | null;
   firstName: string;
   courseName: string;
+  coursePageUrl?: string | null;
   code: string;
   discountLabel: string;
 }): Promise<void> {
   const firstName = input.firstName.trim() || 'there';
-  const subject = `Your Vertex discount code for ${input.courseName}`;
+  const courseName = input.courseName.trim() || 'your course';
+  const enrolUrl = retakeEnrolUrl(input.coursePageUrl);
+  const subject = `Your Vertex discount code for ${courseName}`;
   const text = [
     `Hello ${firstName},`,
     '',
-    `Your discount code for ${input.courseName} is ${input.code}.`,
+    `Your discount code for ${courseName} is ${input.code}.`,
     `It takes ${input.discountLabel} off the course price and can be used once.`,
     'Enter it on the Vertex checkout page with this same email address.',
+    ...(enrolUrl ? ['', `Enrol to ${courseName}: ${enrolUrl}`] : []),
     '',
     'Vertex Learning Solutions',
   ].join('\n');
@@ -92,9 +128,10 @@ export async function sendRetakeDiscountCodeEmail(input: {
         <tr><td style="padding:8px 28px 28px;">
           <h1 style="margin:0 0 12px;font-size:22px;color:${BRAND.navy};">Your discount code</h1>
           <p style="margin:0 0 12px;">Hello ${esc(firstName)},</p>
-          <p style="margin:0 0 12px;">Use this code once when you enrol in <strong>${esc(input.courseName)}</strong>. It takes ${esc(input.discountLabel)} off the course price.</p>
+          <p style="margin:0 0 12px;">Use this code once when you enrol in <strong>${esc(courseName)}</strong>. It takes ${esc(input.discountLabel)} off the course price.</p>
           <p style="margin:16px 0;padding:14px 16px;background:${BRAND.panel};border-radius:8px;font-size:20px;letter-spacing:1px;font-weight:700;color:${BRAND.navy};">${esc(input.code)}</p>
-          <p style="margin:0;color:${BRAND.muted};">Enter it on the checkout page with this same email address. After a successful payment the code cannot be used again.</p>
+          ${enrolUrl ? enrolButton(enrolUrl, courseName) : ''}
+          <p style="margin:16px 0 0;color:${BRAND.muted};">Enter it on the checkout page with this same email address. After a successful payment the code cannot be used again.</p>
         </td></tr>
       </table>
     </td></tr>

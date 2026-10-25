@@ -46,7 +46,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 router.post('/:id/resend', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = positiveInt(req.params.id);
-    if (!id) return res.status(400).json({ ok: false, error: 'Retake code not found.' });
+    if (!id) return res.status(400).json({ ok: false, error: 'Discount code not found.' });
     const issued = await resendRetakeDiscountCode(id);
     return res.json({ ok: true, data: issued });
   } catch (err) {
