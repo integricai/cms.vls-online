@@ -15,6 +15,8 @@ export interface CreateCheckoutInput {
   amount: number;
   currency: string;
   studentEmail: string | null;
+  /** When the site already collected both names, Stripe does not ask again. */
+  skipStudentNameFields?: boolean;
   countryCode?: string | null;
   returnOrigin?: string | null;
   environment?: CheckoutEnvironment | null;

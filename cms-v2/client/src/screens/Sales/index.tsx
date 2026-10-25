@@ -2,13 +2,14 @@ import { useSearchParams } from 'react-router-dom';
 import PageTabs from '../../components/PageTabs';
 import CustomPaymentOffer from '../Billing/CustomPaymentOffer';
 import OfferHistory from '../Billing/OfferHistory';
+import RetakeCodes from '../Billing/RetakeCodes';
 import Banner from '../Banner';
 import SalesTab from './SalesTab';
 
-type SalesTabId = 'overview' | 'payments' | 'custom-offer' | 'transactions' | 'banners';
+type SalesTabId = 'overview' | 'payments' | 'custom-offer' | 'retake-codes' | 'transactions' | 'banners';
 
 function isSalesTab(value: string | null): value is SalesTabId {
-  return value === 'payments' || value === 'custom-offer' || value === 'transactions' || value === 'overview' || value === 'banners';
+  return value === 'payments' || value === 'custom-offer' || value === 'retake-codes' || value === 'transactions' || value === 'overview' || value === 'banners';
 }
 
 function PaymentsTab() {
@@ -38,6 +39,7 @@ export default function Sales() {
           { id: 'overview', label: 'Overview' },
           { id: 'payments', label: 'Payments' },
           { id: 'custom-offer', label: 'Custom Payment Offer' },
+          { id: 'retake-codes', label: 'Retake codes' },
           { id: 'transactions', label: 'Previous transactions' },
           { id: 'banners', label: 'Banners' },
         ]}
@@ -51,6 +53,7 @@ export default function Sales() {
           </div>
         ) : null}
         {tab === 'custom-offer' ? <CustomPaymentOffer /> : null}
+        {tab === 'retake-codes' ? <RetakeCodes /> : null}
         {tab === 'transactions' ? <OfferHistory /> : null}
         {tab === 'banners' ? <Banner /> : null}
         {tab === 'overview' ? (

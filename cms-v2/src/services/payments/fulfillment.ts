@@ -23,6 +23,7 @@ import {
 import { courseAccessUrlForEnrollment } from '../schoolAccess';
 import { clearStudentPassword } from '../studentPassword';
 import { ensureSaleRecordedForPaidOrder } from '../saleRecording';
+import { consumeRetakeCodeForOrder, releaseRetakeCodeForOrder } from '../retakeDiscount';
 import {
   enrollmentEmailContextForOrder,
   ensureZenlerEnrollmentForPaidOrder,
@@ -298,6 +299,10 @@ export async function fulfillPaidCheckout(event: CheckoutCompletedEvent): Promis
     });
   }
 
+  await consumeRetakeCodeForOrder(order.id).catch((err: unknown) => {
+    console.error('[payments] could not mark the retake code used', order.id, err);
+  });
+
   if (wasAlreadyPaid) {
     return reconcilePaidOrder(order);
   }
@@ -325,6 +330,9 @@ export async function closeAbandonedCheckout(event: CheckoutClosedEvent): Promis
   const closed = await closePendingPaymentOrder({
     orderId: existing.id,
     status: event.status,
+  });
+  await releaseRetakeCodeForOrder(existing.id).catch((err: unknown) => {
+    console.error('[payments] could not release the retake code', existing.id, err);
   });
   await clearStudentPassword(existing.id).catch((err: unknown) => {
     console.error('[payments] could not clear the stored password', existing.id, err);

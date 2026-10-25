@@ -49,6 +49,12 @@ import {
 import { resolveConfiguredComboZenlerCourseIds } from '../services/multiCourseStoryblokAllowlist';
 import { ComboBundlePriceError, priceComboAccessSelection } from '../services/comboBundlePrice';
 import {
+  holdRetakeCodeForOrder,
+  previewRetakeDiscount,
+  releaseRetakeCodeForOrder,
+  RetakeCodeError,
+} from '../services/retakeDiscount';
+import {
   checkoutSessionRateLimit,
   freeEnrolEmailRateLimit,
   freeEnrolIpRateLimit,
@@ -164,9 +170,9 @@ function parseCheckoutReturnOrigin(req: Request): string | undefined {
 
 function parseCheckoutCustomer(body: Record<string, unknown>, countryCode: string | null) {
   const studentEmail = parseOptionalText(body.studentEmail);
-  const studentName = parseOptionalText(body.studentName);
-  const firstName = parseOptionalText(body.firstName) ?? splitStudentName(studentName).firstName;
-  const lastName = parseOptionalText(body.lastName) ?? splitStudentName(studentName).lastName;
+  const firstName = parseOptionalText(body.firstName) ?? splitStudentName(parseOptionalText(body.studentName)).firstName;
+  const lastName = parseOptionalText(body.lastName) ?? splitStudentName(parseOptionalText(body.studentName)).lastName;
+  const studentName = parseOptionalText(body.studentName) ?? ([firstName, lastName].filter(Boolean).join(' ') || null);
   const phone = parseOptionalText(body.phone);
 
   return {
@@ -394,6 +400,48 @@ router.post('/school-login', schoolLoginRateLimit, async (req: Request, res: Res
 });
 
 /** Legacy payment-card checkout (course_payment_cards). */
+router.post('/checkout-quote', schoolAccountRateLimit, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const priced = await priceCheckoutSelection(req);
+    if (!priced.ok) return res.status(priced.status).json({ ok: false, error: priced.error });
+
+    const email = normalizeStudentEmail(req.body?.studentEmail) ?? '';
+    const retakeCode = String(req.body?.retakeCode ?? '').trim();
+    let chargeAmount = priced.chargeAmount;
+    let retakeApplied = false;
+    if (retakeCode) {
+      if (priced.accessZenlerCourseIds?.length || priced.comboStorySlug) {
+        return res.status(400).json({ ok: false, error: 'A retake code can only be used for a single course.' });
+      }
+      const quote = await previewRetakeDiscount({
+        code: retakeCode,
+        email,
+        courseId: priced.course.id,
+        zenlerCourseId: priced.course.zenlerCourseId,
+        courseName: priced.course.name,
+        listAmount: priced.listAmount,
+      });
+      chargeAmount = quote.chargeAmount;
+      retakeApplied = true;
+    }
+
+    return res.json({
+      ok: true,
+      courseTitle: priced.course.name,
+      planName: priced.optionType,
+      listAmount: priced.listAmount,
+      chargeAmount,
+      currency: priced.chargeCurrency,
+      retakeApplied,
+    });
+  } catch (err) {
+    if (err instanceof RetakeCodeError || err instanceof MultiCourseAccessError || err instanceof ComboBundlePriceError) {
+      return res.status(err.status).json({ ok: false, error: err.message });
+    }
+    next(err);
+  }
+});
+
 router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const courseId = parsePositiveInt(req.body?.courseId);
@@ -491,85 +539,176 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
   }
 });
 
+type CheckoutPricing = {
+  ok: true;
+  course: NonNullable<Awaited<ReturnType<typeof getCmsCourseById>>>;
+  resolved: {
+    price: { id: number; amount: number; name: string; durationDays: number | null };
+    matchReason: string;
+    effectiveAmount: number;
+    detectedCountryCode: string | null;
+  };
+  chargeAmount: number;
+  listAmount: number;
+  chargeCurrency: string;
+  discountPercent: number | null;
+  optionType: string;
+  accessZenlerCourseIds: string[] | null;
+  comboStorySlug: string | null;
+  quotedCountryCode: string | null;
+  clientIp: string | null;
+};
+
+async function priceCheckoutSelection(
+  req: Request,
+): Promise<CheckoutPricing | { ok: false; status: number; error: string }> {
+  const explicitPriceId = parsePositiveInt(req.body?.coursePriceId);
+  let courseId = parsePositiveInt(req.body?.courseId);
+
+  if (!courseId && explicitPriceId) {
+    const priceRow = await getGeoPriceById(explicitPriceId);
+    if (!priceRow || !priceRow.isActive) {
+      return { ok: false, status: 404, error: 'Course price not found or inactive' };
+    }
+    courseId = priceRow.courseId;
+  }
+  if (!courseId) return { ok: false, status: 400, error: 'courseId or coursePriceId is required' };
+
+  const course = await getCmsCourseById(courseId);
+  if (!course || !course.isActive) return { ok: false, status: 404, error: 'Course not found or inactive' };
+
+  const geo = detectCountryFromRequest(req);
+  const clientIp = detectClientIpFromRequest(req);
+  const parityTest = isParityDealsTestAllowed() && (
+    isParityDealsTestRequest(req)
+    || req.body?.parityDealsTest === true
+    || String(req.body?.test ?? '').toLowerCase() === 'true'
+  );
+  const campaignCode = String(req.body?.campaignCode ?? '').trim() || null;
+  const durationRaw = Number(req.body?.durationMonths);
+  const durationMonths = Number.isInteger(durationRaw) && durationRaw >= 1 && durationRaw <= 6
+    ? durationRaw
+    : null;
+
+  let resolved;
+  try {
+    if (explicitPriceId) {
+      const price = await getGeoPriceById(explicitPriceId);
+      if (!price || price.courseId !== courseId || !price.isActive) {
+        return { ok: false, status: 404, error: 'Course price not found or inactive' };
+      }
+      resolved = await applyParityDealsToResolved({
+        price,
+        matchReason: 'explicit' as const,
+        effectiveAmount: price.amount,
+        detectedCountryCode: geo.countryCode,
+        geoPricingApplied: false,
+        geoRegionCode: null,
+        geoDiscountPercent: null,
+      }, {
+        ipAddress: clientIp,
+        ignoreVpnBlock: parityTest,
+      });
+    } else {
+      resolved = await resolveCoursePrice({
+        courseId,
+        durationMonths,
+        campaignCode,
+        detectedCountryCode: geo.countryCode,
+        ipAddress: clientIp,
+        ignoreVpnBlock: parityTest,
+      });
+    }
+  } catch (err) {
+    if (err instanceof PricingResolutionError) return { ok: false, status: 404, error: err.message };
+    throw err;
+  }
+
+  if (!resolved.price.durationDays || resolved.price.durationDays <= 0) {
+    return { ok: false, status: 400, error: 'Selected price plan has no duration_days configured' };
+  }
+
+  const quotedCountryCode = resolved.detectedCountryCode ?? geo.countryCode;
+  let chargeAmount = resolved.effectiveAmount;
+  let listAmount = resolved.price.amount;
+  let chargeCurrency = 'USD';
+  let discountPercent = computeDiscountPercent(listAmount, chargeAmount);
+  let optionType = resolved.price.name;
+  const requestedAccessIds = parseAccessZenlerCourseIds(req.body ?? {});
+  const comboStorySlug = parseComboStorySlug(req.body ?? {});
+  const configuredComboZenlerCourseIds = await resolveConfiguredComboZenlerCourseIds();
+  let accessZenlerCourseIds: string[] | null = null;
+  assertBundleCheckoutHasSelection({
+    comboStorySlug,
+    accessZenlerCourseIds: requestedAccessIds,
+    zenlerCourseId: course.zenlerCourseId,
+    configuredComboZenlerCourseIds,
+  });
+  if (requestedAccessIds.length > 0) {
+    accessZenlerCourseIds = await validateMultiCourseAccessSelection({
+      bundleCourseId: course.id,
+      accessZenlerCourseIds: requestedAccessIds,
+      comboStorySlug,
+    });
+    const comboQuote = await priceComboAccessSelection({
+      zenlerCourseIds: accessZenlerCourseIds,
+      session: parseExamSession(req.body ?? {}),
+      coursePriceIds: parsePaperCoursePriceIds(req.body ?? {}),
+      comboStorySlug,
+      countryCode: quotedCountryCode,
+      ipAddress: clientIp,
+      ignoreVpnBlock: parityTest,
+    });
+    chargeAmount = comboQuote.chargeAmount;
+    listAmount = comboQuote.listAmount;
+    chargeCurrency = comboQuote.chargeCurrency;
+    discountPercent = comboQuote.discountPercent;
+    if (comboQuote.sessionTitle) optionType = comboQuote.sessionTitle;
+  }
+
+  return {
+    ok: true,
+    course,
+    resolved,
+    chargeAmount,
+    listAmount,
+    chargeCurrency,
+    discountPercent,
+    optionType,
+    accessZenlerCourseIds,
+    comboStorySlug,
+    quotedCountryCode,
+    clientIp,
+  };
+}
+
 async function createGeoPriceCheckout(req: Request, res: Response, next: NextFunction) {
   try {
-    const explicitPriceId = parsePositiveInt(req.body?.coursePriceId);
-    let courseId = parsePositiveInt(req.body?.courseId);
     const providerId = parseRequestedProvider(req.body ?? {});
     if (rejectDisabledProvider(providerId, res)) return;
 
-    if (!courseId && explicitPriceId) {
-      const priceRow = await getGeoPriceById(explicitPriceId);
-      if (!priceRow || !priceRow.isActive) {
-        return res.status(404).json({ ok: false, error: 'Course price not found or inactive' });
-      }
-      courseId = priceRow.courseId;
-    }
-
-    if (!courseId) {
-      return res.status(400).json({ ok: false, error: 'courseId or coursePriceId is required' });
-    }
-
-    const course = await getCmsCourseById(courseId);
-    if (!course || !course.isActive) {
-      return res.status(404).json({ ok: false, error: 'Course not found or inactive' });
-    }
-
-    const geo = detectCountryFromRequest(req);
-    const clientIp = detectClientIpFromRequest(req);
-    const parityTest = isParityDealsTestAllowed() && (
-      isParityDealsTestRequest(req)
-      || req.body?.parityDealsTest === true
-      || String(req.body?.test ?? '').toLowerCase() === 'true'
-    );
-    const campaignCode = String(req.body?.campaignCode ?? '').trim() || null;
-    const durationRaw = Number(req.body?.durationMonths);
-    const durationMonths = Number.isInteger(durationRaw) && durationRaw >= 1 && durationRaw <= 6
-      ? durationRaw
-      : null;
-
-    let resolved;
+    let priced;
     try {
-      if (explicitPriceId) {
-        const price = await getGeoPriceById(explicitPriceId);
-        if (!price || price.courseId !== courseId || !price.isActive) {
-          return res.status(404).json({ ok: false, error: 'Course price not found or inactive' });
-        }
-        const base = {
-          price,
-          matchReason: 'explicit' as const,
-          effectiveAmount: price.amount,
-          detectedCountryCode: geo.countryCode,
-          geoPricingApplied: false,
-          geoRegionCode: null,
-          geoDiscountPercent: null,
-        };
-        resolved = await applyParityDealsToResolved(base, {
-          ipAddress: clientIp,
-          ignoreVpnBlock: parityTest,
-        });
-      } else {
-        resolved = await resolveCoursePrice({
-          courseId,
-          durationMonths,
-          campaignCode,
-          detectedCountryCode: geo.countryCode,
-          ipAddress: clientIp,
-          ignoreVpnBlock: parityTest,
-        });
-      }
+      priced = await priceCheckoutSelection(req);
     } catch (err) {
-      if (err instanceof PricingResolutionError) {
-        return res.status(404).json({ ok: false, error: err.message });
+      if (err instanceof MultiCourseAccessError || err instanceof ComboBundlePriceError) {
+        return res.status(err.status).json({ ok: false, error: err.message });
       }
       throw err;
     }
+    if (!priced.ok) return res.status(priced.status).json({ ok: false, error: priced.error });
 
-    if (!resolved.price.durationDays || resolved.price.durationDays <= 0) {
-      return res.status(400).json({ ok: false, error: 'Selected price plan has no duration_days configured' });
-    }
-
-    const quotedCountryCode = resolved.detectedCountryCode ?? geo.countryCode;
+    const course = priced.course;
+    const resolved = priced.resolved;
+    const quotedCountryCode = priced.quotedCountryCode;
+    const clientIp = priced.clientIp;
+    let chargeAmount = priced.chargeAmount;
+    let listAmount = priced.listAmount;
+    let chargeCurrency = priced.chargeCurrency;
+    let discountPercent = priced.discountPercent;
+    let optionType = priced.optionType;
+    const accessZenlerCourseIds = priced.accessZenlerCourseIds;
+    const comboStorySlug = priced.comboStorySlug;
     const environment = checkoutEnvironmentForRequest(req);
     const attribution = parseCheckoutAttribution(req.body ?? {}, {
       userAgent: req.get('user-agent'),
@@ -590,52 +729,30 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       provider: providerId,
     });
 
-    let chargeAmount = resolved.effectiveAmount;
-    let listAmount = resolved.price.amount;
-    let chargeCurrency = 'USD';
-    let discountPercent = computeDiscountPercent(listAmount, chargeAmount);
-    let optionType = resolved.price.name;
-
-    const requestedAccessIds = parseAccessZenlerCourseIds(req.body ?? {});
-    const comboStorySlug = parseComboStorySlug(req.body ?? {});
-    const configuredComboZenlerCourseIds = await resolveConfiguredComboZenlerCourseIds();
-    let accessZenlerCourseIds: string[] | null = null;
-    try {
-      assertBundleCheckoutHasSelection({
-        comboStorySlug,
-        accessZenlerCourseIds: requestedAccessIds,
-        zenlerCourseId: course.zenlerCourseId,
-        configuredComboZenlerCourseIds,
-      });
-      if (requestedAccessIds.length > 0) {
-        accessZenlerCourseIds = await validateMultiCourseAccessSelection({
-          bundleCourseId: course.id,
-          accessZenlerCourseIds: requestedAccessIds,
-          comboStorySlug,
-        });
-        const comboQuote = await priceComboAccessSelection({
-          zenlerCourseIds: accessZenlerCourseIds,
-          session: parseExamSession(req.body ?? {}),
-          coursePriceIds: parsePaperCoursePriceIds(req.body ?? {}),
-          comboStorySlug,
-          countryCode: quotedCountryCode,
-          ipAddress: clientIp,
-          ignoreVpnBlock: parityTest,
-        });
-        chargeAmount = comboQuote.chargeAmount;
-        listAmount = comboQuote.listAmount;
-        chargeCurrency = comboQuote.chargeCurrency;
-        discountPercent = comboQuote.discountPercent;
-        if (comboQuote.sessionTitle) optionType = comboQuote.sessionTitle;
+    const retakeCode = String(req.body?.retakeCode ?? '').trim();
+    let retakeQuote: Awaited<ReturnType<typeof previewRetakeDiscount>> | null = null;
+    if (retakeCode) {
+      if (accessZenlerCourseIds?.length || comboStorySlug) {
+        return res.status(400).json({ ok: false, error: 'A retake code can only be used for a single course.' });
       }
-    } catch (err) {
-      if (err instanceof MultiCourseAccessError || err instanceof ComboBundlePriceError) {
-        return res.status(err.status).json({ ok: false, error: err.message });
+      try {
+        retakeQuote = await previewRetakeDiscount({
+          code: retakeCode,
+          email: schoolPassword.email ?? '',
+          courseId: course.id,
+          zenlerCourseId: course.zenlerCourseId,
+          courseName: course.name,
+          listAmount,
+        });
+      } catch (err) {
+        if (err instanceof RetakeCodeError) {
+          return res.status(err.status).json({ ok: false, error: err.message });
+        }
+        throw err;
       }
-      throw err;
-    }
-
-    if (await rejectOwnedCheckout(
+      chargeAmount = retakeQuote.chargeAmount;
+      discountPercent = computeDiscountPercent(listAmount, chargeAmount);
+    } else if (await rejectOwnedCheckout(
       res,
       schoolPassword.email,
       grantCourseIds(course.zenlerCourseId, accessZenlerCourseIds),
@@ -663,21 +780,42 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       provider: providerId,
     });
     if (schoolPassword.password) await saveStudentPassword(order.id, schoolPassword.password);
+    if (retakeQuote) {
+      try {
+        await holdRetakeCodeForOrder(retakeQuote.codeId, order.id);
+      } catch (err) {
+        if (err instanceof RetakeCodeError) {
+          return res.status(err.status).json({ ok: false, error: err.message });
+        }
+        throw err;
+      }
+    }
 
-    const session = await startProviderCheckout(providerId, {
-      orderId: order.id,
-      courseId: course.id,
-      coursePriceId: resolved.price.id,
-      zenlerCourseId: course.zenlerCourseId,
-      courseTitle: course.name,
-      paymentCardTitle: `${course.name} — ${optionType}`,
-      amount: chargeAmount,
-      currency: chargeCurrency,
-      studentEmail: schoolPassword.email,
-      countryCode: quotedCountryCode,
-      returnOrigin: parseCheckoutReturnOrigin(req),
-      environment,
-    });
+    let session;
+    try {
+      session = await startProviderCheckout(providerId, {
+        orderId: order.id,
+        courseId: course.id,
+        coursePriceId: resolved.price.id,
+        zenlerCourseId: course.zenlerCourseId,
+        courseTitle: course.name,
+        paymentCardTitle: `${course.name} — ${optionType}`,
+        amount: chargeAmount,
+        currency: chargeCurrency,
+        studentEmail: schoolPassword.email,
+        skipStudentNameFields: Boolean(customerInput.firstName && customerInput.lastName),
+        countryCode: quotedCountryCode,
+        returnOrigin: parseCheckoutReturnOrigin(req),
+        environment,
+      });
+    } catch (err) {
+      if (retakeQuote) {
+        await releaseRetakeCodeForOrder(order.id).catch((releaseErr: unknown) => {
+          console.error('[checkout] could not release the retake code', order.id, releaseErr);
+        });
+      }
+      throw err;
+    }
 
     return res.json({
       checkoutUrl: session.checkoutUrl,

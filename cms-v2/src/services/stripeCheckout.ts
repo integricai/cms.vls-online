@@ -94,6 +94,7 @@ export async function createStripeCheckoutSession(input: {
   amount: number;
   currency: string;
   studentEmail: string | null;
+  skipStudentNameFields?: boolean;
   countryCode?: string | null;
   paymentMethodTypes?: string[];
   returnOrigin?: string | null;
@@ -122,7 +123,7 @@ export async function createStripeCheckoutSession(input: {
   params.append('success_url', `${siteUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`);
   params.append('cancel_url', `${siteUrl}/payment-cancelled`);
   params.append('billing_address_collection', 'required');
-  appendStripeStudentNameFields(params);
+  if (!input.skipStudentNameFields) appendStripeStudentNameFields(params);
   params.append('client_reference_id', String(input.orderId));
   params.append('line_items[0][price_data][currency]', input.currency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
