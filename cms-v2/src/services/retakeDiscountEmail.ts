@@ -29,7 +29,7 @@ function esc(value: string): string {
 }
 
 /** Public course page for the course selected when the code was issued. */
-export function retakeEnrolUrl(coursePageUrl: string | null | undefined): string | null {
+export function retakeEnrolUrl(coursePageUrl: string | null | undefined, code?: string | null): string | null {
   const raw = String(coursePageUrl ?? '').trim();
   if (!raw) return null;
 
@@ -44,7 +44,10 @@ export function retakeEnrolUrl(coursePageUrl: string | null | undefined): string
   if (!path.startsWith('/')) path = `/${path}`;
   path = path.replace(/\/+$/, '');
   if (!path.startsWith('/courses/') || path === '/courses') return null;
-  return `${SITE_ORIGIN}${path}`;
+  const discount = String(code ?? '').trim();
+  const page = `${SITE_ORIGIN}${path}`;
+  if (!discount) return page;
+  return `${page}?discount=${encodeURIComponent(discount)}`;
 }
 
 function enrolButton(url: string, courseName: string): string {
@@ -103,14 +106,14 @@ export async function sendRetakeDiscountCodeEmail(input: {
 }): Promise<void> {
   const firstName = input.firstName.trim() || 'there';
   const courseName = input.courseName.trim() || 'your course';
-  const enrolUrl = retakeEnrolUrl(input.coursePageUrl);
+  const enrolUrl = retakeEnrolUrl(input.coursePageUrl, input.code);
   const subject = `Your Vertex discount code for ${courseName}`;
   const text = [
     `Hello ${firstName},`,
     '',
     `Your discount code for ${courseName} is ${input.code}.`,
     `It takes ${input.discountLabel} off the course price and can be used once.`,
-    'Enter it on the Vertex checkout page with this same email address.',
+    'Open the enrol link below. Checkout will show this code for this email address.',
     ...(enrolUrl ? ['', `Enrol to ${courseName}: ${enrolUrl}`] : []),
     '',
     'Vertex Learning Solutions',
@@ -131,7 +134,7 @@ export async function sendRetakeDiscountCodeEmail(input: {
           <p style="margin:0 0 12px;">Use this code once when you enrol in <strong>${esc(courseName)}</strong>. It takes ${esc(input.discountLabel)} off the course price.</p>
           <p style="margin:16px 0;padding:14px 16px;background:${BRAND.panel};border-radius:8px;font-size:20px;letter-spacing:1px;font-weight:700;color:${BRAND.navy};">${esc(input.code)}</p>
           ${enrolUrl ? enrolButton(enrolUrl, courseName) : ''}
-          <p style="margin:16px 0 0;color:${BRAND.muted};">Enter it on the checkout page with this same email address. After a successful payment the code cannot be used again.</p>
+          <p style="margin:16px 0 0;color:${BRAND.muted};">The enrol link opens checkout with this code for this email address. After a successful payment the code cannot be used again.</p>
         </td></tr>
       </table>
     </td></tr>
