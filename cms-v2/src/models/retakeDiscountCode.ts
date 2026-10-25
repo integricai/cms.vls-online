@@ -189,7 +189,8 @@ export async function markRetakeCodeEmailSent(id: number): Promise<void> {
 
 /**
  * Hold the code on this order until Stripe confirms payment.
- * A code already held by another pending order is left alone.
+ * A pending order that has not been paid is cancelled by the caller first,
+ * so a later checkout from the same student can take the code.
  */
 export async function reserveRetakeCode(codeId: number, orderId: number): Promise<boolean> {
   await ensureRetakeDiscountSchema();

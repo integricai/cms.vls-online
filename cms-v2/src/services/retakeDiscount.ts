@@ -1,5 +1,10 @@
 import { getCourseById } from '../models/course';
 import {
+  closePendingPaymentOrder,
+  getPaymentOrder,
+  paymentOrderCheckoutId,
+} from '../models/paymentOrder';
+import {
   consumeRetakeCodeForOrder,
   generateRetakeCodeValue,
   getRetakeDiscountCodeByCode,
@@ -12,6 +17,7 @@ import {
   type RetakeDiscountCode,
 } from '../models/retakeDiscountCode';
 import { sendRetakeDiscountCodeEmail } from './retakeDiscountEmail';
+import { expireOpenStripeCheckoutSession } from './stripeCheckout';
 import {
   applyRetakeDiscount,
   normalizeRetakeCode,
@@ -196,11 +202,39 @@ export async function previewRetakeDiscount(input: {
   };
 }
 
+const RETAKE_CODE_HELD = 'This retake code is already waiting on another payment.';
+
+/**
+ * The first checkout to pay keeps the code. An earlier checkout that never
+ * finished can be replaced so the student can complete this one.
+ */
 export async function holdRetakeCodeForOrder(codeId: number, orderId: number): Promise<void> {
-  const reserved = await reserveRetakeCode(codeId, orderId);
-  if (!reserved) {
-    throw new RetakeCodeError('This retake code is already waiting on another payment.', 409);
+  if (await reserveRetakeCode(codeId, orderId)) return;
+
+  const row = await getRetakeDiscountCodeById(codeId);
+  const previousId = row && !row.used ? row.paymentOrderId : null;
+  if (!previousId || previousId === orderId) throw new RetakeCodeError(RETAKE_CODE_HELD, 409);
+
+  const previous = await getPaymentOrder(previousId);
+  if (!previous || previous.status === 'Paid' || previous.status === 'Refunded') {
+    throw new RetakeCodeError('This retake code has already been used.', 409);
   }
+  if (previous.status === 'Pending') {
+    const sessionId = paymentOrderCheckoutId(previous);
+    if (sessionId && previous.provider === 'stripe') {
+      let outcome: 'expired' | 'complete';
+      try {
+        outcome = await expireOpenStripeCheckoutSession(sessionId, previous.checkoutEnvironment);
+      } catch (err) {
+        console.error('[retake-code] could not expire the earlier checkout', previous.id, err);
+        outcome = 'expired';
+      }
+      if (outcome === 'complete') throw new RetakeCodeError(RETAKE_CODE_HELD, 409);
+    }
+    await closePendingPaymentOrder({ orderId: previous.id, status: 'Cancelled' });
+  }
+  if (await reserveRetakeCode(codeId, orderId)) return;
+  throw new RetakeCodeError(RETAKE_CODE_HELD, 409);
 }
 
 export { consumeRetakeCodeForOrder, releaseRetakeCodeForOrder };

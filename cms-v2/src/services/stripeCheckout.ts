@@ -88,6 +88,25 @@ async function stripeApiRequest(
   return body;
 }
 
+/** Close an unpaid Checkout page. A completed payment is left alone. */
+export async function expireOpenStripeCheckoutSession(
+  sessionId: string,
+  environment?: CheckoutEnvironment | null,
+): Promise<'expired' | 'complete'> {
+  const secretKey = stripeSecretKeyForEnvironment(environment);
+  try {
+    await stripeApiRequest(secretKey, `/checkout/sessions/${encodeURIComponent(sessionId)}/expire`, {
+      method: 'POST',
+    });
+    return 'expired';
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (/complete|succeeded/i.test(message)) return 'complete';
+    if (/expired/i.test(message)) return 'expired';
+    throw err;
+  }
+}
+
 export async function createStripeCheckoutSession(input: {
   orderId: number;
   paymentOptionId?: number | null;
