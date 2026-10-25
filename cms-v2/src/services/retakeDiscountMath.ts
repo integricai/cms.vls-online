@@ -5,9 +5,9 @@ export type RetakeDiscountType = 'percent' | 'fixed';
 /** Stripe rejects a zero charge. Keep a small payable remainder. */
 export const MIN_RETAKE_CHARGE = 0.5;
 
-/** A discount code applies on staging checkout only. Production keeps the normal price. */
+/** A discount code applies on staging and live checkout. An unknown environment is ignored. */
 export function retakeCodeForCheckout(environment: string | null | undefined, code: unknown): string {
-  if (environment !== 'staging') return '';
+  if (environment !== 'staging' && environment !== 'production') return '';
   return String(code ?? '').trim();
 }
 

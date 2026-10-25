@@ -17,9 +17,9 @@ function run(name: string, fn: () => void) {
   }
 }
 
-run('keeps a discount code off production checkout', () => {
+run('accepts a discount code on staging and production checkout', () => {
   assert.equal(retakeCodeForCheckout('staging', ' RT-7K2M '), 'RT-7K2M');
-  assert.equal(retakeCodeForCheckout('production', 'RT-7K2M'), '');
+  assert.equal(retakeCodeForCheckout('production', 'RT-7K2M'), 'RT-7K2M');
   assert.equal(retakeCodeForCheckout(null, 'RT-7K2M'), '');
 });
 
