@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS retake_discount_codes (
   student_email TEXT NOT NULL,
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
+  cc_email TEXT,
   discount_type TEXT NOT NULL,
   discount_value NUMERIC(10, 2) NOT NULL,
   used BOOLEAN NOT NULL DEFAULT FALSE,

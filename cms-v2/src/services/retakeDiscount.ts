@@ -11,7 +11,6 @@ import {
   reserveRetakeCode,
   type RetakeDiscountCode,
 } from '../models/retakeDiscountCode';
-import { findZenlerUserByEmail, isStudentEnrolledInCourse, zenlerCredentialsConfigured } from './zenlerApi';
 import { sendRetakeDiscountCodeEmail } from './retakeDiscountEmail';
 import {
   applyRetakeDiscount,
@@ -20,6 +19,8 @@ import {
   retakeEmailsMatch,
   type RetakeDiscountType,
 } from './retakeDiscountMath';
+
+export const DEFAULT_DISCOUNT_CC_EMAIL = 'office@vls-online.com';
 
 export class RetakeCodeError extends Error {
   status: number;
@@ -41,26 +42,12 @@ function discountLabel(type: RetakeDiscountType, value: number): string {
   return `$${value.toFixed(2)}`;
 }
 
-async function assertPriorEnrollment(email: string, zenlerCourseId: string, courseName: string): Promise<void> {
-  if (!zenlerCredentialsConfigured()) {
-    throw new RetakeCodeError('Zenler is not configured, so a past enrolment cannot be checked.');
+function parseCcEmail(value: unknown): string {
+  const email = String(value ?? '').trim().toLowerCase() || DEFAULT_DISCOUNT_CC_EMAIL;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new RetakeCodeError('Enter a valid CC email.');
   }
-  const zenlerId = zenlerCourseId.trim();
-  if (!/^\d+$/.test(zenlerId)) {
-    throw new RetakeCodeError('This course is not linked to Zenler.');
-  }
-  const user = await findZenlerUserByEmail(email);
-  if (!user?.id) {
-    throw new RetakeCodeError('This email does not have a Vertex school account.');
-  }
-  const enrolled = await isStudentEnrolledInCourse({
-    zenlerUserId: String(user.id),
-    email,
-    zenlerCourseId: zenlerId,
-  });
-  if (!enrolled) {
-    throw new RetakeCodeError(`${email} is not enrolled in ${courseName} on Zenler, so a retake code cannot be used.`);
-  }
+  return email;
 }
 
 async function loadUsableCode(input: {
@@ -89,6 +76,7 @@ export async function issueRetakeDiscountCode(input: {
   courseId: number;
   discountType: unknown;
   discountValue: unknown;
+  ccEmail?: unknown;
   createdBy: number | null;
 }): Promise<IssuedRetakeCode> {
   const firstName = input.firstName.trim();
@@ -103,7 +91,7 @@ export async function issueRetakeDiscountCode(input: {
 
   const course = await getCourseById(input.courseId);
   if (!course || !course.isActive) throw new RetakeCodeError('Course not found or inactive.', 404);
-  await assertPriorEnrollment(email, course.zenlerCourseId, course.name);
+  const ccEmail = parseCcEmail(input.ccEmail);
 
   let saved: RetakeDiscountCode | null = null;
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -116,6 +104,7 @@ export async function issueRetakeDiscountCode(input: {
         lastName,
         discountType: discount.type,
         discountValue: discount.value,
+        ccEmail,
         createdBy: input.createdBy,
       });
       break;
@@ -131,6 +120,7 @@ export async function issueRetakeDiscountCode(input: {
   try {
     await sendRetakeDiscountCodeEmail({
       to: email,
+      cc: ccEmail,
       firstName,
       courseName: course.name,
       code: saved.code,
@@ -153,6 +143,7 @@ export async function resendRetakeDiscountCode(id: number): Promise<IssuedRetake
   if (row.used) throw new RetakeCodeError('This retake code has already been used.');
   await sendRetakeDiscountCodeEmail({
     to: row.studentEmail,
+    cc: row.ccEmail || DEFAULT_DISCOUNT_CC_EMAIL,
     firstName: row.firstName,
     courseName: row.courseName ?? 'your course',
     code: row.code,
@@ -177,15 +168,13 @@ export type RetakeQuote = {
 };
 
 /**
- * Check the code against the saved student, course, and Zenler enrolment.
- * Does not mark it used.
+ * Check the code against the student and course it was issued for.
+ * Does not mark it used, and does not require a previous enrolment.
  */
 export async function previewRetakeDiscount(input: {
   code: string;
   email: string;
   courseId: number;
-  zenlerCourseId: string;
-  courseName: string;
   listAmount: number;
 }): Promise<RetakeQuote> {
   const email = input.email.trim().toLowerCase();
@@ -193,7 +182,6 @@ export async function previewRetakeDiscount(input: {
     throw new RetakeCodeError('Enter the email address the code was sent to.');
   }
   const row = await loadUsableCode({ code: input.code, email, courseId: input.courseId });
-  await assertPriorEnrollment(email, input.zenlerCourseId, input.courseName);
   const chargeAmount = applyRetakeDiscount(input.listAmount, row.discountType, row.discountValue);
   if (chargeAmount == null) {
     throw new RetakeCodeError('This code reduces the price below the minimum we can charge.');

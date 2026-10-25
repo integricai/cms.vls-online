@@ -2,6 +2,8 @@ import { FormEvent, useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import type { Course } from '../../../../shared/types';
 
+const DEFAULT_CC_EMAIL = 'office@vls-online.com';
+
 type DiscountType = 'percent' | 'fixed';
 
 type RetakeCode = {
@@ -9,6 +11,7 @@ type RetakeCode = {
   code: string;
   courseName: string | null;
   studentEmail: string;
+  ccEmail?: string | null;
   firstName: string;
   lastName: string;
   discountType: DiscountType;
@@ -44,6 +47,7 @@ export default function RetakeCodes() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [ccEmail, setCcEmail] = useState(DEFAULT_CC_EMAIL);
   const [courseId, setCourseId] = useState('');
   const [discountType, setDiscountType] = useState<DiscountType>('percent');
   const [discountValue, setDiscountValue] = useState('');
@@ -76,16 +80,18 @@ export default function RetakeCodes() {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim(),
+        ccEmail: ccEmail.trim() || DEFAULT_CC_EMAIL,
         courseId: Number(courseId),
         discountType,
         discountValue: Number(discountValue),
       });
       setMessage(issued.emailSent
-        ? `Sent ${issued.code} to ${issued.studentEmail}.`
+        ? `Sent ${issued.code} to ${issued.studentEmail} and ${issued.ccEmail || DEFAULT_CC_EMAIL}.`
         : `Saved ${issued.code}, but the email was not sent. ${issued.emailError ?? ''}`.trim());
       setFirstName('');
       setLastName('');
       setEmail('');
+      setCcEmail(DEFAULT_CC_EMAIL);
       setCourseId('');
       setDiscountValue('');
       await loadCodes();
@@ -113,8 +119,8 @@ export default function RetakeCodes() {
       <div className="border-b border-slate-200 bg-white px-6 py-4">
         <h1 className="text-lg font-bold text-slate-800">Retake codes</h1>
         <p className="mt-0.5 text-xs text-slate-500">
-          Generate a one-time code for a student who already took this course and needs to enrol again.
-          The code is checked against Zenler, emailed to the student, and marked used after payment.
+          Generate a one-time code for one student and one course.
+          The code is emailed to the student, copied to the office, and marked used after payment.
         </p>
       </div>
 
@@ -132,6 +138,10 @@ export default function RetakeCodes() {
         <label className="text-xs font-semibold text-slate-600">
           Email
           <input className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm" type="email" value={email} onChange={event => setEmail(event.target.value)} required />
+        </label>
+        <label className="text-xs font-semibold text-slate-600">
+          CC email
+          <input className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm" type="email" value={ccEmail} onChange={event => setCcEmail(event.target.value)} required />
         </label>
         <label className="text-xs font-semibold text-slate-600">
           Course

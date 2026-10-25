@@ -12,6 +12,7 @@ export type RetakeDiscountCode = {
   studentEmail: string;
   firstName: string;
   lastName: string;
+  ccEmail: string | null;
   discountType: RetakeDiscountType;
   discountValue: number;
   used: boolean;
@@ -30,6 +31,7 @@ interface DbRow {
   student_email: string;
   first_name: string;
   last_name: string;
+  cc_email?: string | null;
   discount_type: string;
   discount_value: string | number;
   used: boolean;
@@ -54,6 +56,7 @@ function rowToCode(row: DbRow): RetakeDiscountCode {
     studentEmail: row.student_email,
     firstName: row.first_name,
     lastName: row.last_name,
+    ccEmail: row.cc_email ?? null,
     discountType,
     discountValue: Number(row.discount_value),
     used: row.used === true,
@@ -90,6 +93,7 @@ export async function ensureRetakeDiscountSchema(): Promise<void> {
     `;
     await sql`CREATE INDEX IF NOT EXISTS retake_discount_codes_email_idx ON retake_discount_codes (student_email)`;
     await sql`CREATE INDEX IF NOT EXISTS retake_discount_codes_course_idx ON retake_discount_codes (course_id)`;
+    await sql`ALTER TABLE retake_discount_codes ADD COLUMN IF NOT EXISTS cc_email TEXT`;
   })();
   await schemaReady;
 }
@@ -113,13 +117,14 @@ export async function insertRetakeDiscountCode(input: {
   lastName: string;
   discountType: RetakeDiscountType;
   discountValue: number;
+  ccEmail: string | null;
   createdBy: number | null;
 }): Promise<RetakeDiscountCode> {
   await ensureRetakeDiscountSchema();
   const rows = await sql`
     INSERT INTO retake_discount_codes (
       code, course_id, student_email, first_name, last_name,
-      discount_type, discount_value, created_by
+      discount_type, discount_value, cc_email, created_by
     )
     VALUES (
       ${input.code},
@@ -129,6 +134,7 @@ export async function insertRetakeDiscountCode(input: {
       ${input.lastName},
       ${input.discountType},
       ${input.discountValue},
+      ${input.ccEmail},
       ${input.createdBy}
     )
     RETURNING *

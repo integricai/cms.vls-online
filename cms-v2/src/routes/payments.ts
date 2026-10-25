@@ -417,8 +417,6 @@ router.post('/checkout-quote', schoolAccountRateLimit, async (req: Request, res:
         code: retakeCode,
         email,
         courseId: priced.course.id,
-        zenlerCourseId: priced.course.zenlerCourseId,
-        courseName: priced.course.name,
         listAmount: priced.listAmount,
       });
       chargeAmount = quote.chargeAmount;
@@ -729,6 +727,12 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       provider: providerId,
     });
 
+    if (await rejectOwnedCheckout(
+      res,
+      schoolPassword.email,
+      grantCourseIds(course.zenlerCourseId, accessZenlerCourseIds),
+    )) return;
+
     const retakeCode = String(req.body?.retakeCode ?? '').trim();
     let retakeQuote: Awaited<ReturnType<typeof previewRetakeDiscount>> | null = null;
     if (retakeCode) {
@@ -740,8 +744,6 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
           code: retakeCode,
           email: schoolPassword.email ?? '',
           courseId: course.id,
-          zenlerCourseId: course.zenlerCourseId,
-          courseName: course.name,
           listAmount,
         });
       } catch (err) {
@@ -752,11 +754,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       }
       chargeAmount = retakeQuote.chargeAmount;
       discountPercent = computeDiscountPercent(listAmount, chargeAmount);
-    } else if (await rejectOwnedCheckout(
-      res,
-      schoolPassword.email,
-      grantCourseIds(course.zenlerCourseId, accessZenlerCourseIds),
-    )) return;
+    }
 
     const order = await createPaymentOrder({
       paymentOptionId: null,

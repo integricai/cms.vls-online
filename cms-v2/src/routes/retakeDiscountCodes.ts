@@ -28,6 +28,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       firstName: String(body.firstName ?? ''),
       lastName: String(body.lastName ?? ''),
       email: String(body.email ?? ''),
+      ccEmail: body.ccEmail,
       courseId,
       discountType: body.discountType,
       discountValue: body.discountValue,
