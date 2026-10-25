@@ -174,6 +174,8 @@ export type RetakeQuote = {
   chargeAmount: number;
   discountType: RetakeDiscountType;
   discountValue: number;
+  firstName: string;
+  lastName: string;
 };
 
 /**
@@ -202,6 +204,8 @@ export async function previewRetakeDiscount(input: {
     chargeAmount,
     discountType: row.discountType,
     discountValue: row.discountValue,
+    firstName: row.firstName,
+    lastName: row.lastName,
   };
 }
 

@@ -5,6 +5,7 @@ import {
   STRIPE_WEBHOOK_TOLERANCE_SECONDS,
   appendStripeOrderSummaryNote,
   appendStripeStudentNameFields,
+  resolveStripeStudentNameDefaults,
   STRIPE_PAYPAL_CURRENCY_NOTE,
   stripeSecretKeyForEnvironment,
   verifyStripeWebhook,
@@ -203,6 +204,34 @@ run('prefills Stripe name fields without locking them', () => {
   assert.strictEqual(params.get('custom_fields[0][text][default_value]'), 'Ada');
   assert.strictEqual(params.get('custom_fields[0][optional]'), 'false');
   assert.strictEqual(params.get('custom_fields[1][text][default_value]'), null);
+});
+
+run('leaves Stripe name defaults empty when the form already has both names', () => {
+  assert.deepStrictEqual(resolveStripeStudentNameDefaults({
+    formFirstName: 'Ada',
+    formLastName: 'Lovelace',
+    schoolFirstName: 'School',
+    schoolLastName: 'Name',
+    codeFirstName: 'Code',
+    codeLastName: 'Person',
+  }), {});
+});
+
+run('prefers the school account, then the discount code, for an empty form name', () => {
+  assert.deepStrictEqual(resolveStripeStudentNameDefaults({
+    schoolFirstName: ' Grace ',
+    schoolLastName: '',
+    codeFirstName: 'Code',
+    codeLastName: 'Hopper',
+  }), { studentFirstName: 'Grace', studentLastName: 'Hopper' });
+});
+
+run('keeps a single name typed on the form and fills only the other box', () => {
+  assert.deepStrictEqual(resolveStripeStudentNameDefaults({
+    formFirstName: 'Ada',
+    schoolFirstName: 'School',
+    schoolLastName: 'Lovelace',
+  }), { studentFirstName: 'Ada', studentLastName: 'Lovelace' });
 });
 
 run('rejects an unknown webhook signature', () => {

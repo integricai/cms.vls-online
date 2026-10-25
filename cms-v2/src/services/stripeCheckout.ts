@@ -21,6 +21,39 @@ export function appendStripeOrderSummaryNote(params: URLSearchParams): void {
   params.append('line_items[0][price_data][product_data][description]', STRIPE_PAYPAL_CURRENCY_NOTE);
 }
 
+function clipStripeName(value: string | null | undefined): string {
+  return String(value ?? '').trim().slice(0, 80);
+}
+
+/**
+ * Values for the Stripe name boxes. A name from our form wins for that box.
+ * The school account is next, then the name stored on a discount code.
+ * Both form names means those boxes are left off the page, so this returns nothing.
+ */
+export function resolveStripeStudentNameDefaults(input: {
+  formFirstName?: string | null;
+  formLastName?: string | null;
+  schoolFirstName?: string | null;
+  schoolLastName?: string | null;
+  codeFirstName?: string | null;
+  codeLastName?: string | null;
+}): { studentFirstName?: string; studentLastName?: string } {
+  const formFirstName = clipStripeName(input.formFirstName);
+  const formLastName = clipStripeName(input.formLastName);
+  if (formFirstName && formLastName) return {};
+
+  const studentFirstName = formFirstName
+    || clipStripeName(input.schoolFirstName)
+    || clipStripeName(input.codeFirstName);
+  const studentLastName = formLastName
+    || clipStripeName(input.schoolLastName)
+    || clipStripeName(input.codeLastName);
+  return {
+    ...(studentFirstName ? { studentFirstName } : {}),
+    ...(studentLastName ? { studentLastName } : {}),
+  };
+}
+
 /** Required name fields on the Stripe page, beside the email. */
 export function appendStripeStudentNameFields(
   params: URLSearchParams,

@@ -60,9 +60,9 @@ import {
   freeEnrolIpRateLimit,
   rateLimit,
 } from '../middleware/rateLimit';
-import { findZenlerUserByEmail, zenlerCredentialsConfigured } from '../services/zenlerApi';
+import { findZenlerUserByEmail, zenlerCredentialsConfigured, type ZenlerApiUser } from '../services/zenlerApi';
+import { resolveStripeStudentNameDefaults } from '../services/stripeCheckout';
 import { retakeCodeForCheckout } from '../services/retakeDiscountMath';
-import type { CheckoutEnvironment } from '../../shared/types';
 import {
   lookupSchoolCourseAccess,
   resolveAccountStatusCourseIds,
@@ -187,6 +187,14 @@ function parseCheckoutCustomer(body: Record<string, unknown>, countryCode: strin
   };
 }
 
+type PreparedSchoolAccount = {
+  email: string | null;
+  password: string | null;
+  schoolUser: ZenlerApiUser | null;
+  /** True when this request already searched the school account, including a failed search. */
+  schoolLookupDone: boolean;
+};
+
 /**
  * The new checkout form asks for a password only when the email is new.
  * Older checkouts omit collectSchoolPassword and keep the temporary-password path.
@@ -194,53 +202,70 @@ function parseCheckoutCustomer(body: Record<string, unknown>, countryCode: strin
 async function prepareSchoolPassword(
   body: Record<string, unknown>,
   fallbackEmail: string | null,
-): Promise<{ email: string | null; password: string | null } | { error: string }> {
+): Promise<PreparedSchoolAccount | { error: string }> {
   const collecting = body.collectSchoolPassword === true;
   const email = normalizeStudentEmail(body.studentEmail) ?? (collecting ? null : fallbackEmail);
   const parsed = parseChosenPassword(body.studentPassword);
   if (parsed.invalid) return { error: 'Password must be 8 to 72 characters.' };
-  if (!collecting && !parsed.password) return { email: fallbackEmail, password: null };
+  if (!collecting && !parsed.password) {
+    return { email: fallbackEmail, password: null, schoolUser: null, schoolLookupDone: false };
+  }
   if (!email) return { error: 'Enter the email address for your school account.' };
 
   let registered: boolean | null = null;
+  let schoolUser: ZenlerApiUser | null = null;
+  let schoolLookupDone = false;
   if (zenlerCredentialsConfigured()) {
+    schoolLookupDone = true;
     try {
-      registered = Boolean(await findZenlerUserByEmail(email));
+      schoolUser = await findZenlerUserByEmail(email);
+      registered = Boolean(schoolUser);
     } catch (err) {
       console.error('[checkout] school account lookup failed', err instanceof Error ? err.message : err);
       registered = null;
     }
   }
-  if (registered === true) return { email, password: null };
+  if (registered === true) return { email, password: null, schoolUser, schoolLookupDone };
   if (!parsed.password) return { error: 'Choose a password for your new school account.' };
-  return { email, password: parsed.password };
+  return { email, password: parsed.password, schoolUser, schoolLookupDone };
 }
 
 /**
- * Staging checkout fills the Stripe name boxes from the school account.
- * Production does not call Zenler for this and leaves the boxes empty.
+ * Fills the Stripe name boxes when the form did not send both names.
+ * Uses the school account already loaded for this checkout. A discount code
+ * fills only a box that is still empty. A failed lookup does not stop checkout.
  */
-async function stagingStripeNameDefaults(
-  environment: CheckoutEnvironment,
-  email: string | null,
-  firstName: string | null,
-  lastName: string | null,
-): Promise<{ studentFirstName?: string; studentLastName?: string }> {
-  if (environment !== 'staging' || (firstName && lastName) || !email || !zenlerCredentialsConfigured()) {
-    return {};
+async function stripeNameDefaults(input: {
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  schoolUser: ZenlerApiUser | null;
+  schoolLookupDone: boolean;
+  codeFirstName?: string | null;
+  codeLastName?: string | null;
+}): Promise<{ studentFirstName?: string; studentLastName?: string }> {
+  const formFirstName = String(input.firstName ?? '').trim();
+  const formLastName = String(input.lastName ?? '').trim();
+  if (formFirstName && formLastName) return {};
+
+  let schoolUser = input.schoolUser;
+  if (!input.schoolLookupDone && input.email && zenlerCredentialsConfigured()) {
+    try {
+      schoolUser = await findZenlerUserByEmail(input.email);
+    } catch (err) {
+      console.error('[checkout] could not prefill Stripe names from Zenler', err instanceof Error ? err.message : err);
+      schoolUser = null;
+    }
   }
-  try {
-    const user = await findZenlerUserByEmail(email);
-    const studentFirstName = String(user?.first_name ?? '').trim().slice(0, 80);
-    const studentLastName = String(user?.last_name ?? '').trim().slice(0, 80);
-    return {
-      ...(studentFirstName ? { studentFirstName } : {}),
-      ...(studentLastName ? { studentLastName } : {}),
-    };
-  } catch (err) {
-    console.error('[checkout] could not prefill Stripe names from Zenler', err instanceof Error ? err.message : err);
-    return {};
-  }
+
+  return resolveStripeStudentNameDefaults({
+    formFirstName: input.firstName,
+    formLastName: input.lastName,
+    schoolFirstName: schoolUser?.first_name,
+    schoolLastName: schoolUser?.last_name,
+    codeFirstName: input.codeFirstName,
+    codeLastName: input.codeLastName,
+  });
 }
 
 function schoolLoginErrorUrl(req: Request): string {
@@ -542,12 +567,13 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
     });
     if (schoolPassword.password) await saveStudentPassword(order.id, schoolPassword.password);
 
-    const stripeNames = await stagingStripeNameDefaults(
-      environment,
-      schoolPassword.email,
-      customerInput.firstName,
-      customerInput.lastName,
-    );
+    const stripeNames = await stripeNameDefaults({
+      email: schoolPassword.email,
+      firstName: customerInput.firstName,
+      lastName: customerInput.lastName,
+      schoolUser: schoolPassword.schoolUser,
+      schoolLookupDone: schoolPassword.schoolLookupDone,
+    });
     const session = await startProviderCheckout(providerId, {
       orderId: order.id,
       paymentOptionId: option.id,
@@ -825,12 +851,15 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       }
     }
 
-    const stripeNames = await stagingStripeNameDefaults(
-      environment,
-      schoolPassword.email,
-      customerInput.firstName,
-      customerInput.lastName,
-    );
+    const stripeNames = await stripeNameDefaults({
+      email: schoolPassword.email,
+      firstName: customerInput.firstName,
+      lastName: customerInput.lastName,
+      schoolUser: schoolPassword.schoolUser,
+      schoolLookupDone: schoolPassword.schoolLookupDone,
+      codeFirstName: retakeQuote?.firstName,
+      codeLastName: retakeQuote?.lastName,
+    });
     let session;
     try {
       session = await startProviderCheckout(providerId, {
