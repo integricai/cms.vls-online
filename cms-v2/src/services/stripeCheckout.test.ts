@@ -3,7 +3,9 @@ import crypto from 'crypto';
 import { resolveCheckoutEnvironment } from './attribution';
 import {
   STRIPE_WEBHOOK_TOLERANCE_SECONDS,
+  appendStripeOrderSummaryNote,
   appendStripeStudentNameFields,
+  STRIPE_PAYPAL_CURRENCY_NOTE,
   stripeSecretKeyForEnvironment,
   verifyStripeWebhook,
 } from './stripeCheckout';
@@ -167,6 +169,19 @@ run('accepts any v1 signature when the header carries several', () => {
     const reversedEvent = verifyStripeWebhook(Buffer.from(payload), reversed) as { id?: string };
     assert.strictEqual(reversedEvent.id, 'evt_multi');
   });
+});
+
+run('adds the PayPal currency note to the left order summary', () => {
+  const params = new URLSearchParams();
+  appendStripeOrderSummaryNote(params);
+  assert.strictEqual(
+    params.get('line_items[0][price_data][product_data][description]'),
+    STRIPE_PAYPAL_CURRENCY_NOTE,
+  );
+  assert.strictEqual(
+    STRIPE_PAYPAL_CURRENCY_NOTE,
+    'To pay by PayPal, please select the USD price, provided PayPal is available in your country.',
+  );
 });
 
 run('asks Stripe for a required first name and last name', () => {

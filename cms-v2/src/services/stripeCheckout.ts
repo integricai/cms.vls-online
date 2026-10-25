@@ -13,6 +13,14 @@ function appendParam(params: URLSearchParams, key: string, value: string | numbe
   if (value != null && value !== '') params.append(key, String(value));
 }
 
+/** Shown under the course name in the left order summary, beneath the currency choice. */
+export const STRIPE_PAYPAL_CURRENCY_NOTE =
+  'To pay by PayPal, please select the USD price, provided PayPal is available in your country.';
+
+export function appendStripeOrderSummaryNote(params: URLSearchParams): void {
+  params.append('line_items[0][price_data][product_data][description]', STRIPE_PAYPAL_CURRENCY_NOTE);
+}
+
 /** Required name fields on the Stripe page, beside the email. */
 export function appendStripeStudentNameFields(params: URLSearchParams): void {
   const fields = [
@@ -118,6 +126,7 @@ export async function createStripeCheckoutSession(input: {
   params.append('client_reference_id', String(input.orderId));
   params.append('line_items[0][price_data][currency]', input.currency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
+  appendStripeOrderSummaryNote(params);
   params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
   params.append('line_items[0][quantity]', '1');
   if (input.studentEmail) {
