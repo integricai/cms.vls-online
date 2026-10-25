@@ -190,9 +190,19 @@ run('asks Stripe for a required first name and last name', () => {
   assert.strictEqual(params.get('custom_fields[0][key]'), 'first_name');
   assert.strictEqual(params.get('custom_fields[0][label][custom]'), 'First name');
   assert.strictEqual(params.get('custom_fields[0][optional]'), 'false');
+  assert.strictEqual(params.get('custom_fields[0][text][default_value]'), null);
   assert.strictEqual(params.get('custom_fields[1][key]'), 'last_name');
   assert.strictEqual(params.get('custom_fields[1][label][custom]'), 'Last name');
   assert.strictEqual(params.get('custom_fields[1][optional]'), 'false');
+  assert.strictEqual(params.get('custom_fields[1][text][default_value]'), null);
+});
+
+run('prefills Stripe name fields without locking them', () => {
+  const params = new URLSearchParams();
+  appendStripeStudentNameFields(params, { firstName: ' Ada ', lastName: '' });
+  assert.strictEqual(params.get('custom_fields[0][text][default_value]'), 'Ada');
+  assert.strictEqual(params.get('custom_fields[0][optional]'), 'false');
+  assert.strictEqual(params.get('custom_fields[1][text][default_value]'), null);
 });
 
 run('rejects an unknown webhook signature', () => {

@@ -3,6 +3,7 @@ import {
   applyRetakeDiscount,
   normalizeRetakeCode,
   parseRetakeDiscount,
+  retakeCodeForCheckout,
   retakeEmailsMatch,
 } from './retakeDiscountMath';
 
@@ -15,6 +16,12 @@ function run(name: string, fn: () => void) {
     throw err;
   }
 }
+
+run('keeps a discount code off production checkout', () => {
+  assert.equal(retakeCodeForCheckout('staging', ' RT-7K2M '), 'RT-7K2M');
+  assert.equal(retakeCodeForCheckout('production', 'RT-7K2M'), '');
+  assert.equal(retakeCodeForCheckout(null, 'RT-7K2M'), '');
+});
 
 run('normalizes a typed code', () => {
   assert.equal(normalizeRetakeCode(' rt-7k2m '), 'RT-7K2M');

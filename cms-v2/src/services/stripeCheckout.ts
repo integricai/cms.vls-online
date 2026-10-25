@@ -22,10 +22,13 @@ export function appendStripeOrderSummaryNote(params: URLSearchParams): void {
 }
 
 /** Required name fields on the Stripe page, beside the email. */
-export function appendStripeStudentNameFields(params: URLSearchParams): void {
+export function appendStripeStudentNameFields(
+  params: URLSearchParams,
+  defaults?: { firstName?: string | null; lastName?: string | null },
+): void {
   const fields = [
-    { key: 'first_name', label: 'First name' },
-    { key: 'last_name', label: 'Last name' },
+    { key: 'first_name', label: 'First name', value: defaults?.firstName },
+    { key: 'last_name', label: 'Last name', value: defaults?.lastName },
   ];
   fields.forEach((field, index) => {
     params.append(`custom_fields[${index}][key]`, field.key);
@@ -35,6 +38,8 @@ export function appendStripeStudentNameFields(params: URLSearchParams): void {
     params.append(`custom_fields[${index}][optional]`, 'false');
     params.append(`custom_fields[${index}][text][minimum_length]`, '1');
     params.append(`custom_fields[${index}][text][maximum_length]`, '80');
+    const value = String(field.value ?? '').trim().slice(0, 80);
+    if (value) params.append(`custom_fields[${index}][text][default_value]`, value);
   });
 }
 
@@ -95,6 +100,8 @@ export async function createStripeCheckoutSession(input: {
   currency: string;
   studentEmail: string | null;
   skipStudentNameFields?: boolean;
+  studentFirstName?: string | null;
+  studentLastName?: string | null;
   countryCode?: string | null;
   paymentMethodTypes?: string[];
   returnOrigin?: string | null;
@@ -123,7 +130,12 @@ export async function createStripeCheckoutSession(input: {
   params.append('success_url', `${siteUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`);
   params.append('cancel_url', `${siteUrl}/payment-cancelled`);
   params.append('billing_address_collection', 'required');
-  if (!input.skipStudentNameFields) appendStripeStudentNameFields(params);
+  if (!input.skipStudentNameFields) {
+    appendStripeStudentNameFields(params, {
+      firstName: input.studentFirstName,
+      lastName: input.studentLastName,
+    });
+  }
   params.append('client_reference_id', String(input.orderId));
   params.append('line_items[0][price_data][currency]', input.currency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);

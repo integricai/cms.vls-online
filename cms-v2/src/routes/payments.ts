@@ -61,6 +61,8 @@ import {
   rateLimit,
 } from '../middleware/rateLimit';
 import { findZenlerUserByEmail, zenlerCredentialsConfigured } from '../services/zenlerApi';
+import { retakeCodeForCheckout } from '../services/retakeDiscountMath';
+import type { CheckoutEnvironment } from '../../shared/types';
 import {
   lookupSchoolCourseAccess,
   resolveAccountStatusCourseIds,
@@ -212,6 +214,33 @@ async function prepareSchoolPassword(
   if (registered === true) return { email, password: null };
   if (!parsed.password) return { error: 'Choose a password for your new school account.' };
   return { email, password: parsed.password };
+}
+
+/**
+ * Staging checkout fills the Stripe name boxes from the school account.
+ * Production does not call Zenler for this and leaves the boxes empty.
+ */
+async function stagingStripeNameDefaults(
+  environment: CheckoutEnvironment,
+  email: string | null,
+  firstName: string | null,
+  lastName: string | null,
+): Promise<{ studentFirstName?: string; studentLastName?: string }> {
+  if (environment !== 'staging' || (firstName && lastName) || !email || !zenlerCredentialsConfigured()) {
+    return {};
+  }
+  try {
+    const user = await findZenlerUserByEmail(email);
+    const studentFirstName = String(user?.first_name ?? '').trim().slice(0, 80);
+    const studentLastName = String(user?.last_name ?? '').trim().slice(0, 80);
+    return {
+      ...(studentFirstName ? { studentFirstName } : {}),
+      ...(studentLastName ? { studentLastName } : {}),
+    };
+  } catch (err) {
+    console.error('[checkout] could not prefill Stripe names from Zenler', err instanceof Error ? err.message : err);
+    return {};
+  }
 }
 
 function schoolLoginErrorUrl(req: Request): string {
@@ -406,7 +435,7 @@ router.post('/checkout-quote', schoolAccountRateLimit, async (req: Request, res:
     if (!priced.ok) return res.status(priced.status).json({ ok: false, error: priced.error });
 
     const email = normalizeStudentEmail(req.body?.studentEmail) ?? '';
-    const retakeCode = String(req.body?.retakeCode ?? '').trim();
+    const retakeCode = retakeCodeForCheckout(checkoutEnvironmentForRequest(req), req.body?.retakeCode);
     let chargeAmount = priced.chargeAmount;
     let retakeApplied = false;
     if (retakeCode) {
@@ -513,6 +542,12 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
     });
     if (schoolPassword.password) await saveStudentPassword(order.id, schoolPassword.password);
 
+    const stripeNames = await stagingStripeNameDefaults(
+      environment,
+      schoolPassword.email,
+      customerInput.firstName,
+      customerInput.lastName,
+    );
     const session = await startProviderCheckout(providerId, {
       orderId: order.id,
       paymentOptionId: option.id,
@@ -523,6 +558,7 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       amount,
       currency: option.currency || 'GBP',
       studentEmail: schoolPassword.email,
+      ...stripeNames,
       returnOrigin: parseCheckoutReturnOrigin(req),
       environment,
     });
@@ -733,7 +769,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       grantCourseIds(course.zenlerCourseId, accessZenlerCourseIds),
     )) return;
 
-    const retakeCode = String(req.body?.retakeCode ?? '').trim();
+    const retakeCode = retakeCodeForCheckout(environment, req.body?.retakeCode);
     let retakeQuote: Awaited<ReturnType<typeof previewRetakeDiscount>> | null = null;
     if (retakeCode) {
       if (accessZenlerCourseIds?.length || comboStorySlug) {
@@ -789,6 +825,12 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       }
     }
 
+    const stripeNames = await stagingStripeNameDefaults(
+      environment,
+      schoolPassword.email,
+      customerInput.firstName,
+      customerInput.lastName,
+    );
     let session;
     try {
       session = await startProviderCheckout(providerId, {
@@ -802,6 +844,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
         currency: chargeCurrency,
         studentEmail: schoolPassword.email,
         skipStudentNameFields: Boolean(customerInput.firstName && customerInput.lastName),
+        ...stripeNames,
         countryCode: quotedCountryCode,
         returnOrigin: parseCheckoutReturnOrigin(req),
         environment,
