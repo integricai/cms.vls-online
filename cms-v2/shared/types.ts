@@ -572,6 +572,15 @@ export interface SaleListItem extends Sale {
   stripeRefundId: string | null;
   paidAt: Date | null;
   refundedAt: Date | null;
+  /** Plan name stored on the payment, when checkout recorded one. */
+  optionType: string | null;
+  /** Processor fee in the sale currency. Null until Stripe has been read. */
+  processorFee: number | null;
+  /** Amount after the processor fee. */
+  netAmount: number | null;
+  /** Card, PayPal wallet, Klarna, and similar. Separate from the processor. */
+  paymentMethod: string | null;
+  checkoutEnvironment: CheckoutEnvironment | null;
 }
 
 export interface SaleCourseSummary {
@@ -592,6 +601,64 @@ export interface SaleTutorSummary {
   totalAmount: number;
   totalCommission: number;
   currencies: string[];
+}
+
+export interface SalesDashboardCard {
+  id: 'today' | 'yesterday' | 'last7' | 'month';
+  label: string;
+  amount: number;
+  earnings: number;
+  currency: string;
+  comparisonAmount: number;
+  comparisonLabel: string;
+  changePercent: number | null;
+}
+
+export interface SalesDashboardPoint {
+  date: string;
+  amount: number;
+}
+
+export interface SalesDashboardActivity {
+  id: number;
+  name: string;
+  courseName: string;
+  soldAt: string;
+}
+
+export interface SalesDashboardOrder {
+  id: number;
+  courseName: string;
+  customerName: string;
+  soldAt: string;
+  amount: number;
+  currency: string;
+  type: 'One-time' | 'Refunded';
+}
+
+export interface SalesDashboard {
+  currency: string;
+  otherCurrencies: string[];
+  cards: SalesDashboardCard[];
+  range: 'this_month' | 'last_month' | 'last_7_days' | 'last_30_days';
+  visitors: number;
+  leads: number;
+  enrollments: number;
+  leadConversionPercent: number | null;
+  enrollmentConversionPercent: number | null;
+  series: SalesDashboardPoint[];
+  totalSales: number;
+  oneTime: number;
+  subscriptions: number;
+  others: number;
+  activity: SalesDashboardActivity[];
+  recentOrders: SalesDashboardOrder[];
+}
+
+export interface SalesFeeSyncResult {
+  sales: SaleListItem[];
+  remaining: number;
+  updated: number;
 }
 
 export interface SaleAcceptPreview {

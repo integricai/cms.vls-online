@@ -1,55 +1,23 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/client';
-import type {
-  SaleCourseSummary,
-  SaleListItem,
-  SaleTutorSummary,
-  Tutor,
-} from '../../../../shared/types';
+import type { SaleListItem, SalesFeeSyncResult, Tutor } from '../../../../shared/types';
+import { formatDisplayDate, londonToday, monthStart, saleSessionLabel } from '../../../../shared/salesFormat';
 
-type SalesView = 'overview' | 'unassigned' | 'byCourse' | 'byTutor';
-
-const VIEW_LABELS: Record<SalesView, string> = {
-  overview: 'Overview',
-  unassigned: 'Unassigned',
-  byCourse: 'By course',
-  byTutor: 'By tutor',
-};
-
-function formatMoney(amount: number, currency: string): string {
+function formatMoney(amount: number | null | undefined, currency: string): string {
+  if (amount == null || Number.isNaN(amount)) return '—';
   try {
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
-      currency: currency || 'GBP',
+      currency: currency || 'USD',
     }).format(amount);
   } catch {
     return `${amount.toFixed(2)} ${currency}`;
   }
 }
 
-function formatDate(value: Date | string | null | undefined): string {
-  if (!value) return '—';
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-function statusLabel(sale: SaleListItem): string {
-  if (!sale.tutorId) return 'Awaiting tutor';
-  if (sale.assignmentStatus === 'AdminAssigned') return 'Admin assigned';
-  return 'Assigned';
-}
-
-function paymentLabel(sale: SaleListItem): string {
-  if (sale.paymentStatus === 'Refunded') return 'Refunded';
-  if (sale.paymentStatus === 'Paid') return 'Paid';
-  return sale.paymentStatus || 'Unknown';
-}
-
-function customerLabel(sale: SaleListItem): string {
+function customerName(sale: SaleListItem): string {
   const name = [sale.customerFirstName, sale.customerLastName].filter(Boolean).join(' ').trim();
-  if (name && sale.customerEmail) return `${name} (${sale.customerEmail})`;
-  return name || sale.customerEmail || '—';
+  return name || '—';
 }
 
 const countryNames = typeof Intl.DisplayNames === 'function'
@@ -70,11 +38,10 @@ function countryLabel(code: string | null | undefined): string {
 
 function shortProcessorId(id: string | null | undefined): string {
   if (!id) return '—';
-  if (id.length <= 18) return id;
-  return `${id.slice(0, 10)}…${id.slice(-4)}`;
+  if (id.length <= 22) return id;
+  return `${id.slice(0, 12)}…${id.slice(-4)}`;
 }
 
-/** Historical direct PayPal sales only. New PayPal payments are Stripe and stay labelled Stripe. */
 function processorLabel(sale: SaleListItem): string {
   return sale.provider === 'paypal' ? 'PayPal' : 'Stripe';
 }
@@ -82,56 +49,103 @@ function processorLabel(sale: SaleListItem): string {
 function processorPaymentUrl(sale: SaleListItem): string | null {
   const paymentId = sale.providerPaymentId ?? sale.stripePaymentIntentId;
   if (!paymentId) return null;
-  // Legacy direct PayPal receipt. Stripe PayPal payments use the Stripe dashboard link below.
-  if (sale.provider === 'paypal') {
-    return `https://www.paypal.com/activity/payment/${paymentId}`;
-  }
+  if (sale.provider === 'paypal') return `https://www.paypal.com/activity/payment/${paymentId}`;
   return `https://dashboard.stripe.com/payments/${paymentId}`;
 }
 
+function csvCell(value: string): string {
+  if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
+  return value;
+}
+
+function downloadSales(rows: SaleListItem[], from: string, to: string) {
+  const header = [
+    'SaleId',
+    'StripeId',
+    'User Name',
+    'User Email',
+    'Course',
+    'Session',
+    'Country',
+    'Payment Method',
+    'Stripe/PayPal',
+    'Amount paid',
+    'Stripe charge',
+    'Net Payment',
+  ];
+  const lines = rows.map(sale => [
+    String(sale.id),
+    sale.providerPaymentId ?? sale.stripePaymentIntentId ?? '',
+    customerName(sale),
+    sale.customerEmail ?? '',
+    sale.courseName || `Course #${sale.courseId}`,
+    saleSessionLabel(sale.durationDays, sale.expiryDate),
+    countryLabel(sale.countryCode),
+    sale.paymentMethod ?? '',
+    processorLabel(sale),
+    formatMoney(sale.amount, sale.currency),
+    formatMoney(sale.processorFee, sale.currency),
+    formatMoney(sale.netAmount, sale.currency),
+  ].map(csvCell).join(','));
+  const blob = new Blob([`\uFEFF${header.join(',')}\n${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `sales-${from}-to-${to}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function SalesTab() {
-  const [view, setView] = useState<SalesView>('overview');
+  const [from, setFrom] = useState(() => monthStart(londonToday()));
+  const [to, setTo] = useState(() => londonToday());
   const [sales, setSales] = useState<SaleListItem[]>([]);
-  const [byCourse, setByCourse] = useState<SaleCourseSummary[]>([]);
-  const [byTutor, setByTutor] = useState<SaleTutorSummary[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncingFees, setSyncingFees] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [assigningSaleId, setAssigningSaleId] = useState<number | null>(null);
   const [refundingSaleId, setRefundingSaleId] = useState<number | null>(null);
   const [selectedTutorId, setSelectedTutorId] = useState<Record<number, number>>({});
+  const requestId = useRef(0);
 
-  const unassignedSales = useMemo(
-    () => sales.filter(sale => !sale.tutorId && sale.paymentStatus !== 'Refunded'),
-    [sales],
-  );
-
-  async function loadData() {
+  async function loadData(fromDate: string, toDate: string) {
+    const id = requestId.current + 1;
+    requestId.current = id;
     setLoading(true);
     setError('');
     try {
-      const status = view === 'unassigned' ? 'Unassigned' : 'All';
-      const [saleData, courseSummary, tutorSummary, tutorData] = await Promise.all([
-        api.get<SaleListItem[]>(`/sales?status=${encodeURIComponent(status)}`),
-        api.get<SaleCourseSummary[]>('/sales/summary/by-course'),
-        api.get<SaleTutorSummary[]>('/sales/summary/by-tutor'),
+      const [saleData, tutorData] = await Promise.all([
+        api.get<SaleListItem[]>(`/sales?from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}`),
         api.get<Tutor[]>('/tutors'),
       ]);
+      if (requestId.current !== id) return;
       setSales(saleData ?? []);
-      setByCourse(courseSummary ?? []);
-      setByTutor(tutorSummary ?? []);
-      setTutors((tutorData ?? []).filter(t => t.isActive));
+      setTutors((tutorData ?? []).filter(tutor => tutor.isActive));
+      setLoading(false);
+      setSyncingFees(true);
+      let remaining = 1;
+      for (let attempt = 0; attempt < 8 && remaining > 0; attempt += 1) {
+        const result = await api.post<SalesFeeSyncResult>('/sales/sync-fees', { from: fromDate, to: toDate });
+        if (requestId.current !== id) return;
+        setSales(result.sales ?? []);
+        remaining = result.updated > 0 ? (result.remaining ?? 0) : 0;
+      }
     } catch (err) {
+      if (requestId.current !== id) return;
       setError(err instanceof Error ? err.message : 'Failed to load sales');
     } finally {
-      setLoading(false);
+      if (requestId.current === id) {
+        setLoading(false);
+        setSyncingFees(false);
+      }
     }
   }
 
   useEffect(() => {
-    void loadData();
-  }, [view]);
+    void loadData(from, to);
+  }, [from, to]);
 
   async function assignTutor(saleId: number) {
     const tutorId = selectedTutorId[saleId];
@@ -145,7 +159,7 @@ export default function SalesTab() {
     try {
       await api.post(`/sales/${saleId}/assign`, { tutorId });
       setMessage('Tutor assigned');
-      await loadData();
+      await loadData(from, to);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to assign tutor');
     } finally {
@@ -166,7 +180,7 @@ export default function SalesTab() {
     try {
       await api.post(`/sales/${sale.id}/refund`, {});
       setMessage(`Refund processed in ${processorLabel(sale)}, sale marked refunded, and course access revoked`);
-      await loadData();
+      await loadData(from, to);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to refund sale');
     } finally {
@@ -175,298 +189,173 @@ export default function SalesTab() {
   }
 
   function tutorsForSale(sale: SaleListItem): Tutor[] {
-    const linked = tutors.filter(t => t.courseIds.includes(sale.courseId));
+    const linked = tutors.filter(tutor => tutor.courseIds.includes(sale.courseId));
     return linked.length > 0 ? linked : tutors;
   }
 
-  function renderAssignControl(sale: SaleListItem) {
-    if (sale.paymentStatus === 'Refunded') return null;
-    if (sale.tutorId) return null;
-    const options = tutorsForSale(sale);
-    return (
-      <div className="flex flex-wrap items-center gap-1">
-        <select
-          className="input text-[11px]"
-          value={selectedTutorId[sale.id] ?? ''}
-          onChange={e => setSelectedTutorId(prev => ({
-            ...prev,
-            [sale.id]: Number(e.target.value),
-          }))}
-        >
-          <option value="">Assign tutor…</option>
-          {options.map(tutor => (
-            <option key={tutor.id} value={tutor.id}>
-              {tutor.name} ({tutor.commissionPercent}%)
-            </option>
-          ))}
-        </select>
-        <button
-          className="btn-primary text-[11px]"
-          disabled={assigningSaleId === sale.id}
-          onClick={() => void assignTutor(sale.id)}
-        >
-          {assigningSaleId === sale.id ? 'Assigning…' : 'Assign'}
-        </button>
-      </div>
-    );
-  }
-
-  function renderRefundControl(sale: SaleListItem) {
-    if (sale.paymentStatus === 'Refunded') {
-      return (
-        <div className="text-[11px] text-slate-400">
-          {(sale.providerRefundId ?? sale.stripeRefundId)
-            ? shortProcessorId(sale.providerRefundId ?? sale.stripeRefundId)
-            : `Refunded in ${processorLabel(sale)}`}
-        </div>
-      );
-    }
-    if (sale.paymentStatus !== 'Paid') return null;
-    return (
-      <button
-        className="btn-danger text-[11px]"
-        disabled={refundingSaleId === sale.id || !(sale.providerPaymentId ?? sale.stripePaymentIntentId)}
-        title={!(sale.providerPaymentId ?? sale.stripePaymentIntentId)
-          ? 'Missing processor payment ID'
-          : `Refund in ${processorLabel(sale)}`}
-        onClick={() => void refundSale(sale)}
-      >
-        {refundingSaleId === sale.id ? 'Refunding…' : 'Refund'}
-      </button>
-    );
-  }
-
-  function renderSalesTable(rows: SaleListItem[], mode: 'overview' | 'unassigned') {
-    const showCountry = mode === 'overview';
-    const showTutor = mode === 'unassigned';
-    const columnCount = 9 + Number(showCountry) + Number(showTutor);
-    return (
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="w-full min-w-[1180px] text-left text-xs">
-          <thead className="bg-slate-50 text-slate-500">
-            <tr>
-              <th className="px-3 py-2">Sold</th>
-              <th className="px-3 py-2">Course</th>
-              <th className="px-3 py-2">Customer</th>
-              {showCountry && <th className="px-3 py-2">Country</th>}
-              <th className="px-3 py-2">Amount</th>
-              <th className="px-3 py-2">Payment</th>
-              <th className="px-3 py-2">Processor</th>
-              {showTutor && <th className="px-3 py-2">Tutor</th>}
-              <th className="px-3 py-2">Commission</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr><td colSpan={columnCount} className="px-3 py-8 text-center text-slate-500">Loading…</td></tr>
-            )}
-            {!loading && rows.length === 0 && (
-              <tr><td colSpan={columnCount} className="px-3 py-8 text-center text-slate-500">No sales found.</td></tr>
-            )}
-            {!loading && rows.map(sale => (
-              <tr key={sale.id} className="border-t border-slate-100 align-top">
-                <td className="px-3 py-2 whitespace-nowrap">
-                  <div>{formatDate(sale.soldAt)}</div>
-                  <div className="text-[11px] text-slate-400">Expires {formatDate(sale.expiryDate)}</div>
-                </td>
-                <td className="px-3 py-2">{sale.courseName || `Course #${sale.courseId}`}</td>
-                <td className="px-3 py-2">{customerLabel(sale)}</td>
-                {showCountry && (
-                  <td className="px-3 py-2 whitespace-nowrap" title={sale.countryCode ?? undefined}>
-                    {countryLabel(sale.countryCode)}
-                  </td>
-                )}
-                <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.amount, sale.currency)}</td>
-                <td className="px-3 py-2">
-                  <span className={`inline-flex rounded px-2 py-0.5 text-[11px] font-medium ${
-                    sale.paymentStatus === 'Refunded'
-                      ? 'bg-rose-50 text-rose-700'
-                      : sale.paymentStatus === 'Paid'
-                        ? 'bg-sky-50 text-sky-700'
-                        : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {paymentLabel(sale)}
-                  </span>
-                  {sale.refundedAt && (
-                    <div className="mt-1 text-[11px] text-slate-400">
-                      Refunded {formatDate(sale.refundedAt)}
-                    </div>
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  {(sale.providerPaymentId ?? sale.stripePaymentIntentId) ? (
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wide text-slate-400">{processorLabel(sale)}</div>
-                      <a
-                        href={processorPaymentUrl(sale) ?? '#'}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-mono text-[11px] text-blue-600 hover:underline"
-                        title={sale.providerPaymentId ?? sale.stripePaymentIntentId ?? ''}
-                      >
-                        {shortProcessorId(sale.providerPaymentId ?? sale.stripePaymentIntentId)}
-                      </a>
-                      {(sale.providerCheckoutId ?? sale.stripeCheckoutSessionId) && (
-                        <div className="mt-0.5 font-mono text-[10px] text-slate-400" title={sale.providerCheckoutId ?? sale.stripeCheckoutSessionId ?? ''}>
-                          {shortProcessorId(sale.providerCheckoutId ?? sale.stripeCheckoutSessionId)}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-slate-400">—</span>
-                  )}
-                </td>
-                {showTutor && <td className="px-3 py-2">{sale.tutorName || '—'}</td>}
-                <td className="px-3 py-2 whitespace-nowrap">
-                  {sale.paymentStatus === 'Refunded'
-                    ? '—'
-                    : sale.commissionAmount != null
-                      ? `${formatMoney(sale.commissionAmount, sale.currency)} (${sale.commissionPercent ?? 0}%)`
-                      : '—'}
-                </td>
-                <td className="px-3 py-2">
-                  <span className={`inline-flex rounded px-2 py-0.5 text-[11px] font-medium ${
-                    sale.tutorId
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : 'bg-amber-50 text-amber-700'
-                  }`}>
-                    {statusLabel(sale)}
-                  </span>
-                  {!sale.tutorId && sale.inviteCount > 0 && (
-                    <div className="mt-1 text-[11px] text-slate-400">
-                      {sale.inviteCount} invite{sale.inviteCount === 1 ? '' : 's'} sent
-                    </div>
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-col gap-1">
-                    {renderAssignControl(sale)}
-                    {renderRefundControl(sale)}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  const tableRows = view === 'unassigned'
-    ? sales.filter(sale => !sale.tutorId && sale.paymentStatus !== 'Refunded')
-    : sales;
+  const columnCount = 13;
 
   return (
-    <div className="p-6">
-      <div className="mb-4 flex flex-wrap gap-1 border-b border-slate-200">
-        {(Object.keys(VIEW_LABELS) as SalesView[]).map(key => (
-          <button
-            key={key}
-            onClick={() => setView(key)}
-            className={`border-b-2 px-3 py-2 text-xs font-medium transition ${
-              view === key
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            {VIEW_LABELS[key]}
-            {key === 'unassigned' && unassignedSales.length > 0 && view !== 'unassigned' ? (
-              <span className="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-800">
-                {unassignedSales.length}
-              </span>
-            ) : null}
-          </button>
-        ))}
+    <div className="h-full overflow-auto">
+      <div className="border-b border-slate-200 bg-white px-6 py-4">
+        <h1 className="text-lg font-bold text-slate-800">Sales</h1>
+        <p className="mt-0.5 text-xs text-slate-500">
+          Paid course sales. Stripe charge is the processor fee, and net payment is what remains after that fee.
+        </p>
       </div>
+      <div className="p-6">
+        <div className="mb-4 flex flex-wrap items-end gap-3">
+          <label className="text-xs font-semibold text-slate-600">
+            Start date
+            <input
+              type="date"
+              className="input mt-1"
+              value={from}
+              max={to}
+              onChange={event => {
+                if (event.target.value) setFrom(event.target.value);
+              }}
+            />
+          </label>
+          <label className="text-xs font-semibold text-slate-600">
+            End date
+            <input
+              type="date"
+              className="input mt-1"
+              value={to}
+              min={from}
+              onChange={event => {
+                if (event.target.value) setTo(event.target.value);
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={loading || sales.length === 0}
+            onClick={() => downloadSales(sales, from, to)}
+          >
+            Download
+          </button>
+          {syncingFees ? <span className="pb-2 text-xs text-slate-500">Updating Stripe fees…</span> : null}
+        </div>
 
-      {error && <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
-      {message && <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</div>}
+        {error ? <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
+        {message ? <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</div> : null}
 
-      {(view === 'overview' || view === 'unassigned') && renderSalesTable(tableRows, view)}
-
-      {view === 'byCourse' && (
         <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-          <table className="w-full min-w-[720px] text-left text-xs">
+          <table className="w-full min-w-[1480px] text-left text-xs">
             <thead className="bg-slate-50 text-slate-500">
               <tr>
+                <th className="px-3 py-2">SaleId</th>
+                <th className="px-3 py-2">StripeId</th>
+                <th className="px-3 py-2">User name</th>
+                <th className="px-3 py-2">User email</th>
                 <th className="px-3 py-2">Course</th>
-                <th className="px-3 py-2">Sales</th>
-                <th className="px-3 py-2">Unassigned</th>
-                <th className="px-3 py-2">Revenue</th>
-                <th className="px-3 py-2">Commission</th>
+                <th className="px-3 py-2">Session</th>
+                <th className="px-3 py-2">Country</th>
+                <th className="px-3 py-2">Payment method</th>
+                <th className="px-3 py-2">Stripe/PayPal</th>
+                <th className="px-3 py-2">Amount paid</th>
+                <th className="px-3 py-2">Stripe charge</th>
+                <th className="px-3 py-2">Net payment</th>
+                <th className="px-3 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-500">Loading…</td></tr>
+                <tr><td colSpan={columnCount} className="px-3 py-8 text-center text-slate-500">Loading…</td></tr>
               )}
-              {!loading && byCourse.length === 0 && (
-                <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-500">No sales yet.</td></tr>
+              {!loading && sales.length === 0 && (
+                <tr><td colSpan={columnCount} className="px-3 py-8 text-center text-slate-500">No sales in this date range.</td></tr>
               )}
-              {!loading && byCourse.map(row => (
-                <tr key={row.courseId} className="border-t border-slate-100">
-                  <td className="px-3 py-2 font-medium text-slate-800">{row.courseName}</td>
-                  <td className="px-3 py-2">{row.saleCount}</td>
-                  <td className="px-3 py-2">{row.unassignedCount}</td>
-                  <td className="px-3 py-2">
-                    {row.currencies.length <= 1
-                      ? formatMoney(row.totalAmount, row.currencies[0] || 'GBP')
-                      : `${row.totalAmount.toFixed(2)} (mixed)`}
-                  </td>
-                  <td className="px-3 py-2">
-                    {row.currencies.length <= 1
-                      ? formatMoney(row.totalCommission, row.currencies[0] || 'GBP')
-                      : `${row.totalCommission.toFixed(2)} (mixed)`}
-                  </td>
-                </tr>
-              ))}
+              {!loading && sales.map(sale => {
+                const paymentId = sale.providerPaymentId ?? sale.stripePaymentIntentId;
+                const paymentUrl = processorPaymentUrl(sale);
+                return (
+                  <tr key={sale.id} className="border-t border-slate-100 align-top">
+                    <td className="px-3 py-2 font-medium text-slate-800">{sale.id}</td>
+                    <td className="px-3 py-2">
+                      {paymentId && paymentUrl ? (
+                        <a
+                          href={paymentUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-mono text-[11px] text-blue-600 hover:underline"
+                          title={paymentId}
+                        >
+                          {shortProcessorId(paymentId)}
+                        </a>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">{customerName(sale)}</td>
+                    <td className="px-3 py-2">{sale.customerEmail || '—'}</td>
+                    <td className="px-3 py-2">{sale.courseName || `Course #${sale.courseId}`}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {saleSessionLabel(sale.durationDays, sale.expiryDate)}
+                      <div className="text-[11px] text-slate-400">Sold {formatDisplayDate(sale.soldAt)}</div>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap" title={sale.countryCode ?? undefined}>
+                      {countryLabel(sale.countryCode)}
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">{sale.paymentMethod || '—'}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{processorLabel(sale)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.amount, sale.currency)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.processorFee, sale.currency)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.netAmount, sale.currency)}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-col gap-1">
+                        {sale.paymentStatus !== 'Refunded' && !sale.tutorId ? (
+                          <div className="flex flex-wrap items-center gap-1">
+                            <select
+                              className="input text-[11px]"
+                              value={selectedTutorId[sale.id] ?? ''}
+                              onChange={event => setSelectedTutorId(prev => ({
+                                ...prev,
+                                [sale.id]: Number(event.target.value),
+                              }))}
+                            >
+                              <option value="">Assign tutor…</option>
+                              {tutorsForSale(sale).map(tutor => (
+                                <option key={tutor.id} value={tutor.id}>
+                                  {tutor.name} ({tutor.commissionPercent}%)
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              className="btn-primary text-[11px]"
+                              disabled={assigningSaleId === sale.id}
+                              onClick={() => void assignTutor(sale.id)}
+                            >
+                              {assigningSaleId === sale.id ? 'Assigning…' : 'Assign'}
+                            </button>
+                          </div>
+                        ) : null}
+                        {sale.paymentStatus === 'Refunded' ? (
+                          <span className="text-[11px] text-slate-400">Refunded {formatDisplayDate(sale.refundedAt)}</span>
+                        ) : sale.paymentStatus === 'Paid' ? (
+                          <button
+                            type="button"
+                            className="btn-danger text-[11px]"
+                            disabled={refundingSaleId === sale.id || !paymentId}
+                            title={paymentId ? `Refund in ${processorLabel(sale)}` : 'Missing processor payment ID'}
+                            onClick={() => void refundSale(sale)}
+                          >
+                            {refundingSaleId === sale.id ? 'Refunding…' : 'Refund'}
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-      )}
-
-      {view === 'byTutor' && (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-          <table className="w-full min-w-[720px] text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500">
-              <tr>
-                <th className="px-3 py-2">Tutor</th>
-                <th className="px-3 py-2">Rate</th>
-                <th className="px-3 py-2">Assigned sales</th>
-                <th className="px-3 py-2">Sales total</th>
-                <th className="px-3 py-2">Commission earned</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-500">Loading…</td></tr>
-              )}
-              {!loading && byTutor.length === 0 && (
-                <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-500">No assigned sales yet.</td></tr>
-              )}
-              {!loading && byTutor.map(row => (
-                <tr key={row.tutorId} className="border-t border-slate-100">
-                  <td className="px-3 py-2 font-medium text-slate-800">{row.tutorName}</td>
-                  <td className="px-3 py-2">{row.commissionPercent}%</td>
-                  <td className="px-3 py-2">{row.saleCount}</td>
-                  <td className="px-3 py-2">
-                    {row.currencies.length <= 1
-                      ? formatMoney(row.totalAmount, row.currencies[0] || 'GBP')
-                      : `${row.totalAmount.toFixed(2)} (mixed)`}
-                  </td>
-                  <td className="px-3 py-2">
-                    {row.currencies.length <= 1
-                      ? formatMoney(row.totalCommission, row.currencies[0] || 'GBP')
-                      : `${row.totalCommission.toFixed(2)} (mixed)`}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

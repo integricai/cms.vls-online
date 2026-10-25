@@ -21,6 +21,9 @@ import {
 import { sendStudentRefundConfirmation } from '../services/paymentEmails';
 import { getPaymentRefundProvider } from '../services/payments/registry';
 import { revokeZenlerAccessForRefundedOrder } from '../services/zenlerEnrollmentEnsure';
+import { buildSalesDashboard } from '../services/salesDashboard';
+import { countMissingStripeFees, syncStripeFees } from '../services/stripeSettlement';
+import { isDashboardRange, isIsoDate } from '../../shared/salesFormat';
 
 const router = Router();
 
@@ -72,11 +75,21 @@ router.get('/', requireRole('admin', 'editor'), async (req, res, next) => {
     if (req.query.tutorId != null && !tutorId) {
       return res.status(400).json({ ok: false, error: 'Invalid tutorId' });
     }
+    const fromDate = String(req.query.from ?? '').trim();
+    const toDate = String(req.query.to ?? '').trim();
+    if ((fromDate && !isIsoDate(fromDate)) || (toDate && !isIsoDate(toDate))) {
+      return res.status(400).json({ ok: false, error: 'Dates must be YYYY-MM-DD' });
+    }
+    if (fromDate && toDate && fromDate > toDate) {
+      return res.status(400).json({ ok: false, error: 'Start date is after the end date' });
+    }
 
     const sales = await listSales({
       status,
       courseId: courseId ?? undefined,
       tutorId: tutorId ?? undefined,
+      fromDate: fromDate || null,
+      toDate: toDate || null,
     });
     return res.json({ ok: true, data: sales });
   } catch (err) {
@@ -87,6 +100,39 @@ router.get('/', requireRole('admin', 'editor'), async (req, res, next) => {
 router.get('/summary/by-course', requireRole('admin', 'editor'), async (_req, res, next) => {
   try {
     return res.json({ ok: true, data: await summarizeSalesByCourse() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+function readDateRange(body: unknown): { from: string; to: string } | null {
+  const record = body && typeof body === 'object' ? body as Record<string, unknown> : {};
+  const from = String(record.from ?? '').trim();
+  const to = String(record.to ?? '').trim();
+  if (!isIsoDate(from) || !isIsoDate(to) || from > to) return null;
+  return { from, to };
+}
+
+router.get('/dashboard', requireRole('admin', 'editor'), async (req, res, next) => {
+  try {
+    const requested = String(req.query.range ?? 'this_month');
+    const range = isDashboardRange(requested) ? requested : 'this_month';
+    return res.json({ ok: true, data: await buildSalesDashboard(range) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/sync-fees', requireRole('admin', 'editor'), async (req, res, next) => {
+  try {
+    const range = readDateRange(req.body);
+    if (!range) return res.status(400).json({ ok: false, error: 'from and to must be YYYY-MM-DD' });
+    const updated = await syncStripeFees(range.from, range.to);
+    const [sales, remaining] = await Promise.all([
+      listSales({ fromDate: range.from, toDate: range.to }),
+      countMissingStripeFees(range.from, range.to),
+    ]);
+    return res.json({ ok: true, data: { sales, remaining, updated } });
   } catch (err) {
     next(err);
   }

@@ -389,6 +389,42 @@ export async function unenrollZenlerUserFromCourse(input: {
   }
 }
 
+interface ZenlerFunnelListData {
+  items?: Array<{ id: number }>;
+}
+
+interface ZenlerFunnelEnrollment {
+  email?: string | null;
+  enrolled_on?: string | null;
+}
+
+interface ZenlerFunnelEnrollmentData {
+  items?: ZenlerFunnelEnrollment[];
+}
+
+/**
+ * Emails of people who joined a Zenler funnel between the two London dates.
+ * Zenler does not expose a site-visitor report.
+ */
+export async function listZenlerFunnelLeadEmails(startDate: string, endDate: string): Promise<string[]> {
+  if (!credentialsConfigured()) return [];
+  const funnels = await zenlerFetch<ZenlerFunnelListData>('/funnels?limit=50');
+  const emails = new Set<string>();
+  for (const funnel of funnels?.items ?? []) {
+    if (!funnel?.id) continue;
+    const data = await zenlerFetch<ZenlerFunnelEnrollmentData>(
+      `/funnels/enrollments/${encodeURIComponent(String(funnel.id))}?limit=100`,
+    );
+    for (const row of data?.items ?? []) {
+      const day = String(row.enrolled_on ?? '').slice(0, 10);
+      const email = String(row.email ?? '').trim().toLowerCase();
+      if (!email || day < startDate || day > endDate) continue;
+      emails.add(email);
+    }
+  }
+  return [...emails];
+}
+
 export function zenlerCredentialsConfigured(): boolean {
   return credentialsConfigured();
 }

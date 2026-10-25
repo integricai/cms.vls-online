@@ -205,6 +205,12 @@ export const checkoutSessionRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
 });
 
+export const visitIpRateLimit = rateLimit({
+  name: 'site-visit',
+  limit: 120,
+  windowMs: 60 * 60 * 1000,
+});
+
 export const contactIpRateLimit = rateLimit({
   name: 'contact',
   limit: 5,

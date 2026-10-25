@@ -33,6 +33,7 @@ import googleConversionsRouter from './routes/googleConversions';
 import siteCacheRouter from './routes/siteCache';
 import systemLogsRouter from './routes/systemLogs';
 import contactRouter from './routes/contact';
+import analyticsRouter from './routes/analytics';
 import { sendErrorAlert } from './utils/errorAlert';
 import { freeEnrolEmailRateLimit, freeEnrolIpRateLimit } from './middleware/rateLimit';
 import { getContent, upsertContent } from './models/content';
@@ -307,6 +308,7 @@ app.get('/api/turnstile-site-key', (_req, res) => {
 });
 
 app.use('/api/submit-form', contactRouter);
+app.use('/api/analytics', analyticsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/snippets', snippetsRouter);
 app.use('/api/content', contentRouter);

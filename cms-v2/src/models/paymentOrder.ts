@@ -791,6 +791,22 @@ export async function releaseOrderEmailSend(
   `;
 }
 
+export async function savePaymentOrderSettlement(orderId: number, data: {
+  processorFee: number;
+  netAmount: number;
+  paymentMethod: string | null;
+}): Promise<void> {
+  await sql`
+    UPDATE payment_orders
+    SET
+      processor_fee = ${data.processorFee},
+      net_amount = ${data.netAmount},
+      payment_method_label = ${data.paymentMethod}
+    WHERE id = ${orderId}
+      AND processor_fee IS NULL
+  `;
+}
+
 /** Move this order behind others that have not been attempted yet. */
 export async function markFulfillmentAttempted(orderId: number): Promise<void> {
   await sql`

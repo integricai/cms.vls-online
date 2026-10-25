@@ -48,6 +48,11 @@ interface SaleListDbRow extends SaleDbRow {
   stripe_refund_id: string | null;
   paid_at: Date | null;
   refunded_at: Date | null;
+  option_type: string | null;
+  processor_fee: string | null;
+  net_amount: string | null;
+  payment_method_label: string | null;
+  checkout_environment: string | null;
 }
 
 function num(value: string | number | null | undefined): number | null {
@@ -103,6 +108,15 @@ function rowToSaleListItem(row: SaleListDbRow): SaleListItem {
     stripeRefundId: row.stripe_refund_id ?? null,
     paidAt: row.paid_at ?? null,
     refundedAt: row.refunded_at ?? null,
+    optionType: row.option_type ?? null,
+    processorFee: num(row.processor_fee),
+    netAmount: num(row.net_amount),
+    paymentMethod: row.payment_method_label ?? null,
+    checkoutEnvironment: row.checkout_environment === 'production'
+      ? 'production'
+      : row.checkout_environment === 'staging'
+        ? 'staging'
+        : null,
   };
 }
 
@@ -146,7 +160,12 @@ export async function getSaleListItemById(id: number): Promise<SaleListItem | nu
       po.stripe_payment_intent_id,
       po.stripe_refund_id,
       po.paid_at,
-      po.refunded_at
+      po.refunded_at,
+      po.option_type,
+      po.processor_fee,
+      po.net_amount,
+      po.payment_method_label,
+      po.checkout_environment
     FROM sales s
     LEFT JOIN courses c ON c.id = s.course_id
     LEFT JOIN customers cu ON cu.id = s.customer_id
@@ -208,12 +227,17 @@ export type ListSalesFilters = {
   status?: SaleAssignmentStatus | 'Unassigned' | 'AssignedAny' | 'All';
   courseId?: number;
   tutorId?: number;
+  /** Inclusive London calendar dates, YYYY-MM-DD. */
+  fromDate?: string | null;
+  toDate?: string | null;
 };
 
 export async function listSales(filters: ListSalesFilters = {}): Promise<SaleListItem[]> {
   const status = filters.status ?? 'All';
   const courseId = filters.courseId ?? null;
   const tutorId = filters.tutorId ?? null;
+  const fromDate = filters.fromDate ?? null;
+  const toDate = filters.toDate ?? null;
 
   const rows = await sql`
     SELECT
@@ -234,7 +258,12 @@ export async function listSales(filters: ListSalesFilters = {}): Promise<SaleLis
       po.stripe_payment_intent_id,
       po.stripe_refund_id,
       po.paid_at,
-      po.refunded_at
+      po.refunded_at,
+      po.option_type,
+      po.processor_fee,
+      po.net_amount,
+      po.payment_method_label,
+      po.checkout_environment
     FROM sales s
     LEFT JOIN courses c ON c.id = s.course_id
     LEFT JOIN customers cu ON cu.id = s.customer_id
@@ -249,6 +278,14 @@ export async function listSales(filters: ListSalesFilters = {}): Promise<SaleLis
     ) inv ON TRUE
     WHERE (${courseId}::int IS NULL OR s.course_id = ${courseId})
       AND (${tutorId}::int IS NULL OR s.tutor_id = ${tutorId})
+      AND (
+        ${fromDate}::text IS NULL
+        OR (s.sold_at AT TIME ZONE 'Europe/London')::date >= CAST(${fromDate} AS date)
+      )
+      AND (
+        ${toDate}::text IS NULL
+        OR (s.sold_at AT TIME ZONE 'Europe/London')::date <= CAST(${toDate} AS date)
+      )
       AND (
         ${status}::text = 'All'
         OR (

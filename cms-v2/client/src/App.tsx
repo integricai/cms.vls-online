@@ -151,12 +151,12 @@ export default function App() {
           <Route path="/content-management" element={<LegacyContentRedirect />} />
           <Route path="/content-migration" element={<ContentMigrationPage />} />
           <Route path="/configurations"   element={<RequireAdmin><Configurations /></RequireAdmin>} />
-          <Route path="/sales/payments"   element={<Navigate to="/sales?tab=payments" replace />} />
+          <Route path="/sales/payments"   element={<Navigate to="/sales" replace />} />
           <Route path="/sales"            element={<RequireAdmin><Sales /></RequireAdmin>} />
           <Route path="/students"         element={<RequireAdmin><Students /></RequireAdmin>} />
           <Route path="/google-conversions" element={<RequireAdmin><GoogleConversions /></RequireAdmin>} />
           <Route path="/billing/custom-offer" element={<Navigate to="/sales?tab=custom-offer" replace />} />
-          <Route path="/billing/offers"       element={<Navigate to="/sales?tab=transactions" replace />} />
+          <Route path="/billing/offers"       element={<Navigate to="/sales?tab=sales" replace />} />
           <Route path="/settings/courses" element={<Navigate to="/courses" replace />} />
           <Route path="/settings/tutors"  element={<Navigate to="/configurations" replace />} />
           <Route path="/settings/sales"   element={<Navigate to="/sales" replace />} />

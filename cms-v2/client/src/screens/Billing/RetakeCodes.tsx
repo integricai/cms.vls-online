@@ -117,7 +117,7 @@ export default function RetakeCodes() {
   return (
     <div className="h-full overflow-auto bg-slate-50">
       <div className="border-b border-slate-200 bg-white px-6 py-4">
-        <h1 className="text-lg font-bold text-slate-800">Retake codes</h1>
+        <h1 className="text-lg font-bold text-slate-800">Discount Code</h1>
         <p className="mt-0.5 text-xs text-slate-500">
           Generate a one-time code for one student and one course.
           The code is emailed to the student, copied to the office, and marked used after payment.

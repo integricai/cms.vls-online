@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { contactEmailRateLimit, contactIpRateLimit } from '../middleware/rateLimit';
 import { sendErrorAlert } from '../utils/errorAlert';
 import { verifyTurnstileToken } from '../utils/turnstile';
+import { recordSiteLead } from '../models/siteAnalytics';
 
 const router = Router();
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -82,6 +83,11 @@ router.post(
         .map(item => item.trim())
       : [];
     const adminTo = recipients.length ? recipients : ['office@vls-online.com', 'info@vls-online.com'];
+    try {
+      await recordSiteLead({ email, firstName, lastName });
+    } catch (leadErr) {
+      console.error('[contact] could not store the lead', leadErr instanceof Error ? leadErr.message : leadErr);
+    }
 
     const adminHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head><body>
