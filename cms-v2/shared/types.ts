@@ -657,6 +657,7 @@ export interface SalesDashboard {
 
 export interface SalesFeeSyncResult {
   sales: SaleListItem[];
+  sandboxSales: SaleListItem[];
   remaining: number;
   updated: number;
 }

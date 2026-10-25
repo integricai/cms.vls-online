@@ -100,6 +100,7 @@ export default function SalesTab() {
   const [from, setFrom] = useState(() => monthStart(londonToday()));
   const [to, setTo] = useState(() => londonToday());
   const [sales, setSales] = useState<SaleListItem[]>([]);
+  const [sandboxSales, setSandboxSales] = useState<SaleListItem[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncingFees, setSyncingFees] = useState(false);
@@ -116,12 +117,15 @@ export default function SalesTab() {
     setLoading(true);
     setError('');
     try {
-      const [saleData, tutorData] = await Promise.all([
-        api.get<SaleListItem[]>(`/sales?from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}`),
+      const query = `from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}`;
+      const [saleData, sandboxData, tutorData] = await Promise.all([
+        api.get<SaleListItem[]>(`/sales?${query}&environment=production`),
+        api.get<SaleListItem[]>(`/sales?${query}&environment=staging`),
         api.get<Tutor[]>('/tutors'),
       ]);
       if (requestId.current !== id) return;
       setSales(saleData ?? []);
+      setSandboxSales(sandboxData ?? []);
       setTutors((tutorData ?? []).filter(tutor => tutor.isActive));
       setLoading(false);
       setSyncingFees(true);
@@ -130,6 +134,7 @@ export default function SalesTab() {
         const result = await api.post<SalesFeeSyncResult>('/sales/sync-fees', { from: fromDate, to: toDate });
         if (requestId.current !== id) return;
         setSales(result.sales ?? []);
+        setSandboxSales(result.sandboxSales ?? []);
         remaining = result.updated > 0 ? (result.remaining ?? 0) : 0;
       }
     } catch (err) {
@@ -200,7 +205,7 @@ export default function SalesTab() {
       <div className="border-b border-slate-200 bg-white px-6 py-4">
         <h1 className="text-lg font-bold text-slate-800">Sales</h1>
         <p className="mt-0.5 text-xs text-slate-500">
-          Paid course sales. Stripe charge is the processor fee, and net payment is what remains after that fee.
+          Live course sales. Staging checkouts are listed under Sandbox and tests and are not included in the dashboard or the download.
         </p>
       </div>
       <div className="p-6">
@@ -243,6 +248,18 @@ export default function SalesTab() {
         {error ? <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
         {message ? <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</div> : null}
 
+        <h2 className="mb-2 text-sm font-semibold text-slate-800">Sales</h2>
+        {renderSalesTable(sales, 'No live sales in this date range.')}
+
+        <h2 className="mb-1 mt-8 text-sm font-semibold text-slate-800">Sandbox and tests</h2>
+        <p className="mb-2 text-xs text-slate-500">Staging checkouts. These are kept out of the sales totals.</p>
+        {renderSalesTable(sandboxSales, 'No sandbox sales in this date range.')}
+      </div>
+    </div>
+  );
+
+  function renderSalesTable(rows: SaleListItem[], emptyLabel: string) {
+    return (
         <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
           <table className="w-full min-w-[1480px] text-left text-xs">
             <thead className="bg-slate-50 text-slate-500">
@@ -266,10 +283,10 @@ export default function SalesTab() {
               {loading && (
                 <tr><td colSpan={columnCount} className="px-3 py-8 text-center text-slate-500">Loading…</td></tr>
               )}
-              {!loading && sales.length === 0 && (
-                <tr><td colSpan={columnCount} className="px-3 py-8 text-center text-slate-500">No sales in this date range.</td></tr>
+              {!loading && rows.length === 0 && (
+                <tr><td colSpan={columnCount} className="px-3 py-8 text-center text-slate-500">{emptyLabel}</td></tr>
               )}
-              {!loading && sales.map(sale => {
+              {!loading && rows.map(sale => {
                 const paymentId = sale.providerPaymentId ?? sale.stripePaymentIntentId;
                 const paymentUrl = processorPaymentUrl(sale);
                 return (
@@ -355,7 +372,6 @@ export default function SalesTab() {
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
-  );
+    );
+  }
 }

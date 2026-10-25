@@ -35,6 +35,7 @@ export async function listSalesDayTotals(startDate: string, endDate: string): Pr
     FROM sales s
     LEFT JOIN payment_orders po ON po.id = s.payment_order_id
     WHERE COALESCE(po.status, 'Paid') <> 'Refunded'
+      AND po.checkout_environment = 'production'
       AND (s.sold_at AT TIME ZONE 'Europe/London')::date >= CAST(${startDate} AS date)
       AND (s.sold_at AT TIME ZONE 'Europe/London')::date <= CAST(${endDate} AS date)
     GROUP BY 1, 2
@@ -72,6 +73,7 @@ export async function listRecentSalesActivity(limit: number, includeRefunded: bo
       LEFT JOIN courses c ON c.id = s.course_id
       LEFT JOIN customers cu ON cu.id = s.customer_id
       LEFT JOIN payment_orders po ON po.id = s.payment_order_id
+      WHERE po.checkout_environment = 'production'
       ORDER BY s.sold_at DESC, s.id DESC
       LIMIT ${limit}
     `
@@ -90,6 +92,7 @@ export async function listRecentSalesActivity(limit: number, includeRefunded: bo
       LEFT JOIN customers cu ON cu.id = s.customer_id
       LEFT JOIN payment_orders po ON po.id = s.payment_order_id
       WHERE COALESCE(po.status, 'Paid') <> 'Refunded'
+        AND po.checkout_environment = 'production'
       ORDER BY s.sold_at DESC, s.id DESC
       LIMIT ${limit}
     `;

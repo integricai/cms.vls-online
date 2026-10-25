@@ -230,6 +230,8 @@ export type ListSalesFilters = {
   /** Inclusive London calendar dates, YYYY-MM-DD. */
   fromDate?: string | null;
   toDate?: string | null;
+  /** Omit to include both live and sandbox checkouts. */
+  environment?: 'production' | 'staging' | null;
 };
 
 export async function listSales(filters: ListSalesFilters = {}): Promise<SaleListItem[]> {
@@ -238,6 +240,7 @@ export async function listSales(filters: ListSalesFilters = {}): Promise<SaleLis
   const tutorId = filters.tutorId ?? null;
   const fromDate = filters.fromDate ?? null;
   const toDate = filters.toDate ?? null;
+  const environment = filters.environment ?? null;
 
   const rows = await sql`
     SELECT
@@ -286,6 +289,7 @@ export async function listSales(filters: ListSalesFilters = {}): Promise<SaleLis
         ${toDate}::text IS NULL
         OR (s.sold_at AT TIME ZONE 'Europe/London')::date <= CAST(${toDate} AS date)
       )
+      AND (${environment}::text IS NULL OR po.checkout_environment = ${environment})
       AND (
         ${status}::text = 'All'
         OR (

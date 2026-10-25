@@ -84,12 +84,18 @@ router.get('/', requireRole('admin', 'editor'), async (req, res, next) => {
       return res.status(400).json({ ok: false, error: 'Start date is after the end date' });
     }
 
+    const environmentRaw = String(req.query.environment ?? 'production');
+    const environment = environmentRaw === 'staging' || environmentRaw === 'all'
+      ? environmentRaw
+      : 'production';
+
     const sales = await listSales({
       status,
       courseId: courseId ?? undefined,
       tutorId: tutorId ?? undefined,
       fromDate: fromDate || null,
       toDate: toDate || null,
+      environment: environment === 'all' ? null : environment,
     });
     return res.json({ ok: true, data: sales });
   } catch (err) {
@@ -128,11 +134,12 @@ router.post('/sync-fees', requireRole('admin', 'editor'), async (req, res, next)
     const range = readDateRange(req.body);
     if (!range) return res.status(400).json({ ok: false, error: 'from and to must be YYYY-MM-DD' });
     const updated = await syncStripeFees(range.from, range.to);
-    const [sales, remaining] = await Promise.all([
-      listSales({ fromDate: range.from, toDate: range.to }),
+    const [sales, sandboxSales, remaining] = await Promise.all([
+      listSales({ fromDate: range.from, toDate: range.to, environment: 'production' }),
+      listSales({ fromDate: range.from, toDate: range.to, environment: 'staging' }),
       countMissingStripeFees(range.from, range.to),
     ]);
-    return res.json({ ok: true, data: { sales, remaining, updated } });
+    return res.json({ ok: true, data: { sales, sandboxSales, remaining, updated } });
   } catch (err) {
     next(err);
   }
