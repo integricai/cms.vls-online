@@ -143,7 +143,7 @@ export default function App() {
           <Route path="/split-screen/:type"    element={<SplitScreenSections />} />
           <Route path="/page-desc-with-menu"  element={<PageDescWithMenu />} />
           <Route path="/split-screen-sections" element={<Navigate to="/split-screen/left-hero" replace />} />
-          <Route path="/blog-migration"    element={<Navigate to="/content-migration" replace />} />
+          <Route path="/blog-migration"    element={<Navigate to="/content-migration?tab=global" replace />} />
           <Route path="/books"             element={<Navigate to="/content-migration?tab=books" replace />} />
           <Route path="/courses"           element={<RequireAdmin><CoursesPage /></RequireAdmin>} />
           <Route path="/prices-configuration" element={<Navigate to="/courses?tab=configuration" replace />} />

@@ -4,9 +4,8 @@ import PageTabs from '../../components/PageTabs';
 import FooterV2 from '../FooterV2';
 import HeaderV2 from '../HeaderV2';
 import Books from '../Books';
-import BlogMigration from './index';
 
-type MainTab = 'blog' | 'books' | 'global';
+type MainTab = 'books' | 'global';
 type GlobalPanel = 'header' | 'footer';
 
 export default function ContentMigrationPage() {
@@ -16,15 +15,13 @@ export default function ContentMigrationPage() {
   }
   const canContent = canManageContent(getCurrentUser()?.role);
   const requested = searchParams.get('tab');
-  const tab: MainTab = requested === 'books' || requested === 'global' || requested === 'blog'
-    ? requested
-    : canContent ? 'blog' : 'global';
-  const activeTab: MainTab = !canContent && tab !== 'global' ? 'global' : tab;
+  const tab: MainTab = requested === 'books' ? 'books' : 'global';
+  const activeTab: MainTab = !canContent ? 'global' : tab;
   const globalPanel: GlobalPanel = searchParams.get('global') === 'footer' ? 'footer' : 'header';
 
   function setTab(next: string) {
     const params = new URLSearchParams();
-    if (next !== 'blog') params.set('tab', next);
+    params.set('tab', next === 'books' ? 'books' : 'global');
     setSearchParams(params, { replace: true });
   }
 
@@ -37,7 +34,6 @@ export default function ContentMigrationPage() {
   }
 
   const mainTabs = [
-    canContent ? { id: 'blog', label: 'Blog Migration' } : null,
     { id: 'global', label: 'Global Header/Footer' },
     canContent ? { id: 'books', label: 'BPP Books' } : null,
   ].filter((item): item is { id: string; label: string } => item !== null);
@@ -56,11 +52,6 @@ export default function ContentMigrationPage() {
         />
       ) : null}
       <div className="min-h-0 flex-1 overflow-hidden">
-        {activeTab === 'blog' ? (
-          <div className="h-full overflow-auto">
-            <BlogMigration />
-          </div>
-        ) : null}
         {activeTab === 'books' ? <Books /> : null}
         {activeTab === 'global' ? (
           <div className="h-full">
