@@ -1,9 +1,9 @@
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { canManageContent, getCurrentUser } from '../../api/client';
 import PageTabs from '../../components/PageTabs';
 import FooterV2 from '../FooterV2';
 import HeaderV2 from '../HeaderV2';
-import BooksSection from '../Books/BooksSection';
+import Books from '../Books';
 import BlogMigration from './index';
 
 type MainTab = 'blog' | 'books' | 'global';
@@ -11,6 +11,9 @@ type GlobalPanel = 'header' | 'footer';
 
 export default function ContentMigrationPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  if (searchParams.get('booksTab') === 'discounts') {
+    return <Navigate to="/payments?tab=book-codes" replace />;
+  }
   const canContent = canManageContent(getCurrentUser()?.role);
   const requested = searchParams.get('tab');
   const tab: MainTab = requested === 'books' || requested === 'global' || requested === 'blog'
@@ -35,8 +38,8 @@ export default function ContentMigrationPage() {
 
   const mainTabs = [
     canContent ? { id: 'blog', label: 'Blog Migration' } : null,
-    canContent ? { id: 'books', label: 'Books' } : null,
-    { id: 'global', label: 'Global' },
+    { id: 'global', label: 'Global Header/Footer' },
+    canContent ? { id: 'books', label: 'BPP Books' } : null,
   ].filter((item): item is { id: string; label: string } => item !== null);
 
   return (
@@ -58,7 +61,7 @@ export default function ContentMigrationPage() {
             <BlogMigration />
           </div>
         ) : null}
-        {activeTab === 'books' ? <BooksSection /> : null}
+        {activeTab === 'books' ? <Books /> : null}
         {activeTab === 'global' ? (
           <div className="h-full">
             {globalPanel === 'header' ? <HeaderV2 /> : <FooterV2 />}

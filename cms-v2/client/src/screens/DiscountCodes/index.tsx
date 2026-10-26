@@ -349,7 +349,7 @@ export default function DiscountCodesScreen() {
       <div className="shrink-0 border-b border-slate-200 bg-white px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-[280px] flex-1">
-            <h1 className="text-base font-bold text-slate-900">Discount Codes</h1>
+            <h1 className="text-base font-bold text-slate-900">Book Discount Codes</h1>
             <p className="mt-0.5 text-xs text-slate-400">
               Manage book-specific discount codes from the books database.
             </p>

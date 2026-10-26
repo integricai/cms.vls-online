@@ -336,7 +336,7 @@ export default function BannerScreen() {
       {/* ── Left panel ── */}
       <div className="w-[420px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
         <div className="sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4">
-          <h1 className="text-base font-bold text-slate-900">Banner</h1>
+          <h1 className="text-base font-bold text-slate-900">Banner Discounts</h1>
           <p className="text-xs text-slate-400 mt-0.5">Sticky countdown banners — paste inject code once, publish updates live</p>
         </div>
 
