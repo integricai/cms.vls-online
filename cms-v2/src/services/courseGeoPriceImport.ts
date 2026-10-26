@@ -13,6 +13,7 @@ import {
   getCourseBySlug,
   upsertGeoPriceByKey,
 } from '../models/courseGeoPrice';
+import { EVENDEALS_PRODUCT_OPTIONS, isEvenDealsProductId } from '../../shared/evenDealsProducts';
 import { normalizeGeoPriceInput, validateGeoPriceInput } from './courseGeoPriceValidation';
 
 function escapeCsvCell(value: string): string {
@@ -52,9 +53,26 @@ export function defaultPriorityScore(row: Pick<CoursePriceImportRow, 'durationDa
   return row.durationDays ?? 0;
 }
 
+function parseEvenDeals(value: unknown): string | null | undefined {
+  if (value == null || value === '') return undefined;
+  const text = String(value).trim();
+  if (!text) return undefined;
+  if (isEvenDealsProductId(text)) return text;
+  const byLabel = EVENDEALS_PRODUCT_OPTIONS.find(option => option.label.toLowerCase() === text.toLowerCase());
+  return byLabel?.value ?? text;
+}
+
+function parsePriceSubtitle(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text || null;
+}
+
 export function parseImportRow(raw: Record<string, unknown>, rowNumber: number): CoursePriceImportRow {
-  const isDefault = parseOptionalBoolean(cell(raw, 'is_default', 'isDefault'));
-  const isActive = parseOptionalBoolean(cell(raw, 'is_active', 'isActive'));
+  const isDefault = parseOptionalBoolean(cell(raw, 'is_default', 'isDefault', 'default'));
+  const isActive = parseOptionalBoolean(cell(raw, 'is_active', 'isActive', 'active'));
+  const subtitleCell = cell(raw, 'price_subtitle', 'priceSubtitle');
 
   return {
     rowNumber,
@@ -63,6 +81,7 @@ export function parseImportRow(raw: Record<string, unknown>, rowNumber: number):
     courseSlug: String(cell(raw, 'course_slug', 'courseSlug') ?? '').trim() || undefined,
     courseTitle: String(cell(raw, 'course_title', 'courseTitle') ?? '').trim() || undefined,
     priceName: String(cell(raw, 'price_name', 'priceName', 'name') ?? '').trim(),
+    priceSubtitle: parsePriceSubtitle(subtitleCell),
     currency: String(cell(raw, 'currency') ?? 'USD').trim().toUpperCase(),
     amount: parseNumber(cell(raw, 'amount')) ?? NaN,
     compareAtAmount: null,
@@ -73,11 +92,7 @@ export function parseImportRow(raw: Record<string, unknown>, rowNumber: number):
     examSessionMonth: null,
     examSessionYear: null,
     durationDays: parseNumber(cell(raw, 'duration_days', 'durationDays')),
-    evenDeals: (() => {
-      const rawValue = cell(raw, 'evendeals', 'evenDeals', 'even_deals');
-      if (rawValue == null || rawValue === '') return undefined;
-      return String(rawValue).trim() || null;
-    })(),
+    evenDeals: parseEvenDeals(cell(raw, 'evendeals', 'evenDeals', 'even_deals')),
   };
 }
 
@@ -174,8 +189,9 @@ export async function previewCoursePriceImport(
   let duplicatesToDeactivate = 0;
 
   for (let i = 0; i < rows.length; i += 1) {
-    const rowNumber = i + 2; // header is row 1
     const raw = rows[i] ?? {};
+    const explicitRow = Number(raw.row_number);
+    const rowNumber = Number.isInteger(explicitRow) && explicitRow > 1 ? explicitRow : i + 2;
     const pricingModeRaw = String(cell(raw, 'pricing_mode', 'pricingMode') ?? '').trim().toLowerCase();
     if (pricingModeRaw === 'session') {
       errors.push({
@@ -227,6 +243,7 @@ export async function previewCoursePriceImport(
     const input: CourseGeoPriceInput = normalizeGeoPriceInput({
       courseId: course.courseId,
       name: parsed.priceName,
+      ...(parsed.priceSubtitle !== undefined ? { priceSubtitle: parsed.priceSubtitle } : {}),
       amount: parsed.amount,
       discountPercent: parsed.discountPercent,
       isDefault: effectiveFlags.isDefault,
@@ -277,6 +294,7 @@ export async function previewCoursePriceImport(
         isDefault: effectiveFlags.isDefault,
         isActive: effectiveFlags.isActive,
         evenDeals: parsed.evenDeals !== undefined ? (input.evenDeals ?? null) : parsed.evenDeals,
+        priceSubtitle: parsed.priceSubtitle !== undefined ? (input.priceSubtitle ?? null) : undefined,
         pricingMode: input.pricingMode,
         examSessionMonth: input.examSessionMonth,
         examSessionYear: input.examSessionYear,
@@ -347,6 +365,7 @@ export async function commitCoursePriceImport(
       const input = normalizeGeoPriceInput({
         courseId: row.courseId,
         name: row.price.priceName,
+        ...(row.price.priceSubtitle !== undefined ? { priceSubtitle: row.price.priceSubtitle } : {}),
         amount: row.price.amount,
         discountPercent: row.price.discountPercent,
         isDefault: row.price.isDefault ?? false,

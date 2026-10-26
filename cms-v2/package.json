@@ -31,6 +31,7 @@
     "test:notes-links": "ts-node src/services/notesUrlRewrite.test.ts",
     "test:course-urls": "ts-node src/services/courseUrlRewrite.test.ts",
     "test:course-workbook": "ts-node src/services/courseWorkbook.test.ts",
+    "test:course-price-workbook": "ts-node src/services/coursePriceWorkbook.test.ts",
     "test:sales-page-urls": "ts-node src/services/courseSalesPageUrlSync.test.ts",
     "test:free-enrol": "ts-node src/services/freeEnrol.test.ts",
     "test:rate-limit": "ts-node src/middleware/rateLimit.test.ts",

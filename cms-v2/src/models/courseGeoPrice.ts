@@ -231,6 +231,82 @@ export async function listGeoPricesForCourse(courseId: number): Promise<CourseGe
   return (rows as DbRow[]).map(rowToCourseGeoPrice);
 }
 
+export type CoursePriceWorkbookRow = {
+  courseId: number;
+  zenlerCourseId: string;
+  courseSlug: string | null;
+  courseTitle: string;
+  qualification: string | null;
+  pricingCode: string | null;
+  priceName: string;
+  priceSubtitle: string | null;
+  amount: number;
+  discountPercent: number | null;
+  durationDays: number | null;
+  isDefault: boolean;
+  isActive: boolean;
+  evenDeals: string | null;
+};
+
+type WorkbookDbRow = {
+  course_id: number;
+  zenler_course_id: string;
+  course_slug: string | null;
+  course_title: string;
+  qualification: string | null;
+  zenler_pricing_code: string | null;
+  price_name: string;
+  price_subtitle: string | null;
+  amount: string;
+  discount_percent: string | null;
+  duration_days: number | null;
+  is_default: boolean;
+  is_active: boolean;
+  evendeals: string | null;
+};
+
+/** Duration-based prices for the Excel price workbook, including inactive rows. */
+export async function listCoursePriceWorkbookRows(): Promise<CoursePriceWorkbookRow[]> {
+  const rows = await sql`
+    SELECT
+      p.course_id,
+      c.zenler_course_id,
+      c.slug AS course_slug,
+      c.name AS course_title,
+      c.qualification,
+      p.zenler_pricing_code,
+      p.name AS price_name,
+      p.price_subtitle,
+      p.amount,
+      p.discount_percent,
+      p.duration_days,
+      p.is_default,
+      p.is_active,
+      p.evendeals
+    FROM course_geo_prices p
+    JOIN courses c ON c.id = p.course_id
+    WHERE p.pricing_mode = 'duration'
+    ORDER BY c.name ASC, c.id ASC, p.is_default DESC, p.name ASC, p.id ASC
+  ` as WorkbookDbRow[];
+
+  return rows.map(row => ({
+    courseId: row.course_id,
+    zenlerCourseId: row.zenler_course_id,
+    courseSlug: row.course_slug,
+    courseTitle: row.course_title,
+    qualification: row.qualification,
+    pricingCode: row.zenler_pricing_code,
+    priceName: row.price_name,
+    priceSubtitle: row.price_subtitle?.trim() || null,
+    amount: Number(row.amount),
+    discountPercent: row.discount_percent != null ? Number(row.discount_percent) : null,
+    durationDays: row.duration_days,
+    isDefault: row.is_default,
+    isActive: row.is_active,
+    evenDeals: row.evendeals,
+  }));
+}
+
 /** Duration-based geo prices (including inactive) for CSV export. */
 export async function listAllGeoPricesForExport(): Promise<CourseGeoPrice[]> {
   const rows = await sql`

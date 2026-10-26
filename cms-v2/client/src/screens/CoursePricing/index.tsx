@@ -119,6 +119,38 @@ async function downloadCurrentPrices(): Promise<void> {
   await downloadCsvFromApi('/course-pricing/admin/export', 'course-pricing-export.csv');
 }
 
+function downloadBlob(filename: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function downloadPriceWorkbook(): Promise<void> {
+  const token = getToken();
+  const base = (import.meta.env.VITE_API_URL ?? '') + '/api';
+  const res = await fetch(`${base}/course-pricing/admin/export-workbook`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error('Failed to download the price workbook');
+  downloadBlob('course-prices.xlsx', await res.blob());
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error ?? new Error('Could not read the Excel file'));
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function CoursePricing({ embedded = false }: { embedded?: boolean }) {
   const [view, setView] = useState<View>('list');
   const [search, setSearch] = useState('');
@@ -137,6 +169,7 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const deleteInputRef = useRef<HTMLInputElement>(null);
+  const workbookInputRef = useRef<HTMLInputElement>(null);
 
   // Import state
   const [csvText, setCsvText] = useState('');
@@ -352,6 +385,26 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
     }
   };
 
+  const importPriceWorkbook = async (file: File) => {
+    setImporting(true);
+    setError('');
+    setMessage('');
+    setImportResult(null);
+    setPreview(null);
+    try {
+      const fileBase64 = await fileToBase64(file);
+      const data = await api.post<CoursePriceImportPreview>('/course-pricing/admin/import-workbook', { fileBase64 });
+      setCsvText('');
+      setPreview(data);
+      setView('import');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Excel import failed');
+    } finally {
+      setImporting(false);
+      if (workbookInputRef.current) workbookInputRef.current.value = '';
+    }
+  };
+
   const downloadErrorReport = () => {
     if (!preview?.errors?.length) return;
     const lines = [
@@ -375,9 +428,32 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold text-slate-900">Bulk Upload Prices</h1>
-            <p className="text-sm text-slate-500">Upload CSV/Excel-exported CSV, preview, then confirm.</p>
+            <p className="text-sm text-slate-500">Review the Excel upload or a CSV, then confirm.</p>
           </div>
           <div className="flex gap-2">
+            <button
+              className="btn-ghost text-xs"
+              onClick={() => void downloadPriceWorkbook().catch(err => setError(err instanceof Error ? err.message : 'Download failed'))}
+            >
+              Export data
+            </button>
+            <button
+              className="btn-ghost text-xs"
+              disabled={importing}
+              onClick={() => workbookInputRef.current?.click()}
+            >
+              {importing ? 'Importing…' : 'Import data'}
+            </button>
+            <input
+              ref={workbookInputRef}
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              className="hidden"
+              onChange={event => {
+                const file = event.target.files?.[0];
+                if (file) void importPriceWorkbook(file);
+              }}
+            />
             <button className="btn-ghost text-xs" onClick={() => void downloadCurrentPrices().catch(err => setError(err instanceof Error ? err.message : 'Download failed'))}>
               Download current prices
             </button>
@@ -394,9 +470,8 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
         {message && <div className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</div>}
 
         <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-600">
-          <li>Download current prices (or the blank template for new rows)</li>
-          <li>Edit prices in Excel and save as CSV</li>
-          <li>Paste or upload the file below</li>
+          <li>Use Export data, edit the workbook, then Import data</li>
+          <li>Or paste a CSV below</li>
           <li>Preview changes and review errors</li>
           <li>Confirm import</li>
         </ol>
@@ -753,9 +828,33 @@ export default function CoursePricing({ embedded = false }: { embedded?: boolean
           {embedded && <h2 className="text-sm font-bold text-slate-700">Prices</h2>}
           <p className="text-sm text-slate-500">
             Manage USD prices per course and duration. Regional discounts are handled by Evendeals (per price).
+            Export data downloads every price, including whether the course is session or subscription. Edit that file and use Import data to upload the changes.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            className="btn-ghost text-xs"
+            onClick={() => void downloadPriceWorkbook().catch(err => setError(err instanceof Error ? err.message : 'Download failed'))}
+          >
+            Export data
+          </button>
+          <button
+            className="btn-ghost text-xs"
+            disabled={importing}
+            onClick={() => workbookInputRef.current?.click()}
+          >
+            {importing ? 'Importing…' : 'Import data'}
+          </button>
+          <input
+            ref={workbookInputRef}
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            className="hidden"
+            onChange={event => {
+              const file = event.target.files?.[0];
+              if (file) void importPriceWorkbook(file);
+            }}
+          />
           <button
             className="btn-ghost text-xs"
             onClick={() => void downloadCurrentPrices().catch(err => setError(err instanceof Error ? err.message : 'Download failed'))}

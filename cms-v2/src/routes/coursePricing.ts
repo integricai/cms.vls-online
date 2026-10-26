@@ -24,6 +24,11 @@ import {
   previewCoursePriceImport,
 } from '../services/courseGeoPriceImport';
 import {
+  CoursePriceWorkbookError,
+  buildCoursePriceWorkbookExport,
+  readCoursePriceWorkbook,
+} from '../services/coursePriceWorkbook';
+import {
   normalizeGeoPriceInput,
   validateGeoPriceInput,
 } from '../services/courseGeoPriceValidation';
@@ -155,6 +160,37 @@ router.get('/admin/export', authGuard, requireRole('admin'), async (_req, res, n
     res.setHeader('Content-Disposition', 'attachment; filename="course-pricing-export.csv"');
     return res.send(csv);
   } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/admin/export-workbook', authGuard, requireRole('admin'), async (_req, res, next) => {
+  try {
+    const buffer = await buildCoursePriceWorkbookExport();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="course-prices.xlsx"');
+    return res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/admin/import-workbook', authGuard, requireRole('admin'), async (req, res, next) => {
+  try {
+    const fileBase64 = typeof req.body?.fileBase64 === 'string' ? req.body.fileBase64 : '';
+    if (!fileBase64.trim()) {
+      return res.status(400).json({ ok: false, error: 'Provide an Excel file' });
+    }
+    const rows = await readCoursePriceWorkbook(Buffer.from(fileBase64, 'base64'));
+    if (rows.length === 0) {
+      return res.status(400).json({ ok: false, error: 'No data rows found in the workbook' });
+    }
+    const preview = await previewCoursePriceImport(rows);
+    return res.json({ ok: true, data: preview });
+  } catch (err) {
+    if (err instanceof CoursePriceWorkbookError) {
+      return res.status(400).json({ ok: false, error: err.message });
+    }
     next(err);
   }
 });

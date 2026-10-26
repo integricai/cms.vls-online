@@ -92,32 +92,41 @@ export function normalizeGeoPriceInput(input: CourseGeoPriceInput): CourseGeoPri
     : roundMoney(Number(discountPercentRaw));
   const normalizedDiscount = discountPercent != null && discountPercent > 0 ? discountPercent : null;
 
-  return {
-    ...input,
+  const normalized: CourseGeoPriceInput = {
     courseId: Number(input.courseId),
     name: String(input.name).trim(),
-    priceSubtitle: input.priceSubtitle == null || String(input.priceSubtitle).trim() === ''
-      ? null
-      : String(input.priceSubtitle).trim(),
     currency: 'USD',
     amount,
     compareAtAmount: null,
     discountPercent: normalizedDiscount,
     isDefault: Boolean(input.isDefault),
     isActive: input.isActive !== false,
-    stripePriceId: input.stripePriceId?.trim() || null,
-    ...(input.evenDeals !== undefined
-      ? {
-          evenDeals: input.evenDeals == null || String(input.evenDeals).trim() === ''
-            ? null
-            : String(input.evenDeals).trim(),
-        }
-      : {}),
+    zenlerPricingCode: input.zenlerPricingCode,
     pricingMode: 'duration',
     examSessionMonth: null,
     examSessionYear: null,
     durationDays: Number.isFinite(Number(input.durationDays)) ? Number(input.durationDays) : null,
   };
+
+  if (input.id !== undefined) normalized.id = input.id;
+
+  if (input.priceSubtitle !== undefined) {
+    normalized.priceSubtitle = input.priceSubtitle == null || String(input.priceSubtitle).trim() === ''
+      ? null
+      : String(input.priceSubtitle).trim();
+  }
+
+  if (input.stripePriceId !== undefined) {
+    normalized.stripePriceId = input.stripePriceId?.trim() || null;
+  }
+
+  if (input.evenDeals !== undefined) {
+    normalized.evenDeals = input.evenDeals == null || String(input.evenDeals).trim() === ''
+      ? null
+      : String(input.evenDeals).trim();
+  }
+
+  return normalized;
 }
 
 export function discountedPriceForInput(input: CourseGeoPriceInput): number | null {

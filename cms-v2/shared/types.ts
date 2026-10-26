@@ -760,6 +760,8 @@ export interface CoursePriceImportRow {
   examSessionMonth?: number | null;
   examSessionYear?: number | null;
   durationDays?: number | null;
+  /** Undefined = column omitted (keep the current subtitle). Null = clear it. */
+  priceSubtitle?: string | null;
 }
 
 export interface CoursePriceImportRowError {
