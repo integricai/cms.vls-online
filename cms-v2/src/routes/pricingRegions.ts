@@ -41,7 +41,7 @@ function parseRegionInput(body: unknown): PricingRegionRow[] {
   });
 }
 
-router.get('/', authGuard, requireRole('admin', 'editor'), async (_req, res, next) => {
+router.get('/', authGuard, requireRole('admin'), async (_req, res, next) => {
   try {
     const data = await listPricingRegions();
     return res.json({ ok: true, data });
@@ -50,7 +50,7 @@ router.get('/', authGuard, requireRole('admin', 'editor'), async (_req, res, nex
   }
 });
 
-router.put('/', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+router.put('/', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     const regions = parseRegionInput(req.body?.regions ?? req.body);
     const data = await replacePricingRegions(regions);

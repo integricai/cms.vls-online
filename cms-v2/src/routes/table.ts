@@ -83,7 +83,7 @@ function parseResponseText(payload: any): string {
   return parts.join('\n').trim();
 }
 
-router.use(authGuard, requireRole('admin', 'editor'));
+router.use(authGuard, requireRole('admin'));
 
 router.post('/extract-image', async (req: Request, res: Response, next: NextFunction) => {
   try {

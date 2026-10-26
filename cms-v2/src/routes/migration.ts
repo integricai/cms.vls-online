@@ -29,7 +29,7 @@ import { MIGRATION_TEMPLATE_LABELS } from '../../shared/migrationTemplateLabels'
 
 const router = Router();
 
-router.use(authGuard, requireRole('admin', 'editor'));
+router.use(authGuard, requireRole('admin', 'assistant'));
 
 const STORYBLOK_NOT_CONFIGURED =
   'Storyblok is not configured on the server. Set STORYBLOK_PERSONAL_TOKEN (and optional STORYBLOK_SPACE_ID / STORYBLOK_REGION).';

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
-import { canManageContent, getCurrentUser, getToken } from './api/client';
+import { canManageContent, canUsePayments, getCurrentUser, getToken } from './api/client';
 import Layout from './components/Layout';
 import Dashboard from './screens/Dashboard';
 import Login from './screens/Login';
@@ -65,6 +65,10 @@ function vaultHome(): string {
 
 function RequireAdmin({ children }: { children: React.ReactNode }) {
   return getCurrentUser()?.role === 'admin' ? <>{children}</> : <Navigate to={vaultHome()} replace />;
+}
+
+function RequirePayments({ children }: { children: React.ReactNode }) {
+  return canUsePayments(getCurrentUser()?.role) ? <>{children}</> : <Navigate to={vaultHome()} replace />;
 }
 
 function VaultHome() {
@@ -153,7 +157,7 @@ export default function App() {
           <Route path="/content-migration" element={<ContentMigrationPage />} />
           <Route path="/configurations"   element={<RequireAdmin><Configurations /></RequireAdmin>} />
           <Route path="/sales/payments"   element={<Navigate to="/payments" replace />} />
-          <Route path="/payments"         element={<RequireAdmin><Payments /></RequireAdmin>} />
+          <Route path="/payments"         element={<RequirePayments><Payments /></RequirePayments>} />
           <Route path="/sales"            element={<RequireAdmin><Sales /></RequireAdmin>} />
           <Route path="/students"         element={<RequireAdmin><Students /></RequireAdmin>} />
           <Route path="/google-conversions" element={<RequireAdmin><GoogleConversions /></RequireAdmin>} />

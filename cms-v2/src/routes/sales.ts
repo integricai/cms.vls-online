@@ -58,7 +58,7 @@ router.post('/accept', async (req, res, next) => {
 
 router.use(authGuard);
 
-router.get('/', requireRole('admin', 'editor'), async (req, res, next) => {
+router.get('/', requireRole('admin'), async (req, res, next) => {
   try {
     const statusRaw = String(req.query.status ?? 'All');
     const status = (
@@ -103,7 +103,7 @@ router.get('/', requireRole('admin', 'editor'), async (req, res, next) => {
   }
 });
 
-router.get('/summary/by-course', requireRole('admin', 'editor'), async (_req, res, next) => {
+router.get('/summary/by-course', requireRole('admin'), async (_req, res, next) => {
   try {
     return res.json({ ok: true, data: await summarizeSalesByCourse() });
   } catch (err) {
@@ -119,7 +119,7 @@ function readDateRange(body: unknown): { from: string; to: string } | null {
   return { from, to };
 }
 
-router.get('/dashboard', requireRole('admin', 'editor'), async (req, res, next) => {
+router.get('/dashboard', requireRole('admin'), async (req, res, next) => {
   try {
     const requested = String(req.query.range ?? 'this_month');
     const range = isDashboardRange(requested) ? requested : 'this_month';
@@ -129,7 +129,7 @@ router.get('/dashboard', requireRole('admin', 'editor'), async (req, res, next) 
   }
 });
 
-router.post('/sync-fees', requireRole('admin', 'editor'), async (req, res, next) => {
+router.post('/sync-fees', requireRole('admin'), async (req, res, next) => {
   try {
     const range = readDateRange(req.body);
     if (!range) return res.status(400).json({ ok: false, error: 'from and to must be YYYY-MM-DD' });
@@ -145,7 +145,7 @@ router.post('/sync-fees', requireRole('admin', 'editor'), async (req, res, next)
   }
 });
 
-router.get('/summary/by-tutor', requireRole('admin', 'editor'), async (_req, res, next) => {
+router.get('/summary/by-tutor', requireRole('admin'), async (_req, res, next) => {
   try {
     return res.json({ ok: true, data: await summarizeSalesByTutor() });
   } catch (err) {
@@ -153,7 +153,7 @@ router.get('/summary/by-tutor', requireRole('admin', 'editor'), async (_req, res
   }
 });
 
-router.get('/tutors', requireRole('admin', 'editor'), async (_req, res, next) => {
+router.get('/tutors', requireRole('admin'), async (_req, res, next) => {
   try {
     return res.json({ ok: true, data: await listTutors() });
   } catch (err) {
@@ -161,7 +161,7 @@ router.get('/tutors', requireRole('admin', 'editor'), async (_req, res, next) =>
   }
 });
 
-router.get('/:id/eligible-tutors', requireRole('admin', 'editor'), async (req, res, next) => {
+router.get('/:id/eligible-tutors', requireRole('admin'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) return res.status(400).json({ ok: false, error: 'Invalid sale id' });
@@ -174,7 +174,7 @@ router.get('/:id/eligible-tutors', requireRole('admin', 'editor'), async (req, r
   }
 });
 
-router.post('/:id/assign', requireRole('admin', 'editor'), async (req, res, next) => {
+router.post('/:id/assign', requireRole('admin'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     const tutorId = parseId(req.body?.tutorId);

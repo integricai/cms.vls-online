@@ -6,7 +6,7 @@ const router = Router();
 
 router.use(authGuard);
 
-router.get('/', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', requireRole('admin', 'assistant'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const bookId = req.query.bookId ? Number(req.query.bookId) : undefined;
     if (bookId !== undefined && (!Number.isInteger(bookId) || bookId <= 0)) {
@@ -18,7 +18,7 @@ router.get('/', requireRole('admin', 'editor'), async (req: Request, res: Respon
   }
 });
 
-router.put('/bulk/all-books', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.put('/bulk/all-books', requireRole('admin', 'assistant'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const books = Array.isArray(req.body?.books) ? req.body.books : [];
     return res.json({ ok: true, data: await replaceBulkBookDiscountCodes(books) });
@@ -27,7 +27,7 @@ router.put('/bulk/all-books', requireRole('admin', 'editor'), async (req: Reques
   }
 });
 
-router.put('/:bookId', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.put('/:bookId', requireRole('admin', 'assistant'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const bookId = Number(req.params.bookId);
     if (!Number.isInteger(bookId) || bookId <= 0) {

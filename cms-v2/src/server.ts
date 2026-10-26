@@ -112,7 +112,7 @@ app.get('/api/publish-header', async (_req, res, next) => {
   }
 });
 
-app.post('/api/publish-header', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+app.post('/api/publish-header', authGuard, requireRole('admin', 'assistant'), async (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'no-store');
   try {
@@ -143,7 +143,7 @@ app.get('/api/publish-header-v2', async (_req, res, next) => {
   }
 });
 
-app.post('/api/publish-header-v2', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+app.post('/api/publish-header-v2', authGuard, requireRole('admin', 'assistant'), async (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'no-store');
   try {

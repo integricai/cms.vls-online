@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
-import { canManageContent, clearToken, getCurrentUser } from '../api/client';
+import { canUsePayments, clearToken, getCurrentUser } from '../api/client';
 
-type Access = 'all' | 'content' | 'admin';
+type Access = 'all' | 'payments' | 'admin';
 
 type VaultLink = {
   to: string;
@@ -12,15 +12,15 @@ type VaultLink = {
 const MAIN_LINKS: VaultLink[] = [
   { to: '/content-migration', label: 'Content Migration', access: 'all' },
   { to: '/courses', label: 'Courses', access: 'admin' },
-  { to: '/payments', label: 'Payments', access: 'admin' },
+  { to: '/payments', label: 'Payments', access: 'payments' },
   { to: '/sales', label: 'Sales', access: 'admin' },
   { to: '/students', label: 'Students', access: 'admin' },
   { to: '/google-conversions', label: 'Google Conversions', access: 'admin' },
 ];
 
-function canSee(access: Access, isAdmin: boolean, canContent: boolean): boolean {
+function canSee(access: Access, isAdmin: boolean, canPay: boolean): boolean {
   if (access === 'admin') return isAdmin;
-  if (access === 'content') return canContent;
+  if (access === 'payments') return canPay;
   return true;
 }
 
@@ -102,8 +102,8 @@ interface Props {
 export default function Sidebar({ isOpen, onClose }: Props) {
   const currentUser = getCurrentUser();
   const isAdmin = currentUser?.role === 'admin';
-  const canContent = canManageContent(currentUser?.role);
-  const mainLinks = MAIN_LINKS.filter(item => canSee(item.access, isAdmin, canContent));
+  const canPay = canUsePayments(currentUser?.role);
+  const mainLinks = MAIN_LINKS.filter(item => canSee(item.access, isAdmin, canPay));
 
   return (
     <aside

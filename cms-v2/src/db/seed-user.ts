@@ -14,17 +14,17 @@ const ask = (q: string): Promise<string> => new Promise(res => rl.question(q, re
 async function main() {
   const username = await ask('Username: ');
   const password = await ask('Password: ');
-  const role     = (await ask('Role (admin/editor/viewer) [admin]: ')).trim() || 'admin';
+  const role     = (await ask('Role (admin/assistant) [admin]: ')).trim() || 'admin';
 
   if (!username || !password) { console.error('Username and password are required'); process.exit(1); }
-  if (!['admin', 'editor', 'viewer'].includes(role)) { console.error('Invalid role'); process.exit(1); }
+  if (!['admin', 'assistant'].includes(role)) { console.error('Invalid role'); process.exit(1); }
 
   const hash = await bcrypt.hash(password, 12);
   const cleanUsername = username.trim();
 
   await sql`
     INSERT INTO users (email, username, password_hash, role)
-    VALUES (${cleanUsername}, ${cleanUsername}, ${hash}, ${role as 'admin' | 'editor' | 'viewer'})
+    VALUES (${cleanUsername}, ${cleanUsername}, ${hash}, ${role as 'admin' | 'assistant'})
     ON CONFLICT (username) DO UPDATE
       SET password_hash = EXCLUDED.password_hash,
           role          = EXCLUDED.role,

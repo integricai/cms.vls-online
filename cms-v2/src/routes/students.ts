@@ -64,7 +64,7 @@ router.post('/exam-result', async (req, res) => {
 
 router.use(authGuard);
 
-router.get('/', requireRole('admin', 'editor'), async (req, res, next) => {
+router.get('/', requireRole('admin'), async (req, res, next) => {
   try {
     const search = String(req.query.search ?? '').trim() || undefined;
     const courseId = req.query.courseId != null ? parseId(req.query.courseId) : null;
@@ -105,7 +105,7 @@ router.get('/', requireRole('admin', 'editor'), async (req, res, next) => {
   }
 });
 
-router.get('/export', requireRole('admin', 'editor'), async (req, res, next) => {
+router.get('/export', requireRole('admin'), async (req, res, next) => {
   try {
     const search = String(req.query.search ?? '').trim() || undefined;
     const purchaseRaw = String(req.query.hasPurchased ?? 'all');
@@ -213,7 +213,7 @@ router.post('/sync-enrollments', requireRole('admin'), async (req, res, next) =>
   }
 });
 
-router.post('/send-exam-emails', requireRole('admin', 'editor'), async (req, res, next) => {
+router.post('/send-exam-emails', requireRole('admin'), async (req, res, next) => {
   try {
     const courseId = parseId(req.body?.courseId);
     if (!courseId) return res.status(400).json({ ok: false, error: 'courseId is required' });
@@ -224,7 +224,7 @@ router.post('/send-exam-emails', requireRole('admin', 'editor'), async (req, res
   }
 });
 
-router.get('/:id', requireRole('admin', 'editor'), async (req, res, next) => {
+router.get('/:id', requireRole('admin'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) return res.status(400).json({ ok: false, error: 'Invalid student id' });
@@ -237,7 +237,7 @@ router.get('/:id', requireRole('admin', 'editor'), async (req, res, next) => {
   }
 });
 
-router.put('/:id/newsletter', requireRole('admin', 'editor'), async (req, res) => {
+router.put('/:id/newsletter', requireRole('admin'), async (req, res) => {
   try {
     const customerId = parseId(req.params.id);
     if (!customerId) return res.status(400).json({ ok: false, error: 'Invalid student id' });
@@ -252,7 +252,7 @@ router.put('/:id/newsletter', requireRole('admin', 'editor'), async (req, res) =
   }
 });
 
-router.put('/:id/courses/:courseId/exam-status', requireRole('admin', 'editor'), async (req, res, next) => {
+router.put('/:id/courses/:courseId/exam-status', requireRole('admin'), async (req, res, next) => {
   try {
     const customerId = parseId(req.params.id);
     const courseId = parseId(req.params.courseId);
@@ -273,7 +273,7 @@ router.put('/:id/courses/:courseId/exam-status', requireRole('admin', 'editor'),
   }
 });
 
-router.post('/:id/courses/:courseId/send-exam-email', requireRole('admin', 'editor'), async (req, res, next) => {
+router.post('/:id/courses/:courseId/send-exam-email', requireRole('admin'), async (req, res, next) => {
   try {
     const customerId = parseId(req.params.id);
     const courseId = parseId(req.params.courseId);

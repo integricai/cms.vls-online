@@ -1,6 +1,6 @@
 const BASE = (import.meta.env.VITE_API_URL ?? '') + '/api';
 
-export type AccessLevel = 'admin' | 'editor' | 'viewer';
+export type AccessLevel = 'admin' | 'assistant' | 'editor' | 'viewer';
 
 export interface CurrentUser {
   id: number;
@@ -31,9 +31,13 @@ export function getCurrentUser(): CurrentUser | null {
   }
 }
 
-/** Admins and content managers (`editor`) can use Vertex Vault content tools. */
+/** Admins and assistants can edit Vault content. `editor` is a legacy content-manager role. */
 export function canManageContent(role?: AccessLevel | null): boolean {
-  return role === 'admin' || role === 'editor';
+  return role === 'admin' || role === 'assistant' || role === 'editor';
+}
+
+export function canUsePayments(role?: AccessLevel | null): boolean {
+  return canManageContent(role);
 }
 
 export function setCurrentUser(user: CurrentUser): void {

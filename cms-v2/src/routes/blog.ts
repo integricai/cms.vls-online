@@ -26,7 +26,7 @@ router.get('/posts', async (_req: Request, res: Response, next: NextFunction) =>
   }
 });
 
-router.post('/migrate-urls', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/migrate-urls', requireRole('admin', 'assistant'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const posts = await listBlogPosts();
     return res.json({ ok: true, data: { total: posts.length, migrated: true } });
@@ -35,7 +35,7 @@ router.post('/migrate-urls', requireRole('admin', 'editor'), async (req: Request
   }
 });
 
-router.post('/import', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/import', requireRole('admin', 'assistant'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const body = req.body as {
       sourceUrl?: unknown;
@@ -99,7 +99,7 @@ router.post('/import', requireRole('admin', 'editor'), async (req: Request, res:
   }
 });
 
-router.patch('/posts/:id', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/posts/:id', requireRole('admin', 'assistant'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const posts = await listBlogPosts();
     const index = posts.findIndex(post => post.id === req.params.id);
@@ -122,7 +122,7 @@ router.patch('/posts/:id', requireRole('admin', 'editor'), async (req: Request, 
   }
 });
 
-router.delete('/posts/:id', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/posts/:id', requireRole('admin', 'assistant'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const posts = await listBlogPosts();
     const post = posts.find(item => item.id === req.params.id);

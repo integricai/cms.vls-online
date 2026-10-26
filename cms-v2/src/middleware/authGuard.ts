@@ -44,7 +44,10 @@ export function requireRole(
   ...roles: JwtPayload['role'][]
 ) {
   return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    const role = req.user?.role;
+    const allowed = roles.includes(role as JwtPayload['role'])
+      || (role === 'editor' && roles.includes('assistant'));
+    if (!req.user || !allowed) {
       res.status(403).json({ ok: false, error: 'Insufficient permissions' });
       return;
     }

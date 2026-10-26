@@ -7,7 +7,7 @@ const router = Router();
 
 router.use(authGuard);
 
-router.get('/', requireRole('admin', 'editor'), async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/', requireRole('admin', 'assistant'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     return res.json({ ok: true, data: await listBooks() });
   } catch (err) {
@@ -15,14 +15,14 @@ router.get('/', requireRole('admin', 'editor'), async (_req: Request, res: Respo
   }
 });
 
-router.post('/sync', requireRole('admin', 'editor'), (_req: Request, res: Response) => {
+router.post('/sync', requireRole('admin', 'assistant'), (_req: Request, res: Response) => {
   return res.status(410).json({
     ok: false,
     error: 'Book sync has been disabled. The books table is the source of truth.',
   });
 });
 
-router.post('/upload-image', requireRole('admin', 'editor'), async (req: Request, res: Response) => {
+router.post('/upload-image', requireRole('admin', 'assistant'), async (req: Request, res: Response) => {
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     return res.status(500).json({ ok: false, error: 'Image upload requires Blob storage. Paste a direct image URL instead.' });
   }
@@ -50,7 +50,7 @@ router.post('/upload-image', requireRole('admin', 'editor'), async (req: Request
   }
 });
 
-router.post('/reorder', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/reorder', requireRole('admin', 'assistant'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((id: unknown) => Number(id)) : [];
     if (!ids.length || ids.some((id: number) => !Number.isInteger(id) || id <= 0)) {
@@ -62,7 +62,7 @@ router.post('/reorder', requireRole('admin', 'editor'), async (req: Request, res
   }
 });
 
-router.post('/', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', requireRole('admin', 'assistant'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const price = Number(req.body.price);
     const discountedPrice = req.body.discountedPrice == null || req.body.discountedPrice === ''
@@ -93,7 +93,7 @@ router.post('/', requireRole('admin', 'editor'), async (req: Request, res: Respo
   }
 });
 
-router.put('/:id', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id', requireRole('admin', 'assistant'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) return res.status(400).json({ ok: false, error: 'Invalid book id' });

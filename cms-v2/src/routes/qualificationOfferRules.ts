@@ -34,7 +34,7 @@ function parseRulesBody(body: unknown): QualificationOfferRuleInput[] {
   });
 }
 
-router.get('/', authGuard, requireRole('admin', 'editor'), async (_req, res, next) => {
+router.get('/', authGuard, requireRole('admin'), async (_req, res, next) => {
   try {
     const data = await listQualificationOfferRules();
     return res.json({ ok: true, data });
@@ -43,7 +43,7 @@ router.get('/', authGuard, requireRole('admin', 'editor'), async (_req, res, nex
   }
 });
 
-router.put('/', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+router.put('/', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     const rules = parseRulesBody(req.body);
     const data = await replaceQualificationOfferRules(rules);
@@ -55,7 +55,7 @@ router.put('/', authGuard, requireRole('admin', 'editor'), async (req, res, next
 });
 
 /** Preview open sessions / plan labels for a draft or saved rule as of a date. */
-router.post('/preview', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+router.post('/preview', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     const rule = normalizeOfferRuleInput(req.body?.rule ?? req.body);
     const asOfRaw = String(req.body?.asOf ?? req.query.asOf ?? '').trim();
@@ -73,7 +73,7 @@ router.post('/preview', authGuard, requireRole('admin', 'editor'), async (req, r
 });
 
 /** Utility: next open sessions for given months + cutoff. */
-router.get('/sessions', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+router.get('/sessions', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     const months = String(req.query.months ?? '3,6,9,12')
       .split(',')

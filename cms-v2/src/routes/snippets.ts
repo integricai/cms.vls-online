@@ -32,7 +32,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /snippets — editor or admin only
-router.post('/', requireRole('admin', 'editor'), async (req: Request, res: Response) => {
+router.post('/', requireRole('admin', 'assistant'), async (req: Request, res: Response) => {
   const { key, title, html, meta } = req.body as SnippetInput;
 
   if (!key || !title || html === undefined) {
@@ -47,7 +47,7 @@ router.post('/', requireRole('admin', 'editor'), async (req: Request, res: Respo
 });
 
 // PATCH /snippets/:id — editor or admin only
-router.patch('/:id', requireRole('admin', 'editor'), async (req: Request, res: Response) => {
+router.patch('/:id', requireRole('admin', 'assistant'), async (req: Request, res: Response) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ ok: false, error: 'Invalid id' });
 

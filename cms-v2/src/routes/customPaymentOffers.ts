@@ -16,7 +16,7 @@ import { createStripeCheckoutSession } from '../services/stripeCheckout';
 import { sendCustomPaymentOfferEmail } from '../services/paymentEmails';
 
 const router = Router();
-router.use(authGuard, requireRole('admin'));
+router.use(authGuard, requireRole('admin', 'assistant'));
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

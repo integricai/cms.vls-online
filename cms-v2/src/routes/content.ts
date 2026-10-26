@@ -22,7 +22,7 @@ router.get('/:key', async (req: Request, res: Response) => {
 });
 
 // PUT /content/:key — upsert content (editor or admin)
-router.put('/:key', requireRole('admin', 'editor'), async (req: Request, res: Response) => {
+router.put('/:key', requireRole('admin', 'assistant'), async (req: Request, res: Response) => {
   if (req.body == null || typeof req.body !== 'object') {
     return res.status(400).json({ ok: false, error: 'JSON body required' });
   }

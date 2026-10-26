@@ -65,7 +65,7 @@ export interface AboutUsContent {
 export interface User {
   id: number;
   email: string;
-  role: 'admin' | 'editor' | 'viewer';
+  role: 'admin' | 'assistant' | 'editor' | 'viewer';
 }
 
 // ── Events ───────────────────────────────────────────────────────────────────

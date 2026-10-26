@@ -11,8 +11,7 @@ type FormState = {
 
 const ACCESS_OPTIONS: Array<{ value: AccessLevel; label: string }> = [
   { value: 'admin', label: 'Admin' },
-  { value: 'editor', label: 'Content Manager' },
-  { value: 'viewer', label: 'Read' },
+  { value: 'assistant', label: 'Assistant' },
 ];
 
 const EMPTY_FORM: FormState = {
@@ -20,8 +19,17 @@ const EMPTY_FORM: FormState = {
   first_name: '',
   last_name: '',
   password_: '',
-  access_level: 'viewer',
+  access_level: 'assistant',
 };
+
+function roleOptions(role: AccessLevel): Array<{ value: AccessLevel; label: string }> {
+  if (role !== 'viewer') return ACCESS_OPTIONS;
+  return [...ACCESS_OPTIONS, { value: 'viewer', label: 'Read' }];
+}
+
+function selectedRole(role: AccessLevel): AccessLevel {
+  return role === 'editor' ? 'assistant' : role;
+}
 
 export default function UserManagement() {
   const [users, setUsers] = useState<CurrentUser[]>([]);
@@ -234,12 +242,12 @@ export default function UserManagement() {
                         </td>
                         <td className="px-4 py-3">
                           <select
-                            className="input w-32"
-                            value={user.role}
+                            className="input w-36"
+                            value={selectedRole(user.role)}
                             disabled={isSelf}
                             onChange={e => updateUser(user.id, { access_level: e.target.value })}
                           >
-                            {ACCESS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                            {roleOptions(user.role).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                           </select>
                         </td>
                         <td className="px-4 py-3">

@@ -3,7 +3,7 @@ import { authGuard, requireRole } from '../middleware/authGuard';
 import { RetakeCodeError, issueRetakeDiscountCode, listIssuedRetakeCodes, resendRetakeDiscountCode } from '../services/retakeDiscount';
 
 const router = Router();
-router.use(authGuard, requireRole('admin'));
+router.use(authGuard, requireRole('admin', 'assistant'));
 
 function positiveInt(value: unknown): number | null {
   const id = Number(value);

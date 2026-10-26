@@ -30,7 +30,7 @@ const router = Router();
 
 router.use(authGuard);
 
-router.post('/sync-storyblok-urls', requireRole('admin', 'editor'), async (_req: Request, res: Response) => {
+router.post('/sync-storyblok-urls', requireRole('admin'), async (_req: Request, res: Response) => {
   try {
     const result = await syncCourseSalesPageUrlsFromStoryblok();
     if (!result.ok) {
@@ -44,7 +44,7 @@ router.post('/sync-storyblok-urls', requireRole('admin', 'editor'), async (_req:
   }
 });
 
-router.post('/scrape-prices', requireRole('admin', 'editor'), async (_req: Request, res: Response) => {
+router.post('/scrape-prices', requireRole('admin'), async (_req: Request, res: Response) => {
   try {
     const scraped = await scrapeActiveCoursePrices();
     const prices = await upsertScrapedCoursePrices(scraped);
@@ -56,7 +56,7 @@ router.post('/scrape-prices', requireRole('admin', 'editor'), async (_req: Reque
   }
 });
 
-router.get('/prices', requireRole('admin', 'editor'), async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/prices', requireRole('admin'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const prices = await listCoursePrices();
     return res.json({ ok: true, data: prices });
@@ -65,7 +65,7 @@ router.get('/prices', requireRole('admin', 'editor'), async (_req: Request, res:
   }
 });
 
-router.put('/prices', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.put('/prices', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const incoming = Array.isArray(req.body.prices) ? req.body.prices : [];
     const prices = incoming
@@ -128,7 +128,7 @@ router.get('/banner', async (_req: Request, res: Response, next: NextFunction) =
   }
 });
 
-router.get('/dropdown-options', requireRole('admin', 'editor'), async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/dropdown-options', requireRole('admin'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const options = await listCourseDropdownOptions();
     return res.json({ ok: true, data: options });
@@ -137,7 +137,7 @@ router.get('/dropdown-options', requireRole('admin', 'editor'), async (_req: Req
   }
 });
 
-router.put('/dropdown-options', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.put('/dropdown-options', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const body = req.body as {
       qualification?: string[];
@@ -159,7 +159,7 @@ router.put('/dropdown-options', requireRole('admin', 'editor'), async (req: Requ
   }
 });
 
-router.get('/export-workbook', requireRole('admin', 'editor'), async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/export-workbook', requireRole('admin'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const buffer = await buildCourseWorkbook(await listCourses());
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -170,7 +170,7 @@ router.get('/export-workbook', requireRole('admin', 'editor'), async (_req: Requ
   }
 });
 
-router.post('/import-workbook', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/import-workbook', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const fileBase64 = typeof req.body?.fileBase64 === 'string' ? req.body.fileBase64 : '';
     if (!fileBase64.trim()) {
@@ -186,7 +186,7 @@ router.post('/import-workbook', requireRole('admin', 'editor'), async (req: Requ
   }
 });
 
-router.get('/export', requireRole('admin', 'editor'), async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/export', requireRole('admin'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const csv = buildCoursePageUrlCsv(await listCourses());
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -197,7 +197,7 @@ router.get('/export', requireRole('admin', 'editor'), async (_req: Request, res:
   }
 });
 
-router.post('/import-page-urls', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/import-page-urls', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const csv = typeof req.body?.csv === 'string' ? req.body.csv : '';
     if (!csv.trim()) {
@@ -210,7 +210,7 @@ router.post('/import-page-urls', requireRole('admin', 'editor'), async (req: Req
   }
 });
 
-router.get('/url-changes', requireRole('admin', 'editor'), async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/url-changes', requireRole('admin'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const [summary, failures, rewrite] = await Promise.all([
       summarizeCourseUrlChanges(),
@@ -223,7 +223,7 @@ router.get('/url-changes', requireRole('admin', 'editor'), async (_req: Request,
   }
 });
 
-router.post('/url-changes/apply', requireRole('admin', 'editor'), async (_req: Request, res: Response, next: NextFunction) => {
+router.post('/url-changes/apply', requireRole('admin'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await applyCourseUrlChanges();
     return res.json({ ok: true, data: result });
@@ -234,7 +234,7 @@ router.post('/url-changes/apply', requireRole('admin', 'editor'), async (_req: R
   }
 });
 
-router.post('/url-changes/publish-redirects', requireRole('admin', 'editor'), async (_req: Request, res: Response, next: NextFunction) => {
+router.post('/url-changes/publish-redirects', requireRole('admin'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await publishCourseRedirects();
     return res.json({ ok: true, data: result });
@@ -245,7 +245,7 @@ router.post('/url-changes/publish-redirects', requireRole('admin', 'editor'), as
   }
 });
 
-router.put('/reorder/order', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.put('/reorder/order', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const ids = Array.isArray(req.body.ids)
       ? req.body.ids.map((id: unknown) => Number(id)).filter((id: number) => Number.isInteger(id))
@@ -269,7 +269,7 @@ function isUniqueViolation(err: unknown): boolean {
   return error.code === '23505' || error.cause?.code === '23505';
 }
 
-router.post('/', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const name = requiredText(req.body.name);
     const zenlerCourseId = requiredText(req.body.zenlerCourseId);
@@ -320,7 +320,7 @@ router.post('/', requireRole('admin', 'editor'), async (req: Request, res: Respo
   }
 });
 
-router.put('/:id', requireRole('admin', 'editor'), async (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) {
@@ -365,7 +365,7 @@ router.get('/payment-cards', async (_req: Request, res: Response, next: NextFunc
 
 router.post(
   '/payment-cards',
-  requireRole('admin', 'editor'),
+  requireRole('admin'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const {
@@ -429,7 +429,7 @@ router.post(
 
 router.put(
   '/payment-cards/:id',
-  requireRole('admin', 'editor'),
+  requireRole('admin'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = Number(req.params.id);

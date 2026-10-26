@@ -44,7 +44,7 @@ function parseBody(body: Record<string, unknown>): TutorInput {
   };
 }
 
-router.get('/', requireRole('admin', 'editor'), async (_req, res, next) => {
+router.get('/', requireRole('admin'), async (_req, res, next) => {
   try {
     return res.json({ ok: true, data: await listTutors() });
   } catch (err) {
@@ -52,7 +52,7 @@ router.get('/', requireRole('admin', 'editor'), async (_req, res, next) => {
   }
 });
 
-router.get('/:id', requireRole('admin', 'editor'), async (req, res, next) => {
+router.get('/:id', requireRole('admin'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) return res.status(400).json({ ok: false, error: 'Invalid tutor id' });
@@ -64,7 +64,7 @@ router.get('/:id', requireRole('admin', 'editor'), async (req, res, next) => {
   }
 });
 
-router.post('/', requireRole('admin', 'editor'), async (req, res, next) => {
+router.post('/', requireRole('admin'), async (req, res, next) => {
   try {
     const input = parseBody(req.body ?? {});
     if (!input.name) return res.status(400).json({ ok: false, error: 'Tutor name is required' });
@@ -75,7 +75,7 @@ router.post('/', requireRole('admin', 'editor'), async (req, res, next) => {
   }
 });
 
-router.put('/:id', requireRole('admin', 'editor'), async (req, res, next) => {
+router.put('/:id', requireRole('admin'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) return res.status(400).json({ ok: false, error: 'Invalid tutor id' });
@@ -89,7 +89,7 @@ router.put('/:id', requireRole('admin', 'editor'), async (req, res, next) => {
   }
 });
 
-router.post('/:id/deactivate', requireRole('admin', 'editor'), async (req, res, next) => {
+router.post('/:id/deactivate', requireRole('admin'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) return res.status(400).json({ ok: false, error: 'Invalid tutor id' });

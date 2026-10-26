@@ -115,7 +115,7 @@ router.get('/geo', (req: Request, res: Response) => {
 
 // ── Admin routes ──────────────────────────────────────────────────
 
-router.get('/admin/courses', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+router.get('/admin/courses', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     const search = String(req.query.search ?? '').trim() || undefined;
     const data = await listCoursePricingSummaries(search);
@@ -125,7 +125,7 @@ router.get('/admin/courses', authGuard, requireRole('admin', 'editor'), async (r
   }
 });
 
-router.get('/admin/validation', authGuard, requireRole('admin', 'editor'), async (_req, res, next) => {
+router.get('/admin/validation', authGuard, requireRole('admin'), async (_req, res, next) => {
   try {
     const missing = await listActiveCoursesMissingDefaultPrice();
     return res.json({
@@ -140,14 +140,14 @@ router.get('/admin/validation', authGuard, requireRole('admin', 'editor'), async
   }
 });
 
-router.get('/admin/template', authGuard, requireRole('admin', 'editor'), (_req, res) => {
+router.get('/admin/template', authGuard, requireRole('admin'), (_req, res) => {
   const csv = buildPricingTemplateCsv();
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="course-pricing-template.csv"');
   return res.send(csv);
 });
 
-router.get('/admin/export', authGuard, requireRole('admin', 'editor'), async (_req, res, next) => {
+router.get('/admin/export', authGuard, requireRole('admin'), async (_req, res, next) => {
   try {
     const prices = await listAllGeoPricesForExport();
     const csv = buildPricingExportCsv(prices);
@@ -216,7 +216,7 @@ router.delete('/admin/courses/:courseId', authGuard, requireRole('admin'), async
   }
 });
 
-router.get('/admin/courses/:courseId/prices', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+router.get('/admin/courses/:courseId/prices', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     const courseId = parseCourseId(req.params.courseId);
     if (!courseId) return res.status(400).json({ ok: false, error: 'Invalid course id' });
@@ -231,7 +231,7 @@ router.get('/admin/courses/:courseId/prices', authGuard, requireRole('admin', 'e
   }
 });
 
-router.post('/admin/courses/:courseId/prices', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+router.post('/admin/courses/:courseId/prices', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     const courseId = parseCourseId(req.params.courseId);
     if (!courseId) return res.status(400).json({ ok: false, error: 'Invalid course id' });
@@ -253,7 +253,7 @@ router.post('/admin/courses/:courseId/prices', authGuard, requireRole('admin', '
   }
 });
 
-router.put('/admin/prices/:priceId', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+router.put('/admin/prices/:priceId', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     const priceId = parseCourseId(req.params.priceId);
     if (!priceId) return res.status(400).json({ ok: false, error: 'Invalid price id' });
@@ -275,7 +275,7 @@ router.put('/admin/prices/:priceId', authGuard, requireRole('admin', 'editor'), 
   }
 });
 
-router.post('/admin/prices/:priceId/deactivate', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+router.post('/admin/prices/:priceId/deactivate', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     const priceId = parseCourseId(req.params.priceId);
     if (!priceId) return res.status(400).json({ ok: false, error: 'Invalid price id' });
@@ -288,7 +288,7 @@ router.post('/admin/prices/:priceId/deactivate', authGuard, requireRole('admin',
   }
 });
 
-router.post('/admin/courses/:courseId/prices/:priceId/set-default', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+router.post('/admin/courses/:courseId/prices/:priceId/set-default', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     const courseId = parseCourseId(req.params.courseId);
     const priceId = parseCourseId(req.params.priceId);
@@ -303,7 +303,7 @@ router.post('/admin/courses/:courseId/prices/:priceId/set-default', authGuard, r
   }
 });
 
-router.post('/admin/import/preview', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+router.post('/admin/import/preview', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     let rows: Array<Record<string, unknown>> = [];
 
@@ -326,7 +326,7 @@ router.post('/admin/import/preview', authGuard, requireRole('admin', 'editor'), 
   }
 });
 
-router.post('/admin/import/commit', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+router.post('/admin/import/commit', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     let preview = req.body?.preview;
     if (!preview) {
@@ -353,7 +353,7 @@ router.post('/admin/import/commit', authGuard, requireRole('admin', 'editor'), a
   }
 });
 
-router.post('/admin/import/error-report', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+router.post('/admin/import/error-report', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     const errors = Array.isArray(req.body?.errors) ? req.body.errors : [];
     const lines = [
@@ -403,7 +403,7 @@ async function maybeSyncStoryblokForCourse(
   });
 }
 
-router.post('/admin/courses/:courseId/storyblok-sync', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+router.post('/admin/courses/:courseId/storyblok-sync', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     const courseId = parseCourseId(req.params.courseId);
     if (!courseId) return res.status(400).json({ ok: false, error: 'Invalid course id' });
@@ -431,7 +431,7 @@ router.post('/admin/courses/:courseId/storyblok-sync', authGuard, requireRole('a
   }
 });
 
-router.post('/admin/storyblok-sync', authGuard, requireRole('admin', 'editor'), async (req, res, next) => {
+router.post('/admin/storyblok-sync', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     const { resolveStoryblokConfig, syncAllCoursePricingToStoryblok } = await import('../services/storyblokCoursePricingSync');
     const options = parseStoryblokSyncOptions(req.body ?? {});
