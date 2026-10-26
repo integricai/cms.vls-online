@@ -716,7 +716,8 @@ export default function ContentMigrationTab() {
                   <p className="mt-1 text-[11px] text-slate-400">
                     Paste an AutoSEO shared article (or other public blog URL). Content is scraped into the existing
                     Storyblok blog layout; the destination slug is generated from the article title for SEO,
-                    images upload locally, and AutoSEO links are removed.
+                    images upload locally, and AutoSEO links are removed. Automatic deliveries from AutoSEO
+                    use https://api.cms.vls-online.com/api/autoseo/webhook and are saved as unpublished drafts.
                   </p>
                 </Field>
               ) : null}

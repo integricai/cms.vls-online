@@ -702,3 +702,140 @@ export async function scrapeBlogPage(sourceUrl: string): Promise<ScrapedBlogPost
     extractionWarnings: warnings,
   };
 }
+
+export interface AutoseoArticleFields {
+  id: number;
+  title: string;
+  slug: string;
+  metaDescription: string;
+  html: string;
+  heroImageUrl: string;
+  heroImageAlt: string;
+  infographicImageUrl: string;
+  keywords: string[];
+  faq: Array<{ question: string; answer: string }>;
+  publishedAt: string;
+  assetBaseUrl: string;
+}
+
+function escapeAttr(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function safeHttpUrl(value: string, base: URL): string {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  try {
+    const url = new URL(trimmed, base);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
+    return url.href;
+  } catch {
+    return '';
+  }
+}
+
+/** Replace AutoSEO URLs in text and links. Image src values stay so they can be downloaded. */
+function rewriteLooseAutoseoUrls(html: string, blogPath: string): string {
+  return html.replace(
+    /https?:\/\/(?:[a-z0-9-]+\.)*getautoseo\.com[^\s"'<>]*/gi,
+    (_url, offset: number, source: string) => {
+      const prefix = source.slice(Math.max(0, offset - 160), offset);
+      if (/\b(?:src|srcset)\s*=\s*["'][^"']*$/i.test(prefix)) return _url;
+      if (/<img\b[^>]*$/i.test(prefix)) return _url;
+      return blogPath;
+    },
+  );
+}
+
+function scrubAutoseoText(value: string, blogPath: string): string {
+  return value.replace(/https?:\/\/(?:[a-z0-9-]+\.)*getautoseo\.com[^\s"'<>]*/gi, blogPath).replace(/\s+/g, ' ').trim();
+}
+
+/** Map an AutoSEO webhook article onto the Storyblok blog shape. URLs in the result point at VLS. */
+export function scrapedBlogPostFromAutoseo(input: AutoseoArticleFields): ScrapedBlogPost {
+  const base = new URL(input.assetBaseUrl || 'https://getautoseo.com/');
+  const blogPath = localBlogPath(input.slug);
+  const title = scrubAutoseoText(input.title, blogPath);
+  const heroImageUrl = safeHttpUrl(input.heroImageUrl, base);
+  const infographicImageUrl = safeHttpUrl(input.infographicImageUrl, base);
+
+  let html = input.html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
+
+  const infographicPath = infographicImageUrl.split('?')[0];
+  if (infographicImageUrl && infographicPath && !html.includes(infographicPath)) {
+    html += `<figure><img src="${escapeAttr(infographicImageUrl)}" alt="${escapeAttr(`Infographic: ${title}`)}"></figure>`;
+  }
+
+  const withBackgrounds = materializeBackgroundImages(html, base);
+  const keyTakeaways = extractTakeaways(withBackgrounds)
+    .map(item => scrubAutoseoText(item, blogPath))
+    .filter(Boolean);
+  const extractedFaq = extractFaqItems(withBackgrounds).map(item => ({
+    ...item,
+    question: scrubAutoseoText(item.question, blogPath),
+    answerText: scrubAutoseoText(item.answerText, blogPath),
+    answerHtml: rewriteLooseAutoseoUrls(item.answerHtml, blogPath),
+  }));
+  const sanitized = sanitizeBodyHtml(withBackgrounds, base, blogPath);
+  const bodyHtml = rewriteLooseAutoseoUrls(stripNoiseFromBody(sanitized, title), blogPath);
+
+  const schemaFaq = input.faq
+    .map(item => ({
+      question: scrubAutoseoText(item.question, blogPath),
+      answerText: scrubAutoseoText(item.answer, blogPath),
+      answerHtml: scrubAutoseoText(item.answer, blogPath),
+    }))
+    .filter(item => item.question && item.answerText)
+    .slice(0, 20);
+
+  const { topic, tags } = inferTopicAndTags(
+    title,
+    `${stripTags(bodyHtml)} ${input.keywords.join(' ')}`,
+    '',
+    bodyHtml,
+  );
+
+  const images = mergeImages(
+    heroImageUrl ? [{ sourceUrl: heroImageUrl, alt: input.heroImageAlt.trim() || title, kind: 'featured' as const }] : [],
+    infographicImageUrl ? [{ sourceUrl: infographicImageUrl, alt: `Infographic: ${title}`, kind: 'inline' as const }] : [],
+    extractImgTags(bodyHtml, base, 'inline'),
+  );
+  const featuredImageUrl = heroImageUrl
+    || infographicImageUrl
+    || images.find(image => !isScreenshotImageUrl(image.sourceUrl))?.sourceUrl
+    || '';
+
+  const excerpt = (scrubAutoseoText(input.metaDescription, blogPath) || firstParagraph(bodyHtml)).slice(0, 300);
+  const published = input.publishedAt ? new Date(input.publishedAt) : null;
+  const publishDate = published && !Number.isNaN(published.getTime()) ? published.toISOString() : '';
+
+  return {
+    kind: 'blog_post',
+    sourceUrl: `${PUBLIC_SITE_ORIGIN}${blogPath}`,
+    slug: input.slug,
+    title,
+    excerpt,
+    metaTitle: title,
+    metaDescription: excerpt,
+    topic,
+    tags,
+    featuredImageUrl,
+    publishDate,
+    readingTimeMinutes: extractReadingTime(bodyHtml, bodyHtml),
+    bodyHtml,
+    keyTakeaways,
+    faqItems: schemaFaq.length ? schemaFaq : extractedFaq,
+    sidebarCta: null,
+    midCta: null,
+    images,
+    extractionWarnings: [
+      'Received from the AutoSEO webhook. Images upload to Storyblok and links are rewritten to the VLS blog path.',
+    ],
+  };
+}
