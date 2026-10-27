@@ -10,6 +10,7 @@ import {
   STRIPE_PAYPAL_CURRENCY_NOTE,
   STRIPE_RETURNING_STUDENT_MESSAGE,
   stripePaymentMethodTypes,
+  stripeUnitAmount,
   stripeSecretKeyForEnvironment,
   verifyStripeWebhook,
 } from './stripeCheckout';
@@ -239,7 +240,10 @@ run('keeps a single name typed on the form and fills only the other box', () => 
 
 run('adds Link only when Stripe collects the email', () => {
   assert.deepStrictEqual(stripePaymentMethodTypes(true), ['card', 'link', 'paypal', 'klarna']);
+  assert.deepStrictEqual(stripePaymentMethodTypes(true, 'GBP'), ['card', 'link']);
   assert.deepStrictEqual(stripePaymentMethodTypes(false), ['card', 'paypal', 'klarna']);
+  assert.strictEqual(stripeUnitAmount(176, 'GBP'), 17600);
+  assert.strictEqual(stripeUnitAmount(14850, 'JPY'), 14850);
   assert.strictEqual(
     STRIPE_RETURNING_STUDENT_MESSAGE,
     'Already a Vertex student? Use the email you log in with.',

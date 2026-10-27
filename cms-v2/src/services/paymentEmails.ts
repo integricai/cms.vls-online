@@ -1,5 +1,6 @@
 import type { PaymentOrder } from '../models/paymentOrder';
 import type { ZenlerEnrollmentEmailContext } from './zenlerEnrollmentEnsure';
+import { formatDisplayMoney } from './displayCurrency';
 import { VLS_SCHOOL_LOGIN_URL, VLS_SCHOOL_PASSWORD_RESET_URL } from './schoolAccess';
 
 const VLS_SITE_URL = 'https://vls-online.com';
@@ -368,7 +369,9 @@ export async function sendStudentPaymentConfirmation(
 
   const name = order.studentName || 'Student';
   const option = order.optionType || 'Course payment';
-  const amount = formatAmount(order);
+  const amount = order.checkoutEnvironment === 'staging'
+    ? formatDisplayMoney(order.amount, order.currency || 'USD')
+    : formatAmount(order);
 
   if (order.checkoutEnvironment === 'staging') {
     const staged = stagingPurchaseConfirmation({

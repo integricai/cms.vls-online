@@ -26,6 +26,8 @@ import {
   type PaymentProviderId,
 } from '../services/payments/types';
 import { parseCheckoutAttribution, resolveCheckoutEnvironment } from '../services/attribution';
+import { presentCheckoutAmount } from '../services/displayCurrency';
+import { getUsdRates } from '../services/fxRates';
 import {
   detectClientIpFromRequest,
   detectCountryFromRequest,
@@ -817,6 +819,17 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       }
       chargeAmount = retakeQuote.chargeAmount;
       discountPercent = computeDiscountPercent(listAmount, chargeAmount);
+    }
+
+    if (!schoolPassword.email) {
+      const presented = presentCheckoutAmount({
+        amount: chargeAmount,
+        currency: chargeCurrency,
+        countryCode: quotedCountryCode,
+        rates: await getUsdRates(),
+      });
+      chargeAmount = presented.amount;
+      chargeCurrency = presented.currency;
     }
 
     const order = await createPaymentOrder({

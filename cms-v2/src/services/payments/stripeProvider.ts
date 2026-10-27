@@ -168,7 +168,7 @@ export const stripeProvider: IPaymentProvider = {
   async createCheckout(input: CreateCheckoutInput) {
     const session = await createStripeCheckoutSession({
       ...input,
-      paymentMethodTypes: stripePaymentMethodTypes(!input.studentEmail),
+      paymentMethodTypes: stripePaymentMethodTypes(!input.studentEmail, input.currency),
     });
     if (!session.url) {
       throw new Error('Stripe did not return a checkout URL');

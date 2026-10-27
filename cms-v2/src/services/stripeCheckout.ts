@@ -21,10 +21,29 @@ export const STRIPE_RETURNING_STUDENT_MESSAGE =
   'Already a Vertex student? Use the email you log in with.';
 
 /** Card already surfaces Apple Pay and Google Pay. Link is added only when Stripe collects the email. */
-export function stripePaymentMethodTypes(paymentFirst: boolean): string[] {
-  return paymentFirst
-    ? ['card', 'link', 'paypal', 'klarna']
-    : ['card', 'paypal', 'klarna'];
+export function stripePaymentMethodTypes(paymentFirst: boolean, currency = 'USD'): string[] {
+  if (!paymentFirst) return ['card', 'paypal', 'klarna'];
+  if (currency.toUpperCase() === 'USD') return ['card', 'link', 'paypal', 'klarna'];
+  return ['card', 'link'];
+}
+
+const STRIPE_ZERO_DECIMAL = new Set([
+  'BIF', 'CLP', 'DJF', 'GNF', 'JPY', 'KMF', 'KRW', 'MGA', 'PYG', 'RWF',
+  'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
+]);
+
+/** Stripe wants the amount in the currency's minor unit. Yen is already that unit. */
+export function stripeUnitAmount(amount: number, currency: string): number {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error('Payment amount must be greater than zero');
+  }
+  const unit = STRIPE_ZERO_DECIMAL.has(currency.toUpperCase())
+    ? Math.round(amount)
+    : Math.round(amount * 100);
+  if (!Number.isInteger(unit) || unit <= 0) {
+    throw new Error('Payment amount must be greater than zero');
+  }
+  return unit;
 }
 
 /** Course page path, or the generic cancelled page when the path is not same-site. */
@@ -190,10 +209,7 @@ export async function createStripeCheckoutSession(input: {
   const secretKey = stripeSecretKeyForEnvironment(environment);
 
   const siteUrl = resolveCheckoutSiteUrl(input.returnOrigin);
-  const unitAmount = Math.round(input.amount * 100);
-  if (!Number.isInteger(unitAmount) || unitAmount <= 0) {
-    throw new Error('Payment amount must be greater than zero');
-  }
+  const unitAmount = stripeUnitAmount(input.amount, input.currency);
 
   const paymentFirst = !input.studentEmail;
   const paymentMethodTypes = input.paymentMethodTypes?.length

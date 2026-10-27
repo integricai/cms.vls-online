@@ -7,6 +7,7 @@ import {
   formatDisplayMoney,
   localizeDisplayMoney,
   normalizeCountryCode,
+  presentCheckoutAmount,
 } from './displayCurrency';
 
 function run(name: string, fn: () => void): void {
@@ -64,6 +65,40 @@ run('localizeDisplayMoney shows local price plus charged-as USD', () => {
   assert.strictEqual(localized.formattedChargeUsd, 'Charged as $89 USD');
   assert.match(localized.formatted, /7,387|₹/);
   assert.match(localized.formattedCompareAt ?? '', /9,960|₹/);
+});
+
+run('charges payment-first checkout in the visitor currency', () => {
+  const gbp = presentCheckoutAmount({
+    amount: 220,
+    currency: 'USD',
+    countryCode: 'GB',
+    rates: { GBP: 0.8 },
+  });
+  assert.deepStrictEqual(gbp, { amount: 176, currency: 'GBP' });
+
+  const usd = presentCheckoutAmount({
+    amount: 220,
+    currency: 'USD',
+    countryCode: 'US',
+    rates: { GBP: 0.8 },
+  });
+  assert.deepStrictEqual(usd, { amount: 220, currency: 'USD' });
+
+  const missing = presentCheckoutAmount({
+    amount: 220,
+    currency: 'USD',
+    countryCode: 'GB',
+    rates: null,
+  });
+  assert.deepStrictEqual(missing, { amount: 220, currency: 'USD' });
+
+  const alreadyLocal = presentCheckoutAmount({
+    amount: 90,
+    currency: 'GBP',
+    countryCode: 'DE',
+    rates: { EUR: 0.9 },
+  });
+  assert.deepStrictEqual(alreadyLocal, { amount: 90, currency: 'GBP' });
 });
 
 console.log('All displayCurrency tests passed.');

@@ -1,4 +1,4 @@
-/** ISO 3166-1 alpha-2 → ISO 4217. Used only for display; checkout stays USD. */
+/** ISO 3166-1 alpha-2 → ISO 4217. The course page and payment-first checkout use this. */
 const COUNTRY_CURRENCY: Record<string, string> = {
   AD: 'EUR', AE: 'AED', AF: 'AFN', AG: 'XCD', AI: 'XCD', AL: 'ALL', AM: 'AMD',
   AO: 'AOA', AR: 'ARS', AS: 'USD', AT: 'EUR', AU: 'AUD', AW: 'AWG', AX: 'EUR',
@@ -152,4 +152,39 @@ export function localizeDisplayMoney(
     fxApplied: true,
     fxNote: BANK_FX_NOTE,
   };
+}
+
+/** Currencies Stripe Checkout can charge on a card. Others stay in USD. */
+const CHECKOUT_PRESENTMENT = new Set([
+  'AED', 'AUD', 'BGN', 'BRL', 'CAD', 'CHF', 'CZK', 'DKK', 'EGP', 'EUR', 'GBP', 'HKD',
+  'HUF', 'ILS', 'INR', 'JPY', 'KES', 'KRW', 'MXN', 'MYR', 'NGN', 'NOK', 'NZD',
+  'PHP', 'PKR', 'PLN', 'QAR', 'RON', 'SAR', 'SEK', 'SGD', 'THB', 'TRY', 'TWD', 'USD', 'ZAR',
+]);
+
+/**
+ * Payment-first checkout charges the same converted amount the course page showed.
+ * A price that is already in another currency is left alone. A missing rate stays USD.
+ */
+export function presentCheckoutAmount(input: {
+  amount: number;
+  currency: string;
+  countryCode: string | null | undefined;
+  rates: Record<string, number> | null;
+}): { amount: number; currency: string } {
+  const currency = (input.currency || 'USD').toUpperCase();
+  if (currency !== 'USD') return { amount: input.amount, currency };
+  const local = currencyForCountry(input.countryCode);
+  const rate = input.rates?.[local];
+  if (
+    local === 'USD'
+    || !CHECKOUT_PRESENTMENT.has(local)
+    || rate == null
+    || !(rate > 0)
+  ) {
+    return { amount: input.amount, currency: 'USD' };
+  }
+  const converted = convertUsdAmount(input.amount, rate);
+  const amount = ZERO_DECIMAL_CURRENCIES.has(local) ? Math.round(converted) : converted;
+  if (!Number.isFinite(amount) || amount <= 0) return { amount: input.amount, currency: 'USD' };
+  return { amount, currency: local };
 }
