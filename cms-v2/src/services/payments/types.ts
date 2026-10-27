@@ -22,6 +22,8 @@ export interface CreateCheckoutInput {
   studentLastName?: string | null;
   countryCode?: string | null;
   returnOrigin?: string | null;
+  /** Same-site path opened when the student leaves Checkout. */
+  cancelPath?: string | null;
   environment?: CheckoutEnvironment | null;
 }
 

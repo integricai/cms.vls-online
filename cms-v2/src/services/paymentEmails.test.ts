@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { studentPaymentAccessInstructions } from './paymentEmails';
+import { stagingPurchaseConfirmation, studentPaymentAccessInstructions } from './paymentEmails';
 import { enrollmentStatusBlocksAccessEmail, VLS_SCHOOL_LOGIN_URL, VLS_SCHOOL_PASSWORD_RESET_URL } from './schoolAccess';
 
 const login = VLS_SCHOOL_LOGIN_URL;
@@ -108,6 +108,59 @@ run('holds the access email only until enrolment is attempted', () => {
   assert.equal(enrollmentStatusBlocksAccessEmail('skipped'), false);
   assert.equal(enrollmentStatusBlocksAccessEmail('enrolled'), false);
   assert.equal(enrollmentStatusBlocksAccessEmail('enrolled_new'), false);
+});
+
+run('gives a new staging student the course, price, email, and a temporary password', () => {
+  const message = stagingPurchaseConfirmation({
+    name: 'Ada',
+    email: 'ada@vls-online.com',
+    courseTitle: 'ACCA FA',
+    amountLabel: '£199.00',
+    loginUrl: login,
+    isNewZenlerUser: true,
+    temporaryPassword: 'temp-secret',
+    zenlerEnrollmentStatus: 'enrolled_new',
+  });
+  assert.ok(message);
+  assert.match(message.text, /Course: ACCA FA/);
+  assert.match(message.text, /Price: £199\.00/);
+  assert.match(message.text, /Email: ada@vls-online\.com/);
+  assert.match(message.text, /Temporary password: temp-secret/);
+  assert.match(message.text, /change this password/);
+  assert.match(message.html, /temp-secret/);
+});
+
+run('thanks a returning staging student and omits a temporary password', () => {
+  const message = stagingPurchaseConfirmation({
+    name: 'Ada',
+    email: 'ada@vls-online.com',
+    courseTitle: 'ACCA FA',
+    amountLabel: '£199.00',
+    loginUrl: login,
+    isNewZenlerUser: false,
+    temporaryPassword: null,
+    zenlerEnrollmentStatus: 'enrolled',
+  });
+  assert.ok(message);
+  assert.match(message.text, /Thank you! Your purchase was successful/);
+  assert.match(message.text, /same login information/);
+  assert.match(message.text, /Course: ACCA FA/);
+  assert.match(message.text, /Price: £199\.00/);
+  assert.doesNotMatch(message.text, /Temporary password/);
+  assert.doesNotMatch(message.html, /Temporary password/);
+});
+
+run('leaves other staging enrolment cases on the existing email', () => {
+  assert.equal(stagingPurchaseConfirmation({
+    name: 'Ada',
+    email: 'ada@vls-online.com',
+    courseTitle: 'ACCA FA',
+    amountLabel: '£199.00',
+    loginUrl: login,
+    isNewZenlerUser: true,
+    temporaryPassword: null,
+    zenlerEnrollmentStatus: 'enrolled_new',
+  }), null);
 });
 
 run('keeps the existing-account instructions for a returning student', () => {

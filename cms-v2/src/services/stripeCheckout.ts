@@ -17,6 +17,31 @@ function appendParam(params: URLSearchParams, key: string, value: string | numbe
 export const STRIPE_PAYPAL_CURRENCY_NOTE =
   'To pay by PayPal, please select the USD price, provided PayPal is available in your country.';
 
+export const STRIPE_RETURNING_STUDENT_MESSAGE =
+  'Already a Vertex student? Use the email you log in with.';
+
+/** Card already surfaces Apple Pay and Google Pay. Link is added only when Stripe collects the email. */
+export function stripePaymentMethodTypes(paymentFirst: boolean): string[] {
+  return paymentFirst
+    ? ['card', 'link', 'paypal', 'klarna']
+    : ['card', 'paypal', 'klarna'];
+}
+
+/** Course page path, or the generic cancelled page when the path is not same-site. */
+export function safeCheckoutCancelPath(value: string | null | undefined): string {
+  const path = String(value ?? '').trim();
+  if (
+    !path.startsWith('/')
+    || path.startsWith('//')
+    || path.includes('://')
+    || path.includes('\\')
+    || path.length > 500
+  ) {
+    return '/payment-cancelled';
+  }
+  return path;
+}
+
 export function appendStripeOrderSummaryNote(params: URLSearchParams): void {
   params.append('line_items[0][price_data][product_data][description]', STRIPE_PAYPAL_CURRENCY_NOTE);
 }
@@ -157,6 +182,7 @@ export async function createStripeCheckoutSession(input: {
   countryCode?: string | null;
   paymentMethodTypes?: string[];
   returnOrigin?: string | null;
+  cancelPath?: string | null;
   environment?: CheckoutEnvironment | null;
 }): Promise<StripeCheckoutSession> {
   const environment = input.environment
@@ -169,9 +195,10 @@ export async function createStripeCheckoutSession(input: {
     throw new Error('Payment amount must be greater than zero');
   }
 
+  const paymentFirst = !input.studentEmail;
   const paymentMethodTypes = input.paymentMethodTypes?.length
     ? input.paymentMethodTypes
-    : ['card', 'paypal', 'klarna'];
+    : stripePaymentMethodTypes(paymentFirst);
 
   const params = new URLSearchParams();
   params.append('mode', 'payment');
@@ -180,7 +207,11 @@ export async function createStripeCheckoutSession(input: {
     params.append('payment_method_types[]', method);
   }
   params.append('success_url', `${siteUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`);
-  params.append('cancel_url', `${siteUrl}/payment-cancelled`);
+  params.append('cancel_url', `${siteUrl}${safeCheckoutCancelPath(input.cancelPath)}`);
+  if (paymentFirst) {
+    params.append('custom_text[submit][message]', STRIPE_RETURNING_STUDENT_MESSAGE);
+    params.append('metadata[flow]', 'standard');
+  }
   params.append('billing_address_collection', 'required');
   if (!input.skipStudentNameFields) {
     appendStripeStudentNameFields(params, {

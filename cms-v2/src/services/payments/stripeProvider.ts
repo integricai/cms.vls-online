@@ -4,6 +4,7 @@ import {
   createStripeCheckoutSession,
   createStripeRefund,
   stripeEventLivemode,
+  stripePaymentMethodTypes,
   verifyStripeWebhook,
 } from '../stripeCheckout';
 import type {
@@ -167,7 +168,7 @@ export const stripeProvider: IPaymentProvider = {
   async createCheckout(input: CreateCheckoutInput) {
     const session = await createStripeCheckoutSession({
       ...input,
-      paymentMethodTypes: ['card', 'paypal', 'klarna'],
+      paymentMethodTypes: stripePaymentMethodTypes(!input.studentEmail),
     });
     if (!session.url) {
       throw new Error('Stripe did not return a checkout URL');

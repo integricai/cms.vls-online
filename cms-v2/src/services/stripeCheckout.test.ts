@@ -6,7 +6,10 @@ import {
   appendStripeOrderSummaryNote,
   appendStripeStudentNameFields,
   resolveStripeStudentNameDefaults,
+  safeCheckoutCancelPath,
   STRIPE_PAYPAL_CURRENCY_NOTE,
+  STRIPE_RETURNING_STUDENT_MESSAGE,
+  stripePaymentMethodTypes,
   stripeSecretKeyForEnvironment,
   verifyStripeWebhook,
 } from './stripeCheckout';
@@ -232,6 +235,22 @@ run('keeps a single name typed on the form and fills only the other box', () => 
     schoolFirstName: 'School',
     schoolLastName: 'Lovelace',
   }), { studentFirstName: 'Ada', studentLastName: 'Lovelace' });
+});
+
+run('adds Link only when Stripe collects the email', () => {
+  assert.deepStrictEqual(stripePaymentMethodTypes(true), ['card', 'link', 'paypal', 'klarna']);
+  assert.deepStrictEqual(stripePaymentMethodTypes(false), ['card', 'paypal', 'klarna']);
+  assert.strictEqual(
+    STRIPE_RETURNING_STUDENT_MESSAGE,
+    'Already a Vertex student? Use the email you log in with.',
+  );
+});
+
+run('keeps Stripe cancel on the course page', () => {
+  assert.strictEqual(safeCheckoutCancelPath('/courses/acca-fa'), '/courses/acca-fa');
+  assert.strictEqual(safeCheckoutCancelPath('/courses/acca-fa?discount=RT-ABC'), '/courses/acca-fa?discount=RT-ABC');
+  assert.strictEqual(safeCheckoutCancelPath('https://evil.example/steal'), '/payment-cancelled');
+  assert.strictEqual(safeCheckoutCancelPath('//evil.example'), '/payment-cancelled');
 });
 
 run('rejects an unknown webhook signature', () => {

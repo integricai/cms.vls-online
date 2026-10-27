@@ -281,6 +281,84 @@ ${p(`If you are a new student, create your account at <a href="https://school.vl
   };
 }
 
+/**
+ * Staging purchases skip the account form. New students receive a temporary
+ * password. Returning students are told to use the school login they already have.
+ * Production orders keep the existing confirmation.
+ */
+export function stagingPurchaseConfirmation(input: {
+  name: string;
+  email: string;
+  courseTitle: string;
+  amountLabel: string;
+  loginUrl: string;
+  isNewZenlerUser: boolean;
+  temporaryPassword: string | null;
+  zenlerEnrollmentStatus: string;
+}): { subject: string; text: string; html: string } | null {
+  const name = input.name.trim() || 'Student';
+  const subject = 'Payment confirmation - VLS Online';
+  const enrolled = input.zenlerEnrollmentStatus.toLowerCase().startsWith('enrolled');
+
+  if (input.isNewZenlerUser && input.temporaryPassword) {
+    const text = `Hi ${name},
+
+Thank you! Your purchase was successful.
+
+Course: ${input.courseTitle}
+Price: ${input.amountLabel}
+Email: ${input.email}
+Temporary password: ${input.temporaryPassword}
+
+Please sign in to the school and change this password.
+
+${input.loginUrl}
+
+Kind regards,
+VLS Online`;
+    const bodyHtml = `
+${p(`Hi ${esc(name)},`)}
+${p(`Thank you! Your purchase was successful.`)}
+${detailTable([
+    { label: 'Course', value: input.courseTitle },
+    { label: 'Price', value: input.amountLabel },
+    { label: 'Email', value: input.email },
+    { label: 'Temporary password', value: input.temporaryPassword },
+  ])}
+${p(`Please sign in to the school and change this password.`)}
+${ctaButton(input.loginUrl, 'Sign in to the school')}`;
+    return { subject, text, html: bodyHtml };
+  }
+
+  if (!input.isNewZenlerUser && enrolled) {
+    const text = `Hi ${name},
+
+Thank you! Your purchase was successful.
+
+Course: ${input.courseTitle}
+Price: ${input.amountLabel}
+
+You can access the course in the school with the same login information you already use.
+
+${input.loginUrl}
+
+Kind regards,
+VLS Online`;
+    const bodyHtml = `
+${p(`Hi ${esc(name)},`)}
+${p(`Thank you! Your purchase was successful.`)}
+${detailTable([
+    { label: 'Course', value: input.courseTitle },
+    { label: 'Price', value: input.amountLabel },
+  ])}
+${p(`You can access the course in the school with the same login information you already use.`)}
+${ctaButton(input.loginUrl, 'Sign in to the school')}`;
+    return { subject, text, html: bodyHtml };
+  }
+
+  return null;
+}
+
 export async function sendStudentPaymentConfirmation(
   order: PaymentOrder,
   access?: ZenlerEnrollmentEmailContext | null,
@@ -291,6 +369,33 @@ export async function sendStudentPaymentConfirmation(
   const name = order.studentName || 'Student';
   const option = order.optionType || 'Course payment';
   const amount = formatAmount(order);
+
+  if (order.checkoutEnvironment === 'staging') {
+    const staged = stagingPurchaseConfirmation({
+      name,
+      email: to,
+      courseTitle: order.courseTitle,
+      amountLabel: amount,
+      loginUrl: access?.courseAccessUrl ?? VLS_SCHOOL_LOGIN_URL,
+      isNewZenlerUser: access?.isNewZenlerUser === true,
+      temporaryPassword: access?.temporaryPassword ?? null,
+      zenlerEnrollmentStatus: access?.zenlerEnrollmentStatus ?? '',
+    });
+    if (staged) {
+      await sendEmail({
+        to,
+        subject: staged.subject,
+        text: staged.text,
+        html: renderBrandedEmail({
+          title: 'Payment confirmation',
+          preheader: `Payment confirmed for ${order.courseTitle} — ${amount}`,
+          bodyHtml: staged.html,
+        }),
+      });
+      return true;
+    }
+  }
+
   const accessInstructions = studentPaymentAccessInstructions({ email: to, access });
 
   const text = `Hi ${name},

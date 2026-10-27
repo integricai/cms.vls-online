@@ -586,6 +586,7 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       studentEmail: schoolPassword.email,
       ...stripeNames,
       returnOrigin: parseCheckoutReturnOrigin(req),
+      cancelPath: typeof req.body?.cancelPath === 'string' ? req.body.cancelPath : null,
       environment,
     });
 
@@ -876,6 +877,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
         ...stripeNames,
         countryCode: quotedCountryCode,
         returnOrigin: parseCheckoutReturnOrigin(req),
+        cancelPath: typeof req.body?.cancelPath === 'string' ? req.body.cancelPath : null,
         environment,
       });
     } catch (err) {
