@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import {
   discountLinkExpiresAt,
   discountLinkStatus,
+  discountOfferLabel,
   discountPayUrl,
   generateDiscountToken,
   hashDiscountToken,
+  presentDiscountPrices,
   quoteDiscountedPrice,
   DISCOUNT_LINK_DAYS,
 } from './discountPayLink';
@@ -61,4 +63,39 @@ run('snapshots the discounted catalogue price in the same currency', () => {
   assert.equal(quoteDiscountedPrice(100, 'fixed', 25), 75);
   assert.equal(quoteDiscountedPrice(100, 'percent', 100), null);
   assert.equal(quoteDiscountedPrice(10, 'fixed', 9.6), null);
+});
+
+run('locks the full price and the payable price in the student currency', () => {
+  assert.deepEqual(presentDiscountPrices({
+    fullAmount: 100,
+    finalAmount: 70,
+    currency: 'USD',
+    countryCode: 'GB',
+    rates: { GBP: 0.8 },
+  }), { fullAmount: 80, finalAmount: 56, currency: 'GBP' });
+});
+
+run('keeps US dollars when the local currency cannot be charged', () => {
+  assert.deepEqual(presentDiscountPrices({
+    fullAmount: 100,
+    finalAmount: 70,
+    currency: 'USD',
+    countryCode: 'ID',
+    rates: { IDR: 16000 },
+  }), { fullAmount: 100, finalAmount: 70, currency: 'USD' });
+});
+
+run('shows the form percent, or the equivalent percent for a fixed discount', () => {
+  assert.equal(discountOfferLabel({
+    discountType: 'percent',
+    discountValue: 30,
+    fullAmount: 80,
+    payableAmount: 56,
+  }), '30%');
+  assert.equal(discountOfferLabel({
+    discountType: 'fixed',
+    discountValue: 25,
+    fullAmount: 80,
+    payableAmount: 60,
+  }), '25%');
 });

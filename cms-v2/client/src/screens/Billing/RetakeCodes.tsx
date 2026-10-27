@@ -6,6 +6,12 @@ const DEFAULT_CC_EMAIL = 'office@vls-online.com';
 
 type DiscountType = 'percent' | 'fixed';
 
+type CountryOption = {
+  code: string;
+  name: string;
+  currency: string;
+};
+
 type RetakeCode = {
   id: number;
   code: string;
@@ -51,6 +57,7 @@ function priceLabel(row: RetakeCode): string {
 
 export default function RetakeCodes() {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [countries, setCountries] = useState<CountryOption[]>([]);
   const [codes, setCodes] = useState<RetakeCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -62,6 +69,7 @@ export default function RetakeCodes() {
   const [email, setEmail] = useState('');
   const [ccEmail, setCcEmail] = useState(DEFAULT_CC_EMAIL);
   const [courseId, setCourseId] = useState('');
+  const [countryCode, setCountryCode] = useState('');
   const [discountType, setDiscountType] = useState<DiscountType>('percent');
   const [discountValue, setDiscountValue] = useState('');
 
@@ -74,10 +82,12 @@ export default function RetakeCodes() {
     Promise.all([
       api.get<Course[]>('/courses/active'),
       api.get<RetakeCode[]>('/retake-discount-codes'),
+      api.get<CountryOption[]>('/retake-discount-codes/countries'),
     ])
-      .then(([courseRows, codeRows]) => {
+      .then(([courseRows, codeRows, countryRows]) => {
         setCourses(courseRows.filter(course => course.zenlerCourseId));
         setCodes(codeRows);
+        setCountries(countryRows);
       })
       .catch(err => setError(err instanceof Error ? err.message : 'Could not load discount codes.'))
       .finally(() => setLoading(false));
@@ -95,6 +105,7 @@ export default function RetakeCodes() {
         email: email.trim(),
         ccEmail: ccEmail.trim() || DEFAULT_CC_EMAIL,
         courseId: Number(courseId),
+        countryCode,
         discountType,
         discountValue: Number(discountValue),
       });
@@ -133,7 +144,7 @@ export default function RetakeCodes() {
         <h1 className="text-lg font-bold text-slate-800">Single course Discount</h1>
         <p className="mt-0.5 text-xs text-slate-500">
           Send one student a payment link for one course.
-          The link expires after 14 days and is marked used after payment.
+          Prices use the student's country, the link expires after 14 days, and it is marked used after payment.
         </p>
       </div>
 
@@ -155,6 +166,15 @@ export default function RetakeCodes() {
         <label className="text-xs font-semibold text-slate-600">
           CC email
           <input className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm" type="email" value={ccEmail} onChange={event => setCcEmail(event.target.value)} required />
+        </label>
+        <label className="text-xs font-semibold text-slate-600">
+          Country
+          <select className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm" value={countryCode} onChange={event => setCountryCode(event.target.value)} required>
+            <option value="">{loading ? 'Loading countries…' : 'Choose the student\'s country'}</option>
+            {countries.map(country => (
+              <option key={country.code} value={country.code}>{country.name}</option>
+            ))}
+          </select>
         </label>
         <label className="text-xs font-semibold text-slate-600">
           Course

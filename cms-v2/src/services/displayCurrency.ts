@@ -89,6 +89,18 @@ export function currencyForCountry(countryCode: string | null | undefined): stri
   return COUNTRY_CURRENCY[country] ?? 'USD';
 }
 
+/** Countries staff can pick when sending a discount link, with the currency that country uses. */
+export function discountCountryOptions(): Array<{ code: string; name: string; currency: string }> {
+  const names = new Intl.DisplayNames(['en'], { type: 'region' });
+  return Object.entries(COUNTRY_CURRENCY)
+    .map(([code, currency]) => ({
+      code,
+      name: names.of(code) ?? code,
+      currency,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'en'));
+}
+
 export function convertUsdAmount(amountUsd: number, rate: number): number {
   return Math.round(amountUsd * rate * 100) / 100;
 }

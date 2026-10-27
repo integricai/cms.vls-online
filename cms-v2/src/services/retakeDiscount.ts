@@ -26,13 +26,16 @@ import {
   DISCOUNT_LINK_MESSAGES,
   discountLinkExpiresAt,
   discountLinkStatus,
+  discountOfferLabel,
   discountPayUrl,
   generateDiscountToken,
   hashDiscountToken,
+  presentDiscountPrices,
   quoteDiscountedPrice,
   type DiscountLinkStatus,
 } from './discountPayLink';
-import { formatDisplayMoney } from './displayCurrency';
+import { formatDisplayMoney, normalizeCountryCode } from './displayCurrency';
+import { getUsdRates } from './fxRates';
 import { sendRetakeDiscountCodeEmail } from './retakeDiscountEmail';
 import {
   createStripeCheckoutSession,
@@ -97,6 +100,25 @@ async function retireOpenDiscountCheckout(row: RetakeDiscountCode): Promise<void
   await releaseRetakeCodeForOrder(previous.id);
 }
 
+function offerEmailPrices(input: {
+  fullAmount: number;
+  finalAmount: number;
+  currency: string;
+  discountType: RetakeDiscountType;
+  discountValue: number;
+}): { fullPriceLabel: string; discountLabel: string; payableLabel: string } {
+  return {
+    fullPriceLabel: formatDisplayMoney(input.fullAmount, input.currency),
+    payableLabel: formatDisplayMoney(input.finalAmount, input.currency),
+    discountLabel: discountOfferLabel({
+      discountType: input.discountType,
+      discountValue: input.discountValue,
+      fullAmount: input.fullAmount,
+      payableAmount: input.finalAmount,
+    }),
+  };
+}
+
 function savedPrice(row: RetakeDiscountCode): { fullAmount: number; finalAmount: number; currency: string } | null {
   if (row.finalAmount == null || row.fullAmount == null) return null;
   return {
@@ -141,13 +163,16 @@ export async function issueRetakeDiscountCode(input: {
   discountType: unknown;
   discountValue: unknown;
   ccEmail?: unknown;
+  countryCode?: unknown;
   createdBy: number | null;
 }): Promise<IssuedRetakeCode> {
   const firstName = input.firstName.trim();
   const lastName = input.lastName.trim();
   const email = input.email.trim().toLowerCase();
+  const countryCode = normalizeCountryCode(String(input.countryCode ?? ''));
   if (!firstName || !lastName) throw new RetakeCodeError('Enter the student first and last name.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new RetakeCodeError('Enter a valid student email.');
+  if (!countryCode) throw new RetakeCodeError('Choose the student\'s country.');
   if (!Number.isInteger(input.courseId) || input.courseId <= 0) throw new RetakeCodeError('Choose a course.');
 
   const discount = parseRetakeDiscount(input);
@@ -159,7 +184,12 @@ export async function issueRetakeDiscountCode(input: {
     throw new RetakeCodeError('This course is not connected to the school yet.');
   }
   const ccEmail = parseCcEmail(input.ccEmail);
-  const price = await catalogueDiscountPrice(course.id, discount.type, discount.value);
+  const catalogue = await catalogueDiscountPrice(course.id, discount.type, discount.value);
+  const price = presentDiscountPrices({
+    ...catalogue,
+    countryCode,
+    rates: await getUsdRates(),
+  });
   const expiresAt = discountLinkExpiresAt();
 
   let saved: RetakeDiscountCode | null = null;
@@ -199,7 +229,7 @@ export async function issueRetakeDiscountCode(input: {
       cc: ccEmail,
       firstName,
       courseName: course.name,
-      priceLabel: formatDisplayMoney(price.finalAmount, price.currency),
+      ...offerEmailPrices({ ...price, discountType: discount.type, discountValue: discount.value }),
       payUrl: discountPayUrl(payToken),
       expiresAt,
     });
@@ -249,7 +279,7 @@ export async function resendRetakeDiscountCode(id: number): Promise<IssuedRetake
     cc: row.ccEmail || DEFAULT_DISCOUNT_CC_EMAIL,
     firstName: row.firstName,
     courseName,
-    priceLabel: formatDisplayMoney(price.finalAmount, price.currency),
+    ...offerEmailPrices({ ...price, discountType: row.discountType, discountValue: row.discountValue }),
     payUrl: discountPayUrl(payToken),
     expiresAt,
   });

@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
 import { RetakeCodeError, issueRetakeDiscountCode, listIssuedRetakeCodes, resendRetakeDiscountCode } from '../services/retakeDiscount';
+import { discountCountryOptions } from '../services/displayCurrency';
 
 const router = Router();
 router.use(authGuard, requireRole('admin', 'assistant'));
@@ -9,6 +10,10 @@ function positiveInt(value: unknown): number | null {
   const id = Number(value);
   return Number.isInteger(id) && id > 0 ? id : null;
 }
+
+router.get('/countries', (_req: Request, res: Response) => {
+  res.json({ ok: true, data: discountCountryOptions() });
+});
 
 router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
   try {
@@ -32,6 +37,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       courseId,
       discountType: body.discountType,
       discountValue: body.discountValue,
+      countryCode: body.countryCode,
       createdBy: req.user?.userId ?? null,
     });
     return res.status(201).json({ ok: true, data: issued });

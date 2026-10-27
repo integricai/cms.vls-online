@@ -48,7 +48,9 @@ function formatExpiryDate(value: Date): string {
 export function buildDiscountPayEmail(input: {
   firstName: string;
   courseName: string;
-  priceLabel: string;
+  fullPriceLabel: string;
+  discountLabel: string;
+  payableLabel: string;
   payUrl: string;
   expiresAt: Date;
 }): { subject: string; text: string; html: string } {
@@ -62,7 +64,9 @@ export function buildDiscountPayEmail(input: {
     `Your place on ${courseName} is ready.`,
     '',
     `Course: ${courseName}`,
-    `Price: ${input.priceLabel}`,
+    `Full price: ${input.fullPriceLabel}`,
+    `Discount: ${input.discountLabel}`,
+    `You pay: ${input.payableLabel}`,
     '',
     `Pay and enrol: ${input.payUrl}`,
     '',
@@ -86,7 +90,9 @@ export function buildDiscountPayEmail(input: {
           <p style="margin:0 0 12px;">Your place on <strong>${esc(courseName)}</strong> is ready.</p>
           <p style="margin:16px 0;padding:14px 16px;background:${BRAND.panel};border-radius:8px;color:${BRAND.navy};">
             <strong>Course:</strong> ${esc(courseName)}<br>
-            <strong>Price:</strong> ${esc(input.priceLabel)}
+            <strong>Full price:</strong> ${esc(input.fullPriceLabel)}<br>
+            <strong>Discount:</strong> ${esc(input.discountLabel)}<br>
+            <strong>You pay:</strong> ${esc(input.payableLabel)}
           </p>
           ${payButton(input.payUrl)}
           <p style="margin:16px 0 0;color:${BRAND.muted};">This link expires on ${esc(expires)} and can be used once. You will enter your email and payment details on the next page.</p>
@@ -139,7 +145,9 @@ export async function sendRetakeDiscountCodeEmail(input: {
   cc?: string | null;
   firstName: string;
   courseName: string;
-  priceLabel: string;
+  fullPriceLabel: string;
+  discountLabel: string;
+  payableLabel: string;
   payUrl: string;
   expiresAt: Date;
 }): Promise<void> {

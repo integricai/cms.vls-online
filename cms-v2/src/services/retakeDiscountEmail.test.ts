@@ -14,18 +14,23 @@ function run(name: string, fn: () => void) {
 const message = buildDiscountPayEmail({
   firstName: 'Amina',
   courseName: 'ACCA AFM',
-  priceLabel: '$80.00',
+  fullPriceLabel: '£100',
+  discountLabel: '20%',
+  payableLabel: '£80',
   payUrl: 'https://staging.vls-online.com/pay/abc123token',
   expiresAt: new Date('2026-11-10T12:00:00.000Z'),
 });
 
-run('names the course, the price, and the payment link', () => {
+run('names the course, the discount, and the payment link', () => {
   assert.match(message.subject, /ACCA AFM/);
   assert.match(message.text, /Course: ACCA AFM/);
-  assert.match(message.text, /Price: \$80\.00/);
+  assert.match(message.text, /Full price: £100/);
+  assert.match(message.text, /Discount: 20%/);
+  assert.match(message.text, /You pay: £80/);
   assert.match(message.text, /https:\/\/staging\.vls-online\.com\/pay\/abc123token/);
-  assert.match(message.html, /ACCA AFM/);
-  assert.match(message.html, /\$80\.00/);
+  assert.match(message.html, /Full price:/);
+  assert.match(message.html, /Discount:/);
+  assert.match(message.html, /You pay:/);
   assert.match(message.html, /href="https:\/\/staging\.vls-online\.com\/pay\/abc123token"/);
 });
 

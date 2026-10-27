@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { presentCheckoutAmount } from './displayCurrency';
 import { applyRetakeDiscount, type RetakeDiscountType } from './retakeDiscountMath';
 
 export const DISCOUNT_LINK_DAYS = 14;
@@ -58,4 +59,57 @@ export function quoteDiscountedPrice(
   value: number,
 ): number | null {
   return applyRetakeDiscount(listAmount, type, value);
+}
+
+/**
+ * Lock the full price and the payable price in the student's currency.
+ * Both use the same conversion as the course page. An unsupported currency stays in the catalogue currency.
+ */
+export function presentDiscountPrices(input: {
+  fullAmount: number;
+  finalAmount: number;
+  currency: string;
+  countryCode: string;
+  rates: Record<string, number> | null;
+}): { fullAmount: number; finalAmount: number; currency: string } {
+  const full = presentCheckoutAmount({
+    amount: input.fullAmount,
+    currency: input.currency,
+    countryCode: input.countryCode,
+    rates: input.rates,
+  });
+  const payable = presentCheckoutAmount({
+    amount: input.finalAmount,
+    currency: input.currency,
+    countryCode: input.countryCode,
+    rates: input.rates,
+  });
+  if (full.currency !== payable.currency) {
+    return {
+      fullAmount: input.fullAmount,
+      finalAmount: input.finalAmount,
+      currency: (input.currency || 'USD').toUpperCase(),
+    };
+  }
+  return { fullAmount: full.amount, finalAmount: payable.amount, currency: full.currency };
+}
+
+function formatPercent(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  if (!Number.isFinite(rounded) || rounded <= 0) return '0%';
+  return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
+}
+
+/** Percent from the form, or the equivalent percent when the discount was a fixed amount. */
+export function discountOfferLabel(input: {
+  discountType: RetakeDiscountType;
+  discountValue: number;
+  fullAmount: number;
+  payableAmount: number;
+}): string {
+  if (input.discountType === 'percent') return formatPercent(input.discountValue);
+  if (!(input.fullAmount > 0) || !(input.payableAmount >= 0) || input.payableAmount >= input.fullAmount) {
+    return '0%';
+  }
+  return formatPercent(((input.fullAmount - input.payableAmount) / input.fullAmount) * 100);
 }
