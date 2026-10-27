@@ -20,6 +20,9 @@ type RetakeCode = {
   usedAt: string | null;
   paymentOrderId: number | null;
   emailSentAt: string | null;
+  expiresAt?: string | null;
+  finalAmount?: number | null;
+  currency?: string | null;
   createdAt: string;
   emailSent?: boolean;
   emailError?: string | null;
@@ -32,8 +35,18 @@ function discountLabel(row: Pick<RetakeCode, 'discountType' | 'discountValue'>):
 
 function statusLabel(row: RetakeCode): string {
   if (row.used) return 'Used';
+  if (row.expiresAt && new Date(row.expiresAt).getTime() <= Date.now()) return 'Expired';
   if (row.paymentOrderId) return 'Waiting on payment';
   return 'Unused';
+}
+
+function priceLabel(row: RetakeCode): string {
+  if (row.finalAmount == null) return '—';
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: row.currency || 'USD' }).format(row.finalAmount);
+  } catch {
+    return `${row.finalAmount} ${row.currency || 'USD'}`;
+  }
 }
 
 export default function RetakeCodes() {
@@ -86,8 +99,8 @@ export default function RetakeCodes() {
         discountValue: Number(discountValue),
       });
       setMessage(issued.emailSent
-        ? `Sent ${issued.code} to ${issued.studentEmail} and ${issued.ccEmail || DEFAULT_CC_EMAIL}.`
-        : `Saved ${issued.code}, but the email was not sent. ${issued.emailError ?? ''}`.trim());
+        ? `Payment link sent to ${issued.studentEmail} and ${issued.ccEmail || DEFAULT_CC_EMAIL}.`
+        : `Saved, but the email was not sent. ${issued.emailError ?? ''}`.trim());
       setFirstName('');
       setLastName('');
       setEmail('');
@@ -107,7 +120,7 @@ export default function RetakeCodes() {
     setMessage('');
     try {
       const issued = await api.post<RetakeCode>(`/retake-discount-codes/${id}/resend`, {});
-      setMessage(`Sent ${issued.code} to ${issued.studentEmail}.`);
+      setMessage(`Sent a new payment link to ${issued.studentEmail}. The previous link no longer works.`);
       await loadCodes();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not resend that code.');
@@ -119,8 +132,8 @@ export default function RetakeCodes() {
       <div className="border-b border-slate-200 bg-white px-6 py-4">
         <h1 className="text-lg font-bold text-slate-800">Single course Discount</h1>
         <p className="mt-0.5 text-xs text-slate-500">
-          Generate a one-time code for one student and one course.
-          The code is emailed to the student, copied to the office, and marked used after payment.
+          Send one student a payment link for one course.
+          The link expires after 14 days and is marked used after payment.
         </p>
       </div>
 
@@ -169,7 +182,7 @@ export default function RetakeCodes() {
         {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
         <div>
           <button type="submit" className="rounded bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60" disabled={submitting}>
-            {submitting ? 'Generating…' : 'Generate discount code'}
+            {submitting ? 'Sending…' : 'Send payment link'}
           </button>
         </div>
       </form>
@@ -182,13 +195,14 @@ export default function RetakeCodes() {
               <th className="px-3 py-2">Student</th>
               <th className="px-3 py-2">Course</th>
               <th className="px-3 py-2">Discount</th>
+              <th className="px-3 py-2">Price</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>
           <tbody>
             {codes.length === 0 ? (
-              <tr><td className="px-3 py-4 text-slate-500" colSpan={6}>No discount codes yet.</td></tr>
+              <tr><td className="px-3 py-4 text-slate-500" colSpan={7}>No discount links yet.</td></tr>
             ) : codes.map(row => (
               <tr key={row.id} className="border-t border-slate-100">
                 <td className="px-3 py-2 font-mono text-xs">{row.code}</td>
@@ -198,6 +212,7 @@ export default function RetakeCodes() {
                 </td>
                 <td className="px-3 py-2">{row.courseName}</td>
                 <td className="px-3 py-2">{discountLabel(row)}</td>
+                <td className="px-3 py-2">{priceLabel(row)}</td>
                 <td className="px-3 py-2">{statusLabel(row)}</td>
                 <td className="px-3 py-2 text-right">
                   {row.used ? null : (

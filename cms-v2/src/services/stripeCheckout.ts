@@ -184,6 +184,19 @@ export async function expireOpenStripeCheckoutSession(
   }
 }
 
+export async function readStripeCheckoutSession(
+  sessionId: string,
+  environment?: CheckoutEnvironment | null,
+): Promise<{ status: string; url: string | null }> {
+  const secretKey = stripeSecretKeyForEnvironment(environment);
+  const body = await stripeApiRequest(
+    secretKey,
+    `/checkout/sessions/${encodeURIComponent(sessionId)}`,
+    { method: 'GET' },
+  ) as { status?: string; url?: string | null };
+  return { status: body.status ?? '', url: body.url ?? null };
+}
+
 export async function createStripeCheckoutSession(input: {
   orderId: number;
   paymentOptionId?: number | null;

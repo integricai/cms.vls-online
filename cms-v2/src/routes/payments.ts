@@ -54,6 +54,7 @@ import {
   holdRetakeCodeForOrder,
   previewRetakeDiscount,
   releaseRetakeCodeForOrder,
+  openDiscountPaymentLink,
   RetakeCodeError,
 } from '../services/retakeDiscount';
 import {
@@ -90,6 +91,12 @@ const schoolAccountRateLimit = rateLimit({
 const schoolLoginRateLimit = rateLimit({
   name: 'school-login',
   limit: 10,
+  windowMs: 15 * 60 * 1000,
+});
+
+const discountLinkRateLimit = rateLimit({
+  name: 'discount-link',
+  limit: 30,
   windowMs: 15 * 60 * 1000,
 });
 
@@ -980,6 +987,22 @@ async function paymentStatusForSession(
 
   return { order, confirmationEmailFailed };
 }
+
+router.post('/discount-link/open', discountLinkRateLimit, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await openDiscountPaymentLink({
+      token: String((req.body as { token?: unknown } | undefined)?.token ?? ''),
+      returnOrigin: parseCheckoutReturnOrigin(req),
+      environment: checkoutEnvironmentForRequest(req),
+    });
+    return res.json({ ok: true, ...result });
+  } catch (err) {
+    if (err instanceof RetakeCodeError) {
+      return res.status(err.status).json({ ok: false, error: err.message });
+    }
+    next(err);
+  }
+});
 
 router.get('/status', async (req: Request, res: Response, next: NextFunction) => {
   try {

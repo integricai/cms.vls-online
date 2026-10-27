@@ -20,6 +20,10 @@ export type RetakeDiscountCode = {
   paymentOrderId: number | null;
   reservedAt: string | null;
   emailSentAt: string | null;
+  expiresAt: string | null;
+  fullAmount: number | null;
+  finalAmount: number | null;
+  currency: string | null;
   createdAt: string;
 };
 
@@ -39,6 +43,10 @@ interface DbRow {
   payment_order_id: number | null;
   reserved_at: Date | null;
   email_sent_at: Date | null;
+  expires_at?: Date | null;
+  full_amount?: string | number | null;
+  final_amount?: string | number | null;
+  currency?: string | null;
   created_at: Date;
 }
 
@@ -64,6 +72,10 @@ function rowToCode(row: DbRow): RetakeDiscountCode {
     paymentOrderId: row.payment_order_id,
     reservedAt: iso(row.reserved_at),
     emailSentAt: iso(row.email_sent_at),
+    expiresAt: iso(row.expires_at),
+    fullAmount: row.full_amount != null ? Number(row.full_amount) : null,
+    finalAmount: row.final_amount != null ? Number(row.final_amount) : null,
+    currency: row.currency ?? null,
     createdAt: row.created_at.toISOString(),
   };
 }
@@ -94,6 +106,16 @@ export async function ensureRetakeDiscountSchema(): Promise<void> {
     await sql`CREATE INDEX IF NOT EXISTS retake_discount_codes_email_idx ON retake_discount_codes (student_email)`;
     await sql`CREATE INDEX IF NOT EXISTS retake_discount_codes_course_idx ON retake_discount_codes (course_id)`;
     await sql`ALTER TABLE retake_discount_codes ADD COLUMN IF NOT EXISTS cc_email TEXT`;
+    await sql`ALTER TABLE retake_discount_codes ADD COLUMN IF NOT EXISTS token_hash TEXT`;
+    await sql`ALTER TABLE retake_discount_codes ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`;
+    await sql`ALTER TABLE retake_discount_codes ADD COLUMN IF NOT EXISTS full_amount NUMERIC(10, 2)`;
+    await sql`ALTER TABLE retake_discount_codes ADD COLUMN IF NOT EXISTS final_amount NUMERIC(10, 2)`;
+    await sql`ALTER TABLE retake_discount_codes ADD COLUMN IF NOT EXISTS currency TEXT`;
+    await sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS retake_discount_codes_token_hash_idx
+      ON retake_discount_codes (token_hash)
+      WHERE token_hash IS NOT NULL
+    `;
   })();
   await schemaReady;
 }
@@ -119,12 +141,18 @@ export async function insertRetakeDiscountCode(input: {
   discountValue: number;
   ccEmail: string | null;
   createdBy: number | null;
+  tokenHash: string;
+  expiresAt: Date;
+  fullAmount: number;
+  finalAmount: number;
+  currency: string;
 }): Promise<RetakeDiscountCode> {
   await ensureRetakeDiscountSchema();
   const rows = await sql`
     INSERT INTO retake_discount_codes (
       code, course_id, student_email, first_name, last_name,
-      discount_type, discount_value, cc_email, created_by
+      discount_type, discount_value, cc_email, created_by,
+      token_hash, expires_at, full_amount, final_amount, currency
     )
     VALUES (
       ${input.code},
@@ -135,7 +163,12 @@ export async function insertRetakeDiscountCode(input: {
       ${input.discountType},
       ${input.discountValue},
       ${input.ccEmail},
-      ${input.createdBy}
+      ${input.createdBy},
+      ${input.tokenHash},
+      ${input.expiresAt},
+      ${input.fullAmount},
+      ${input.finalAmount},
+      ${input.currency}
     )
     RETURNING *
   `;
@@ -164,6 +197,41 @@ export async function getRetakeDiscountCodeById(id: number): Promise<RetakeDisco
     LIMIT 1
   `;
   return rows[0] ? rowToCode(rows[0] as DbRow) : null;
+}
+
+export async function getRetakeDiscountCodeByTokenHash(tokenHash: string): Promise<RetakeDiscountCode | null> {
+  await ensureRetakeDiscountSchema();
+  const rows = await sql`
+    SELECT r.*, c.name AS course_name
+    FROM retake_discount_codes r
+    JOIN courses c ON c.id = r.course_id
+    WHERE r.token_hash = ${tokenHash}
+    LIMIT 1
+  `;
+  return rows[0] ? rowToCode(rows[0] as DbRow) : null;
+}
+
+/** Replace the payment link. The previous link stops working. A used offer is left unchanged. */
+export async function replaceDiscountPaymentLink(id: number, input: {
+  tokenHash: string;
+  expiresAt: Date;
+  fullAmount: number;
+  finalAmount: number;
+  currency: string;
+}): Promise<boolean> {
+  await ensureRetakeDiscountSchema();
+  const rows = await sql`
+    UPDATE retake_discount_codes
+    SET token_hash = ${input.tokenHash},
+        expires_at = ${input.expiresAt},
+        full_amount = ${input.fullAmount},
+        final_amount = ${input.finalAmount},
+        currency = ${input.currency}
+    WHERE id = ${id}
+      AND used = FALSE
+    RETURNING id
+  `;
+  return rows.length > 0;
 }
 
 export async function getRetakeDiscountCodeByCode(code: string): Promise<RetakeDiscountCode | null> {

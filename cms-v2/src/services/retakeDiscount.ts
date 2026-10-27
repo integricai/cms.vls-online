@@ -1,6 +1,9 @@
 import { getCourseById } from '../models/course';
+import { listActiveGeoPricesForCourse } from '../models/courseGeoPrice';
 import {
+  attachCheckoutSession,
   closePendingPaymentOrder,
+  createPaymentOrder,
   getPaymentOrder,
   paymentOrderCheckoutId,
 } from '../models/paymentOrder';
@@ -9,15 +12,34 @@ import {
   generateRetakeCodeValue,
   getRetakeDiscountCodeByCode,
   getRetakeDiscountCodeById,
+  getRetakeDiscountCodeByTokenHash,
   insertRetakeDiscountCode,
   listRetakeDiscountCodes,
   markRetakeCodeEmailSent,
   releaseRetakeCodeForOrder,
+  replaceDiscountPaymentLink,
   reserveRetakeCode,
   type RetakeDiscountCode,
 } from '../models/retakeDiscountCode';
+import type { CheckoutEnvironment } from '../../shared/types';
+import {
+  DISCOUNT_LINK_MESSAGES,
+  discountLinkExpiresAt,
+  discountLinkStatus,
+  discountPayUrl,
+  generateDiscountToken,
+  hashDiscountToken,
+  quoteDiscountedPrice,
+  type DiscountLinkStatus,
+} from './discountPayLink';
+import { formatDisplayMoney } from './displayCurrency';
 import { sendRetakeDiscountCodeEmail } from './retakeDiscountEmail';
-import { expireOpenStripeCheckoutSession } from './stripeCheckout';
+import {
+  createStripeCheckoutSession,
+  expireOpenStripeCheckoutSession,
+  readStripeCheckoutSession,
+  stripePaymentMethodTypes,
+} from './stripeCheckout';
 import {
   applyRetakeDiscount,
   normalizeRetakeCode,
@@ -43,9 +65,45 @@ export type IssuedRetakeCode = RetakeDiscountCode & {
   emailError: string | null;
 };
 
-function discountLabel(type: RetakeDiscountType, value: number): string {
-  if (type === 'percent') return `${value}%`;
-  return `$${value.toFixed(2)}`;
+async function catalogueDiscountPrice(
+  courseId: number,
+  discountType: RetakeDiscountType,
+  discountValue: number,
+): Promise<{ fullAmount: number; finalAmount: number; currency: string }> {
+  const prices = await listActiveGeoPricesForCourse(courseId);
+  const price = prices.find(row => row.isDefault) ?? prices[0];
+  if (!price) throw new RetakeCodeError('This course has no active price.');
+  const finalAmount = quoteDiscountedPrice(price.effectiveAmount, discountType, discountValue);
+  if (finalAmount == null) {
+    throw new RetakeCodeError('This discount reduces the price below the minimum we can charge.');
+  }
+  return {
+    fullAmount: price.effectiveAmount,
+    finalAmount,
+    currency: (price.currency || 'USD').toUpperCase(),
+  };
+}
+
+async function retireOpenDiscountCheckout(row: RetakeDiscountCode): Promise<void> {
+  if (!row.paymentOrderId || row.used) return;
+  const previous = await getPaymentOrder(row.paymentOrderId);
+  if (!previous || previous.status !== 'Pending') return;
+  const sessionId = paymentOrderCheckoutId(previous);
+  if (sessionId && previous.provider === 'stripe') {
+    const outcome = await expireOpenStripeCheckoutSession(sessionId, previous.checkoutEnvironment);
+    if (outcome === 'complete') throw new RetakeCodeError('This offer has already been paid.', 409);
+  }
+  await closePendingPaymentOrder({ orderId: previous.id, status: 'Cancelled' });
+  await releaseRetakeCodeForOrder(previous.id);
+}
+
+function savedPrice(row: RetakeDiscountCode): { fullAmount: number; finalAmount: number; currency: string } | null {
+  if (row.finalAmount == null || row.fullAmount == null) return null;
+  return {
+    fullAmount: row.fullAmount,
+    finalAmount: row.finalAmount,
+    currency: (row.currency || 'USD').toUpperCase(),
+  };
 }
 
 function parseCcEmail(value: unknown): string {
@@ -97,10 +155,17 @@ export async function issueRetakeDiscountCode(input: {
 
   const course = await getCourseById(input.courseId);
   if (!course || !course.isActive) throw new RetakeCodeError('Course not found or inactive.', 404);
+  if (!course.zenlerCourseId?.trim()) {
+    throw new RetakeCodeError('This course is not connected to the school yet.');
+  }
   const ccEmail = parseCcEmail(input.ccEmail);
+  const price = await catalogueDiscountPrice(course.id, discount.type, discount.value);
+  const expiresAt = discountLinkExpiresAt();
 
   let saved: RetakeDiscountCode | null = null;
+  let payToken = '';
   for (let attempt = 0; attempt < 5; attempt += 1) {
+    payToken = generateDiscountToken();
     try {
       saved = await insertRetakeDiscountCode({
         code: generateRetakeCodeValue(),
@@ -112,6 +177,11 @@ export async function issueRetakeDiscountCode(input: {
         discountValue: discount.value,
         ccEmail,
         createdBy: input.createdBy,
+        tokenHash: hashDiscountToken(payToken),
+        expiresAt,
+        fullAmount: price.fullAmount,
+        finalAmount: price.finalAmount,
+        currency: price.currency,
       });
       break;
     } catch (err) {
@@ -129,14 +199,14 @@ export async function issueRetakeDiscountCode(input: {
       cc: ccEmail,
       firstName,
       courseName: course.name,
-      coursePageUrl: course.coursePageUrl,
-      code: saved.code,
-      discountLabel: discountLabel(discount.type, discount.value),
+      priceLabel: formatDisplayMoney(price.finalAmount, price.currency),
+      payUrl: discountPayUrl(payToken),
+      expiresAt,
     });
     await markRetakeCodeEmailSent(saved.id);
     emailSent = true;
   } catch (err) {
-    emailError = err instanceof Error ? err.message : 'The code was saved, but the email could not be sent.';
+    emailError = err instanceof Error ? err.message : 'The offer was saved, but the email could not be sent.';
     console.error('[retake-code] email failed', emailError);
   }
 
@@ -149,14 +219,39 @@ export async function resendRetakeDiscountCode(id: number): Promise<IssuedRetake
   if (!row) throw new RetakeCodeError('Discount code not found.', 404);
   if (row.used) throw new RetakeCodeError('This discount code has already been used.');
   const course = await getCourseById(row.courseId);
+  const courseName = course?.name ?? row.courseName ?? 'your course';
+  const price = savedPrice(row) ?? await catalogueDiscountPrice(row.courseId, row.discountType, row.discountValue);
+  await retireOpenDiscountCheckout(row);
+
+  const expiresAt = discountLinkExpiresAt();
+  let payToken = '';
+  let replaced = false;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    payToken = generateDiscountToken();
+    try {
+      replaced = await replaceDiscountPaymentLink(row.id, {
+        tokenHash: hashDiscountToken(payToken),
+        expiresAt,
+        fullAmount: price.fullAmount,
+        finalAmount: price.finalAmount,
+        currency: price.currency,
+      });
+      break;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!/duplicate|unique/i.test(message) || attempt === 4) throw err;
+    }
+  }
+  if (!replaced) throw new RetakeCodeError('This discount code has already been used.');
+
   await sendRetakeDiscountCodeEmail({
     to: row.studentEmail,
     cc: row.ccEmail || DEFAULT_DISCOUNT_CC_EMAIL,
     firstName: row.firstName,
-    courseName: course?.name ?? row.courseName ?? 'your course',
-    coursePageUrl: course?.coursePageUrl,
-    code: row.code,
-    discountLabel: discountLabel(row.discountType, row.discountValue),
+    courseName,
+    priceLabel: formatDisplayMoney(price.finalAmount, price.currency),
+    payUrl: discountPayUrl(payToken),
+    expiresAt,
   });
   await markRetakeCodeEmailSent(row.id);
   const fresh = await getRetakeDiscountCodeById(row.id);
@@ -242,6 +337,92 @@ export async function holdRetakeCodeForOrder(codeId: number, orderId: number): P
   }
   if (await reserveRetakeCode(codeId, orderId)) return;
   throw new RetakeCodeError(RETAKE_CODE_HELD, 409);
+}
+
+export type OpenDiscountLinkResult = {
+  status: DiscountLinkStatus | 'error';
+  message: string;
+  checkoutUrl: string | null;
+};
+
+function closedLink(status: Exclude<DiscountLinkStatus, 'valid'>): OpenDiscountLinkResult {
+  return { status, message: DISCOUNT_LINK_MESSAGES[status], checkoutUrl: null };
+}
+
+/**
+ * Open a discount payment link. A valid link returns the Stripe page.
+ * Opening the link does not mark the offer used.
+ */
+export async function openDiscountPaymentLink(input: {
+  token: string;
+  returnOrigin?: string | null;
+  environment: CheckoutEnvironment;
+}): Promise<OpenDiscountLinkResult> {
+  const token = input.token.trim();
+  if (!/^[A-Za-z0-9_-]{32,128}$/.test(token)) return closedLink('invalid');
+
+  const row = await getRetakeDiscountCodeByTokenHash(hashDiscountToken(token));
+  const status = discountLinkStatus(row);
+  if (status !== 'valid' || !row) return closedLink(status === 'valid' ? 'invalid' : status);
+
+  const price = savedPrice(row);
+  if (!price) return closedLink('invalid');
+
+  const course = await getCourseById(row.courseId);
+  if (!course?.isActive || !course.zenlerCourseId?.trim()) {
+    throw new RetakeCodeError('This course cannot be paid for from this link.');
+  }
+
+  if (row.paymentOrderId) {
+    const existing = await getPaymentOrder(row.paymentOrderId);
+    if (existing?.status === 'Paid' || existing?.status === 'Refunded') return closedLink('used');
+    if (existing?.status === 'Pending') {
+      const sessionId = paymentOrderCheckoutId(existing);
+      if (sessionId && existing.provider === 'stripe') {
+        const session = await readStripeCheckoutSession(sessionId, existing.checkoutEnvironment);
+        if (session.status === 'complete') return closedLink('used');
+        if (session.status === 'open' && session.url) {
+          return { status: 'valid', message: '', checkoutUrl: session.url };
+        }
+      }
+      await retireOpenDiscountCheckout(row);
+    }
+  }
+
+  const order = await createPaymentOrder({
+    courseId: course.id,
+    zenlerCourseId: course.zenlerCourseId,
+    courseTitle: course.name,
+    optionType: 'discount-link',
+    studentName: `${row.firstName} ${row.lastName}`.trim() || null,
+    studentEmail: null,
+    amount: price.finalAmount,
+    currency: price.currency,
+    environment: input.environment,
+    provider: 'stripe',
+  });
+
+  await holdRetakeCodeForOrder(row.id, order.id);
+
+  const session = await createStripeCheckoutSession({
+    orderId: order.id,
+    courseId: course.id,
+    zenlerCourseId: course.zenlerCourseId,
+    courseTitle: course.name,
+    paymentCardTitle: course.name,
+    amount: price.finalAmount,
+    currency: price.currency,
+    studentEmail: null,
+    studentFirstName: row.firstName,
+    studentLastName: row.lastName,
+    paymentMethodTypes: stripePaymentMethodTypes(true, price.currency),
+    returnOrigin: input.returnOrigin,
+    cancelPath: '/',
+    environment: input.environment,
+  });
+  if (!session.url) throw new RetakeCodeError('Stripe did not return a checkout page.', 502);
+  await attachCheckoutSession(order.id, { provider: 'stripe', checkoutId: session.id });
+  return { status: 'valid', message: '', checkoutUrl: session.url };
 }
 
 export { consumeRetakeCodeForOrder, releaseRetakeCodeForOrder };
