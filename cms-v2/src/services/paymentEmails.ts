@@ -283,9 +283,9 @@ ${p(`If you are a new student, create your account at <a href="https://school.vl
 }
 
 /**
- * Staging purchases skip the account form. New students receive a temporary
+ * Payment-first purchases skip the account form. New students receive a temporary
  * password. Returning students are told to use the school login they already have.
- * Production orders keep the existing confirmation.
+ * A buyer who chose a password at checkout keeps the older confirmation.
  */
 export function stagingPurchaseConfirmation(input: {
   name: string;
@@ -369,34 +369,30 @@ export async function sendStudentPaymentConfirmation(
 
   const name = order.studentName || 'Student';
   const option = order.optionType || 'Course payment';
-  const amount = order.checkoutEnvironment === 'staging'
-    ? formatDisplayMoney(order.amount, order.currency || 'USD')
-    : formatAmount(order);
+  const amount = formatDisplayMoney(order.amount, order.currency || 'USD');
 
-  if (order.checkoutEnvironment === 'staging') {
-    const staged = stagingPurchaseConfirmation({
-      name,
-      email: to,
-      courseTitle: order.courseTitle,
-      amountLabel: amount,
-      loginUrl: access?.courseAccessUrl ?? VLS_SCHOOL_LOGIN_URL,
-      isNewZenlerUser: access?.isNewZenlerUser === true,
-      temporaryPassword: access?.temporaryPassword ?? null,
-      zenlerEnrollmentStatus: access?.zenlerEnrollmentStatus ?? '',
+  const staged = stagingPurchaseConfirmation({
+    name,
+    email: to,
+    courseTitle: order.courseTitle,
+    amountLabel: amount,
+    loginUrl: access?.courseAccessUrl ?? VLS_SCHOOL_LOGIN_URL,
+    isNewZenlerUser: access?.isNewZenlerUser === true,
+    temporaryPassword: access?.temporaryPassword ?? null,
+    zenlerEnrollmentStatus: access?.zenlerEnrollmentStatus ?? '',
+  });
+  if (staged) {
+    await sendEmail({
+      to,
+      subject: staged.subject,
+      text: staged.text,
+      html: renderBrandedEmail({
+        title: 'Payment confirmation',
+        preheader: `Payment confirmed for ${order.courseTitle} — ${amount}`,
+        bodyHtml: staged.html,
+      }),
     });
-    if (staged) {
-      await sendEmail({
-        to,
-        subject: staged.subject,
-        text: staged.text,
-        html: renderBrandedEmail({
-          title: 'Payment confirmation',
-          preheader: `Payment confirmed for ${order.courseTitle} — ${amount}`,
-          bodyHtml: staged.html,
-        }),
-      });
-      return true;
-    }
+    return true;
   }
 
   const accessInstructions = studentPaymentAccessInstructions({ email: to, access });
