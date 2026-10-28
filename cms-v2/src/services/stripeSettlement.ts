@@ -1,9 +1,9 @@
 import type { CheckoutEnvironment } from '../../shared/types';
 import { sql } from '../db/client';
-import { savePaymentOrderSettlement } from '../models/paymentOrder';
+import { ensurePaymentPresentmentColumns, savePaymentOrderSettlement } from '../models/paymentOrder';
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 import { stripeSecretKeyForEnvironment } from './stripeCheckout';
-import { parseStripeSettlement } from './stripeSettlementParse';
+import { parseStripeSettlement, type StoredCharge } from './stripeSettlementParse';
 
 const FEE_BATCH = 40;
 
@@ -12,6 +12,8 @@ interface MissingFeeRow {
   payment_order_id: number;
   payment_id: string | null;
   checkout_environment: string | null;
+  amount: string;
+  currency: string;
 }
 
 function otherEnvironment(environment: CheckoutEnvironment): CheckoutEnvironment {
@@ -34,39 +36,53 @@ async function stripeGet(secretKey: string, path: string): Promise<unknown> {
   return body;
 }
 
-async function lookupOnce(paymentIntentId: string, environment: CheckoutEnvironment) {
+async function lookupOnce(
+  paymentIntentId: string,
+  environment: CheckoutEnvironment,
+  storedCharge: StoredCharge | null,
+) {
   const secretKey = stripeSecretKeyForEnvironment(environment);
   const body = await stripeGet(
     secretKey,
     `/payment_intents/${encodeURIComponent(paymentIntentId)}?expand[]=latest_charge.balance_transaction`,
   );
-  return parseStripeSettlement(body);
+  return parseStripeSettlement(body, storedCharge);
 }
 
 /**
  * Stripe fees are not on the payment webhook. Read the balance transaction once
  * and store it. A live payment recorded against the test key is tried once on the other key.
  */
-export async function lookupStripeSettlement(paymentIntentId: string, environment: CheckoutEnvironment) {
+export async function lookupStripeSettlement(
+  paymentIntentId: string,
+  environment: CheckoutEnvironment,
+  storedCharge: StoredCharge | null = null,
+) {
   try {
-    return await lookupOnce(paymentIntentId, environment);
+    return await lookupOnce(paymentIntentId, environment, storedCharge);
   } catch (err) {
     const missing = Boolean((err as { missing?: boolean }).missing);
     if (!missing) throw err;
-    return lookupOnce(paymentIntentId, otherEnvironment(environment));
+    return lookupOnce(paymentIntentId, otherEnvironment(environment), storedCharge);
   }
 }
 
 async function missingFeeRows(fromDate: string, toDate: string): Promise<MissingFeeRow[]> {
+  await ensurePaymentPresentmentColumns();
   const rows = await sql`
     SELECT
       s.id,
       s.payment_order_id,
+      po.amount,
+      po.currency,
       COALESCE(po.stripe_payment_intent_id, po.provider_payment_id) AS payment_id,
       po.checkout_environment
     FROM sales s
     JOIN payment_orders po ON po.id = s.payment_order_id
-    WHERE po.processor_fee IS NULL
+    WHERE (
+        po.processor_fee IS NULL
+        OR po.settlement_currency IS NULL
+      )
       AND COALESCE(po.provider, 'stripe') <> 'paypal'
       AND COALESCE(po.stripe_payment_intent_id, po.provider_payment_id) IS NOT NULL
       AND (s.sold_at AT TIME ZONE 'Europe/London')::date >= CAST(${fromDate} AS date)
@@ -78,11 +94,15 @@ async function missingFeeRows(fromDate: string, toDate: string): Promise<Missing
 }
 
 export async function countMissingStripeFees(fromDate: string, toDate: string): Promise<number> {
+  await ensurePaymentPresentmentColumns();
   const rows = await sql`
     SELECT COUNT(*)::int AS remaining
     FROM sales s
     JOIN payment_orders po ON po.id = s.payment_order_id
-    WHERE po.processor_fee IS NULL
+    WHERE (
+        po.processor_fee IS NULL
+        OR po.settlement_currency IS NULL
+      )
       AND COALESCE(po.provider, 'stripe') <> 'paypal'
       AND COALESCE(po.stripe_payment_intent_id, po.provider_payment_id) IS NOT NULL
       AND (s.sold_at AT TIME ZONE 'Europe/London')::date >= CAST(${fromDate} AS date)
@@ -102,11 +122,15 @@ export async function syncStripeFees(fromDate: string, toDate: string): Promise<
       if (!row?.payment_id) continue;
       const environment: CheckoutEnvironment = row.checkout_environment === 'production' ? 'production' : 'staging';
       try {
-        const settlement = await lookupStripeSettlement(row.payment_id, environment);
+        const settlement = await lookupStripeSettlement(row.payment_id, environment, {
+          amount: Number(row.amount),
+          currency: row.currency,
+        });
         if (!settlement) continue;
         await savePaymentOrderSettlement(row.payment_order_id, {
           processorFee: settlement.fee,
           netAmount: settlement.net,
+          settlementCurrency: settlement.currency,
           paymentMethod: settlement.paymentMethod,
         });
         updated += 1;

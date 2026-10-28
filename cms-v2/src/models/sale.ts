@@ -52,6 +52,7 @@ interface SaleListDbRow extends SaleDbRow {
   option_type: string | null;
   processor_fee: string | null;
   net_amount: string | null;
+  settlement_currency: string | null;
   payment_method_label: string | null;
   checkout_environment: string | null;
   presentment_amount: string | null;
@@ -114,6 +115,7 @@ function rowToSaleListItem(row: SaleListDbRow): SaleListItem {
     optionType: row.option_type ?? null,
     processorFee: num(row.processor_fee),
     netAmount: num(row.net_amount),
+    settlementCurrency: row.settlement_currency ?? null,
     paymentMethod: row.payment_method_label ?? null,
     checkoutEnvironment: row.checkout_environment === 'production'
       ? 'production'
@@ -173,7 +175,8 @@ export async function getSaleListItemById(id: number): Promise<SaleListItem | nu
       po.payment_method_label,
       po.checkout_environment,
       po.presentment_amount,
-      po.presentment_currency
+      po.presentment_currency,
+      po.settlement_currency
     FROM sales s
     LEFT JOIN courses c ON c.id = s.course_id
     LEFT JOIN customers cu ON cu.id = s.customer_id
@@ -277,7 +280,8 @@ export async function listSales(filters: ListSalesFilters = {}): Promise<SaleLis
       po.payment_method_label,
       po.checkout_environment,
       po.presentment_amount,
-      po.presentment_currency
+      po.presentment_currency,
+      po.settlement_currency
     FROM sales s
     LEFT JOIN courses c ON c.id = s.course_id
     LEFT JOIN customers cu ON cu.id = s.customer_id

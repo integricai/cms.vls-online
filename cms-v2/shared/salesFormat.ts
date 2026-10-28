@@ -87,6 +87,37 @@ export function saleSessionLabel(
   return `${length} · valid to ${valid}`;
 }
 
+export interface DayMoneyRow {
+  date: string;
+  currency: string;
+  count: number;
+  gross: number;
+  earnings: number;
+}
+
+/**
+ * Adds nets that settled in a different currency onto that currency's day.
+ * A day with no sales in the settlement currency still keeps the earnings.
+ */
+export function addCrossCurrencyEarnings(
+  rows: DayMoneyRow[],
+  settled: Array<{ date: string; currency: string; earnings: number }>,
+): DayMoneyRow[] {
+  const next = rows.map(row => ({ ...row, currency: row.currency.toUpperCase() }));
+  for (const extra of settled) {
+    const currency = extra.currency.trim().toUpperCase();
+    if (!currency || extra.earnings === 0) continue;
+    const existing = next.find(row => row.date === extra.date && row.currency === currency);
+    const earnings = Math.round(extra.earnings * 100) / 100;
+    if (existing) {
+      existing.earnings = Math.round((existing.earnings + earnings) * 100) / 100;
+      continue;
+    }
+    next.push({ date: extra.date, currency, count: 0, gross: 0, earnings });
+  }
+  return next;
+}
+
 /** Currency with the most sales in the window. USD wins a tie. */
 export function pickDashboardCurrency(
   rows: Array<{ currency: string; count: number; date: string }>,

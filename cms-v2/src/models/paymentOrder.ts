@@ -447,6 +447,7 @@ export function ensurePaymentPresentmentColumns(): Promise<void> {
   presentmentColumnsReady ??= (async () => {
     await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS presentment_amount NUMERIC(10, 2)`;
     await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS presentment_currency TEXT`;
+    await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS settlement_currency TEXT`;
   })();
   return presentmentColumnsReady;
 }
@@ -861,17 +862,23 @@ export async function releaseOrderEmailSend(
 
 export async function savePaymentOrderSettlement(orderId: number, data: {
   processorFee: number;
-  netAmount: number;
+  netAmount: number | null;
+  settlementCurrency: string;
   paymentMethod: string | null;
 }): Promise<void> {
+  await ensurePaymentPresentmentColumns();
   await sql`
     UPDATE payment_orders
     SET
       processor_fee = ${data.processorFee},
       net_amount = ${data.netAmount},
-      payment_method_label = ${data.paymentMethod}
+      settlement_currency = ${data.settlementCurrency},
+      payment_method_label = COALESCE(${data.paymentMethod}, payment_method_label)
     WHERE id = ${orderId}
-      AND processor_fee IS NULL
+      AND (
+        processor_fee IS NULL
+        OR settlement_currency IS NULL
+      )
   `;
 }
 

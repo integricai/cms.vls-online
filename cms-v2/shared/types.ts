@@ -574,10 +574,12 @@ export interface SaleListItem extends Sale {
   refundedAt: Date | null;
   /** Plan name stored on the payment, when checkout recorded one. */
   optionType: string | null;
-  /** Processor fee in the sale currency. Null until Stripe has been read. */
+  /** Processor fee in the settlement currency. Null until Stripe has been read. */
   processorFee: number | null;
-  /** Amount after the processor fee. */
+  /** Amount after the processor fee, in the settlement currency. */
   netAmount: number | null;
+  /** Currency of the Stripe fee and net. Null until Stripe has been read. */
+  settlementCurrency: string | null;
   /** Card, PayPal wallet, Klarna, and similar. Separate from the processor. */
   paymentMethod: string | null;
   checkoutEnvironment: CheckoutEnvironment | null;

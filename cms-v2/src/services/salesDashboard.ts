@@ -106,7 +106,7 @@ export async function buildSalesDashboard(range: DashboardRange, now = new Date(
   const overview = sumWindow(rows, currency, bounds.start, bounds.end);
   const otherCurrencies = [...new Set(
     rows
-      .filter(row => row.date >= bounds.start && row.date <= bounds.end && row.currency !== currency && row.gross > 0)
+      .filter(row => row.date >= bounds.start && row.date <= bounds.end && row.currency !== currency && (row.gross > 0 || row.earnings > 0))
       .map(row => row.currency),
   )];
 

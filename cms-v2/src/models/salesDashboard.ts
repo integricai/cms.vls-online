@@ -1,3 +1,4 @@
+import { addCrossCurrencyEarnings } from '../../shared/salesFormat';
 import { sql } from '../db/client';
 import { ensurePaymentPresentmentColumns } from './paymentOrder';
 
@@ -28,24 +29,57 @@ function dayKey(value: unknown): string {
 }
 
 export async function listSalesDayTotals(startDate: string, endDate: string): Promise<SalesDayTotal[]> {
-  const rows = await sql`
-    SELECT
-      (s.sold_at AT TIME ZONE 'Europe/London')::date AS sold_on,
-      s.currency,
-      COUNT(*)::int AS sale_count,
-      COALESCE(SUM(s.amount), 0) AS gross_amount,
-      COALESCE(SUM(COALESCE(po.net_amount, s.amount)), 0) AS earnings_amount
-    FROM sales s
-    LEFT JOIN payment_orders po ON po.id = s.payment_order_id
-    WHERE COALESCE(po.status, 'Paid') <> 'Refunded'
-      AND po.checkout_environment = 'production'
-      AND (s.sold_at AT TIME ZONE 'Europe/London')::date >= CAST(${startDate} AS date)
-      AND (s.sold_at AT TIME ZONE 'Europe/London')::date <= CAST(${endDate} AS date)
-    GROUP BY 1, 2
-    ORDER BY 1
-  `;
+  await ensurePaymentPresentmentColumns();
+  const [grossRows, settledRows] = await Promise.all([
+    sql`
+      SELECT
+        (s.sold_at AT TIME ZONE 'Europe/London')::date AS sold_on,
+        s.currency,
+        COUNT(*)::int AS sale_count,
+        COALESCE(SUM(s.amount), 0) AS gross_amount,
+        COALESCE(SUM(
+          CASE
+            WHEN po.settlement_currency IS NOT NULL
+              AND po.net_amount IS NOT NULL
+              AND UPPER(po.settlement_currency) = UPPER(s.currency)
+              THEN po.net_amount
+            WHEN po.settlement_currency IS NOT NULL
+              AND po.net_amount IS NOT NULL
+              AND UPPER(po.settlement_currency) <> UPPER(s.currency)
+              THEN 0
+            WHEN po.net_amount IS NOT NULL AND po.net_amount >= 0
+              THEN po.net_amount
+            ELSE s.amount
+          END
+        ), 0) AS earnings_amount
+      FROM sales s
+      LEFT JOIN payment_orders po ON po.id = s.payment_order_id
+      WHERE COALESCE(po.status, 'Paid') <> 'Refunded'
+        AND po.checkout_environment = 'production'
+        AND (s.sold_at AT TIME ZONE 'Europe/London')::date >= CAST(${startDate} AS date)
+        AND (s.sold_at AT TIME ZONE 'Europe/London')::date <= CAST(${endDate} AS date)
+      GROUP BY 1, 2
+      ORDER BY 1
+    `,
+    sql`
+      SELECT
+        (s.sold_at AT TIME ZONE 'Europe/London')::date AS sold_on,
+        po.settlement_currency AS currency,
+        COALESCE(SUM(po.net_amount), 0) AS earnings_amount
+      FROM sales s
+      JOIN payment_orders po ON po.id = s.payment_order_id
+      WHERE COALESCE(po.status, 'Paid') <> 'Refunded'
+        AND po.checkout_environment = 'production'
+        AND (s.sold_at AT TIME ZONE 'Europe/London')::date >= CAST(${startDate} AS date)
+        AND (s.sold_at AT TIME ZONE 'Europe/London')::date <= CAST(${endDate} AS date)
+        AND po.settlement_currency IS NOT NULL
+        AND po.net_amount IS NOT NULL
+        AND UPPER(po.settlement_currency) <> UPPER(s.currency)
+      GROUP BY 1, 2
+    `,
+  ]);
 
-  return (rows as Array<{
+  const days = (grossRows as Array<{
     sold_on: unknown;
     currency: string;
     sale_count: number;
@@ -58,6 +92,18 @@ export async function listSalesDayTotals(startDate: string, endDate: string): Pr
     gross: Number(row.gross_amount),
     earnings: Number(row.earnings_amount),
   }));
+
+  const settled = (settledRows as Array<{
+    sold_on: unknown;
+    currency: string;
+    earnings_amount: string;
+  }>).map(row => ({
+    date: dayKey(row.sold_on),
+    currency: row.currency || 'USD',
+    earnings: Number(row.earnings_amount),
+  }));
+
+  return addCrossCurrencyEarnings(days, settled);
 }
 
 export async function listRecentSalesActivity(limit: number, includeRefunded: boolean): Promise<SalesActivityRow[]> {

@@ -1,5 +1,6 @@
 import assert from 'assert';
 import {
+  addCrossCurrencyEarnings,
   addIsoDays,
   dashboardRangeBounds,
   percentChange,
@@ -47,6 +48,37 @@ run('percent change is null when the earlier period was empty', () => {
   assert.strictEqual(percentChange(10, 0), null);
   assert.strictEqual(percentChange(0, 0), 0);
   assert.strictEqual(percentChange(110, 100), 10);
+});
+
+run('adds a foreign settlement onto the currency Stripe actually paid', () => {
+  const rows = addCrossCurrencyEarnings(
+    [
+      { date: '2026-10-28', currency: 'usd', count: 2, gross: 157.5, earnings: 151.93 },
+      { date: '2026-10-28', currency: 'SAR', count: 1, gross: 335.25, earnings: 0 },
+    ],
+    [{ date: '2026-10-28', currency: 'usd', earnings: 84.44 }],
+  );
+  const dollars = rows.find(row => row.currency === 'USD' && row.date === '2026-10-28');
+  const riyals = rows.find(row => row.currency === 'SAR');
+  assert.strictEqual(dollars?.earnings, 236.37);
+  assert.strictEqual(dollars?.gross, 157.5);
+  assert.strictEqual(riyals?.earnings, 0);
+  assert.strictEqual(riyals?.count, 1);
+});
+
+run('keeps earnings for a settlement currency that had no sale of its own', () => {
+  const rows = addCrossCurrencyEarnings(
+    [{ date: '2026-10-28', currency: 'EUR', count: 1, gross: 62.82, earnings: 0 }],
+    [{ date: '2026-10-28', currency: 'USD', earnings: 66.45 }],
+  );
+  const dollars = rows.find(row => row.currency === 'USD');
+  assert.deepStrictEqual(dollars, {
+    date: '2026-10-28',
+    currency: 'USD',
+    count: 0,
+    gross: 0,
+    earnings: 66.45,
+  });
 });
 
 run('picks the currency with the most sales, not the largest nominal total', () => {
