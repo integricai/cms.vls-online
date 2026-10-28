@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, getCurrentUser } from '../../api/client';
 import type { SalesDashboard, SalesDashboardCard, SalesDashboardPoint, SalesFeeSyncResult } from '../../../../shared/types';
-import { formatDisplayDate, formatVaultPrice, londonToday, monthStart, type DashboardRange } from '../../../../shared/salesFormat';
+import { formatDisplayDate, formatVaultPrice, londonToday, monthStart, shiftMonth, type DashboardRange } from '../../../../shared/salesFormat';
 
 const RANGES: Array<{ id: DashboardRange; label: string }> = [
   { id: 'this_month', label: 'This month' },
@@ -168,12 +168,19 @@ export default function DashboardTab() {
 
   useEffect(() => {
     const today = londonToday();
+    const from = monthStart(shiftMonth(monthStart(today), -1));
     let cancelled = false;
-    api.post<SalesFeeSyncResult>('/sales/sync-fees', { from: monthStart(today), to: today })
-      .then(result => {
-        if (!cancelled && result.updated > 0) setRefreshKey(key => key + 1);
-      })
-      .catch(() => undefined);
+    (async () => {
+      let remaining = 1;
+      let changed = false;
+      for (let attempt = 0; attempt < 8 && remaining > 0; attempt += 1) {
+        const result = await api.post<SalesFeeSyncResult>('/sales/sync-fees', { from, to: today });
+        if (cancelled) return;
+        if (result.updated > 0) changed = true;
+        remaining = result.updated > 0 ? (result.remaining ?? 0) : 0;
+      }
+      if (!cancelled && changed) setRefreshKey(key => key + 1);
+    })().catch(() => undefined);
     return () => {
       cancelled = true;
     };

@@ -84,8 +84,8 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
     sale.paymentMethod ?? '',
     processorLabel(sale),
     formatVaultPrice(sale),
-    formatMoney(sale.processorFee, sale.currency),
-    formatMoney(sale.netAmount, sale.currency),
+    formatMoney(sale.processorFee, sale.settlementCurrency || sale.currency),
+    formatMoney(sale.netAmount, sale.settlementCurrency || sale.currency),
   ].map(csvCell).join(','));
   const blob = new Blob([`\uFEFF${header.join(',')}\n${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -320,8 +320,8 @@ export default function SalesTab() {
                     <td className="px-3 py-2 whitespace-nowrap">{sale.paymentMethod || '—'}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{processorLabel(sale)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{formatVaultPrice(sale)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.processorFee, sale.currency)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.netAmount, sale.currency)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.processorFee, sale.settlementCurrency || sale.currency)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.netAmount, sale.settlementCurrency || sale.currency)}</td>
                     <td className="px-3 py-2">
                       <div className="flex flex-col gap-1">
                         {sale.paymentStatus !== 'Refunded' && !sale.tutorId ? (
