@@ -114,14 +114,14 @@ export function parseStripeSettlement(
   const gross = moneyFromMinor(amountMinor, currency);
   const fee = moneyFromMinor(feeMinor, currency);
   const reportedNet = moneyFromMinor(netMinor, currency);
-  if (gross === 0 && fee === 0) return null;
 
   const paymentMethod = paymentMethodLabel(asRecord(charge.payment_method_details));
   const dollars = dollarAmount(storedCharge);
   const perLocal = currency === 'USD' ? null : dollarsPerLocalUnit(currency, storedCharge);
 
-  // PayPal settled to PayPal posts a zero gross. The net is only Stripe's fee leaving the Stripe balance.
-  if (gross === 0 && fee > 0) {
+  // PayPal settled outside Stripe posts a zero gross. A zero fee is still a finished
+  // balance: keep it, so the order leaves the sync. The net is the amount paid.
+  if (gross === 0) {
     if (currency === 'USD') {
       const paid = paidCandidates(paymentIntent, charge, storedCharge)
         .find(candidate => candidate.currency === 'USD');

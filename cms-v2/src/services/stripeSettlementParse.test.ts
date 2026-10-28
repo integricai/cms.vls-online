@@ -74,6 +74,29 @@ run('uses the dollar charge minus the fee when PayPal settles outside Stripe', (
   assert.deepStrictEqual(parsed, { fee: 0.12, net: 13.38, currency: 'USD', paymentMethod: 'PayPal' });
 });
 
+run('keeps a zero PayPal fee and the dollar amount paid', () => {
+  const parsed = parseStripeSettlement({
+    amount: 1350,
+    currency: 'usd',
+    latest_charge: {
+      amount: 1350,
+      currency: 'usd',
+      payment_method_details: { type: 'paypal' },
+      balance_transaction: { amount: 0, fee: 0, net: 0, currency: 'usd' },
+    },
+  });
+  assert.deepStrictEqual(parsed, { fee: 0, net: 13.5, currency: 'USD', paymentMethod: 'PayPal' });
+});
+
+run('records a zero fee when the balance has no paid amount to recover', () => {
+  const parsed = parseStripeSettlement({
+    latest_charge: {
+      balance_transaction: { amount: 0, fee: 0, net: 0, currency: 'usd' },
+    },
+  });
+  assert.deepStrictEqual(parsed, { fee: 0, net: null, currency: 'USD', paymentMethod: null });
+});
+
 run('uses the stored charge when the PaymentIntent does not repeat the amount', () => {
   const parsed = parseStripeSettlement({
     latest_charge: {
