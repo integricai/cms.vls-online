@@ -55,6 +55,9 @@ export interface CheckoutCompletedEvent {
   customerName: string | null;
   amountMinor: number | null;
   currency: string | null;
+  /** What the student actually paid when they chose a local price. */
+  presentmentAmountMinor?: number | null;
+  presentmentCurrency?: string | null;
 }
 
 export interface RefundCompletedEvent {

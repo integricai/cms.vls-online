@@ -94,7 +94,19 @@ export function stripeCheckoutStudentName(object: Record<string, any>): string |
   return typeof billing === 'string' && billing.trim() ? billing.trim() : null;
 }
 
+function stripePresentment(object: Record<string, any>): { amountMinor: number; currency: string } | null {
+  const details = object.presentment_details;
+  if (!details || typeof details !== 'object') return null;
+  const amountMinor = details.presentment_amount;
+  const currency = typeof details.presentment_currency === 'string'
+    ? details.presentment_currency.trim().toUpperCase()
+    : '';
+  if (typeof amountMinor !== 'number' || !Number.isFinite(amountMinor) || !currency) return null;
+  return { amountMinor, currency };
+}
+
 function checkoutCompletedFromSession(object: Record<string, any>): CheckoutCompletedEvent {
+  const presentment = stripePresentment(object);
   return {
     type: 'checkout.completed',
     provider: 'stripe',
@@ -105,6 +117,8 @@ function checkoutCompletedFromSession(object: Record<string, any>): CheckoutComp
     customerName: stripeCheckoutStudentName(object),
     amountMinor: typeof object.amount_total === 'number' ? object.amount_total : null,
     currency: typeof object.currency === 'string' ? object.currency : null,
+    presentmentAmountMinor: presentment?.amountMinor ?? null,
+    presentmentCurrency: presentment?.currency ?? null,
   };
 }
 

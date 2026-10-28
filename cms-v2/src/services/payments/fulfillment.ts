@@ -10,6 +10,7 @@ import {
   markOrderEmailSent,
   markPaymentOrderPaid,
   rememberPaymentOrderStudentName,
+  rememberPresentedCharge,
   markPaymentOrderRefunded,
   paymentOrderPayerEmail,
   releaseOrderEmailSend,
@@ -20,6 +21,7 @@ import {
   sendStudentPaymentConfirmation,
   sendStudentRefundConfirmation,
 } from '../paymentEmails';
+import { majorAmountFromStripeMinor } from '../stripeCheckout';
 import { courseAccessUrlForEnrollment } from '../schoolAccess';
 import { clearStudentPassword } from '../studentPassword';
 import { ensureSaleRecordedForPaidOrder } from '../saleRecording';
@@ -282,6 +284,17 @@ export async function fulfillPaidCheckout(event: CheckoutCompletedEvent): Promis
     amountMinor: event.amountMinor,
     currency: event.currency,
   });
+  if (
+    event.presentmentAmountMinor != null
+    && event.presentmentCurrency
+    && event.presentmentCurrency.toUpperCase() !== order.currency.toUpperCase()
+  ) {
+    order = await rememberPresentedCharge(
+      order.id,
+      majorAmountFromStripeMinor(event.presentmentAmountMinor, event.presentmentCurrency),
+      event.presentmentCurrency,
+    );
+  }
 
   const payerEmail = paymentOrderPayerEmail(order) ?? event.customerEmail;
   const payerName = (event.customerName ?? order.studentName ?? '').trim();

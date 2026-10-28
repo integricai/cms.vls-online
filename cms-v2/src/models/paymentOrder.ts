@@ -421,6 +421,27 @@ export async function markPaymentOrderPaid(data: {
   return { order: rowToOrder(paid), wasAlreadyPaid: false };
 }
 
+/** Store the local price the student chose, so the confirmation email matches the checkout page. */
+export async function rememberPresentedCharge(
+  orderId: number,
+  amount: number,
+  currency: string,
+): Promise<PaymentOrder> {
+  const rows = await sql`
+    UPDATE payment_orders
+    SET amount = ${amount},
+        currency = ${currency.toUpperCase()}
+    WHERE id = ${orderId}
+      AND status = 'Paid'
+    RETURNING *
+  `;
+  const updated = rows[0] as DbRow | undefined;
+  if (updated) return rowToOrder(updated);
+  const current = await getPaymentOrder(orderId);
+  if (!current) throw new Error('Payment order not found');
+  return current;
+}
+
 /** Pending → Failed or Cancelled. Paid and refunded orders are left unchanged. */
 export async function closePendingPaymentOrder(data: {
   orderId: number;

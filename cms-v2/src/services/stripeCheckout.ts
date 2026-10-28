@@ -65,6 +65,18 @@ export function appendStripeOrderSummaryNote(params: URLSearchParams): void {
   params.append('line_items[0][price_data][product_data][description]', STRIPE_PAYPAL_CURRENCY_NOTE);
 }
 
+/** Stripe draws the local price and the dollar price, on desktop and on a phone. */
+export function appendStripeAdaptivePricing(params: URLSearchParams, currency: string): void {
+  if (currency.toUpperCase() !== 'USD') return;
+  params.append('adaptive_pricing[enabled]', 'true');
+}
+
+/** Stripe minor units back to the amount we store. Yen is already that unit. */
+export function majorAmountFromStripeMinor(amountMinor: number, currency: string): number {
+  if (STRIPE_ZERO_DECIMAL.has(currency.toUpperCase())) return amountMinor;
+  return amountMinor / 100;
+}
+
 function clipStripeName(value: string | null | undefined): string {
   return String(value ?? '').trim().slice(0, 80);
 }
@@ -252,6 +264,7 @@ export async function createStripeCheckoutSession(input: {
   params.append('line_items[0][price_data][currency]', input.currency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
   appendStripeOrderSummaryNote(params);
+  appendStripeAdaptivePricing(params, input.currency);
   params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
   params.append('line_items[0][quantity]', '1');
   if (input.studentEmail) {

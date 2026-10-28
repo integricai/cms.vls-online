@@ -3,8 +3,10 @@ import crypto from 'crypto';
 import { resolveCheckoutEnvironment } from './attribution';
 import {
   STRIPE_WEBHOOK_TOLERANCE_SECONDS,
+  appendStripeAdaptivePricing,
   appendStripeOrderSummaryNote,
   appendStripeStudentNameFields,
+  majorAmountFromStripeMinor,
   resolveStripeStudentNameDefaults,
   safeCheckoutCancelPath,
   STRIPE_PAYPAL_CURRENCY_NOTE,
@@ -187,6 +189,18 @@ run('adds the PayPal currency note to the left order summary', () => {
     STRIPE_PAYPAL_CURRENCY_NOTE,
     'To pay by PayPal, please select the USD price, provided PayPal is available in your country.',
   );
+});
+
+run('asks Stripe for the local price and the dollar price on a US dollar charge', () => {
+  const usd = new URLSearchParams();
+  appendStripeAdaptivePricing(usd, 'USD');
+  assert.strictEqual(usd.get('adaptive_pricing[enabled]'), 'true');
+
+  const gbp = new URLSearchParams();
+  appendStripeAdaptivePricing(gbp, 'gbp');
+  assert.strictEqual(gbp.get('adaptive_pricing[enabled]'), null);
+  assert.strictEqual(majorAmountFromStripeMinor(6100, 'USD'), 61);
+  assert.strictEqual(majorAmountFromStripeMinor(14850, 'JPY'), 14850);
 });
 
 run('asks Stripe for a required first name and last name', () => {

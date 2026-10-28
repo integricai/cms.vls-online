@@ -1,4 +1,4 @@
-/** ISO 3166-1 alpha-2 → ISO 4217. The course page and payment-first checkout use this. */
+/** ISO 3166-1 alpha-2 → ISO 4217. The course page and discount payment links use this. */
 const COUNTRY_CURRENCY: Record<string, string> = {
   AD: 'EUR', AE: 'AED', AF: 'AFN', AG: 'XCD', AI: 'XCD', AL: 'ALL', AM: 'AMD',
   AO: 'AOA', AR: 'ARS', AS: 'USD', AT: 'EUR', AU: 'AUD', AW: 'AWG', AX: 'EUR',
@@ -174,8 +174,8 @@ const CHECKOUT_PRESENTMENT = new Set([
 ]);
 
 /**
- * Payment-first checkout charges the same converted amount the course page showed.
- * A price that is already in another currency is left alone. A missing rate stays USD.
+ * Discount payment links charge the converted amount the course page showed.
+ * Direct checkout stays in US dollars so Stripe can offer the local price and the dollar price.
  */
 export function presentCheckoutAmount(input: {
   amount: number;

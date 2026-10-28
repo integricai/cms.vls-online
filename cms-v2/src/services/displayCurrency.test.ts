@@ -67,7 +67,7 @@ run('localizeDisplayMoney shows local price plus charged-as USD', () => {
   assert.match(localized.formattedCompareAt ?? '', /9,960|₹/);
 });
 
-run('charges payment-first checkout in the visitor currency', () => {
+run('converts a discount link into the visitor currency', () => {
   const gbp = presentCheckoutAmount({
     amount: 220,
     currency: 'USD',

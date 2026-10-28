@@ -95,7 +95,33 @@ run('maps Stripe checkout.session.completed only when payment_status is paid', (
     customerName: 'Ada Lovelace',
     amountMinor: 19900,
     currency: 'usd',
+    presentmentAmountMinor: null,
+    presentmentCurrency: null,
   });
+});
+
+run('keeps the local price the student chose on Stripe', () => {
+  const event = mapStripeWebhookEvent({
+    type: 'checkout.session.completed',
+    data: {
+      object: {
+        id: 'cs_local',
+        client_reference_id: '41',
+        payment_status: 'paid',
+        payment_intent: 'pi_local',
+        amount_total: 6100,
+        currency: 'usd',
+        presentment_details: {
+          presentment_amount: 4882,
+          presentment_currency: 'gbp',
+        },
+        customer_details: { email: 'a@b.com', name: 'Ada Lovelace' },
+      },
+    },
+  });
+  assert.strictEqual(event.type === 'checkout.completed' ? event.presentmentCurrency : null, 'GBP');
+  assert.strictEqual(event.type === 'checkout.completed' ? event.presentmentAmountMinor : null, 4882);
+  assert.strictEqual(event.type === 'checkout.completed' ? event.currency : null, 'usd');
 });
 
 run('prefers the Stripe first and last name fields over the billing name', () => {
@@ -145,6 +171,8 @@ run('maps Stripe async payment success, failure, and expiry', () => {
     customerName: 'Ada Lovelace',
     amountMinor: 19900,
     currency: 'usd',
+    presentmentAmountMinor: null,
+    presentmentCurrency: null,
   });
 
   const failed = mapStripeWebhookEvent({
