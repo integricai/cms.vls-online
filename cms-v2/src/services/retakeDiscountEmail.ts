@@ -51,6 +51,7 @@ export function buildDiscountPayEmail(input: {
   fullPriceLabel: string;
   discountLabel: string;
   payableLabel: string;
+  chargeNote?: string | null;
   payUrl: string;
   expiresAt: Date;
 }): { subject: string; text: string; html: string } {
@@ -67,6 +68,7 @@ export function buildDiscountPayEmail(input: {
     `Full price: ${input.fullPriceLabel}`,
     `Discount: ${input.discountLabel}`,
     `You pay: ${input.payableLabel}`,
+    ...(input.chargeNote ? [input.chargeNote] : []),
     '',
     `Pay and enrol: ${input.payUrl}`,
     '',
@@ -93,6 +95,7 @@ export function buildDiscountPayEmail(input: {
             <strong>Full price:</strong> ${esc(input.fullPriceLabel)}<br>
             <strong>Discount:</strong> ${esc(input.discountLabel)}<br>
             <strong>You pay:</strong> ${esc(input.payableLabel)}
+            ${input.chargeNote ? `<br><span style="color:${BRAND.muted};">${esc(input.chargeNote)}</span>` : ''}
           </p>
           ${payButton(input.payUrl)}
           <p style="margin:16px 0 0;color:${BRAND.muted};">This link expires on ${esc(expires)} and can be used once. You will enter your email and payment details on the next page.</p>
@@ -148,6 +151,7 @@ export async function sendRetakeDiscountCodeEmail(input: {
   fullPriceLabel: string;
   discountLabel: string;
   payableLabel: string;
+  chargeNote?: string | null;
   payUrl: string;
   expiresAt: Date;
 }): Promise<void> {

@@ -1,6 +1,8 @@
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+/** Keep the last successful rates this long after they expire, when a new fetch fails. */
+const STALE_TTL_MS = 24 * 60 * 60 * 1000;
 const FX_URL = 'https://open.er-api.com/v6/latest/USD';
 
 type FxCache = {
@@ -45,15 +47,31 @@ async function fetchUsdRates(): Promise<Record<string, number> | null> {
   }
 }
 
+/** Fresh rates, otherwise the rates just fetched, otherwise the last good rates while they are still recent. */
+export function selectUsdRates(
+  cached: FxCache | null,
+  fetched: Record<string, number> | null,
+  now = Date.now(),
+): Record<string, number> | null {
+  if (cached && now - cached.fetchedAt < CACHE_TTL_MS) return cached.rates;
+  if (fetched) return fetched;
+  if (cached && now - cached.fetchedAt < CACHE_TTL_MS + STALE_TTL_MS) return cached.rates;
+  return null;
+}
+
 export async function getUsdRates(): Promise<Record<string, number> | null> {
-  if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
+  const now = Date.now();
+  if (cache && now - cache.fetchedAt < CACHE_TTL_MS) {
     return cache.rates;
   }
   if (!inflight) {
+    const cached = cache;
     inflight = fetchUsdRates()
       .then(rates => {
         if (rates) cache = { rates, fetchedAt: Date.now() };
-        return rates;
+        const selected = selectUsdRates(rates ? cache : cached, rates);
+        if (!rates && selected) console.warn('[fx-rates] using the last good rates');
+        return selected;
       })
       .finally(() => {
         inflight = null;

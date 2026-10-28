@@ -102,22 +102,49 @@ async function retireOpenDiscountCheckout(row: RetakeDiscountCode): Promise<void
   await releaseRetakeCodeForOrder(previous.id);
 }
 
+/** The amount Stripe will charge. A stored dollar price wins over the local figure in the old emails. */
+function emailedChargeAmounts(input: {
+  fullAmount: number;
+  finalAmount: number;
+  currency: string;
+  usdFullAmount?: number | null;
+  usdFinalAmount?: number | null;
+}): { fullAmount: number; finalAmount: number; currency: string } {
+  if (
+    input.usdFinalAmount != null
+    && input.usdFinalAmount > 0
+    && input.usdFullAmount != null
+    && input.usdFullAmount > 0
+  ) {
+    return { fullAmount: input.usdFullAmount, finalAmount: input.usdFinalAmount, currency: 'USD' };
+  }
+  return {
+    fullAmount: input.fullAmount,
+    finalAmount: input.finalAmount,
+    currency: input.currency,
+  };
+}
+
 function offerEmailPrices(input: {
   fullAmount: number;
   finalAmount: number;
   currency: string;
+  usdFullAmount?: number | null;
+  usdFinalAmount?: number | null;
   discountType: RetakeDiscountType;
   discountValue: number;
-}): { fullPriceLabel: string; discountLabel: string; payableLabel: string } {
+}): { fullPriceLabel: string; discountLabel: string; payableLabel: string; chargeNote: string | null } {
+  const charge = emailedChargeAmounts(input);
   return {
-    fullPriceLabel: formatDisplayMoney(input.fullAmount, input.currency),
-    payableLabel: formatDisplayMoney(input.finalAmount, input.currency),
+    fullPriceLabel: formatDisplayMoney(charge.fullAmount, charge.currency),
+    payableLabel: formatDisplayMoney(charge.finalAmount, charge.currency),
     discountLabel: discountOfferLabel({
       discountType: input.discountType,
       discountValue: input.discountValue,
-      fullAmount: input.fullAmount,
-      payableAmount: input.finalAmount,
+      fullAmount: charge.fullAmount,
+      payableAmount: charge.finalAmount,
     }),
+    chargeNote: charge.currency === 'USD' ? 'You will be charged in US dollars.' : null,
   };
 }
 
@@ -233,7 +260,13 @@ export async function issueRetakeDiscountCode(input: {
       cc: ccEmail,
       firstName,
       courseName: course.name,
-      ...offerEmailPrices({ ...price, discountType: discount.type, discountValue: discount.value }),
+      ...offerEmailPrices({
+        ...price,
+        usdFullAmount: catalogue.fullAmount,
+        usdFinalAmount: catalogue.finalAmount,
+        discountType: discount.type,
+        discountValue: discount.value,
+      }),
       payUrl: discountPayUrl(payToken),
       expiresAt,
     });
@@ -283,7 +316,13 @@ export async function resendRetakeDiscountCode(id: number): Promise<IssuedRetake
     cc: row.ccEmail || DEFAULT_DISCOUNT_CC_EMAIL,
     firstName: row.firstName,
     courseName,
-    ...offerEmailPrices({ ...price, discountType: row.discountType, discountValue: row.discountValue }),
+    ...offerEmailPrices({
+      ...price,
+      usdFullAmount: row.usdFullAmount,
+      usdFinalAmount: row.usdFinalAmount,
+      discountType: row.discountType,
+      discountValue: row.discountValue,
+    }),
     payUrl: discountPayUrl(payToken),
     expiresAt,
   });
