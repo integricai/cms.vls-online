@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { sql } from '../db/client';
 import type { CheckoutAttribution, CheckoutEnvironment, ConversionUploadStatus } from '../services/attribution';
 import { parsePaymentProviderId, type PaymentProviderId } from '../services/payments/types';
+import { classifyPaidAmount } from '../services/stripeCheckout';
 
 export type PaymentOrderStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled' | 'Refunded';
 
@@ -377,21 +378,32 @@ export async function markPaymentOrderPaid(data: {
   const paymentId = data.paymentId ?? data.stripePaymentIntentId ?? existing.providerPaymentId;
   const customerEmail = data.customerEmail ?? data.stripeCustomerEmail ?? existing.providerCustomerEmail;
   const amountMinor = data.amountMinor ?? data.amountTotal ?? null;
-  const amount = amountMinor != null ? amountMinor / 100 : existing.amount;
-  const currency = data.currency?.toUpperCase() ?? existing.currency;
+  let amount = amountMinor != null ? amountMinor / 100 : existing.amount;
+  let currency = data.currency?.toUpperCase() ?? existing.currency;
   const stripeCheckoutId = provider === 'stripe' ? checkoutId : existing.stripeCheckoutSessionId;
   const stripePaymentId = provider === 'stripe' ? paymentId : existing.stripePaymentIntentId;
   const stripeCustomerEmail = provider === 'stripe' ? customerEmail : existing.stripeCustomerEmail;
 
+  let paidDecision: 'order' | 'presentment' | 'mismatch' | 'unchecked' = 'unchecked';
   if (amountMinor != null) {
-    const expectedCents = Math.round(existing.amount * 100);
-    if (expectedCents !== amountMinor) {
+    paidDecision = classifyPaidAmount({
+      orderAmount: existing.amount,
+      orderCurrency: existing.currency,
+      presentmentAmount: existing.presentmentAmount,
+      presentmentCurrency: existing.presentmentCurrency,
+      paidAmountMinor: amountMinor,
+      paidCurrency: (data.currency ?? existing.currency).toUpperCase(),
+    });
+    if (paidDecision === 'mismatch') {
       throw new Error(
-        `Payment amount mismatch: expected ${expectedCents} cents, got ${amountMinor}`,
+        `Payment amount mismatch: expected ${existing.currency} ${existing.amount}, got ${data.currency ?? existing.currency} ${amountMinor}`,
       );
     }
-  }
-  if (data.currency && data.currency.toUpperCase() !== existing.currency.toUpperCase()) {
+    if (paidDecision === 'presentment') {
+      amount = existing.amount;
+      currency = existing.currency;
+    }
+  } else if (data.currency && data.currency.toUpperCase() !== existing.currency.toUpperCase()) {
     throw new Error(
       `Payment currency mismatch: expected ${existing.currency}, got ${data.currency}`,
     );
@@ -437,6 +449,22 @@ export function ensurePaymentPresentmentColumns(): Promise<void> {
     await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS presentment_currency TEXT`;
   })();
   return presentmentColumnsReady;
+}
+
+/** Local amount offered on the Stripe page, stored before the student pays. */
+export async function saveOfferedPresentment(
+  orderId: number,
+  amount: number,
+  currency: string,
+): Promise<void> {
+  await ensurePaymentPresentmentColumns();
+  await sql`
+    UPDATE payment_orders
+    SET presentment_amount = ${amount},
+        presentment_currency = ${currency.toUpperCase()}
+    WHERE id = ${orderId}
+      AND status = 'Pending'
+  `;
 }
 
 /** The local price the student saw. The dollar amount on the order is left as Stripe charged it. */

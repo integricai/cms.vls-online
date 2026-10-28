@@ -690,6 +690,8 @@ export interface ResolvedCoursePrice {
   /** Quoted ISO country from Evendeals when regional pricing applied. */
   geoRegionCode: string | null;
   geoDiscountPercent: number | null;
+  /** True when Evendeals did not answer. Checkout must not charge the list price in that case. */
+  lookupFailed?: boolean;
 }
 
 export interface PricingRegionConfig {

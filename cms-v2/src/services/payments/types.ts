@@ -25,6 +25,8 @@ export interface CreateCheckoutInput {
   /** Same-site path opened when the student leaves Checkout. */
   cancelPath?: string | null;
   environment?: CheckoutEnvironment | null;
+  /** Local amount the course page showed. Stripe keeps the dollar price beside it. */
+  localPresentment?: { amount: number; currency: string } | null;
 }
 
 export interface CheckoutSessionResult {

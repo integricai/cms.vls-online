@@ -6,6 +6,9 @@ import {
   appendStripeAdaptivePricing,
   appendStripeOrderSummaryNote,
   appendStripeStudentNameFields,
+  buildLocalCurrencyPriceParams,
+  classifyPaidAmount,
+  locksLocalPresentment,
   majorAmountFromStripeMinor,
   resolveStripeStudentNameDefaults,
   safeCheckoutCancelPath,
@@ -269,6 +272,35 @@ run('keeps Stripe cancel on the course page', () => {
   assert.strictEqual(safeCheckoutCancelPath('/courses/acca-fa?discount=RT-ABC'), '/courses/acca-fa?discount=RT-ABC');
   assert.strictEqual(safeCheckoutCancelPath('https://evil.example/steal'), '/payment-cancelled');
   assert.strictEqual(safeCheckoutCancelPath('//evil.example'), '/payment-cancelled');
+});
+
+run('locks the course-page pound amount beside the dollar price', () => {
+  assert.strictEqual(locksLocalPresentment('USD', { amount: 65.72, currency: 'GBP' }), true);
+  assert.strictEqual(locksLocalPresentment('GBP', { amount: 65.72, currency: 'GBP' }), false);
+  assert.strictEqual(locksLocalPresentment('USD', { amount: 87.5, currency: 'USD' }), false);
+
+  const params = buildLocalCurrencyPriceParams({
+    title: 'ACCA SBR',
+    usdAmount: 87.5,
+    localAmount: 65.72,
+    localCurrency: 'GBP',
+  });
+  assert.strictEqual(params.get('currency'), 'usd');
+  assert.strictEqual(params.get('unit_amount'), '8750');
+  assert.strictEqual(params.get('currency_options[gbp][unit_amount]'), '6572');
+  assert.strictEqual(params.get('product_data[description]'), STRIPE_PAYPAL_CURRENCY_NOTE);
+});
+
+run('accepts either the dollar charge or the locked local amount', () => {
+  const offered = {
+    orderAmount: 87.5,
+    orderCurrency: 'USD',
+    presentmentAmount: 65.72,
+    presentmentCurrency: 'GBP',
+  };
+  assert.strictEqual(classifyPaidAmount({ ...offered, paidAmountMinor: 8750, paidCurrency: 'usd' }), 'order');
+  assert.strictEqual(classifyPaidAmount({ ...offered, paidAmountMinor: 6572, paidCurrency: 'gbp' }), 'presentment');
+  assert.strictEqual(classifyPaidAmount({ ...offered, paidAmountMinor: 6849, paidCurrency: 'gbp' }), 'mismatch');
 });
 
 run('rejects an unknown webhook signature', () => {

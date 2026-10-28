@@ -19,7 +19,16 @@ export type RegionalPricingApplyResult = {
   geoDiscountPercent: number | null;
   quotedCountryCode: string | null;
   evenDealsCouponCode: string | null;
+  /** The discount service did not answer. Callers must not invent a full-price charge. */
+  lookupFailed: boolean;
 };
+
+export class EvenDealsUnavailableError extends Error {
+  constructor(message = 'Evendeals discount lookup failed') {
+    super(message);
+    this.name = 'EvenDealsUnavailableError';
+  }
+}
 
 function envTrim(value: string | undefined): string {
   return String(value ?? '')
@@ -85,8 +94,9 @@ function parseQuoteBody(body: Record<string, unknown>): EvenDealsQuote | null {
 /**
  * Server-side Evendeals discount lookup by visitor IP.
  * Requires EVENDEALS_API_KEY and a product id (per-price or EVENDEALS_PRODUCT_ID).
+ * Throws when the service does not answer. A 204 or a zero discount returns null.
  */
-export async function fetchEvenDealsQuote(
+async function requestEvenDealsQuote(
   ipAddress: string | null | undefined,
   productId?: string | null,
 ): Promise<EvenDealsQuote | null> {
@@ -99,8 +109,9 @@ export async function fetchEvenDealsQuote(
   url.searchParams.set('ip', ip);
   url.searchParams.set('productId', product);
 
+  let response: Awaited<ReturnType<typeof fetchWithTimeout>>;
   try {
-    const response = await fetchWithTimeout(url.toString(), {
+    response = await fetchWithTimeout(url.toString(), {
       method: 'GET',
       headers: {
         Accept: 'application/json',
@@ -108,18 +119,31 @@ export async function fetchEvenDealsQuote(
       },
       timeoutMs: 8_000,
     });
-
-    if (response.status === 204) return null;
-    if (!response.ok) {
-      console.warn('[evendeals] Discount API failed', response.status);
-      return null;
-    }
-
-    const body = await response.json() as Record<string, unknown>;
-    return parseQuoteBody(body);
   } catch (err) {
     console.warn('[evendeals] Discount API error', err);
-    return null;
+    throw new EvenDealsUnavailableError();
+  }
+
+  if (response.status === 204) return null;
+  if (!response.ok) {
+    console.warn('[evendeals] Discount API failed', response.status);
+    throw new EvenDealsUnavailableError(`Evendeals discount lookup failed (${response.status})`);
+  }
+
+  const body = await response.json() as Record<string, unknown>;
+  return parseQuoteBody(body);
+}
+
+/** Course-page lookup. A failed request shows the list price so the page still loads. */
+export async function fetchEvenDealsQuote(
+  ipAddress: string | null | undefined,
+  productId?: string | null,
+): Promise<EvenDealsQuote | null> {
+  try {
+    return await requestEvenDealsQuote(ipAddress, productId);
+  } catch (err) {
+    if (err instanceof EvenDealsUnavailableError) return null;
+    throw err;
   }
 }
 
@@ -143,6 +167,7 @@ export function applyEvenDealsQuote(
       geoDiscountPercent: null,
       quotedCountryCode,
       evenDealsCouponCode: null,
+      lookupFailed: false,
     };
   }
 
@@ -157,6 +182,7 @@ export function applyEvenDealsQuote(
     geoDiscountPercent: quote.discountPercentage,
     quotedCountryCode,
     evenDealsCouponCode: quote.couponCode,
+    lookupFailed: false,
   };
 }
 
@@ -177,7 +203,24 @@ export async function applyEvenDealsPricing(input: {
   const fallbackCountry = normalizeCountry(input.fallbackCountryCode);
   const ignoreVpnBlock = input.ignoreVpnBlock === true;
 
-  const quote = await fetchEvenDealsQuote(input.ipAddress, input.productId);
+  let quote: EvenDealsQuote | null = null;
+  try {
+    quote = await requestEvenDealsQuote(input.ipAddress, input.productId);
+  } catch (err) {
+    if (err instanceof EvenDealsUnavailableError) {
+      return {
+        effectiveAmount: campaignAmount,
+        regionalPricingApplied: false,
+        geoPricingApplied: false,
+        geoRegionCode: null,
+        geoDiscountPercent: null,
+        quotedCountryCode: fallbackCountry,
+        evenDealsCouponCode: null,
+        lookupFailed: true,
+      };
+    }
+    throw err;
+  }
   if (quote && quote.discountPercentage > 0) {
     return applyEvenDealsQuote(campaignAmount, quote, fallbackCountry, ignoreVpnBlock);
   }
@@ -190,6 +233,7 @@ export async function applyEvenDealsPricing(input: {
     geoDiscountPercent: null,
     quotedCountryCode: fallbackCountry,
     evenDealsCouponCode: null,
+    lookupFailed: false,
   };
 }
 

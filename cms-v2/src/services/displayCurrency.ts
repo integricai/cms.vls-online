@@ -173,9 +173,14 @@ const CHECKOUT_PRESENTMENT = new Set([
   'PHP', 'PKR', 'PLN', 'QAR', 'RON', 'SAR', 'SEK', 'SGD', 'THB', 'TRY', 'TWD', 'USD', 'ZAR',
 ]);
 
+export function canPresentCheckoutCurrency(currency: string): boolean {
+  return CHECKOUT_PRESENTMENT.has(currency.toUpperCase());
+}
+
 /**
- * Discount payment links charge the converted amount the course page showed.
- * Direct checkout stays in US dollars so Stripe can offer the local price and the dollar price.
+ * The local amount the course page showed for a US dollar catalogue price.
+ * Direct checkout keeps the dollar amount and also sends this local amount to Stripe,
+ * so the pound price matches the page and the dollar price stays available.
  */
 export function presentCheckoutAmount(input: {
   amount: number;

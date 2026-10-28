@@ -98,6 +98,7 @@ export async function applyParityDealsToResolved(
     geoPricingApplied: regional.geoPricingApplied,
     geoRegionCode: regional.geoRegionCode,
     geoDiscountPercent: regional.geoDiscountPercent,
+    lookupFailed: regional.lookupFailed,
   };
 }
 

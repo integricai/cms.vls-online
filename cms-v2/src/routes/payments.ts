@@ -8,6 +8,7 @@ import {
   createPaymentOrder,
   getPaymentOrder,
   getPaymentOrderByCheckoutId,
+  saveOfferedPresentment,
   type PaymentOrder,
 } from '../models/paymentOrder';
 import {
@@ -26,6 +27,9 @@ import {
   type PaymentProviderId,
 } from '../services/payments/types';
 import { parseCheckoutAttribution, resolveCheckoutEnvironment } from '../services/attribution';
+import { canPresentCheckoutCurrency, presentCheckoutAmount } from '../services/displayCurrency';
+import { getUsdRates } from '../services/fxRates';
+import { quoteMatchesCataloguePrice, verifyPriceQuote, type PriceQuotePayload } from '../services/priceQuote';
 import {
   detectClientIpFromRequest,
   detectCountryFromRequest,
@@ -625,7 +629,32 @@ type CheckoutPricing = {
   comboStorySlug: string | null;
   quotedCountryCode: string | null;
   clientIp: string | null;
+  /** Local amount already shown on the course page. Null when checkout stays in one currency. */
+  localPresentment: { amount: number; currency: string } | null;
 };
+
+const PRICING_UNAVAILABLE = 'Pricing is temporarily unavailable. Please refresh the page and try again.';
+
+function presentmentFromQuote(
+  quote: PriceQuotePayload,
+): { amount: number; currency: string } | null {
+  const currency = quote.displayCurrency.toUpperCase();
+  if (currency === 'USD' || !canPresentCheckoutCurrency(currency)) return null;
+  return { amount: quote.displayAmount, currency };
+}
+
+async function presentmentFromFx(
+  amountUsd: number,
+  countryCode: string | null,
+): Promise<{ amount: number; currency: string } | null> {
+  const presented = presentCheckoutAmount({
+    amount: amountUsd,
+    currency: 'USD',
+    countryCode,
+    rates: await getUsdRates(),
+  });
+  return presented.currency === 'USD' ? null : presented;
+}
 
 async function priceCheckoutSelection(
   req: Request,
@@ -659,24 +688,42 @@ async function priceCheckoutSelection(
     : null;
 
   let resolved;
+  let usedPageQuote = false;
+  let localPresentment: { amount: number; currency: string } | null = null;
   try {
     if (explicitPriceId) {
       const price = await getGeoPriceById(explicitPriceId);
       if (!price || price.courseId !== courseId || !price.isActive) {
         return { ok: false, status: 404, error: 'Course price not found or inactive' };
       }
-      resolved = await applyParityDealsToResolved({
-        price,
-        matchReason: 'explicit' as const,
-        effectiveAmount: price.amount,
-        detectedCountryCode: geo.countryCode,
-        geoPricingApplied: false,
-        geoRegionCode: null,
-        geoDiscountPercent: null,
-      }, {
-        ipAddress: clientIp,
-        ignoreVpnBlock: parityTest,
-      });
+      const pageQuote = verifyPriceQuote(req.body?.priceQuote);
+      if (pageQuote && quoteMatchesCataloguePrice(pageQuote, price.id, price.amount)) {
+        usedPageQuote = true;
+        localPresentment = presentmentFromQuote(pageQuote);
+        resolved = {
+          price,
+          matchReason: 'explicit' as const,
+          effectiveAmount: pageQuote.amountUsd,
+          detectedCountryCode: geo.countryCode,
+          geoPricingApplied: pageQuote.amountUsd < price.amount - 0.009,
+          geoRegionCode: geo.countryCode,
+          geoDiscountPercent: computeDiscountPercent(price.amount, pageQuote.amountUsd),
+          lookupFailed: false,
+        };
+      } else {
+        resolved = await applyParityDealsToResolved({
+          price,
+          matchReason: 'explicit' as const,
+          effectiveAmount: price.amount,
+          detectedCountryCode: geo.countryCode,
+          geoPricingApplied: false,
+          geoRegionCode: null,
+          geoDiscountPercent: null,
+        }, {
+          ipAddress: clientIp,
+          ignoreVpnBlock: parityTest,
+        });
+      }
     } else {
       resolved = await resolveCoursePrice({
         courseId,
@@ -690,6 +737,16 @@ async function priceCheckoutSelection(
   } catch (err) {
     if (err instanceof PricingResolutionError) return { ok: false, status: 404, error: err.message };
     throw err;
+  }
+
+  if (!usedPageQuote && resolved.lookupFailed) {
+    return { ok: false, status: 503, error: PRICING_UNAVAILABLE };
+  }
+  if (!usedPageQuote) {
+    localPresentment = await presentmentFromFx(
+      resolved.effectiveAmount,
+      resolved.detectedCountryCode ?? geo.countryCode,
+    );
   }
 
   if (!resolved.price.durationDays || resolved.price.durationDays <= 0) {
@@ -732,7 +789,9 @@ async function priceCheckoutSelection(
     chargeCurrency = comboQuote.chargeCurrency;
     discountPercent = comboQuote.discountPercent;
     if (comboQuote.sessionTitle) optionType = comboQuote.sessionTitle;
+    localPresentment = null;
   }
+  if (chargeCurrency !== 'USD') localPresentment = null;
 
   return {
     ok: true,
@@ -747,6 +806,7 @@ async function priceCheckoutSelection(
     comboStorySlug,
     quotedCountryCode,
     clientIp,
+    localPresentment,
   };
 }
 
@@ -777,6 +837,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
     let optionType = priced.optionType;
     const accessZenlerCourseIds = priced.accessZenlerCourseIds;
     const comboStorySlug = priced.comboStorySlug;
+    let localPresentment = priced.localPresentment;
     const environment = checkoutEnvironmentForRequest(req);
     const attribution = parseCheckoutAttribution(req.body ?? {}, {
       userAgent: req.get('user-agent'),
@@ -824,6 +885,9 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       }
       chargeAmount = retakeQuote.chargeAmount;
       discountPercent = computeDiscountPercent(listAmount, chargeAmount);
+      localPresentment = chargeCurrency === 'USD'
+        ? await presentmentFromFx(chargeAmount, quotedCountryCode)
+        : null;
     }
 
     const order = await createPaymentOrder({
@@ -847,6 +911,9 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       environment,
       provider: providerId,
     });
+    if (localPresentment && providerId === 'stripe') {
+      await saveOfferedPresentment(order.id, localPresentment.amount, localPresentment.currency);
+    }
     if (schoolPassword.password) await saveStudentPassword(order.id, schoolPassword.password);
     if (retakeQuote) {
       try {
@@ -886,6 +953,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
         returnOrigin: parseCheckoutReturnOrigin(req),
         cancelPath: typeof req.body?.cancelPath === 'string' ? req.body.cancelPath : null,
         environment,
+        localPresentment: providerId === 'stripe' ? localPresentment : null,
       });
     } catch (err) {
       if (retakeQuote) {

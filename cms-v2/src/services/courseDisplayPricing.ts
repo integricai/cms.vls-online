@@ -13,6 +13,7 @@ import {
 } from './qualificationOfferSessions';
 import { BANK_FX_NOTE, convertUsdAmount, currencyForCountry, localizeDisplayMoney } from './displayCurrency';
 import { getUsdRates, rateForCurrency } from './fxRates';
+import { signPriceQuote } from './priceQuote';
 
 /** ACCA exam sittings fallback when no qualification offer rule is configured. */
 export const ACCA_EXAM_MONTHS = [3, 6, 9, 12] as const;
@@ -42,6 +43,8 @@ export type PublishedCoursePricePlan = {
   badge: string | null;
   geoPricingApplied: boolean;
   geoRegionCode: string | null;
+  /** Signed snapshot of the amounts on this card. Enrol sends it back to checkout. */
+  priceQuote?: string;
 };
 
 export type PublishedCoursePricing = {
@@ -61,6 +64,7 @@ export type PublishedCoursePricing = {
   compareAt: number | null;
   formatted: string;
   formattedCompareAt: string | null;
+  priceQuote?: string | null;
 };
 
 export function formatUsd(amount: number): string {
@@ -338,6 +342,16 @@ export async function buildCourseDisplayPricing(
     resolveDisplayCountry(input.countryCode, resolvedPlans),
     input.fxRates,
   );
+  plans = plans.map((plan) => {
+    const priceQuote = signPriceQuote({
+      coursePriceId: plan.coursePriceId,
+      amountUsd: plan.effectiveAmount,
+      listAmountUsd: plan.amount,
+      displayAmount: plan.displayAmount,
+      displayCurrency: plan.displayCurrency || 'USD',
+    });
+    return priceQuote ? { ...plan, priceQuote } : plan;
+  });
 
   const defaultPlan = plans.find(p => p.isDefault) ?? plans[0]!;
 
@@ -356,6 +370,7 @@ export async function buildCourseDisplayPricing(
     compareAt: defaultPlan.compareAt,
     formatted: defaultPlan.formatted,
     formattedCompareAt: defaultPlan.formattedCompareAt,
+    priceQuote: defaultPlan.priceQuote ?? null,
   };
 }
 
