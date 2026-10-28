@@ -277,13 +277,16 @@ export async function createStripeCheckoutSession(input: {
   environment?: CheckoutEnvironment | null;
   /** Exact local amount from the course page. The dollar amount stays the integration price. */
   localPresentment?: LocalPresentment | null;
+  /** An emailed offer that was saved in a local currency. The amount is that offer, not today's price. */
+  savedOffer?: boolean;
 }): Promise<StripeCheckoutSession> {
-  assertStripeUsdCharge(input.currency);
+  if (!input.savedOffer) assertStripeUsdCharge(input.currency);
+  const chargeCurrency = input.currency.toUpperCase();
   const environment = input.environment
     ?? resolveCheckoutEnvironment({ origin: input.returnOrigin });
   const secretKey = stripeSecretKeyForEnvironment(environment);
   const siteUrl = resolveCheckoutSiteUrl(input.returnOrigin);
-  const unitAmount = stripeUnitAmount(input.amount, 'USD');
+  const unitAmount = stripeUnitAmount(input.amount, chargeCurrency);
 
   const paymentFirst = !input.studentEmail;
   const paymentMethodTypes = input.paymentMethodTypes?.length
@@ -310,12 +313,12 @@ export async function createStripeCheckoutSession(input: {
     });
   }
   params.append('client_reference_id', String(input.orderId));
-  // Dollars only. Adaptive Pricing may show a local price; the PaymentIntent stays USD.
-  params.append('line_items[0][price_data][currency]', 'usd');
+  // New checkouts are USD. Adaptive Pricing may show a local price; the PaymentIntent stays USD.
+  params.append('line_items[0][price_data][currency]', chargeCurrency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
   appendStripeOrderSummaryNote(params);
   params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
-  appendStripeAdaptivePricing(params, 'USD');
+  appendStripeAdaptivePricing(params, chargeCurrency);
   params.append('line_items[0][quantity]', '1');
   if (input.studentEmail) {
     try {

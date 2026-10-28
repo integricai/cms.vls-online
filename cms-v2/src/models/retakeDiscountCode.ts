@@ -24,6 +24,9 @@ export type RetakeDiscountCode = {
   fullAmount: number | null;
   finalAmount: number | null;
   currency: string | null;
+  /** Dollar prices locked when the offer was sent. Null on links sent before this was stored. */
+  usdFullAmount: number | null;
+  usdFinalAmount: number | null;
   createdAt: string;
 };
 
@@ -47,6 +50,8 @@ interface DbRow {
   full_amount?: string | number | null;
   final_amount?: string | number | null;
   currency?: string | null;
+  usd_full_amount?: string | number | null;
+  usd_final_amount?: string | number | null;
   created_at: Date;
 }
 
@@ -76,6 +81,8 @@ function rowToCode(row: DbRow): RetakeDiscountCode {
     fullAmount: row.full_amount != null ? Number(row.full_amount) : null,
     finalAmount: row.final_amount != null ? Number(row.final_amount) : null,
     currency: row.currency ?? null,
+    usdFullAmount: row.usd_full_amount != null ? Number(row.usd_full_amount) : null,
+    usdFinalAmount: row.usd_final_amount != null ? Number(row.usd_final_amount) : null,
     createdAt: row.created_at.toISOString(),
   };
 }
@@ -111,6 +118,8 @@ export async function ensureRetakeDiscountSchema(): Promise<void> {
     await sql`ALTER TABLE retake_discount_codes ADD COLUMN IF NOT EXISTS full_amount NUMERIC(10, 2)`;
     await sql`ALTER TABLE retake_discount_codes ADD COLUMN IF NOT EXISTS final_amount NUMERIC(10, 2)`;
     await sql`ALTER TABLE retake_discount_codes ADD COLUMN IF NOT EXISTS currency TEXT`;
+    await sql`ALTER TABLE retake_discount_codes ADD COLUMN IF NOT EXISTS usd_full_amount NUMERIC(10, 2)`;
+    await sql`ALTER TABLE retake_discount_codes ADD COLUMN IF NOT EXISTS usd_final_amount NUMERIC(10, 2)`;
     await sql`
       CREATE UNIQUE INDEX IF NOT EXISTS retake_discount_codes_token_hash_idx
       ON retake_discount_codes (token_hash)
@@ -146,13 +155,16 @@ export async function insertRetakeDiscountCode(input: {
   fullAmount: number;
   finalAmount: number;
   currency: string;
+  usdFullAmount: number;
+  usdFinalAmount: number;
 }): Promise<RetakeDiscountCode> {
   await ensureRetakeDiscountSchema();
   const rows = await sql`
     INSERT INTO retake_discount_codes (
       code, course_id, student_email, first_name, last_name,
       discount_type, discount_value, cc_email, created_by,
-      token_hash, expires_at, full_amount, final_amount, currency
+      token_hash, expires_at, full_amount, final_amount, currency,
+      usd_full_amount, usd_final_amount
     )
     VALUES (
       ${input.code},
@@ -168,7 +180,9 @@ export async function insertRetakeDiscountCode(input: {
       ${input.expiresAt},
       ${input.fullAmount},
       ${input.finalAmount},
-      ${input.currency}
+      ${input.currency},
+      ${input.usdFullAmount},
+      ${input.usdFinalAmount}
     )
     RETURNING *
   `;

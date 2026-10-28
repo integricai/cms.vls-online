@@ -94,6 +94,26 @@ export function presentDiscountPrices(input: {
   return { fullAmount: full.amount, finalAmount: payable.amount, currency: full.currency };
 }
 
+/**
+ * The price locked when the offer was emailed.
+ * A stored dollar amount wins. An older link with only a local snapshot keeps that snapshot.
+ */
+export function offeredStripeCharge(input: {
+  finalAmount: number;
+  currency: string;
+  usdFinalAmount?: number | null;
+}): { amount: number; currency: string; presentment: { amount: number; currency: string } | null } {
+  const currency = (input.currency || 'USD').toUpperCase();
+  if (input.usdFinalAmount != null && input.usdFinalAmount > 0) {
+    return {
+      amount: input.usdFinalAmount,
+      currency: 'USD',
+      presentment: currency === 'USD' ? null : { amount: input.finalAmount, currency },
+    };
+  }
+  return { amount: input.finalAmount, currency, presentment: null };
+}
+
 function formatPercent(value: number): string {
   const rounded = Math.round(value * 10) / 10;
   if (!Number.isFinite(rounded) || rounded <= 0) return '0%';

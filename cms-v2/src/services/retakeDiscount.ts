@@ -31,6 +31,7 @@ import {
   discountPayUrl,
   generateDiscountToken,
   hashDiscountToken,
+  offeredStripeCharge,
   presentDiscountPrices,
   quoteDiscountedPrice,
   type DiscountLinkStatus,
@@ -213,6 +214,8 @@ export async function issueRetakeDiscountCode(input: {
         fullAmount: price.fullAmount,
         finalAmount: price.finalAmount,
         currency: price.currency,
+        usdFullAmount: catalogue.fullAmount,
+        usdFinalAmount: catalogue.finalAmount,
       });
       break;
     } catch (err) {
@@ -398,10 +401,11 @@ export async function openDiscountPaymentLink(input: {
 
   const shown = savedPrice(row);
   if (!shown) return closedLink('invalid');
-  const catalogue = await catalogueDiscountPrice(row.courseId, row.discountType, row.discountValue);
-  const presentment = shown.currency !== 'USD' && shown.finalAmount > 0
-    ? { amount: shown.finalAmount, currency: shown.currency }
-    : null;
+  const charge = offeredStripeCharge({
+    finalAmount: shown.finalAmount,
+    currency: shown.currency,
+    usdFinalAmount: row.usdFinalAmount,
+  });
 
   const course = await getCourseById(row.courseId);
   if (!course?.isActive || !course.zenlerCourseId?.trim()) {
@@ -431,13 +435,13 @@ export async function openDiscountPaymentLink(input: {
     optionType: 'discount-link',
     studentName: `${row.firstName} ${row.lastName}`.trim() || null,
     studentEmail: null,
-    amount: catalogue.finalAmount,
-    currency: 'USD',
+    amount: charge.amount,
+    currency: charge.currency,
     environment: input.environment,
     provider: 'stripe',
   });
-  if (presentment) {
-    await saveOfferedPresentment(order.id, presentment.amount, presentment.currency);
+  if (charge.presentment) {
+    await saveOfferedPresentment(order.id, charge.presentment.amount, charge.presentment.currency);
   }
 
   await holdRetakeCodeForOrder(row.id, order.id);
@@ -448,12 +452,13 @@ export async function openDiscountPaymentLink(input: {
     zenlerCourseId: course.zenlerCourseId,
     courseTitle: course.name,
     paymentCardTitle: course.name,
-    amount: catalogue.finalAmount,
-    currency: 'USD',
+    amount: charge.amount,
+    currency: charge.currency,
+    savedOffer: charge.currency !== 'USD',
     studentEmail: null,
     studentFirstName: row.firstName,
     studentLastName: row.lastName,
-    paymentMethodTypes: stripePaymentMethodTypes(true, 'USD'),
+    paymentMethodTypes: stripePaymentMethodTypes(true, charge.currency),
     returnOrigin: input.returnOrigin,
     cancelPath: '/',
     environment: input.environment,

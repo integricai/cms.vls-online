@@ -448,6 +448,7 @@ export function ensurePaymentPresentmentColumns(): Promise<void> {
     await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS presentment_amount NUMERIC(10, 2)`;
     await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS presentment_currency TEXT`;
     await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS settlement_currency TEXT`;
+    await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS settlement_synced_at TIMESTAMPTZ`;
   })();
   return presentmentColumnsReady;
 }
@@ -873,13 +874,28 @@ export async function savePaymentOrderSettlement(orderId: number, data: {
       processor_fee = ${data.processorFee},
       net_amount = ${data.netAmount},
       settlement_currency = ${data.settlementCurrency},
+      settlement_synced_at = NOW(),
       payment_method_label = COALESCE(${data.paymentMethod}, payment_method_label)
     WHERE id = ${orderId}
       AND (
         processor_fee IS NULL
         OR settlement_currency IS NULL
-        OR UPPER(settlement_currency) <> 'USD'
+        OR (
+          settlement_synced_at IS NULL
+          AND UPPER(settlement_currency) <> 'USD'
+        )
       )
+  `;
+}
+
+/** Leave an existing fee alone, and stop selecting this order on later syncs. */
+export async function markSettlementChecked(orderId: number): Promise<void> {
+  await ensurePaymentPresentmentColumns();
+  await sql`
+    UPDATE payment_orders
+    SET settlement_synced_at = NOW()
+    WHERE id = ${orderId}
+      AND settlement_synced_at IS NULL
   `;
 }
 

@@ -1,10 +1,9 @@
 import type { CheckoutEnvironment } from '../../shared/types';
 import { sql } from '../db/client';
-import { ensurePaymentPresentmentColumns, savePaymentOrderSettlement } from '../models/paymentOrder';
+import { ensurePaymentPresentmentColumns, markSettlementChecked, savePaymentOrderSettlement } from '../models/paymentOrder';
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 import { stripeSecretKeyForEnvironment } from './stripeCheckout';
-import { getUsdRates, rateForCurrency } from './fxRates';
-import { parseStripeSettlement, type StoredCharge, type StripeSettlement } from './stripeSettlementParse';
+import { parseStripeSettlement, type StoredCharge } from './stripeSettlementParse';
 
 const FEE_BATCH = 40;
 
@@ -17,23 +16,8 @@ interface MissingFeeRow {
   currency: string;
   presentment_amount: string | null;
   presentment_currency: string | null;
-}
-
-function roundMoney(amount: number): number {
-  return Math.round(amount * 100) / 100;
-}
-
-/** Fee and net in dollars. Uses a spot rate only when the order has no dollar price to scale from. */
-async function settlementInUsd(settlement: StripeSettlement): Promise<StripeSettlement> {
-  if (settlement.currency === 'USD') return settlement;
-  const rate = rateForCurrency(await getUsdRates(), settlement.currency);
-  if (rate == null) return settlement;
-  return {
-    fee: roundMoney(settlement.fee / rate),
-    net: settlement.net == null ? null : roundMoney(settlement.net / rate),
-    currency: 'USD',
-    paymentMethod: settlement.paymentMethod,
-  };
+  processor_fee: string | null;
+  settlement_currency: string | null;
 }
 
 function otherEnvironment(environment: CheckoutEnvironment): CheckoutEnvironment {
@@ -97,6 +81,8 @@ async function missingFeeRows(fromDate: string, toDate: string): Promise<Missing
       po.currency,
       po.presentment_amount,
       po.presentment_currency,
+      po.processor_fee,
+      po.settlement_currency,
       COALESCE(po.stripe_payment_intent_id, po.provider_payment_id) AS payment_id,
       po.checkout_environment
     FROM sales s
@@ -104,7 +90,13 @@ async function missingFeeRows(fromDate: string, toDate: string): Promise<Missing
     WHERE (
         po.processor_fee IS NULL
         OR po.settlement_currency IS NULL
-        OR UPPER(po.settlement_currency) <> 'USD'
+        OR (
+          po.settlement_synced_at IS NULL
+          AND UPPER(po.settlement_currency) <> 'USD'
+          AND UPPER(po.currency) = 'USD'
+          AND po.presentment_amount IS NOT NULL
+          AND po.presentment_currency IS NOT NULL
+        )
       )
       AND COALESCE(po.provider, 'stripe') <> 'paypal'
       AND COALESCE(po.stripe_payment_intent_id, po.provider_payment_id) IS NOT NULL
@@ -125,7 +117,13 @@ export async function countMissingStripeFees(fromDate: string, toDate: string): 
     WHERE (
         po.processor_fee IS NULL
         OR po.settlement_currency IS NULL
-        OR UPPER(po.settlement_currency) <> 'USD'
+        OR (
+          po.settlement_synced_at IS NULL
+          AND UPPER(po.settlement_currency) <> 'USD'
+          AND UPPER(po.currency) = 'USD'
+          AND po.presentment_amount IS NOT NULL
+          AND po.presentment_currency IS NOT NULL
+        )
       )
       AND COALESCE(po.provider, 'stripe') <> 'paypal'
       AND COALESCE(po.stripe_payment_intent_id, po.provider_payment_id) IS NOT NULL
@@ -153,13 +151,17 @@ export async function syncStripeFees(fromDate: string, toDate: string): Promise<
           presentmentCurrency: row.presentment_currency,
         });
         if (!lookedUp) continue;
-        const settlement = await settlementInUsd(lookedUp);
-        if (settlement.currency !== 'USD') continue;
+        const alreadyRecorded = row.processor_fee != null && row.settlement_currency != null;
+        if (lookedUp.currency !== 'USD' && alreadyRecorded) {
+          await markSettlementChecked(row.payment_order_id);
+          updated += 1;
+          continue;
+        }
         await savePaymentOrderSettlement(row.payment_order_id, {
-          processorFee: settlement.fee,
-          netAmount: settlement.net,
-          settlementCurrency: settlement.currency,
-          paymentMethod: settlement.paymentMethod,
+          processorFee: lookedUp.fee,
+          netAmount: lookedUp.net,
+          settlementCurrency: lookedUp.currency,
+          paymentMethod: lookedUp.paymentMethod,
         });
         updated += 1;
       } catch (err) {

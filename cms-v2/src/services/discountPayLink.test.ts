@@ -6,6 +6,7 @@ import {
   discountPayUrl,
   generateDiscountToken,
   hashDiscountToken,
+  offeredStripeCharge,
   presentDiscountPrices,
   quoteDiscountedPrice,
   DISCOUNT_LINK_DAYS,
@@ -83,6 +84,31 @@ run('keeps US dollars when the local currency cannot be charged', () => {
     countryCode: 'ID',
     rates: { IDR: 16000 },
   }), { fullAmount: 100, finalAmount: 70, currency: 'USD' });
+});
+
+run('charges the dollar amount saved with the offer, not a later catalogue price', () => {
+  assert.deepEqual(offeredStripeCharge({
+    finalAmount: 120,
+    currency: 'GBP',
+    usdFinalAmount: 150,
+  }), {
+    amount: 150,
+    currency: 'USD',
+    presentment: { amount: 120, currency: 'GBP' },
+  });
+  assert.deepEqual(offeredStripeCharge({
+    finalAmount: 150,
+    currency: 'USD',
+    usdFinalAmount: null,
+  }), { amount: 150, currency: 'USD', presentment: null });
+});
+
+run('an older local offer keeps the amount from the email', () => {
+  assert.deepEqual(offeredStripeCharge({
+    finalAmount: 120,
+    currency: 'GBP',
+    usdFinalAmount: null,
+  }), { amount: 120, currency: 'GBP', presentment: null });
 });
 
 run('shows the form percent, or the equivalent percent for a fixed discount', () => {
