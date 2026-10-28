@@ -7,6 +7,7 @@ import {
   appendStripeOrderSummaryNote,
   appendStripeStudentNameFields,
   buildLocalCurrencyPriceParams,
+  buildLocalCurrencyProductParams,
   classifyPaidAmount,
   locksLocalPresentment,
   majorAmountFromStripeMinor,
@@ -279,8 +280,12 @@ run('locks the course-page pound amount beside the dollar price', () => {
   assert.strictEqual(locksLocalPresentment('GBP', { amount: 65.72, currency: 'GBP' }), false);
   assert.strictEqual(locksLocalPresentment('USD', { amount: 87.5, currency: 'USD' }), false);
 
+  const product = buildLocalCurrencyProductParams('ACCA SBR');
+  assert.strictEqual(product.get('name'), 'ACCA SBR');
+  assert.strictEqual(product.get('description'), STRIPE_PAYPAL_CURRENCY_NOTE);
+
   const params = buildLocalCurrencyPriceParams({
-    title: 'ACCA SBR',
+    productId: 'prod_123',
     usdAmount: 87.5,
     localAmount: 65.72,
     localCurrency: 'GBP',
@@ -288,7 +293,9 @@ run('locks the course-page pound amount beside the dollar price', () => {
   assert.strictEqual(params.get('currency'), 'usd');
   assert.strictEqual(params.get('unit_amount'), '8750');
   assert.strictEqual(params.get('currency_options[gbp][unit_amount]'), '6572');
-  assert.strictEqual(params.get('product_data[description]'), STRIPE_PAYPAL_CURRENCY_NOTE);
+  assert.strictEqual(params.get('product'), 'prod_123');
+  // Stripe rejects a description inside a Price's inline product_data.
+  assert.strictEqual(params.has('product_data[description]'), false);
 });
 
 run('accepts either the dollar charge or the locked local amount', () => {

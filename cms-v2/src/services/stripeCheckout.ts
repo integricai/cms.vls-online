@@ -89,12 +89,20 @@ export function locksLocalPresentment(
     && Number.isFinite(local.amount);
 }
 
+/** Product for the locked-price checkout. A Price's inline product_data does not accept a description. */
+export function buildLocalCurrencyProductParams(title: string): URLSearchParams {
+  const params = new URLSearchParams();
+  params.append('name', title);
+  params.append('description', STRIPE_PAYPAL_CURRENCY_NOTE);
+  return params;
+}
+
 /**
  * Stripe Price in dollars, with the course-page amount locked in as the local currency.
  * Adaptive Pricing will not replace that currency with its own conversion fee.
  */
 export function buildLocalCurrencyPriceParams(input: {
-  title: string;
+  productId: string;
   usdAmount: number;
   localAmount: number;
   localCurrency: string;
@@ -102,8 +110,7 @@ export function buildLocalCurrencyPriceParams(input: {
   const params = new URLSearchParams();
   params.append('currency', 'usd');
   params.append('unit_amount', String(stripeUnitAmount(input.usdAmount, 'USD')));
-  params.append('product_data[name]', input.title);
-  params.append('product_data[description]', STRIPE_PAYPAL_CURRENCY_NOTE);
+  params.append('product', input.productId);
   const code = input.localCurrency.toLowerCase();
   params.append(
     `currency_options[${code}][unit_amount]`,
@@ -340,8 +347,17 @@ export async function createStripeCheckoutSession(input: {
     ? input.localPresentment
     : null;
   if (localPresentment) {
+    const product = await stripeApiRequest(secretKey, '/products', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Idempotency-Key': `checkout-product-${input.orderId}`,
+      },
+      body: buildLocalCurrencyProductParams(input.paymentCardTitle || input.courseTitle),
+    });
+    if (!product.id) throw new Error('Stripe did not return a product for the local amount');
     const priceParams = buildLocalCurrencyPriceParams({
-      title: input.paymentCardTitle || input.courseTitle,
+      productId: product.id,
       usdAmount: input.amount,
       localAmount: localPresentment.amount,
       localCurrency: localPresentment.currency,
