@@ -23,7 +23,7 @@ type PurgeResult = {
 
 const DEFAULT_TARGETS: SiteCacheTarget[] = [
   { id: 'staging', label: 'Staging', siteUrl: 'https://staging.vls-online.com', configured: false },
-  { id: 'production', label: 'Production', siteUrl: 'https://prod.vls-online.com', configured: false },
+  { id: 'production', label: 'Production', siteUrl: 'https://vls-online.com', configured: false },
 ];
 
 export default function SiteCache() {

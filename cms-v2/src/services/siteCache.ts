@@ -38,7 +38,7 @@ const TARGETS: Record<SiteCacheEnvironment, TargetConfig> = {
     urlEnv: 'PRODUCTION_SITE_URL',
     secretEnv: 'PRODUCTION_REVALIDATE_SECRET',
     label: 'Production',
-    defaultUrl: 'https://prod.vls-online.com',
+    defaultUrl: 'https://vls-online.com',
   },
 };
 
