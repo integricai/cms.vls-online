@@ -5,6 +5,7 @@
 
 import { randomBytes } from 'crypto';
 import { splitStudentName } from '../models/customer';
+import { sendErrorAlert } from '../utils/errorAlert';
 import {
   createZenlerStudent,
   enrollZenlerUserInCourse,
@@ -65,6 +66,21 @@ function enrollmentStatusFromExisting(isNewUser: boolean): 'enrolled' | 'enrolle
   return isNewUser ? 'enrolled_new' : 'enrolled';
 }
 
+const reportedEnrollmentFailures = new Set<string>();
+
+function reportEnrollmentFailure(key: string, error: unknown, extra: Record<string, unknown>): void {
+  if (reportedEnrollmentFailures.has(key)) return;
+  reportedEnrollmentFailures.add(key);
+  void sendErrorAlert({
+    area: 'School enrolment failed',
+    explanation: 'A paid checkout could not open school access. The buyer sees a short message on the payment page. This log is the real error.',
+    error,
+    extra,
+  }).catch((alertErr) => {
+    console.error('[alert] failed to record school enrolment failure', alertErr);
+  });
+}
+
 /** Zenler rejects a new account when the last name is blank. */
 export function zenlerStudentNames(
   name: string | null | undefined,
@@ -82,25 +98,33 @@ export async function enrollStudentInZenlerCourse(
   input: ZenlerEnrollmentInput,
 ): Promise<ZenlerEnrollmentResult> {
   if (!zenlerCredentialsConfigured()) {
+    const message = 'Zenler API credentials are not configured';
+    reportEnrollmentFailure('zenler-credentials-missing', new Error(message), {
+      zenlerCourseId: input.zenlerCourseId,
+    });
     return {
       zenlerUserId: null,
       status: 'skipped',
       isNewZenlerUser: false,
       temporaryPassword: null,
       studentChosePassword: false,
-      message: 'Zenler API credentials are not configured',
+      message,
     };
   }
 
   const email = input.email.trim().toLowerCase();
   if (!email) {
+    const message = 'Student email is required for Zenler enrollment';
+    reportEnrollmentFailure(`missing-email:${input.zenlerCourseId}`, new Error(message), {
+      zenlerCourseId: input.zenlerCourseId,
+    });
     return {
       zenlerUserId: null,
       status: 'failed',
       isNewZenlerUser: false,
       temporaryPassword: null,
       studentChosePassword: false,
-      message: 'Student email is required for Zenler enrollment',
+      message,
     };
   }
 
@@ -169,6 +193,10 @@ export async function enrollStudentInZenlerCourse(
       email,
       zenlerCourseId: input.zenlerCourseId,
       message,
+    });
+    reportEnrollmentFailure(`${email}:${input.zenlerCourseId}:${message}`, err, {
+      email,
+      zenlerCourseId: input.zenlerCourseId,
     });
     return {
       zenlerUserId,

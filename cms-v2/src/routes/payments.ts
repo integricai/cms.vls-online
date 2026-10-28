@@ -17,6 +17,7 @@ import {
   fulfillPaidCheckout,
   fulfillRefund,
   isStudentConfirmationEmailError,
+  isZenlerEnrollmentHoldError,
   reconcilePaidOrder,
 } from '../services/payments/fulfillment';
 import { getPaymentProvider, isPaymentProviderEnabled, listEnabledPaymentProviders } from '../services/payments/registry';
@@ -41,7 +42,7 @@ import {
 } from '../services/pricingResolver';
 import { isParityDealsTestAllowed, isParityDealsTestRequest } from '../services/parityDealsTest';
 import { proxySecretMatches } from '../services/proxySecret';
-import { courseAccessUrlForEnrollment } from '../services/schoolAccess';
+import { courseAccessUrlForEnrollment, schoolAccessState } from '../services/schoolAccess';
 import { freeEnrolHandler } from './freeEnrol';
 import {
   MultiCourseAccessError,
@@ -1006,10 +1007,28 @@ function publicPaymentStatus(order: PaymentOrder, confirmationEmailFailed = fals
       zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
       isNewZenlerUser: order.zenlerUserCreated,
     }),
+    accessState: schoolAccessState(order),
     confirmationEmailSent,
     confirmationEmailFailed: !confirmationEmailSent && confirmationEmailFailed,
     refundedAt: order.refundedAt?.toISOString() ?? null,
   };
+}
+
+const reportedPaymentStatusFailures = new Set<string>();
+
+function reportPaymentStatusFailure(orderId: number, area: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  const key = `${area}:${orderId}:${message}`;
+  if (reportedPaymentStatusFailures.has(key)) return;
+  reportedPaymentStatusFailures.add(key);
+  void sendErrorAlert({
+    area,
+    explanation: 'The payment return page could not finish this order. The buyer sees a short message. This log is the real error.',
+    error,
+    extra: { orderId },
+  }).catch((alertErr) => {
+    console.error('[alert] failed to record payment status failure', alertErr);
+  });
 }
 
 async function paymentStatusForSession(
@@ -1026,6 +1045,7 @@ async function paymentStatusForSession(
       order = await capturePendingProviderCheckout(order);
     } catch (err) {
       console.error('[payments] capture on status failed', err);
+      reportPaymentStatusFailure(order.id, 'Payment capture failed', err);
     }
   }
 
@@ -1036,6 +1056,9 @@ async function paymentStatusForSession(
     } catch (err) {
       console.error('[payments] status reconcile failed', err);
       confirmationEmailFailed = isStudentConfirmationEmailError(err);
+      if (!confirmationEmailFailed && !isZenlerEnrollmentHoldError(err)) {
+        reportPaymentStatusFailure(order.id, 'Payment fulfilment failed', err);
+      }
       order = (await getPaymentOrder(order.id)) ?? order;
     }
   }

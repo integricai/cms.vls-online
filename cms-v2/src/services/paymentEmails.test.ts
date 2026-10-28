@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { stagingPurchaseConfirmation, studentPaymentAccessInstructions } from './paymentEmails';
-import { enrollmentStatusBlocksAccessEmail, VLS_SCHOOL_LOGIN_URL, VLS_SCHOOL_PASSWORD_RESET_URL } from './schoolAccess';
+import { enrollmentStatusBlocksAccessEmail, schoolAccessState, VLS_SCHOOL_LOGIN_URL, VLS_SCHOOL_PASSWORD_RESET_URL } from './schoolAccess';
 
 const login = VLS_SCHOOL_LOGIN_URL;
 
@@ -176,4 +176,35 @@ run('keeps the existing-account instructions for a returning student', () => {
   assert.match(message.text, /existing VLS school account/);
   assert.doesNotMatch(message.text, /Set your password/);
   assert.doesNotMatch(message.text, new RegExp(VLS_SCHOOL_PASSWORD_RESET_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+});
+
+run('tells the thank-you page when school access is ready, waiting, or unavailable', () => {
+  assert.equal(schoolAccessState({
+    zenlerEnrollmentStatus: 'enrolled',
+    zenlerCourseId: '101',
+  }), 'ready');
+  assert.equal(schoolAccessState({
+    zenlerEnrollmentStatus: 'enrolled_new',
+    zenlerCourseId: '101',
+  }), 'ready');
+  assert.equal(schoolAccessState({
+    zenlerEnrollmentStatus: null,
+    zenlerCourseId: '101',
+  }), 'pending');
+  assert.equal(schoolAccessState({
+    zenlerEnrollmentStatus: 'pending',
+    accessZenlerCourseIds: ['202'],
+  }), 'pending');
+  assert.equal(schoolAccessState({
+    zenlerEnrollmentStatus: 'failed',
+    zenlerCourseId: '101',
+  }), 'unavailable');
+  assert.equal(schoolAccessState({
+    zenlerEnrollmentStatus: 'skipped',
+    zenlerCourseId: '101',
+  }), 'unavailable');
+  assert.equal(schoolAccessState({
+    zenlerEnrollmentStatus: null,
+    zenlerCourseId: '',
+  }), 'ready');
 });
