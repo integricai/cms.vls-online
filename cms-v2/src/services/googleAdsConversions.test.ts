@@ -30,6 +30,8 @@ function order(partial: Partial<PaymentOrder>): PaymentOrder {
     countryCode: 'GB',
     amount: 199,
     currency: 'usd',
+    presentmentAmount: null,
+    presentmentCurrency: null,
     durationDays: 180,
     discountPercent: null,
     status: 'Paid',

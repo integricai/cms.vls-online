@@ -1,4 +1,5 @@
 import { sql } from '../db/client';
+import { ensurePaymentPresentmentColumns } from './paymentOrder';
 
 export interface SalesDayTotal {
   date: string;
@@ -16,6 +17,8 @@ export interface SalesActivityRow {
   lastName: string | null;
   amount: number;
   currency: string;
+  presentmentAmount: number | null;
+  presentmentCurrency: string | null;
   refunded: boolean;
 }
 
@@ -58,6 +61,7 @@ export async function listSalesDayTotals(startDate: string, endDate: string): Pr
 }
 
 export async function listRecentSalesActivity(limit: number, includeRefunded: boolean): Promise<SalesActivityRow[]> {
+  await ensurePaymentPresentmentColumns();
   const rows = includeRefunded
     ? await sql`
       SELECT
@@ -65,6 +69,8 @@ export async function listRecentSalesActivity(limit: number, includeRefunded: bo
         s.sold_at,
         s.amount,
         s.currency,
+        po.presentment_amount,
+        po.presentment_currency,
         c.name AS course_name,
         cu.first_name,
         cu.last_name,
@@ -83,6 +89,8 @@ export async function listRecentSalesActivity(limit: number, includeRefunded: bo
         s.sold_at,
         s.amount,
         s.currency,
+        po.presentment_amount,
+        po.presentment_currency,
         c.name AS course_name,
         cu.first_name,
         cu.last_name,
@@ -102,6 +110,8 @@ export async function listRecentSalesActivity(limit: number, includeRefunded: bo
     sold_at: Date;
     amount: string;
     currency: string;
+    presentment_amount: string | null;
+    presentment_currency: string | null;
     course_name: string | null;
     first_name: string | null;
     last_name: string | null;
@@ -114,6 +124,8 @@ export async function listRecentSalesActivity(limit: number, includeRefunded: bo
     lastName: row.last_name,
     amount: Number(row.amount),
     currency: row.currency || 'USD',
+    presentmentAmount: row.presentment_amount != null ? Number(row.presentment_amount) : null,
+    presentmentCurrency: row.presentment_currency ?? null,
     refunded: Boolean(row.refunded),
   }));
 }

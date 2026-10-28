@@ -369,7 +369,12 @@ export async function sendStudentPaymentConfirmation(
 
   const name = order.studentName || 'Student';
   const option = order.optionType || 'Course payment';
-  const amount = formatDisplayMoney(order.amount, order.currency || 'USD');
+  const seenLocally = order.presentmentAmount != null
+    && order.presentmentCurrency
+    && order.presentmentCurrency.toUpperCase() !== (order.currency || 'USD').toUpperCase();
+  const amount = seenLocally
+    ? formatDisplayMoney(order.presentmentAmount as number, order.presentmentCurrency as string)
+    : formatDisplayMoney(order.amount, order.currency || 'USD');
 
   const staged = stagingPurchaseConfirmation({
     name,

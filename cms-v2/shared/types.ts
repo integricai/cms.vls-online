@@ -581,6 +581,9 @@ export interface SaleListItem extends Sale {
   /** Card, PayPal wallet, Klarna, and similar. Separate from the processor. */
   paymentMethod: string | null;
   checkoutEnvironment: CheckoutEnvironment | null;
+  /** Local price the student saw, when it differs from the dollar charge. */
+  presentmentAmount: number | null;
+  presentmentCurrency: string | null;
 }
 
 export interface SaleCourseSummary {
@@ -633,6 +636,8 @@ export interface SalesDashboardOrder {
   soldAt: string;
   amount: number;
   currency: string;
+  presentmentAmount: number | null;
+  presentmentCurrency: string | null;
   type: 'One-time' | 'Refunded';
 }
 

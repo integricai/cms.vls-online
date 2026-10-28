@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, getCurrentUser } from '../../api/client';
 import type { SalesDashboard, SalesDashboardCard, SalesDashboardPoint, SalesFeeSyncResult } from '../../../../shared/types';
-import { formatDisplayDate, londonToday, monthStart, type DashboardRange } from '../../../../shared/salesFormat';
+import { formatDisplayDate, formatVaultPrice, londonToday, monthStart, type DashboardRange } from '../../../../shared/salesFormat';
 
 const RANGES: Array<{ id: DashboardRange; label: string }> = [
   { id: 'this_month', label: 'This month' },
@@ -304,7 +304,7 @@ export default function DashboardTab() {
                         <td className="px-4 py-2">{order.customerName}</td>
                         <td className="px-4 py-2 whitespace-nowrap">{formatDisplayDate(order.soldAt)}</td>
                         <td className="px-4 py-2">{order.type}</td>
-                        <td className="px-4 py-2 whitespace-nowrap">{formatMoney(order.amount, order.currency)}</td>
+                        <td className="px-4 py-2 whitespace-nowrap">{formatVaultPrice(order)}</td>
                       </tr>
                     ))}
                   </tbody>

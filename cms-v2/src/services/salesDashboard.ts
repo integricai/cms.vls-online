@@ -157,6 +157,8 @@ export async function buildSalesDashboard(range: DashboardRange, now = new Date(
       soldAt: new Date(row.soldAt).toISOString(),
       amount: roundMoney(row.amount),
       currency: row.currency,
+      presentmentAmount: row.presentmentAmount,
+      presentmentCurrency: row.presentmentCurrency,
       type: row.refunded ? 'Refunded' : 'One-time',
     })),
   };

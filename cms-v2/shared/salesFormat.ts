@@ -109,6 +109,34 @@ export function pickDashboardCurrency(
   return bestCount < 0 ? 'USD' : best;
 }
 
+function formatMoneyAmount(amount: number | null | undefined, currency: string | null | undefined): string {
+  if (amount == null || Number.isNaN(amount)) return '—';
+  const code = currency || 'USD';
+  try {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: code,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${amount.toFixed(2)} ${code}`;
+  }
+}
+
+/** Local price the student saw, with the dollar charge beside it when they differ. */
+export function formatVaultPrice(input: {
+  amount: number | null | undefined;
+  currency: string | null | undefined;
+  presentmentAmount?: number | null;
+  presentmentCurrency?: string | null;
+}): string {
+  const charge = formatMoneyAmount(input.amount, input.currency);
+  const localCode = input.presentmentCurrency?.trim().toUpperCase() ?? '';
+  const chargeCode = (input.currency || 'USD').trim().toUpperCase();
+  if (input.presentmentAmount == null || !localCode || localCode === chargeCode) return charge;
+  return `${formatMoneyAmount(input.presentmentAmount, localCode)} (${charge})`;
+}
+
 export function isDashboardRange(value: string): value is DashboardRange {
   return value === 'this_month' || value === 'last_month' || value === 'last_7_days' || value === 'last_30_days';
 }

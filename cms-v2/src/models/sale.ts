@@ -1,4 +1,5 @@
 import { sql } from '../db/client';
+import { ensurePaymentPresentmentColumns } from './paymentOrder';
 import { isValidIsoCountryCode, normalizeCountryCode } from '../utils/isoCountryCodes';
 import type {
   PaymentOrderStatus,
@@ -53,6 +54,8 @@ interface SaleListDbRow extends SaleDbRow {
   net_amount: string | null;
   payment_method_label: string | null;
   checkout_environment: string | null;
+  presentment_amount: string | null;
+  presentment_currency: string | null;
 }
 
 function num(value: string | number | null | undefined): number | null {
@@ -117,6 +120,8 @@ function rowToSaleListItem(row: SaleListDbRow): SaleListItem {
       : row.checkout_environment === 'staging'
         ? 'staging'
         : null,
+    presentmentAmount: row.presentment_amount != null ? Number(row.presentment_amount) : null,
+    presentmentCurrency: row.presentment_currency ?? null,
   };
 }
 
@@ -141,6 +146,7 @@ export async function getSaleByPaymentOrderId(paymentOrderId: number): Promise<S
 }
 
 export async function getSaleListItemById(id: number): Promise<SaleListItem | null> {
+  await ensurePaymentPresentmentColumns();
   const rows = await sql`
     SELECT
       s.*,
@@ -165,7 +171,9 @@ export async function getSaleListItemById(id: number): Promise<SaleListItem | nu
       po.processor_fee,
       po.net_amount,
       po.payment_method_label,
-      po.checkout_environment
+      po.checkout_environment,
+      po.presentment_amount,
+      po.presentment_currency
     FROM sales s
     LEFT JOIN courses c ON c.id = s.course_id
     LEFT JOIN customers cu ON cu.id = s.customer_id
@@ -235,6 +243,7 @@ export type ListSalesFilters = {
 };
 
 export async function listSales(filters: ListSalesFilters = {}): Promise<SaleListItem[]> {
+  await ensurePaymentPresentmentColumns();
   const status = filters.status ?? 'All';
   const courseId = filters.courseId ?? null;
   const tutorId = filters.tutorId ?? null;
@@ -266,7 +275,9 @@ export async function listSales(filters: ListSalesFilters = {}): Promise<SaleLis
       po.processor_fee,
       po.net_amount,
       po.payment_method_label,
-      po.checkout_environment
+      po.checkout_environment,
+      po.presentment_amount,
+      po.presentment_currency
     FROM sales s
     LEFT JOIN courses c ON c.id = s.course_id
     LEFT JOIN customers cu ON cu.id = s.customer_id

@@ -3,6 +3,7 @@ import {
   addIsoDays,
   dashboardRangeBounds,
   percentChange,
+  formatVaultPrice,
   pickDashboardCurrency,
   saleSessionLabel,
   shiftMonth,
@@ -54,6 +55,16 @@ run('picks the currency with the most sales, not the largest nominal total', () 
     { currency: 'USD', count: 19, date: '2026-10-20' },
   ];
   assert.strictEqual(pickDashboardCurrency(rows, '2026-10-01', '2026-10-25'), 'USD');
+});
+
+run('shows the local price and the dollar charge together', () => {
+  assert.strictEqual(formatVaultPrice({
+    amount: 61,
+    currency: 'USD',
+    presentmentAmount: 48.82,
+    presentmentCurrency: 'GBP',
+  }), '£48.82 (US$61.00)');
+  assert.strictEqual(formatVaultPrice({ amount: 61, currency: 'USD' }), 'US$61.00');
 });
 
 run('session label keeps the month length and the valid-to date', () => {

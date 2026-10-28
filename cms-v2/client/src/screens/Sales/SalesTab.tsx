@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/client';
 import type { SaleListItem, SalesFeeSyncResult, Tutor } from '../../../../shared/types';
-import { formatDisplayDate, londonToday, monthStart, saleSessionLabel } from '../../../../shared/salesFormat';
+import { formatDisplayDate, formatVaultPrice, londonToday, monthStart, saleSessionLabel } from '../../../../shared/salesFormat';
 
 function formatMoney(amount: number | null | undefined, currency: string): string {
   if (amount == null || Number.isNaN(amount)) return '—';
@@ -83,7 +83,7 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
     countryLabel(sale.countryCode),
     sale.paymentMethod ?? '',
     processorLabel(sale),
-    formatMoney(sale.amount, sale.currency),
+    formatVaultPrice(sale),
     formatMoney(sale.processorFee, sale.currency),
     formatMoney(sale.netAmount, sale.currency),
   ].map(csvCell).join(','));
@@ -319,7 +319,7 @@ export default function SalesTab() {
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">{sale.paymentMethod || '—'}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{processorLabel(sale)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.amount, sale.currency)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{formatVaultPrice(sale)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.processorFee, sale.currency)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.netAmount, sale.currency)}</td>
                     <td className="px-3 py-2">

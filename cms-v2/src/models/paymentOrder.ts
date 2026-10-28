@@ -21,6 +21,9 @@ export interface PaymentOrder {
   countryCode: string | null;
   amount: number;
   currency: string;
+  /** Local price the student saw. Null when they paid the dollar price. */
+  presentmentAmount: number | null;
+  presentmentCurrency: string | null;
   durationDays: number | null;
   discountPercent: number | null;
   status: PaymentOrderStatus;
@@ -80,6 +83,8 @@ interface DbRow {
   customer_phone: string | null;
   amount: string;
   currency: string;
+  presentment_amount?: string | null;
+  presentment_currency?: string | null;
   duration_days: number | null;
   discount_percent: string | null;
   status: PaymentOrderStatus;
@@ -139,6 +144,8 @@ function rowToOrder(row: DbRow): PaymentOrder {
     countryCode: row.country_code ?? null,
     amount: Number(row.amount),
     currency: row.currency,
+    presentmentAmount: row.presentment_amount != null ? Number(row.presentment_amount) : null,
+    presentmentCurrency: row.presentment_currency ?? null,
     durationDays: row.duration_days ?? null,
     discountPercent: row.discount_percent != null ? Number(row.discount_percent) : null,
     status: row.status,
@@ -421,16 +428,28 @@ export async function markPaymentOrderPaid(data: {
   return { order: rowToOrder(paid), wasAlreadyPaid: false };
 }
 
-/** Store the local price the student chose, so the confirmation email matches the checkout page. */
+let presentmentColumnsReady: Promise<void> | null = null;
+
+/** Adds the local-price columns if this process has not added them yet. */
+export function ensurePaymentPresentmentColumns(): Promise<void> {
+  presentmentColumnsReady ??= (async () => {
+    await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS presentment_amount NUMERIC(10, 2)`;
+    await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS presentment_currency TEXT`;
+  })();
+  return presentmentColumnsReady;
+}
+
+/** The local price the student saw. The dollar amount on the order is left as Stripe charged it. */
 export async function rememberPresentedCharge(
   orderId: number,
   amount: number,
   currency: string,
 ): Promise<PaymentOrder> {
+  await ensurePaymentPresentmentColumns();
   const rows = await sql`
     UPDATE payment_orders
-    SET amount = ${amount},
-        currency = ${currency.toUpperCase()}
+    SET presentment_amount = ${amount},
+        presentment_currency = ${currency.toUpperCase()}
     WHERE id = ${orderId}
       AND status = 'Paid'
     RETURNING *
