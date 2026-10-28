@@ -6,6 +6,7 @@ import {
   createPaymentOrder,
   getPaymentOrder,
   paymentOrderCheckoutId,
+  saveOfferedPresentment,
 } from '../models/paymentOrder';
 import {
   consumeRetakeCodeForOrder,
@@ -395,8 +396,12 @@ export async function openDiscountPaymentLink(input: {
   const status = discountLinkStatus(row);
   if (status !== 'valid' || !row) return closedLink(status === 'valid' ? 'invalid' : status);
 
-  const price = savedPrice(row);
-  if (!price) return closedLink('invalid');
+  const shown = savedPrice(row);
+  if (!shown) return closedLink('invalid');
+  const catalogue = await catalogueDiscountPrice(row.courseId, row.discountType, row.discountValue);
+  const presentment = shown.currency !== 'USD' && shown.finalAmount > 0
+    ? { amount: shown.finalAmount, currency: shown.currency }
+    : null;
 
   const course = await getCourseById(row.courseId);
   if (!course?.isActive || !course.zenlerCourseId?.trim()) {
@@ -426,11 +431,14 @@ export async function openDiscountPaymentLink(input: {
     optionType: 'discount-link',
     studentName: `${row.firstName} ${row.lastName}`.trim() || null,
     studentEmail: null,
-    amount: price.finalAmount,
-    currency: price.currency,
+    amount: catalogue.finalAmount,
+    currency: 'USD',
     environment: input.environment,
     provider: 'stripe',
   });
+  if (presentment) {
+    await saveOfferedPresentment(order.id, presentment.amount, presentment.currency);
+  }
 
   await holdRetakeCodeForOrder(row.id, order.id);
 
@@ -440,12 +448,12 @@ export async function openDiscountPaymentLink(input: {
     zenlerCourseId: course.zenlerCourseId,
     courseTitle: course.name,
     paymentCardTitle: course.name,
-    amount: price.finalAmount,
-    currency: price.currency,
+    amount: catalogue.finalAmount,
+    currency: 'USD',
     studentEmail: null,
     studentFirstName: row.firstName,
     studentLastName: row.lastName,
-    paymentMethodTypes: stripePaymentMethodTypes(true, price.currency),
+    paymentMethodTypes: stripePaymentMethodTypes(true, 'USD'),
     returnOrigin: input.returnOrigin,
     cancelPath: '/',
     environment: input.environment,

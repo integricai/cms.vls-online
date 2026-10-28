@@ -3,7 +3,8 @@ import { sql } from '../db/client';
 import { ensurePaymentPresentmentColumns, savePaymentOrderSettlement } from '../models/paymentOrder';
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 import { stripeSecretKeyForEnvironment } from './stripeCheckout';
-import { parseStripeSettlement, type StoredCharge } from './stripeSettlementParse';
+import { getUsdRates, rateForCurrency } from './fxRates';
+import { parseStripeSettlement, type StoredCharge, type StripeSettlement } from './stripeSettlementParse';
 
 const FEE_BATCH = 40;
 
@@ -14,6 +15,25 @@ interface MissingFeeRow {
   checkout_environment: string | null;
   amount: string;
   currency: string;
+  presentment_amount: string | null;
+  presentment_currency: string | null;
+}
+
+function roundMoney(amount: number): number {
+  return Math.round(amount * 100) / 100;
+}
+
+/** Fee and net in dollars. Uses a spot rate only when the order has no dollar price to scale from. */
+async function settlementInUsd(settlement: StripeSettlement): Promise<StripeSettlement> {
+  if (settlement.currency === 'USD') return settlement;
+  const rate = rateForCurrency(await getUsdRates(), settlement.currency);
+  if (rate == null) return settlement;
+  return {
+    fee: roundMoney(settlement.fee / rate),
+    net: settlement.net == null ? null : roundMoney(settlement.net / rate),
+    currency: 'USD',
+    paymentMethod: settlement.paymentMethod,
+  };
 }
 
 function otherEnvironment(environment: CheckoutEnvironment): CheckoutEnvironment {
@@ -75,6 +95,8 @@ async function missingFeeRows(fromDate: string, toDate: string): Promise<Missing
       s.payment_order_id,
       po.amount,
       po.currency,
+      po.presentment_amount,
+      po.presentment_currency,
       COALESCE(po.stripe_payment_intent_id, po.provider_payment_id) AS payment_id,
       po.checkout_environment
     FROM sales s
@@ -82,6 +104,7 @@ async function missingFeeRows(fromDate: string, toDate: string): Promise<Missing
     WHERE (
         po.processor_fee IS NULL
         OR po.settlement_currency IS NULL
+        OR UPPER(po.settlement_currency) <> 'USD'
       )
       AND COALESCE(po.provider, 'stripe') <> 'paypal'
       AND COALESCE(po.stripe_payment_intent_id, po.provider_payment_id) IS NOT NULL
@@ -102,6 +125,7 @@ export async function countMissingStripeFees(fromDate: string, toDate: string): 
     WHERE (
         po.processor_fee IS NULL
         OR po.settlement_currency IS NULL
+        OR UPPER(po.settlement_currency) <> 'USD'
       )
       AND COALESCE(po.provider, 'stripe') <> 'paypal'
       AND COALESCE(po.stripe_payment_intent_id, po.provider_payment_id) IS NOT NULL
@@ -122,11 +146,15 @@ export async function syncStripeFees(fromDate: string, toDate: string): Promise<
       if (!row?.payment_id) continue;
       const environment: CheckoutEnvironment = row.checkout_environment === 'production' ? 'production' : 'staging';
       try {
-        const settlement = await lookupStripeSettlement(row.payment_id, environment, {
+        const lookedUp = await lookupStripeSettlement(row.payment_id, environment, {
           amount: Number(row.amount),
           currency: row.currency,
+          presentmentAmount: row.presentment_amount != null ? Number(row.presentment_amount) : null,
+          presentmentCurrency: row.presentment_currency,
         });
-        if (!settlement) continue;
+        if (!lookedUp) continue;
+        const settlement = await settlementInUsd(lookedUp);
+        if (settlement.currency !== 'USD') continue;
         await savePaymentOrderSettlement(row.payment_order_id, {
           processorFee: settlement.fee,
           netAmount: settlement.net,

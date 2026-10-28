@@ -76,47 +76,14 @@ export type LocalPresentment = {
   currency: string;
 };
 
-/** A US dollar charge can also carry the exact local amount the course page showed. */
-export function locksLocalPresentment(
-  chargeCurrency: string,
-  local: LocalPresentment | null | undefined,
-): local is LocalPresentment {
-  if (!local) return false;
-  const localCurrency = local.currency.toUpperCase();
-  return chargeCurrency.toUpperCase() === 'USD'
-    && localCurrency !== 'USD'
-    && local.amount > 0
-    && Number.isFinite(local.amount);
-}
-
-/** Product for the locked-price checkout. A Price's inline product_data does not accept a description. */
-export function buildLocalCurrencyProductParams(title: string): URLSearchParams {
-  const params = new URLSearchParams();
-  params.append('name', title);
-  params.append('description', STRIPE_PAYPAL_CURRENCY_NOTE);
-  return params;
-}
-
 /**
- * Stripe Price in dollars, with the course-page amount locked in as the local currency.
- * Adaptive Pricing will not replace that currency with its own conversion fee.
+ * Stripe stores this currency on the PaymentIntent.
+ * A price currency option would record the student's local currency instead.
  */
-export function buildLocalCurrencyPriceParams(input: {
-  productId: string;
-  usdAmount: number;
-  localAmount: number;
-  localCurrency: string;
-}): URLSearchParams {
-  const params = new URLSearchParams();
-  params.append('currency', 'usd');
-  params.append('unit_amount', String(stripeUnitAmount(input.usdAmount, 'USD')));
-  params.append('product', input.productId);
-  const code = input.localCurrency.toLowerCase();
-  params.append(
-    `currency_options[${code}][unit_amount]`,
-    String(stripeUnitAmount(input.localAmount, input.localCurrency)),
-  );
-  return params;
+export function assertStripeUsdCharge(currency: string): void {
+  if (currency.toUpperCase() !== 'USD') {
+    throw new Error('Stripe charges must be in USD');
+  }
 }
 
 export type PaidAmountDecision = 'order' | 'presentment' | 'mismatch';
@@ -311,12 +278,12 @@ export async function createStripeCheckoutSession(input: {
   /** Exact local amount from the course page. The dollar amount stays the integration price. */
   localPresentment?: LocalPresentment | null;
 }): Promise<StripeCheckoutSession> {
+  assertStripeUsdCharge(input.currency);
   const environment = input.environment
     ?? resolveCheckoutEnvironment({ origin: input.returnOrigin });
   const secretKey = stripeSecretKeyForEnvironment(environment);
-
   const siteUrl = resolveCheckoutSiteUrl(input.returnOrigin);
-  const unitAmount = stripeUnitAmount(input.amount, input.currency);
+  const unitAmount = stripeUnitAmount(input.amount, 'USD');
 
   const paymentFirst = !input.studentEmail;
   const paymentMethodTypes = input.paymentMethodTypes?.length
@@ -343,42 +310,12 @@ export async function createStripeCheckoutSession(input: {
     });
   }
   params.append('client_reference_id', String(input.orderId));
-  const localPresentment = locksLocalPresentment(input.currency, input.localPresentment)
-    ? input.localPresentment
-    : null;
-  if (localPresentment) {
-    const product = await stripeApiRequest(secretKey, '/products', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Idempotency-Key': `checkout-product-${input.orderId}`,
-      },
-      body: buildLocalCurrencyProductParams(input.paymentCardTitle || input.courseTitle),
-    });
-    if (!product.id) throw new Error('Stripe did not return a product for the local amount');
-    const priceParams = buildLocalCurrencyPriceParams({
-      productId: product.id,
-      usdAmount: input.amount,
-      localAmount: localPresentment.amount,
-      localCurrency: localPresentment.currency,
-    });
-    const price = await stripeApiRequest(secretKey, '/prices', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Idempotency-Key': `checkout-price-${input.orderId}`,
-      },
-      body: priceParams,
-    });
-    if (!price.id) throw new Error('Stripe did not return a price for the local amount');
-    params.append('line_items[0][price]', price.id);
-  } else {
-    params.append('line_items[0][price_data][currency]', input.currency.toLowerCase());
-    params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
-    appendStripeOrderSummaryNote(params);
-    params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
-  }
-  appendStripeAdaptivePricing(params, input.currency);
+  // Dollars only. Adaptive Pricing may show a local price; the PaymentIntent stays USD.
+  params.append('line_items[0][price_data][currency]', 'usd');
+  params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
+  appendStripeOrderSummaryNote(params);
+  params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
+  appendStripeAdaptivePricing(params, 'USD');
   params.append('line_items[0][quantity]', '1');
   if (input.studentEmail) {
     try {

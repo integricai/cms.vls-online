@@ -4,9 +4,11 @@ import {
   addIsoDays,
   dashboardRangeBounds,
   percentChange,
+  foldTotalsToUsd,
   formatVaultPrice,
   pickDashboardCurrency,
   saleSessionLabel,
+  salesPresetBounds,
   shiftMonth,
 } from '../../shared/salesFormat';
 
@@ -87,6 +89,46 @@ run('picks the currency with the most sales, not the largest nominal total', () 
     { currency: 'USD', count: 19, date: '2026-10-20' },
   ];
   assert.strictEqual(pickDashboardCurrency(rows, '2026-10-01', '2026-10-25'), 'USD');
+});
+
+run('sales presets use London days, with last week as the last 7 days', () => {
+  assert.deepStrictEqual(salesPresetBounds('today', '2026-10-28'), {
+    start: '2026-10-28',
+    end: '2026-10-28',
+  });
+  assert.deepStrictEqual(salesPresetBounds('yesterday', '2026-10-28'), {
+    start: '2026-10-27',
+    end: '2026-10-27',
+  });
+  assert.deepStrictEqual(salesPresetBounds('last_week', '2026-10-28'), {
+    start: '2026-10-22',
+    end: '2026-10-28',
+  });
+  assert.deepStrictEqual(salesPresetBounds('last_month', '2026-10-28'), {
+    start: '2026-09-01',
+    end: '2026-09-30',
+  });
+  assert.deepStrictEqual(salesPresetBounds('last_year', '2026-10-28'), {
+    start: '2025-01-01',
+    end: '2025-12-31',
+  });
+});
+
+run('folds a pound day into the dollar total', () => {
+  const rows = foldTotalsToUsd(
+    [
+      { date: '2026-10-28', currency: 'USD', count: 2, gross: 200, earnings: 190 },
+      { date: '2026-10-28', currency: 'GBP', count: 1, gross: 80, earnings: 76 },
+    ],
+    { GBP: 0.8 },
+  );
+  assert.deepStrictEqual(rows, [{
+    date: '2026-10-28',
+    currency: 'USD',
+    count: 3,
+    gross: 300,
+    earnings: 285,
+  }]);
 });
 
 run('shows the local price and the dollar charge together', () => {

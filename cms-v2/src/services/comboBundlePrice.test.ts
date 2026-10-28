@@ -64,9 +64,11 @@ run('Evendeals is ignored and 35% comes off the catalogue price', () => {
   const quote = quoteComboCharge([[paper], [{ ...paper }]], null);
   assert.strictEqual(quote.listAmountUsd, 260);
   assert.strictEqual(quote.chargeAmountUsd, 169);
-  assert.strictEqual(quote.listAmount, 196.68);
-  assert.strictEqual(quote.chargeAmount, 127.84);
-  assert.strictEqual(quote.chargeCurrency, 'GBP');
+  assert.strictEqual(quote.listAmount, 260);
+  assert.strictEqual(quote.chargeAmount, 169);
+  assert.strictEqual(quote.chargeCurrency, 'USD');
+  assert.strictEqual(quote.presentmentAmount, 127.84);
+  assert.strictEqual(quote.presentmentCurrency, 'GBP');
 });
 
 run('courses without sessions sum their default prices', () => {

@@ -4,6 +4,8 @@ const LONDON = 'Europe/London';
 
 export type DashboardRange = 'this_month' | 'last_month' | 'last_7_days' | 'last_30_days';
 
+export type SalesPreset = 'today' | 'yesterday' | 'last_week' | 'last_month' | 'last_year';
+
 export function londonToday(now = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: LONDON,
@@ -170,6 +172,69 @@ export function formatVaultPrice(input: {
 
 export function isDashboardRange(value: string): value is DashboardRange {
   return value === 'this_month' || value === 'last_month' || value === 'last_7_days' || value === 'last_30_days';
+}
+
+export function isSalesPreset(value: string): value is SalesPreset {
+  return value === 'today'
+    || value === 'yesterday'
+    || value === 'last_week'
+    || value === 'last_month'
+    || value === 'last_year';
+}
+
+/** London dates for the sales page presets. Last week is the last 7 days, including today. */
+export function salesPresetBounds(
+  preset: SalesPreset,
+  today = londonToday(),
+): { start: string; end: string } {
+  if (preset === 'today') return { start: today, end: today };
+  if (preset === 'yesterday') {
+    const day = addIsoDays(today, -1);
+    return { start: day, end: day };
+  }
+  if (preset === 'last_week') return { start: addIsoDays(today, -6), end: today };
+  if (preset === 'last_month') {
+    const endLast = addIsoDays(monthStart(today), -1);
+    return { start: monthStart(endLast), end: endLast };
+  }
+  const year = Number(today.slice(0, 4)) - 1;
+  return { start: `${year}-01-01`, end: `${year}-12-31` };
+}
+
+function roundMoney(amount: number): number {
+  return Math.round(amount * 100) / 100;
+}
+
+/**
+ * Adds local-currency days onto USD.
+ * `localPerUsd` is how many local units equal one dollar. Rows with no rate stay as they are.
+ */
+export function foldTotalsToUsd(
+  rows: DayMoneyRow[],
+  localPerUsd: Record<string, number> | null,
+): DayMoneyRow[] {
+  const next: DayMoneyRow[] = [];
+  for (const row of rows) {
+    const currency = row.currency.trim().toUpperCase();
+    const rate = currency === 'USD' ? 1 : localPerUsd?.[currency];
+    const converted = rate != null && rate > 0
+      ? {
+        ...row,
+        currency: 'USD',
+        gross: roundMoney(row.gross / rate),
+        earnings: roundMoney(row.earnings / rate),
+      }
+      : { ...row, currency };
+    const existing = next.find(item => item.date === converted.date && item.currency === converted.currency);
+    if (!existing) {
+      next.push(converted);
+      continue;
+    }
+    existing.gross = roundMoney(existing.gross + converted.gross);
+    existing.earnings = roundMoney(existing.earnings + converted.earnings);
+    existing.count += converted.count;
+  }
+  return next;
 }
 
 export function isIsoDate(value: string): boolean {

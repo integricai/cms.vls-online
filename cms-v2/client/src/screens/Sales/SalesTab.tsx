@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/client';
 import type { SaleListItem, SalesFeeSyncResult, Tutor } from '../../../../shared/types';
-import { formatDisplayDate, formatVaultPrice, londonToday, monthStart, saleSessionLabel } from '../../../../shared/salesFormat';
+import { formatDisplayDate, formatVaultPrice, isSalesPreset, londonToday, monthStart, salesPresetBounds, saleSessionLabel, type SalesPreset } from '../../../../shared/salesFormat';
+
+const RANGE_PRESETS: Array<{ id: SalesPreset; label: string }> = [
+  { id: 'today', label: 'Today' },
+  { id: 'yesterday', label: 'Yesterday' },
+  { id: 'last_week', label: 'Last week' },
+  { id: 'last_month', label: 'Last month' },
+  { id: 'last_year', label: 'Last year' },
+];
 
 function formatMoney(amount: number | null | undefined, currency: string): string {
   if (amount == null || Number.isNaN(amount)) return '—';
@@ -99,6 +107,7 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
 export default function SalesTab() {
   const [from, setFrom] = useState(() => monthStart(londonToday()));
   const [to, setTo] = useState(() => londonToday());
+  const [preset, setPreset] = useState<SalesPreset | ''>('');
   const [sales, setSales] = useState<SaleListItem[]>([]);
   const [sandboxSales, setSandboxSales] = useState<SaleListItem[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
@@ -211,6 +220,29 @@ export default function SalesTab() {
       <div className="p-6">
         <div className="mb-4 flex flex-wrap items-end gap-3">
           <label className="text-xs font-semibold text-slate-600">
+            Range
+            <select
+              className="input mt-1"
+              value={preset}
+              onChange={event => {
+                const value = event.target.value;
+                if (!isSalesPreset(value)) {
+                  setPreset('');
+                  return;
+                }
+                const bounds = salesPresetBounds(value);
+                setPreset(value);
+                setFrom(bounds.start);
+                setTo(bounds.end);
+              }}
+            >
+              <option value="">Custom range</option>
+              {RANGE_PRESETS.map(option => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-slate-600">
             Start date
             <input
               type="date"
@@ -218,7 +250,9 @@ export default function SalesTab() {
               value={from}
               max={to}
               onChange={event => {
-                if (event.target.value) setFrom(event.target.value);
+                if (!event.target.value) return;
+                setPreset('');
+                setFrom(event.target.value);
               }}
             />
           </label>
@@ -230,7 +264,9 @@ export default function SalesTab() {
               value={to}
               min={from}
               onChange={event => {
-                if (event.target.value) setTo(event.target.value);
+                if (!event.target.value) return;
+                setPreset('');
+                setTo(event.target.value);
               }}
             />
           </label>

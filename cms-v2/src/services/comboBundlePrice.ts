@@ -44,11 +44,14 @@ export type ComboPlanAmount = {
 export type ComboChargeQuote = {
   listAmountUsd: number;
   chargeAmountUsd: number;
-  /** Amount Stripe should collect, in chargeCurrency. */
+  /** Amount Stripe should collect, in USD. */
   chargeAmount: number;
-  chargeCurrency: string;
-  /** Pre-discount total in chargeCurrency. */
+  chargeCurrency: 'USD';
+  /** Pre-discount total in USD. */
   listAmount: number;
+  /** Local total shown on the course page. Null when the papers are not all in one local currency. */
+  presentmentAmount: number | null;
+  presentmentCurrency: string | null;
   discountPercent: number;
   sessionTitle: string | null;
 };
@@ -204,9 +207,11 @@ export function quoteComboCharge(
   return {
     listAmountUsd,
     chargeAmountUsd,
-    chargeAmount: local?.amount ?? chargeAmountUsd,
-    chargeCurrency: local?.currency ?? 'USD',
-    listAmount: local?.list ?? listAmountUsd,
+    chargeAmount: chargeAmountUsd,
+    chargeCurrency: 'USD',
+    listAmount: listAmountUsd,
+    presentmentAmount: local?.amount ?? null,
+    presentmentCurrency: local?.currency ?? null,
     discountPercent,
     sessionTitle,
   };
@@ -218,10 +223,6 @@ const ZERO_DECIMAL = new Set([
   'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
 ]);
 
-/**
- * When every paper is shown in the same local currency, discount that sum and
- * charge Stripe in that currency. Otherwise charge the USD total.
- */
 /** Local catalogue price: Evendeals is ignored, then the same FX rate is applied to the list price. */
 function catalogueLocalAmount(plan: ComboPlanAmount): number | null {
   if (plan.displayAmount == null || !Number.isFinite(plan.displayAmount)) return null;

@@ -99,6 +99,48 @@ run('leaves the net blank when the PayPal fee is in a different currency from th
   assert.strictEqual(parsed?.currency, 'USD');
 });
 
+run('converts a pound settlement into the stored dollar charge', () => {
+  const parsed = parseStripeSettlement({
+    amount: 5595,
+    currency: 'gbp',
+    latest_charge: {
+      amount: 5595,
+      currency: 'gbp',
+      payment_method_details: { type: 'klarna' },
+      balance_transaction: { amount: 5595, fee: 314, net: 5281, currency: 'gbp' },
+    },
+  }, {
+    amount: 74.5,
+    currency: 'USD',
+    presentmentAmount: 55.95,
+    presentmentCurrency: 'GBP',
+  });
+  assert.strictEqual(parsed?.currency, 'USD');
+  assert.strictEqual(parsed?.fee, 4.18);
+  assert.strictEqual(parsed?.net, 70.32);
+});
+
+run('converts a PayPal fee in pounds off the dollar charge', () => {
+  const parsed = parseStripeSettlement({
+    amount: 1014,
+    currency: 'gbp',
+    latest_charge: {
+      amount: 1014,
+      currency: 'gbp',
+      payment_method_details: { type: 'paypal' },
+      balance_transaction: { amount: 0, fee: 12, net: -12, currency: 'gbp' },
+    },
+  }, {
+    amount: 13.5,
+    currency: 'USD',
+    presentmentAmount: 10.14,
+    presentmentCurrency: 'GBP',
+  });
+  assert.strictEqual(parsed?.currency, 'USD');
+  assert.strictEqual(parsed?.fee, 0.16);
+  assert.strictEqual(parsed?.net, 13.34);
+});
+
 run('waits when Stripe has not attached a balance transaction yet', () => {
   assert.strictEqual(parseStripeSettlement({ latest_charge: { id: 'ch_1' } }), null);
   assert.strictEqual(parseStripeSettlement({}), null);

@@ -6,10 +6,8 @@ import {
   appendStripeAdaptivePricing,
   appendStripeOrderSummaryNote,
   appendStripeStudentNameFields,
-  buildLocalCurrencyPriceParams,
-  buildLocalCurrencyProductParams,
+  assertStripeUsdCharge,
   classifyPaidAmount,
-  locksLocalPresentment,
   majorAmountFromStripeMinor,
   resolveStripeStudentNameDefaults,
   safeCheckoutCancelPath,
@@ -275,27 +273,9 @@ run('keeps Stripe cancel on the course page', () => {
   assert.strictEqual(safeCheckoutCancelPath('//evil.example'), '/payment-cancelled');
 });
 
-run('locks the course-page pound amount beside the dollar price', () => {
-  assert.strictEqual(locksLocalPresentment('USD', { amount: 65.72, currency: 'GBP' }), true);
-  assert.strictEqual(locksLocalPresentment('GBP', { amount: 65.72, currency: 'GBP' }), false);
-  assert.strictEqual(locksLocalPresentment('USD', { amount: 87.5, currency: 'USD' }), false);
-
-  const product = buildLocalCurrencyProductParams('ACCA SBR');
-  assert.strictEqual(product.get('name'), 'ACCA SBR');
-  assert.strictEqual(product.get('description'), STRIPE_PAYPAL_CURRENCY_NOTE);
-
-  const params = buildLocalCurrencyPriceParams({
-    productId: 'prod_123',
-    usdAmount: 87.5,
-    localAmount: 65.72,
-    localCurrency: 'GBP',
-  });
-  assert.strictEqual(params.get('currency'), 'usd');
-  assert.strictEqual(params.get('unit_amount'), '8750');
-  assert.strictEqual(params.get('currency_options[gbp][unit_amount]'), '6572');
-  assert.strictEqual(params.get('product'), 'prod_123');
-  // Stripe rejects a description inside a Price's inline product_data.
-  assert.strictEqual(params.has('product_data[description]'), false);
+run('records every Stripe charge in US dollars', () => {
+  assert.doesNotThrow(() => assertStripeUsdCharge('usd'));
+  assert.throws(() => assertStripeUsdCharge('GBP'), /Stripe charges must be in USD/);
 });
 
 run('accepts either the dollar charge or the locked local amount', () => {

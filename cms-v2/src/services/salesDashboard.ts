@@ -5,11 +5,13 @@ import {
   eachIsoDay,
   londonToday,
   monthStart,
+  foldTotalsToUsd,
   percentChange,
   pickDashboardCurrency,
   shiftMonth,
   type DashboardRange,
 } from '../../shared/salesFormat';
+import { getUsdRates } from './fxRates';
 import { listRecentSalesActivity, listSalesDayTotals, type SalesDayTotal } from '../models/salesDashboard';
 import { countSiteVisitors, listSiteLeadEmails } from '../models/siteAnalytics';
 import { listZenlerFunnelLeadEmails } from './zenlerApi';
@@ -84,13 +86,14 @@ export async function buildSalesDashboard(range: DashboardRange, now = new Date(
   const previousMonthStart = monthStart(shiftMonth(monthStart(today), -1));
   const queryStart = [previousMonthStart, addIsoDays(today, -29), bounds.start].sort()[0];
 
-  const [rows, activity, orders, visitors, siteLeadEmails] = await Promise.all([
+  const [dayTotals, activity, orders, visitors, siteLeadEmails] = await Promise.all([
     listSalesDayTotals(queryStart, today),
     listRecentSalesActivity(8, false),
     listRecentSalesActivity(6, true),
     countSiteVisitors(bounds.start, bounds.end),
     listSiteLeadEmails(bounds.start, bounds.end),
   ]);
+  const rows = foldTotalsToUsd(dayTotals, await getUsdRates());
 
   let zenlerEmails: string[] = [];
   try {

@@ -28,7 +28,7 @@ import {
 } from '../services/payments/types';
 import { parseCheckoutAttribution, resolveCheckoutEnvironment } from '../services/attribution';
 import { canPresentCheckoutCurrency, presentCheckoutAmount } from '../services/displayCurrency';
-import { getUsdRates } from '../services/fxRates';
+import { getUsdRates, rateForCurrency } from '../services/fxRates';
 import { quoteMatchesCataloguePrice, verifyPriceQuote, type PriceQuotePayload } from '../services/priceQuote';
 import {
   detectClientIpFromRequest,
@@ -525,11 +525,22 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       return res.status(400).json({ ok: false, error: 'Payment option is not linked to a Zenler course' });
     }
 
-    const amount = option.isDiscountActive && option.discountPrice != null
+    const cardAmount = option.isDiscountActive && option.discountPrice != null
       ? option.discountPrice
       : option.normalPrice;
-    if (!Number.isFinite(amount) || amount <= 0) {
+    if (!Number.isFinite(cardAmount) || cardAmount <= 0) {
       return res.status(400).json({ ok: false, error: 'Payment option price is invalid' });
+    }
+    const cardCurrency = (option.currency || 'GBP').toUpperCase();
+    let amount = cardAmount;
+    let localPresentment: { amount: number; currency: string } | null = null;
+    if (cardCurrency !== 'USD') {
+      const rate = rateForCurrency(await getUsdRates(), cardCurrency);
+      if (rate == null) {
+        return res.status(503).json({ ok: false, error: 'Pricing is unavailable' });
+      }
+      localPresentment = { amount: cardAmount, currency: cardCurrency };
+      amount = Math.round((cardAmount / rate) * 100) / 100;
     }
 
     const providerId = parseRequestedProvider(req.body ?? {});
@@ -570,13 +581,16 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       studentPhone: customerInput.phone,
       countryCode: geo.countryCode,
       amount,
-      currency: option.currency || 'GBP',
-      discountPercent: computeDiscountPercent(option.normalPrice, amount),
+      currency: 'USD',
+      discountPercent: computeDiscountPercent(option.normalPrice, cardAmount),
       attribution,
       environment,
       provider: providerId,
     });
     if (schoolPassword.password) await saveStudentPassword(order.id, schoolPassword.password);
+    if (localPresentment && providerId === 'stripe') {
+      await saveOfferedPresentment(order.id, localPresentment.amount, localPresentment.currency);
+    }
 
     const stripeNames = await stripeNameDefaults({
       email: schoolPassword.email,
@@ -593,8 +607,9 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       courseTitle: option.courseName ?? option.title,
       paymentCardTitle: option.title,
       amount,
-      currency: option.currency || 'GBP',
+      currency: 'USD',
       studentEmail: schoolPassword.email,
+      localPresentment: providerId === 'stripe' ? localPresentment : null,
       ...stripeNames,
       returnOrigin: parseCheckoutReturnOrigin(req),
       cancelPath: typeof req.body?.cancelPath === 'string' ? req.body.cancelPath : null,
@@ -784,14 +799,15 @@ async function priceCheckoutSelection(
       ipAddress: clientIp,
       ignoreVpnBlock: parityTest,
     });
-    chargeAmount = comboQuote.chargeAmount;
-    listAmount = comboQuote.listAmount;
-    chargeCurrency = comboQuote.chargeCurrency;
+    chargeAmount = comboQuote.chargeAmountUsd;
+    listAmount = comboQuote.listAmountUsd;
+    chargeCurrency = 'USD';
     discountPercent = comboQuote.discountPercent;
     if (comboQuote.sessionTitle) optionType = comboQuote.sessionTitle;
-    localPresentment = null;
+    localPresentment = comboQuote.presentmentAmount != null && comboQuote.presentmentCurrency
+      ? { amount: comboQuote.presentmentAmount, currency: comboQuote.presentmentCurrency }
+      : null;
   }
-  if (chargeCurrency !== 'USD') localPresentment = null;
 
   return {
     ok: true,

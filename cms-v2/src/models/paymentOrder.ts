@@ -878,6 +878,7 @@ export async function savePaymentOrderSettlement(orderId: number, data: {
       AND (
         processor_fee IS NULL
         OR settlement_currency IS NULL
+        OR UPPER(settlement_currency) <> 'USD'
       )
   `;
 }

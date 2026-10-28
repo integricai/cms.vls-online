@@ -15,6 +15,8 @@ export interface StripeSettlement {
 export interface StoredCharge {
   amount: number;
   currency: string;
+  presentmentAmount?: number | null;
+  presentmentCurrency?: string | null;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -23,6 +25,25 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function moneyFromMinor(amountMinor: number, currency: string): number {
   return Math.round(majorAmountFromStripeMinor(Math.round(amountMinor), currency) * 100) / 100;
+}
+
+function roundMoney(amount: number): number {
+  return Math.round(amount * 100) / 100;
+}
+
+function dollarAmount(stored: StoredCharge | null | undefined): number | null {
+  const currency = stored?.currency?.trim().toUpperCase() ?? '';
+  if (currency !== 'USD' || stored == null || !(stored.amount > 0)) return null;
+  return stored.amount;
+}
+
+/** Dollars per one unit of the local currency, taken from the two prices on the order. */
+function dollarsPerLocalUnit(currency: string, stored: StoredCharge | null | undefined): number | null {
+  const dollars = dollarAmount(stored);
+  const presentmentCurrency = stored?.presentmentCurrency?.trim().toUpperCase() ?? '';
+  const presentmentAmount = stored?.presentmentAmount ?? 0;
+  if (dollars == null || presentmentCurrency !== currency || !(presentmentAmount > 0)) return null;
+  return dollars / presentmentAmount;
 }
 
 function paymentMethodLabel(details: Record<string, unknown> | null): string | null {
@@ -96,12 +117,27 @@ export function parseStripeSettlement(
   if (gross === 0 && fee === 0) return null;
 
   const paymentMethod = paymentMethodLabel(asRecord(charge.payment_method_details));
+  const dollars = dollarAmount(storedCharge);
+  const perLocal = currency === 'USD' ? null : dollarsPerLocalUnit(currency, storedCharge);
+
   // PayPal settled to PayPal posts a zero gross. The net is only Stripe's fee leaving the Stripe balance.
   if (gross === 0 && fee > 0) {
-    const paid = paidCandidates(paymentIntent, charge, storedCharge)
-      .find(candidate => candidate.currency === currency);
-    const net = paid ? Math.round((paid.amount - fee) * 100) / 100 : null;
-    return { fee, net, currency, paymentMethod };
+    if (currency === 'USD') {
+      const paid = paidCandidates(paymentIntent, charge, storedCharge)
+        .find(candidate => candidate.currency === 'USD');
+      const net = paid ? roundMoney(paid.amount - fee) : (dollars == null ? null : roundMoney(dollars - fee));
+      return { fee, net, currency: 'USD', paymentMethod };
+    }
+    if (perLocal != null && dollars != null) {
+      const feeUsd = roundMoney(fee * perLocal);
+      return { fee: feeUsd, net: roundMoney(dollars - feeUsd), currency: 'USD', paymentMethod };
+    }
+    return { fee, net: null, currency, paymentMethod };
+  }
+
+  if (currency !== 'USD' && perLocal != null && dollars != null) {
+    const feeUsd = roundMoney(fee * perLocal);
+    return { fee: feeUsd, net: roundMoney(dollars - feeUsd), currency: 'USD', paymentMethod };
   }
 
   return { fee, net: reportedNet, currency, paymentMethod };
