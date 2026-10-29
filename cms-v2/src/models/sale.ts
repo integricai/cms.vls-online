@@ -221,7 +221,7 @@ export async function createSale(data: {
     INSERT INTO sales (
       customer_id, course_id, course_price_id, payment_order_id,
       amount, currency, discount_percent, duration_days, sold_at, expiry_date,
-      session_month, session_year, session_checked_at,
+      session_month, session_year, session_checked_at, session_from_checkout,
       country_code, assignment_status
     )
     VALUES (
@@ -238,6 +238,7 @@ export async function createSale(data: {
       ${data.sessionMonth ?? null},
       ${data.sessionYear ?? null},
       NOW(),
+      ${data.sessionMonth != null && data.sessionYear != null},
       ${countryCode},
       'AwaitingTutor'
     )
@@ -538,7 +539,6 @@ export async function saveBackfilledExamSession(input: {
     WHERE id = ${input.saleId}
       AND session_month IS NULL
       AND ${input.expiryDate} > sold_at
-    RETURNING id
   `;
   await markSaleSessionChecked(input.saleId);
 }
@@ -568,58 +568,65 @@ export async function noteSessionBackfillFailure(saleId: number): Promise<void> 
   `;
 }
 
-/** Named sittings whose sale expiry would move to the 15th. Does not write. */
-export async function countNamedSessionBackfill(): Promise<number> {
+export type SessionBackfillSource = {
+  saleId: number;
+  soldAt: Date;
+  expiryDate: Date | null;
+  orderId: number;
+  optionType: string | null;
+  orderSessionMonth: number | null;
+  orderSessionYear: number | null;
+  saleSessionMonth: number | null;
+  saleSessionYear: number | null;
+  fromCheckout: boolean;
+};
+
+/** Sales the backfill might shorten, plus sittings an older migration already wrote. */
+export async function listSessionBackfillSources(limit = 500): Promise<SessionBackfillSource[]> {
   const rows = await sql`
-    SELECT COUNT(*)::int AS named_sittings
+    SELECT
+      s.id AS sale_id,
+      s.sold_at,
+      s.expiry_date,
+      s.session_month AS sale_session_month,
+      s.session_year AS sale_session_year,
+      COALESCE(s.session_from_checkout, false) AS session_from_checkout,
+      po.id AS order_id,
+      po.option_type,
+      po.session_month,
+      po.session_year
     FROM sales s
     JOIN payment_orders po ON po.id = s.payment_order_id
-    LEFT JOIN (
-      VALUES
-        ('january', 1), ('jan', 1),
-        ('february', 2), ('feb', 2),
-        ('march', 3), ('mar', 3),
-        ('april', 4), ('apr', 4),
-        ('may', 5),
-        ('june', 6), ('jun', 6),
-        ('july', 7), ('jul', 7),
-        ('august', 8), ('aug', 8),
-        ('september', 9), ('sept', 9), ('sep', 9),
-        ('october', 10), ('oct', 10),
-        ('november', 11), ('nov', 11),
-        ('december', 12), ('dec', 12)
-    ) AS names(month_name, month_number)
-      ON names.month_name = lower((regexp_match(
-        lower(btrim(po.option_type)),
-        '^([a-z]+)[[:space:]]+([0-9]{4})([[:space:]]+session)?$'
-      ))[1])
-    WHERE s.session_checked_at IS NULL
-      AND s.session_month IS NULL
-      AND po.status = 'Paid'
+    WHERE po.status = 'Paid'
+      AND COALESCE(s.session_from_checkout, false) = false
       AND (
-        (
-          po.session_month BETWEEN 1 AND 12
-          AND po.session_year BETWEEN 2000 AND 2100
-          AND make_timestamptz(po.session_year, po.session_month, 16, 0, 0, 0, 'Europe/London')
-            - interval '1 millisecond' > s.sold_at
-        )
-        OR (
-          po.session_month IS NULL
-          AND names.month_number IS NOT NULL
-          AND (regexp_match(
-            lower(btrim(po.option_type)),
-            '^([a-z]+)[[:space:]]+([0-9]{4})([[:space:]]+session)?$'
-          ))[2]::int BETWEEN 2000 AND 2100
-          AND make_timestamptz(
-            (regexp_match(
-              lower(btrim(po.option_type)),
-              '^([a-z]+)[[:space:]]+([0-9]{4})([[:space:]]+session)?$'
-            ))[2]::int,
-            names.month_number,
-            16, 0, 0, 0, 'Europe/London'
-          ) - interval '1 millisecond' > s.sold_at
-        )
+        (s.session_month BETWEEN 1 AND 12 AND s.session_year BETWEEN 2000 AND 2100)
+        OR (s.session_checked_at IS NULL AND s.session_month IS NULL)
       )
+    ORDER BY s.sold_at ASC
+    LIMIT ${limit}
   `;
-  return Number((rows[0] as { named_sittings?: number } | undefined)?.named_sittings ?? 0);
+  return (rows as Array<{
+    sale_id: number;
+    sold_at: Date;
+    expiry_date: Date | null;
+    sale_session_month: number | null;
+    sale_session_year: number | null;
+    session_from_checkout: boolean;
+    order_id: number;
+    option_type: string | null;
+    session_month: number | null;
+    session_year: number | null;
+  }>).map(row => ({
+    saleId: row.sale_id,
+    soldAt: row.sold_at,
+    expiryDate: row.expiry_date,
+    orderId: row.order_id,
+    optionType: row.option_type,
+    orderSessionMonth: row.session_month,
+    orderSessionYear: row.session_year,
+    saleSessionMonth: row.sale_session_month,
+    saleSessionYear: row.sale_session_year,
+    fromCheckout: row.session_from_checkout === true,
+  }));
 }

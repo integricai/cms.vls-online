@@ -1,9 +1,9 @@
 import type { PaymentOrder } from '../models/paymentOrder';
 import { getGeoPriceById } from '../models/courseGeoPrice';
 import {
-  coveringZenlerAccessUntil,
   deferSessionAccessRemoval,
   getPaymentOrder,
+  latestCoveringAccessByCourse,
   recordSessionUnenrollFailure,
   updateZenlerEnrollment,
 } from '../models/paymentOrder';
@@ -198,14 +198,11 @@ export type ZenlerEnrollmentEnsureResult = {
   emailContext: ZenlerEnrollmentEmailContext | null;
 };
 
-/** A retry after the 15th must not enrol the student or send the access email. */
+/** A retry after the 15th must not enrol again. Courses already open are unenrolled. */
 async function closeEnrollmentIfSessionEnded(order: PaymentOrder): Promise<PaymentOrder | null> {
   const session = normalizeExamSession(order.sessionMonth, order.sessionYear);
   if (!session || sessionAccessEndsAt(session.month, session.year).getTime() > Date.now()) return null;
-  await updateZenlerEnrollment(order.id, {
-    zenlerUserId: order.zenlerUserId,
-    zenlerEnrollmentStatus: 'expired',
-  });
+  await expireZenlerAccessForSessionOrder(order);
   return (await getPaymentOrder(order.id)) ?? order;
 }
 
@@ -295,14 +292,17 @@ export async function revokeZenlerAccessForRefundedOrder(
   return (await getPaymentOrder(order.id)) ?? order;
 }
 
-export type SessionAccessClose = 'closed' | 'deferred' | 'first_failure' | 'retry_failure';
+export type SessionAccessClose = 'closed' | 'deferred' | 'first_failure' | 'retry_failure' | 'stopped';
 
 /**
  * After the 15th of a purchased sitting, remove school access.
  * A course another paid order still covers is left until that cover ends.
  * Best-effort: a missing Zenler account is treated as already closed.
  */
-export async function expireZenlerAccessForSessionOrder(order: PaymentOrder): Promise<SessionAccessClose> {
+export async function expireZenlerAccessForSessionOrder(
+  order: PaymentOrder,
+  deadline = Date.now() + 40_000,
+): Promise<SessionAccessClose> {
   const firstAttempt = String(order.zenlerEnrollmentStatus ?? '').toLowerCase() !== 'unenroll_failed';
   const courseIds = zenlerCourseIdsForAccess(order);
   if (courseIds.length === 0) {
@@ -316,18 +316,24 @@ export async function expireZenlerAccessForSessionOrder(order: PaymentOrder): Pr
   let zenlerUserId = order.zenlerUserId;
   let failed = false;
   let removed = false;
+  let stoppedEarly = false;
   let holdUntil: Date | null = null;
+  const email = (order.studentEmail ?? order.stripeCustomerEmail)?.trim().toLowerCase() || null;
+  const covered = await latestCoveringAccessByCourse({
+    orderId: order.id,
+    customerId: order.customerId,
+    email,
+    zenlerCourseIds: courseIds,
+  });
   for (const zenlerCourseId of courseIds) {
-    const email = (order.studentEmail ?? order.stripeCustomerEmail)?.trim().toLowerCase() || null;
-    const coveredUntil = await coveringZenlerAccessUntil({
-      orderId: order.id,
-      customerId: order.customerId,
-      email,
-      zenlerCourseId,
-    });
+    const coveredUntil = covered.get(zenlerCourseId) ?? null;
     if (coveredUntil) {
       if (!holdUntil || coveredUntil.getTime() < holdUntil.getTime()) holdUntil = coveredUntil;
       continue;
+    }
+    if (Date.now() > deadline) {
+      stoppedEarly = true;
+      break;
     }
 
     const result = await unenrollStudentFromZenlerCourse({
@@ -344,6 +350,8 @@ export async function expireZenlerAccessForSessionOrder(order: PaymentOrder): Pr
     if (nothingToRemove) continue;
     failed = true;
   }
+
+  if (stoppedEarly && !failed) return 'stopped';
 
   if (failed) {
     const status = await recordSessionUnenrollFailure(order.id, zenlerUserId);
