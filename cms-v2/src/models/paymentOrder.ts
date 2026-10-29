@@ -451,7 +451,7 @@ export async function markPaymentOrderPaid(data: {
   return { order: rowToOrder(paid), wasAlreadyPaid: false };
 }
 
-/** Stop retrying an unenroll after this many hourly attempts. */
+/** Stop retrying an unenroll after this many Zenler failures. */
 export const SESSION_UNENROLL_ATTEMPT_LIMIT = 8;
 
 /** Paid session enrolments whose 15th has ended and who are still in Zenler. Fresh expiries go first. */
@@ -467,7 +467,10 @@ export async function listSessionOrdersDueForExpiry(limit = 10): Promise<Payment
       AND COALESCE(po.session_unenroll_attempts, 0) < ${SESSION_UNENROLL_ATTEMPT_LIMIT}
       AND (
         po.zenler_enrollment_status ILIKE 'enrolled%'
-        OR po.zenler_enrollment_status = 'unenroll_failed'
+        OR (
+          po.zenler_enrollment_status = 'unenroll_failed'
+          AND (po.session_unenroll_after IS NULL OR po.session_unenroll_after <= NOW())
+        )
         OR (
           po.zenler_enrollment_status = 'expire_deferred'
           AND (po.session_access_hold_until IS NULL OR po.session_access_hold_until <= NOW())
@@ -543,7 +546,9 @@ export async function coveringZenlerAccessUntil(input: {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/** Count a failed unenroll. After the limit the order leaves the queue. */
+/** Count a Zenler unenroll failure. A database error must not call this.
+ * Waits match sessionUnenrollDelayMs: 1 hour, then 4 hours, then 1 day.
+ */
 export async function recordSessionUnenrollFailure(
   orderId: number,
   zenlerUserId: string | null,
@@ -555,6 +560,12 @@ export async function recordSessionUnenrollFailure(
         zenler_enrollment_status = CASE
           WHEN session_unenroll_attempts + 1 >= ${SESSION_UNENROLL_ATTEMPT_LIMIT} THEN 'unenroll_gave_up'
           ELSE 'unenroll_failed'
+        END,
+        session_unenroll_after = CASE
+          WHEN session_unenroll_attempts + 1 >= ${SESSION_UNENROLL_ATTEMPT_LIMIT} THEN NULL
+          WHEN session_unenroll_attempts + 1 = 1 THEN NOW() + INTERVAL '1 hour'
+          WHEN session_unenroll_attempts + 1 = 2 THEN NOW() + INTERVAL '4 hours'
+          ELSE NOW() + INTERVAL '1 day'
         END
     WHERE id = ${orderId}
     RETURNING zenler_enrollment_status

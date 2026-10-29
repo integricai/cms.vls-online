@@ -12,10 +12,12 @@ import {
   shiftMonth,
 } from '../../shared/salesFormat';
 import {
+  cataloguePlanReachesSessionEnd,
+  parseSessionLabel,
   sessionAccessDayCount,
   sessionAccessEndsAt,
   sessionSaleLabel,
-  parseSessionLabel,
+  sessionUnenrollDelayMs,
 } from '../../shared/sessionAccess';
 
 function run(name: string, fn: () => void): void {
@@ -184,4 +186,17 @@ run('access runs from the purchase date to the 15th', () => {
   const onTheFifteenth = new Date('2026-12-15T12:00:00.000Z');
   assert.strictEqual(sessionAccessDayCount(onTheFifteenth, 12, 2026), 0);
   assert.ok(sessionAccessEndsAt(12, 2026).getTime() > onTheFifteenth.getTime());
+});
+
+run('a catalogue plan is sent only when it lasts through the 15th', () => {
+  const bought = new Date('2026-10-30T12:00:00.000Z');
+  assert.strictEqual(cataloguePlanReachesSessionEnd(180, bought, 12, 2026), true);
+  assert.strictEqual(cataloguePlanReachesSessionEnd(30, bought, 12, 2026), false);
+  assert.strictEqual(cataloguePlanReachesSessionEnd(90, new Date('2026-12-15T12:00:00.000Z'), 12, 2026), true);
+});
+
+run('unenroll retries wait out a short Zenler outage', () => {
+  assert.strictEqual(sessionUnenrollDelayMs(1), 60 * 60 * 1000);
+  assert.strictEqual(sessionUnenrollDelayMs(2), 4 * 60 * 60 * 1000);
+  assert.strictEqual(sessionUnenrollDelayMs(3), 24 * 60 * 60 * 1000);
 });

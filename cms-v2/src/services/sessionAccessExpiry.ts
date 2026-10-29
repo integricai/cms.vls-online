@@ -1,5 +1,6 @@
-import { listSessionOrdersDueForExpiry, recordSessionUnenrollFailure } from '../models/paymentOrder';
+import { listSessionOrdersDueForExpiry } from '../models/paymentOrder';
 import {
+  countNamedSessionBackfill,
   listSalesNeedingSessionBackfill,
   markSaleSessionChecked,
   noteSessionBackfillFailure,
@@ -38,25 +39,30 @@ export async function expireDueSessionEnrollments(): Promise<SessionExpiryResult
       else if (outcome === 'retry_failure') retryFailed += 1;
       else expired += 1;
     } catch (err) {
-      const retry = String(order.zenlerEnrollmentStatus ?? '').toLowerCase() === 'unenroll_failed';
-      if (retry) retryFailed += 1;
-      else failed += 1;
-      console.error('[session-expiry] unenroll failed', order.id, err);
-      try {
-        await recordSessionUnenrollFailure(order.id, order.zenlerUserId);
-      } catch (recordErr) {
-        console.error('[session-expiry] could not record the unenroll failure', order.id, recordErr);
-      }
+      console.error('[session-expiry] unenroll failed before Zenler answered', order.id, err);
     }
   }
   return { selected: orders.length, expired, failed, retryFailed };
 }
 
+function sessionBackfillWritesEnabled(): boolean {
+  const value = String(process.env.SESSION_BACKFILL_APPLY ?? '').trim().toLowerCase();
+  return value === '1' || value === 'true';
+}
+
 /**
  * Older sales keep the catalogue length unless the order itself names the sitting.
  * Prices and offer rules are not consulted, because those can change after the sale.
+ * Nothing is written until SESSION_BACKFILL_APPLY=true.
  */
 async function backfillExamSessions(): Promise<void> {
+  const named = await countNamedSessionBackfill();
+  const write = sessionBackfillWritesEnabled();
+  console.log(
+    `[session-expiry] ${named} named sittings would be shortened`
+    + (write ? '' : '; not writing until SESSION_BACKFILL_APPLY=true'),
+  );
+  if (!write) return;
   const rows = await listSalesNeedingSessionBackfill(BACKFILL_BATCH);
   for (const row of rows) {
     try {

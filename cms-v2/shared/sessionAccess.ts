@@ -123,3 +123,23 @@ export function sessionAccessDayCount(soldAt: Date, month: number, year: number)
   const end = `${year}-${String(month).padStart(2, '0')}-15`;
   return isoDayNumber(end) - isoDayNumber(sold);
 }
+
+/** The catalogue plan still has the student enrolled on the 15th if Zenler starts it now. */
+export function cataloguePlanReachesSessionEnd(
+  durationDays: number | null | undefined,
+  now: Date,
+  month: number,
+  year: number,
+): boolean {
+  if (durationDays == null || durationDays <= 0) return false;
+  return sessionAccessDayCount(now, month, year) <= durationDays;
+}
+
+const HOUR_MS = 60 * 60 * 1000;
+
+/** First Zenler failure waits an hour, the second four hours, and each later one a day. */
+export function sessionUnenrollDelayMs(attempt: number): number {
+  if (attempt <= 1) return HOUR_MS;
+  if (attempt === 2) return 4 * HOUR_MS;
+  return 24 * HOUR_MS;
+}

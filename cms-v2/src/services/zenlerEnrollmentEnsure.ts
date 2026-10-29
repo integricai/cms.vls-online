@@ -20,7 +20,8 @@ import {
   markStudentChosePassword,
   readStudentPassword,
 } from './studentPassword';
-import { normalizeExamSession } from '../../shared/sessionAccess';
+import { cataloguePlanReachesSessionEnd, normalizeExamSession, sessionAccessEndsAt } from '../../shared/sessionAccess';
+import { sendErrorAlert } from '../utils/errorAlert';
 
 const RETRYABLE_STATUSES = new Set<string | null>(['pending', 'failed', 'skipped', null, '']);
 
@@ -59,7 +60,14 @@ async function enrollOrderCourses(order: PaymentOrder) {
   }
 
   const session = normalizeExamSession(order.sessionMonth, order.sessionYear);
-  const planId = session ? undefined : await resolvePlanId(order);
+  const planId = !session || cataloguePlanReachesSessionEnd(
+    order.durationDays,
+    new Date(),
+    session.month,
+    session.year,
+  )
+    ? await resolvePlanId(order)
+    : undefined;
   const chosenPassword = await readStudentPassword(order.id).catch((err: unknown) => {
     console.error('[zenler-enrollment] could not read the chosen password', order.id, err);
     return null;
@@ -190,6 +198,17 @@ export type ZenlerEnrollmentEnsureResult = {
   emailContext: ZenlerEnrollmentEmailContext | null;
 };
 
+/** A retry after the 15th must not enrol the student or send the access email. */
+async function closeEnrollmentIfSessionEnded(order: PaymentOrder): Promise<PaymentOrder | null> {
+  const session = normalizeExamSession(order.sessionMonth, order.sessionYear);
+  if (!session || sessionAccessEndsAt(session.month, session.year).getTime() > Date.now()) return null;
+  await updateZenlerEnrollment(order.id, {
+    zenlerUserId: order.zenlerUserId,
+    zenlerEnrollmentStatus: 'expired',
+  });
+  return (await getPaymentOrder(order.id)) ?? order;
+}
+
 /** Enroll a paid order in Zenler when webhook or status backfill runs. */
 export async function ensureZenlerEnrollmentForPaidOrder(
   order: PaymentOrder,
@@ -208,6 +227,9 @@ export async function ensureZenlerEnrollmentForPaidOrder(
   if (!email || zenlerCourseIdsForAccess(order).length === 0) {
     return { order, emailContext: null };
   }
+
+  const ended = await closeEnrollmentIfSessionEnded(order);
+  if (ended) return { order: ended, emailContext: null };
 
   const enrollment = await enrollOrderCourses(order);
 
@@ -324,7 +346,22 @@ export async function expireZenlerAccessForSessionOrder(order: PaymentOrder): Pr
   }
 
   if (failed) {
-    await recordSessionUnenrollFailure(order.id, zenlerUserId);
+    const status = await recordSessionUnenrollFailure(order.id, zenlerUserId);
+    if (status === 'unenroll_gave_up') {
+      const studentEmail = (order.studentEmail ?? order.stripeCustomerEmail)?.trim() || null;
+      await sendErrorAlert({
+        area: 'session-expiry',
+        explanation: 'Zenler unenroll was tried 8 times. This student still has school access after the 15th.',
+        error: new Error(`Unenroll gave up for order ${order.id}`),
+        extra: {
+          orderId: order.id,
+          studentEmail,
+          zenlerCourseIds: courseIds,
+        },
+      }).catch((alertErr) => {
+        console.error('[session-expiry] could not send the give-up alert', order.id, alertErr);
+      });
+    }
     return firstAttempt ? 'first_failure' : 'retry_failure';
   }
 
@@ -353,6 +390,9 @@ export async function runZenlerEnrollmentForPaidOrder(
   if (currentStatus.startsWith('enrolled')) {
     return { order, emailContext: await emailContextFromOrder(order) };
   }
+
+  const ended = await closeEnrollmentIfSessionEnded(order);
+  if (ended) return { order: ended, emailContext: null };
 
   const enrollment = await enrollOrderCourses(order);
 

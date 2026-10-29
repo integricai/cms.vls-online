@@ -567,3 +567,59 @@ export async function noteSessionBackfillFailure(saleId: number): Promise<void> 
       AND session_checked_at IS NULL
   `;
 }
+
+/** Named sittings whose sale expiry would move to the 15th. Does not write. */
+export async function countNamedSessionBackfill(): Promise<number> {
+  const rows = await sql`
+    SELECT COUNT(*)::int AS named_sittings
+    FROM sales s
+    JOIN payment_orders po ON po.id = s.payment_order_id
+    LEFT JOIN (
+      VALUES
+        ('january', 1), ('jan', 1),
+        ('february', 2), ('feb', 2),
+        ('march', 3), ('mar', 3),
+        ('april', 4), ('apr', 4),
+        ('may', 5),
+        ('june', 6), ('jun', 6),
+        ('july', 7), ('jul', 7),
+        ('august', 8), ('aug', 8),
+        ('september', 9), ('sept', 9), ('sep', 9),
+        ('october', 10), ('oct', 10),
+        ('november', 11), ('nov', 11),
+        ('december', 12), ('dec', 12)
+    ) AS names(month_name, month_number)
+      ON names.month_name = lower((regexp_match(
+        lower(btrim(po.option_type)),
+        '^([a-z]+)[[:space:]]+([0-9]{4})([[:space:]]+session)?$'
+      ))[1])
+    WHERE s.session_checked_at IS NULL
+      AND s.session_month IS NULL
+      AND po.status = 'Paid'
+      AND (
+        (
+          po.session_month BETWEEN 1 AND 12
+          AND po.session_year BETWEEN 2000 AND 2100
+          AND make_timestamptz(po.session_year, po.session_month, 16, 0, 0, 0, 'Europe/London')
+            - interval '1 millisecond' > s.sold_at
+        )
+        OR (
+          po.session_month IS NULL
+          AND names.month_number IS NOT NULL
+          AND (regexp_match(
+            lower(btrim(po.option_type)),
+            '^([a-z]+)[[:space:]]+([0-9]{4})([[:space:]]+session)?$'
+          ))[2]::int BETWEEN 2000 AND 2100
+          AND make_timestamptz(
+            (regexp_match(
+              lower(btrim(po.option_type)),
+              '^([a-z]+)[[:space:]]+([0-9]{4})([[:space:]]+session)?$'
+            ))[2]::int,
+            names.month_number,
+            16, 0, 0, 0, 'Europe/London'
+          ) - interval '1 millisecond' > s.sold_at
+        )
+      )
+  `;
+  return Number((rows[0] as { named_sittings?: number } | undefined)?.named_sittings ?? 0);
+}
