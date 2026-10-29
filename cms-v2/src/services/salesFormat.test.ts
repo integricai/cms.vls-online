@@ -11,6 +11,14 @@ import {
   salesPresetBounds,
   shiftMonth,
 } from '../../shared/salesFormat';
+import {
+  cataloguePlanReachesSessionEnd,
+  parseSessionLabel,
+  sessionAccessDayCount,
+  sessionAccessEndsAt,
+  sessionSaleLabel,
+  sessionUnenrollDelayMs,
+} from '../../shared/sessionAccess';
 
 function run(name: string, fn: () => void): void {
   try {
@@ -150,4 +158,45 @@ run('session label keeps the month length and the valid-to date', () => {
     saleSessionLabel(120, '2027-02-25T12:00:00.000Z'),
     '4 months · valid to 25 Feb 2027',
   );
+});
+
+run('exam sitting label is the month and year', () => {
+  assert.strictEqual(sessionSaleLabel(12, 2026), 'Dec 2026');
+  assert.strictEqual(sessionSaleLabel(3, 2027), 'March 2027');
+  assert.strictEqual(
+    saleSessionLabel(90, '2026-12-15T23:59:59.999Z', 12, 2026),
+    'Dec 2026',
+  );
+});
+
+run('a stored plan name can name the sitting', () => {
+  assert.deepStrictEqual(parseSessionLabel('December 2026 session'), { month: 12, year: 2026 });
+  assert.deepStrictEqual(parseSessionLabel('Dec 2026'), { month: 12, year: 2026 });
+  assert.deepStrictEqual(parseSessionLabel('March 2027'), { month: 3, year: 2027 });
+  assert.strictEqual(parseSessionLabel('Three months'), null);
+  assert.strictEqual(parseSessionLabel('12 months access – launch offer May 2025'), null);
+});
+
+run('access runs from the purchase date to the 15th', () => {
+  const sold = new Date('2026-10-30T12:00:00.000Z');
+  assert.strictEqual(sessionAccessDayCount(sold, 12, 2026), 46);
+  assert.strictEqual(sessionAccessEndsAt(12, 2026).toISOString(), '2026-12-15T23:59:59.999Z');
+  assert.strictEqual(sessionAccessEndsAt(3, 2027).toISOString(), '2027-03-15T23:59:59.999Z');
+  assert.strictEqual(sessionAccessEndsAt(9, 2026).toISOString(), '2026-09-15T22:59:59.999Z');
+  const onTheFifteenth = new Date('2026-12-15T12:00:00.000Z');
+  assert.strictEqual(sessionAccessDayCount(onTheFifteenth, 12, 2026), 0);
+  assert.ok(sessionAccessEndsAt(12, 2026).getTime() > onTheFifteenth.getTime());
+});
+
+run('a catalogue plan is sent only when it lasts through the 15th', () => {
+  const bought = new Date('2026-10-30T12:00:00.000Z');
+  assert.strictEqual(cataloguePlanReachesSessionEnd(180, bought, 12, 2026), true);
+  assert.strictEqual(cataloguePlanReachesSessionEnd(30, bought, 12, 2026), false);
+  assert.strictEqual(cataloguePlanReachesSessionEnd(90, new Date('2026-12-15T12:00:00.000Z'), 12, 2026), true);
+});
+
+run('unenroll retries wait out a short Zenler outage', () => {
+  assert.strictEqual(sessionUnenrollDelayMs(1), 60 * 60 * 1000);
+  assert.strictEqual(sessionUnenrollDelayMs(2), 4 * 60 * 60 * 1000);
+  assert.strictEqual(sessionUnenrollDelayMs(3), 24 * 60 * 60 * 1000);
 });

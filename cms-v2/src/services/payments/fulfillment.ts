@@ -23,6 +23,7 @@ import {
 } from '../paymentEmails';
 import { majorAmountFromStripeMinor } from '../stripeCheckout';
 import { courseAccessUrlForEnrollment } from '../schoolAccess';
+import { normalizeExamSession, sessionAccessEndsAt } from '../../../shared/sessionAccess';
 import { clearStudentPassword } from '../studentPassword';
 import { ensureSaleRecordedForPaidOrder } from '../saleRecording';
 import { consumeRetakeCodeForOrder, releaseRetakeCodeForOrder } from '../retakeDiscount';
@@ -80,6 +81,11 @@ export function isStudentConfirmationEmailError(err: unknown): boolean {
     && typeof err === 'object'
     && (err as { confirmationEmailFailed?: boolean }).confirmationEmailFailed === true,
   );
+}
+
+/** Enrolment has not finished yet. The status page keeps waiting instead of treating this as a failure. */
+export function isZenlerEnrollmentHoldError(err: unknown): boolean {
+  return err instanceof Error && err.message.startsWith('Zenler enrolment incomplete for order ');
 }
 
 /**
@@ -161,6 +167,13 @@ async function contextForStudentEmail(
   return fromOrder;
 }
 
+function studentAccessEmailClosed(order: PaymentOrder): boolean {
+  const status = String(order.zenlerEnrollmentStatus ?? '').toLowerCase();
+  if (status === 'expired' || status === 'expire_skipped' || status === 'unenroll_gave_up') return true;
+  const session = normalizeExamSession(order.sessionMonth, order.sessionYear);
+  return session != null && sessionAccessEndsAt(session.month, session.year).getTime() <= Date.now();
+}
+
 function waitingForPasswordHolder(
   order: PaymentOrder,
   emailContext: ZenlerEnrollmentEmailContext | null,
@@ -206,6 +219,7 @@ async function sendUnsentPaymentEmails(
   const fresh = (await getPaymentOrder(order.id)) ?? order;
   const access = await contextForStudentEmail(fresh, emailContext);
   const sendStudent = !fresh.confirmationEmailSentAt
+    && !studentAccessEmailClosed(fresh)
     && !zenlerAccessStillBlockingStudentEmail(fresh)
     && !waitingForPasswordHolder(fresh, access);
   const sendAdmin = !fresh.adminEmailSentAt;

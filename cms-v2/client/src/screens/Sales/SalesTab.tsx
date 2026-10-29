@@ -87,7 +87,7 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
     customerName(sale),
     sale.customerEmail ?? '',
     sale.courseName || `Course #${sale.courseId}`,
-    saleSessionLabel(sale.durationDays, sale.expiryDate),
+    saleSessionLabel(sale.durationDays, sale.expiryDate, sale.sessionMonth, sale.sessionYear),
     countryLabel(sale.countryCode),
     sale.paymentMethod ?? '',
     processorLabel(sale),
@@ -347,7 +347,7 @@ export default function SalesTab() {
                     <td className="px-3 py-2">{sale.customerEmail || '—'}</td>
                     <td className="px-3 py-2">{sale.courseName || `Course #${sale.courseId}`}</td>
                     <td className="px-3 py-2 whitespace-nowrap">
-                      {saleSessionLabel(sale.durationDays, sale.expiryDate)}
+                      {saleSessionLabel(sale.durationDays, sale.expiryDate, sale.sessionMonth, sale.sessionYear)}
                       <div className="text-[11px] text-slate-400">Sold {formatDisplayDate(sale.soldAt)}</div>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap" title={sale.countryCode ?? undefined}>

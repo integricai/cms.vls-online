@@ -3,6 +3,7 @@ import { sql } from '../db/client';
 import type { CheckoutAttribution, CheckoutEnvironment, ConversionUploadStatus } from '../services/attribution';
 import { parsePaymentProviderId, type PaymentProviderId } from '../services/payments/types';
 import { classifyPaidAmount } from '../services/stripeCheckout';
+import { sessionUnenrollDelayMs } from '../../shared/sessionAccess';
 
 export type PaymentOrderStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled' | 'Refunded';
 
@@ -26,6 +27,9 @@ export interface PaymentOrder {
   presentmentAmount: number | null;
   presentmentCurrency: string | null;
   durationDays: number | null;
+  /** Exam sitting. Null for a fixed-length plan. */
+  sessionMonth: number | null;
+  sessionYear: number | null;
   discountPercent: number | null;
   status: PaymentOrderStatus;
   provider: PaymentProviderId;
@@ -87,6 +91,8 @@ interface DbRow {
   presentment_amount?: string | null;
   presentment_currency?: string | null;
   duration_days: number | null;
+  session_month?: number | null;
+  session_year?: number | null;
   discount_percent: string | null;
   status: PaymentOrderStatus;
   provider?: string | null;
@@ -148,6 +154,8 @@ function rowToOrder(row: DbRow): PaymentOrder {
     presentmentAmount: row.presentment_amount != null ? Number(row.presentment_amount) : null,
     presentmentCurrency: row.presentment_currency ?? null,
     durationDays: row.duration_days ?? null,
+    sessionMonth: row.session_month ?? null,
+    sessionYear: row.session_year ?? null,
     discountPercent: row.discount_percent != null ? Number(row.discount_percent) : null,
     status: row.status,
     provider: parsePaymentProviderId(row.provider),
@@ -206,6 +214,8 @@ export async function createPaymentOrder(data: {
   amount: number;
   currency: string;
   durationDays?: number | null;
+  sessionMonth?: number | null;
+  sessionYear?: number | null;
   discountPercent?: number | null;
   attribution?: CheckoutAttribution | null;
   environment?: CheckoutEnvironment | null;
@@ -219,7 +229,8 @@ export async function createPaymentOrder(data: {
   const rows = await sql`
     INSERT INTO payment_orders
       (payment_option_id, course_id, course_price_id, customer_id, zenler_course_id, access_zenler_course_ids, course_title,
-       option_type, student_name, student_email, student_phone, country_code, amount, currency, duration_days, discount_percent,
+       option_type, student_name, student_email, student_phone, country_code, amount, currency, duration_days,
+       session_month, session_year, discount_percent,
        provider,
        gclid, gbraid, wbraid, fbclid, fbp, fbc,
        utm_source, utm_medium, utm_campaign, utm_content, utm_term,
@@ -228,7 +239,8 @@ export async function createPaymentOrder(data: {
       (${data.paymentOptionId ?? null}, ${data.courseId ?? null}, ${data.coursePriceId ?? null},
        ${data.customerId ?? null}, ${data.zenlerCourseId}, ${data.accessZenlerCourseIds ?? null}, ${data.courseTitle}, ${data.optionType},
        ${data.studentName}, ${data.studentEmail}, ${data.studentPhone ?? null}, ${data.countryCode ?? null},
-       ${data.amount}, ${data.currency}, ${data.durationDays ?? null}, ${data.discountPercent ?? null},
+       ${data.amount}, ${data.currency}, ${data.durationDays ?? null},
+       ${data.sessionMonth ?? null}, ${data.sessionYear ?? null}, ${data.discountPercent ?? null},
        ${provider},
        ${attr?.gclid ?? null}, ${attr?.gbraid ?? null}, ${attr?.wbraid ?? null},
        ${attr?.fbclid ?? null}, ${attr?.fbp ?? null}, ${attr?.fbc ?? null},
@@ -438,6 +450,155 @@ export async function markPaymentOrderPaid(data: {
     throw new Error(`Cannot mark payment order paid in status ${current.status}`);
   }
   return { order: rowToOrder(paid), wasAlreadyPaid: false };
+}
+
+/** Stop retrying an unenroll after this many Zenler failures. */
+export const SESSION_UNENROLL_ATTEMPT_LIMIT = 8;
+
+/** Paid session enrolments whose 15th has ended and who are still in Zenler. Fresh expiries go first. */
+export async function listSessionOrdersDueForExpiry(
+  limit = 10,
+  includeBackfill = false,
+): Promise<PaymentOrder[]> {
+  const rows = await sql`
+    SELECT po.*
+    FROM payment_orders po
+    JOIN sales s ON s.payment_order_id = po.id
+    WHERE po.status = 'Paid'
+      AND s.session_month BETWEEN 1 AND 12
+      AND s.session_year BETWEEN 2000 AND 2100
+      AND s.expiry_date <= NOW()
+      AND (
+        COALESCE(s.session_from_checkout, false) = true
+        OR ${includeBackfill} = true
+      )
+      AND COALESCE(po.session_unenroll_attempts, 0) < ${SESSION_UNENROLL_ATTEMPT_LIMIT}
+      AND (
+        po.zenler_enrollment_status ILIKE 'enrolled%'
+        OR (
+          po.zenler_enrollment_status = 'unenroll_failed'
+          AND (po.session_unenroll_after IS NULL OR po.session_unenroll_after <= NOW())
+        )
+        OR (
+          po.zenler_enrollment_status = 'expire_deferred'
+          AND (po.session_access_hold_until IS NULL OR po.session_access_hold_until <= NOW())
+        )
+      )
+    ORDER BY
+      CASE
+        WHEN po.zenler_enrollment_status ILIKE 'enrolled%' THEN 0
+        WHEN po.zenler_enrollment_status = 'expire_deferred' THEN 1
+        ELSE 2
+      END,
+      s.expiry_date ASC
+    LIMIT ${limit}
+  `;
+  return (rows as DbRow[]).map(rowToOrder);
+}
+
+/**
+ * Latest time another paid order still covers each Zenler course.
+ * One course can be on several orders; access lasts until the latest of those.
+ */
+export async function latestCoveringAccessByCourse(input: {
+  orderId: number;
+  customerId: number | null;
+  email: string | null;
+  zenlerCourseIds: string[];
+}): Promise<Map<string, Date>> {
+  const email = input.email?.trim().toLowerCase() || null;
+  const courseIds = input.zenlerCourseIds.map(id => id.trim()).filter(id => id.length > 0);
+  if ((!email && input.customerId == null) || courseIds.length === 0) return new Map();
+  const rows = await sql`
+    SELECT matched.course_id, MAX(covered.covered_until) AS covered_until
+    FROM payment_orders po
+    JOIN LATERAL (
+      SELECT COALESCE(
+        (
+          SELECT MAX(s.expiry_date)
+          FROM sales s
+          WHERE s.payment_order_id = po.id
+            AND s.expiry_date > NOW()
+        ),
+        CASE
+          WHEN NOT EXISTS (SELECT 1 FROM sales s WHERE s.payment_order_id = po.id)
+            AND po.paid_at IS NOT NULL
+            AND po.duration_days IS NOT NULL
+            AND po.paid_at + (po.duration_days * INTERVAL '1 day') > NOW()
+          THEN po.paid_at + (po.duration_days * INTERVAL '1 day')
+          ELSE NULL
+        END
+      ) AS covered_until
+    ) covered ON covered.covered_until IS NOT NULL
+    JOIN LATERAL (
+      SELECT course_id
+      FROM (
+        SELECT po.zenler_course_id AS course_id
+        UNION ALL
+        SELECT unnest(COALESCE(po.access_zenler_course_ids, ARRAY[]::text[]))
+      ) ids
+      WHERE course_id = ANY(${courseIds}::text[])
+    ) matched ON true
+    WHERE po.id <> ${input.orderId}
+      AND po.status = 'Paid'
+      AND (
+        (${input.customerId}::int IS NOT NULL AND po.customer_id = ${input.customerId})
+        OR (${email}::text IS NOT NULL AND LOWER(po.student_email) = ${email})
+        OR (${email}::text IS NOT NULL AND LOWER(po.stripe_customer_email) = ${email})
+      )
+    GROUP BY matched.course_id
+  `;
+  const covered = new Map<string, Date>();
+  for (const row of rows as Array<{ course_id?: string | null; covered_until?: Date | string | null }>) {
+    if (!row.course_id || !row.covered_until) continue;
+    const date = row.covered_until instanceof Date ? row.covered_until : new Date(row.covered_until);
+    if (!Number.isNaN(date.getTime())) covered.set(String(row.course_id), date);
+  }
+  return covered;
+}
+
+/** Count a Zenler unenroll failure. A database error must not call this. */
+export async function recordSessionUnenrollFailure(
+  orderId: number,
+  zenlerUserId: string | null,
+): Promise<'unenroll_failed' | 'unenroll_gave_up'> {
+  const current = await sql`
+    SELECT session_unenroll_attempts
+    FROM payment_orders
+    WHERE id = ${orderId}
+    LIMIT 1
+  `;
+  const attempt = Number((current[0] as { session_unenroll_attempts?: number } | undefined)?.session_unenroll_attempts ?? 0) + 1;
+  const gaveUp = attempt >= SESSION_UNENROLL_ATTEMPT_LIMIT;
+  const status = gaveUp ? 'unenroll_gave_up' : 'unenroll_failed';
+  const retryAt = gaveUp ? null : new Date(Date.now() + sessionUnenrollDelayMs(attempt));
+  const rows = await sql`
+    UPDATE payment_orders
+    SET session_unenroll_attempts = ${attempt},
+        zenler_user_id = ${zenlerUserId},
+        zenler_enrollment_status = ${status},
+        session_unenroll_after = ${retryAt}
+    WHERE id = ${orderId}
+      AND session_unenroll_attempts = ${attempt - 1}
+    RETURNING zenler_enrollment_status
+  `;
+  const saved = String((rows[0] as { zenler_enrollment_status?: string } | undefined)?.zenler_enrollment_status ?? '');
+  return saved === 'unenroll_gave_up' ? 'unenroll_gave_up' : 'unenroll_failed';
+}
+
+/** Leave access in place until the other order's cover ends, then try again. */
+export async function deferSessionAccessRemoval(
+  orderId: number,
+  zenlerUserId: string | null,
+  holdUntil: Date,
+): Promise<void> {
+  await sql`
+    UPDATE payment_orders
+    SET zenler_user_id = ${zenlerUserId},
+        zenler_enrollment_status = 'expire_deferred',
+        session_access_hold_until = ${holdUntil}
+    WHERE id = ${orderId}
+  `;
 }
 
 let presentmentColumnsReady: Promise<void> | null = null;

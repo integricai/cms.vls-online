@@ -21,6 +21,8 @@ export interface SalesActivityRow {
   presentmentAmount: number | null;
   presentmentCurrency: string | null;
   refunded: boolean;
+  sessionMonth: number | null;
+  sessionYear: number | null;
 }
 
 function dayKey(value: unknown): string {
@@ -120,6 +122,8 @@ export async function listRecentSalesActivity(limit: number, includeRefunded: bo
         c.name AS course_name,
         cu.first_name,
         cu.last_name,
+        s.session_month,
+        s.session_year,
         COALESCE(po.status, 'Paid') = 'Refunded' AS refunded
       FROM sales s
       LEFT JOIN courses c ON c.id = s.course_id
@@ -140,6 +144,8 @@ export async function listRecentSalesActivity(limit: number, includeRefunded: bo
         c.name AS course_name,
         cu.first_name,
         cu.last_name,
+        s.session_month,
+        s.session_year,
         FALSE AS refunded
       FROM sales s
       LEFT JOIN courses c ON c.id = s.course_id
@@ -161,6 +167,8 @@ export async function listRecentSalesActivity(limit: number, includeRefunded: bo
     course_name: string | null;
     first_name: string | null;
     last_name: string | null;
+    session_month: number | null;
+    session_year: number | null;
     refunded: boolean;
   }>).map(row => ({
     id: row.id,
@@ -173,5 +181,7 @@ export async function listRecentSalesActivity(limit: number, includeRefunded: bo
     presentmentAmount: row.presentment_amount != null ? Number(row.presentment_amount) : null,
     presentmentCurrency: row.presentment_currency ?? null,
     refunded: Boolean(row.refunded),
+    sessionMonth: row.session_month ?? null,
+    sessionYear: row.session_year ?? null,
   }));
 }

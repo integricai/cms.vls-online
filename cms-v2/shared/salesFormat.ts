@@ -1,5 +1,7 @@
 /** London calendar helpers and sale labels shared by the API and the vault. */
 
+import { normalizeExamSession, sessionSaleLabel } from './sessionAccess';
+
 const LONDON = 'Europe/London';
 
 export type DashboardRange = 'this_month' | 'last_month' | 'last_7_days' | 'last_30_days';
@@ -77,11 +79,18 @@ export function formatDisplayDate(value: Date | string | null | undefined): stri
   }).format(date);
 }
 
-/** Access length plus the date the session stays valid until. */
+/** Sitting name for an exam session, otherwise the access length and valid-to date. */
 export function saleSessionLabel(
   durationDays: number,
   expiry: Date | string | null | undefined,
+  sessionMonth?: number | null,
+  sessionYear?: number | null,
 ): string {
+  const session = normalizeExamSession(sessionMonth, sessionYear);
+  if (session) {
+    const label = sessionSaleLabel(session.month, session.year);
+    if (label) return label;
+  }
   const months = Math.max(1, Math.round(Number(durationDays) / 30));
   const length = months === 1 ? '1 month' : `${months} months`;
   const valid = formatDisplayDate(expiry);

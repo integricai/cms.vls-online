@@ -544,6 +544,9 @@ export interface Sale {
   durationDays: number;
   soldAt: Date;
   expiryDate: Date;
+  /** Exam sitting purchased. Null for a fixed-length plan. */
+  sessionMonth: number | null;
+  sessionYear: number | null;
   /** ISO 3166-1 alpha-2 country captured for this sale. */
   countryCode: string | null;
   tutorId: number | null;
@@ -629,6 +632,8 @@ export interface SalesDashboardActivity {
   name: string;
   courseName: string;
   soldAt: string;
+  sessionMonth: number | null;
+  sessionYear: number | null;
 }
 
 export interface SalesDashboardOrder {
@@ -641,6 +646,8 @@ export interface SalesDashboardOrder {
   presentmentAmount: number | null;
   presentmentCurrency: string | null;
   type: 'One-time' | 'Refunded';
+  sessionMonth: number | null;
+  sessionYear: number | null;
 }
 
 export interface SalesDashboard {

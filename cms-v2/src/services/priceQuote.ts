@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { normalizeExamSession } from '../../shared/sessionAccess';
 import { roundMoney } from './courseGeoPriceValidation';
 
 /** How long the enrol button may reuse the price the course page showed. */
@@ -14,6 +15,9 @@ export type PriceQuotePayload = {
   displayAmount: number;
   displayCurrency: string;
   exp: number;
+  /** Sitting the course page showed. Absent on quotes signed before this field existed. */
+  sessionMonth?: number;
+  sessionYear?: number;
 };
 
 function priceQuoteSecret(): string | null {
@@ -46,6 +50,11 @@ export function signPriceQuote(
     displayCurrency: input.displayCurrency.toUpperCase(),
     exp: input.exp ?? now + PRICE_QUOTE_TTL_MS,
   };
+  const session = normalizeExamSession(input.sessionMonth, input.sessionYear);
+  if (session) {
+    payload.sessionMonth = session.month;
+    payload.sessionYear = session.year;
+  }
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
   return `${body}.${signBody(body, secret)}`;
 }
@@ -53,6 +62,8 @@ export function signPriceQuote(
 function isPayload(value: unknown): value is PriceQuotePayload {
   if (!value || typeof value !== 'object') return false;
   const record = value as Partial<PriceQuotePayload>;
+  const session = normalizeExamSession(record.sessionMonth, record.sessionYear);
+  const sessionOk = (record.sessionMonth == null && record.sessionYear == null) || session != null;
   return Number.isInteger(record.coursePriceId)
     && (record.coursePriceId ?? 0) > 0
     && typeof record.amountUsd === 'number'
@@ -64,7 +75,8 @@ function isPayload(value: unknown): value is PriceQuotePayload {
     && typeof record.displayCurrency === 'string'
     && /^[A-Z]{3}$/.test(record.displayCurrency)
     && typeof record.exp === 'number'
-    && Number.isFinite(record.exp);
+    && Number.isFinite(record.exp)
+    && sessionOk;
 }
 
 /** Null when the token is missing, altered, or expired. */

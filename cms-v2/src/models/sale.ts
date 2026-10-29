@@ -20,6 +20,8 @@ export interface SaleDbRow {
   currency: string;
   discount_percent: string | null;
   duration_days: number;
+  session_month?: number | null;
+  session_year?: number | null;
   sold_at: Date;
   expiry_date: Date;
   country_code: string | null;
@@ -82,6 +84,8 @@ export function rowToSale(row: SaleDbRow): Sale {
     durationDays: row.duration_days,
     soldAt: row.sold_at,
     expiryDate: row.expiry_date,
+    sessionMonth: row.session_month ?? null,
+    sessionYear: row.session_year ?? null,
     countryCode: saleCountryCode(row.country_code),
     tutorId: row.tutor_id,
     assignmentStatus: row.assignment_status ?? 'AwaitingTutor',
@@ -205,14 +209,19 @@ export async function createSale(data: {
   discountPercent: number | null;
   durationDays: number;
   soldAt: Date;
+  /** When set, this is the 15th of the exam sitting instead of soldAt + durationDays. */
+  expiryDate?: Date | null;
+  sessionMonth?: number | null;
+  sessionYear?: number | null;
   countryCode?: string | null;
 }): Promise<Sale> {
-  const expiryDate = computeExpiryDate(data.soldAt, data.durationDays);
+  const expiryDate = data.expiryDate ?? computeExpiryDate(data.soldAt, data.durationDays);
   const countryCode = saleCountryCode(data.countryCode);
   const rows = await sql`
     INSERT INTO sales (
       customer_id, course_id, course_price_id, payment_order_id,
       amount, currency, discount_percent, duration_days, sold_at, expiry_date,
+      session_month, session_year, session_checked_at, session_from_checkout,
       country_code, assignment_status
     )
     VALUES (
@@ -226,6 +235,10 @@ export async function createSale(data: {
       ${data.durationDays},
       ${data.soldAt},
       ${expiryDate},
+      ${data.sessionMonth ?? null},
+      ${data.sessionYear ?? null},
+      NOW(),
+      ${data.sessionMonth != null && data.sessionYear != null},
       ${countryCode},
       'AwaitingTutor'
     )
@@ -455,4 +468,165 @@ export async function getSaleDetailForInvite(saleId: number): Promise<{
     studentFirstName: row.customer_first_name,
     studentEmail: row.customer_email,
   };
+}
+
+export type SessionBackfillCandidate = {
+  saleId: number;
+  soldAt: Date;
+  orderId: number;
+  optionType: string | null;
+  orderSessionMonth: number | null;
+  orderSessionYear: number | null;
+};
+
+/** Paid sales that have not yet been checked for an exam sitting. */
+export async function listSalesNeedingSessionBackfill(limit = 25): Promise<SessionBackfillCandidate[]> {
+  const rows = await sql`
+    SELECT
+      s.id AS sale_id,
+      s.sold_at,
+      po.id AS order_id,
+      po.option_type,
+      po.session_month,
+      po.session_year
+    FROM sales s
+    JOIN payment_orders po ON po.id = s.payment_order_id
+    WHERE s.session_checked_at IS NULL
+      AND s.session_month IS NULL
+      AND po.status = 'Paid'
+    ORDER BY s.session_check_attempts ASC, s.sold_at ASC
+    LIMIT ${limit}
+  `;
+  return (rows as Array<{
+    sale_id: number;
+    sold_at: Date;
+    order_id: number;
+    option_type: string | null;
+    session_month: number | null;
+    session_year: number | null;
+  }>).map(row => ({
+    saleId: row.sale_id,
+    soldAt: row.sold_at,
+    orderId: row.order_id,
+    optionType: row.option_type,
+    orderSessionMonth: row.session_month,
+    orderSessionYear: row.session_year,
+  }));
+}
+
+export async function saveBackfilledExamSession(input: {
+  saleId: number;
+  orderId: number;
+  sessionMonth: number;
+  sessionYear: number;
+  durationDays: number;
+  expiryDate: Date;
+}): Promise<void> {
+  await sql`
+    UPDATE payment_orders
+    SET session_month = ${input.sessionMonth},
+        session_year = ${input.sessionYear}
+    WHERE id = ${input.orderId}
+      AND session_month IS NULL
+  `;
+  await sql`
+    UPDATE sales
+    SET session_month = ${input.sessionMonth},
+        session_year = ${input.sessionYear},
+        duration_days = ${input.durationDays},
+        expiry_date = ${input.expiryDate},
+        session_checked_at = NOW()
+    WHERE id = ${input.saleId}
+      AND session_month IS NULL
+      AND ${input.expiryDate} > sold_at
+  `;
+  await markSaleSessionChecked(input.saleId);
+}
+
+export async function markSaleSessionChecked(saleId: number): Promise<void> {
+  await sql`
+    UPDATE sales
+    SET session_checked_at = NOW()
+    WHERE id = ${saleId}
+      AND session_checked_at IS NULL
+  `;
+}
+
+const SESSION_BACKFILL_ATTEMPT_LIMIT = 3;
+
+/** A backfill error is retried twice, then the sale is left on its catalogue length. */
+export async function noteSessionBackfillFailure(saleId: number): Promise<void> {
+  await sql`
+    UPDATE sales
+    SET session_check_attempts = session_check_attempts + 1,
+        session_checked_at = CASE
+          WHEN session_check_attempts + 1 >= ${SESSION_BACKFILL_ATTEMPT_LIMIT} THEN NOW()
+          ELSE session_checked_at
+        END
+    WHERE id = ${saleId}
+      AND session_checked_at IS NULL
+  `;
+}
+
+export type SessionBackfillSource = {
+  saleId: number;
+  soldAt: Date;
+  expiryDate: Date | null;
+  orderId: number;
+  optionType: string | null;
+  orderSessionMonth: number | null;
+  orderSessionYear: number | null;
+  saleSessionMonth: number | null;
+  saleSessionYear: number | null;
+  fromCheckout: boolean;
+};
+
+/** Sales the backfill might shorten, plus sittings an older migration already wrote. */
+export async function listSessionBackfillSources(limit = 500): Promise<SessionBackfillSource[]> {
+  const rows = await sql`
+    SELECT
+      s.id AS sale_id,
+      s.sold_at,
+      s.expiry_date,
+      s.session_month AS sale_session_month,
+      s.session_year AS sale_session_year,
+      COALESCE(s.session_from_checkout, false) AS session_from_checkout,
+      po.id AS order_id,
+      po.option_type,
+      po.session_month,
+      po.session_year
+    FROM sales s
+    JOIN payment_orders po ON po.id = s.payment_order_id
+    WHERE po.status = 'Paid'
+      AND COALESCE(s.session_from_checkout, false) = false
+      AND (
+        (s.session_month BETWEEN 1 AND 12 AND s.session_year BETWEEN 2000 AND 2100)
+        OR (s.session_checked_at IS NULL AND s.session_month IS NULL)
+      )
+    ORDER BY s.sold_at ASC
+    LIMIT ${limit}
+  `;
+  return (rows as Array<{
+    sale_id: number;
+    sold_at: Date;
+    expiry_date: Date | null;
+    sale_session_month: number | null;
+    sale_session_year: number | null;
+    session_from_checkout: boolean;
+    order_id: number;
+    option_type: string | null;
+    session_month: number | null;
+    session_year: number | null;
+  }>).map(row => ({
+    saleId: row.sale_id,
+    soldAt: row.sold_at,
+    expiryDate: row.expiry_date,
+    orderId: row.order_id,
+    optionType: row.option_type,
+    orderSessionMonth: row.session_month,
+    orderSessionYear: row.session_year,
+    saleSessionMonth: row.sale_session_month,
+    saleSessionYear: row.sale_session_year,
+    fromCheckout: row.session_from_checkout === true,
+  }));
 }
