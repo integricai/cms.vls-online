@@ -54,7 +54,7 @@ import {
 import { resolveConfiguredComboZenlerCourseIds } from '../services/multiCourseStoryblokAllowlist';
 import { ComboBundlePriceError, priceComboAccessSelection } from '../services/comboBundlePrice';
 import { examSessionForCoursePrice } from '../services/courseDisplayPricing';
-import { sessionAccessDayCount, sessionSaleLabel } from '../../shared/sessionAccess';
+import { normalizeExamSession, sessionAccessEndsAt, sessionSaleLabel } from '../../shared/sessionAccess';
 import {
   holdRetakeCodeForOrder,
   previewRetakeDiscount,
@@ -708,6 +708,7 @@ async function priceCheckoutSelection(
 
   let resolved;
   let usedPageQuote = false;
+  let quotedSession: { month: number; year: number } | null = null;
   let localPresentment: { amount: number; currency: string } | null = null;
   try {
     if (explicitPriceId) {
@@ -718,6 +719,7 @@ async function priceCheckoutSelection(
       const pageQuote = verifyPriceQuote(req.body?.priceQuote);
       if (pageQuote && quoteMatchesCataloguePrice(pageQuote, price.id, price.amount)) {
         usedPageQuote = true;
+        quotedSession = normalizeExamSession(pageQuote.sessionMonth, pageQuote.sessionYear);
         localPresentment = presentmentFromQuote(pageQuote);
         resolved = {
           price,
@@ -816,16 +818,17 @@ async function priceCheckoutSelection(
       ? { amount: comboQuote.presentmentAmount, currency: comboQuote.presentmentCurrency }
       : null;
   } else {
-    examSession = await examSessionForCoursePrice(
+    const computed = await examSessionForCoursePrice(
       course.id,
       course.qualification,
       resolved.price.id,
     );
+    examSession = quotedSession ?? computed;
+  }
+  if (examSession && sessionAccessEndsAt(examSession.month, examSession.year).getTime() <= Date.now()) {
+    return { ok: false, status: 400, error: 'This session is no longer available.' };
   }
   if (examSession) {
-    if (sessionAccessDayCount(new Date(), examSession.month, examSession.year) < 1) {
-      return { ok: false, status: 400, error: 'This session is no longer available.' };
-    }
     optionType = sessionSaleLabel(examSession.month, examSession.year);
   }
 
@@ -1054,11 +1057,15 @@ function publicPaymentStatus(order: PaymentOrder, confirmationEmailFailed = fals
 }
 
 const reportedPaymentStatusFailures = new Set<string>();
+const PAYMENT_STATUS_FAILURE_LIMIT = 200;
 
 function reportPaymentStatusFailure(orderId: number, area: string, error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
   const key = `${area}:${orderId}:${message}`;
   if (reportedPaymentStatusFailures.has(key)) return;
+  if (reportedPaymentStatusFailures.size >= PAYMENT_STATUS_FAILURE_LIMIT) {
+    reportedPaymentStatusFailures.clear();
+  }
   reportedPaymentStatusFailures.add(key);
   void sendErrorAlert({
     area,

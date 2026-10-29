@@ -632,6 +632,8 @@ export interface SalesDashboardActivity {
   name: string;
   courseName: string;
   soldAt: string;
+  sessionMonth: number | null;
+  sessionYear: number | null;
 }
 
 export interface SalesDashboardOrder {
@@ -644,6 +646,8 @@ export interface SalesDashboardOrder {
   presentmentAmount: number | null;
   presentmentCurrency: string | null;
   type: 'One-time' | 'Refunded';
+  sessionMonth: number | null;
+  sessionYear: number | null;
 }
 
 export interface SalesDashboard {

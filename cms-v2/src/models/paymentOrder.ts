@@ -220,7 +220,6 @@ export async function createPaymentOrder(data: {
   environment?: CheckoutEnvironment | null;
   provider?: PaymentProviderId | null;
 }): Promise<PaymentOrder> {
-  await ensureExamSessionColumns();
   const attr = data.attribution;
   const environment = data.environment
     ?? attr?.environment
@@ -452,48 +451,70 @@ export async function markPaymentOrderPaid(data: {
   return { order: rowToOrder(paid), wasAlreadyPaid: false };
 }
 
-let examSessionColumnsReady: Promise<void> | null = null;
-
-/** Adds the exam-sitting columns if this process has not added them yet. */
-export function ensureExamSessionColumns(): Promise<void> {
-  examSessionColumnsReady ??= (async () => {
-    await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS session_month SMALLINT`;
-    await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS session_year SMALLINT`;
-    await sql`ALTER TABLE sales ADD COLUMN IF NOT EXISTS session_month SMALLINT`;
-    await sql`ALTER TABLE sales ADD COLUMN IF NOT EXISTS session_year SMALLINT`;
-  })();
-  return examSessionColumnsReady;
-}
-
-/** Days of access counted at payment, from the payment date to the 15th. */
-export async function saveSessionAccessDays(orderId: number, durationDays: number): Promise<void> {
-  await ensureExamSessionColumns();
-  await sql`
-    UPDATE payment_orders
-    SET duration_days = ${durationDays}
-    WHERE id = ${orderId}
-  `;
-}
-
-/** Paid session enrolments whose 15th has ended and who are still in Zenler. */
+/** Paid session enrolments whose 15th has ended and who are still in Zenler. Fresh expiries go first so a batch of failures cannot block them. */
 export async function listSessionOrdersDueForExpiry(limit = 40): Promise<PaymentOrder[]> {
-  await ensureExamSessionColumns();
   const rows = await sql`
     SELECT po.*
     FROM payment_orders po
     JOIN sales s ON s.payment_order_id = po.id
     WHERE po.status = 'Paid'
-      AND s.session_month IS NOT NULL
-      AND s.session_year IS NOT NULL
+      AND s.session_month BETWEEN 1 AND 12
+      AND s.session_year BETWEEN 2000 AND 2100
       AND s.expiry_date <= NOW()
       AND (
         po.zenler_enrollment_status ILIKE 'enrolled%'
         OR po.zenler_enrollment_status = 'unenroll_failed'
       )
-    ORDER BY s.expiry_date ASC
+    ORDER BY
+      CASE WHEN po.zenler_enrollment_status ILIKE 'enrolled%' THEN 0 ELSE 1 END,
+      s.expiry_date ASC
     LIMIT ${limit}
   `;
   return (rows as DbRow[]).map(rowToOrder);
+}
+
+/**
+ * Another paid order still covers this Zenler course for the same student.
+ * Expiry of one sitting must not remove access that a later purchase includes.
+ */
+export async function studentKeepsZenlerCourse(input: {
+  orderId: number;
+  customerId: number | null;
+  email: string | null;
+  zenlerCourseId: string;
+}): Promise<boolean> {
+  const email = input.email?.trim().toLowerCase() || null;
+  if (!email && input.customerId == null) return false;
+  const rows = await sql`
+    SELECT 1
+    FROM payment_orders po
+    WHERE po.id <> ${input.orderId}
+      AND po.status = 'Paid'
+      AND (
+        (${input.customerId}::int IS NOT NULL AND po.customer_id = ${input.customerId})
+        OR (${email}::text IS NOT NULL AND LOWER(po.student_email) = ${email})
+        OR (${email}::text IS NOT NULL AND LOWER(po.stripe_customer_email) = ${email})
+      )
+      AND (
+        po.zenler_course_id = ${input.zenlerCourseId}
+        OR ${input.zenlerCourseId} = ANY(COALESCE(po.access_zenler_course_ids, ARRAY[]::text[]))
+      )
+      AND (
+        EXISTS (
+          SELECT 1 FROM sales s
+          WHERE s.payment_order_id = po.id
+            AND s.expiry_date > NOW()
+        )
+        OR (
+          NOT EXISTS (SELECT 1 FROM sales s WHERE s.payment_order_id = po.id)
+          AND po.paid_at IS NOT NULL
+          AND po.duration_days IS NOT NULL
+          AND po.paid_at + (po.duration_days * INTERVAL '1 day') > NOW()
+        )
+      )
+    LIMIT 1
+  `;
+  return rows.length > 0;
 }
 
 let presentmentColumnsReady: Promise<void> | null = null;

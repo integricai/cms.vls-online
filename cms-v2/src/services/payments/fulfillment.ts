@@ -82,6 +82,11 @@ export function isStudentConfirmationEmailError(err: unknown): boolean {
   );
 }
 
+/** Enrolment has not finished yet. The status page keeps waiting instead of treating this as a failure. */
+export function isZenlerEnrollmentHoldError(err: unknown): boolean {
+  return err instanceof Error && err.message.startsWith('Zenler enrolment incomplete for order ');
+}
+
 /**
  * Paid is stored before Zenler enrolment and confirmation emails. A webhook
  * retry, or the reconciliation cron, has to finish whichever of those did not.

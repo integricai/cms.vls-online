@@ -2,6 +2,7 @@ import type { PaymentOrder } from '../models/paymentOrder';
 import { getGeoPriceById } from '../models/courseGeoPrice';
 import {
   getPaymentOrder,
+  studentKeepsZenlerCourse,
   updateZenlerEnrollment,
 } from '../models/paymentOrder';
 import { updateCustomerZenlerUserId } from '../models/customer';
@@ -285,7 +286,6 @@ export async function revokeZenlerAccessForRefundedOrder(
  * Best-effort: a missing Zenler account is treated as already closed.
  */
 export async function expireZenlerAccessForSessionOrder(order: PaymentOrder): Promise<boolean> {
-  const email = (order.studentEmail ?? order.stripeCustomerEmail)?.trim() ?? null;
   const courseIds = zenlerCourseIdsForAccess(order);
   if (courseIds.length === 0) {
     await updateZenlerEnrollment(order.id, {
@@ -297,15 +297,42 @@ export async function expireZenlerAccessForSessionOrder(order: PaymentOrder): Pr
 
   let zenlerUserId = order.zenlerUserId;
   let failed = false;
+  let permanent = true;
   for (const zenlerCourseId of courseIds) {
+    const email = (order.studentEmail ?? order.stripeCustomerEmail)?.trim().toLowerCase() || null;
+    const stillCovered = await studentKeepsZenlerCourse({
+      orderId: order.id,
+      customerId: order.customerId,
+      email,
+      zenlerCourseId,
+    });
+    if (stillCovered) {
+      permanent = false;
+      continue;
+    }
+
     const result = await unenrollStudentFromZenlerCourse({
       email,
       zenlerUserId,
       zenlerCourseId,
     });
     if (result.zenlerUserId) zenlerUserId = result.zenlerUserId;
-    if (result.status === 'skipped') return false;
-    if (result.status !== 'unenrolled') failed = true;
+    if (result.status === 'unenrolled') {
+      permanent = false;
+      continue;
+    }
+    const nothingToRemove = /email is required|no zenler account/i.test(result.message);
+    if (nothingToRemove) continue;
+    permanent = false;
+    failed = true;
+  }
+
+  if (courseIds.length > 0 && permanent && !failed) {
+    await updateZenlerEnrollment(order.id, {
+      zenlerUserId,
+      zenlerEnrollmentStatus: 'expire_skipped',
+    });
+    return true;
   }
 
   await updateZenlerEnrollment(order.id, {

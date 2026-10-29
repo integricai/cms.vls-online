@@ -1,5 +1,5 @@
 import { sql } from '../db/client';
-import { ensureExamSessionColumns, ensurePaymentPresentmentColumns } from './paymentOrder';
+import { ensurePaymentPresentmentColumns } from './paymentOrder';
 import { isValidIsoCountryCode, normalizeCountryCode } from '../utils/isoCountryCodes';
 import type {
   PaymentOrderStatus,
@@ -152,7 +152,6 @@ export async function getSaleByPaymentOrderId(paymentOrderId: number): Promise<S
 }
 
 export async function getSaleListItemById(id: number): Promise<SaleListItem | null> {
-  await ensureExamSessionColumns();
   await ensurePaymentPresentmentColumns();
   const rows = await sql`
     SELECT
@@ -216,14 +215,13 @@ export async function createSale(data: {
   sessionYear?: number | null;
   countryCode?: string | null;
 }): Promise<Sale> {
-  await ensureExamSessionColumns();
   const expiryDate = data.expiryDate ?? computeExpiryDate(data.soldAt, data.durationDays);
   const countryCode = saleCountryCode(data.countryCode);
   const rows = await sql`
     INSERT INTO sales (
       customer_id, course_id, course_price_id, payment_order_id,
       amount, currency, discount_percent, duration_days, sold_at, expiry_date,
-      session_month, session_year,
+      session_month, session_year, session_checked_at,
       country_code, assignment_status
     )
     VALUES (
@@ -239,6 +237,7 @@ export async function createSale(data: {
       ${expiryDate},
       ${data.sessionMonth ?? null},
       ${data.sessionYear ?? null},
+      NOW(),
       ${countryCode},
       'AwaitingTutor'
     )
@@ -259,7 +258,6 @@ export type ListSalesFilters = {
 };
 
 export async function listSales(filters: ListSalesFilters = {}): Promise<SaleListItem[]> {
-  await ensureExamSessionColumns();
   await ensurePaymentPresentmentColumns();
   const status = filters.status ?? 'All';
   const courseId = filters.courseId ?? null;
@@ -469,4 +467,90 @@ export async function getSaleDetailForInvite(saleId: number): Promise<{
     studentFirstName: row.customer_first_name,
     studentEmail: row.customer_email,
   };
+}
+
+export type SessionBackfillCandidate = {
+  saleId: number;
+  soldAt: Date;
+  orderId: number;
+  courseId: number;
+  coursePriceId: number | null;
+  optionType: string | null;
+  qualification: string | null;
+};
+
+/** Paid sales that have not yet been checked for an exam sitting. */
+export async function listSalesNeedingSessionBackfill(limit = 40): Promise<SessionBackfillCandidate[]> {
+  const rows = await sql`
+    SELECT
+      s.id AS sale_id,
+      s.sold_at,
+      po.id AS order_id,
+      po.course_id,
+      po.course_price_id,
+      po.option_type,
+      c.qualification
+    FROM sales s
+    JOIN payment_orders po ON po.id = s.payment_order_id
+    JOIN courses c ON c.id = po.course_id
+    WHERE s.session_checked_at IS NULL
+      AND s.session_month IS NULL
+      AND po.status = 'Paid'
+    ORDER BY s.sold_at ASC
+    LIMIT ${limit}
+  `;
+  return (rows as Array<{
+    sale_id: number;
+    sold_at: Date;
+    order_id: number;
+    course_id: number;
+    course_price_id: number | null;
+    option_type: string | null;
+    qualification: string | null;
+  }>).map(row => ({
+    saleId: row.sale_id,
+    soldAt: row.sold_at,
+    orderId: row.order_id,
+    courseId: row.course_id,
+    coursePriceId: row.course_price_id,
+    optionType: row.option_type,
+    qualification: row.qualification,
+  }));
+}
+
+export async function saveBackfilledExamSession(input: {
+  saleId: number;
+  orderId: number;
+  sessionMonth: number;
+  sessionYear: number;
+  durationDays: number;
+  expiryDate: Date;
+}): Promise<void> {
+  await sql`
+    UPDATE payment_orders
+    SET session_month = ${input.sessionMonth},
+        session_year = ${input.sessionYear}
+    WHERE id = ${input.orderId}
+      AND session_month IS NULL
+  `;
+  await sql`
+    UPDATE sales
+    SET session_month = ${input.sessionMonth},
+        session_year = ${input.sessionYear},
+        duration_days = ${input.durationDays},
+        expiry_date = ${input.expiryDate},
+        session_checked_at = NOW()
+    WHERE id = ${input.saleId}
+      AND session_month IS NULL
+      AND ${input.expiryDate} > sold_at
+  `;
+}
+
+export async function markSaleSessionChecked(saleId: number): Promise<void> {
+  await sql`
+    UPDATE sales
+    SET session_checked_at = NOW()
+    WHERE id = ${saleId}
+      AND session_checked_at IS NULL
+  `;
 }

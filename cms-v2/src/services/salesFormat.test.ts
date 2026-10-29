@@ -15,6 +15,7 @@ import {
   sessionAccessDayCount,
   sessionAccessEndsAt,
   sessionSaleLabel,
+  parseSessionLabel,
 } from '../../shared/sessionAccess';
 
 function run(name: string, fn: () => void): void {
@@ -166,10 +167,20 @@ run('exam sitting label is the month and year', () => {
   );
 });
 
+run('a stored plan name can name the sitting', () => {
+  assert.deepStrictEqual(parseSessionLabel('December 2026 session'), { month: 12, year: 2026 });
+  assert.deepStrictEqual(parseSessionLabel('Dec 2026'), { month: 12, year: 2026 });
+  assert.deepStrictEqual(parseSessionLabel('March 2027'), { month: 3, year: 2027 });
+  assert.strictEqual(parseSessionLabel('Three months'), null);
+});
+
 run('access runs from the purchase date to the 15th', () => {
   const sold = new Date('2026-10-30T12:00:00.000Z');
   assert.strictEqual(sessionAccessDayCount(sold, 12, 2026), 46);
   assert.strictEqual(sessionAccessEndsAt(12, 2026).toISOString(), '2026-12-15T23:59:59.999Z');
   assert.strictEqual(sessionAccessEndsAt(3, 2027).toISOString(), '2027-03-15T23:59:59.999Z');
   assert.strictEqual(sessionAccessEndsAt(9, 2026).toISOString(), '2026-09-15T22:59:59.999Z');
+  const onTheFifteenth = new Date('2026-12-15T12:00:00.000Z');
+  assert.strictEqual(sessionAccessDayCount(onTheFifteenth, 12, 2026), 0);
+  assert.ok(sessionAccessEndsAt(12, 2026).getTime() > onTheFifteenth.getTime());
 });

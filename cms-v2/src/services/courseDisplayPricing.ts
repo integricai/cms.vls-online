@@ -14,6 +14,7 @@ import {
 } from './qualificationOfferSessions';
 import { BANK_FX_NOTE, convertUsdAmount, currencyForCountry, localizeDisplayMoney } from './displayCurrency';
 import { getUsdRates, rateForCurrency } from './fxRates';
+import { normalizeExamSession } from '../../shared/sessionAccess';
 import { signPriceQuote } from './priceQuote';
 
 /** ACCA exam sittings fallback when no qualification offer rule is configured. */
@@ -379,12 +380,14 @@ export async function buildCourseDisplayPricing(
     input.fxRates,
   );
   plans = plans.map((plan) => {
+    const session = normalizeExamSession(plan.sessionMonth, plan.sessionYear);
     const priceQuote = signPriceQuote({
       coursePriceId: plan.coursePriceId,
       amountUsd: plan.effectiveAmount,
       listAmountUsd: plan.amount,
       displayAmount: plan.displayAmount,
       displayCurrency: plan.displayCurrency || 'USD',
+      ...(session ? { sessionMonth: session.month, sessionYear: session.year } : {}),
     });
     return priceQuote ? { ...plan, priceQuote } : plan;
   });

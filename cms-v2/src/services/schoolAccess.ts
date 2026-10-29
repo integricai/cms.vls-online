@@ -17,6 +17,29 @@ export function courseAccessUrlForEnrollment(input: {
   return input.isNewZenlerUser ? VLS_SCHOOL_REGISTER_URL : VLS_SCHOOL_LOGIN_URL;
 }
 
+export type SchoolAccessState = 'ready' | 'pending' | 'unavailable';
+
+export function orderHasSchoolCourse(input: {
+  zenlerCourseId?: string | null;
+  accessZenlerCourseIds?: readonly string[] | null;
+}): boolean {
+  if ((input.accessZenlerCourseIds ?? []).some((id) => /^\d+$/.test(String(id).trim()))) return true;
+  return /^\d+$/.test(String(input.zenlerCourseId ?? '').trim());
+}
+
+/** What the thank-you page may tell the buyer about school access. */
+export function schoolAccessState(input: {
+  zenlerEnrollmentStatus?: string | null;
+  zenlerCourseId?: string | null;
+  accessZenlerCourseIds?: readonly string[] | null;
+}): SchoolAccessState {
+  const status = String(input.zenlerEnrollmentStatus ?? '').trim().toLowerCase();
+  if (status.startsWith('enrolled')) return 'ready';
+  if (status === 'failed' || status === 'skipped') return 'unavailable';
+  if (!orderHasSchoolCourse(input)) return 'ready';
+  return 'pending';
+}
+
 /**
  * Hold the course-access email only while enrolment has not been attempted.
  * A failed or skipped enrolment must still send access instructions.

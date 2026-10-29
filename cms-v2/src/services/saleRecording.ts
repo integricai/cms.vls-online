@@ -2,7 +2,6 @@ import type { PaymentOrder } from '../models/paymentOrder';
 import {
   attachCustomerToPaymentOrder,
   getPaymentOrder,
-  saveSessionAccessDays,
 } from '../models/paymentOrder';
 import { splitStudentName, upsertCustomer } from '../models/customer';
 import { ensureCustomerCourseStatus } from '../models/customerCourseStatus';
@@ -36,12 +35,11 @@ async function createSaleForOrder(order: PaymentOrder, customerCountryCode: stri
   if (session) {
     const days = sessionAccessDayCount(order.paidAt, session.month, session.year);
     const endsAt = sessionAccessEndsAt(session.month, session.year);
-    if (days >= 1 && endsAt.getTime() > order.paidAt.getTime()) {
-      durationDays = days;
+    if (endsAt.getTime() > order.paidAt.getTime()) {
+      durationDays = Math.max(days, 1);
       expiryDate = endsAt;
       sessionMonth = session.month;
       sessionYear = session.year;
-      await saveSessionAccessDays(order.id, days);
     } else {
       console.warn('[sales] session access already ended; keeping the catalogue length', order.id);
     }
