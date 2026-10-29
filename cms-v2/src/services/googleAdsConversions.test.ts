@@ -33,6 +33,8 @@ function order(partial: Partial<PaymentOrder>): PaymentOrder {
     presentmentAmount: null,
     presentmentCurrency: null,
     durationDays: 180,
+    sessionMonth: null,
+    sessionYear: null,
     discountPercent: null,
     status: 'Paid',
     provider: 'stripe',

@@ -26,6 +26,9 @@ export interface PaymentOrder {
   presentmentAmount: number | null;
   presentmentCurrency: string | null;
   durationDays: number | null;
+  /** Exam sitting. Null for a fixed-length plan. */
+  sessionMonth: number | null;
+  sessionYear: number | null;
   discountPercent: number | null;
   status: PaymentOrderStatus;
   provider: PaymentProviderId;
@@ -87,6 +90,8 @@ interface DbRow {
   presentment_amount?: string | null;
   presentment_currency?: string | null;
   duration_days: number | null;
+  session_month?: number | null;
+  session_year?: number | null;
   discount_percent: string | null;
   status: PaymentOrderStatus;
   provider?: string | null;
@@ -148,6 +153,8 @@ function rowToOrder(row: DbRow): PaymentOrder {
     presentmentAmount: row.presentment_amount != null ? Number(row.presentment_amount) : null,
     presentmentCurrency: row.presentment_currency ?? null,
     durationDays: row.duration_days ?? null,
+    sessionMonth: row.session_month ?? null,
+    sessionYear: row.session_year ?? null,
     discountPercent: row.discount_percent != null ? Number(row.discount_percent) : null,
     status: row.status,
     provider: parsePaymentProviderId(row.provider),
@@ -206,11 +213,14 @@ export async function createPaymentOrder(data: {
   amount: number;
   currency: string;
   durationDays?: number | null;
+  sessionMonth?: number | null;
+  sessionYear?: number | null;
   discountPercent?: number | null;
   attribution?: CheckoutAttribution | null;
   environment?: CheckoutEnvironment | null;
   provider?: PaymentProviderId | null;
 }): Promise<PaymentOrder> {
+  await ensureExamSessionColumns();
   const attr = data.attribution;
   const environment = data.environment
     ?? attr?.environment
@@ -219,7 +229,8 @@ export async function createPaymentOrder(data: {
   const rows = await sql`
     INSERT INTO payment_orders
       (payment_option_id, course_id, course_price_id, customer_id, zenler_course_id, access_zenler_course_ids, course_title,
-       option_type, student_name, student_email, student_phone, country_code, amount, currency, duration_days, discount_percent,
+       option_type, student_name, student_email, student_phone, country_code, amount, currency, duration_days,
+       session_month, session_year, discount_percent,
        provider,
        gclid, gbraid, wbraid, fbclid, fbp, fbc,
        utm_source, utm_medium, utm_campaign, utm_content, utm_term,
@@ -228,7 +239,8 @@ export async function createPaymentOrder(data: {
       (${data.paymentOptionId ?? null}, ${data.courseId ?? null}, ${data.coursePriceId ?? null},
        ${data.customerId ?? null}, ${data.zenlerCourseId}, ${data.accessZenlerCourseIds ?? null}, ${data.courseTitle}, ${data.optionType},
        ${data.studentName}, ${data.studentEmail}, ${data.studentPhone ?? null}, ${data.countryCode ?? null},
-       ${data.amount}, ${data.currency}, ${data.durationDays ?? null}, ${data.discountPercent ?? null},
+       ${data.amount}, ${data.currency}, ${data.durationDays ?? null},
+       ${data.sessionMonth ?? null}, ${data.sessionYear ?? null}, ${data.discountPercent ?? null},
        ${provider},
        ${attr?.gclid ?? null}, ${attr?.gbraid ?? null}, ${attr?.wbraid ?? null},
        ${attr?.fbclid ?? null}, ${attr?.fbp ?? null}, ${attr?.fbc ?? null},
@@ -438,6 +450,50 @@ export async function markPaymentOrderPaid(data: {
     throw new Error(`Cannot mark payment order paid in status ${current.status}`);
   }
   return { order: rowToOrder(paid), wasAlreadyPaid: false };
+}
+
+let examSessionColumnsReady: Promise<void> | null = null;
+
+/** Adds the exam-sitting columns if this process has not added them yet. */
+export function ensureExamSessionColumns(): Promise<void> {
+  examSessionColumnsReady ??= (async () => {
+    await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS session_month SMALLINT`;
+    await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS session_year SMALLINT`;
+    await sql`ALTER TABLE sales ADD COLUMN IF NOT EXISTS session_month SMALLINT`;
+    await sql`ALTER TABLE sales ADD COLUMN IF NOT EXISTS session_year SMALLINT`;
+  })();
+  return examSessionColumnsReady;
+}
+
+/** Days of access counted at payment, from the payment date to the 15th. */
+export async function saveSessionAccessDays(orderId: number, durationDays: number): Promise<void> {
+  await ensureExamSessionColumns();
+  await sql`
+    UPDATE payment_orders
+    SET duration_days = ${durationDays}
+    WHERE id = ${orderId}
+  `;
+}
+
+/** Paid session enrolments whose 15th has ended and who are still in Zenler. */
+export async function listSessionOrdersDueForExpiry(limit = 40): Promise<PaymentOrder[]> {
+  await ensureExamSessionColumns();
+  const rows = await sql`
+    SELECT po.*
+    FROM payment_orders po
+    JOIN sales s ON s.payment_order_id = po.id
+    WHERE po.status = 'Paid'
+      AND s.session_month IS NOT NULL
+      AND s.session_year IS NOT NULL
+      AND s.expiry_date <= NOW()
+      AND (
+        po.zenler_enrollment_status ILIKE 'enrolled%'
+        OR po.zenler_enrollment_status = 'unenroll_failed'
+      )
+    ORDER BY s.expiry_date ASC
+    LIMIT ${limit}
+  `;
+  return (rows as DbRow[]).map(rowToOrder);
 }
 
 let presentmentColumnsReady: Promise<void> | null = null;

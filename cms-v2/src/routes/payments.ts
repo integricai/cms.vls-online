@@ -17,6 +17,7 @@ import {
   fulfillPaidCheckout,
   fulfillRefund,
   isStudentConfirmationEmailError,
+  isZenlerEnrollmentHoldError,
   reconcilePaidOrder,
 } from '../services/payments/fulfillment';
 import { getPaymentProvider, isPaymentProviderEnabled, listEnabledPaymentProviders } from '../services/payments/registry';
@@ -41,7 +42,7 @@ import {
 } from '../services/pricingResolver';
 import { isParityDealsTestAllowed, isParityDealsTestRequest } from '../services/parityDealsTest';
 import { proxySecretMatches } from '../services/proxySecret';
-import { courseAccessUrlForEnrollment } from '../services/schoolAccess';
+import { courseAccessUrlForEnrollment, schoolAccessState } from '../services/schoolAccess';
 import { freeEnrolHandler } from './freeEnrol';
 import {
   MultiCourseAccessError,
@@ -52,6 +53,8 @@ import {
 } from '../services/multiCourseAccess';
 import { resolveConfiguredComboZenlerCourseIds } from '../services/multiCourseStoryblokAllowlist';
 import { ComboBundlePriceError, priceComboAccessSelection } from '../services/comboBundlePrice';
+import { examSessionForCoursePrice } from '../services/courseDisplayPricing';
+import { sessionAccessDayCount, sessionSaleLabel } from '../../shared/sessionAccess';
 import {
   holdRetakeCodeForOrder,
   previewRetakeDiscount,
@@ -640,6 +643,7 @@ type CheckoutPricing = {
   chargeCurrency: string;
   discountPercent: number | null;
   optionType: string;
+  examSession: { month: number; year: number } | null;
   accessZenlerCourseIds: string[] | null;
   comboStorySlug: string | null;
   quotedCountryCode: string | null;
@@ -774,6 +778,7 @@ async function priceCheckoutSelection(
   let chargeCurrency = 'USD';
   let discountPercent = computeDiscountPercent(listAmount, chargeAmount);
   let optionType = resolved.price.name;
+  let examSession: { month: number; year: number } | null = null;
   const requestedAccessIds = parseAccessZenlerCourseIds(req.body ?? {});
   const comboStorySlug = parseComboStorySlug(req.body ?? {});
   const configuredComboZenlerCourseIds = await resolveConfiguredComboZenlerCourseIds();
@@ -804,9 +809,24 @@ async function priceCheckoutSelection(
     chargeCurrency = 'USD';
     discountPercent = comboQuote.discountPercent;
     if (comboQuote.sessionTitle) optionType = comboQuote.sessionTitle;
+    if (comboQuote.sessionMonth != null && comboQuote.sessionYear != null) {
+      examSession = { month: comboQuote.sessionMonth, year: comboQuote.sessionYear };
+    }
     localPresentment = comboQuote.presentmentAmount != null && comboQuote.presentmentCurrency
       ? { amount: comboQuote.presentmentAmount, currency: comboQuote.presentmentCurrency }
       : null;
+  } else {
+    examSession = await examSessionForCoursePrice(
+      course.id,
+      course.qualification,
+      resolved.price.id,
+    );
+  }
+  if (examSession) {
+    if (sessionAccessDayCount(new Date(), examSession.month, examSession.year) < 1) {
+      return { ok: false, status: 400, error: 'This session is no longer available.' };
+    }
+    optionType = sessionSaleLabel(examSession.month, examSession.year);
   }
 
   return {
@@ -818,6 +838,7 @@ async function priceCheckoutSelection(
     chargeCurrency,
     discountPercent,
     optionType,
+    examSession,
     accessZenlerCourseIds,
     comboStorySlug,
     quotedCountryCode,
@@ -851,6 +872,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
     let chargeCurrency = priced.chargeCurrency;
     let discountPercent = priced.discountPercent;
     let optionType = priced.optionType;
+    const examSession = priced.examSession;
     const accessZenlerCourseIds = priced.accessZenlerCourseIds;
     const comboStorySlug = priced.comboStorySlug;
     let localPresentment = priced.localPresentment;
@@ -922,6 +944,8 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       amount: chargeAmount,
       currency: chargeCurrency,
       durationDays: resolved.price.durationDays,
+      sessionMonth: examSession?.month ?? null,
+      sessionYear: examSession?.year ?? null,
       discountPercent,
       attribution,
       environment,
@@ -1022,10 +1046,28 @@ function publicPaymentStatus(order: PaymentOrder, confirmationEmailFailed = fals
       zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
       isNewZenlerUser: order.zenlerUserCreated,
     }),
+    accessState: schoolAccessState(order),
     confirmationEmailSent,
     confirmationEmailFailed: !confirmationEmailSent && confirmationEmailFailed,
     refundedAt: order.refundedAt?.toISOString() ?? null,
   };
+}
+
+const reportedPaymentStatusFailures = new Set<string>();
+
+function reportPaymentStatusFailure(orderId: number, area: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  const key = `${area}:${orderId}:${message}`;
+  if (reportedPaymentStatusFailures.has(key)) return;
+  reportedPaymentStatusFailures.add(key);
+  void sendErrorAlert({
+    area,
+    explanation: 'The payment return page could not finish this order. The buyer sees a short message. This log is the real error.',
+    error,
+    extra: { orderId },
+  }).catch((alertErr) => {
+    console.error('[alert] failed to record payment status failure', alertErr);
+  });
 }
 
 async function paymentStatusForSession(
@@ -1042,6 +1084,7 @@ async function paymentStatusForSession(
       order = await capturePendingProviderCheckout(order);
     } catch (err) {
       console.error('[payments] capture on status failed', err);
+      reportPaymentStatusFailure(order.id, 'Payment capture failed', err);
     }
   }
 
@@ -1052,6 +1095,9 @@ async function paymentStatusForSession(
     } catch (err) {
       console.error('[payments] status reconcile failed', err);
       confirmationEmailFailed = isStudentConfirmationEmailError(err);
+      if (!confirmationEmailFailed && !isZenlerEnrollmentHoldError(err)) {
+        reportPaymentStatusFailure(order.id, 'Payment fulfilment failed', err);
+      }
       order = (await getPaymentOrder(order.id)) ?? order;
     }
   }

@@ -1,5 +1,5 @@
 import { sql } from '../db/client';
-import { ensurePaymentPresentmentColumns } from './paymentOrder';
+import { ensureExamSessionColumns, ensurePaymentPresentmentColumns } from './paymentOrder';
 import { isValidIsoCountryCode, normalizeCountryCode } from '../utils/isoCountryCodes';
 import type {
   PaymentOrderStatus,
@@ -20,6 +20,8 @@ export interface SaleDbRow {
   currency: string;
   discount_percent: string | null;
   duration_days: number;
+  session_month?: number | null;
+  session_year?: number | null;
   sold_at: Date;
   expiry_date: Date;
   country_code: string | null;
@@ -82,6 +84,8 @@ export function rowToSale(row: SaleDbRow): Sale {
     durationDays: row.duration_days,
     soldAt: row.sold_at,
     expiryDate: row.expiry_date,
+    sessionMonth: row.session_month ?? null,
+    sessionYear: row.session_year ?? null,
     countryCode: saleCountryCode(row.country_code),
     tutorId: row.tutor_id,
     assignmentStatus: row.assignment_status ?? 'AwaitingTutor',
@@ -148,6 +152,7 @@ export async function getSaleByPaymentOrderId(paymentOrderId: number): Promise<S
 }
 
 export async function getSaleListItemById(id: number): Promise<SaleListItem | null> {
+  await ensureExamSessionColumns();
   await ensurePaymentPresentmentColumns();
   const rows = await sql`
     SELECT
@@ -205,14 +210,20 @@ export async function createSale(data: {
   discountPercent: number | null;
   durationDays: number;
   soldAt: Date;
+  /** When set, this is the 15th of the exam sitting instead of soldAt + durationDays. */
+  expiryDate?: Date | null;
+  sessionMonth?: number | null;
+  sessionYear?: number | null;
   countryCode?: string | null;
 }): Promise<Sale> {
-  const expiryDate = computeExpiryDate(data.soldAt, data.durationDays);
+  await ensureExamSessionColumns();
+  const expiryDate = data.expiryDate ?? computeExpiryDate(data.soldAt, data.durationDays);
   const countryCode = saleCountryCode(data.countryCode);
   const rows = await sql`
     INSERT INTO sales (
       customer_id, course_id, course_price_id, payment_order_id,
       amount, currency, discount_percent, duration_days, sold_at, expiry_date,
+      session_month, session_year,
       country_code, assignment_status
     )
     VALUES (
@@ -226,6 +237,8 @@ export async function createSale(data: {
       ${data.durationDays},
       ${data.soldAt},
       ${expiryDate},
+      ${data.sessionMonth ?? null},
+      ${data.sessionYear ?? null},
       ${countryCode},
       'AwaitingTutor'
     )
@@ -246,6 +259,7 @@ export type ListSalesFilters = {
 };
 
 export async function listSales(filters: ListSalesFilters = {}): Promise<SaleListItem[]> {
+  await ensureExamSessionColumns();
   await ensurePaymentPresentmentColumns();
   const status = filters.status ?? 'All';
   const courseId = filters.courseId ?? null;

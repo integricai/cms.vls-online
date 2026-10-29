@@ -17,6 +17,7 @@ import {
   markStudentChosePassword,
   readStudentPassword,
 } from './studentPassword';
+import { normalizeExamSession, sessionAccessDayCount } from '../../shared/sessionAccess';
 
 const RETRYABLE_STATUSES = new Set<string | null>(['pending', 'failed', 'skipped', null, '']);
 
@@ -55,6 +56,17 @@ async function enrollOrderCourses(order: PaymentOrder) {
   }
 
   const planId = await resolvePlanId(order);
+  const session = normalizeExamSession(order.sessionMonth, order.sessionYear);
+  if (session && order.paidAt && order.durationDays) {
+    const days = sessionAccessDayCount(order.paidAt, session.month, session.year);
+    if (days > order.durationDays) {
+      console.warn('[zenler-enrollment] sitting lasts longer than the Zenler plan', {
+        orderId: order.id,
+        sessionDays: days,
+        planDays: order.durationDays,
+      });
+    }
+  }
   const chosenPassword = await readStudentPassword(order.id).catch((err: unknown) => {
     console.error('[zenler-enrollment] could not read the chosen password', order.id, err);
     return null;
@@ -266,6 +278,41 @@ export async function revokeZenlerAccessForRefundedOrder(
   });
 
   return (await getPaymentOrder(order.id)) ?? order;
+}
+
+/**
+ * After the 15th of a purchased sitting, remove school access.
+ * Best-effort: a missing Zenler account is treated as already closed.
+ */
+export async function expireZenlerAccessForSessionOrder(order: PaymentOrder): Promise<boolean> {
+  const email = (order.studentEmail ?? order.stripeCustomerEmail)?.trim() ?? null;
+  const courseIds = zenlerCourseIdsForAccess(order);
+  if (courseIds.length === 0) {
+    await updateZenlerEnrollment(order.id, {
+      zenlerUserId: order.zenlerUserId,
+      zenlerEnrollmentStatus: 'expired',
+    });
+    return true;
+  }
+
+  let zenlerUserId = order.zenlerUserId;
+  let failed = false;
+  for (const zenlerCourseId of courseIds) {
+    const result = await unenrollStudentFromZenlerCourse({
+      email,
+      zenlerUserId,
+      zenlerCourseId,
+    });
+    if (result.zenlerUserId) zenlerUserId = result.zenlerUserId;
+    if (result.status === 'skipped') return false;
+    if (result.status !== 'unenrolled') failed = true;
+  }
+
+  await updateZenlerEnrollment(order.id, {
+    zenlerUserId,
+    zenlerEnrollmentStatus: failed ? 'unenroll_failed' : 'expired',
+  });
+  return !failed;
 }
 
 /** Run enrollment once and return email context (password only on first successful create). */

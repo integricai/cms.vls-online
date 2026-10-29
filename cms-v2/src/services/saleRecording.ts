@@ -2,11 +2,17 @@ import type { PaymentOrder } from '../models/paymentOrder';
 import {
   attachCustomerToPaymentOrder,
   getPaymentOrder,
+  saveSessionAccessDays,
 } from '../models/paymentOrder';
 import { splitStudentName, upsertCustomer } from '../models/customer';
 import { ensureCustomerCourseStatus } from '../models/customerCourseStatus';
 import { createSale, getSaleByPaymentOrderId } from '../models/sale';
 import { autoAssignCourseTutorForSale } from './saleAssignment';
+import {
+  normalizeExamSession,
+  sessionAccessDayCount,
+  sessionAccessEndsAt,
+} from '../../shared/sessionAccess';
 
 async function createSaleForOrder(order: PaymentOrder, customerCountryCode: string | null) {
   const existing = await getSaleByPaymentOrderId(order.id);
@@ -22,6 +28,25 @@ async function createSaleForOrder(order: PaymentOrder, customerCountryCode: stri
     return null;
   }
 
+  const session = normalizeExamSession(order.sessionMonth, order.sessionYear);
+  let durationDays = order.durationDays;
+  let expiryDate: Date | null = null;
+  let sessionMonth: number | null = null;
+  let sessionYear: number | null = null;
+  if (session) {
+    const days = sessionAccessDayCount(order.paidAt, session.month, session.year);
+    const endsAt = sessionAccessEndsAt(session.month, session.year);
+    if (days >= 1 && endsAt.getTime() > order.paidAt.getTime()) {
+      durationDays = days;
+      expiryDate = endsAt;
+      sessionMonth = session.month;
+      sessionYear = session.year;
+      await saveSessionAccessDays(order.id, days);
+    } else {
+      console.warn('[sales] session access already ended; keeping the catalogue length', order.id);
+    }
+  }
+
   const sale = await createSale({
     customerId: order.customerId,
     courseId: order.courseId,
@@ -30,8 +55,11 @@ async function createSaleForOrder(order: PaymentOrder, customerCountryCode: stri
     amount: order.amount,
     currency: order.currency,
     discountPercent: order.discountPercent,
-    durationDays: order.durationDays,
+    durationDays,
     soldAt: order.paidAt,
+    expiryDate,
+    sessionMonth,
+    sessionYear,
     countryCode: order.countryCode ?? customerCountryCode,
   });
 

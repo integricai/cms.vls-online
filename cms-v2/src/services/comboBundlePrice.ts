@@ -54,6 +54,8 @@ export type ComboChargeQuote = {
   presentmentCurrency: string | null;
   discountPercent: number;
   sessionTitle: string | null;
+  sessionMonth: number | null;
+  sessionYear: number | null;
 };
 
 export function roundComboMoney(amount: number): number {
@@ -214,6 +216,8 @@ export function quoteComboCharge(
     presentmentCurrency: local?.currency ?? null,
     discountPercent,
     sessionTitle,
+    sessionMonth: chosenSession?.month ?? null,
+    sessionYear: chosenSession?.year ?? null,
   };
 }
 

@@ -11,6 +11,11 @@ import {
   salesPresetBounds,
   shiftMonth,
 } from '../../shared/salesFormat';
+import {
+  sessionAccessDayCount,
+  sessionAccessEndsAt,
+  sessionSaleLabel,
+} from '../../shared/sessionAccess';
 
 function run(name: string, fn: () => void): void {
   try {
@@ -150,4 +155,21 @@ run('session label keeps the month length and the valid-to date', () => {
     saleSessionLabel(120, '2027-02-25T12:00:00.000Z'),
     '4 months · valid to 25 Feb 2027',
   );
+});
+
+run('exam sitting label is the month and year', () => {
+  assert.strictEqual(sessionSaleLabel(12, 2026), 'Dec 2026');
+  assert.strictEqual(sessionSaleLabel(3, 2027), 'March 2027');
+  assert.strictEqual(
+    saleSessionLabel(90, '2026-12-15T23:59:59.999Z', 12, 2026),
+    'Dec 2026',
+  );
+});
+
+run('access runs from the purchase date to the 15th', () => {
+  const sold = new Date('2026-10-30T12:00:00.000Z');
+  assert.strictEqual(sessionAccessDayCount(sold, 12, 2026), 46);
+  assert.strictEqual(sessionAccessEndsAt(12, 2026).toISOString(), '2026-12-15T23:59:59.999Z');
+  assert.strictEqual(sessionAccessEndsAt(3, 2027).toISOString(), '2027-03-15T23:59:59.999Z');
+  assert.strictEqual(sessionAccessEndsAt(9, 2026).toISOString(), '2026-09-15T22:59:59.999Z');
 });
