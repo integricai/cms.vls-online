@@ -1,8 +1,10 @@
 import type { PaymentOrder } from '../models/paymentOrder';
 import { getGeoPriceById } from '../models/courseGeoPrice';
 import {
+  coveringZenlerAccessUntil,
+  deferSessionAccessRemoval,
   getPaymentOrder,
-  studentKeepsZenlerCourse,
+  recordSessionUnenrollFailure,
   updateZenlerEnrollment,
 } from '../models/paymentOrder';
 import { updateCustomerZenlerUserId } from '../models/customer';
@@ -18,7 +20,7 @@ import {
   markStudentChosePassword,
   readStudentPassword,
 } from './studentPassword';
-import { normalizeExamSession, sessionAccessDayCount } from '../../shared/sessionAccess';
+import { normalizeExamSession } from '../../shared/sessionAccess';
 
 const RETRYABLE_STATUSES = new Set<string | null>(['pending', 'failed', 'skipped', null, '']);
 
@@ -56,18 +58,8 @@ async function enrollOrderCourses(order: PaymentOrder) {
     };
   }
 
-  const planId = await resolvePlanId(order);
   const session = normalizeExamSession(order.sessionMonth, order.sessionYear);
-  if (session && order.paidAt && order.durationDays) {
-    const days = sessionAccessDayCount(order.paidAt, session.month, session.year);
-    if (days > order.durationDays) {
-      console.warn('[zenler-enrollment] sitting lasts longer than the Zenler plan', {
-        orderId: order.id,
-        sessionDays: days,
-        planDays: order.durationDays,
-      });
-    }
-  }
+  const planId = session ? undefined : await resolvePlanId(order);
   const chosenPassword = await readStudentPassword(order.id).catch((err: unknown) => {
     console.error('[zenler-enrollment] could not read the chosen password', order.id, err);
     return null;
@@ -281,33 +273,38 @@ export async function revokeZenlerAccessForRefundedOrder(
   return (await getPaymentOrder(order.id)) ?? order;
 }
 
+export type SessionAccessClose = 'closed' | 'deferred' | 'first_failure' | 'retry_failure';
+
 /**
  * After the 15th of a purchased sitting, remove school access.
+ * A course another paid order still covers is left until that cover ends.
  * Best-effort: a missing Zenler account is treated as already closed.
  */
-export async function expireZenlerAccessForSessionOrder(order: PaymentOrder): Promise<boolean> {
+export async function expireZenlerAccessForSessionOrder(order: PaymentOrder): Promise<SessionAccessClose> {
+  const firstAttempt = String(order.zenlerEnrollmentStatus ?? '').toLowerCase() !== 'unenroll_failed';
   const courseIds = zenlerCourseIdsForAccess(order);
   if (courseIds.length === 0) {
     await updateZenlerEnrollment(order.id, {
       zenlerUserId: order.zenlerUserId,
       zenlerEnrollmentStatus: 'expired',
     });
-    return true;
+    return 'closed';
   }
 
   let zenlerUserId = order.zenlerUserId;
   let failed = false;
-  let permanent = true;
+  let removed = false;
+  let holdUntil: Date | null = null;
   for (const zenlerCourseId of courseIds) {
     const email = (order.studentEmail ?? order.stripeCustomerEmail)?.trim().toLowerCase() || null;
-    const stillCovered = await studentKeepsZenlerCourse({
+    const coveredUntil = await coveringZenlerAccessUntil({
       orderId: order.id,
       customerId: order.customerId,
       email,
       zenlerCourseId,
     });
-    if (stillCovered) {
-      permanent = false;
+    if (coveredUntil) {
+      if (!holdUntil || coveredUntil.getTime() < holdUntil.getTime()) holdUntil = coveredUntil;
       continue;
     }
 
@@ -318,28 +315,29 @@ export async function expireZenlerAccessForSessionOrder(order: PaymentOrder): Pr
     });
     if (result.zenlerUserId) zenlerUserId = result.zenlerUserId;
     if (result.status === 'unenrolled') {
-      permanent = false;
+      removed = true;
       continue;
     }
     const nothingToRemove = /email is required|no zenler account/i.test(result.message);
     if (nothingToRemove) continue;
-    permanent = false;
     failed = true;
   }
 
-  if (courseIds.length > 0 && permanent && !failed) {
-    await updateZenlerEnrollment(order.id, {
-      zenlerUserId,
-      zenlerEnrollmentStatus: 'expire_skipped',
-    });
-    return true;
+  if (failed) {
+    await recordSessionUnenrollFailure(order.id, zenlerUserId);
+    return firstAttempt ? 'first_failure' : 'retry_failure';
+  }
+
+  if (holdUntil) {
+    await deferSessionAccessRemoval(order.id, zenlerUserId, holdUntil);
+    return 'deferred';
   }
 
   await updateZenlerEnrollment(order.id, {
     zenlerUserId,
-    zenlerEnrollmentStatus: failed ? 'unenroll_failed' : 'expired',
+    zenlerEnrollmentStatus: removed || courseIds.length === 0 ? 'expired' : 'expire_skipped',
   });
-  return !failed;
+  return 'closed';
 }
 
 /** Run enrollment once and return email context (password only on first successful create). */

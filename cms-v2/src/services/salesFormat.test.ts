@@ -172,6 +172,7 @@ run('a stored plan name can name the sitting', () => {
   assert.deepStrictEqual(parseSessionLabel('Dec 2026'), { month: 12, year: 2026 });
   assert.deepStrictEqual(parseSessionLabel('March 2027'), { month: 3, year: 2027 });
   assert.strictEqual(parseSessionLabel('Three months'), null);
+  assert.strictEqual(parseSessionLabel('12 months access – launch offer May 2025'), null);
 });
 
 run('access runs from the purchase date to the 15th', () => {

@@ -34,8 +34,15 @@ export function schoolAccessState(input: {
   accessZenlerCourseIds?: readonly string[] | null;
 }): SchoolAccessState {
   const status = String(input.zenlerEnrollmentStatus ?? '').trim().toLowerCase();
-  if (status.startsWith('enrolled')) return 'ready';
-  if (status === 'failed' || status === 'skipped') return 'unavailable';
+  if (status.startsWith('enrolled') || status === 'expire_deferred') return 'ready';
+  if (
+    status === 'failed'
+    || status === 'skipped'
+    || status === 'expired'
+    || status === 'expire_skipped'
+    || status === 'unenroll_failed'
+    || status === 'unenroll_gave_up'
+  ) return 'unavailable';
   if (!orderHasSchoolCourse(input)) return 'ready';
   return 'pending';
 }

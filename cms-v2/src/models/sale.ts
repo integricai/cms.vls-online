@@ -473,48 +473,43 @@ export type SessionBackfillCandidate = {
   saleId: number;
   soldAt: Date;
   orderId: number;
-  courseId: number;
-  coursePriceId: number | null;
   optionType: string | null;
-  qualification: string | null;
+  orderSessionMonth: number | null;
+  orderSessionYear: number | null;
 };
 
 /** Paid sales that have not yet been checked for an exam sitting. */
-export async function listSalesNeedingSessionBackfill(limit = 40): Promise<SessionBackfillCandidate[]> {
+export async function listSalesNeedingSessionBackfill(limit = 25): Promise<SessionBackfillCandidate[]> {
   const rows = await sql`
     SELECT
       s.id AS sale_id,
       s.sold_at,
       po.id AS order_id,
-      po.course_id,
-      po.course_price_id,
       po.option_type,
-      c.qualification
+      po.session_month,
+      po.session_year
     FROM sales s
     JOIN payment_orders po ON po.id = s.payment_order_id
-    JOIN courses c ON c.id = po.course_id
     WHERE s.session_checked_at IS NULL
       AND s.session_month IS NULL
       AND po.status = 'Paid'
-    ORDER BY s.sold_at ASC
+    ORDER BY s.session_check_attempts ASC, s.sold_at ASC
     LIMIT ${limit}
   `;
   return (rows as Array<{
     sale_id: number;
     sold_at: Date;
     order_id: number;
-    course_id: number;
-    course_price_id: number | null;
     option_type: string | null;
-    qualification: string | null;
+    session_month: number | null;
+    session_year: number | null;
   }>).map(row => ({
     saleId: row.sale_id,
     soldAt: row.sold_at,
     orderId: row.order_id,
-    courseId: row.course_id,
-    coursePriceId: row.course_price_id,
     optionType: row.option_type,
-    qualification: row.qualification,
+    orderSessionMonth: row.session_month,
+    orderSessionYear: row.session_year,
   }));
 }
 
@@ -543,13 +538,31 @@ export async function saveBackfilledExamSession(input: {
     WHERE id = ${input.saleId}
       AND session_month IS NULL
       AND ${input.expiryDate} > sold_at
+    RETURNING id
   `;
+  await markSaleSessionChecked(input.saleId);
 }
 
 export async function markSaleSessionChecked(saleId: number): Promise<void> {
   await sql`
     UPDATE sales
     SET session_checked_at = NOW()
+    WHERE id = ${saleId}
+      AND session_checked_at IS NULL
+  `;
+}
+
+const SESSION_BACKFILL_ATTEMPT_LIMIT = 3;
+
+/** A backfill error is retried twice, then the sale is left on its catalogue length. */
+export async function noteSessionBackfillFailure(saleId: number): Promise<void> {
+  await sql`
+    UPDATE sales
+    SET session_check_attempts = session_check_attempts + 1,
+        session_checked_at = CASE
+          WHEN session_check_attempts + 1 >= ${SESSION_BACKFILL_ATTEMPT_LIMIT} THEN NOW()
+          ELSE session_checked_at
+        END
     WHERE id = ${saleId}
       AND session_checked_at IS NULL
   `;

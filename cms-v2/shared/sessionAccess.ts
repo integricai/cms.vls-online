@@ -41,9 +41,12 @@ const MONTH_NUMBERS: Record<string, number> = {
   december: 12, dec: 12,
 };
 
-/** "December 2026 session" or "Dec 2026" from a stored plan name. */
+/**
+ * The whole plan name is a sitting: "Dec 2026", "December 2026", or "December 2026 session".
+ * A month mentioned inside a longer name, such as a launch offer, is not a sitting.
+ */
 export function parseSessionLabel(text: string | null | undefined): ExamSession | null {
-  const match = String(text ?? '').match(/\b([A-Za-z]+)\s+(\d{4})\b/);
+  const match = String(text ?? '').trim().match(/^([A-Za-z]+)\s+(\d{4})(?:\s+session)?$/i);
   if (!match) return null;
   const month = MONTH_NUMBERS[match[1].toLowerCase()];
   const year = Number(match[2]);

@@ -4,12 +4,15 @@ ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS session_year SMALLINT;
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS session_month SMALLINT;
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS session_year SMALLINT;
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS session_checked_at TIMESTAMPTZ;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS session_check_attempts SMALLINT NOT NULL DEFAULT 0;
+ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS session_unenroll_attempts SMALLINT NOT NULL DEFAULT 0;
+ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS session_access_hold_until TIMESTAMPTZ;
 
--- Plan names such as "December 2026 session" already name the sitting.
+-- The whole plan name is the sitting, for example "December 2026 session".
 UPDATE payment_orders AS po
 SET
   session_month = names.month_number,
-  session_year = (regexp_match(po.option_type, '([A-Za-z]+)[[:space:]]+([0-9]{4})'))[2]::int
+  session_year = (regexp_match(lower(btrim(po.option_type)), '^([a-z]+)[[:space:]]+([0-9]{4})([[:space:]]+session)?$'))[2]::int
 FROM (
   VALUES
     ('january', 1), ('jan', 1),
@@ -26,8 +29,8 @@ FROM (
     ('december', 12), ('dec', 12)
 ) AS names(month_name, month_number)
 WHERE po.session_month IS NULL
-  AND lower((regexp_match(po.option_type, '([A-Za-z]+)[[:space:]]+([0-9]{4})'))[1]) = names.month_name
-  AND (regexp_match(po.option_type, '([A-Za-z]+)[[:space:]]+([0-9]{4})'))[2]::int BETWEEN 2000 AND 2100;
+  AND lower((regexp_match(lower(btrim(po.option_type)), '^([a-z]+)[[:space:]]+([0-9]{4})([[:space:]]+session)?$'))[1]) = names.month_name
+  AND (regexp_match(lower(btrim(po.option_type)), '^([a-z]+)[[:space:]]+([0-9]{4})([[:space:]]+session)?$'))[2]::int BETWEEN 2000 AND 2100;
 
 -- Access ends at the end of the 15th, London time. The counted days replace the catalogue length on the sale only.
 UPDATE sales AS s

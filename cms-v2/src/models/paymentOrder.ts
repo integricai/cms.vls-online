@@ -451,8 +451,11 @@ export async function markPaymentOrderPaid(data: {
   return { order: rowToOrder(paid), wasAlreadyPaid: false };
 }
 
-/** Paid session enrolments whose 15th has ended and who are still in Zenler. Fresh expiries go first so a batch of failures cannot block them. */
-export async function listSessionOrdersDueForExpiry(limit = 40): Promise<PaymentOrder[]> {
+/** Stop retrying an unenroll after this many hourly attempts. */
+export const SESSION_UNENROLL_ATTEMPT_LIMIT = 8;
+
+/** Paid session enrolments whose 15th has ended and who are still in Zenler. Fresh expiries go first. */
+export async function listSessionOrdersDueForExpiry(limit = 10): Promise<PaymentOrder[]> {
   const rows = await sql`
     SELECT po.*
     FROM payment_orders po
@@ -461,12 +464,21 @@ export async function listSessionOrdersDueForExpiry(limit = 40): Promise<Payment
       AND s.session_month BETWEEN 1 AND 12
       AND s.session_year BETWEEN 2000 AND 2100
       AND s.expiry_date <= NOW()
+      AND COALESCE(po.session_unenroll_attempts, 0) < ${SESSION_UNENROLL_ATTEMPT_LIMIT}
       AND (
         po.zenler_enrollment_status ILIKE 'enrolled%'
         OR po.zenler_enrollment_status = 'unenroll_failed'
+        OR (
+          po.zenler_enrollment_status = 'expire_deferred'
+          AND (po.session_access_hold_until IS NULL OR po.session_access_hold_until <= NOW())
+        )
       )
     ORDER BY
-      CASE WHEN po.zenler_enrollment_status ILIKE 'enrolled%' THEN 0 ELSE 1 END,
+      CASE
+        WHEN po.zenler_enrollment_status ILIKE 'enrolled%' THEN 0
+        WHEN po.zenler_enrollment_status = 'expire_deferred' THEN 1
+        ELSE 2
+      END,
       s.expiry_date ASC
     LIMIT ${limit}
   `;
@@ -474,47 +486,96 @@ export async function listSessionOrdersDueForExpiry(limit = 40): Promise<Payment
 }
 
 /**
- * Another paid order still covers this Zenler course for the same student.
- * Expiry of one sitting must not remove access that a later purchase includes.
+ * When another paid order still covers this Zenler course, the instant that cover ends.
+ * Null when nothing else keeps the student in the course.
  */
-export async function studentKeepsZenlerCourse(input: {
+export async function coveringZenlerAccessUntil(input: {
   orderId: number;
   customerId: number | null;
   email: string | null;
   zenlerCourseId: string;
-}): Promise<boolean> {
+}): Promise<Date | null> {
   const email = input.email?.trim().toLowerCase() || null;
-  if (!email && input.customerId == null) return false;
+  if (!email && input.customerId == null) return null;
   const rows = await sql`
-    SELECT 1
-    FROM payment_orders po
-    WHERE po.id <> ${input.orderId}
-      AND po.status = 'Paid'
-      AND (
-        (${input.customerId}::int IS NOT NULL AND po.customer_id = ${input.customerId})
-        OR (${email}::text IS NOT NULL AND LOWER(po.student_email) = ${email})
-        OR (${email}::text IS NOT NULL AND LOWER(po.stripe_customer_email) = ${email})
-      )
-      AND (
-        po.zenler_course_id = ${input.zenlerCourseId}
-        OR ${input.zenlerCourseId} = ANY(COALESCE(po.access_zenler_course_ids, ARRAY[]::text[]))
-      )
-      AND (
-        EXISTS (
-          SELECT 1 FROM sales s
-          WHERE s.payment_order_id = po.id
-            AND s.expiry_date > NOW()
+    SELECT covered_until
+    FROM (
+      SELECT
+        CASE
+          WHEN EXISTS (
+            SELECT 1 FROM sales s
+            WHERE s.payment_order_id = po.id
+              AND s.expiry_date > NOW()
+          )
+          THEN (
+            SELECT MIN(s.expiry_date)
+            FROM sales s
+            WHERE s.payment_order_id = po.id
+              AND s.expiry_date > NOW()
+          )
+          WHEN NOT EXISTS (SELECT 1 FROM sales s WHERE s.payment_order_id = po.id)
+            AND po.paid_at IS NOT NULL
+            AND po.duration_days IS NOT NULL
+            AND po.paid_at + (po.duration_days * INTERVAL '1 day') > NOW()
+          THEN po.paid_at + (po.duration_days * INTERVAL '1 day')
+          ELSE NULL
+        END AS covered_until
+      FROM payment_orders po
+      WHERE po.id <> ${input.orderId}
+        AND po.status = 'Paid'
+        AND (
+          (${input.customerId}::int IS NOT NULL AND po.customer_id = ${input.customerId})
+          OR (${email}::text IS NOT NULL AND LOWER(po.student_email) = ${email})
+          OR (${email}::text IS NOT NULL AND LOWER(po.stripe_customer_email) = ${email})
         )
-        OR (
-          NOT EXISTS (SELECT 1 FROM sales s WHERE s.payment_order_id = po.id)
-          AND po.paid_at IS NOT NULL
-          AND po.duration_days IS NOT NULL
-          AND po.paid_at + (po.duration_days * INTERVAL '1 day') > NOW()
+        AND (
+          po.zenler_course_id = ${input.zenlerCourseId}
+          OR ${input.zenlerCourseId} = ANY(COALESCE(po.access_zenler_course_ids, ARRAY[]::text[]))
         )
-      )
+    ) covered
+    WHERE covered_until IS NOT NULL
+    ORDER BY covered_until ASC
     LIMIT 1
   `;
-  return rows.length > 0;
+  const until = (rows[0] as { covered_until?: Date | string | null } | undefined)?.covered_until;
+  if (!until) return null;
+  const date = until instanceof Date ? until : new Date(until);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** Count a failed unenroll. After the limit the order leaves the queue. */
+export async function recordSessionUnenrollFailure(
+  orderId: number,
+  zenlerUserId: string | null,
+): Promise<'unenroll_failed' | 'unenroll_gave_up'> {
+  const rows = await sql`
+    UPDATE payment_orders
+    SET session_unenroll_attempts = session_unenroll_attempts + 1,
+        zenler_user_id = ${zenlerUserId},
+        zenler_enrollment_status = CASE
+          WHEN session_unenroll_attempts + 1 >= ${SESSION_UNENROLL_ATTEMPT_LIMIT} THEN 'unenroll_gave_up'
+          ELSE 'unenroll_failed'
+        END
+    WHERE id = ${orderId}
+    RETURNING zenler_enrollment_status
+  `;
+  const status = String((rows[0] as { zenler_enrollment_status?: string } | undefined)?.zenler_enrollment_status ?? '');
+  return status === 'unenroll_gave_up' ? 'unenroll_gave_up' : 'unenroll_failed';
+}
+
+/** Leave access in place until the other order's cover ends, then try again. */
+export async function deferSessionAccessRemoval(
+  orderId: number,
+  zenlerUserId: string | null,
+  holdUntil: Date,
+): Promise<void> {
+  await sql`
+    UPDATE payment_orders
+    SET zenler_user_id = ${zenlerUserId},
+        zenler_enrollment_status = 'expire_deferred',
+        session_access_hold_until = ${holdUntil}
+    WHERE id = ${orderId}
+  `;
 }
 
 let presentmentColumnsReady: Promise<void> | null = null;
