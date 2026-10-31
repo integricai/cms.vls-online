@@ -7,6 +7,7 @@ import {
   foldTotalsToUsd,
   amountInUsd,
   formatPlainAmount,
+  matchesSaleReportQuery,
   formatVaultPrice,
   sumAmountsInUsd,
   pickDashboardCurrency,
@@ -171,6 +172,17 @@ run('a currency with no rate is named and left out of the dollar total', () => {
     usd: 20,
     missingCurrencies: ['SAR'],
   });
+});
+
+run('a report query matches email, course, country, or session', () => {
+  const fields = ['student@gmail.com', 'ACCA FR', 'Oman', 'OM', '6 months · valid to 28 Apr 2027'];
+  assert.strictEqual(matchesSaleReportQuery('', fields), true);
+  assert.strictEqual(matchesSaleReportQuery('  GMAIL ', fields), true);
+  assert.strictEqual(matchesSaleReportQuery('acca', fields), true);
+  assert.strictEqual(matchesSaleReportQuery('oman', fields), true);
+  assert.strictEqual(matchesSaleReportQuery('om', fields), true);
+  assert.strictEqual(matchesSaleReportQuery('apr 2027', fields), true);
+  assert.strictEqual(matchesSaleReportQuery('belgium', fields), false);
 });
 
 run('plain export amounts keep two decimals and drop the currency sign', () => {

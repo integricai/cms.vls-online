@@ -166,6 +166,13 @@ function formatMoneyAmount(amount: number | null | undefined, currency: string |
   }
 }
 
+/** True when the report box is empty, or any field contains that text. */
+export function matchesSaleReportQuery(query: string, fields: Array<string | null | undefined>): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  return fields.some(field => (field ?? '').toLowerCase().includes(needle));
+}
+
 /** Two-decimal amount with no currency symbol, for the sales spreadsheet. */
 export function formatPlainAmount(amount: number | null | undefined): string {
   if (amount == null || Number.isNaN(Number(amount))) return '';
