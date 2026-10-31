@@ -395,7 +395,7 @@ export async function createStripeCheckoutSession(input: {
   appendParam(params, 'metadata[paymentOptionId]', input.paymentOptionId);
   appendParam(params, 'metadata[courseId]', input.courseId);
   appendParam(params, 'metadata[coursePriceId]', input.coursePriceId);
-  params.append('metadata[zenlerCourseId]', input.zenlerCourseId);
+  appendParam(params, 'metadata[zenlerCourseId]', input.zenlerCourseId);
   params.append('metadata[courseTitle]', input.courseTitle);
   appendParam(params, 'metadata[studentEmail]', input.studentEmail);
   appendParam(params, 'metadata[countryCode]', input.countryCode);
