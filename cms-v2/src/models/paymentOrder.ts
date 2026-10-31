@@ -56,6 +56,8 @@ export interface PaymentOrder {
   utmCampaign: string | null;
   utmContent: string | null;
   utmTerm: string | null;
+  gadSource: string | null;
+  gadCampaignId: string | null;
   landingPage: string | null;
   checkoutEnvironment: CheckoutEnvironment;
   attrUserAgent: string | null;
@@ -117,6 +119,8 @@ interface DbRow {
   utm_campaign: string | null;
   utm_content: string | null;
   utm_term: string | null;
+  gad_source: string | null;
+  gad_campaign_id: string | null;
   landing_page: string | null;
   checkout_environment: CheckoutEnvironment | null;
   attr_user_agent: string | null;
@@ -126,6 +130,7 @@ interface DbRow {
   conversion_uploaded_at: Date | null;
   conversion_upload_error: string | null;
   conversion_upload_request_id: string | null;
+  customer_country_code?: string | null;
 }
 
 function rowToOrder(row: DbRow): PaymentOrder {
@@ -178,6 +183,8 @@ function rowToOrder(row: DbRow): PaymentOrder {
     utmCampaign: row.utm_campaign ?? null,
     utmContent: row.utm_content ?? null,
     utmTerm: row.utm_term ?? null,
+    gadSource: row.gad_source ?? null,
+    gadCampaignId: row.gad_campaign_id ?? null,
     landingPage: row.landing_page ?? null,
     checkoutEnvironment: row.checkout_environment === 'production' ? 'production' : 'staging',
     attrUserAgent: row.attr_user_agent ?? null,
@@ -223,6 +230,7 @@ export async function createPaymentOrder(data: {
        provider,
        gclid, gbraid, wbraid, fbclid, fbp, fbc,
        utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+       gad_source, gad_campaign_id,
        landing_page, checkout_environment, attr_user_agent, attr_client_ip, attr_captured_at)
     VALUES
       (${data.paymentOptionId ?? null}, ${data.courseId ?? null}, ${data.coursePriceId ?? null},
@@ -234,6 +242,7 @@ export async function createPaymentOrder(data: {
        ${attr?.fbclid ?? null}, ${attr?.fbp ?? null}, ${attr?.fbc ?? null},
        ${attr?.utmSource ?? null}, ${attr?.utmMedium ?? null}, ${attr?.utmCampaign ?? null},
        ${attr?.utmContent ?? null}, ${attr?.utmTerm ?? null},
+       ${attr?.gadSource ?? null}, ${attr?.gadCampaignId ?? null},
        ${attr?.landingPage ?? null}, ${environment}, ${attr?.userAgent ?? null}, ${attr?.clientIp ?? null},
        ${attr?.capturedAt ?? null})
     RETURNING *
@@ -619,7 +628,8 @@ export async function listPaidConversionOrders(input: {
   const offset = (page - 1) * pageSize;
 
   const rows = await sql`
-    SELECT po.*, cu.phone AS customer_phone, COUNT(*) OVER()::int AS total_count
+    SELECT po.*, cu.phone AS customer_phone, cu.country_code AS customer_country_code,
+           COUNT(*) OVER()::int AS total_count
     FROM payment_orders po
     LEFT JOIN customers cu ON cu.id = po.customer_id
     WHERE po.status = 'Paid'
@@ -647,7 +657,14 @@ export async function listPaidConversionOrders(input: {
 
   const total = Number((rows[0] as { total_count?: number } | undefined)?.total_count ?? 0);
   return {
-    items: (rows as DbRow[]).map(rowToOrder),
+    items: (rows as DbRow[]).map((row) => {
+      const order = rowToOrder(row);
+      if (!order.countryCode) {
+        const fallback = row.customer_country_code?.trim().toUpperCase() ?? '';
+        if (/^[A-Z]{2}$/.test(fallback)) order.countryCode = fallback;
+      }
+      return order;
+    }),
     total,
     page,
     pageSize,
