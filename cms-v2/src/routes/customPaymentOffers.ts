@@ -3,7 +3,7 @@ import { authGuard, requireRole } from '../middleware/authGuard';
 import { getCourseById } from '../models/courseGeoPrice';
 import { upsertCustomer } from '../models/customer';
 import {
-  attachStripeCheckoutSession,
+  attachCheckoutSession,
   createPaymentOrder,
 } from '../models/paymentOrder';
 import {
@@ -12,13 +12,26 @@ import {
   markCustomPaymentOfferEmailSent,
 } from '../models/customPaymentOffer';
 import { createActivityLog } from '../models/activityLog';
-import { createStripeCheckoutSession } from '../services/stripeCheckout';
+import { getPaymentProvider } from '../services/payments/registry';
 import { sendCustomPaymentOfferEmail } from '../services/paymentEmails';
 
 const router = Router();
 router.use(authGuard, requireRole('admin', 'assistant'));
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Checkout success and cancel always return the student to the live site. */
+const CUSTOM_PAYMENT_SITE_ORIGIN = 'https://vls-online.com';
+const DESCRIPTION_MAX_LENGTH = 200;
+
+function hasCourseSelection(value: unknown): boolean {
+  if (value == null) return false;
+  if (typeof value === 'string' && value.trim() === '') return false;
+  return true;
+}
+
+function parsePaymentDescription(value: unknown): string {
+  return String(value ?? '').replace(/\s+/g, ' ').trim();
+}
 
 function parsePositiveAmount(value: unknown): number | null {
   const amount = typeof value === 'number' ? value : Number(String(value ?? '').trim());
@@ -47,7 +60,9 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     const firstName = String(req.body?.firstName ?? '').trim();
     const lastName = String(req.body?.lastName ?? '').trim();
     const email = String(req.body?.email ?? '').trim().toLowerCase();
+    const courseSelected = hasCourseSelection(req.body?.courseId);
     const courseId = parsePositiveInt(req.body?.courseId);
+    const description = parsePaymentDescription(req.body?.description);
     const amount = parsePositiveAmount(req.body?.amount);
     const durationDays = parsePositiveInt(req.body?.durationDays);
     const discountReason = String(req.body?.discountReason ?? '').trim();
@@ -57,22 +72,34 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     if (!email || !EMAIL_RE.test(email)) {
       return res.status(400).json({ ok: false, error: 'A valid email address is required' });
     }
-    if (!courseId) return res.status(400).json({ ok: false, error: 'Course is required' });
-    if (amount == null) return res.status(400).json({ ok: false, error: 'Price must be greater than zero' });
-    if (!durationDays) {
-      return res.status(400).json({ ok: false, error: 'Duration (days) must be a positive whole number' });
+    if (courseSelected && !courseId) {
+      return res.status(400).json({ ok: false, error: 'Selected course is not valid' });
     }
+    if (amount == null) return res.status(400).json({ ok: false, error: 'Price must be greater than zero' });
     if (!discountReason) {
       return res.status(400).json({ ok: false, error: 'Reason for discount is required' });
     }
 
-    const course = await getCourseById(courseId);
-    if (!course || !course.isActive) {
-      return res.status(400).json({ ok: false, error: 'Selected course was not found or is inactive' });
+    const course = courseId ? await getCourseById(courseId) : null;
+    if (courseId) {
+      if (!course || !course.isActive) {
+        return res.status(400).json({ ok: false, error: 'Selected course was not found or is inactive' });
+      }
+      if (!course.zenlerCourseId) {
+        return res.status(400).json({ ok: false, error: 'Selected course is missing a Zenler course id' });
+      }
+      if (!durationDays) {
+        return res.status(400).json({ ok: false, error: 'Duration (days) must be a positive whole number' });
+      }
+    } else if (!description) {
+      return res.status(400).json({ ok: false, error: 'Add a description when no course is selected' });
+    } else if (description.length > DESCRIPTION_MAX_LENGTH) {
+      return res.status(400).json({ ok: false, error: `Description must be ${DESCRIPTION_MAX_LENGTH} characters or fewer` });
     }
-    if (!course.zenlerCourseId) {
-      return res.status(400).json({ ok: false, error: 'Selected course is missing a Zenler course id' });
-    }
+
+    const paymentTitle = course ? course.name : description;
+    const optionType = course ? 'Custom / Resit offer' : 'Custom payment';
+    const accessDays = course ? durationDays : null;
 
     const studentName = `${firstName} ${lastName}`.trim();
     const customer = await upsertCustomer({
@@ -84,51 +111,53 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
     const order = await createPaymentOrder({
       paymentOptionId: null,
-      courseId: course.id,
+      courseId: course?.id ?? null,
       coursePriceId: null,
       customerId: customer.id,
-      zenlerCourseId: course.zenlerCourseId,
-      courseTitle: course.name,
-      optionType: 'Custom / Resit offer',
+      zenlerCourseId: course?.zenlerCourseId ?? '',
+      courseTitle: paymentTitle,
+      optionType,
       studentName,
       studentEmail: email,
       amount,
       currency: 'USD',
-      durationDays,
+      durationDays: accessDays,
       discountPercent: null,
+      environment: 'production',
     });
 
-    const session = await createStripeCheckoutSession({
+    const session = await getPaymentProvider('stripe').createCheckout({
       orderId: order.id,
-      courseId: course.id,
+      courseId: course?.id ?? null,
       coursePriceId: null,
-      zenlerCourseId: course.zenlerCourseId,
-      courseTitle: course.name,
-      paymentCardTitle: `${course.name} — Custom / Resit offer`,
+      zenlerCourseId: course?.zenlerCourseId ?? '',
+      courseTitle: paymentTitle,
+      paymentCardTitle: course ? `${course.name} — Custom / Resit offer` : paymentTitle,
       amount,
       currency: 'USD',
       studentEmail: email,
+      returnOrigin: CUSTOM_PAYMENT_SITE_ORIGIN,
+      environment: 'production',
     });
 
-    if (!session.url) {
-      return res.status(502).json({ ok: false, error: 'Stripe did not return a checkout URL' });
-    }
-
-    await attachStripeCheckoutSession(order.id, session.id);
+    await attachCheckoutSession(order.id, {
+      provider: session.provider,
+      checkoutId: session.checkoutId,
+    });
 
     const offer = await createCustomPaymentOffer({
       paymentOrderId: order.id,
-      courseId: course.id,
+      courseId: course?.id ?? null,
       createdByUserId: req.user?.userId ?? null,
       studentFirstName: firstName,
       studentLastName: lastName,
       studentEmail: email,
       amount,
       currency: 'USD',
-      durationDays,
+      durationDays: accessDays,
       discountReason,
-      stripeCheckoutSessionId: session.id,
-      checkoutUrl: session.url,
+      stripeCheckoutSessionId: session.checkoutId,
+      checkoutUrl: session.checkoutUrl,
     });
 
     let emailSent = false;
@@ -136,11 +165,11 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       await sendCustomPaymentOfferEmail({
         firstName,
         email,
-        courseTitle: course.name,
+        courseTitle: paymentTitle,
         amount,
         currency: 'USD',
-        durationDays,
-        checkoutUrl: session.url,
+        durationDays: accessDays,
+        checkoutUrl: session.checkoutUrl,
       });
       await markCustomPaymentOfferEmailSent(offer.id);
       emailSent = true;
@@ -156,14 +185,15 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       action: 'create',
       componentKey: 'custom-payment-offer',
       componentName: 'Custom Payment Offer',
-      summary: `Created custom payment offer for ${email} — ${course.name} ($${amount.toFixed(2)})`,
+      summary: `Created custom payment offer for ${email} — ${paymentTitle} ($${amount.toFixed(2)})`,
       changedPaths: ['custom_payment_offers'],
       afterJson: {
         offerId: offer.id,
         orderId: order.id,
-        courseId: course.id,
+        courseId: course?.id ?? null,
+        description: course ? null : description,
         amount,
-        durationDays,
+        durationDays: accessDays,
         emailSent,
       },
       ipAddress: req.ip,
@@ -174,8 +204,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       ok: true,
       data: {
         ...offer,
-        courseTitle: course.name,
-        checkoutUrl: session.url,
+        courseTitle: paymentTitle,
+        checkoutUrl: session.checkoutUrl,
         emailSent,
         orderStatus: order.status,
       },
