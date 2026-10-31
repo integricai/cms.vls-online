@@ -87,6 +87,21 @@ export function formatDisplayDate(value: Date | string | null | undefined): stri
   }).format(date);
 }
 
+/**
+ * Session cell for a sale row.
+ * A payment order uses the reason the form was created. A course sale uses the access length.
+ */
+export function saleListSessionLabel(
+  durationDays: number | null | undefined,
+  expiry: Date | string | null | undefined,
+  paymentReason?: string | null,
+): string {
+  const reason = paymentReason?.trim();
+  if (reason) return reason;
+  if (durationDays == null || !Number.isFinite(Number(durationDays))) return '—';
+  return saleSessionLabel(durationDays, expiry);
+}
+
 /** Access length plus the date the session stays valid until. */
 export function saleSessionLabel(
   durationDays: number,

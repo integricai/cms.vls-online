@@ -117,7 +117,7 @@ export async function listRecentSalesActivity(limit: number, includeRefunded: bo
         s.currency,
         po.presentment_amount,
         po.presentment_currency,
-        c.name AS course_name,
+        CASE WHEN s.course_id IS NULL THEN 'Payment Order' ELSE c.name END AS course_name,
         cu.first_name,
         cu.last_name,
         COALESCE(po.status, 'Paid') = 'Refunded' AS refunded
@@ -137,7 +137,7 @@ export async function listRecentSalesActivity(limit: number, includeRefunded: bo
         s.currency,
         po.presentment_amount,
         po.presentment_currency,
-        c.name AS course_name,
+        CASE WHEN s.course_id IS NULL THEN 'Payment Order' ELSE c.name END AS course_name,
         cu.first_name,
         cu.last_name,
         FALSE AS refunded

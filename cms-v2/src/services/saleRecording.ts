@@ -12,12 +12,26 @@ async function createSaleForOrder(order: PaymentOrder, customerCountryCode: stri
   const existing = await getSaleByPaymentOrderId(order.id);
   if (existing) return existing;
 
-  if (!order.customerId || !order.courseId || !order.durationDays || !order.paidAt) {
+  if (!order.customerId || !order.paidAt) {
     console.warn('[sales] Cannot create sale for paid order', order.id, {
       customerId: order.customerId,
+      paidAt: order.paidAt,
+    });
+    return null;
+  }
+
+  const paymentOrderOnly = order.courseId == null;
+  if (paymentOrderOnly && order.optionType !== 'Custom payment') {
+    console.warn('[sales] Cannot create sale for paid order', order.id, {
+      courseId: order.courseId,
+      optionType: order.optionType,
+    });
+    return null;
+  }
+  if (!paymentOrderOnly && !order.durationDays) {
+    console.warn('[sales] Cannot create sale for paid order', order.id, {
       courseId: order.courseId,
       durationDays: order.durationDays,
-      paidAt: order.paidAt,
     });
     return null;
   }
@@ -30,16 +44,20 @@ async function createSaleForOrder(order: PaymentOrder, customerCountryCode: stri
     amount: order.amount,
     currency: order.currency,
     discountPercent: order.discountPercent,
-    durationDays: order.durationDays,
+    durationDays: paymentOrderOnly ? null : order.durationDays,
     soldAt: order.paidAt,
     countryCode: order.countryCode ?? customerCountryCode,
   });
 
-  try {
-    await ensureCustomerCourseStatus(order.customerId, order.courseId);
-  } catch (err) {
-    console.error(`[sales] Failed to ensure course status for sale ${sale.id}`, err);
+  if (order.courseId != null) {
+    try {
+      await ensureCustomerCourseStatus(order.customerId, order.courseId);
+    } catch (err) {
+      console.error(`[sales] Failed to ensure course status for sale ${sale.id}`, err);
+    }
   }
+
+  if (sale.courseId == null) return sale;
 
   try {
     const assigned = await autoAssignCourseTutorForSale(sale);

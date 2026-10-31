@@ -11,6 +11,7 @@ import {
   formatVaultPrice,
   sumAmountsInUsd,
   pickDashboardCurrency,
+  saleListSessionLabel,
   saleSessionLabel,
   salesPresetBounds,
   shiftMonth,
@@ -216,6 +217,18 @@ run('shows the local price and the dollar charge together', () => {
     presentmentCurrency: 'GBP',
   }), '£48.82 (US$61.00)');
   assert.strictEqual(formatVaultPrice({ amount: 61, currency: 'USD' }), 'US$61.00');
+});
+
+run('a payment order session is the reason the form was created', () => {
+  assert.strictEqual(
+    saleListSessionLabel(null, null, 'Student failed exams and requested a resit'),
+    'Student failed exams and requested a resit',
+  );
+  assert.strictEqual(saleListSessionLabel(null, null, '  '), '—');
+  assert.strictEqual(
+    saleListSessionLabel(180, '2027-04-25T12:00:00.000Z', null),
+    '6 months · valid to 25 Apr 2027',
+  );
 });
 
 run('session label keeps the month length and the valid-to date', () => {

@@ -535,15 +535,15 @@ export interface ExamEmailBulkSendResult {
 export interface Sale {
   id: number;
   customerId: number;
-  courseId: number;
+  courseId: number | null;
   coursePriceId: number | null;
   paymentOrderId: number;
   amount: number;
   currency: string;
   discountPercent: number | null;
-  durationDays: number;
+  durationDays: number | null;
   soldAt: Date;
-  expiryDate: Date;
+  expiryDate: Date | null;
   /** ISO 3166-1 alpha-2 country captured for this sale. */
   countryCode: string | null;
   tutorId: number | null;
@@ -556,6 +556,8 @@ export interface Sale {
 
 export interface SaleListItem extends Sale {
   courseName: string | null;
+  /** Reason captured when a payment form was created with no course. */
+  paymentReason: string | null;
   customerEmail: string | null;
   customerFirstName: string | null;
   customerLastName: string | null;
@@ -589,7 +591,7 @@ export interface SaleListItem extends Sale {
 }
 
 export interface SaleCourseSummary {
-  courseId: number;
+  courseId: number | null;
   courseName: string;
   saleCount: number;
   unassignedCount: number;

@@ -9,7 +9,7 @@ import {
   matchesSaleReportQuery,
   monthStart,
   salesPresetBounds,
-  saleSessionLabel,
+  saleListSessionLabel,
   sumAmountsInUsd,
   type SalesPreset,
 } from '../../../../shared/salesFormat';
@@ -102,7 +102,7 @@ function reportFields(sale: SaleListItem): string[] {
     sale.courseName || `Course #${sale.courseId}`,
     countryLabel(sale.countryCode),
     sale.countryCode ?? '',
-    saleSessionLabel(sale.durationDays, sale.expiryDate),
+    saleListSessionLabel(sale.durationDays, sale.expiryDate, sale.paymentReason),
   ];
 }
 
@@ -206,7 +206,9 @@ export default function ReportsTab() {
   async function refundSale(sale: SaleListItem) {
     if (sale.paymentStatus === 'Refunded') return;
     const confirmed = window.confirm(
-      `Refund ${formatMoney(sale.amount, sale.currency)} for ${sale.courseName || `course #${sale.courseId}`}?\n\nThis will create a full refund in ${processorLabel(sale)} and revoke the student's access to this course.`,
+      sale.courseId == null
+        ? `Refund ${formatMoney(sale.amount, sale.currency)} for this payment order?\n\nThis will create a full refund in ${processorLabel(sale)}.`
+        : `Refund ${formatMoney(sale.amount, sale.currency)} for ${sale.courseName || `course #${sale.courseId}`}?\n\nThis will create a full refund in ${processorLabel(sale)} and revoke the student's access to this course.`,
     );
     if (!confirmed) return;
 
@@ -225,6 +227,7 @@ export default function ReportsTab() {
   }
 
   function tutorsForSale(sale: SaleListItem): Tutor[] {
+    if (sale.courseId == null) return [];
     const linked = tutors.filter(tutor => tutor.courseIds.includes(sale.courseId));
     return linked.length > 0 ? linked : tutors;
   }
@@ -397,7 +400,7 @@ export default function ReportsTab() {
                   <td className="px-3 py-2">{sale.customerEmail || '—'}</td>
                   <td className="px-3 py-2">{sale.courseName || `Course #${sale.courseId}`}</td>
                   <td className="px-3 py-2 whitespace-nowrap">
-                    {saleSessionLabel(sale.durationDays, sale.expiryDate)}
+                    {saleListSessionLabel(sale.durationDays, sale.expiryDate, sale.paymentReason)}
                     <div className="text-[11px] text-slate-400">Sold {formatDisplayDate(sale.soldAt)}</div>
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap" title={sale.countryCode ?? undefined}>
@@ -410,7 +413,7 @@ export default function ReportsTab() {
                   <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.netAmount, sale.settlementCurrency || sale.currency)}</td>
                   <td className="px-3 py-2">
                     <div className="flex flex-col gap-1">
-                      {sale.paymentStatus !== 'Refunded' && !sale.tutorId ? (
+                      {sale.courseId != null && sale.paymentStatus !== 'Refunded' && !sale.tutorId ? (
                         <div className="flex flex-wrap items-center gap-1">
                           <select
                             className="input text-[11px]"

@@ -13,15 +13,15 @@ import type {
 export interface SaleDbRow {
   id: number;
   customer_id: number;
-  course_id: number;
+  course_id: number | null;
   course_price_id: number | null;
   payment_order_id: number;
   amount: string;
   currency: string;
   discount_percent: string | null;
-  duration_days: number;
+  duration_days: number | null;
   sold_at: Date;
-  expiry_date: Date;
+  expiry_date: Date | null;
   country_code: string | null;
   tutor_id: number | null;
   assignment_status: SaleAssignmentStatus;
@@ -33,6 +33,7 @@ export interface SaleDbRow {
 
 interface SaleListDbRow extends SaleDbRow {
   course_name: string | null;
+  payment_reason: string | null;
   customer_email: string | null;
   customer_first_name: string | null;
   customer_last_name: string | null;
@@ -96,6 +97,7 @@ function rowToSaleListItem(row: SaleListDbRow): SaleListItem {
   return {
     ...rowToSale(row),
     courseName: row.course_name,
+    paymentReason: row.payment_reason?.trim() || null,
     customerEmail: row.customer_email,
     customerFirstName: row.customer_first_name,
     customerLastName: row.customer_last_name,
@@ -152,7 +154,8 @@ export async function getSaleListItemById(id: number): Promise<SaleListItem | nu
   const rows = await sql`
     SELECT
       s.*,
-      c.name AS course_name,
+      CASE WHEN s.course_id IS NULL THEN 'Payment Order' ELSE c.name END AS course_name,
+      CASE WHEN s.course_id IS NULL THEN o.discount_reason ELSE NULL END AS payment_reason,
       cu.email AS customer_email,
       cu.first_name AS customer_first_name,
       cu.last_name AS customer_last_name,
@@ -179,6 +182,7 @@ export async function getSaleListItemById(id: number): Promise<SaleListItem | nu
       po.settlement_currency
     FROM sales s
     LEFT JOIN courses c ON c.id = s.course_id
+    LEFT JOIN custom_payment_offers o ON o.payment_order_id = s.payment_order_id
     LEFT JOIN customers cu ON cu.id = s.customer_id
     LEFT JOIN tutors t ON t.id = s.tutor_id
     LEFT JOIN payment_orders po ON po.id = s.payment_order_id
@@ -197,17 +201,19 @@ export async function getSaleListItemById(id: number): Promise<SaleListItem | nu
 
 export async function createSale(data: {
   customerId: number;
-  courseId: number;
+  courseId: number | null;
   coursePriceId: number | null;
   paymentOrderId: number;
   amount: number;
   currency: string;
   discountPercent: number | null;
-  durationDays: number;
+  durationDays: number | null;
   soldAt: Date;
   countryCode?: string | null;
 }): Promise<Sale> {
-  const expiryDate = computeExpiryDate(data.soldAt, data.durationDays);
+  const expiryDate = data.courseId != null && data.durationDays != null
+    ? computeExpiryDate(data.soldAt, data.durationDays)
+    : null;
   const countryCode = saleCountryCode(data.countryCode);
   const rows = await sql`
     INSERT INTO sales (
@@ -257,7 +263,8 @@ export async function listSales(filters: ListSalesFilters = {}): Promise<SaleLis
   const rows = await sql`
     SELECT
       s.*,
-      c.name AS course_name,
+      CASE WHEN s.course_id IS NULL THEN 'Payment Order' ELSE c.name END AS course_name,
+      CASE WHEN s.course_id IS NULL THEN o.discount_reason ELSE NULL END AS payment_reason,
       cu.email AS customer_email,
       cu.first_name AS customer_first_name,
       cu.last_name AS customer_last_name,
@@ -284,6 +291,7 @@ export async function listSales(filters: ListSalesFilters = {}): Promise<SaleLis
       po.settlement_currency
     FROM sales s
     LEFT JOIN courses c ON c.id = s.course_id
+    LEFT JOIN custom_payment_offers o ON o.payment_order_id = s.payment_order_id
     LEFT JOIN customers cu ON cu.id = s.customer_id
     LEFT JOIN tutors t ON t.id = s.tutor_id
     LEFT JOIN payment_orders po ON po.id = s.payment_order_id
@@ -331,7 +339,7 @@ export async function summarizeSalesByCourse(): Promise<SaleCourseSummary[]> {
   const rows = await sql`
     SELECT
       s.course_id,
-      COALESCE(c.name, 'Unknown course') AS course_name,
+      COALESCE(c.name, 'Payment Order') AS course_name,
       COUNT(*)::int AS sale_count,
       COUNT(*) FILTER (WHERE s.tutor_id IS NULL)::int AS unassigned_count,
       COALESCE(SUM(s.amount), 0) AS total_amount,
@@ -346,7 +354,7 @@ export async function summarizeSalesByCourse(): Promise<SaleCourseSummary[]> {
   `;
 
   return (rows as Array<{
-    course_id: number;
+    course_id: number | null;
     course_name: string;
     sale_count: number;
     unassigned_count: number;
@@ -434,11 +442,13 @@ export async function getSaleDetailForInvite(saleId: number): Promise<{
   const rows = await sql`
     SELECT
       s.*,
-      c.name AS course_name,
+      CASE WHEN s.course_id IS NULL THEN 'Payment Order' ELSE c.name END AS course_name,
+      CASE WHEN s.course_id IS NULL THEN o.discount_reason ELSE NULL END AS payment_reason,
       cu.first_name AS customer_first_name,
       cu.email AS customer_email
     FROM sales s
     LEFT JOIN courses c ON c.id = s.course_id
+    LEFT JOIN custom_payment_offers o ON o.payment_order_id = s.payment_order_id
     LEFT JOIN customers cu ON cu.id = s.customer_id
     WHERE s.id = ${saleId}
     LIMIT 1
