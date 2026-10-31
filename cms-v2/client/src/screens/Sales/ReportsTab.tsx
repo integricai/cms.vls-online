@@ -227,8 +227,9 @@ export default function ReportsTab() {
   }
 
   function tutorsForSale(sale: SaleListItem): Tutor[] {
-    if (sale.courseId == null) return [];
-    const linked = tutors.filter(tutor => tutor.courseIds.includes(sale.courseId));
+    const courseId = sale.courseId;
+    if (courseId == null) return [];
+    const linked = tutors.filter(tutor => tutor.courseIds.includes(courseId));
     return linked.length > 0 ? linked : tutors;
   }
 
