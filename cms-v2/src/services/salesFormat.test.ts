@@ -5,8 +5,10 @@ import {
   dashboardRangeBounds,
   percentChange,
   foldTotalsToUsd,
+  amountInUsd,
   formatPlainAmount,
   formatVaultPrice,
+  sumAmountsInUsd,
   pickDashboardCurrency,
   saleSessionLabel,
   salesPresetBounds,
@@ -125,6 +127,11 @@ run('sales presets use Monday weeks and inclusive recent months', () => {
     start: '2025-01-01',
     end: '2025-12-31',
   });
+  assert.deepStrictEqual(salesPresetBounds('this_year', '2026-10-31'), {
+    start: '2026-01-01',
+    end: '2026-10-31',
+  });
+  assert.strictEqual(salesPresetBounds('all_time', '2026-10-31'), null);
 });
 
 run('a Monday starts a new week and a Sunday closes the current one', () => {
@@ -139,6 +146,30 @@ run('a Monday starts a new week and a Sunday closes the current one', () => {
   assert.deepStrictEqual(salesPresetBounds('this_week', '2026-11-01'), {
     start: '2026-10-26',
     end: '2026-11-01',
+  });
+});
+
+run('foreign gross amounts convert into the dollar total', () => {
+  assert.strictEqual(amountInUsd(375, 'SAR', { SAR: 3.75 }), 100);
+  assert.strictEqual(amountInUsd(80, 'EUR', { EUR: 0.8 }), 100);
+  assert.deepStrictEqual(sumAmountsInUsd([
+    { amount: 50, currency: 'USD' },
+    { amount: 375, currency: 'SAR' },
+    { amount: 80, currency: 'EUR' },
+  ], { SAR: 3.75, EUR: 0.8 }), {
+    usd: 250,
+    missingCurrencies: [],
+  });
+});
+
+run('a currency with no rate is named and left out of the dollar total', () => {
+  assert.strictEqual(amountInUsd(10, 'SAR', null), null);
+  assert.deepStrictEqual(sumAmountsInUsd([
+    { amount: 20, currency: 'USD' },
+    { amount: 10, currency: 'SAR' },
+  ], null), {
+    usd: 20,
+    missingCurrencies: ['SAR'],
   });
 });
 

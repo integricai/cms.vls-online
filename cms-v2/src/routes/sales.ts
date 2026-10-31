@@ -22,6 +22,7 @@ import { sendStudentRefundConfirmation } from '../services/paymentEmails';
 import { getPaymentRefundProvider } from '../services/payments/registry';
 import { revokeZenlerAccessForRefundedOrder } from '../services/zenlerEnrollmentEnsure';
 import { buildSalesDashboard } from '../services/salesDashboard';
+import { getUsdRates } from '../services/fxRates';
 import { countMissingStripeFees, syncStripeFees } from '../services/stripeSettlement';
 import { isDashboardRange, isIsoDate } from '../../shared/salesFormat';
 
@@ -118,6 +119,14 @@ function readDateRange(body: unknown): { from: string; to: string } | null {
   if (!isIsoDate(from) || !isIsoDate(to) || from > to) return null;
   return { from, to };
 }
+
+router.get('/fx-rates', requireRole('admin'), async (_req, res, next) => {
+  try {
+    return res.json({ ok: true, data: await getUsdRates() });
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.get('/dashboard', requireRole('admin'), async (req, res, next) => {
   try {

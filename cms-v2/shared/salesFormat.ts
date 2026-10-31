@@ -12,7 +12,9 @@ export type SalesPreset =
   | 'last_month'
   | 'last_3_months'
   | 'last_6_months'
-  | 'last_year';
+  | 'last_year'
+  | 'this_year'
+  | 'all_time';
 
 export function londonToday(now = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -196,7 +198,9 @@ export function isSalesPreset(value: string): value is SalesPreset {
     || value === 'last_month'
     || value === 'last_3_months'
     || value === 'last_6_months'
-    || value === 'last_year';
+    || value === 'last_year'
+    || value === 'this_year'
+    || value === 'all_time';
 }
 
 /** Monday of the week that contains this calendar date. Weeks start on Monday. */
@@ -215,7 +219,8 @@ export function weekStartMonday(isoDate: string): string {
 export function salesPresetBounds(
   preset: SalesPreset,
   today = londonToday(),
-): { start: string; end: string } {
+): { start: string; end: string } | null {
+  if (preset === 'all_time') return null;
   if (preset === 'today') return { start: today, end: today };
   if (preset === 'yesterday') {
     const day = addIsoDays(today, -1);
@@ -232,8 +237,46 @@ export function salesPresetBounds(
   }
   if (preset === 'last_3_months') return { start: monthStart(shiftMonth(today, -2)), end: today };
   if (preset === 'last_6_months') return { start: monthStart(shiftMonth(today, -5)), end: today };
+  if (preset === 'this_year') return { start: `${today.slice(0, 4)}-01-01`, end: today };
   const year = Number(today.slice(0, 4)) - 1;
   return { start: `${year}-01-01`, end: `${year}-12-31` };
+}
+
+/**
+ * Turns a local amount into dollars.
+ * `localPerUsd` is how many local units equal one dollar. Null when that currency has no rate.
+ */
+export function amountInUsd(
+  amount: number,
+  currency: string | null | undefined,
+  localPerUsd: Record<string, number> | null | undefined,
+): number | null {
+  if (!Number.isFinite(amount)) return null;
+  const code = (currency || 'USD').trim().toUpperCase() || 'USD';
+  if (code === 'USD') return Math.round(amount * 100) / 100;
+  const rate = localPerUsd?.[code];
+  if (rate == null || !(rate > 0)) return null;
+  return Math.round((amount / rate) * 100) / 100;
+}
+
+/** One dollar total. Currencies with no rate are listed and left out of the figure. */
+export function sumAmountsInUsd(
+  entries: Array<{ amount: number | null | undefined; currency: string | null | undefined }>,
+  localPerUsd: Record<string, number> | null | undefined,
+): { usd: number; missingCurrencies: string[] } {
+  let cents = 0;
+  const missing = new Set<string>();
+  for (const entry of entries) {
+    if (entry.amount == null || !Number.isFinite(Number(entry.amount))) continue;
+    const code = (entry.currency || 'USD').trim().toUpperCase() || 'USD';
+    const usd = amountInUsd(Number(entry.amount), code, localPerUsd);
+    if (usd == null) {
+      missing.add(code);
+      continue;
+    }
+    cents += Math.round(usd * 100);
+  }
+  return { usd: cents / 100, missingCurrencies: [...missing].sort() };
 }
 
 function roundMoney(amount: number): number {
