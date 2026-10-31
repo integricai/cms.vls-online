@@ -11,7 +11,7 @@ interface OfferResult {
   studentEmail: string;
   amount: number;
   currency: string;
-  durationDays: number;
+  durationDays: number | null;
   checkoutUrl: string | null;
   emailSent: boolean;
   orderStatus?: string | null;
@@ -33,6 +33,7 @@ export default function CustomPaymentOffer() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [courseId, setCourseId] = useState('');
+  const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [durationDays, setDurationDays] = useState('90');
   const [discountReason, setDiscountReason] = useState('');
@@ -56,9 +57,10 @@ export default function CustomPaymentOffer() {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim(),
-        courseId: Number(courseId),
+        courseId: courseId ? Number(courseId) : null,
+        description: courseId ? '' : description.trim(),
         amount: Number(amount),
-        durationDays: Number(durationDays),
+        durationDays: courseId ? Number(durationDays) : null,
         discountReason: discountReason.trim(),
       });
       setResult(data);
@@ -66,6 +68,7 @@ export default function CustomPaymentOffer() {
       setLastName('');
       setEmail('');
       setCourseId('');
+      setDescription('');
       setAmount('');
       setDurationDays('90');
       setDiscountReason('');
@@ -92,7 +95,7 @@ export default function CustomPaymentOffer() {
       <div className="border-b border-slate-200 bg-white px-6 py-4">
         <h1 className="text-lg font-bold text-slate-800">Customer Payment Form</h1>
         <p className="mt-0.5 text-xs text-slate-500">
-          Create a special USD price for a student (e.g. exam resit), generate a Stripe checkout link, and email it to them.
+          Create a USD payment for a student. Choose a course, or describe what the payment is for, then email a live checkout link.
         </p>
       </div>
 
@@ -115,7 +118,8 @@ export default function CustomPaymentOffer() {
                 {result.studentFirstName} {result.studentLastName} · {result.studentEmail}
               </p>
               <p className="mt-1">
-                {result.courseTitle} · {formatUsd(result.amount)} · {result.durationDays} days access
+                {result.courseTitle} · {formatUsd(result.amount)}
+                {result.durationDays ? ` · ${result.durationDays} days access` : ''}
               </p>
               {result.checkoutUrl && (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -171,22 +175,42 @@ export default function CustomPaymentOffer() {
             <label className="mt-4 block text-sm">
               <span className="mb-1 block font-medium text-slate-700">Course</span>
               <select
-                required
                 value={courseId}
                 onChange={e => setCourseId(e.target.value)}
                 disabled={loadingCourses}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
               >
-                <option value="">{loadingCourses ? 'Loading courses…' : 'Select a course'}</option>
+                <option value="">{loadingCourses ? 'Loading courses…' : 'No course — add a description'}</option>
                 {courses.map(course => (
                   <option key={course.id} value={course.id}>
                     {course.name}
                   </option>
                 ))}
               </select>
+              <span className="mt-1 block text-xs text-slate-400">
+                Optional. Leave this blank to charge for something other than a course.
+              </span>
             </label>
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {!courseId && (
+              <label className="mt-4 block text-sm">
+                <span className="mb-1 block font-medium text-slate-700">Description</span>
+                <textarea
+                  required
+                  rows={3}
+                  maxLength={200}
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                  placeholder="e.g. Exam resit fee for the June sitting."
+                />
+                <span className="mt-1 block text-xs text-slate-400">
+                  Shown to the student and used as the payment description. No course access is granted.
+                </span>
+              </label>
+            )}
+
+            <div className={`mt-4 grid gap-4 ${courseId ? 'sm:grid-cols-2' : ''}`}>
               <label className="block text-sm">
                 <span className="mb-1 block font-medium text-slate-700">Price (USD)</span>
                 <div className="relative">
@@ -203,18 +227,20 @@ export default function CustomPaymentOffer() {
                   />
                 </div>
               </label>
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Duration (days)</span>
-                <input
-                  required
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={durationDays}
-                  onChange={e => setDurationDays(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
-                />
-              </label>
+              {courseId && (
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-slate-700">Duration (days)</span>
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={durationDays}
+                    onChange={e => setDurationDays(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                  />
+                </label>
+              )}
             </div>
 
             <label className="mt-4 block text-sm">
@@ -233,7 +259,7 @@ export default function CustomPaymentOffer() {
             </label>
 
             <div className="mt-6 flex justify-end">
-              <button type="submit" disabled={submitting || loadingCourses} className="btn-primary">
+              <button type="submit" disabled={submitting} className="btn-primary">
                 {submitting ? 'Creating & sending…' : 'Create offer & email student'}
               </button>
             </div>

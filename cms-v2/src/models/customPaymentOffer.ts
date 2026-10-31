@@ -3,7 +3,7 @@ import { sql } from '../db/client';
 export interface CustomPaymentOffer {
   id: number;
   paymentOrderId: number;
-  courseId: number;
+  courseId: number | null;
   courseTitle?: string;
   createdByUserId: number | null;
   createdByName?: string | null;
@@ -12,7 +12,7 @@ export interface CustomPaymentOffer {
   studentEmail: string;
   amount: number;
   currency: string;
-  durationDays: number;
+  durationDays: number | null;
   discountReason: string;
   stripeCheckoutSessionId: string | null;
   checkoutUrl: string | null;
@@ -24,7 +24,7 @@ export interface CustomPaymentOffer {
 interface DbRow {
   id: number;
   payment_order_id: number;
-  course_id: number;
+  course_id: number | null;
   course_title?: string | null;
   created_by_user_id: number | null;
   created_by_name?: string | null;
@@ -33,7 +33,7 @@ interface DbRow {
   student_email: string;
   amount: string | number;
   currency: string;
-  duration_days: number;
+  duration_days: number | null;
   discount_reason: string;
   stripe_checkout_session_id: string | null;
   checkout_url: string | null;
@@ -67,14 +67,14 @@ function rowToOffer(row: DbRow): CustomPaymentOffer {
 
 export async function createCustomPaymentOffer(data: {
   paymentOrderId: number;
-  courseId: number;
+  courseId: number | null;
   createdByUserId: number | null;
   studentFirstName: string;
   studentLastName: string;
   studentEmail: string;
   amount: number;
   currency: string;
-  durationDays: number;
+  durationDays: number | null;
   discountReason: string;
   stripeCheckoutSessionId: string | null;
   checkoutUrl: string | null;
@@ -110,11 +110,11 @@ export async function listCustomPaymentOffers(limit = 50): Promise<CustomPayment
   const rows = await sql`
     SELECT
       o.*,
-      c.name AS course_title,
+      COALESCE(c.name, po.course_title) AS course_title,
       po.status AS order_status,
       NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), '') AS created_by_name
     FROM custom_payment_offers o
-    JOIN courses c ON c.id = o.course_id
+    LEFT JOIN courses c ON c.id = o.course_id
     JOIN payment_orders po ON po.id = o.payment_order_id
     LEFT JOIN users u ON u.id = o.created_by_user_id
     ORDER BY o.created_at DESC

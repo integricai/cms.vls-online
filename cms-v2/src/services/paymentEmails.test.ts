@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { stagingPurchaseConfirmation, studentPaymentAccessInstructions } from './paymentEmails';
-import { enrollmentStatusBlocksAccessEmail, VLS_SCHOOL_LOGIN_URL, VLS_SCHOOL_PASSWORD_RESET_URL } from './schoolAccess';
+import { customPaymentOfferMessage, stagingPurchaseConfirmation, studentPaymentAccessInstructions } from './paymentEmails';
+import { enrollmentStatusBlocksAccessEmail, schoolAccessState, VLS_SCHOOL_LOGIN_URL, VLS_SCHOOL_PASSWORD_RESET_URL } from './schoolAccess';
 
 const login = VLS_SCHOOL_LOGIN_URL;
 
@@ -176,4 +176,72 @@ run('keeps the existing-account instructions for a returning student', () => {
   assert.match(message.text, /existing VLS school account/);
   assert.doesNotMatch(message.text, /Set your password/);
   assert.doesNotMatch(message.text, new RegExp(VLS_SCHOOL_PASSWORD_RESET_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+});
+
+run('tells the thank-you page when school access is ready, waiting, or unavailable', () => {
+  assert.equal(schoolAccessState({
+    zenlerEnrollmentStatus: 'enrolled',
+    zenlerCourseId: '101',
+  }), 'ready');
+  assert.equal(schoolAccessState({
+    zenlerEnrollmentStatus: 'enrolled_new',
+    zenlerCourseId: '101',
+  }), 'ready');
+  assert.equal(schoolAccessState({
+    zenlerEnrollmentStatus: null,
+    zenlerCourseId: '101',
+  }), 'pending');
+  assert.equal(schoolAccessState({
+    zenlerEnrollmentStatus: 'pending',
+    accessZenlerCourseIds: ['202'],
+  }), 'pending');
+  assert.equal(schoolAccessState({
+    zenlerEnrollmentStatus: 'failed',
+    zenlerCourseId: '101',
+  }), 'unavailable');
+  assert.equal(schoolAccessState({
+    zenlerEnrollmentStatus: 'skipped',
+    zenlerCourseId: '101',
+  }), 'unavailable');
+  assert.equal(schoolAccessState({
+    zenlerEnrollmentStatus: null,
+    zenlerCourseId: '',
+  }), 'ready');
+});
+
+run('keeps course access details on a course payment offer', () => {
+  const message = customPaymentOfferMessage({
+    firstName: 'Ada',
+    courseTitle: 'ACCA FA',
+    amount: 50,
+    currency: 'USD',
+    durationDays: 90,
+    checkoutUrl: 'https://checkout.stripe.com/c/pay/cs_live_123',
+  });
+  assert.match(message.subject, /course payment link — ACCA FA/);
+  assert.match(message.text, /Course: ACCA FA/);
+  assert.match(message.text, /Access duration: 90 days/);
+  assert.match(message.text, /complete your enrolment/);
+  assert.match(message.text, /https:\/\/vls-online\.com/);
+  assert.doesNotMatch(message.text, /staging\.vls-online\.com/);
+});
+
+run('uses the description and omits course access when no course is selected', () => {
+  const message = customPaymentOfferMessage({
+    firstName: 'Ada',
+    courseTitle: 'June exam resit fee',
+    amount: 40,
+    currency: 'USD',
+    durationDays: null,
+    checkoutUrl: 'https://checkout.stripe.com/c/pay/cs_live_456',
+  });
+  assert.match(message.subject, /payment link — June exam resit fee/);
+  assert.doesNotMatch(message.subject, /course payment link/);
+  assert.match(message.text, /Description: June exam resit fee/);
+  assert.doesNotMatch(message.text, /Access duration/);
+  assert.doesNotMatch(message.text, /enrolment/);
+  assert.doesNotMatch(message.text, /access your course/);
+  assert.match(message.text, /https:\/\/checkout\.stripe\.com\/c\/pay\/cs_live_456/);
+  assert.match(message.text, /https:\/\/vls-online\.com/);
+  assert.doesNotMatch(message.text, /staging\.vls-online\.com/);
 });
