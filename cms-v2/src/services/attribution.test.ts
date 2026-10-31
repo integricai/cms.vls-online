@@ -6,6 +6,7 @@ import {
   parseCheckoutAttribution,
   resolveCheckoutEnvironment,
   resolveConversionUploadAction,
+  resolveGoogleAdsNetwork,
   sanitizeAttributionField,
 } from './attribution';
 
@@ -34,12 +35,16 @@ run('parses nested attribution and request extras', () => {
       attribution: {
         gclid: ' gclid-1 ',
         utm_source: 'google',
+        gad_source: '3',
+        gad_campaignid: '12345',
         capturedAt: '2026-08-16T08:00:00.000Z',
       },
     }, { userAgent: 'Mozilla/5.0', clientIp: '203.0.113.10' });
 
     assert.strictEqual(parsed.gclid, 'gclid-1');
     assert.strictEqual(parsed.utmSource, 'google');
+    assert.strictEqual(parsed.gadSource, '3');
+    assert.strictEqual(parsed.gadCampaignId, '12345');
     assert.strictEqual(parsed.userAgent, 'Mozilla/5.0');
     assert.strictEqual(parsed.clientIp, '203.0.113.10');
     assert.ok(parsed.capturedAt instanceof Date);
@@ -107,6 +112,29 @@ run('production deployment ignores the visitor environment', () => {
   withDeploymentEnv({ CMS_ENV: 'production' }, () => {
     assert.strictEqual(resolveCheckoutEnvironment({ explicit: 'staging' }), 'production');
   });
+});
+
+run('labels YouTube from gad_source and from an older landing page', () => {
+  assert.deepStrictEqual(resolveGoogleAdsNetwork({ gadSource: '3', gadCampaignId: '99' }), {
+    gadSource: '3',
+    gadCampaignId: '99',
+    adNetwork: 'YouTube',
+  });
+  assert.deepStrictEqual(resolveGoogleAdsNetwork({
+    landingPage: '/courses/fa2?gclid=abc&gad_source=3&gad_campaignid=555',
+  }), {
+    gadSource: '3',
+    gadCampaignId: '555',
+    adNetwork: 'YouTube',
+  });
+  assert.deepStrictEqual(resolveGoogleAdsNetwork({ utmSource: 'youtube' }), {
+    gadSource: null,
+    gadCampaignId: null,
+    adNetwork: 'YouTube',
+  });
+  assert.strictEqual(resolveGoogleAdsNetwork({ gadSource: '1' }).adNetwork, 'Search');
+  assert.strictEqual(resolveGoogleAdsNetwork({ gadSource: '7' }).adNetwork, 'Source 7');
+  assert.strictEqual(resolveGoogleAdsNetwork({}).adNetwork, null);
 });
 
 run('hashes email the way Google Ads expects', () => {
