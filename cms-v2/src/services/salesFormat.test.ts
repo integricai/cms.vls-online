@@ -5,6 +5,7 @@ import {
   dashboardRangeBounds,
   percentChange,
   foldTotalsToUsd,
+  formatPlainAmount,
   formatVaultPrice,
   pickDashboardCurrency,
   saleSessionLabel,
@@ -91,27 +92,60 @@ run('picks the currency with the most sales, not the largest nominal total', () 
   assert.strictEqual(pickDashboardCurrency(rows, '2026-10-01', '2026-10-25'), 'USD');
 });
 
-run('sales presets use London days, with last week as the last 7 days', () => {
-  assert.deepStrictEqual(salesPresetBounds('today', '2026-10-28'), {
-    start: '2026-10-28',
-    end: '2026-10-28',
+run('sales presets use Monday weeks and inclusive recent months', () => {
+  assert.deepStrictEqual(salesPresetBounds('today', '2026-10-31'), {
+    start: '2026-10-31',
+    end: '2026-10-31',
   });
-  assert.deepStrictEqual(salesPresetBounds('yesterday', '2026-10-28'), {
-    start: '2026-10-27',
-    end: '2026-10-27',
+  assert.deepStrictEqual(salesPresetBounds('yesterday', '2026-10-31'), {
+    start: '2026-10-30',
+    end: '2026-10-30',
   });
-  assert.deepStrictEqual(salesPresetBounds('last_week', '2026-10-28'), {
-    start: '2026-10-22',
-    end: '2026-10-28',
+  assert.deepStrictEqual(salesPresetBounds('this_week', '2026-10-31'), {
+    start: '2026-10-26',
+    end: '2026-10-31',
   });
-  assert.deepStrictEqual(salesPresetBounds('last_month', '2026-10-28'), {
+  assert.deepStrictEqual(salesPresetBounds('last_week', '2026-10-31'), {
+    start: '2026-10-19',
+    end: '2026-10-25',
+  });
+  assert.deepStrictEqual(salesPresetBounds('last_month', '2026-10-31'), {
     start: '2026-09-01',
     end: '2026-09-30',
   });
-  assert.deepStrictEqual(salesPresetBounds('last_year', '2026-10-28'), {
+  assert.deepStrictEqual(salesPresetBounds('last_3_months', '2026-10-31'), {
+    start: '2026-08-01',
+    end: '2026-10-31',
+  });
+  assert.deepStrictEqual(salesPresetBounds('last_6_months', '2026-10-31'), {
+    start: '2026-05-01',
+    end: '2026-10-31',
+  });
+  assert.deepStrictEqual(salesPresetBounds('last_year', '2026-10-31'), {
     start: '2025-01-01',
     end: '2025-12-31',
   });
+});
+
+run('a Monday starts a new week and a Sunday closes the current one', () => {
+  assert.deepStrictEqual(salesPresetBounds('this_week', '2026-11-02'), {
+    start: '2026-11-02',
+    end: '2026-11-02',
+  });
+  assert.deepStrictEqual(salesPresetBounds('last_week', '2026-11-02'), {
+    start: '2026-10-26',
+    end: '2026-11-01',
+  });
+  assert.deepStrictEqual(salesPresetBounds('this_week', '2026-11-01'), {
+    start: '2026-10-26',
+    end: '2026-11-01',
+  });
+});
+
+run('plain export amounts keep two decimals and drop the currency sign', () => {
+  assert.strictEqual(formatPlainAmount(243.7), '243.70');
+  assert.strictEqual(formatPlainAmount(0), '0.00');
+  assert.strictEqual(formatPlainAmount(null), '');
 });
 
 run('folds a pound day into the dollar total', () => {

@@ -4,7 +4,15 @@ const LONDON = 'Europe/London';
 
 export type DashboardRange = 'this_month' | 'last_month' | 'last_7_days' | 'last_30_days';
 
-export type SalesPreset = 'today' | 'yesterday' | 'last_week' | 'last_month' | 'last_year';
+export type SalesPreset =
+  | 'today'
+  | 'yesterday'
+  | 'this_week'
+  | 'last_week'
+  | 'last_month'
+  | 'last_3_months'
+  | 'last_6_months'
+  | 'last_year';
 
 export function londonToday(now = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -156,6 +164,12 @@ function formatMoneyAmount(amount: number | null | undefined, currency: string |
   }
 }
 
+/** Two-decimal amount with no currency symbol, for the sales spreadsheet. */
+export function formatPlainAmount(amount: number | null | undefined): string {
+  if (amount == null || Number.isNaN(Number(amount))) return '';
+  return Number(amount).toFixed(2);
+}
+
 /** Local price the student saw, with the dollar charge beside it when they differ. */
 export function formatVaultPrice(input: {
   amount: number | null | undefined;
@@ -177,12 +191,27 @@ export function isDashboardRange(value: string): value is DashboardRange {
 export function isSalesPreset(value: string): value is SalesPreset {
   return value === 'today'
     || value === 'yesterday'
+    || value === 'this_week'
     || value === 'last_week'
     || value === 'last_month'
+    || value === 'last_3_months'
+    || value === 'last_6_months'
     || value === 'last_year';
 }
 
-/** London dates for the sales page presets. Last week is the last 7 days, including today. */
+/** Monday of the week that contains this calendar date. Weeks start on Monday. */
+export function weekStartMonday(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const utcDay = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  const daysSinceMonday = utcDay === 0 ? 6 : utcDay - 1;
+  return addIsoDays(isoDate, -daysSinceMonday);
+}
+
+/**
+ * London dates for the sales page presets. Weeks start on Monday.
+ * Last 3 and last 6 months include the current month: on 31 Oct 2026 that is
+ * 1 Aug–31 Oct and 1 May–31 Oct. Last year is the previous calendar year.
+ */
 export function salesPresetBounds(
   preset: SalesPreset,
   today = londonToday(),
@@ -192,11 +221,17 @@ export function salesPresetBounds(
     const day = addIsoDays(today, -1);
     return { start: day, end: day };
   }
-  if (preset === 'last_week') return { start: addIsoDays(today, -6), end: today };
+  if (preset === 'this_week') return { start: weekStartMonday(today), end: today };
+  if (preset === 'last_week') {
+    const end = addIsoDays(weekStartMonday(today), -1);
+    return { start: weekStartMonday(end), end };
+  }
   if (preset === 'last_month') {
     const endLast = addIsoDays(monthStart(today), -1);
     return { start: monthStart(endLast), end: endLast };
   }
+  if (preset === 'last_3_months') return { start: monthStart(shiftMonth(today, -2)), end: today };
+  if (preset === 'last_6_months') return { start: monthStart(shiftMonth(today, -5)), end: today };
   const year = Number(today.slice(0, 4)) - 1;
   return { start: `${year}-01-01`, end: `${year}-12-31` };
 }

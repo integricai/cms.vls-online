@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/client';
 import type { SaleListItem, SalesFeeSyncResult, Tutor } from '../../../../shared/types';
-import { formatDisplayDate, formatVaultPrice, isSalesPreset, londonToday, monthStart, salesPresetBounds, saleSessionLabel, type SalesPreset } from '../../../../shared/salesFormat';
+import { formatDisplayDate, formatPlainAmount, formatVaultPrice, isSalesPreset, londonToday, monthStart, salesPresetBounds, saleSessionLabel, type SalesPreset } from '../../../../shared/salesFormat';
 
 const RANGE_PRESETS: Array<{ id: SalesPreset; label: string }> = [
   { id: 'today', label: 'Today' },
   { id: 'yesterday', label: 'Yesterday' },
+  { id: 'this_week', label: 'This week' },
   { id: 'last_week', label: 'Last week' },
   { id: 'last_month', label: 'Last month' },
+  { id: 'last_3_months', label: 'Last 3 months' },
+  { id: 'last_6_months', label: 'Last 6 months' },
   { id: 'last_year', label: 'Last year' },
 ];
 
@@ -66,6 +69,23 @@ function csvCell(value: string): string {
   return value;
 }
 
+function periodSalesTotals(rows: SaleListItem[]): Array<{ currency: string; amount: number }> {
+  const cents = new Map<string, number>();
+  for (const sale of rows) {
+    if (sale.paymentStatus === 'Refunded') continue;
+    if (sale.amount == null || Number.isNaN(Number(sale.amount))) continue;
+    const currency = (sale.currency || 'USD').trim().toUpperCase() || 'USD';
+    cents.set(currency, (cents.get(currency) ?? 0) + Math.round(Number(sale.amount) * 100));
+  }
+  return [...cents.entries()]
+    .map(([currency, value]) => ({ currency, amount: value / 100 }))
+    .sort((a, b) => {
+      if (a.currency === 'USD') return -1;
+      if (b.currency === 'USD') return 1;
+      return a.currency.localeCompare(b.currency);
+    });
+}
+
 function downloadSales(rows: SaleListItem[], from: string, to: string) {
   const header = [
     'SaleId',
@@ -79,7 +99,7 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
     'Stripe/PayPal',
     'Amount paid',
     'Stripe charge',
-    'Net Payment',
+    'Net Payment $',
   ];
   const lines = rows.map(sale => [
     String(sale.id),
@@ -93,7 +113,7 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
     processorLabel(sale),
     formatVaultPrice(sale),
     formatMoney(sale.processorFee, sale.settlementCurrency || sale.currency),
-    formatMoney(sale.netAmount, sale.settlementCurrency || sale.currency),
+    formatPlainAmount(sale.netAmount),
   ].map(csvCell).join(','));
   const blob = new Blob([`\uFEFF${header.join(',')}\n${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -208,6 +228,7 @@ export default function SalesTab() {
   }
 
   const columnCount = 13;
+  const totals = periodSalesTotals(sales);
 
   return (
     <div className="h-full overflow-auto">
@@ -222,7 +243,7 @@ export default function SalesTab() {
           <label className="text-xs font-semibold text-slate-600">
             Range
             <select
-              className="input mt-1"
+              className="input mt-1 w-auto"
               value={preset}
               onChange={event => {
                 const value = event.target.value;
@@ -279,6 +300,20 @@ export default function SalesTab() {
             Download
           </button>
           {syncingFees ? <span className="pb-2 text-xs text-slate-500">Updating Stripe fees…</span> : null}
+          <div className="ml-auto rounded-lg border border-slate-200 bg-white px-4 py-2 text-right">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Total sales</p>
+            {loading ? (
+              <p className="text-lg font-semibold text-slate-400">…</p>
+            ) : totals.length === 0 ? (
+              <p className="text-lg font-semibold text-slate-900">{formatMoney(0, 'USD')}</p>
+            ) : (
+              totals.map(total => (
+                <p key={total.currency} className="text-lg font-semibold text-slate-900">
+                  {formatMoney(total.amount, total.currency)}
+                </p>
+              ))
+            )}
+          </div>
         </div>
 
         {error ? <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
