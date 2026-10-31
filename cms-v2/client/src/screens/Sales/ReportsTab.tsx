@@ -3,6 +3,7 @@ import { api } from '../../api/client';
 import type { SaleListItem, SalesFeeSyncResult, Tutor } from '../../../../shared/types';
 import {
   formatDisplayDate,
+  formatPlainAmount,
   formatVaultPrice,
   isSalesPreset,
   londonToday,
@@ -19,6 +20,7 @@ const RANGE_PRESETS: Array<{ id: SalesPreset; label: string }> = [
   { id: 'yesterday', label: 'Yesterday' },
   { id: 'this_week', label: 'This week' },
   { id: 'last_week', label: 'Last week' },
+  { id: 'this_month', label: 'This month' },
   { id: 'last_month', label: 'Last month' },
   { id: 'last_3_months', label: 'Last 3 months' },
   { id: 'last_6_months', label: 'Last 6 months' },
@@ -77,6 +79,11 @@ function processorPaymentUrl(sale: SaleListItem): string | null {
   return `https://dashboard.stripe.com/payments/${paymentId}`;
 }
 
+function csvCell(value: string): string {
+  if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
+  return value;
+}
+
 function dollarTotals(
   rows: SaleListItem[],
   rates: Record<string, number> | null,
@@ -104,6 +111,44 @@ function reportFields(sale: SaleListItem): string[] {
     sale.countryCode ?? '',
     saleListSessionLabel(sale.durationDays, sale.expiryDate, sale.paymentReason),
   ];
+}
+
+function downloadReport(rows: SaleListItem[], from: string, to: string) {
+  const header = [
+    'SaleId',
+    'StripeId',
+    'User Name',
+    'User Email',
+    'Course',
+    'Session',
+    'Country',
+    'Payment Method',
+    'Stripe/PayPal',
+    'Amount paid',
+    'Stripe charge',
+    'Net Payment $',
+  ];
+  const lines = rows.map(sale => [
+    String(sale.id),
+    sale.providerPaymentId ?? sale.stripePaymentIntentId ?? '',
+    customerName(sale),
+    sale.customerEmail ?? '',
+    sale.courseName || `Course #${sale.courseId}`,
+    saleListSessionLabel(sale.durationDays, sale.expiryDate, sale.paymentReason),
+    countryLabel(sale.countryCode),
+    sale.paymentMethod ?? '',
+    processorLabel(sale),
+    formatVaultPrice(sale),
+    formatMoney(sale.processorFee, sale.settlementCurrency || sale.currency),
+    formatPlainAmount(sale.netAmount),
+  ].map(csvCell).join(','));
+  const blob = new Blob([`\uFEFF${header.join(',')}\n${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = from && to ? `report-${from}-to-${to}.csv` : 'report-all-time.csv';
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function openingRange(): { from: string; to: string } {
@@ -316,6 +361,14 @@ export default function ReportsTab() {
           </label>
           <button type="submit" className="btn-primary">
             Go
+          </button>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={loading || visibleSales.length === 0}
+            onClick={() => downloadReport(visibleSales, appliedFrom, appliedTo)}
+          >
+            Download
           </button>
           {syncingFees ? <span className="pb-2 text-xs text-slate-500">Updating Stripe fees…</span> : null}
           <div className="ml-auto flex flex-wrap justify-end gap-3">

@@ -113,6 +113,10 @@ run('sales presets use Monday weeks and inclusive recent months', () => {
     start: '2026-10-19',
     end: '2026-10-25',
   });
+  assert.deepStrictEqual(salesPresetBounds('this_month', '2026-10-31'), {
+    start: '2026-10-01',
+    end: '2026-10-31',
+  });
   assert.deepStrictEqual(salesPresetBounds('last_month', '2026-10-31'), {
     start: '2026-09-01',
     end: '2026-09-30',

@@ -9,6 +9,7 @@ export type SalesPreset =
   | 'yesterday'
   | 'this_week'
   | 'last_week'
+  | 'this_month'
   | 'last_month'
   | 'last_3_months'
   | 'last_6_months'
@@ -217,6 +218,7 @@ export function isSalesPreset(value: string): value is SalesPreset {
     || value === 'yesterday'
     || value === 'this_week'
     || value === 'last_week'
+    || value === 'this_month'
     || value === 'last_month'
     || value === 'last_3_months'
     || value === 'last_6_months'
@@ -253,6 +255,7 @@ export function salesPresetBounds(
     const end = addIsoDays(weekStartMonday(today), -1);
     return { start: weekStartMonday(end), end };
   }
+  if (preset === 'this_month') return { start: monthStart(today), end: today };
   if (preset === 'last_month') {
     const endLast = addIsoDays(monthStart(today), -1);
     return { start: monthStart(endLast), end: endLast };
