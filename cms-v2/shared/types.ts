@@ -347,6 +347,10 @@ export interface GoogleConversionListItem {
   utmSource: string | null;
   utmMedium: string | null;
   utmCampaign: string | null;
+  countryCode: string | null;
+  adNetwork: string | null;
+  gadSource: string | null;
+  gadCampaignId: string | null;
   conversionUploadedAt: string | null;
   conversionUploadError: string | null;
 }
