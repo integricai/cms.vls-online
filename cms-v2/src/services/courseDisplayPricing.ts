@@ -5,6 +5,7 @@ import {
   resolveEvenDealsProductId,
   type EvenDealsQuote,
 } from './evenDeals';
+import { listActiveGeoPricesForCourse } from '../models/courseGeoPrice';
 import { getQualificationOfferRuleByQualification } from '../models/qualificationOfferRule';
 import {
   formatExamSessionTitle,
@@ -13,6 +14,7 @@ import {
 } from './qualificationOfferSessions';
 import { BANK_FX_NOTE, convertUsdAmount, currencyForCountry, localizeDisplayMoney } from './displayCurrency';
 import { getUsdRates, rateForCurrency } from './fxRates';
+import { normalizeExamSession } from '../../shared/sessionAccess';
 import { signPriceQuote } from './priceQuote';
 
 /** ACCA exam sittings fallback when no qualification offer rule is configured. */
@@ -222,6 +224,41 @@ function resolveSessionPlanMode(
   };
 }
 
+/**
+ * Sitting shown on the price card for this plan.
+ * Shorter plan → nearer sitting. A single plan, or a duration offer, has none.
+ */
+export function displayedExamSessionForPrice(
+  prices: CourseGeoPrice[],
+  rule: Pick<QualificationOfferRule, 'offerType' | 'examMonths' | 'cutoffDay' | 'courseIds'> | null,
+  courseId: number | null,
+  coursePriceId: number,
+  now: Date = new Date(),
+): ExamSession | null {
+  const active = prices.filter(price => price.isActive);
+  if (active.length < 2) return null;
+  const planSlice = [...active]
+    .sort((a, b) => planDurationSortKey(a) - planDurationSortKey(b))
+    .slice(0, 2);
+  const index = planSlice.findIndex(price => price.id === coursePriceId);
+  if (index < 0) return null;
+  const sessionMode = resolveSessionPlanMode(rule, now, planSlice.length, courseId);
+  if (sessionMode.mode !== 'sessions' || sessionMode.sessions.length === 0) return null;
+  return sessionMode.sessions[index] ?? sessionMode.sessions[sessionMode.sessions.length - 1] ?? null;
+}
+
+/** Same sitting the course page would show for this price. */
+export async function examSessionForCoursePrice(
+  courseId: number,
+  qualification: string | null | undefined,
+  coursePriceId: number,
+  now: Date = new Date(),
+): Promise<ExamSession | null> {
+  const prices = await listActiveGeoPricesForCourse(courseId);
+  const rule = await getQualificationOfferRuleByQualification(qualification);
+  return displayedExamSessionForPrice(prices, rule, courseId, coursePriceId, now);
+}
+
 export async function buildCourseDisplayPricing(
   input: {
     zenlerCourseId: string;
@@ -343,12 +380,14 @@ export async function buildCourseDisplayPricing(
     input.fxRates,
   );
   plans = plans.map((plan) => {
+    const session = normalizeExamSession(plan.sessionMonth, plan.sessionYear);
     const priceQuote = signPriceQuote({
       coursePriceId: plan.coursePriceId,
       amountUsd: plan.effectiveAmount,
       listAmountUsd: plan.amount,
       displayAmount: plan.displayAmount,
       displayCurrency: plan.displayCurrency || 'USD',
+      ...(session ? { sessionMonth: session.month, sessionYear: session.year } : {}),
     });
     return priceQuote ? { ...plan, priceQuote } : plan;
   });

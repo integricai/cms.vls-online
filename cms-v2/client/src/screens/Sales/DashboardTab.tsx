@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, getCurrentUser } from '../../api/client';
 import type { SalesDashboard, SalesDashboardCard, SalesDashboardPoint, SalesFeeSyncResult } from '../../../../shared/types';
 import { formatDisplayDate, formatVaultPrice, londonToday, monthStart, shiftMonth, type DashboardRange } from '../../../../shared/salesFormat';
+import { normalizeExamSession, sessionSaleLabel } from '../../../../shared/sessionAccess';
 
 const RANGES: Array<{ id: DashboardRange; label: string }> = [
   { id: 'this_month', label: 'This month' },
@@ -9,6 +10,11 @@ const RANGES: Array<{ id: DashboardRange; label: string }> = [
   { id: 'last_7_days', label: 'Last 7 days' },
   { id: 'last_30_days', label: 'Last 30 days' },
 ];
+
+function sittingLabel(month: number | null, year: number | null): string | null {
+  const session = normalizeExamSession(month, year);
+  return session ? sessionSaleLabel(session.month, session.year) : null;
+}
 
 function formatMoney(amount: number, currency: string, compact = false): string {
   const code = currency || 'USD';
@@ -271,7 +277,9 @@ export default function DashboardTab() {
                 <ul className="mt-3 space-y-3">
                   {dashboard.activity.length === 0 ? (
                     <li className="text-sm text-slate-500">No enrolments yet.</li>
-                  ) : dashboard.activity.map(item => (
+                  ) : dashboard.activity.map(item => {
+                    const sitting = sittingLabel(item.sessionMonth, item.sessionYear);
+                    return (
                     <li key={item.id} className="flex gap-3">
                       <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-xs font-semibold text-indigo-700">
                         {item.name.slice(0, 1).toUpperCase()}
@@ -280,11 +288,13 @@ export default function DashboardTab() {
                         <p className="text-sm text-slate-800">
                           <span className="font-semibold">{item.name}</span>
                           {' '}enrolled in {item.courseName}
+                          {sitting ? ` (${sitting})` : ''}
                         </p>
                         <p className="text-xs text-slate-400">{timeAgo(item.soldAt)}</p>
                       </div>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               </aside>
             </div>
@@ -310,7 +320,7 @@ export default function DashboardTab() {
                         <td className="px-4 py-2">{order.courseName}</td>
                         <td className="px-4 py-2">{order.customerName}</td>
                         <td className="px-4 py-2 whitespace-nowrap">{formatDisplayDate(order.soldAt)}</td>
-                        <td className="px-4 py-2">{order.type}</td>
+                        <td className="px-4 py-2">{order.type === 'Refunded' ? 'Refunded' : (sittingLabel(order.sessionMonth, order.sessionYear) ?? order.type)}</td>
                         <td className="px-4 py-2 whitespace-nowrap">{formatVaultPrice(order)}</td>
                       </tr>
                     ))}

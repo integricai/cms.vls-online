@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { schoolAccessState } from './schoolAccess';
 import { summarizeSchoolCourseAccess } from './schoolCourseAccess';
 
 function run(name: string, fn: () => void): void {
@@ -86,6 +87,19 @@ run('does not block payment when an enrollment read fails', () => {
   });
   assert.equal(access.ownsAll, false);
   assert.deepEqual(access.ownedCourses, []);
+});
+
+run('ended school access is not still being set up', () => {
+  for (const status of ['expired', 'expire_skipped', 'unenroll_failed', 'unenroll_gave_up']) {
+    assert.equal(schoolAccessState({
+      zenlerEnrollmentStatus: status,
+      zenlerCourseId: '10',
+    }), 'unavailable');
+  }
+  assert.equal(schoolAccessState({
+    zenlerEnrollmentStatus: 'expire_deferred',
+    zenlerCourseId: '10',
+  }), 'ready');
 });
 
 console.log('school course access tests passed');

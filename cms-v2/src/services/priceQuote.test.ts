@@ -61,6 +61,34 @@ run('rejects a changed amount and an expired quote', () => {
   assert.strictEqual(verifyPriceQuote(expired), null);
 });
 
+run('keeps the sitting the page showed, and quotes without one still verify', () => {
+  const token = signPriceQuote({
+    coursePriceId: 42,
+    amountUsd: 87.5,
+    listAmountUsd: 175,
+    displayAmount: 65.72,
+    displayCurrency: 'GBP',
+    sessionMonth: 12,
+    sessionYear: 2026,
+  });
+  const quote = verifyPriceQuote(token);
+  assert.ok(quote);
+  assert.strictEqual(quote.sessionMonth, 12);
+  assert.strictEqual(quote.sessionYear, 2026);
+
+  const plain = signPriceQuote({
+    coursePriceId: 42,
+    amountUsd: 87.5,
+    listAmountUsd: 175,
+    displayAmount: 65.72,
+    displayCurrency: 'GBP',
+  });
+  const old = verifyPriceQuote(plain);
+  assert.ok(old);
+  assert.strictEqual(old.sessionMonth, undefined);
+  assert.strictEqual(old.sessionYear, undefined);
+});
+
 if (previous === undefined) delete process.env.PRICE_QUOTE_SECRET;
 else process.env.PRICE_QUOTE_SECRET = previous;
 

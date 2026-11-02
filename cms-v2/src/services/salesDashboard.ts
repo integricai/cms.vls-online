@@ -152,6 +152,8 @@ export async function buildSalesDashboard(range: DashboardRange, now = new Date(
       name: personName(row.firstName, row.lastName),
       courseName: row.courseName || 'a course',
       soldAt: new Date(row.soldAt).toISOString(),
+      sessionMonth: row.sessionMonth,
+      sessionYear: row.sessionYear,
     })),
     recentOrders: orders.map(row => ({
       id: row.id,
@@ -162,7 +164,9 @@ export async function buildSalesDashboard(range: DashboardRange, now = new Date(
       currency: row.currency,
       presentmentAmount: row.presentmentAmount,
       presentmentCurrency: row.presentmentCurrency,
-      type: row.refunded ? 'Refunded' : 'One-time',
+      type: row.refunded ? 'Refunded' as const : 'One-time' as const,
+      sessionMonth: row.sessionMonth,
+      sessionYear: row.sessionYear,
     })),
   };
 }

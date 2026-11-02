@@ -3,6 +3,7 @@ import type { CourseGeoPrice, QualificationOfferRule } from '../../shared/types'
 import { effectiveAmount } from './courseGeoPriceValidation';
 import {
   buildCourseDisplayPricing,
+  displayedExamSessionForPrice,
   getNextAccaExamSessions,
   monthsUntilExamSession,
   planDurationSortKey,
@@ -141,6 +142,26 @@ await run('preview CIMA uses duration labels', () => {
   const preview = previewQualificationOffers(cimaRule(), new Date('2026-08-15T12:00:00'));
   assert.strictEqual(preview.plans[0]!.sessionTitle, '6 months');
   assert.strictEqual(preview.plans[1]!.sessionTitle, '1 year');
+});
+
+await run('price card maps the shorter plan to the nearer sitting', () => {
+  const prices = [
+    geoPrice({ id: 1, name: 'Six months', amount: 180, durationDays: 180, isDefault: true }),
+    geoPrice({ id: 2, name: 'Three months', amount: 120, durationDays: 90 }),
+  ];
+  const asOf = new Date('2026-10-30T12:00:00Z');
+  assert.deepStrictEqual(
+    displayedExamSessionForPrice(prices, accaRule(12), 1, 2, asOf),
+    { month: 12, year: 2026 },
+  );
+  assert.deepStrictEqual(
+    displayedExamSessionForPrice(prices, accaRule(12), 1, 1, asOf),
+    { month: 3, year: 2027 },
+  );
+  assert.strictEqual(
+    displayedExamSessionForPrice(prices, cimaRule(), 1, 2, asOf),
+    null,
+  );
 });
 
 await run('months until September from August is 1', () => {

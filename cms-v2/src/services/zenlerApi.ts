@@ -59,49 +59,63 @@ function zenlerHeaders(): Record<string, string> {
   };
 }
 
+const ZENLER_TIMEOUT_MS = 12_000;
+
 async function zenlerFetch<T>(path: string, options?: RequestInit): Promise<T> {
   if (!credentialsConfigured()) {
     throw new Error('Zenler API credentials are not configured');
   }
 
-  const response = await fetch(`${ZENLER_BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      ...zenlerHeaders(),
-      ...(options?.headers ?? {}),
-    },
-  });
-
-  const raw = await response.text();
-  if (raw && /^\s*</.test(raw)) {
-    throw new Error(
-      `Zenler API returned an HTML error page for ${path.split('?')[0]} `
-        + '(often a broken/unsupported course report).',
-    );
-  }
-
-  let payload: ZenlerApiResponse<T> | null = null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ZENLER_TIMEOUT_MS);
   try {
-    payload = raw ? (JSON.parse(raw) as ZenlerApiResponse<T>) : null;
-  } catch {
-    /* non-JSON body */
-  }
+    const response = await fetch(`${ZENLER_BASE_URL}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        ...zenlerHeaders(),
+        ...(options?.headers ?? {}),
+      },
+    });
 
-  if (!response.ok) {
-    throw new Error(`Zenler API ${response.status}: ${formatZenlerErrorMessage(payload, raw || response.statusText)}`);
-  }
+    const raw = await response.text();
+    if (raw && /^\s*</.test(raw)) {
+      throw new Error(
+        `Zenler API returned an HTML error page for ${path.split('?')[0]} `
+          + '(often a broken/unsupported course report).',
+      );
+    }
 
-  if (!payload) {
-    throw new Error('Zenler API returned an empty response');
-  }
+    let payload: ZenlerApiResponse<T> | null = null;
+    try {
+      payload = raw ? (JSON.parse(raw) as ZenlerApiResponse<T>) : null;
+    } catch {
+      /* non-JSON body */
+    }
 
-  // Create-user returns response_code 201 ("People added successfully"). Treating
-  // that as a failure skipped course enrolment for every new student.
-  if (payload.response_code != null && payload.response_code !== 200 && payload.response_code !== 201) {
-    throw new Error(formatZenlerErrorMessage(payload, `Zenler API error (${payload.response_code})`));
-  }
+    if (!response.ok) {
+      throw new Error(`Zenler API ${response.status}: ${formatZenlerErrorMessage(payload, raw || response.statusText)}`);
+    }
 
-  return payload.data;
+    if (!payload) {
+      throw new Error('Zenler API returned an empty response');
+    }
+
+    // Create-user returns response_code 201 ("People added successfully"). Treating
+    // that as a failure skipped course enrolment for every new student.
+    if (payload.response_code != null && payload.response_code !== 200 && payload.response_code !== 201) {
+      throw new Error(formatZenlerErrorMessage(payload, `Zenler API error (${payload.response_code})`));
+    }
+
+    return payload.data;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`Zenler API timed out after ${ZENLER_TIMEOUT_MS / 1000}s for ${path.split('?')[0]}`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function formatZenlerErrorMessage(
