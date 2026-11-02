@@ -101,8 +101,17 @@ export function discountCountryOptions(): Array<{ code: string; name: string; cu
     .sort((a, b) => a.name.localeCompare(b.name, 'en'));
 }
 
+/** Round up to the next multiple of 5. 82.50 → 85, 97.10 → 100, 112.04 → 115. Exact multiples stay put. */
+export function roundUpToFive(amount: number): number {
+  if (!Number.isFinite(amount) || amount <= 0) return amount;
+  const cents = Math.round(amount * 100);
+  const step = 500;
+  return (Math.ceil(cents / step) * step) / 100;
+}
+
 export function convertUsdAmount(amountUsd: number, rate: number): number {
-  return Math.round(amountUsd * rate * 100) / 100;
+  const converted = Math.round(amountUsd * rate * 100) / 100;
+  return roundUpToFive(converted);
 }
 
 export function formatDisplayMoney(amount: number, currency: string): string {

@@ -45,6 +45,8 @@ export type PublishedCoursePricePlan = {
   badge: string | null;
   geoPricingApplied: boolean;
   geoRegionCode: string | null;
+  /** EvenDeals saw a VPN on this visitor. The country discount is withheld when the deal blocks VPNs. */
+  isVpn: boolean;
   /** Signed snapshot of the amounts on this card. Enrol sends it back to checkout. */
   priceQuote?: string;
 };
@@ -176,6 +178,48 @@ function buildPlanFields(
     badge: options.badge,
     geoPricingApplied: false,
     geoRegionCode: null,
+    isVpn: false,
+  };
+}
+
+/** Attach the EvenDeals result to a plan. A VPN flag is kept even when the discount is withheld. */
+export function applyVisitorDealToPlan(
+  plan: PublishedCoursePricePlan,
+  quote: EvenDealsQuote | null,
+  countryCode: string | null,
+  ignoreVpnBlock: boolean,
+): PublishedCoursePricePlan {
+  const isVpn = quote?.isVpn === true;
+  if (!quote || quote.discountPercentage <= 0) {
+    return { ...plan, isVpn };
+  }
+
+  const regional = applyEvenDealsQuote(
+    plan.effectiveAmount,
+    quote,
+    countryCode,
+    ignoreVpnBlock,
+  );
+  if (!regional.regionalPricingApplied) {
+    return { ...plan, isVpn };
+  }
+
+  const effective = regional.effectiveAmount;
+  const compareAt = plan.compareAt != null && plan.compareAt > effective
+    ? plan.compareAt
+    : (plan.effectiveAmount > effective ? plan.effectiveAmount : plan.compareAt);
+
+  return {
+    ...plan,
+    effectiveAmount: effective,
+    displayAmount: effective,
+    compareAt,
+    discountPercent: regional.geoDiscountPercent,
+    formatted: formatUsd(effective),
+    formattedCompareAt: compareAt != null ? formatUsd(compareAt) : null,
+    geoPricingApplied: true,
+    geoRegionCode: regional.geoRegionCode,
+    isVpn,
   };
 }
 
@@ -340,38 +384,13 @@ export async function buildCourseDisplayPricing(
       quoteCache.set(productKey, await fetchEvenDealsQuote(input.ipAddress, price.evenDeals));
     }
 
-    const quote = quoteCache.get(productKey);
-    if (!quote || quote.discountPercentage <= 0) {
-      resolvedPlans.push(plan);
-      continue;
-    }
-
-    const regional = applyEvenDealsQuote(
-      plan.effectiveAmount,
+    const quote = quoteCache.get(productKey) ?? null;
+    resolvedPlans.push(applyVisitorDealToPlan(
+      plan,
       quote,
       input.countryCode ?? null,
       ignoreVpnBlock,
-    );
-    if (!regional.regionalPricingApplied) {
-      resolvedPlans.push(plan);
-      continue;
-    }
-
-    const effective = regional.effectiveAmount;
-    const compareAt = plan.compareAt != null && plan.compareAt > effective
-      ? plan.compareAt
-      : (plan.effectiveAmount > effective ? plan.effectiveAmount : plan.compareAt);
-
-    resolvedPlans.push({
-      ...plan,
-      effectiveAmount: effective,
-      displayAmount: effective,
-      compareAt,
-      formatted: formatUsd(effective),
-      formattedCompareAt: compareAt != null ? formatUsd(compareAt) : null,
-      geoPricingApplied: true,
-      geoRegionCode: regional.geoRegionCode,
-    });
+    ));
   }
 
   plans = await applyLocalDisplayCurrency(

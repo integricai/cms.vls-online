@@ -2,6 +2,7 @@ import assert from 'assert';
 import {
   BANK_FX_NOTE,
   convertUsdAmount,
+  roundUpToFive,
   currencyForCountry,
   formatChargedAsUsd,
   formatDisplayMoney,
@@ -34,11 +35,19 @@ run('maps India and Pakistan to local currency', () => {
   assert.strictEqual(currencyForCountry(null), 'USD');
 });
 
+run('rounds money up to the next multiple of 5', () => {
+  assert.strictEqual(roundUpToFive(82.5), 85);
+  assert.strictEqual(roundUpToFive(97.1), 100);
+  assert.strictEqual(roundUpToFive(112.04), 115);
+  assert.strictEqual(roundUpToFive(100), 100);
+  assert.strictEqual(roundUpToFive(80), 80);
+});
+
 run('converts and formats INR without paise', () => {
   const amount = convertUsdAmount(89, 83);
-  assert.strictEqual(amount, 7387);
+  assert.strictEqual(amount, 7390);
   const formatted = formatDisplayMoney(amount, 'INR');
-  assert.match(formatted, /7,387/);
+  assert.match(formatted, /7,390/);
   assert.ok(!formatted.includes('.'), formatted);
 });
 
@@ -63,7 +72,7 @@ run('localizeDisplayMoney shows local price plus charged-as USD', () => {
   assert.strictEqual(localized.fxNote, BANK_FX_NOTE);
   assert.strictEqual(localized.formattedChargeUsd, formatChargedAsUsd(89));
   assert.strictEqual(localized.formattedChargeUsd, 'Charged as $89 USD');
-  assert.match(localized.formatted, /7,387|₹/);
+  assert.match(localized.formatted, /7,390|₹/);
   assert.match(localized.formattedCompareAt ?? '', /9,960|₹/);
 });
 
@@ -74,7 +83,7 @@ run('converts a discount link into the visitor currency', () => {
     countryCode: 'GB',
     rates: { GBP: 0.8 },
   });
-  assert.deepStrictEqual(gbp, { amount: 176, currency: 'GBP' });
+  assert.deepStrictEqual(gbp, { amount: 180, currency: 'GBP' });
 
   const usd = presentCheckoutAmount({
     amount: 220,
