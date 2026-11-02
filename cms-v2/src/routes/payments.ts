@@ -998,6 +998,7 @@ function publicPaymentStatus(order: PaymentOrder, confirmationEmailFailed = fals
     optionType: order.optionType,
     amount: order.amount,
     currency: order.currency,
+    transactionId: `po-${order.id}`,
     countryCode: order.countryCode,
     coursePriceId: order.coursePriceId,
     zenlerEnrollmentStatus: order.zenlerEnrollmentStatus,
