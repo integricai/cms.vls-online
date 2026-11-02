@@ -1,4 +1,4 @@
--- Exam sittings. 067 is already the discount and settlement migration.
+-- Exam sittings. Each statement is safe to repeat, so a database that ran this as 068 is unaffected.
 -- Columns only. Named sittings are shortened later, after SESSION_BACKFILL_APPLY=true.
 ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS session_month SMALLINT;
 ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS session_year SMALLINT;

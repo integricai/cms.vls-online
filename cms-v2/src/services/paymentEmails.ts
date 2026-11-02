@@ -1,7 +1,7 @@
 import type { PaymentOrder } from '../models/paymentOrder';
 import type { ZenlerEnrollmentEmailContext } from './zenlerEnrollmentEnsure';
 import { formatDisplayMoney } from './displayCurrency';
-import { VLS_SCHOOL_LOGIN_URL, VLS_SCHOOL_PASSWORD_RESET_URL } from './schoolAccess';
+import { orderHasSchoolCourse, VLS_SCHOOL_LOGIN_URL, VLS_SCHOOL_PASSWORD_RESET_URL } from './schoolAccess';
 
 const VLS_SITE_URL = 'https://vls-online.com';
 const BRAND = {
@@ -376,6 +376,47 @@ export async function sendStudentPaymentConfirmation(
     ? formatDisplayMoney(order.presentmentAmount as number, order.presentmentCurrency as string)
     : formatDisplayMoney(order.amount, order.currency || 'USD');
 
+  if (!orderHasSchoolCourse(order)) {
+    const text = `Hi ${name},
+
+Thank you for your payment.
+
+We have successfully received your payment for:
+
+Description: ${order.courseTitle}
+Amount paid: ${amount}
+
+Your payment has been confirmed.
+
+If you have any questions, please reply to this email or contact our support team.
+
+Kind regards,
+VLS Online`;
+
+    const bodyHtml = `
+${p(`Hi ${esc(name)},`)}
+${p(`Thank you for your payment.`)}
+${p(`We have successfully received your payment for:`)}
+${detailTable([
+    { label: 'Description', value: order.courseTitle },
+    { label: 'Amount paid', value: amount },
+  ])}
+${p(`Your payment has been confirmed.`)}
+${p(`If you have any questions, please reply to this email or contact our support team.`)}`;
+
+    await sendEmail({
+      to,
+      subject: 'Payment confirmation - VLS Online',
+      text,
+      html: renderBrandedEmail({
+        title: 'Payment confirmation',
+        preheader: `Payment confirmed for ${order.courseTitle} — ${amount}`,
+        bodyHtml,
+      }),
+    });
+    return true;
+  }
+
   const staged = stagingPurchaseConfirmation({
     name,
     email: to,
@@ -442,41 +483,62 @@ ${accessInstructions.html}`;
   return true;
 }
 
-export async function sendCustomPaymentOfferEmail(input: {
+export function customPaymentOfferMessage(input: {
   firstName: string;
-  email: string;
   courseTitle: string;
   amount: number;
   currency: string;
-  durationDays: number;
+  durationDays: number | null;
   checkoutUrl: string;
-}): Promise<void> {
+}): { subject: string; text: string; bodyHtml: string; title: string; preheader: string } {
   const name = input.firstName.trim() || 'Student';
   const amount = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: input.currency || 'USD',
   }).format(input.amount);
-  const durationLabel = input.durationDays === 1
-    ? '1 day'
-    : `${input.durationDays} days`;
+  const hasCourse = input.durationDays != null;
+  const durationLabel = !hasCourse
+    ? ''
+    : input.durationDays === 1
+      ? '1 day'
+      : `${input.durationDays} days`;
+  const itemLabel = hasCourse ? 'Course' : 'Description';
+  const subject = hasCourse
+    ? `Your VLS Online course payment link — ${input.courseTitle}`
+    : `Your VLS Online payment link — ${input.courseTitle}`;
+  const arrangement = hasCourse
+    ? 'Please find below the details of your course payment arrangement:'
+    : 'Please find below the details of your payment:';
+  const payPrompt = hasCourse
+    ? 'To complete your enrolment, please make payment securely via the link below:'
+    : 'To complete your payment, please use the link below:';
+  const payPromptHtml = hasCourse
+    ? 'To complete your enrolment, please make payment securely using the button below:'
+    : 'To complete your payment, please use the button below:';
+  const afterPayment = hasCourse
+    ? 'Once payment has been received, you will receive a confirmation email with instructions on how to access your course.'
+    : 'Once payment has been received, you will receive a confirmation email.';
 
-  const subject = `Your VLS Online course payment link — ${input.courseTitle}`;
+  const detailRows = [
+    { label: itemLabel, value: input.courseTitle },
+    { label: 'Amount due', value: amount },
+    ...(hasCourse ? [{ label: 'Access duration', value: durationLabel }] : []),
+  ];
 
   const text = `Dear ${name},
 
 Thank you for your interest in continuing your studies with VLS Online.
 
-Please find below the details of your course payment arrangement:
+${arrangement}
 
-Course: ${input.courseTitle}
-Amount due: ${amount}
-Access duration: ${durationLabel}
+${itemLabel}: ${input.courseTitle}
+Amount due: ${amount}${hasCourse ? `\nAccess duration: ${durationLabel}` : ''}
 
-To complete your enrolment, please make payment securely via the link below:
+${payPrompt}
 
 ${input.checkoutUrl}
 
-Once payment has been received, you will receive a confirmation email with instructions on how to access your course.
+${afterPayment}
 
 If you have any questions, please reply to this email or contact our support team.
 
@@ -487,27 +549,43 @@ https://vls-online.com`;
   const bodyHtml = `
 ${p(`Dear ${esc(name)},`)}
 ${p(`Thank you for your interest in continuing your studies with VLS Online.`)}
-${p(`Please find below the details of your course payment arrangement:`)}
-${detailTable([
-    { label: 'Course', value: input.courseTitle },
-    { label: 'Amount due', value: amount },
-    { label: 'Access duration', value: durationLabel },
-  ])}
-${p(`To complete your enrolment, please make payment securely using the button below:`)}
+${p(arrangement)}
+${detailTable(detailRows)}
+${p(payPromptHtml)}
 ${ctaButton(input.checkoutUrl, `Pay ${amount} securely`)}
 ${p(`<span style="color:${BRAND.muted};font-size:13px;">Or copy and paste this link into your browser:</span><br>
 <a href="${esc(input.checkoutUrl)}" style="color:${BRAND.navySoft};font-size:13px;word-break:break-all;">${esc(input.checkoutUrl)}</a>`)}
-${p(`Once payment has been received, you will receive a confirmation email with instructions on how to access your course.`)}
+${p(afterPayment)}
 ${p(`If you have any questions, please reply to this email or contact our support team.`)}`;
+
+  return {
+    subject,
+    text,
+    bodyHtml,
+    title: hasCourse ? 'Course payment invitation' : 'Payment invitation',
+    preheader: `Complete payment for ${input.courseTitle} — ${amount}`,
+  };
+}
+
+export async function sendCustomPaymentOfferEmail(input: {
+  firstName: string;
+  email: string;
+  courseTitle: string;
+  amount: number;
+  currency: string;
+  durationDays: number | null;
+  checkoutUrl: string;
+}): Promise<void> {
+  const message = customPaymentOfferMessage(input);
 
   await sendEmail({
     to: input.email,
-    subject,
-    text,
+    subject: message.subject,
+    text: message.text,
     html: renderBrandedEmail({
-      title: 'Course payment invitation',
-      preheader: `Complete payment for ${input.courseTitle} — ${amount}`,
-      bodyHtml,
+      title: message.title,
+      preheader: message.preheader,
+      bodyHtml: message.bodyHtml,
     }),
   });
 }
@@ -519,16 +597,21 @@ export async function sendStudentRefundConfirmation(order: PaymentOrder): Promis
   const name = order.studentName || 'Student';
   const option = order.optionType || 'Course payment';
   const amount = formatAmount(order);
+  const hasCourse = orderHasSchoolCourse(order);
+  const itemLabel = hasCourse ? 'Course' : 'Description';
+  const accessNote = hasCourse
+    ? 'Your course access has been revoked. The refund will be returned to your original payment method and should appear within 5–10 business days, depending on your bank.'
+    : 'The refund will be returned to your original payment method and should appear within 5–10 business days, depending on your bank.';
 
   const text = `Hi ${name},
 
 We have initiated a refund for your VLS Online purchase.
 
-Course: ${order.courseTitle}
+${itemLabel}: ${order.courseTitle}
 Option: ${option}
 Refund amount: ${amount}
 
-Your course access has been revoked. The refund will be returned to your original payment method and should appear within 5–10 business days, depending on your bank.
+${accessNote}
 
 If you have any questions, please reply to this email or contact our support team.
 
@@ -539,11 +622,13 @@ VLS Online`;
 ${p(`Hi ${esc(name)},`)}
 ${p(`We have initiated a refund for your VLS Online purchase.`)}
 ${detailTable([
-    { label: 'Course', value: order.courseTitle },
+    { label: itemLabel, value: order.courseTitle },
     { label: 'Option', value: option },
     { label: 'Refund amount', value: amount },
   ])}
-${p(`Your course access has been revoked. The refund will be returned to your original payment method and should appear within <strong>5–10 business days</strong>, depending on your bank.`)}
+${p(hasCourse
+    ? `Your course access has been revoked. The refund will be returned to your original payment method and should appear within <strong>5–10 business days</strong>, depending on your bank.`
+    : `The refund will be returned to your original payment method and should appear within <strong>5–10 business days</strong>, depending on your bank.`)}
 ${p(`If you have any questions, please reply to this email or contact our support team.`)}`;
 
   await sendEmail({
@@ -633,9 +718,11 @@ export async function sendAdminPaymentNotification(order: PaymentOrder): Promise
   if (!to) return false;
 
   const amount = formatAmount(order);
+  const hasCourse = orderHasSchoolCourse(order);
+  const itemLabel = hasCourse ? 'Course title' : 'Description';
   const text = `Student name: ${order.studentName ?? ''}
 Student email: ${order.studentEmail ?? order.providerCustomerEmail ?? order.stripeCustomerEmail ?? ''}
-Course title: ${order.courseTitle}
+${itemLabel}: ${order.courseTitle}
 Option type: ${order.optionType ?? ''}
 Amount paid: ${amount}
 Provider: ${order.provider}
@@ -644,11 +731,13 @@ Payment date/time: ${order.paidAt?.toISOString() ?? ''}`;
 
   await sendEmail({
     to,
-    subject: `New course payment received - ${order.courseTitle}`,
+    subject: hasCourse
+      ? `New course payment received - ${order.courseTitle}`
+      : `New payment received - ${order.courseTitle}`,
     text,
     html: `<p><strong>Student name:</strong> ${esc(order.studentName)}</p>
 <p><strong>Student email:</strong> ${esc(order.studentEmail ?? order.providerCustomerEmail ?? order.stripeCustomerEmail)}</p>
-<p><strong>Course title:</strong> ${esc(order.courseTitle)}</p>
+<p><strong>${esc(itemLabel)}:</strong> ${esc(order.courseTitle)}</p>
 <p><strong>Option type:</strong> ${esc(order.optionType)}</p>
 <p><strong>Amount paid:</strong> ${esc(amount)}</p>
 <p><strong>Provider:</strong> ${esc(order.provider)}</p>

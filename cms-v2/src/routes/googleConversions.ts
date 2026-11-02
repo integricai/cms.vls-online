@@ -7,6 +7,7 @@ import type {
   GoogleConversionListItem,
   GoogleConversionListPage,
 } from '../../shared/types';
+import { resolveGoogleAdsNetwork } from '../services/attribution';
 import {
   uploadDuePurchaseConversions,
   uploadSinglePurchaseConversion,
@@ -31,7 +32,7 @@ function toListItem(order: PaymentOrder): GoogleConversionListItem {
     checkoutEnvironment: order.checkoutEnvironment,
     paidAt: toIso(order.paidAt),
     studentName: order.studentName,
-    studentEmail: order.studentEmail ?? order.stripeCustomerEmail,
+    studentEmail: order.studentEmail ?? order.providerCustomerEmail ?? order.stripeCustomerEmail,
     studentPhone: order.studentPhone,
     courseTitle: order.courseTitle,
     amount: order.amount,
@@ -43,6 +44,8 @@ function toListItem(order: PaymentOrder): GoogleConversionListItem {
     utmSource: order.utmSource,
     utmMedium: order.utmMedium,
     utmCampaign: order.utmCampaign,
+    countryCode: order.countryCode,
+    ...resolveGoogleAdsNetwork(order),
     conversionUploadedAt: toIso(order.conversionUploadedAt),
     conversionUploadError: order.conversionUploadError,
   };

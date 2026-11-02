@@ -52,6 +52,8 @@ export type CheckoutAttribution = {
   utmCampaign: string | null;
   utmContent: string | null;
   utmTerm: string | null;
+  gadSource: string | null;
+  gadCampaignId: string | null;
   landingPage: string | null;
   capturedAt: Date | null;
   userAgent: string | null;
@@ -184,6 +186,8 @@ export function parseCheckoutAttribution(
     utmCampaign: sanitizeAttributionField(raw.utmCampaign ?? raw.utm_campaign),
     utmContent: sanitizeAttributionField(raw.utmContent ?? raw.utm_content),
     utmTerm: sanitizeAttributionField(raw.utmTerm ?? raw.utm_term),
+    gadSource: sanitizeAttributionField(raw.gadSource ?? raw.gad_source),
+    gadCampaignId: sanitizeAttributionField(raw.gadCampaignId ?? raw.gad_campaignid ?? raw.gad_campaign_id),
     landingPage: sanitizeAttributionField(raw.landingPage ?? raw.landing_page),
     capturedAt: parseCapturedAt(raw.capturedAt ?? raw.captured_at),
     userAgent: sanitizeAttributionField(raw.userAgent ?? raw.user_agent ?? extras?.userAgent),
@@ -200,6 +204,49 @@ export function hashEmailForAds(email: string | null | undefined): string | null
   const normalized = email.trim().toLowerCase();
   if (!normalized || !normalized.includes('@')) return null;
   return createHash('sha256').update(normalized).digest('hex');
+}
+
+const GAD_SOURCE_LABELS: Record<string, string> = {
+  '1': 'Search',
+  '2': 'Display',
+  '3': 'YouTube',
+  '4': 'Discovery',
+  '5': 'Shopping',
+};
+
+/** Read one Google auto-tag param from a stored path + query landing page. */
+export function gadParamFromLandingPage(landingPage: string | null | undefined, name: string): string | null {
+  if (!landingPage) return null;
+  const queryIndex = landingPage.indexOf('?');
+  if (queryIndex < 0) return null;
+  const query = landingPage.slice(queryIndex + 1).split('#')[0];
+  if (!query) return null;
+  return sanitizeAttributionField(new URLSearchParams(query).get(name));
+}
+
+/** Observed gad_source label. Google has not published this map. */
+export function googleAdsNetworkLabel(gadSource: string | null | undefined): string | null {
+  const source = sanitizeAttributionField(gadSource ?? null);
+  if (!source) return null;
+  return GAD_SOURCE_LABELS[source] ?? `Source ${source}`;
+}
+
+export function resolveGoogleAdsNetwork(input: {
+  gadSource?: string | null;
+  gadCampaignId?: string | null;
+  landingPage?: string | null;
+  utmSource?: string | null;
+}): { gadSource: string | null; gadCampaignId: string | null; adNetwork: string | null } {
+  const gadSource = sanitizeAttributionField(input.gadSource)
+    ?? gadParamFromLandingPage(input.landingPage, 'gad_source');
+  const gadCampaignId = sanitizeAttributionField(input.gadCampaignId)
+    ?? gadParamFromLandingPage(input.landingPage, 'gad_campaignid');
+  let adNetwork = googleAdsNetworkLabel(gadSource);
+  if (!adNetwork) {
+    const utm = (input.utmSource ?? '').trim().toLowerCase();
+    if (utm === 'youtube' || utm === 'yt' || utm.includes('youtube')) adNetwork = 'YouTube';
+  }
+  return { gadSource, gadCampaignId, adNetwork };
 }
 
 export function hasGoogleClickId(attribution: Pick<CheckoutAttribution, 'gclid' | 'gbraid' | 'wbraid'>): boolean {

@@ -16,7 +16,7 @@ import { getTutorById, listActiveTutorsForCourse } from '../models/tutor';
  * Each course has a single teacher — no claim-invite emails.
  */
 export async function autoAssignCourseTutorForSale(sale: Sale): Promise<Sale | null> {
-  if (sale.tutorId) return sale;
+  if (sale.tutorId || sale.courseId == null) return sale.tutorId ? sale : null;
 
   const tutors = await listActiveTutorsForCourse(sale.courseId);
   if (tutors.length === 0) {
@@ -162,6 +162,7 @@ export async function adminAssignSale(saleId: number, tutorId: number): Promise<
 }> {
   const sale = await getSaleById(saleId);
   if (!sale) return { ok: false, error: 'Sale not found' };
+  if (sale.courseId == null) return { ok: false, error: 'This payment has no course to assign' };
   if (sale.tutorId) return { ok: false, error: 'Sale is already assigned to a tutor' };
 
   const order = await getPaymentOrder(sale.paymentOrderId);

@@ -62,6 +62,22 @@ function formatDate(value: string | null): string {
   });
 }
 
+const countryNames = typeof Intl.DisplayNames === 'function'
+  ? new Intl.DisplayNames(['en'], { type: 'region' })
+  : null;
+
+function countryLabel(code: string | null | undefined): string {
+  const normalized = code?.trim().toUpperCase();
+  if (!normalized) return '—';
+  try {
+    const name = countryNames?.of(normalized);
+    if (!name || name.toUpperCase() === normalized) return normalized;
+    return name;
+  } catch {
+    return normalized;
+  }
+}
+
 function shorten(value: string | null, size = 14): string {
   if (!value) return '—';
   if (value.length <= size) return value;
@@ -155,7 +171,7 @@ export default function GoogleConversions() {
       <div className="border-b border-slate-200 bg-white px-6 py-4">
         <h1 className="text-lg font-bold text-slate-800">Google Conversions</h1>
         <p className="mt-0.5 text-xs text-slate-500">
-          Paid orders saved for Google Ads upload. Retry ignores the 7-hour delay. Due uploads send production only.
+          Paid orders saved for Google Ads upload. Country is the checkout country. Network is the Google ad surface, including YouTube, when the click carried it. Retry ignores the 7-hour delay. Due uploads send production only.
         </p>
       </div>
 
@@ -251,12 +267,14 @@ export default function GoogleConversions() {
                 <th className="px-3 py-2 font-semibold">Environment</th>
                 <th className="px-3 py-2 font-semibold">Paid at</th>
                 <th className="px-3 py-2 font-semibold">Student</th>
+                <th className="px-3 py-2 font-semibold">Country</th>
                 <th className="px-3 py-2 font-semibold">Phone</th>
                 <th className="px-3 py-2 font-semibold">Course</th>
                 <th className="px-3 py-2 font-semibold">Amount</th>
                 <th className="px-3 py-2 font-semibold">Status</th>
                 <th className="px-3 py-2 font-semibold">gclid</th>
                 <th className="px-3 py-2 font-semibold">UTMs</th>
+                <th className="px-3 py-2 font-semibold">Network</th>
                 <th className="px-3 py-2 font-semibold">Uploaded at</th>
                 <th className="px-3 py-2 font-semibold">Error</th>
                 <th className="px-3 py-2 font-semibold">Actions</th>
@@ -265,7 +283,7 @@ export default function GoogleConversions() {
             <tbody>
               {items.length === 0 && !loading ? (
                 <tr>
-                  <td colSpan={13} className="px-3 py-8 text-center text-slate-500">
+                  <td colSpan={15} className="px-3 py-8 text-center text-slate-500">
                     No paid conversion rows found.
                   </td>
                 </tr>
@@ -283,6 +301,9 @@ export default function GoogleConversions() {
                     <div className="text-xs text-slate-500" title={row.studentEmail ?? undefined}>
                       {row.studentEmail || '—'}
                     </div>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-slate-700" title={row.countryCode ?? undefined}>
+                    {countryLabel(row.countryCode)}
                   </td>
                   <td className="px-3 py-2 text-slate-600">{row.studentPhone || '—'}</td>
                   <td className="max-w-[220px] px-3 py-2 text-slate-700">{row.courseTitle}</td>
@@ -302,6 +323,12 @@ export default function GoogleConversions() {
                   <td className="px-3 py-2 text-xs text-slate-600">
                     <div>{row.utmSource || '—'}</div>
                     <div>{[row.utmMedium, row.utmCampaign].filter(Boolean).join(' / ') || '—'}</div>
+                  </td>
+                  <td className="px-3 py-2 text-slate-700" title={row.gadSource ? `gad_source=${row.gadSource}` : undefined}>
+                    <div>{row.adNetwork || '—'}</div>
+                    {row.gadCampaignId ? (
+                      <div className="text-xs text-slate-500">Campaign {row.gadCampaignId}</div>
+                    ) : null}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-slate-600">{formatDate(row.conversionUploadedAt)}</td>
                   <td className="max-w-[220px] px-3 py-2 text-xs text-rose-600" title={row.conversionUploadError ?? undefined}>

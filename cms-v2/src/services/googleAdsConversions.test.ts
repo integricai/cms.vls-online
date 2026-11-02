@@ -65,6 +65,8 @@ function order(partial: Partial<PaymentOrder>): PaymentOrder {
     utmCampaign: 'acca',
     utmContent: null,
     utmTerm: null,
+    gadSource: null,
+    gadCampaignId: null,
     landingPage: '/courses/fa2?gclid=gclid-abc',
     checkoutEnvironment: 'staging',
     attrUserAgent: 'Mozilla/5.0',

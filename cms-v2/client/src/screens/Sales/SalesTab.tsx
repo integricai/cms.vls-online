@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/client';
 import type { SaleListItem, SalesFeeSyncResult, Tutor } from '../../../../shared/types';
-import { formatDisplayDate, formatVaultPrice, isSalesPreset, londonToday, monthStart, salesPresetBounds, saleSessionLabel, type SalesPreset } from '../../../../shared/salesFormat';
+import { formatDisplayDate, formatPlainAmount, formatVaultPrice, isSalesPreset, londonToday, monthStart, salesPresetBounds, saleListSessionLabel, sumAmountsInUsd, type SalesPreset } from '../../../../shared/salesFormat';
 
 const RANGE_PRESETS: Array<{ id: SalesPreset; label: string }> = [
   { id: 'today', label: 'Today' },
   { id: 'yesterday', label: 'Yesterday' },
+  { id: 'this_week', label: 'This week' },
   { id: 'last_week', label: 'Last week' },
   { id: 'last_month', label: 'Last month' },
+  { id: 'last_3_months', label: 'Last 3 months' },
+  { id: 'last_6_months', label: 'Last 6 months' },
+  { id: 'this_year', label: 'This year' },
   { id: 'last_year', label: 'Last year' },
+  { id: 'all_time', label: 'All time' },
 ];
 
 function formatMoney(amount: number | null | undefined, currency: string): string {
@@ -66,6 +71,25 @@ function csvCell(value: string): string {
   return value;
 }
 
+function dollarTotals(
+  rows: SaleListItem[],
+  rates: Record<string, number> | null,
+): { gross: number; net: number; missingCurrencies: string[] } {
+  const grossEntries: Array<{ amount: number | null; currency: string }> = [];
+  const netEntries: Array<{ amount: number | null; currency: string }> = [];
+  for (const sale of rows) {
+    if (sale.paymentStatus === 'Refunded') continue;
+    grossEntries.push({ amount: sale.amount, currency: sale.currency || 'USD' });
+    if (sale.netAmount != null && sale.settlementCurrency) {
+      netEntries.push({ amount: sale.netAmount, currency: sale.settlementCurrency });
+    }
+  }
+  const gross = sumAmountsInUsd(grossEntries, rates);
+  const net = sumAmountsInUsd(netEntries, rates);
+  const missingCurrencies = [...new Set([...gross.missingCurrencies, ...net.missingCurrencies])].sort();
+  return { gross: gross.usd, net: net.usd, missingCurrencies };
+}
+
 function downloadSales(rows: SaleListItem[], from: string, to: string) {
   const header = [
     'SaleId',
@@ -79,7 +103,7 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
     'Stripe/PayPal',
     'Amount paid',
     'Stripe charge',
-    'Net Payment',
+    'Net Payment $',
   ];
   const lines = rows.map(sale => [
     String(sale.id),
@@ -87,19 +111,19 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
     customerName(sale),
     sale.customerEmail ?? '',
     sale.courseName || `Course #${sale.courseId}`,
-    saleSessionLabel(sale.durationDays, sale.expiryDate, sale.sessionMonth, sale.sessionYear),
+    saleListSessionLabel(sale.durationDays, sale.expiryDate, sale.paymentReason, sale.sessionMonth, sale.sessionYear),
     countryLabel(sale.countryCode),
     sale.paymentMethod ?? '',
     processorLabel(sale),
     formatVaultPrice(sale),
     formatMoney(sale.processorFee, sale.settlementCurrency || sale.currency),
-    formatMoney(sale.netAmount, sale.settlementCurrency || sale.currency),
+    formatPlainAmount(sale.netAmount),
   ].map(csvCell).join(','));
   const blob = new Blob([`\uFEFF${header.join(',')}\n${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `sales-${from}-to-${to}.csv`;
+  link.download = from && to ? `sales-${from}-to-${to}.csv` : 'sales-all-time.csv';
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -108,6 +132,7 @@ export default function SalesTab() {
   const [from, setFrom] = useState(() => monthStart(londonToday()));
   const [to, setTo] = useState(() => londonToday());
   const [preset, setPreset] = useState<SalesPreset | ''>('');
+  const [usdRates, setUsdRates] = useState<Record<string, number> | null>(null);
   const [sales, setSales] = useState<SaleListItem[]>([]);
   const [sandboxSales, setSandboxSales] = useState<SaleListItem[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
@@ -126,21 +151,31 @@ export default function SalesTab() {
     setLoading(true);
     setError('');
     try {
-      const query = `from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}`;
-      const [saleData, sandboxData, tutorData] = await Promise.all([
-        api.get<SaleListItem[]>(`/sales?${query}&environment=production`),
-        api.get<SaleListItem[]>(`/sales?${query}&environment=staging`),
+      const params = new URLSearchParams();
+      if (fromDate) params.set('from', fromDate);
+      if (toDate) params.set('to', toDate);
+      const live = new URLSearchParams(params);
+      live.set('environment', 'production');
+      const sandbox = new URLSearchParams(params);
+      sandbox.set('environment', 'staging');
+      const [saleData, sandboxData, tutorData, rates] = await Promise.all([
+        api.get<SaleListItem[]>(`/sales?${live.toString()}`),
+        api.get<SaleListItem[]>(`/sales?${sandbox.toString()}`),
         api.get<Tutor[]>('/tutors'),
+        api.get<Record<string, number> | null>('/sales/fx-rates').catch(() => null),
       ]);
       if (requestId.current !== id) return;
       setSales(saleData ?? []);
       setSandboxSales(sandboxData ?? []);
       setTutors((tutorData ?? []).filter(tutor => tutor.isActive));
+      setUsdRates(rates);
       setLoading(false);
       setSyncingFees(true);
+      const syncFrom = fromDate || '2000-01-01';
+      const syncTo = toDate || londonToday();
       let remaining = 1;
       for (let attempt = 0; attempt < 8 && remaining > 0; attempt += 1) {
-        const result = await api.post<SalesFeeSyncResult>('/sales/sync-fees', { from: fromDate, to: toDate });
+        const result = await api.post<SalesFeeSyncResult>('/sales/sync-fees', { from: syncFrom, to: syncTo });
         if (requestId.current !== id) return;
         setSales(result.sales ?? []);
         setSandboxSales(result.sandboxSales ?? []);
@@ -184,7 +219,9 @@ export default function SalesTab() {
   async function refundSale(sale: SaleListItem) {
     if (sale.paymentStatus === 'Refunded') return;
     const confirmed = window.confirm(
-      `Refund ${formatMoney(sale.amount, sale.currency)} for ${sale.courseName || `course #${sale.courseId}`}?\n\nThis will create a full refund in ${processorLabel(sale)} and revoke the student's access to this course.`,
+      sale.courseId == null
+        ? `Refund ${formatMoney(sale.amount, sale.currency)} for this payment order?\n\nThis will create a full refund in ${processorLabel(sale)}.`
+        : `Refund ${formatMoney(sale.amount, sale.currency)} for ${sale.courseName || `course #${sale.courseId}`}?\n\nThis will create a full refund in ${processorLabel(sale)} and revoke the student's access to this course.`,
     );
     if (!confirmed) return;
 
@@ -203,11 +240,14 @@ export default function SalesTab() {
   }
 
   function tutorsForSale(sale: SaleListItem): Tutor[] {
-    const linked = tutors.filter(tutor => tutor.courseIds.includes(sale.courseId));
+    const courseId = sale.courseId;
+    if (courseId == null) return [];
+    const linked = tutors.filter(tutor => tutor.courseIds.includes(courseId));
     return linked.length > 0 ? linked : tutors;
   }
 
   const columnCount = 13;
+  const totals = dollarTotals(sales, usdRates);
 
   return (
     <div className="h-full overflow-auto">
@@ -222,7 +262,7 @@ export default function SalesTab() {
           <label className="text-xs font-semibold text-slate-600">
             Range
             <select
-              className="input mt-1"
+              className="input mt-1 w-auto"
               value={preset}
               onChange={event => {
                 const value = event.target.value;
@@ -232,8 +272,8 @@ export default function SalesTab() {
                 }
                 const bounds = salesPresetBounds(value);
                 setPreset(value);
-                setFrom(bounds.start);
-                setTo(bounds.end);
+                setFrom(bounds?.start ?? '');
+                setTo(bounds?.end ?? '');
               }}
             >
               <option value="">Custom range</option>
@@ -248,7 +288,7 @@ export default function SalesTab() {
               type="date"
               className="input mt-1"
               value={from}
-              max={to}
+              max={to || undefined}
               onChange={event => {
                 if (!event.target.value) return;
                 setPreset('');
@@ -262,7 +302,7 @@ export default function SalesTab() {
               type="date"
               className="input mt-1"
               value={to}
-              min={from}
+              min={from || undefined}
               onChange={event => {
                 if (!event.target.value) return;
                 setPreset('');
@@ -279,6 +319,25 @@ export default function SalesTab() {
             Download
           </button>
           {syncingFees ? <span className="pb-2 text-xs text-slate-500">Updating Stripe fees…</span> : null}
+          <div className="ml-auto flex flex-wrap justify-end gap-3">
+            <div className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-right">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Gross Payments $</p>
+              <p className={`text-lg font-semibold ${loading ? 'text-slate-400' : 'text-slate-900'}`}>
+                {loading ? '…' : formatMoney(totals.gross, 'USD')}
+              </p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-right">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Net Payments $</p>
+              <p className={`text-lg font-semibold ${loading ? 'text-slate-400' : 'text-slate-900'}`}>
+                {loading ? '…' : formatMoney(totals.net, 'USD')}
+              </p>
+            </div>
+            {!loading && totals.missingCurrencies.length > 0 ? (
+              <p className="basis-full text-right text-[11px] text-amber-700">
+                No dollar rate for {totals.missingCurrencies.join(', ')}, so those amounts are not in the totals yet.
+              </p>
+            ) : null}
+          </div>
         </div>
 
         {error ? <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
@@ -347,7 +406,7 @@ export default function SalesTab() {
                     <td className="px-3 py-2">{sale.customerEmail || '—'}</td>
                     <td className="px-3 py-2">{sale.courseName || `Course #${sale.courseId}`}</td>
                     <td className="px-3 py-2 whitespace-nowrap">
-                      {saleSessionLabel(sale.durationDays, sale.expiryDate, sale.sessionMonth, sale.sessionYear)}
+                      {saleListSessionLabel(sale.durationDays, sale.expiryDate, sale.paymentReason, sale.sessionMonth, sale.sessionYear)}
                       <div className="text-[11px] text-slate-400">Sold {formatDisplayDate(sale.soldAt)}</div>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap" title={sale.countryCode ?? undefined}>
@@ -360,7 +419,7 @@ export default function SalesTab() {
                     <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.netAmount, sale.settlementCurrency || sale.currency)}</td>
                     <td className="px-3 py-2">
                       <div className="flex flex-col gap-1">
-                        {sale.paymentStatus !== 'Refunded' && !sale.tutorId ? (
+                        {sale.courseId != null && sale.paymentStatus !== 'Refunded' && !sale.tutorId ? (
                           <div className="flex flex-wrap items-center gap-1">
                             <select
                               className="input text-[11px]"

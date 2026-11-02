@@ -6,7 +6,18 @@ const LONDON = 'Europe/London';
 
 export type DashboardRange = 'this_month' | 'last_month' | 'last_7_days' | 'last_30_days';
 
-export type SalesPreset = 'today' | 'yesterday' | 'last_week' | 'last_month' | 'last_year';
+export type SalesPreset =
+  | 'today'
+  | 'yesterday'
+  | 'this_week'
+  | 'last_week'
+  | 'this_month'
+  | 'last_month'
+  | 'last_3_months'
+  | 'last_6_months'
+  | 'last_year'
+  | 'this_year'
+  | 'all_time';
 
 export function londonToday(now = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -77,6 +88,23 @@ export function formatDisplayDate(value: Date | string | null | undefined): stri
     year: 'numeric',
     timeZone: LONDON,
   }).format(date);
+}
+
+/**
+ * Session cell for a sale row.
+ * A payment order uses the reason the form was created. A course sale uses the sitting or the access length.
+ */
+export function saleListSessionLabel(
+  durationDays: number | null | undefined,
+  expiry: Date | string | null | undefined,
+  paymentReason?: string | null,
+  sessionMonth?: number | null,
+  sessionYear?: number | null,
+): string {
+  const reason = paymentReason?.trim();
+  if (reason) return reason;
+  if (durationDays == null || !Number.isFinite(Number(durationDays))) return '—';
+  return saleSessionLabel(durationDays, expiry, sessionMonth, sessionYear);
 }
 
 /** Sitting name for an exam session, otherwise the access length and valid-to date. */
@@ -165,6 +193,19 @@ function formatMoneyAmount(amount: number | null | undefined, currency: string |
   }
 }
 
+/** True when the report box is empty, or any field contains that text. */
+export function matchesSaleReportQuery(query: string, fields: Array<string | null | undefined>): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  return fields.some(field => (field ?? '').toLowerCase().includes(needle));
+}
+
+/** Two-decimal amount with no currency symbol, for the sales spreadsheet. */
+export function formatPlainAmount(amount: number | null | undefined): string {
+  if (amount == null || Number.isNaN(Number(amount))) return '';
+  return Number(amount).toFixed(2);
+}
+
 /** Local price the student saw, with the dollar charge beside it when they differ. */
 export function formatVaultPrice(input: {
   amount: number | null | undefined;
@@ -186,28 +227,92 @@ export function isDashboardRange(value: string): value is DashboardRange {
 export function isSalesPreset(value: string): value is SalesPreset {
   return value === 'today'
     || value === 'yesterday'
+    || value === 'this_week'
     || value === 'last_week'
+    || value === 'this_month'
     || value === 'last_month'
-    || value === 'last_year';
+    || value === 'last_3_months'
+    || value === 'last_6_months'
+    || value === 'last_year'
+    || value === 'this_year'
+    || value === 'all_time';
 }
 
-/** London dates for the sales page presets. Last week is the last 7 days, including today. */
+/** Monday of the week that contains this calendar date. Weeks start on Monday. */
+export function weekStartMonday(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const utcDay = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  const daysSinceMonday = utcDay === 0 ? 6 : utcDay - 1;
+  return addIsoDays(isoDate, -daysSinceMonday);
+}
+
+/**
+ * London dates for the sales page presets. Weeks start on Monday.
+ * Last 3 and last 6 months include the current month: on 31 Oct 2026 that is
+ * 1 Aug–31 Oct and 1 May–31 Oct. Last year is the previous calendar year.
+ */
 export function salesPresetBounds(
   preset: SalesPreset,
   today = londonToday(),
-): { start: string; end: string } {
+): { start: string; end: string } | null {
+  if (preset === 'all_time') return null;
   if (preset === 'today') return { start: today, end: today };
   if (preset === 'yesterday') {
     const day = addIsoDays(today, -1);
     return { start: day, end: day };
   }
-  if (preset === 'last_week') return { start: addIsoDays(today, -6), end: today };
+  if (preset === 'this_week') return { start: weekStartMonday(today), end: today };
+  if (preset === 'last_week') {
+    const end = addIsoDays(weekStartMonday(today), -1);
+    return { start: weekStartMonday(end), end };
+  }
+  if (preset === 'this_month') return { start: monthStart(today), end: today };
   if (preset === 'last_month') {
     const endLast = addIsoDays(monthStart(today), -1);
     return { start: monthStart(endLast), end: endLast };
   }
+  if (preset === 'last_3_months') return { start: monthStart(shiftMonth(today, -2)), end: today };
+  if (preset === 'last_6_months') return { start: monthStart(shiftMonth(today, -5)), end: today };
+  if (preset === 'this_year') return { start: `${today.slice(0, 4)}-01-01`, end: today };
   const year = Number(today.slice(0, 4)) - 1;
   return { start: `${year}-01-01`, end: `${year}-12-31` };
+}
+
+/**
+ * Turns a local amount into dollars.
+ * `localPerUsd` is how many local units equal one dollar. Null when that currency has no rate.
+ */
+export function amountInUsd(
+  amount: number,
+  currency: string | null | undefined,
+  localPerUsd: Record<string, number> | null | undefined,
+): number | null {
+  if (!Number.isFinite(amount)) return null;
+  const code = (currency || 'USD').trim().toUpperCase() || 'USD';
+  if (code === 'USD') return Math.round(amount * 100) / 100;
+  const rate = localPerUsd?.[code];
+  if (rate == null || !(rate > 0)) return null;
+  return Math.round((amount / rate) * 100) / 100;
+}
+
+/** One dollar total. Currencies with no rate are listed and left out of the figure. */
+export function sumAmountsInUsd(
+  entries: Array<{ amount: number | null | undefined; currency: string | null | undefined }>,
+  localPerUsd: Record<string, number> | null | undefined,
+): { usd: number; missingCurrencies: string[] } {
+  let cents = 0;
+  const missing = new Set<string>();
+  for (const entry of entries) {
+    if (entry.amount == null || !Number.isFinite(Number(entry.amount))) continue;
+    const code = (entry.currency || 'USD').trim().toUpperCase() || 'USD';
+    const usd = amountInUsd(Number(entry.amount), code, localPerUsd);
+    if (usd == null) {
+      missing.add(code);
+      continue;
+    }
+    cents += Math.round(usd * 100);
+  }
+  return { usd: cents / 100, missingCurrencies: [...missing].sort() };
 }
 
 function roundMoney(amount: number): number {

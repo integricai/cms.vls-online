@@ -347,6 +347,10 @@ export interface GoogleConversionListItem {
   utmSource: string | null;
   utmMedium: string | null;
   utmCampaign: string | null;
+  countryCode: string | null;
+  adNetwork: string | null;
+  gadSource: string | null;
+  gadCampaignId: string | null;
   conversionUploadedAt: string | null;
   conversionUploadError: string | null;
 }
@@ -535,15 +539,15 @@ export interface ExamEmailBulkSendResult {
 export interface Sale {
   id: number;
   customerId: number;
-  courseId: number;
+  courseId: number | null;
   coursePriceId: number | null;
   paymentOrderId: number;
   amount: number;
   currency: string;
   discountPercent: number | null;
-  durationDays: number;
+  durationDays: number | null;
   soldAt: Date;
-  expiryDate: Date;
+  expiryDate: Date | null;
   /** Exam sitting purchased. Null for a fixed-length plan. */
   sessionMonth: number | null;
   sessionYear: number | null;
@@ -559,6 +563,8 @@ export interface Sale {
 
 export interface SaleListItem extends Sale {
   courseName: string | null;
+  /** Reason captured when a payment form was created with no course. */
+  paymentReason: string | null;
   customerEmail: string | null;
   customerFirstName: string | null;
   customerLastName: string | null;
@@ -592,7 +598,7 @@ export interface SaleListItem extends Sale {
 }
 
 export interface SaleCourseSummary {
-  courseId: number;
+  courseId: number | null;
   courseName: string;
   saleCount: number;
   unassignedCount: number;

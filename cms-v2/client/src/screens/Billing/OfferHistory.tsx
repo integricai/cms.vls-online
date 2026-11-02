@@ -11,7 +11,7 @@ interface CustomPaymentOfferRow {
   studentEmail: string;
   amount: number;
   currency: string;
-  durationDays: number;
+  durationDays: number | null;
   discountReason: string;
   checkoutUrl: string | null;
   emailSentAt: string | null;
@@ -75,7 +75,7 @@ export default function OfferHistory() {
                 <tr>
                   <th className="px-4 py-3 font-semibold">Created</th>
                   <th className="px-4 py-3 font-semibold">Student</th>
-                  <th className="px-4 py-3 font-semibold">Course</th>
+                  <th className="px-4 py-3 font-semibold">Course / description</th>
                   <th className="px-4 py-3 font-semibold">Amount</th>
                   <th className="px-4 py-3 font-semibold">Duration</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
@@ -104,7 +104,7 @@ export default function OfferHistory() {
                       {formatUsd(offer.amount)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-slate-600">
-                      {offer.durationDays} days
+                      {offer.durationDays == null ? '—' : `${offer.durationDays} days`}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span

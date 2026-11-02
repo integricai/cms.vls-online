@@ -22,6 +22,7 @@ import { sendStudentRefundConfirmation } from '../services/paymentEmails';
 import { getPaymentRefundProvider } from '../services/payments/registry';
 import { revokeZenlerAccessForRefundedOrder } from '../services/zenlerEnrollmentEnsure';
 import { buildSalesDashboard } from '../services/salesDashboard';
+import { getUsdRates } from '../services/fxRates';
 import { countMissingStripeFees, syncStripeFees } from '../services/stripeSettlement';
 import { isDashboardRange, isIsoDate } from '../../shared/salesFormat';
 
@@ -119,6 +120,14 @@ function readDateRange(body: unknown): { from: string; to: string } | null {
   return { from, to };
 }
 
+router.get('/fx-rates', requireRole('admin'), async (_req, res, next) => {
+  try {
+    return res.json({ ok: true, data: await getUsdRates() });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/dashboard', requireRole('admin'), async (req, res, next) => {
   try {
     const requested = String(req.query.range ?? 'this_month');
@@ -167,6 +176,7 @@ router.get('/:id/eligible-tutors', requireRole('admin'), async (req, res, next) 
     if (!id) return res.status(400).json({ ok: false, error: 'Invalid sale id' });
     const sale = await getSaleById(id);
     if (!sale) return res.status(404).json({ ok: false, error: 'Sale not found' });
+    if (sale.courseId == null) return res.json({ ok: true, data: [] });
     const tutors = await listActiveTutorsForCourse(sale.courseId);
     return res.json({ ok: true, data: tutors });
   } catch (err) {
