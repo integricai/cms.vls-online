@@ -505,9 +505,13 @@ export async function listSessionOrdersDueForExpiry(
   return (rows as DbRow[]).map(rowToOrder);
 }
 
+/** Hold date for an order with no end date. Removal waits until then, so in practice never. */
+const UNLIMITED_ACCESS_UNTIL = '9999-12-31T23:59:59Z';
+
 /**
  * Latest time another paid order still covers each Zenler course.
  * One course can be on several orders; access lasts until the latest of those.
+ * A course sale with no expiry, or a paid order with no sale and no length, has no end date.
  */
 export async function latestCoveringAccessByCourse(input: {
   orderId: number;
@@ -522,22 +526,35 @@ export async function latestCoveringAccessByCourse(input: {
     SELECT matched.course_id, MAX(covered.covered_until) AS covered_until
     FROM payment_orders po
     JOIN LATERAL (
-      SELECT COALESCE(
-        (
-          SELECT MAX(s.expiry_date)
+      SELECT CASE
+        WHEN EXISTS (
+          SELECT 1
           FROM sales s
           WHERE s.payment_order_id = po.id
-            AND s.expiry_date > NOW()
-        ),
-        CASE
-          WHEN NOT EXISTS (SELECT 1 FROM sales s WHERE s.payment_order_id = po.id)
-            AND po.paid_at IS NOT NULL
-            AND po.duration_days IS NOT NULL
-            AND po.paid_at + (po.duration_days * INTERVAL '1 day') > NOW()
-          THEN po.paid_at + (po.duration_days * INTERVAL '1 day')
-          ELSE NULL
-        END
-      ) AS covered_until
+            AND s.course_id IS NOT NULL
+            AND s.expiry_date IS NULL
+        ) THEN ${UNLIMITED_ACCESS_UNTIL}::timestamptz
+        WHEN NOT EXISTS (SELECT 1 FROM sales s WHERE s.payment_order_id = po.id)
+          AND po.paid_at IS NOT NULL
+          AND po.duration_days IS NULL
+        THEN ${UNLIMITED_ACCESS_UNTIL}::timestamptz
+        ELSE COALESCE(
+          (
+            SELECT MAX(s.expiry_date)
+            FROM sales s
+            WHERE s.payment_order_id = po.id
+              AND s.expiry_date > NOW()
+          ),
+          CASE
+            WHEN NOT EXISTS (SELECT 1 FROM sales s WHERE s.payment_order_id = po.id)
+              AND po.paid_at IS NOT NULL
+              AND po.duration_days IS NOT NULL
+              AND po.paid_at + (po.duration_days * INTERVAL '1 day') > NOW()
+            THEN po.paid_at + (po.duration_days * INTERVAL '1 day')
+            ELSE NULL
+          END
+        )
+      END AS covered_until
     ) covered ON covered.covered_until IS NOT NULL
     JOIN LATERAL (
       SELECT course_id

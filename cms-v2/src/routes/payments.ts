@@ -817,14 +817,18 @@ async function priceCheckoutSelection(
     localPresentment = comboQuote.presentmentAmount != null && comboQuote.presentmentCurrency
       ? { amount: comboQuote.presentmentAmount, currency: comboQuote.presentmentCurrency }
       : null;
-  } else {
-    const computed = await examSessionForCoursePrice(
+  } else if (usedPageQuote) {
+    // The signed quote says whether the page showed a sitting for this price.
+    examSession = quotedSession;
+  } else if (explicitPriceId) {
+    // The quote expired. Use the sitting the page shows for this price now.
+    examSession = await examSessionForCoursePrice(
       course.id,
       course.qualification,
       resolved.price.id,
     );
-    examSession = quotedSession ?? computed;
   }
+  // A durationMonths or campaign checkout buys a plan length, never a sitting.
   if (examSession && sessionAccessEndsAt(examSession.month, examSession.year).getTime() <= Date.now()) {
     return { ok: false, status: 400, error: 'This session is no longer available.' };
   }
