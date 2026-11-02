@@ -3,6 +3,9 @@ import {
   addCrossCurrencyEarnings,
   addIsoDays,
   dashboardRangeBounds,
+  formatLocalPrice,
+  formatPlainAmount,
+  formatUsdPlainAmount,
   percentChange,
   formatVaultPrice,
   pickDashboardCurrency,
@@ -97,6 +100,22 @@ run('shows the local price and the dollar charge together', () => {
     presentmentCurrency: 'GBP',
   }), '£48.82 (US$61.00)');
   assert.strictEqual(formatVaultPrice({ amount: 61, currency: 'USD' }), 'US$61.00');
+});
+
+run('sales export keeps the local symbol and a plain dollar amount', () => {
+  const gbp = {
+    amount: 61,
+    currency: 'USD',
+    presentmentAmount: 48.82,
+    presentmentCurrency: 'GBP',
+  };
+  assert.strictEqual(formatLocalPrice(gbp), '£48.82');
+  assert.strictEqual(formatUsdPlainAmount(gbp.amount, gbp.currency), '61.00');
+  assert.strictEqual(formatLocalPrice({ amount: 61, currency: 'USD' }), 'US$61.00');
+  assert.strictEqual(formatPlainAmount(59.15), '59.15');
+  assert.strictEqual(formatUsdPlainAmount(1.85, 'usd'), '1.85');
+  assert.strictEqual(formatUsdPlainAmount(1.85, 'EUR'), '');
+  assert.strictEqual(formatUsdPlainAmount(null, 'USD'), '');
 });
 
 run('session label keeps the month length and the valid-to date', () => {
