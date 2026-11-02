@@ -5,6 +5,7 @@ import {
   resolveEvenDealsProductId,
   type EvenDealsQuote,
 } from './evenDeals';
+import { listActiveGeoPricesForCourse } from '../models/courseGeoPrice';
 import { getQualificationOfferRuleByQualification } from '../models/qualificationOfferRule';
 import {
   formatExamSessionTitle,
@@ -43,6 +44,8 @@ export type PublishedCoursePricePlan = {
   badge: string | null;
   geoPricingApplied: boolean;
   geoRegionCode: string | null;
+  /** EvenDeals saw a VPN on this visitor. The country discount is withheld when the deal blocks VPNs. */
+  isVpn: boolean;
   /** Signed snapshot of the amounts on this card. Enrol sends it back to checkout. */
   priceQuote?: string;
 };
@@ -174,6 +177,48 @@ function buildPlanFields(
     badge: options.badge,
     geoPricingApplied: false,
     geoRegionCode: null,
+    isVpn: false,
+  };
+}
+
+/** Attach the EvenDeals result to a plan. A VPN flag is kept even when the discount is withheld. */
+export function applyVisitorDealToPlan(
+  plan: PublishedCoursePricePlan,
+  quote: EvenDealsQuote | null,
+  countryCode: string | null,
+  ignoreVpnBlock: boolean,
+): PublishedCoursePricePlan {
+  const isVpn = quote?.isVpn === true;
+  if (!quote || quote.discountPercentage <= 0) {
+    return { ...plan, isVpn };
+  }
+
+  const regional = applyEvenDealsQuote(
+    plan.effectiveAmount,
+    quote,
+    countryCode,
+    ignoreVpnBlock,
+  );
+  if (!regional.regionalPricingApplied) {
+    return { ...plan, isVpn };
+  }
+
+  const effective = regional.effectiveAmount;
+  const compareAt = plan.compareAt != null && plan.compareAt > effective
+    ? plan.compareAt
+    : (plan.effectiveAmount > effective ? plan.effectiveAmount : plan.compareAt);
+
+  return {
+    ...plan,
+    effectiveAmount: effective,
+    displayAmount: effective,
+    compareAt,
+    discountPercent: regional.geoDiscountPercent,
+    formatted: formatUsd(effective),
+    formattedCompareAt: compareAt != null ? formatUsd(compareAt) : null,
+    geoPricingApplied: true,
+    geoRegionCode: regional.geoRegionCode,
+    isVpn,
   };
 }
 
@@ -220,6 +265,41 @@ function resolveSessionPlanMode(
     mode: 'sessions',
     sessions: getNextAccaExamSessions(now, planCount),
   };
+}
+
+/**
+ * Sitting shown on the price card for this plan.
+ * Shorter plan → nearer sitting. A single plan, or a duration offer, has none.
+ */
+export function displayedExamSessionForPrice(
+  prices: CourseGeoPrice[],
+  rule: Pick<QualificationOfferRule, 'offerType' | 'examMonths' | 'cutoffDay' | 'courseIds'> | null,
+  courseId: number | null,
+  coursePriceId: number,
+  now: Date = new Date(),
+): ExamSession | null {
+  const active = prices.filter(price => price.isActive);
+  if (active.length < 2) return null;
+  const planSlice = [...active]
+    .sort((a, b) => planDurationSortKey(a) - planDurationSortKey(b))
+    .slice(0, 2);
+  const index = planSlice.findIndex(price => price.id === coursePriceId);
+  if (index < 0) return null;
+  const sessionMode = resolveSessionPlanMode(rule, now, planSlice.length, courseId);
+  if (sessionMode.mode !== 'sessions' || sessionMode.sessions.length === 0) return null;
+  return sessionMode.sessions[index] ?? sessionMode.sessions[sessionMode.sessions.length - 1] ?? null;
+}
+
+/** Same sitting the course page would show for this price. */
+export async function examSessionForCoursePrice(
+  courseId: number,
+  qualification: string | null | undefined,
+  coursePriceId: number,
+  now: Date = new Date(),
+): Promise<ExamSession | null> {
+  const prices = await listActiveGeoPricesForCourse(courseId);
+  const rule = await getQualificationOfferRuleByQualification(qualification);
+  return displayedExamSessionForPrice(prices, rule, courseId, coursePriceId, now);
 }
 
 export async function buildCourseDisplayPricing(
@@ -303,38 +383,13 @@ export async function buildCourseDisplayPricing(
       quoteCache.set(productKey, await fetchEvenDealsQuote(input.ipAddress, price.evenDeals));
     }
 
-    const quote = quoteCache.get(productKey);
-    if (!quote || quote.discountPercentage <= 0) {
-      resolvedPlans.push(plan);
-      continue;
-    }
-
-    const regional = applyEvenDealsQuote(
-      plan.effectiveAmount,
+    const quote = quoteCache.get(productKey) ?? null;
+    resolvedPlans.push(applyVisitorDealToPlan(
+      plan,
       quote,
       input.countryCode ?? null,
       ignoreVpnBlock,
-    );
-    if (!regional.regionalPricingApplied) {
-      resolvedPlans.push(plan);
-      continue;
-    }
-
-    const effective = regional.effectiveAmount;
-    const compareAt = plan.compareAt != null && plan.compareAt > effective
-      ? plan.compareAt
-      : (plan.effectiveAmount > effective ? plan.effectiveAmount : plan.compareAt);
-
-    resolvedPlans.push({
-      ...plan,
-      effectiveAmount: effective,
-      displayAmount: effective,
-      compareAt,
-      formatted: formatUsd(effective),
-      formattedCompareAt: compareAt != null ? formatUsd(compareAt) : null,
-      geoPricingApplied: true,
-      geoRegionCode: regional.geoRegionCode,
-    });
+    ));
   }
 
   plans = await applyLocalDisplayCurrency(

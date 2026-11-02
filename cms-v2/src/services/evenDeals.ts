@@ -1,5 +1,6 @@
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 import { roundMoney } from './courseGeoPriceValidation';
+import { roundUpToFive } from './displayCurrency';
 
 export type EvenDealsQuote = {
   discountPercentage: number;
@@ -70,12 +71,14 @@ function parseDiscountPercent(value: unknown): number {
   return Math.min(100, n);
 }
 
+/** A VPN visitor often gets no discount. Keep the quote so the VPN flag still reaches the price card. */
 function parseQuoteBody(body: Record<string, unknown>): EvenDealsQuote | null {
-  const discount = body.discount;
-  if (!discount || typeof discount !== 'object') return null;
-  const d = discount as Record<string, unknown>;
+  const isVpn = body.isVpn === true;
+  const d = body.discount && typeof body.discount === 'object'
+    ? body.discount as Record<string, unknown>
+    : {};
   const percent = parseDiscountPercent(d.discountAmount ?? d.discountPercentage);
-  if (percent <= 0) return null;
+  if (percent <= 0 && !isVpn) return null;
 
   const settings = body.settings && typeof body.settings === 'object'
     ? body.settings as Record<string, unknown>
@@ -84,8 +87,8 @@ function parseQuoteBody(body: Record<string, unknown>): EvenDealsQuote | null {
   return {
     discountPercentage: percent,
     countryCode: normalizeCountry(d.countryCode),
-    couponCode: d.couponCode != null ? String(d.couponCode) : null,
-    isVpn: body.isVpn === true,
+    couponCode: percent > 0 && d.couponCode != null ? String(d.couponCode) : null,
+    isVpn,
     blockVpn: settings?.blockVpn === true,
     raw: body,
   };
@@ -172,7 +175,8 @@ export function applyEvenDealsQuote(
   }
 
   const discounted = roundMoney(campaignAmount * (1 - quote.discountPercentage / 100));
-  const effectiveAmount = Math.max(0.5, Math.min(campaignAmount, discounted));
+  const lifted = roundUpToFive(discounted);
+  const effectiveAmount = Math.max(0.5, Math.min(campaignAmount, lifted));
 
   return {
     effectiveAmount,

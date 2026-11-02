@@ -2,12 +2,16 @@ import assert from 'assert';
 import type { CourseGeoPrice, QualificationOfferRule } from '../../shared/types';
 import { effectiveAmount } from './courseGeoPriceValidation';
 import {
+  applyVisitorDealToPlan,
   buildCourseDisplayPricing,
+  displayedExamSessionForPrice,
   getNextAccaExamSessions,
   monthsUntilExamSession,
   planDurationSortKey,
   resolveDisplayCountry,
+  type PublishedCoursePricePlan,
 } from './courseDisplayPricing';
+import type { EvenDealsQuote } from './evenDeals';
 import {
   getNextOpenExamSessions,
   isExamSessionOpen,
@@ -141,6 +145,26 @@ await run('preview CIMA uses duration labels', () => {
   const preview = previewQualificationOffers(cimaRule(), new Date('2026-08-15T12:00:00'));
   assert.strictEqual(preview.plans[0]!.sessionTitle, '6 months');
   assert.strictEqual(preview.plans[1]!.sessionTitle, '1 year');
+});
+
+await run('price card maps the shorter plan to the nearer sitting', () => {
+  const prices = [
+    geoPrice({ id: 1, name: 'Six months', amount: 180, durationDays: 180, isDefault: true }),
+    geoPrice({ id: 2, name: 'Three months', amount: 120, durationDays: 90 }),
+  ];
+  const asOf = new Date('2026-10-30T12:00:00Z');
+  assert.deepStrictEqual(
+    displayedExamSessionForPrice(prices, accaRule(12), 1, 2, asOf),
+    { month: 12, year: 2026 },
+  );
+  assert.deepStrictEqual(
+    displayedExamSessionForPrice(prices, accaRule(12), 1, 1, asOf),
+    { month: 3, year: 2027 },
+  );
+  assert.strictEqual(
+    displayedExamSessionForPrice(prices, cimaRule(), 1, 2, asOf),
+    null,
+  );
 });
 
 await run('months until September from August is 1', () => {
@@ -364,7 +388,7 @@ await run('India visitor sees INR with charged-as USD; amount stays USD', async 
   assert.strictEqual(result!.displayCurrency, 'INR');
   assert.strictEqual(result!.fxApplied, true);
   assert.strictEqual(result!.formattedChargeUsd, 'Charged as $89 USD');
-  assert.match(result!.formatted, /7,387|₹/);
+  assert.match(result!.formatted, /7,390|₹/);
   assert.strictEqual(result!.plans[0]!.effectiveAmount, 89);
 });
 
@@ -423,6 +447,92 @@ await run('resolveDisplayCountry prefers Evendeals quoted country', () => {
   assert.strictEqual(resolveDisplayCountry('US', [{ geoRegionCode: 'PK' }]), 'PK');
   assert.strictEqual(resolveDisplayCountry('IN', [{ geoRegionCode: null }]), 'IN');
   assert.strictEqual(resolveDisplayCountry(null, [{ geoRegionCode: null }]), null);
+});
+
+function samplePlan(amount = 100): PublishedCoursePricePlan {
+  return {
+    id: 1,
+    coursePriceId: 1,
+    planName: 'Four months',
+    sessionTitle: 'December 2026 session',
+    sessionMonth: 12,
+    sessionYear: 2026,
+    subtitle: 'Complete course with tutor support',
+    amount,
+    compareAt: null,
+    discountPercent: null,
+    effectiveAmount: amount,
+    formatted: `$${amount}`,
+    formattedCompareAt: null,
+    formattedChargeUsd: null,
+    displayAmount: amount,
+    displayCurrency: 'USD',
+    fxApplied: false,
+    lateEnrollmentDiscount: false,
+    isDefault: true,
+    badge: null,
+    geoPricingApplied: false,
+    geoRegionCode: null,
+    isVpn: false,
+  };
+}
+
+function dealQuote(partial: Partial<EvenDealsQuote>): EvenDealsQuote {
+  return {
+    discountPercentage: 40,
+    countryCode: 'TR',
+    couponCode: null,
+    isVpn: false,
+    blockVpn: true,
+    raw: null,
+    ...partial,
+  };
+}
+
+await run('discounted dollar price rounds up to the next multiple of 5', () => {
+  const priced = applyVisitorDealToPlan(
+    samplePlan(150),
+    dealQuote({ discountPercentage: 45 }),
+    'TR',
+    false,
+  );
+  assert.strictEqual(priced.effectiveAmount, 85);
+  assert.strictEqual(priced.discountPercent, 45);
+  assert.strictEqual(priced.compareAt, 150);
+});
+
+await run('Evendeals discount percent is kept for the price card', () => {
+  const priced = applyVisitorDealToPlan(samplePlan(100), dealQuote({}), 'TR', false);
+  assert.strictEqual(priced.discountPercent, 40);
+  assert.strictEqual(priced.effectiveAmount, 60);
+  assert.strictEqual(priced.geoPricingApplied, true);
+  assert.strictEqual(priced.isVpn, false);
+  assert.strictEqual(priced.compareAt, 100);
+});
+
+await run('VPN visitors keep the flag and lose the discount when the deal blocks VPNs', () => {
+  const priced = applyVisitorDealToPlan(
+    samplePlan(100),
+    dealQuote({ isVpn: true, blockVpn: true }),
+    'TR',
+    false,
+  );
+  assert.strictEqual(priced.isVpn, true);
+  assert.strictEqual(priced.discountPercent, null);
+  assert.strictEqual(priced.effectiveAmount, 100);
+  assert.strictEqual(priced.geoPricingApplied, false);
+});
+
+await run('VPN visitors with no country discount still carry the flag', () => {
+  const priced = applyVisitorDealToPlan(
+    samplePlan(100),
+    dealQuote({ discountPercentage: 0, isVpn: true }),
+    'US',
+    false,
+  );
+  assert.strictEqual(priced.isVpn, true);
+  assert.strictEqual(priced.discountPercent, null);
+  assert.strictEqual(priced.effectiveAmount, 100);
 });
 
 console.log('All courseDisplayPricing tests passed.');
