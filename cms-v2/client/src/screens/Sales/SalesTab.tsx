@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/client';
 import type { SaleListItem, SalesFeeSyncResult, Tutor } from '../../../../shared/types';
-import { formatDisplayDate, formatPlainAmount, formatVaultPrice, isSalesPreset, londonToday, monthStart, salesPresetBounds, saleListSessionLabel, sumAmountsInUsd, type SalesPreset } from '../../../../shared/salesFormat';
+import { formatDisplayDate, formatLocalPrice, formatPlainAmount, formatUsdPlainAmount, isSalesPreset, londonToday, monthStart, salesPresetBounds, saleListSessionLabel, sumAmountsInUsd, type SalesPreset } from '../../../../shared/salesFormat';
 
 const RANGE_PRESETS: Array<{ id: SalesPreset; label: string }> = [
   { id: 'today', label: 'Today' },
@@ -71,6 +71,10 @@ function csvCell(value: string): string {
   return value;
 }
 
+function plainOrDash(value: string): string {
+  return value || '—';
+}
+
 function dollarTotals(
   rows: SaleListItem[],
   rates: Record<string, number> | null,
@@ -101,8 +105,9 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
     'Country',
     'Payment Method',
     'Stripe/PayPal',
+    'Amount Paid $',
     'Amount paid',
-    'Stripe charge',
+    'Transaction Fee in $',
     'Net Payment $',
   ];
   const lines = rows.map(sale => [
@@ -115,8 +120,9 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
     countryLabel(sale.countryCode),
     sale.paymentMethod ?? '',
     processorLabel(sale),
-    formatVaultPrice(sale),
-    formatMoney(sale.processorFee, sale.settlementCurrency || sale.currency),
+    formatUsdPlainAmount(sale.amount, sale.currency),
+    formatLocalPrice(sale),
+    formatUsdPlainAmount(sale.processorFee, sale.settlementCurrency || sale.currency),
     formatPlainAmount(sale.netAmount),
   ].map(csvCell).join(','));
   const blob = new Blob([`\uFEFF${header.join(',')}\n${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' });
@@ -246,7 +252,7 @@ export default function SalesTab() {
     return linked.length > 0 ? linked : tutors;
   }
 
-  const columnCount = 13;
+  const columnCount = 14;
   const totals = dollarTotals(sales, usdRates);
 
   return (
@@ -356,7 +362,7 @@ export default function SalesTab() {
   function renderSalesTable(rows: SaleListItem[], emptyLabel: string) {
     return (
         <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-          <table className="w-full min-w-[1480px] text-left text-xs">
+          <table className="w-full min-w-[1600px] text-left text-xs">
             <thead className="bg-slate-50 text-slate-500">
               <tr>
                 <th className="px-3 py-2">SaleId</th>
@@ -368,9 +374,10 @@ export default function SalesTab() {
                 <th className="px-3 py-2">Country</th>
                 <th className="px-3 py-2">Payment method</th>
                 <th className="px-3 py-2">Stripe/PayPal</th>
+                <th className="px-3 py-2">Amount Paid $</th>
                 <th className="px-3 py-2">Amount paid</th>
-                <th className="px-3 py-2">Stripe charge</th>
-                <th className="px-3 py-2">Net payment</th>
+                <th className="px-3 py-2">Transaction Fee in $</th>
+                <th className="px-3 py-2">Net Payment $</th>
                 <th className="px-3 py-2">Actions</th>
               </tr>
             </thead>
@@ -414,9 +421,10 @@ export default function SalesTab() {
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">{sale.paymentMethod || '—'}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{processorLabel(sale)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{formatVaultPrice(sale)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.processorFee, sale.settlementCurrency || sale.currency)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{formatMoney(sale.netAmount, sale.settlementCurrency || sale.currency)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{plainOrDash(formatUsdPlainAmount(sale.amount, sale.currency))}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{formatLocalPrice(sale)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{plainOrDash(formatUsdPlainAmount(sale.processorFee, sale.settlementCurrency || sale.currency))}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{plainOrDash(formatPlainAmount(sale.netAmount))}</td>
                     <td className="px-3 py-2">
                       <div className="flex flex-col gap-1">
                         {sale.courseId != null && sale.paymentStatus !== 'Refunded' && !sale.tutorId ? (

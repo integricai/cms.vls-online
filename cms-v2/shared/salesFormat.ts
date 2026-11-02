@@ -206,6 +206,30 @@ export function formatPlainAmount(amount: number | null | undefined): string {
   return Number(amount).toFixed(2);
 }
 
+/** Dollar amount with no currency sign. Blank when the amount is not in USD. */
+export function formatUsdPlainAmount(
+  amount: number | null | undefined,
+  currency: string | null | undefined,
+): string {
+  if ((currency || '').trim().toUpperCase() !== 'USD') return '';
+  return formatPlainAmount(amount);
+}
+
+/** Local price the student saw, with its currency symbol and no dollar equivalent. */
+export function formatLocalPrice(input: {
+  amount: number | null | undefined;
+  currency: string | null | undefined;
+  presentmentAmount?: number | null;
+  presentmentCurrency?: string | null;
+}): string {
+  const localCode = input.presentmentCurrency?.trim().toUpperCase() ?? '';
+  const chargeCode = (input.currency || 'USD').trim().toUpperCase();
+  if (input.presentmentAmount != null && localCode && localCode !== chargeCode) {
+    return formatMoneyAmount(input.presentmentAmount, localCode);
+  }
+  return formatMoneyAmount(input.amount, input.currency);
+}
+
 /** Local price the student saw, with the dollar charge beside it when they differ. */
 export function formatVaultPrice(input: {
   amount: number | null | undefined;
