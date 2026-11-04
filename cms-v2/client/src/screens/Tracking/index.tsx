@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { api } from '../../api/client';
 import type { DashboardRange } from '../../../../shared/salesFormat';
 import type { TrackingCount, TrackingReport, TrackingSourceRow } from '../../../../shared/siteTracking';
@@ -26,6 +26,37 @@ function countryLabel(code: string): string {
   } catch {
     return code;
   }
+}
+
+function CountryName({ code }: { code: string }) {
+  const name = countryLabel(code);
+  const flag = code.toLowerCase();
+  if (!/^[a-z]{2}$/.test(flag)) return name;
+  return (
+    <span className="inline-flex items-center gap-2">
+      <img
+        src={`https://flagcdn.com/w40/${flag}.png`}
+        width={20}
+        height={15}
+        alt=""
+        className="h-[15px] w-5 rounded-sm object-cover"
+      />
+      {name}
+    </span>
+  );
+}
+
+function campaignLabel(value: string): string {
+  if (value === 'No campaign' || value === 'No campaign stored') return value;
+  let text = value.trim();
+  try {
+    text = decodeURIComponent(text);
+  } catch {
+    text = value.trim();
+  }
+  text = text.replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (/^\d{3,24}$/.test(text)) return `Google campaign ${text}`;
+  return text;
 }
 
 function formatMoney(amount: number, currency: string): string {
@@ -60,7 +91,7 @@ function VisitorsChart({ days }: { days: TrackingReport['days'] }) {
   );
 }
 
-function CountTable({ title, rows, label }: { title: string; rows: TrackingCount[]; label: (value: string) => string }) {
+function CountTable({ title, rows, label }: { title: string; rows: TrackingCount[]; label: (value: string) => ReactNode }) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4">
       <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
@@ -164,9 +195,9 @@ export default function Tracking() {
             </section>
             <div className="grid gap-3 lg:grid-cols-2">
               <CountTable title="Channel" rows={report.channels} label={value => value} />
-              <CountTable title="Campaign" rows={report.campaigns} label={value => value} />
+              <CountTable title="Campaign" rows={report.campaigns} label={campaignLabel} />
               <CountTable title="Landing page" rows={report.landingPages} label={value => value} />
-              <CountTable title="Country" rows={report.countries} label={countryLabel} />
+              <CountTable title="Country" rows={report.countries} label={code => <CountryName code={code} />} />
               <CountTable title="Device" rows={report.devices} label={value => value} />
               <CountTable title="Language" rows={report.locales} label={value => value === 'ar' ? 'Arabic' : 'English'} />
             </div>
@@ -188,7 +219,7 @@ export default function Tracking() {
                   <tbody>
                     {report.enrolments.map(row => (
                       <tr key={`${row.campaign}-${row.currency}`} className="border-t border-slate-100">
-                        <td className="py-2 pr-3 text-slate-700">{row.campaign}</td>
+                        <td className="py-2 pr-3 text-slate-700">{campaignLabel(row.campaign)}</td>
                         <td className="py-2 text-right text-slate-900">{row.orders.toLocaleString('en-GB')}</td>
                         <td className="py-2 text-right font-medium text-slate-900">{formatMoney(row.amount, row.currency)}</td>
                       </tr>
