@@ -1,8 +1,10 @@
+import ExcelJS from 'exceljs';
 import type { Course, ZenlerRosterSyncResult } from '../../shared/types';
 import { listCourses } from '../models/course';
 import {
   enrollmentOnOrAfterCutoff,
   isManualAccessDuration,
+  listZenlerRoster,
   markRosterRemoved,
   saveRosterDuration,
   upsertZenlerRosterEnrollment,
@@ -87,6 +89,51 @@ export async function syncZenlerRosterCourse(courseIndex: number): Promise<Zenle
     done,
     error,
   };
+}
+
+function validityLabel(expiry: Date | null): string {
+  if (!expiry) return 'Not set';
+  const date = expiry instanceof Date ? expiry : new Date(expiry);
+  if (Number.isNaN(date.getTime())) return 'Not set';
+  return date.getTime() <= Date.now() ? 'Ended' : 'Active';
+}
+
+/** Every stored enrolment, including rows past the current page. */
+export async function buildActiveStudentsWorkbook(search?: string): Promise<Buffer> {
+  const page = await listZenlerRoster({ search, unbounded: true });
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Active students');
+  sheet.columns = [
+    { header: 'First name', key: 'firstName', width: 22 },
+    { header: 'Last name', key: 'lastName', width: 22 },
+    { header: 'Email', key: 'email', width: 36 },
+    { header: 'Course', key: 'course', width: 42 },
+    { header: 'Enrolled', key: 'enrolled', width: 16 },
+    { header: 'Duration days', key: 'duration', width: 16 },
+    { header: 'Validity', key: 'validity', width: 16 },
+    { header: 'Status', key: 'status', width: 12 },
+  ];
+  sheet.getRow(1).font = { bold: true };
+
+  for (const row of page.items) {
+    const enrolled = row.enrollmentDate ? new Date(row.enrollmentDate) : null;
+    const validity = row.expiryDate ? new Date(row.expiryDate) : null;
+    const added = sheet.addRow({
+      firstName: row.firstName ?? '',
+      lastName: row.lastName ?? '',
+      email: row.email,
+      course: row.courseName,
+      enrolled: enrolled && !Number.isNaN(enrolled.getTime()) ? enrolled : '',
+      duration: row.durationDays ?? '',
+      validity: validity && !Number.isNaN(validity.getTime()) ? validity : '',
+      status: validityLabel(validity),
+    });
+    added.getCell('enrolled').numFmt = 'dd mmm yyyy';
+    added.getCell('validity').numFmt = 'dd mmm yyyy';
+  }
+
+  const raw = await workbook.xlsx.writeBuffer();
+  return Buffer.from(raw);
 }
 
 export async function saveManualAccessDuration(input: {

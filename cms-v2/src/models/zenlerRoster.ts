@@ -111,11 +111,15 @@ export async function listZenlerRoster(filters: {
   search?: string;
   page?: number;
   pageSize?: number;
+  unbounded?: boolean;
 } = {}): Promise<ActiveEnrollmentPage> {
   await ensureZenlerRoster();
   const search = filters.search?.trim().toLowerCase() || null;
-  const pageSize = Math.min(100, Math.max(1, Number(filters.pageSize ?? 100) || 100));
-  const page = Math.max(1, Number(filters.page ?? 1) || 1);
+  const unbounded = filters.unbounded === true;
+  const pageSize = unbounded
+    ? 100000
+    : Math.min(100, Math.max(1, Number(filters.pageSize ?? 100) || 100));
+  const page = unbounded ? 1 : Math.max(1, Number(filters.page ?? 1) || 1);
   const offset = (page - 1) * pageSize;
 
   const rows = await sql`

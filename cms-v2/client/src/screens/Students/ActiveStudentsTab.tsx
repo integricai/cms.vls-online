@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api } from '../../api/client';
+import { api, getToken } from '../../api/client';
 import {
   MANUAL_ACCESS_DURATIONS,
   type ActiveEnrollment,
@@ -41,6 +41,7 @@ export default function ActiveStudentsTab() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [syncing, setSyncing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [syncLabel, setSyncLabel] = useState('');
   const [unenrollingKey, setUnenrollingKey] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
@@ -112,6 +113,33 @@ export default function ActiveStudentsTab() {
     }
   }
 
+  async function downloadExcel() {
+    setDownloading(true);
+    setError('');
+    try {
+      const token = getToken();
+      const base = (import.meta.env.VITE_API_URL ?? '') + '/api';
+      const params = new URLSearchParams();
+      if (search.trim()) params.set('search', search.trim());
+      const suffix = params.toString() ? `?${params.toString()}` : '';
+      const res = await fetch(`${base}/students/active/export${suffix}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Failed to download the spreadsheet');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'active-students.xlsx';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to download the spreadsheet');
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   async function saveDuration(row: ActiveEnrollment) {
     const key = rowKey(row);
     const durationDays = Number(durations[key]);
@@ -174,14 +202,24 @@ export default function ActiveStudentsTab() {
               Zenler enrolments from 1 Nov 2025. Set the duration you see in Zenler, then save the validity date.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => void syncFromZenler()}
-            disabled={syncing}
-            className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
-          >
-            {syncing ? 'Syncing…' : 'Sync from Zenler'}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void downloadExcel()}
+              disabled={downloading || syncing || total === 0}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {downloading ? 'Downloading…' : 'Download Excel'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void syncFromZenler()}
+              disabled={syncing}
+              className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+            >
+              {syncing ? 'Syncing…' : 'Sync from Zenler'}
+            </button>
+          </div>
         </div>
         {syncLabel && <p className="mt-2 text-xs text-slate-500">Syncing {syncLabel}</p>}
       </div>

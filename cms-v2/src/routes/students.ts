@@ -20,7 +20,12 @@ import {
   syncZenlerEnrollmentsBatch,
 } from '../services/zenlerEnrollmentBackfill';
 import { listZenlerRoster } from '../models/zenlerRoster';
-import { saveManualAccessDuration, syncZenlerRosterCourse, unenrollRosterCourse } from '../services/zenlerRosterSync';
+import {
+  buildActiveStudentsWorkbook,
+  saveManualAccessDuration,
+  syncZenlerRosterCourse,
+  unenrollRosterCourse,
+} from '../services/zenlerRosterSync';
 import type { StudentPurchaseFilter } from '../../shared/types';
 
 const router = Router();
@@ -235,6 +240,18 @@ router.get('/active', requireRole('admin'), async (req, res, next) => {
       pageSize: Number(req.query.pageSize ?? 100),
     });
     return res.json({ ok: true, data: page });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/active/export', requireRole('admin'), async (req, res, next) => {
+  try {
+    const search = String(req.query.search ?? '').trim() || undefined;
+    const buffer = await buildActiveStudentsWorkbook(search);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="active-students.xlsx"');
+    return res.send(buffer);
   } catch (err) {
     next(err);
   }
