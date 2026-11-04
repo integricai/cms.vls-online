@@ -1,13 +1,21 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { api } from '../../api/client';
-import type { DashboardRange } from '../../../../shared/salesFormat';
-import type { TrackingCount, TrackingReport, TrackingSourceRow } from '../../../../shared/siteTracking';
+import {
+  trackingCustomBounds,
+  type TrackingCount,
+  type TrackingRange,
+  type TrackingReport,
+  type TrackingSourceRow,
+} from '../../../../shared/siteTracking';
 
-const RANGES: Array<{ id: DashboardRange; label: string }> = [
+const RANGES: Array<{ id: TrackingRange; label: string }> = [
+  { id: 'today', label: 'Today' },
+  { id: 'yesterday', label: 'Yesterday' },
+  { id: 'this_week', label: 'This week' },
+  { id: 'last_week', label: 'Last week' },
   { id: 'this_month', label: 'This month' },
   { id: 'last_month', label: 'Last month' },
-  { id: 'last_7_days', label: 'Last 7 days' },
-  { id: 'last_30_days', label: 'Last 30 days' },
+  { id: 'custom', label: 'Custom' },
 ];
 
 const countryNames = typeof Intl.DisplayNames === 'function'
@@ -140,14 +148,25 @@ function SourceTable({ rows }: { rows: TrackingSourceRow[] }) {
 }
 
 export default function Tracking() {
-  const [range, setRange] = useState<DashboardRange>('last_30_days');
+  const [range, setRange] = useState<TrackingRange>('this_month');
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
   const [report, setReport] = useState<TrackingReport | null>(null);
   const [error, setError] = useState('');
+  const customBounds = range === 'custom' ? trackingCustomBounds(start, end) : null;
+  const query = range === 'custom'
+    ? (customBounds ? `/analytics/tracking?range=custom&start=${customBounds.start}&end=${customBounds.end}` : null)
+    : `/analytics/tracking?range=${range}`;
 
   useEffect(() => {
+    if (!query) {
+      setReport(null);
+      setError(start && end ? 'Choose a start date and an end date within one year.' : '');
+      return undefined;
+    }
     let cancelled = false;
     setError('');
-    api.get<TrackingReport>(`/analytics/tracking?range=${range}`)
+    api.get<TrackingReport>(query)
       .then(data => {
         if (!cancelled) setReport(data);
       })
@@ -157,7 +176,7 @@ export default function Tracking() {
     return () => {
       cancelled = true;
     };
-  }, [range]);
+  }, [query, start, end]);
 
   return (
     <div className="h-full overflow-auto bg-slate-50">
@@ -169,21 +188,48 @@ export default function Tracking() {
               One person a day. Channel, campaign, and landing page come from the address they opened.
             </p>
           </div>
-          <label className="text-xs font-semibold text-slate-500">
-            Period
-            <select
-              className="input ml-2 w-auto py-1 text-xs"
-              value={range}
-              onChange={event => setRange(event.target.value as DashboardRange)}
-            >
-              {RANGES.map(option => (
-                <option key={option.id} value={option.id}>{option.label}</option>
-              ))}
-            </select>
-          </label>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="text-xs font-semibold text-slate-500">
+              Period
+              <select
+                className="input mt-1 w-auto py-1 text-xs"
+                value={range}
+                onChange={event => setRange(event.target.value as TrackingRange)}
+              >
+                {RANGES.map(option => (
+                  <option key={option.id} value={option.id}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+            {range === 'custom' ? (
+              <>
+                <label className="text-xs font-semibold text-slate-500">
+                  Start date
+                  <input
+                    type="date"
+                    className="input mt-1 w-auto py-1 text-xs"
+                    value={start}
+                    max={end || undefined}
+                    onChange={event => setStart(event.target.value)}
+                  />
+                </label>
+                <label className="text-xs font-semibold text-slate-500">
+                  End date
+                  <input
+                    type="date"
+                    className="input mt-1 w-auto py-1 text-xs"
+                    value={end}
+                    min={start || undefined}
+                    onChange={event => setEnd(event.target.value)}
+                  />
+                </label>
+              </>
+            ) : null}
+          </div>
         </div>
         {error ? <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
-        {!report && !error ? <p className="text-sm text-slate-500">Loading tracking…</p> : null}
+        {!report && !error && query ? <p className="text-sm text-slate-500">Loading tracking…</p> : null}
+        {range === 'custom' && !customBounds && !error ? <p className="text-sm text-slate-500">Choose a start date and an end date.</p> : null}
         {report ? (
           <>
             <section className="rounded-2xl border border-slate-200 bg-white p-4">

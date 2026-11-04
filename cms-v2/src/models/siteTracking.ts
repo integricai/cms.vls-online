@@ -1,6 +1,6 @@
 import { sql } from '../db/client';
-import { eachIsoDay, dashboardRangeBounds, type DashboardRange } from '../../shared/salesFormat';
-import type { TrackingReport } from '../../shared/siteTracking';
+import { eachIsoDay } from '../../shared/salesFormat';
+import type { TrackingRange, TrackingReport } from '../../shared/siteTracking';
 import { siteVisitorKey } from './siteAnalytics';
 import type { ClassifiedTrackingVisit } from '../services/siteTracking';
 
@@ -57,14 +57,10 @@ export async function recordTrackingVisit(
   `;
 }
 
-export async function buildTrackingReport(range: DashboardRange, now = new Date()): Promise<TrackingReport> {
-  const today = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/London',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(now);
-  const bounds = dashboardRangeBounds(range, today);
+export async function buildTrackingReport(
+  range: TrackingRange,
+  bounds: { start: string; end: string },
+): Promise<TrackingReport> {
   const [dayRows, channelRows, campaignRows, landingRows, countryRows, sourceRows, deviceRows, localeRows, enrolmentRows] = await Promise.all([
     sql`
       SELECT visited_on::text AS date, COUNT(*)::int AS visitors

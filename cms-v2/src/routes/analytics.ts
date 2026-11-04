@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
 import { visitIpRateLimit } from '../middleware/rateLimit';
-import { isDashboardRange } from '../../shared/salesFormat';
+import { isTrackingPreset, trackingCustomBounds, trackingPresetBounds } from '../../shared/siteTracking';
 import { buildTrackingReport, recordTrackingVisit } from '../models/siteTracking';
 import { recordSiteVisitor } from '../models/siteAnalytics';
 import { detectClientIpFromRequest, detectCountryFromRequest } from '../services/geoDetection';
@@ -66,10 +66,19 @@ router.post('/track', visitIpRateLimit, async (req, res) => {
 
 router.get('/tracking', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
-    const requested = String(req.query.range ?? 'last_30_days');
-    const range = isDashboardRange(requested) ? requested : 'last_30_days';
+    const requested = String(req.query.range ?? 'this_month');
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ ok: true, data: await buildTrackingReport(range) });
+    if (requested === 'custom') {
+      const bounds = trackingCustomBounds(String(req.query.start ?? ''), String(req.query.end ?? ''));
+      if (!bounds) {
+        res.status(400).json({ ok: false, error: 'Choose a start date and an end date within one year.' });
+        return;
+      }
+      res.json({ ok: true, data: await buildTrackingReport('custom', bounds) });
+      return;
+    }
+    const range = isTrackingPreset(requested) ? requested : 'this_month';
+    res.json({ ok: true, data: await buildTrackingReport(range, trackingPresetBounds(range)) });
   } catch (err) {
     next(err);
   }
