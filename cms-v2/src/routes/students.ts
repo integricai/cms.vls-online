@@ -19,6 +19,8 @@ import {
   stopZenlerEnrollmentSync,
   syncZenlerEnrollmentsBatch,
 } from '../services/zenlerEnrollmentBackfill';
+import { listActiveEnrollments } from '../models/activeEnrollment';
+import { unenrollActiveCourse } from '../services/activeEnrollment';
 import type { StudentPurchaseFilter } from '../../shared/types';
 
 const router = Router();
@@ -221,6 +223,35 @@ router.post('/send-exam-emails', requireRole('admin'), async (req, res, next) =>
     return res.json({ ok: true, data: result });
   } catch (err) {
     next(err);
+  }
+});
+
+router.get('/active', requireRole('admin'), async (req, res, next) => {
+  try {
+    const search = String(req.query.search ?? '').trim() || undefined;
+    const page = await listActiveEnrollments({
+      search,
+      page: Number(req.query.page ?? 1),
+      pageSize: Number(req.query.pageSize ?? 100),
+    });
+    return res.json({ ok: true, data: page });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/active/unenroll', requireRole('admin'), async (req, res) => {
+  try {
+    const saleId = parseId(req.body?.saleId);
+    const zenlerCourseId = String(req.body?.zenlerCourseId ?? '').trim();
+    if (!saleId || !zenlerCourseId) {
+      return res.status(400).json({ ok: false, error: 'saleId and zenlerCourseId are required' });
+    }
+    const result = await unenrollActiveCourse({ saleId, zenlerCourseId });
+    return res.json({ ok: true, data: result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Could not unenrol this course';
+    return res.status(400).json({ ok: false, error: message });
   }
 });
 

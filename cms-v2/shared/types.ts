@@ -423,6 +423,28 @@ export interface StudentListPage {
   totalPages: number;
 }
 
+/** One open school enrolment: a paid sale that has not reached its validity date. */
+export interface ActiveEnrollment {
+  saleId: number;
+  paymentOrderId: number;
+  customerId: number;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  courseId: number | null;
+  courseName: string;
+  zenlerCourseId: string;
+  expiryDate: Date;
+}
+
+export interface ActiveEnrollmentPage {
+  items: ActiveEnrollment[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface StudentSyncState {
   status: StudentSyncStatus;
   lastCompletedPage: number;
