@@ -44,6 +44,9 @@ function rowToActiveEnrollment(row: ActiveEnrollmentDbRow): ActiveEnrollment {
     courseId: row.course_id,
     courseName: row.course_name?.trim() || `Course ${row.zenler_course_id}`,
     zenlerCourseId: row.zenler_course_id,
+    zenlerUserId: '',
+    enrollmentDate: row.expiry_date,
+    durationDays: null,
     expiryDate: row.expiry_date,
   };
 }

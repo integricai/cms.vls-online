@@ -34,6 +34,7 @@ export interface ZenlerEnrollmentItem {
   first_name?: string | null;
   last_name?: string | null;
   course_name?: string | null;
+  enrollment_date?: string | null;
 }
 
 interface ZenlerEnrollmentListData {

@@ -423,18 +423,38 @@ export interface StudentListPage {
   totalPages: number;
 }
 
-/** One open school enrolment: a paid sale that has not reached its validity date. */
+/** Day lengths an admin can apply after checking the plan in Zenler. */
+export const MANUAL_ACCESS_DURATIONS = [60, 90, 180, 365] as const;
+
+/** Enrolments before this date are finished even on a 365-day plan. */
+export const ZENLER_ROSTER_FROM = '2025-11-01';
+
+/** A Zenler enrolment since 1 Nov 2025, with a validity date once an admin saves a duration. */
 export interface ActiveEnrollment {
-  saleId: number;
-  paymentOrderId: number;
-  customerId: number;
+  saleId: number | null;
+  paymentOrderId: number | null;
+  customerId: number | null;
+  zenlerUserId: string;
   email: string;
   firstName: string | null;
   lastName: string | null;
   courseId: number | null;
   courseName: string;
   zenlerCourseId: string;
-  expiryDate: Date;
+  enrollmentDate: Date;
+  durationDays: number | null;
+  expiryDate: Date | null;
+}
+
+export interface ZenlerRosterSyncResult {
+  courseIndex: number;
+  nextCourseIndex: number | null;
+  totalCourses: number;
+  courseName: string | null;
+  kept: number;
+  skipped: number;
+  done: boolean;
+  error: string | null;
 }
 
 export interface ActiveEnrollmentPage {

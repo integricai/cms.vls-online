@@ -19,8 +19,8 @@ import {
   stopZenlerEnrollmentSync,
   syncZenlerEnrollmentsBatch,
 } from '../services/zenlerEnrollmentBackfill';
-import { listActiveEnrollments } from '../models/activeEnrollment';
-import { unenrollActiveCourse } from '../services/activeEnrollment';
+import { listZenlerRoster } from '../models/zenlerRoster';
+import { saveManualAccessDuration, syncZenlerRosterCourse, unenrollRosterCourse } from '../services/zenlerRosterSync';
 import type { StudentPurchaseFilter } from '../../shared/types';
 
 const router = Router();
@@ -229,7 +229,7 @@ router.post('/send-exam-emails', requireRole('admin'), async (req, res, next) =>
 router.get('/active', requireRole('admin'), async (req, res, next) => {
   try {
     const search = String(req.query.search ?? '').trim() || undefined;
-    const page = await listActiveEnrollments({
+    const page = await listZenlerRoster({
       search,
       page: Number(req.query.page ?? 1),
       pageSize: Number(req.query.pageSize ?? 100),
@@ -240,14 +240,48 @@ router.get('/active', requireRole('admin'), async (req, res, next) => {
   }
 });
 
+router.post('/active/sync', requireRole('admin'), async (req, res) => {
+  try {
+    const courseIndex = Number(req.body?.courseIndex ?? 0);
+    const result = await syncZenlerRosterCourse(Number.isFinite(courseIndex) ? courseIndex : 0);
+    return res.json({ ok: true, data: result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Could not sync Zenler enrolments';
+    return res.status(400).json({ ok: false, error: message });
+  }
+});
+
+router.post('/active/duration', requireRole('admin'), async (req, res) => {
+  try {
+    const zenlerCourseId = String(req.body?.zenlerCourseId ?? '').trim();
+    const zenlerUserId = String(req.body?.zenlerUserId ?? '').trim();
+    const durationDays = Number(req.body?.durationDays);
+    if (!zenlerCourseId || !zenlerUserId || !Number.isInteger(durationDays)) {
+      return res.status(400).json({ ok: false, error: 'Course, student, and duration are required' });
+    }
+    const result = await saveManualAccessDuration({ zenlerCourseId, zenlerUserId, durationDays });
+    return res.json({ ok: true, data: result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Could not save the validity date';
+    return res.status(400).json({ ok: false, error: message });
+  }
+});
+
 router.post('/active/unenroll', requireRole('admin'), async (req, res) => {
   try {
-    const saleId = parseId(req.body?.saleId);
     const zenlerCourseId = String(req.body?.zenlerCourseId ?? '').trim();
-    if (!saleId || !zenlerCourseId) {
-      return res.status(400).json({ ok: false, error: 'saleId and zenlerCourseId are required' });
+    const zenlerUserId = String(req.body?.zenlerUserId ?? '').trim();
+    const email = String(req.body?.email ?? '').trim();
+    const saleId = parseId(req.body?.saleId);
+    if (!zenlerCourseId || !zenlerUserId) {
+      return res.status(400).json({ ok: false, error: 'zenlerCourseId and zenlerUserId are required' });
     }
-    const result = await unenrollActiveCourse({ saleId, zenlerCourseId });
+    const result = await unenrollRosterCourse({
+      zenlerCourseId,
+      zenlerUserId,
+      email,
+      saleId,
+    });
     return res.json({ ok: true, data: result });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Could not unenrol this course';
