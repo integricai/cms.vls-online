@@ -25,6 +25,7 @@ import { majorAmountFromStripeMinor } from '../stripeCheckout';
 import { courseAccessUrlForEnrollment } from '../schoolAccess';
 import { normalizeExamSession, sessionAccessEndsAt } from '../../../shared/sessionAccess';
 import { clearStudentPassword } from '../studentPassword';
+import { sendMetaPurchaseConversion } from '../metaConversions';
 import { ensureSaleRecordedForPaidOrder } from '../saleRecording';
 import { consumeRetakeCodeForOrder, releaseRetakeCodeForOrder } from '../retakeDiscount';
 import {
@@ -332,6 +333,12 @@ export async function fulfillPaidCheckout(event: CheckoutCompletedEvent): Promis
 
   if (wasAlreadyPaid) {
     return reconcilePaidOrder(order);
+  }
+
+  try {
+    await sendMetaPurchaseConversion(order);
+  } catch (err) {
+    console.error('[meta] purchase conversion failed', order.id, err instanceof Error ? err.message : err);
   }
 
   const email = paymentOrderPayerEmail(order);
