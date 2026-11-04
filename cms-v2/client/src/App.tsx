@@ -32,6 +32,7 @@ import Team from './screens/Team';
 import SettingsPage from './screens/Settings/Page';
 import Configurations from './screens/Configurations';
 import Sales from './screens/Sales';
+import Tracking from './screens/Tracking';
 import Payments from './screens/Payments';
 import Students from './screens/Students';
 import GoogleConversions from './screens/GoogleConversions';
@@ -159,6 +160,7 @@ export default function App() {
           <Route path="/sales/payments"   element={<Navigate to="/payments" replace />} />
           <Route path="/payments"         element={<RequirePayments><Payments /></RequirePayments>} />
           <Route path="/sales"            element={<RequireAdmin><Sales /></RequireAdmin>} />
+          <Route path="/tracking"         element={<RequireAdmin><Tracking /></RequireAdmin>} />
           <Route path="/students"         element={<RequireAdmin><Students /></RequireAdmin>} />
           <Route path="/google-conversions" element={<RequireAdmin><GoogleConversions /></RequireAdmin>} />
           <Route path="/billing/custom-offer" element={<Navigate to="/payments?tab=custom-offer" replace />} />
