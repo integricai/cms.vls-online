@@ -13,6 +13,7 @@ import {
   safeCheckoutCancelPath,
   STRIPE_PAYPAL_CURRENCY_NOTE,
   STRIPE_RETURNING_STUDENT_MESSAGE,
+  stripeMethodsForCharge,
   stripePaymentMethodTypes,
   stripeUnitAmount,
   stripeSecretKeyForEnvironment,
@@ -268,6 +269,13 @@ run('adds Link only when Stripe collects the email', () => {
     STRIPE_RETURNING_STUDENT_MESSAGE,
     'Already a Vertex student? Use the email you log in with.',
   );
+});
+
+run('drops Klarna from a dollar charge only where Adaptive Pricing is off', () => {
+  const methods = ['card', 'link', 'paypal', 'klarna'];
+  assert.deepStrictEqual(stripeMethodsForCharge(methods, 'USD', 'staging'), ['card', 'link', 'paypal']);
+  assert.deepStrictEqual(stripeMethodsForCharge(methods, 'USD', 'production'), methods);
+  assert.deepStrictEqual(stripeMethodsForCharge(methods, 'GBP', 'staging'), methods);
 });
 
 run('keeps Stripe cancel on the course page', () => {

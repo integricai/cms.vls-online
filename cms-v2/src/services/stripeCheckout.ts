@@ -82,6 +82,16 @@ export function appendStripeAdaptivePricing(
   params.append('adaptive_pricing[enabled]', 'true');
 }
 
+/** Stripe refuses Klarna on a dollar charge once Adaptive Pricing is off, as it is on staging. */
+export function stripeMethodsForCharge(
+  methods: string[],
+  currency: string,
+  environment?: CheckoutEnvironment | null,
+): string[] {
+  if (environment !== 'staging' || currency.toUpperCase() !== 'USD') return methods;
+  return methods.filter((method) => method !== 'klarna');
+}
+
 export type LocalPresentment = {
   amount: number;
   currency: string;
@@ -300,9 +310,13 @@ export async function createStripeCheckoutSession(input: {
   const unitAmount = stripeUnitAmount(input.amount, chargeCurrency);
 
   const paymentFirst = !input.studentEmail;
-  const paymentMethodTypes = input.paymentMethodTypes?.length
-    ? input.paymentMethodTypes
-    : stripePaymentMethodTypes(paymentFirst);
+  const paymentMethodTypes = stripeMethodsForCharge(
+    input.paymentMethodTypes?.length
+      ? input.paymentMethodTypes
+      : stripePaymentMethodTypes(paymentFirst),
+    chargeCurrency,
+    environment,
+  );
 
   const params = new URLSearchParams();
   params.append('mode', 'payment');
