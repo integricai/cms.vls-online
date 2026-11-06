@@ -495,8 +495,6 @@ export async function openDiscountPaymentLink(input: {
     currency: charge.currency,
     savedOffer: charge.currency !== 'USD',
     studentEmail: null,
-    studentFirstName: row.firstName,
-    studentLastName: row.lastName,
     paymentMethodTypes: stripePaymentMethodTypes(true, charge.currency),
     returnOrigin: input.returnOrigin,
     cancelPath: '/',

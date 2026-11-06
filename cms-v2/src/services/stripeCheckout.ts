@@ -13,14 +13,10 @@ function appendParam(params: URLSearchParams, key: string, value: string | numbe
   if (value != null && value !== '') params.append(key, String(value));
 }
 
-/** Shown under the course name in the left order summary, beneath the currency choice. */
-export const STRIPE_PAYPAL_CURRENCY_NOTE =
-  'To pay by PayPal, please select the USD price, provided PayPal is available in your country.';
-
 export const STRIPE_RETURNING_STUDENT_MESSAGE =
   'Already a Vertex student? Use the email you log in with.';
 
-/** Stripe drops line breaks from product text, so the staging summary list is an image. */
+/** Stripe drops line breaks from product text, so the summary list is an image. */
 export const STRIPE_ORDER_SUMMARY_IMAGE_URL = 'https://cms.vls-online.com/stripe-order-summary.png';
 
 const STRIPE_BRAND_COLOR = '#0b1f3a';
@@ -67,10 +63,6 @@ export function safeCheckoutCancelPath(value: string | null | undefined): string
   return path;
 }
 
-export function appendStripeOrderSummaryNote(params: URLSearchParams): void {
-  params.append('line_items[0][price_data][product_data][description]', STRIPE_PAYPAL_CURRENCY_NOTE);
-}
-
 export function appendStripeOrderSummaryImage(params: URLSearchParams): void {
   params.append('line_items[0][price_data][product_data][images][0]', STRIPE_ORDER_SUMMARY_IMAGE_URL);
 }
@@ -83,30 +75,14 @@ export function appendStripeBranding(params: URLSearchParams): void {
   params.append('branding_settings[icon][url]', STRIPE_BRAND_ICON_URL);
 }
 
-/**
- * Live checkout lets Stripe show a local price beside the dollar charge.
- * Staging checkout forces the dollar price, even if the dashboard toggle is on.
- */
-export function appendStripeAdaptivePricing(
-  params: URLSearchParams,
-  currency: string,
-  environment?: CheckoutEnvironment | null,
-): void {
-  if (environment === 'staging') {
-    params.append('adaptive_pricing[enabled]', 'false');
-    return;
-  }
-  if (currency.toUpperCase() !== 'USD') return;
-  params.append('adaptive_pricing[enabled]', 'true');
+/** Checkout shows only the dollar price, even if the dashboard toggle is on. */
+export function appendStripeAdaptivePricing(params: URLSearchParams): void {
+  params.append('adaptive_pricing[enabled]', 'false');
 }
 
-/** Stripe refuses Klarna on a dollar charge once Adaptive Pricing is off, as it is on staging. */
-export function stripeMethodsForCharge(
-  methods: string[],
-  currency: string,
-  environment?: CheckoutEnvironment | null,
-): string[] {
-  if (environment !== 'staging' || currency.toUpperCase() !== 'USD') return methods;
+/** Stripe refuses Klarna on a dollar charge once Adaptive Pricing is off. */
+export function stripeMethodsForCharge(methods: string[], currency: string): string[] {
+  if (currency.toUpperCase() !== 'USD') return methods;
   return methods.filter((method) => method !== 'klarna');
 }
 
@@ -161,61 +137,6 @@ export function classifyPaidAmount(input: {
 export function majorAmountFromStripeMinor(amountMinor: number, currency: string): number {
   if (STRIPE_ZERO_DECIMAL.has(currency.toUpperCase())) return amountMinor;
   return amountMinor / 100;
-}
-
-function clipStripeName(value: string | null | undefined): string {
-  return String(value ?? '').trim().slice(0, 80);
-}
-
-/**
- * Values for the Stripe name boxes. A name from our form wins for that box.
- * The school account is next, then the name stored on a discount code.
- * Both form names means those boxes are left off the page, so this returns nothing.
- */
-export function resolveStripeStudentNameDefaults(input: {
-  formFirstName?: string | null;
-  formLastName?: string | null;
-  schoolFirstName?: string | null;
-  schoolLastName?: string | null;
-  codeFirstName?: string | null;
-  codeLastName?: string | null;
-}): { studentFirstName?: string; studentLastName?: string } {
-  const formFirstName = clipStripeName(input.formFirstName);
-  const formLastName = clipStripeName(input.formLastName);
-  if (formFirstName && formLastName) return {};
-
-  const studentFirstName = formFirstName
-    || clipStripeName(input.schoolFirstName)
-    || clipStripeName(input.codeFirstName);
-  const studentLastName = formLastName
-    || clipStripeName(input.schoolLastName)
-    || clipStripeName(input.codeLastName);
-  return {
-    ...(studentFirstName ? { studentFirstName } : {}),
-    ...(studentLastName ? { studentLastName } : {}),
-  };
-}
-
-/** Required name fields on the Stripe page, beside the email. */
-export function appendStripeStudentNameFields(
-  params: URLSearchParams,
-  defaults?: { firstName?: string | null; lastName?: string | null },
-): void {
-  const fields = [
-    { key: 'first_name', label: 'First name', value: defaults?.firstName },
-    { key: 'last_name', label: 'Last name', value: defaults?.lastName },
-  ];
-  fields.forEach((field, index) => {
-    params.append(`custom_fields[${index}][key]`, field.key);
-    params.append(`custom_fields[${index}][label][type]`, 'custom');
-    params.append(`custom_fields[${index}][label][custom]`, field.label);
-    params.append(`custom_fields[${index}][type]`, 'text');
-    params.append(`custom_fields[${index}][optional]`, 'false');
-    params.append(`custom_fields[${index}][text][minimum_length]`, '1');
-    params.append(`custom_fields[${index}][text][maximum_length]`, '80');
-    const value = String(field.value ?? '').trim().slice(0, 80);
-    if (value) params.append(`custom_fields[${index}][text][default_value]`, value);
-  });
 }
 
 /** Lock Checkout to this email. A prefilled customer_email can still be edited. */
@@ -306,9 +227,6 @@ export async function createStripeCheckoutSession(input: {
   amount: number;
   currency: string;
   studentEmail: string | null;
-  skipStudentNameFields?: boolean;
-  studentFirstName?: string | null;
-  studentLastName?: string | null;
   countryCode?: string | null;
   paymentMethodTypes?: string[];
   returnOrigin?: string | null;
@@ -333,7 +251,6 @@ export async function createStripeCheckoutSession(input: {
       ? input.paymentMethodTypes
       : stripePaymentMethodTypes(paymentFirst),
     chargeCurrency,
-    environment,
   );
 
   const params = new URLSearchParams();
@@ -349,23 +266,14 @@ export async function createStripeCheckoutSession(input: {
     params.append('metadata[flow]', 'standard');
   }
   params.append('billing_address_collection', 'required');
-  const stagingPage = environment === 'staging';
-  if (stagingPage) appendStripeBranding(params);
-  // Staging takes the student name from Stripe's own full name box.
-  if (!input.skipStudentNameFields && !stagingPage) {
-    appendStripeStudentNameFields(params, {
-      firstName: input.studentFirstName,
-      lastName: input.studentLastName,
-    });
-  }
+  appendStripeBranding(params);
   params.append('client_reference_id', String(input.orderId));
-  // The charge is USD. Live checkout may also show a local price. Staging does not.
+  // The charge and the price on the Stripe page are both USD.
   params.append('line_items[0][price_data][currency]', chargeCurrency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
-  if (stagingPage) appendStripeOrderSummaryImage(params);
-  else appendStripeOrderSummaryNote(params);
+  appendStripeOrderSummaryImage(params);
   params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
-  appendStripeAdaptivePricing(params, chargeCurrency, environment);
+  appendStripeAdaptivePricing(params);
   params.append('line_items[0][quantity]', '1');
   if (input.studentEmail) {
     try {

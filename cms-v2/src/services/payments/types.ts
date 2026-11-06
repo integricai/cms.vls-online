@@ -15,11 +15,6 @@ export interface CreateCheckoutInput {
   amount: number;
   currency: string;
   studentEmail: string | null;
-  /** When the site already collected both names, Stripe does not ask again. */
-  skipStudentNameFields?: boolean;
-  /** Prefills the Stripe name boxes. The student can still edit them. */
-  studentFirstName?: string | null;
-  studentLastName?: string | null;
   countryCode?: string | null;
   returnOrigin?: string | null;
   /** Same-site path opened when the student leaves Checkout. */

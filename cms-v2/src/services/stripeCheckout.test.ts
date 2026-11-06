@@ -4,15 +4,11 @@ import { resolveCheckoutEnvironment } from './attribution';
 import {
   STRIPE_WEBHOOK_TOLERANCE_SECONDS,
   appendStripeAdaptivePricing,
-  appendStripeOrderSummaryNote,
-  appendStripeStudentNameFields,
   assertStripeUsdCharge,
   classifyPaidAmount,
   createStripeCheckoutSession,
   majorAmountFromStripeMinor,
-  resolveStripeStudentNameDefaults,
   safeCheckoutCancelPath,
-  STRIPE_PAYPAL_CURRENCY_NOTE,
   STRIPE_RETURNING_STUDENT_MESSAGE,
   STRIPE_ORDER_SUMMARY_IMAGE_URL,
   stripeMethodsForCharge,
@@ -183,82 +179,12 @@ run('accepts any v1 signature when the header carries several', () => {
   });
 });
 
-run('adds the PayPal currency note to the left order summary', () => {
+run('turns Adaptive Pricing off so Stripe shows only the dollar price', () => {
   const params = new URLSearchParams();
-  appendStripeOrderSummaryNote(params);
-  assert.strictEqual(
-    params.get('line_items[0][price_data][product_data][description]'),
-    STRIPE_PAYPAL_CURRENCY_NOTE,
-  );
-  assert.strictEqual(
-    STRIPE_PAYPAL_CURRENCY_NOTE,
-    'To pay by PayPal, please select the USD price, provided PayPal is available in your country.',
-  );
-});
-
-run('asks Stripe for the local price and the dollar price on a live US dollar charge', () => {
-  const usd = new URLSearchParams();
-  appendStripeAdaptivePricing(usd, 'USD', 'production');
-  assert.strictEqual(usd.get('adaptive_pricing[enabled]'), 'true');
-
-  const staging = new URLSearchParams();
-  appendStripeAdaptivePricing(staging, 'USD', 'staging');
-  assert.strictEqual(staging.get('adaptive_pricing[enabled]'), 'false');
-
-  const gbp = new URLSearchParams();
-  appendStripeAdaptivePricing(gbp, 'gbp', 'production');
-  assert.strictEqual(gbp.get('adaptive_pricing[enabled]'), null);
+  appendStripeAdaptivePricing(params);
+  assert.strictEqual(params.get('adaptive_pricing[enabled]'), 'false');
   assert.strictEqual(majorAmountFromStripeMinor(6100, 'USD'), 61);
   assert.strictEqual(majorAmountFromStripeMinor(14850, 'JPY'), 14850);
-});
-
-run('asks Stripe for a required first name and last name', () => {
-  const params = new URLSearchParams();
-  appendStripeStudentNameFields(params);
-  assert.strictEqual(params.get('custom_fields[0][key]'), 'first_name');
-  assert.strictEqual(params.get('custom_fields[0][label][custom]'), 'First name');
-  assert.strictEqual(params.get('custom_fields[0][optional]'), 'false');
-  assert.strictEqual(params.get('custom_fields[0][text][default_value]'), null);
-  assert.strictEqual(params.get('custom_fields[1][key]'), 'last_name');
-  assert.strictEqual(params.get('custom_fields[1][label][custom]'), 'Last name');
-  assert.strictEqual(params.get('custom_fields[1][optional]'), 'false');
-  assert.strictEqual(params.get('custom_fields[1][text][default_value]'), null);
-});
-
-run('prefills Stripe name fields without locking them', () => {
-  const params = new URLSearchParams();
-  appendStripeStudentNameFields(params, { firstName: ' Ada ', lastName: '' });
-  assert.strictEqual(params.get('custom_fields[0][text][default_value]'), 'Ada');
-  assert.strictEqual(params.get('custom_fields[0][optional]'), 'false');
-  assert.strictEqual(params.get('custom_fields[1][text][default_value]'), null);
-});
-
-run('leaves Stripe name defaults empty when the form already has both names', () => {
-  assert.deepStrictEqual(resolveStripeStudentNameDefaults({
-    formFirstName: 'Ada',
-    formLastName: 'Lovelace',
-    schoolFirstName: 'School',
-    schoolLastName: 'Name',
-    codeFirstName: 'Code',
-    codeLastName: 'Person',
-  }), {});
-});
-
-run('prefers the school account, then the discount code, for an empty form name', () => {
-  assert.deepStrictEqual(resolveStripeStudentNameDefaults({
-    schoolFirstName: ' Grace ',
-    schoolLastName: '',
-    codeFirstName: 'Code',
-    codeLastName: 'Hopper',
-  }), { studentFirstName: 'Grace', studentLastName: 'Hopper' });
-});
-
-run('keeps a single name typed on the form and fills only the other box', () => {
-  assert.deepStrictEqual(resolveStripeStudentNameDefaults({
-    formFirstName: 'Ada',
-    schoolFirstName: 'School',
-    schoolLastName: 'Lovelace',
-  }), { studentFirstName: 'Ada', studentLastName: 'Lovelace' });
 });
 
 run('adds Link only when Stripe collects the email', () => {
@@ -273,11 +199,10 @@ run('adds Link only when Stripe collects the email', () => {
   );
 });
 
-run('drops Klarna from a dollar charge only where Adaptive Pricing is off', () => {
+run('drops Klarna from a dollar charge', () => {
   const methods = ['card', 'link', 'paypal', 'klarna'];
-  assert.deepStrictEqual(stripeMethodsForCharge(methods, 'USD', 'staging'), ['card', 'link', 'paypal']);
-  assert.deepStrictEqual(stripeMethodsForCharge(methods, 'USD', 'production'), methods);
-  assert.deepStrictEqual(stripeMethodsForCharge(methods, 'GBP', 'staging'), methods);
+  assert.deepStrictEqual(stripeMethodsForCharge(methods, 'USD'), ['card', 'link', 'paypal']);
+  assert.deepStrictEqual(stripeMethodsForCharge(methods, 'GBP'), methods);
 });
 
 run('keeps Stripe cancel on the course page', () => {
@@ -359,24 +284,19 @@ void (async () => {
   const orderSummaryNote = 'line_items[0][price_data][product_data][description]';
   const orderSummaryImage = 'line_items[0][price_data][product_data][images][0]';
 
-  run('gives staging one Stripe name box, the left pane image, and the branded page', () => {
-    assert.strictEqual(staging.get('custom_fields[0][key]'), null);
-    assert.strictEqual(staging.get(orderSummaryNote), null);
-    assert.strictEqual(staging.get(orderSummaryImage), STRIPE_ORDER_SUMMARY_IMAGE_URL);
-    assert.strictEqual(staging.get('custom_text[after_submit][message]'), null);
-    assert.ok(staging.getAll('payment_method_types[]').includes('card'));
-    assert.strictEqual(staging.get('branding_settings[background_color]'), '#0b1f3a');
-    assert.strictEqual(staging.get('custom_text[submit][message]'), STRIPE_RETURNING_STUDENT_MESSAGE);
-  });
-
-  run('leaves the live Stripe page as it was', () => {
-    assert.strictEqual(live.get('custom_fields[0][key]'), 'first_name');
-    assert.strictEqual(live.get('custom_fields[1][key]'), 'last_name');
-    assert.strictEqual(live.get(orderSummaryNote), STRIPE_PAYPAL_CURRENCY_NOTE);
-    assert.strictEqual(live.get(orderSummaryImage), null);
-    assert.strictEqual(live.get('custom_text[after_submit][message]'), null);
-    assert.strictEqual(live.get('branding_settings[background_color]'), null);
-  });
+  for (const [name, page] of [['staging', staging], ['live', live]] as const) {
+    run(`gives ${name} one Stripe name box, the left pane image, and the branded page`, () => {
+      assert.strictEqual(page.get('custom_fields[0][key]'), null);
+      assert.strictEqual(page.get(orderSummaryNote), null);
+      assert.strictEqual(page.get(orderSummaryImage), STRIPE_ORDER_SUMMARY_IMAGE_URL);
+      assert.strictEqual(page.get('custom_text[after_submit][message]'), null);
+      assert.ok(page.getAll('payment_method_types[]').includes('card'));
+      assert.ok(!page.getAll('payment_method_types[]').includes('klarna'));
+      assert.strictEqual(page.get('adaptive_pricing[enabled]'), 'false');
+      assert.strictEqual(page.get('branding_settings[background_color]'), '#0b1f3a');
+      assert.strictEqual(page.get('custom_text[submit][message]'), STRIPE_RETURNING_STUDENT_MESSAGE);
+    });
+  }
 
   console.log('stripeCheckout tests passed');
 })().catch((err) => {

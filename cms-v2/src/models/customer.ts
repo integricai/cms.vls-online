@@ -79,10 +79,8 @@ function rowToStudentListItem(row: StudentListDbRow): StudentListItem {
   };
 }
 
-export function splitStudentName(
-  name: string | null | undefined,
-  repeatSingleName = false,
-): {
+/** A one-word name fills both boxes, so Madonna is Madonna Madonna. */
+export function splitStudentName(name: string | null | undefined): {
   firstName: string | null;
   lastName: string | null;
 } {
@@ -90,7 +88,7 @@ export function splitStudentName(
   if (!trimmed) return { firstName: null, lastName: null };
   const parts = trimmed.split(/\s+/);
   if (parts.length === 1) {
-    return { firstName: parts[0]!, lastName: repeatSingleName ? parts[0]! : null };
+    return { firstName: parts[0]!, lastName: parts[0]! };
   }
   return { firstName: parts[0]!, lastName: parts.slice(1).join(' ') };
 }

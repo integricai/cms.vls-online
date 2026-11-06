@@ -69,7 +69,6 @@ import {
   rateLimit,
 } from '../middleware/rateLimit';
 import { findZenlerUserByEmail, zenlerCredentialsConfigured, type ZenlerApiUser } from '../services/zenlerApi';
-import { resolveStripeStudentNameDefaults } from '../services/stripeCheckout';
 import { retakeCodeForCheckout } from '../services/retakeDiscountMath';
 import {
   lookupSchoolCourseAccess,
@@ -187,10 +186,9 @@ function parseCheckoutReturnOrigin(req: Request): string | undefined {
 function parseCheckoutCustomer(
   body: Record<string, unknown>,
   countryCode: string | null,
-  repeatSingleName = false,
 ) {
   const studentEmail = parseOptionalText(body.studentEmail);
-  const split = splitStudentName(parseOptionalText(body.studentName), repeatSingleName);
+  const split = splitStudentName(parseOptionalText(body.studentName));
   const firstName = parseOptionalText(body.firstName) ?? split.firstName;
   const lastName = parseOptionalText(body.lastName) ?? split.lastName;
   const studentName = parseOptionalText(body.studentName) ?? ([firstName, lastName].filter(Boolean).join(' ') || null);
@@ -247,44 +245,6 @@ async function prepareSchoolPassword(
   if (registered === true) return { email, password: null, schoolUser, schoolLookupDone };
   if (!parsed.password) return { error: 'Choose a password for your new school account.' };
   return { email, password: parsed.password, schoolUser, schoolLookupDone };
-}
-
-/**
- * Fills the Stripe name boxes when the form did not send both names.
- * Uses the school account already loaded for this checkout. A discount code
- * fills only a box that is still empty. A failed lookup does not stop checkout.
- */
-async function stripeNameDefaults(input: {
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  schoolUser: ZenlerApiUser | null;
-  schoolLookupDone: boolean;
-  codeFirstName?: string | null;
-  codeLastName?: string | null;
-}): Promise<{ studentFirstName?: string; studentLastName?: string }> {
-  const formFirstName = String(input.firstName ?? '').trim();
-  const formLastName = String(input.lastName ?? '').trim();
-  if (formFirstName && formLastName) return {};
-
-  let schoolUser = input.schoolUser;
-  if (!input.schoolLookupDone && input.email && zenlerCredentialsConfigured()) {
-    try {
-      schoolUser = await findZenlerUserByEmail(input.email);
-    } catch (err) {
-      console.error('[checkout] could not prefill Stripe names from Zenler', err instanceof Error ? err.message : err);
-      schoolUser = null;
-    }
-  }
-
-  return resolveStripeStudentNameDefaults({
-    formFirstName: input.firstName,
-    formLastName: input.lastName,
-    schoolFirstName: schoolUser?.first_name,
-    schoolLastName: schoolUser?.last_name,
-    codeFirstName: input.codeFirstName,
-    codeLastName: input.codeLastName,
-  });
 }
 
 function schoolLoginErrorUrl(req: Request): string {
@@ -459,7 +419,7 @@ router.post('/school-login', schoolLoginRateLimit, async (req: Request, res: Res
     }
     const email = normalizeStudentEmail(order.studentEmail ?? order.providerCustomerEmail ?? order.stripeCustomerEmail);
     if (!email) return res.status(400).json({ ok: false, error: 'This payment has no school email.' });
-    const names = zenlerStudentNames(order.studentName, email, order.checkoutEnvironment === 'staging');
+    const names = zenlerStudentNames(order.studentName, email);
     const url = schoolSsoUrl({
       firstName: names.firstName,
       lastName: names.lastName,
@@ -561,7 +521,7 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       clientIp,
       environment,
     });
-    const customerInput = parseCheckoutCustomer(req.body ?? {}, geo.countryCode, environment === 'staging');
+    const customerInput = parseCheckoutCustomer(req.body ?? {}, geo.countryCode);
     const schoolPassword = await prepareSchoolPassword(req.body ?? {}, customerInput.studentEmail);
     if ('error' in schoolPassword) {
       return res.status(400).json({ ok: false, error: 'invalid_request', message: schoolPassword.error });
@@ -600,13 +560,6 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       await saveOfferedPresentment(order.id, localPresentment.amount, localPresentment.currency);
     }
 
-    const stripeNames = await stripeNameDefaults({
-      email: schoolPassword.email,
-      firstName: customerInput.firstName,
-      lastName: customerInput.lastName,
-      schoolUser: schoolPassword.schoolUser,
-      schoolLookupDone: schoolPassword.schoolLookupDone,
-    });
     const session = await startProviderCheckout(providerId, {
       orderId: order.id,
       paymentOptionId: option.id,
@@ -618,7 +571,6 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       currency: 'USD',
       studentEmail: schoolPassword.email,
       localPresentment: providerId === 'stripe' ? localPresentment : null,
-      ...stripeNames,
       returnOrigin: parseCheckoutReturnOrigin(req),
       cancelPath: typeof req.body?.cancelPath === 'string' ? req.body.cancelPath : null,
       environment,
@@ -894,7 +846,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       clientIp,
       environment,
     });
-    const customerInput = parseCheckoutCustomer(req.body ?? {}, quotedCountryCode, environment === 'staging');
+    const customerInput = parseCheckoutCustomer(req.body ?? {}, quotedCountryCode);
     const schoolPassword = await prepareSchoolPassword(req.body ?? {}, customerInput.studentEmail);
     if ('error' in schoolPassword) {
       return res.status(400).json({ ok: false, error: 'invalid_request', message: schoolPassword.error });
@@ -978,15 +930,6 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       }
     }
 
-    const stripeNames = await stripeNameDefaults({
-      email: schoolPassword.email,
-      firstName: customerInput.firstName,
-      lastName: customerInput.lastName,
-      schoolUser: schoolPassword.schoolUser,
-      schoolLookupDone: schoolPassword.schoolLookupDone,
-      codeFirstName: retakeQuote?.firstName,
-      codeLastName: retakeQuote?.lastName,
-    });
     let session;
     try {
       session = await startProviderCheckout(providerId, {
@@ -999,8 +942,6 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
         amount: chargeAmount,
         currency: chargeCurrency,
         studentEmail: schoolPassword.email,
-        skipStudentNameFields: Boolean(customerInput.firstName && customerInput.lastName),
-        ...stripeNames,
         countryCode: quotedCountryCode,
         returnOrigin: parseCheckoutReturnOrigin(req),
         cancelPath: typeof req.body?.cancelPath === 'string' ? req.body.cancelPath : null,

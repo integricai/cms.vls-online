@@ -108,10 +108,7 @@ export async function ensureSaleRecordedForPaidOrder(order: PaymentOrder) {
     return null;
   }
 
-  const { firstName, lastName } = splitStudentName(
-    workingOrder.studentName,
-    workingOrder.checkoutEnvironment === 'staging',
-  );
+  const { firstName, lastName } = splitStudentName(workingOrder.studentName);
   const customer = await upsertCustomer({
     email,
     firstName,
