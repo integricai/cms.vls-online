@@ -20,6 +20,12 @@ export const STRIPE_PAYPAL_CURRENCY_NOTE =
 export const STRIPE_RETURNING_STUDENT_MESSAGE =
   'Already a Vertex student? Use the email you log in with.';
 
+export const STRIPE_SECURE_PAYMENT_MESSAGE =
+  '7-Day Money-Back Guarantee. Get a full refund within 7 days of registration. Secure payment. Your details are encrypted and processed by Stripe. We never see or store your full card number.';
+
+const STRIPE_BRAND_COLOR = '#0b1f3a';
+const STRIPE_BRAND_ICON_URL = 'https://vls-online.com/icon.png';
+
 /** Card already surfaces Apple Pay and Google Pay. Link is added only when Stripe collects the email. */
 export function stripePaymentMethodTypes(paymentFirst: boolean, currency = 'USD'): string[] {
   if (!paymentFirst) return ['card', 'paypal', 'klarna'];
@@ -63,6 +69,15 @@ export function safeCheckoutCancelPath(value: string | null | undefined): string
 
 export function appendStripeOrderSummaryNote(params: URLSearchParams): void {
   params.append('line_items[0][price_data][product_data][description]', STRIPE_PAYPAL_CURRENCY_NOTE);
+}
+
+/** Vertex navy and icon on the order summary, with the security note below the pay button. */
+export function appendStripeBranding(params: URLSearchParams): void {
+  params.append('branding_settings[background_color]', STRIPE_BRAND_COLOR);
+  params.append('branding_settings[button_color]', STRIPE_BRAND_COLOR);
+  params.append('branding_settings[icon][type]', 'url');
+  params.append('branding_settings[icon][url]', STRIPE_BRAND_ICON_URL);
+  params.append('custom_text[after_submit][message]', STRIPE_SECURE_PAYMENT_MESSAGE);
 }
 
 /**
@@ -331,7 +346,10 @@ export async function createStripeCheckoutSession(input: {
     params.append('metadata[flow]', 'standard');
   }
   params.append('billing_address_collection', 'required');
-  if (!input.skipStudentNameFields) {
+  const stagingPage = environment === 'staging';
+  if (stagingPage) appendStripeBranding(params);
+  // Staging takes the student name from Stripe's own full name box.
+  if (!input.skipStudentNameFields && !stagingPage) {
     appendStripeStudentNameFields(params, {
       firstName: input.studentFirstName,
       lastName: input.studentLastName,
@@ -341,7 +359,7 @@ export async function createStripeCheckoutSession(input: {
   // The charge is USD. Live checkout may also show a local price. Staging does not.
   params.append('line_items[0][price_data][currency]', chargeCurrency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
-  appendStripeOrderSummaryNote(params);
+  if (!stagingPage) appendStripeOrderSummaryNote(params);
   params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
   appendStripeAdaptivePricing(params, chargeCurrency, environment);
   params.append('line_items[0][quantity]', '1');

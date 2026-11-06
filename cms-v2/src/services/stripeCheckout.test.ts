@@ -8,11 +8,13 @@ import {
   appendStripeStudentNameFields,
   assertStripeUsdCharge,
   classifyPaidAmount,
+  createStripeCheckoutSession,
   majorAmountFromStripeMinor,
   resolveStripeStudentNameDefaults,
   safeCheckoutCancelPath,
   STRIPE_PAYPAL_CURRENCY_NOTE,
   STRIPE_RETURNING_STUDENT_MESSAGE,
+  STRIPE_SECURE_PAYMENT_MESSAGE,
   stripeMethodsForCharge,
   stripePaymentMethodTypes,
   stripeUnitAmount,
@@ -321,4 +323,62 @@ else process.env.STRIPE_WEBHOOK_SECRET = previous.webhook;
 if (previous.liveWebhook === undefined) delete process.env.STRIPE_WEBHOOK_SECRET_LIVE;
 else process.env.STRIPE_WEBHOOK_SECRET_LIVE = previous.liveWebhook;
 
-console.log('stripeCheckout tests passed');
+async function checkoutParams(environment: 'staging' | 'production'): Promise<URLSearchParams> {
+  process.env.STRIPE_SECRET_KEY = 'sk_test_stub';
+  process.env.STRIPE_SECRET_KEY_LIVE = 'sk_live_stub';
+  const realFetch = globalThis.fetch;
+  let sent = new URLSearchParams();
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    sent = init.body as URLSearchParams;
+    return new Response(JSON.stringify({ id: 'cs_stub', url: 'https://checkout.stripe.com/stub' }));
+  }) as typeof fetch;
+  try {
+    await createStripeCheckoutSession({
+      orderId: 1,
+      zenlerCourseId: '1',
+      courseTitle: 'ACCA FBT',
+      paymentCardTitle: 'ACCA FBT',
+      amount: 105,
+      currency: 'USD',
+      studentEmail: null,
+      environment,
+    });
+    return sent;
+  } finally {
+    globalThis.fetch = realFetch;
+    if (previous.secret === undefined) delete process.env.STRIPE_SECRET_KEY;
+    else process.env.STRIPE_SECRET_KEY = previous.secret;
+    if (previous.liveSecret === undefined) delete process.env.STRIPE_SECRET_KEY_LIVE;
+    else process.env.STRIPE_SECRET_KEY_LIVE = previous.liveSecret;
+  }
+}
+
+void (async () => {
+  const staging = await checkoutParams('staging');
+  const live = await checkoutParams('production');
+  const paypalNote = 'line_items[0][price_data][product_data][description]';
+
+  run('gives staging one Stripe name box, no PayPal note, and the branded page', () => {
+    assert.strictEqual(staging.get('custom_fields[0][key]'), null);
+    assert.strictEqual(staging.get(paypalNote), null);
+    assert.strictEqual(staging.get('custom_text[after_submit][message]'), STRIPE_SECURE_PAYMENT_MESSAGE);
+    assert.match(STRIPE_SECURE_PAYMENT_MESSAGE, /7-Day Money-Back Guarantee/);
+    assert.ok(STRIPE_SECURE_PAYMENT_MESSAGE.length <= 1200);
+    assert.ok(staging.getAll('payment_method_types[]').includes('card'));
+    assert.strictEqual(staging.get('branding_settings[background_color]'), '#0b1f3a');
+    assert.strictEqual(staging.get('custom_text[submit][message]'), STRIPE_RETURNING_STUDENT_MESSAGE);
+  });
+
+  run('leaves the live Stripe page as it was', () => {
+    assert.strictEqual(live.get('custom_fields[0][key]'), 'first_name');
+    assert.strictEqual(live.get('custom_fields[1][key]'), 'last_name');
+    assert.strictEqual(live.get(paypalNote), STRIPE_PAYPAL_CURRENCY_NOTE);
+    assert.strictEqual(live.get('custom_text[after_submit][message]'), null);
+    assert.strictEqual(live.get('branding_settings[background_color]'), null);
+  });
+
+  console.log('stripeCheckout tests passed');
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
