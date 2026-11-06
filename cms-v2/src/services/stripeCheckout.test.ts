@@ -15,6 +15,7 @@ import {
   STRIPE_PAYPAL_CURRENCY_NOTE,
   STRIPE_RETURNING_STUDENT_MESSAGE,
   STRIPE_SECURE_PAYMENT_MESSAGE,
+  STRIPE_STAGING_ORDER_SUMMARY,
   stripeMethodsForCharge,
   stripePaymentMethodTypes,
   stripeUnitAmount,
@@ -356,14 +357,13 @@ async function checkoutParams(environment: 'staging' | 'production'): Promise<UR
 void (async () => {
   const staging = await checkoutParams('staging');
   const live = await checkoutParams('production');
-  const paypalNote = 'line_items[0][price_data][product_data][description]';
+  const orderSummaryNote = 'line_items[0][price_data][product_data][description]';
 
-  run('gives staging one Stripe name box, no PayPal note, and the branded page', () => {
+  run('gives staging one Stripe name box, the left pane text, and the branded page', () => {
     assert.strictEqual(staging.get('custom_fields[0][key]'), null);
-    assert.strictEqual(staging.get(paypalNote), null);
-    assert.strictEqual(staging.get('custom_text[after_submit][message]'), STRIPE_SECURE_PAYMENT_MESSAGE);
-    assert.match(STRIPE_SECURE_PAYMENT_MESSAGE, /7-Day Money-Back Guarantee/);
-    assert.ok(STRIPE_SECURE_PAYMENT_MESSAGE.length <= 1200);
+    assert.strictEqual(staging.get(orderSummaryNote), STRIPE_STAGING_ORDER_SUMMARY);
+    assert.match(STRIPE_STAGING_ORDER_SUMMARY, /^Complete Course With Tutor Support\.\n7-Day Money-Back Guarantee/);
+    assert.strictEqual(staging.get('custom_text[after_submit][message]'), null);
     assert.ok(staging.getAll('payment_method_types[]').includes('card'));
     assert.strictEqual(staging.get('branding_settings[background_color]'), '#0b1f3a');
     assert.strictEqual(staging.get('custom_text[submit][message]'), STRIPE_RETURNING_STUDENT_MESSAGE);
@@ -372,7 +372,7 @@ void (async () => {
   run('leaves the live Stripe page as it was', () => {
     assert.strictEqual(live.get('custom_fields[0][key]'), 'first_name');
     assert.strictEqual(live.get('custom_fields[1][key]'), 'last_name');
-    assert.strictEqual(live.get(paypalNote), STRIPE_PAYPAL_CURRENCY_NOTE);
+    assert.strictEqual(live.get(orderSummaryNote), STRIPE_PAYPAL_CURRENCY_NOTE);
     assert.strictEqual(live.get('custom_text[after_submit][message]'), null);
     assert.strictEqual(live.get('branding_settings[background_color]'), null);
   });

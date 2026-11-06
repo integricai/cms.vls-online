@@ -23,6 +23,10 @@ export const STRIPE_RETURNING_STUDENT_MESSAGE =
 export const STRIPE_SECURE_PAYMENT_MESSAGE =
   '7-Day Money-Back Guarantee. Get a full refund within 7 days of registration. Secure payment. Your details are encrypted and processed by Stripe. We never see or store your full card number.';
 
+/** Under the price on the staging order summary. */
+export const STRIPE_STAGING_ORDER_SUMMARY =
+  `Complete Course With Tutor Support.\n${STRIPE_SECURE_PAYMENT_MESSAGE}`;
+
 const STRIPE_BRAND_COLOR = '#0b1f3a';
 const STRIPE_BRAND_ICON_URL = 'https://vls-online.com/icon.png';
 
@@ -67,17 +71,19 @@ export function safeCheckoutCancelPath(value: string | null | undefined): string
   return path;
 }
 
-export function appendStripeOrderSummaryNote(params: URLSearchParams): void {
-  params.append('line_items[0][price_data][product_data][description]', STRIPE_PAYPAL_CURRENCY_NOTE);
+export function appendStripeOrderSummaryNote(
+  params: URLSearchParams,
+  note = STRIPE_PAYPAL_CURRENCY_NOTE,
+): void {
+  params.append('line_items[0][price_data][product_data][description]', note);
 }
 
-/** Vertex navy and icon on the order summary, with the security note below the pay button. */
+/** Vertex navy and icon on the order summary. */
 export function appendStripeBranding(params: URLSearchParams): void {
   params.append('branding_settings[background_color]', STRIPE_BRAND_COLOR);
   params.append('branding_settings[button_color]', STRIPE_BRAND_COLOR);
   params.append('branding_settings[icon][type]', 'url');
   params.append('branding_settings[icon][url]', STRIPE_BRAND_ICON_URL);
-  params.append('custom_text[after_submit][message]', STRIPE_SECURE_PAYMENT_MESSAGE);
 }
 
 /**
@@ -359,7 +365,7 @@ export async function createStripeCheckoutSession(input: {
   // The charge is USD. Live checkout may also show a local price. Staging does not.
   params.append('line_items[0][price_data][currency]', chargeCurrency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
-  if (!stagingPage) appendStripeOrderSummaryNote(params);
+  appendStripeOrderSummaryNote(params, stagingPage ? STRIPE_STAGING_ORDER_SUMMARY : STRIPE_PAYPAL_CURRENCY_NOTE);
   params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
   appendStripeAdaptivePricing(params, chargeCurrency, environment);
   params.append('line_items[0][quantity]', '1');
