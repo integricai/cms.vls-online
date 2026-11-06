@@ -193,13 +193,17 @@ run('adds the PayPal currency note to the left order summary', () => {
   );
 });
 
-run('asks Stripe for the local price and the dollar price on a US dollar charge', () => {
+run('asks Stripe for the local price and the dollar price on a live US dollar charge', () => {
   const usd = new URLSearchParams();
-  appendStripeAdaptivePricing(usd, 'USD');
+  appendStripeAdaptivePricing(usd, 'USD', 'production');
   assert.strictEqual(usd.get('adaptive_pricing[enabled]'), 'true');
 
+  const staging = new URLSearchParams();
+  appendStripeAdaptivePricing(staging, 'USD', 'staging');
+  assert.strictEqual(staging.get('adaptive_pricing[enabled]'), null);
+
   const gbp = new URLSearchParams();
-  appendStripeAdaptivePricing(gbp, 'gbp');
+  appendStripeAdaptivePricing(gbp, 'gbp', 'production');
   assert.strictEqual(gbp.get('adaptive_pricing[enabled]'), null);
   assert.strictEqual(majorAmountFromStripeMinor(6100, 'USD'), 61);
   assert.strictEqual(majorAmountFromStripeMinor(14850, 'JPY'), 14850);

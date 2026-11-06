@@ -65,8 +65,16 @@ export function appendStripeOrderSummaryNote(params: URLSearchParams): void {
   params.append('line_items[0][price_data][product_data][description]', STRIPE_PAYPAL_CURRENCY_NOTE);
 }
 
-/** Stripe draws the local price and the dollar price, on desktop and on a phone. */
-export function appendStripeAdaptivePricing(params: URLSearchParams, currency: string): void {
+/**
+ * Live checkout lets Stripe show a local price beside the dollar charge.
+ * Staging checkout shows the dollar price only.
+ */
+export function appendStripeAdaptivePricing(
+  params: URLSearchParams,
+  currency: string,
+  environment?: CheckoutEnvironment | null,
+): void {
+  if (environment === 'staging') return;
   if (currency.toUpperCase() !== 'USD') return;
   params.append('adaptive_pricing[enabled]', 'true');
 }
@@ -313,12 +321,12 @@ export async function createStripeCheckoutSession(input: {
     });
   }
   params.append('client_reference_id', String(input.orderId));
-  // New checkouts are USD. Adaptive Pricing may show a local price; the PaymentIntent stays USD.
+  // The charge is USD. Live checkout may also show a local price. Staging does not.
   params.append('line_items[0][price_data][currency]', chargeCurrency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
   appendStripeOrderSummaryNote(params);
   params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
-  appendStripeAdaptivePricing(params, chargeCurrency);
+  appendStripeAdaptivePricing(params, chargeCurrency, environment);
   params.append('line_items[0][quantity]', '1');
   if (input.studentEmail) {
     try {
