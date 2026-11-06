@@ -65,7 +65,7 @@ function enrollmentStatusFromExisting(isNewUser: boolean): 'enrolled' | 'enrolle
   return isNewUser ? 'enrolled_new' : 'enrolled';
 }
 
-/** Zenler rejects a new account when the last name is blank. */
+/** Zenler rejects a new account when the last name is blank. A one-word name is repeated. */
 export function zenlerStudentNames(
   name: string | null | undefined,
   email: string,

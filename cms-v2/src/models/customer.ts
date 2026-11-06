@@ -86,7 +86,7 @@ export function splitStudentName(name: string | null | undefined): {
   const trimmed = String(name ?? '').trim();
   if (!trimmed) return { firstName: null, lastName: null };
   const parts = trimmed.split(/\s+/);
-  if (parts.length === 1) return { firstName: parts[0]!, lastName: null };
+  if (parts.length === 1) return { firstName: parts[0]!, lastName: parts[0]! };
   return { firstName: parts[0]!, lastName: parts.slice(1).join(' ') };
 }
 
