@@ -200,7 +200,7 @@ run('asks Stripe for the local price and the dollar price on a live US dollar ch
 
   const staging = new URLSearchParams();
   appendStripeAdaptivePricing(staging, 'USD', 'staging');
-  assert.strictEqual(staging.get('adaptive_pricing[enabled]'), null);
+  assert.strictEqual(staging.get('adaptive_pricing[enabled]'), 'false');
 
   const gbp = new URLSearchParams();
   appendStripeAdaptivePricing(gbp, 'gbp', 'production');

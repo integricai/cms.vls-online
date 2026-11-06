@@ -67,14 +67,17 @@ export function appendStripeOrderSummaryNote(params: URLSearchParams): void {
 
 /**
  * Live checkout lets Stripe show a local price beside the dollar charge.
- * Staging checkout shows the dollar price only.
+ * Staging checkout forces the dollar price, even if the dashboard toggle is on.
  */
 export function appendStripeAdaptivePricing(
   params: URLSearchParams,
   currency: string,
   environment?: CheckoutEnvironment | null,
 ): void {
-  if (environment === 'staging') return;
+  if (environment === 'staging') {
+    params.append('adaptive_pricing[enabled]', 'false');
+    return;
+  }
   if (currency.toUpperCase() !== 'USD') return;
   params.append('adaptive_pricing[enabled]', 'true');
 }
