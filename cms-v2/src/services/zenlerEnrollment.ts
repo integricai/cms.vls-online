@@ -21,6 +21,8 @@ export interface ZenlerEnrollmentInput {
   zenlerPlanId?: number | null;
   /** Set only for a buyer who does not already have a school account. */
   password?: string | null;
+  /** Staging checkout repeats a one-word name. Live leaves the last name empty. */
+  repeatSingleName?: boolean;
 }
 
 export interface ZenlerEnrollmentResult {
@@ -65,12 +67,13 @@ function enrollmentStatusFromExisting(isNewUser: boolean): 'enrolled' | 'enrolle
   return isNewUser ? 'enrolled_new' : 'enrolled';
 }
 
-/** Zenler rejects a new account when the last name is blank. A one-word name is repeated. */
+/** Zenler rejects a new account when the last name is blank. */
 export function zenlerStudentNames(
   name: string | null | undefined,
   email: string,
+  repeatSingleName = false,
 ): { firstName: string; lastName: string } {
-  const split = splitStudentName(name);
+  const split = splitStudentName(name, repeatSingleName);
   const localPart = email.split('@')[0]?.trim() || 'Student';
   return {
     firstName: split.firstName?.trim() || localPart || 'Student',
@@ -117,7 +120,7 @@ export async function enrollStudentInZenlerCourse(
     let existingUser = await findZenlerUserByEmail(email);
 
     if (!existingUser) {
-      const names = zenlerStudentNames(input.name, email);
+      const names = zenlerStudentNames(input.name, email, input.repeatSingleName === true);
       const chosen = passwordForNewZenlerAccount(input.password);
       temporaryPassword = chosen.temporaryPassword;
       studentChosePassword = chosen.studentChosePassword;

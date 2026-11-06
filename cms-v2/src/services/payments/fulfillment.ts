@@ -317,7 +317,10 @@ export async function fulfillPaidCheckout(event: CheckoutCompletedEvent): Promis
     order = await rememberPaymentOrderStudentName(order.id, payerName);
   }
   if (payerEmail) {
-    const { firstName, lastName } = splitStudentName(order.studentName ?? payerName);
+    const { firstName, lastName } = splitStudentName(
+      order.studentName ?? payerName,
+      order.checkoutEnvironment === 'staging',
+    );
     await upsertCustomer({
       email: String(payerEmail).trim().toLowerCase(),
       firstName,

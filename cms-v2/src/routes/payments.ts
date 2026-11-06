@@ -184,10 +184,15 @@ function parseCheckoutReturnOrigin(req: Request): string | undefined {
   return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : undefined;
 }
 
-function parseCheckoutCustomer(body: Record<string, unknown>, countryCode: string | null) {
+function parseCheckoutCustomer(
+  body: Record<string, unknown>,
+  countryCode: string | null,
+  repeatSingleName = false,
+) {
   const studentEmail = parseOptionalText(body.studentEmail);
-  const firstName = parseOptionalText(body.firstName) ?? splitStudentName(parseOptionalText(body.studentName)).firstName;
-  const lastName = parseOptionalText(body.lastName) ?? splitStudentName(parseOptionalText(body.studentName)).lastName;
+  const split = splitStudentName(parseOptionalText(body.studentName), repeatSingleName);
+  const firstName = parseOptionalText(body.firstName) ?? split.firstName;
+  const lastName = parseOptionalText(body.lastName) ?? split.lastName;
   const studentName = parseOptionalText(body.studentName) ?? ([firstName, lastName].filter(Boolean).join(' ') || null);
   const phone = parseOptionalText(body.phone);
 
@@ -454,7 +459,7 @@ router.post('/school-login', schoolLoginRateLimit, async (req: Request, res: Res
     }
     const email = normalizeStudentEmail(order.studentEmail ?? order.providerCustomerEmail ?? order.stripeCustomerEmail);
     if (!email) return res.status(400).json({ ok: false, error: 'This payment has no school email.' });
-    const names = zenlerStudentNames(order.studentName, email);
+    const names = zenlerStudentNames(order.studentName, email, order.checkoutEnvironment === 'staging');
     const url = schoolSsoUrl({
       firstName: names.firstName,
       lastName: names.lastName,
@@ -556,7 +561,7 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       clientIp,
       environment,
     });
-    const customerInput = parseCheckoutCustomer(req.body ?? {}, geo.countryCode);
+    const customerInput = parseCheckoutCustomer(req.body ?? {}, geo.countryCode, environment === 'staging');
     const schoolPassword = await prepareSchoolPassword(req.body ?? {}, customerInput.studentEmail);
     if ('error' in schoolPassword) {
       return res.status(400).json({ ok: false, error: 'invalid_request', message: schoolPassword.error });
@@ -889,7 +894,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       clientIp,
       environment,
     });
-    const customerInput = parseCheckoutCustomer(req.body ?? {}, quotedCountryCode);
+    const customerInput = parseCheckoutCustomer(req.body ?? {}, quotedCountryCode, environment === 'staging');
     const schoolPassword = await prepareSchoolPassword(req.body ?? {}, customerInput.studentEmail);
     if ('error' in schoolPassword) {
       return res.status(400).json({ ok: false, error: 'invalid_request', message: schoolPassword.error });

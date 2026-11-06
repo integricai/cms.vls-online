@@ -86,6 +86,7 @@ async function enrollOrderCourses(order: PaymentOrder) {
       zenlerCourseId,
       zenlerPlanId: planId,
       password: chosenPassword,
+      repeatSingleName: order.checkoutEnvironment === 'staging',
     });
     lastStatus = enrollment.status;
     if (enrollment.zenlerUserId) zenlerUserId = enrollment.zenlerUserId;

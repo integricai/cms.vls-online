@@ -21,8 +21,15 @@ run('splits a full name into first and last', () => {
   });
 });
 
-run('repeats a one-word name for the first and last name', () => {
+run('keeps a one-word live checkout on the Student last name', () => {
   assert.deepStrictEqual(zenlerStudentNames('Madonna', 'madonna@example.com'), {
+    firstName: 'Madonna',
+    lastName: 'Student',
+  });
+});
+
+run('repeats a one-word name for a staging checkout', () => {
+  assert.deepStrictEqual(zenlerStudentNames('Madonna', 'madonna@example.com', true), {
     firstName: 'Madonna',
     lastName: 'Madonna',
   });

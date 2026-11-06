@@ -79,14 +79,19 @@ function rowToStudentListItem(row: StudentListDbRow): StudentListItem {
   };
 }
 
-export function splitStudentName(name: string | null | undefined): {
+export function splitStudentName(
+  name: string | null | undefined,
+  repeatSingleName = false,
+): {
   firstName: string | null;
   lastName: string | null;
 } {
   const trimmed = String(name ?? '').trim();
   if (!trimmed) return { firstName: null, lastName: null };
   const parts = trimmed.split(/\s+/);
-  if (parts.length === 1) return { firstName: parts[0]!, lastName: parts[0]! };
+  if (parts.length === 1) {
+    return { firstName: parts[0]!, lastName: repeatSingleName ? parts[0]! : null };
+  }
   return { firstName: parts[0]!, lastName: parts.slice(1).join(' ') };
 }
 
