@@ -20,12 +20,8 @@ export const STRIPE_PAYPAL_CURRENCY_NOTE =
 export const STRIPE_RETURNING_STUDENT_MESSAGE =
   'Already a Vertex student? Use the email you log in with.';
 
-export const STRIPE_SECURE_PAYMENT_MESSAGE =
-  '7-Day Money-Back Guarantee. Get a full refund within 7 days of registration. Secure payment. Your details are encrypted and processed by Stripe. We never see or store your full card number.';
-
-/** Under the price on the staging order summary. */
-export const STRIPE_STAGING_ORDER_SUMMARY =
-  `Complete Course With Tutor Support.\n${STRIPE_SECURE_PAYMENT_MESSAGE}`;
+/** Stripe drops line breaks from product text, so the staging summary list is an image. */
+export const STRIPE_ORDER_SUMMARY_IMAGE_URL = 'https://cms.vls-online.com/stripe-order-summary.png';
 
 const STRIPE_BRAND_COLOR = '#0b1f3a';
 const STRIPE_BRAND_ICON_URL = 'https://vls-online.com/icon.png';
@@ -71,11 +67,12 @@ export function safeCheckoutCancelPath(value: string | null | undefined): string
   return path;
 }
 
-export function appendStripeOrderSummaryNote(
-  params: URLSearchParams,
-  note = STRIPE_PAYPAL_CURRENCY_NOTE,
-): void {
-  params.append('line_items[0][price_data][product_data][description]', note);
+export function appendStripeOrderSummaryNote(params: URLSearchParams): void {
+  params.append('line_items[0][price_data][product_data][description]', STRIPE_PAYPAL_CURRENCY_NOTE);
+}
+
+export function appendStripeOrderSummaryImage(params: URLSearchParams): void {
+  params.append('line_items[0][price_data][product_data][images][0]', STRIPE_ORDER_SUMMARY_IMAGE_URL);
 }
 
 /** Vertex navy and icon on the order summary. */
@@ -365,7 +362,8 @@ export async function createStripeCheckoutSession(input: {
   // The charge is USD. Live checkout may also show a local price. Staging does not.
   params.append('line_items[0][price_data][currency]', chargeCurrency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
-  appendStripeOrderSummaryNote(params, stagingPage ? STRIPE_STAGING_ORDER_SUMMARY : STRIPE_PAYPAL_CURRENCY_NOTE);
+  if (stagingPage) appendStripeOrderSummaryImage(params);
+  else appendStripeOrderSummaryNote(params);
   params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
   appendStripeAdaptivePricing(params, chargeCurrency, environment);
   params.append('line_items[0][quantity]', '1');

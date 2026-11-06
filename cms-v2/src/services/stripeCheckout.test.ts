@@ -14,8 +14,7 @@ import {
   safeCheckoutCancelPath,
   STRIPE_PAYPAL_CURRENCY_NOTE,
   STRIPE_RETURNING_STUDENT_MESSAGE,
-  STRIPE_SECURE_PAYMENT_MESSAGE,
-  STRIPE_STAGING_ORDER_SUMMARY,
+  STRIPE_ORDER_SUMMARY_IMAGE_URL,
   stripeMethodsForCharge,
   stripePaymentMethodTypes,
   stripeUnitAmount,
@@ -358,11 +357,12 @@ void (async () => {
   const staging = await checkoutParams('staging');
   const live = await checkoutParams('production');
   const orderSummaryNote = 'line_items[0][price_data][product_data][description]';
+  const orderSummaryImage = 'line_items[0][price_data][product_data][images][0]';
 
-  run('gives staging one Stripe name box, the left pane text, and the branded page', () => {
+  run('gives staging one Stripe name box, the left pane image, and the branded page', () => {
     assert.strictEqual(staging.get('custom_fields[0][key]'), null);
-    assert.strictEqual(staging.get(orderSummaryNote), STRIPE_STAGING_ORDER_SUMMARY);
-    assert.match(STRIPE_STAGING_ORDER_SUMMARY, /^Complete Course With Tutor Support\.\n7-Day Money-Back Guarantee/);
+    assert.strictEqual(staging.get(orderSummaryNote), null);
+    assert.strictEqual(staging.get(orderSummaryImage), STRIPE_ORDER_SUMMARY_IMAGE_URL);
     assert.strictEqual(staging.get('custom_text[after_submit][message]'), null);
     assert.ok(staging.getAll('payment_method_types[]').includes('card'));
     assert.strictEqual(staging.get('branding_settings[background_color]'), '#0b1f3a');
@@ -373,6 +373,7 @@ void (async () => {
     assert.strictEqual(live.get('custom_fields[0][key]'), 'first_name');
     assert.strictEqual(live.get('custom_fields[1][key]'), 'last_name');
     assert.strictEqual(live.get(orderSummaryNote), STRIPE_PAYPAL_CURRENCY_NOTE);
+    assert.strictEqual(live.get(orderSummaryImage), null);
     assert.strictEqual(live.get('custom_text[after_submit][message]'), null);
     assert.strictEqual(live.get('branding_settings[background_color]'), null);
   });
