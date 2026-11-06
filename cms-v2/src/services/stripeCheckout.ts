@@ -65,10 +65,10 @@ export function appendStripeOrderSummaryNote(params: URLSearchParams): void {
   params.append('line_items[0][price_data][product_data][description]', STRIPE_PAYPAL_CURRENCY_NOTE);
 }
 
-/** Stripe draws the local price and the dollar price, on desktop and on a phone. */
+/** Keep the charge in the integration currency. This overrides the dashboard toggle. */
 export function appendStripeAdaptivePricing(params: URLSearchParams, currency: string): void {
-  if (currency.toUpperCase() !== 'USD') return;
-  params.append('adaptive_pricing[enabled]', 'true');
+  if (!currency.trim()) return;
+  params.append('adaptive_pricing[enabled]', 'false');
 }
 
 export type LocalPresentment = {
@@ -313,7 +313,7 @@ export async function createStripeCheckoutSession(input: {
     });
   }
   params.append('client_reference_id', String(input.orderId));
-  // New checkouts are USD. Adaptive Pricing may show a local price; the PaymentIntent stays USD.
+  // New checkouts are USD. Adaptive Pricing stays off, so the customer sees that dollar price.
   params.append('line_items[0][price_data][currency]', chargeCurrency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
   appendStripeOrderSummaryNote(params);
