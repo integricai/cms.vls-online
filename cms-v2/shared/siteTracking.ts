@@ -1,4 +1,4 @@
-import { isIsoDate, londonToday, salesPresetBounds } from './salesFormat';
+import { eachIsoDay, isIsoDate, londonToday, salesPresetBounds } from './salesFormat';
 
 export const TRACKING_PRESETS = ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 'last_month'] as const;
 export type TrackingPreset = (typeof TRACKING_PRESETS)[number];
@@ -30,7 +30,42 @@ export function trackingCustomBounds(start: string, end: string): { start: strin
 
 export type TrackingCount = { label: string; visitors: number };
 export type TrackingSourceRow = { source: string; medium: string; visitors: number };
-export type TrackingDay = { date: string; visitors: number };
+export type TrackingDay = {
+  date: string;
+  visitors: number;
+  channels: Record<string, number>;
+};
+
+export type TrackingChannelDay = { date: string; channel: string; visitors: number };
+
+/** One row per calendar day, with a zero for every channel that had no visits that day. */
+export function assembleTrackingDays(
+  start: string,
+  end: string,
+  rows: TrackingChannelDay[],
+  channelOrder: string[],
+): TrackingDay[] {
+  const byDate = new Map<string, Map<string, number>>();
+  for (const row of rows) {
+    const date = row.date.slice(0, 10);
+    const channel = row.channel.trim() || 'Direct';
+    const bucket = byDate.get(date) ?? new Map<string, number>();
+    bucket.set(channel, (bucket.get(channel) ?? 0) + (Number(row.visitors) || 0));
+    byDate.set(date, bucket);
+  }
+  return eachIsoDay(start, end).map(date => {
+    const bucket = byDate.get(date) ?? new Map<string, number>();
+    const channels: Record<string, number> = {};
+    for (const channel of channelOrder) channels[channel] = bucket.get(channel) ?? 0;
+    for (const [channel, count] of bucket) {
+      if (!(channel in channels)) channels[channel] = count;
+    }
+    let visitors = 0;
+    for (const count of bucket.values()) visitors += count;
+    return { date, visitors, channels };
+  });
+}
+
 export type TrackingEnrolment = {
   campaign: string;
   currency: string;

@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { trackingCustomBounds, trackingPresetBounds } from '../../shared/siteTracking';
+import { assembleTrackingDays, trackingCustomBounds, trackingPresetBounds } from '../../shared/siteTracking';
 
 function run(name: string, fn: () => void): void {
   try {
@@ -38,6 +38,20 @@ run('uses Monday weeks in London', () => {
     start: '2026-10-01',
     end: '2026-10-31',
   });
+});
+
+run('fills a zero for every channel on days with no visits', () => {
+  assert.deepStrictEqual(
+    assembleTrackingDays('2026-11-01', '2026-11-03', [
+      { date: '2026-11-02', channel: 'Google Ads', visitors: 4 },
+      { date: '2026-11-02', channel: 'Meta', visitors: 1 },
+    ], ['Google Ads', 'Meta', 'Direct']),
+    [
+      { date: '2026-11-01', visitors: 0, channels: { 'Google Ads': 0, Meta: 0, Direct: 0 } },
+      { date: '2026-11-02', visitors: 5, channels: { 'Google Ads': 4, Meta: 1, Direct: 0 } },
+      { date: '2026-11-03', visitors: 0, channels: { 'Google Ads': 0, Meta: 0, Direct: 0 } },
+    ],
+  );
 });
 
 run('accepts a custom range of one year and rejects a longer one', () => {

@@ -1,12 +1,11 @@
 import { sql } from '../db/client';
-import { eachIsoDay } from '../../shared/salesFormat';
-import type { TrackingRange, TrackingReport } from '../../shared/siteTracking';
+import { assembleTrackingDays, type TrackingRange, type TrackingReport } from '../../shared/siteTracking';
 import { siteVisitorKey } from './siteAnalytics';
 import type { ClassifiedTrackingVisit } from '../services/siteTracking';
 
 type CountRow = { label: string | null; visitors: number };
 type SourceRow = { source: string | null; medium: string | null; visitors: number };
-type DayRow = { date: string | Date; visitors: number };
+type ChannelDayRow = { date: string | Date; label: string | null; visitors: number };
 type AudienceRow = { unique_visits: number; returning_visits: number };
 type EnrolmentRow = { campaign: string | null; currency: string | null; orders: number; amount: string | number };
 
@@ -62,13 +61,13 @@ export async function buildTrackingReport(
   range: TrackingRange,
   bounds: { start: string; end: string },
 ): Promise<TrackingReport> {
-  const [dayRows, audienceRows, channelRows, campaignRows, landingRows, countryRows, sourceRows, deviceRows, localeRows, enrolmentRows] = await Promise.all([
+  const [channelDayRows, audienceRows, channelRows, campaignRows, landingRows, countryRows, sourceRows, deviceRows, localeRows, enrolmentRows] = await Promise.all([
     sql`
-      SELECT visited_on::text AS date, COUNT(*)::int AS visitors
+      SELECT visited_on::text AS date, channel AS label, COUNT(*)::int AS visitors
       FROM site_tracking_visits
       WHERE visited_on >= CAST(${bounds.start} AS date)
         AND visited_on <= CAST(${bounds.end} AS date)
-      GROUP BY visited_on
+      GROUP BY visited_on, channel
       ORDER BY visited_on
     `,
     sql`
@@ -171,11 +170,17 @@ export async function buildTrackingReport(
     `,
   ]);
 
-  const byDay = new Map((dayRows as DayRow[]).map(row => [isoDay(row.date), Number(row.visitors) || 0]));
-  const days = eachIsoDay(bounds.start, bounds.end).map(date => ({
-    date,
-    visitors: byDay.get(date) ?? 0,
-  }));
+  const channelList = counts(channelRows as CountRow[], 'Direct');
+  const days = assembleTrackingDays(
+    bounds.start,
+    bounds.end,
+    (channelDayRows as ChannelDayRow[]).map(row => ({
+      date: isoDay(row.date),
+      channel: row.label?.trim() || 'Direct',
+      visitors: Number(row.visitors) || 0,
+    })),
+    channelList.map(row => row.label),
+  );
   const audience = (audienceRows as AudienceRow[])[0];
 
   return {
@@ -186,7 +191,7 @@ export async function buildTrackingReport(
     uniqueVisits: Number(audience?.unique_visits) || 0,
     returningVisits: Number(audience?.returning_visits) || 0,
     days,
-    channels: counts(channelRows as CountRow[], 'Direct'),
+    channels: channelList,
     campaigns: counts(campaignRows as CountRow[], 'No campaign'),
     landingPages: counts(landingRows as CountRow[], '/'),
     countries: counts(countryRows as CountRow[], 'Unknown'),
