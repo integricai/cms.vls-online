@@ -25,6 +25,7 @@
     "test:stripe-checkout": "ts-node src/services/stripeCheckout.test.ts",
     "test:checkout-site-url": "ts-node src/services/checkoutSiteUrl.test.ts",
     "test:google-ads-conversions": "ts-node src/services/googleAdsConversions.test.ts",
+    "test:ga4-report": "ts-node src/services/ga4Report.test.ts",
     "test:meta-conversions": "ts-node src/services/metaConversions.test.ts",
     "test:site-cache": "ts-node src/services/siteCache.test.ts",
     "test:payments": "ts-node src/services/payments/provider.test.ts && ts-node src/services/paymentEmails.test.ts",

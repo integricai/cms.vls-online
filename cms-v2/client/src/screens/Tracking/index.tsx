@@ -1,5 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../../api/client';
+import PageTabs from '../../components/PageTabs';
+import AnalyticsTab from './AnalyticsTab';
 import {
   trackingCustomBounds,
   type TrackingCount,
@@ -456,21 +459,14 @@ function SourceTable({ rows }: { rows: TrackingSourceRow[] }) {
   );
 }
 
-export default function Tracking() {
-  const [range, setRange] = useState<TrackingRange>('this_month');
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
+function VisitsTab({ query }: { query: string | null }) {
   const [report, setReport] = useState<TrackingReport | null>(null);
   const [error, setError] = useState('');
-  const customBounds = range === 'custom' ? trackingCustomBounds(start, end) : null;
-  const query = range === 'custom'
-    ? (customBounds ? `/analytics/tracking?range=custom&start=${customBounds.start}&end=${customBounds.end}` : null)
-    : `/analytics/tracking?range=${range}`;
 
   useEffect(() => {
     if (!query) {
       setReport(null);
-      setError(start && end ? 'Choose a start date and an end date within one year.' : '');
+      setError('');
       return undefined;
     }
     let cancelled = false;
@@ -485,60 +481,14 @@ export default function Tracking() {
     return () => {
       cancelled = true;
     };
-  }, [query, start, end]);
+  }, [query]);
+
+  if (!query) return null;
 
   return (
-    <div className="h-full overflow-auto bg-slate-50">
-      <div className="mx-auto max-w-7xl space-y-4 p-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Tracking</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              One person a day. Channel, campaign, and landing page come from the address they opened.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="text-xs font-semibold text-slate-500">
-              Period
-              <select
-                className="input mt-1 w-auto py-1 text-xs"
-                value={range}
-                onChange={event => setRange(event.target.value as TrackingRange)}
-              >
-                {RANGES.map(option => (
-                  <option key={option.id} value={option.id}>{option.label}</option>
-                ))}
-              </select>
-            </label>
-            {range === 'custom' ? (
-              <>
-                <label className="text-xs font-semibold text-slate-500">
-                  Start date
-                  <input
-                    type="date"
-                    className="input mt-1 w-auto py-1 text-xs"
-                    value={start}
-                    max={end || undefined}
-                    onChange={event => setStart(event.target.value)}
-                  />
-                </label>
-                <label className="text-xs font-semibold text-slate-500">
-                  End date
-                  <input
-                    type="date"
-                    className="input mt-1 w-auto py-1 text-xs"
-                    value={end}
-                    min={start || undefined}
-                    onChange={event => setEnd(event.target.value)}
-                  />
-                </label>
-              </>
-            ) : null}
-          </div>
-        </div>
+    <>
         {error ? <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
-        {!report && !error && query ? <p className="text-sm text-slate-500">Loading tracking…</p> : null}
-        {range === 'custom' && !customBounds && !error ? <p className="text-sm text-slate-500">Choose a start date and an end date.</p> : null}
+        {!report && !error ? <p className="text-sm text-slate-500">Loading tracking…</p> : null}
         {report ? (
           <>
             <section className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -620,6 +570,95 @@ export default function Tracking() {
             </section>
           </>
         ) : null}
+    </>
+  );
+}
+
+function trackingPath(base: string, range: TrackingRange, start: string, end: string): string | null {
+  if (range !== 'custom') return `${base}?range=${range}`;
+  const bounds = trackingCustomBounds(start, end);
+  if (!bounds) return null;
+  return `${base}?range=custom&start=${bounds.start}&end=${bounds.end}`;
+}
+
+export default function Tracking() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab') === 'analytics' ? 'analytics' : 'visits';
+  const [range, setRange] = useState<TrackingRange>('this_month');
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
+  const visitsQuery = trackingPath('/analytics/tracking', range, start, end);
+  const analyticsQuery = trackingPath('/analytics/ga4', range, start, end);
+
+  function setTab(next: string) {
+    const params = new URLSearchParams();
+    if (next !== 'visits') params.set('tab', next);
+    setSearchParams(params, { replace: true });
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <PageTabs
+        tabs={[
+          { id: 'visits', label: 'Visits' },
+          { id: 'analytics', label: 'Analytics' },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
+      <div className="min-h-0 flex-1 overflow-auto bg-slate-50">
+        <div className="mx-auto max-w-7xl space-y-4 p-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Tracking</h1>
+              <p className="mt-1 text-sm text-slate-500">
+                {tab === 'analytics'
+                  ? 'Sessions and pages come from GA4. Orders and revenue come from production payments.'
+                  : 'One person a day. Channel, campaign, and landing page come from the address they opened.'}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="text-xs font-semibold text-slate-500">
+                Period
+                <select
+                  className="input mt-1 w-auto py-1 text-xs"
+                  value={range}
+                  onChange={event => setRange(event.target.value as TrackingRange)}
+                >
+                  {RANGES.map(option => (
+                    <option key={option.id} value={option.id}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              {range === 'custom' ? (
+                <>
+                  <label className="text-xs font-semibold text-slate-500">
+                    Start date
+                    <input
+                      type="date"
+                      className="input mt-1 w-auto py-1 text-xs"
+                      value={start}
+                      max={end || undefined}
+                      onChange={event => setStart(event.target.value)}
+                    />
+                  </label>
+                  <label className="text-xs font-semibold text-slate-500">
+                    End date
+                    <input
+                      type="date"
+                      className="input mt-1 w-auto py-1 text-xs"
+                      value={end}
+                      min={start || undefined}
+                      onChange={event => setEnd(event.target.value)}
+                    />
+                  </label>
+                </>
+              ) : null}
+            </div>
+          </div>
+          {range === 'custom' && !visitsQuery ? <p className="text-sm text-slate-500">Choose a start date and an end date within one year.</p> : null}
+          {tab === 'visits' ? <VisitsTab query={visitsQuery} /> : <AnalyticsTab query={analyticsQuery} />}
+        </div>
       </div>
     </div>
   );
