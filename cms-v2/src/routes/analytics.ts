@@ -3,6 +3,8 @@ import { authGuard, requireRole } from '../middleware/authGuard';
 import { visitIpRateLimit } from '../middleware/rateLimit';
 import { isTrackingPreset, trackingCustomBounds, trackingPresetBounds } from '../../shared/siteTracking';
 import { buildTrackingReport, recordTrackingVisit } from '../models/siteTracking';
+import { loadTrackingSales } from '../models/trackingSales';
+import { loadGa4Traffic } from '../services/ga4Report';
 import { recordSiteVisitor } from '../models/siteAnalytics';
 import { detectClientIpFromRequest, detectCountryFromRequest } from '../services/geoDetection';
 import { proxySecretMatches } from '../services/proxySecret';
@@ -61,6 +63,28 @@ router.post('/track', visitIpRateLimit, async (req, res) => {
   } catch (err) {
     console.error('[analytics] track record failed', err instanceof Error ? err.message : err);
     res.status(200).json({ ok: true, recorded: false });
+  }
+});
+
+router.get('/ga4', authGuard, requireRole('admin'), async (req, res, next) => {
+  try {
+    const requested = String(req.query.range ?? 'this_month');
+    res.setHeader('Cache-Control', 'no-store');
+    const bounds = requested === 'custom'
+      ? trackingCustomBounds(String(req.query.start ?? ''), String(req.query.end ?? ''))
+      : trackingPresetBounds(isTrackingPreset(requested) ? requested : 'this_month');
+    if (!bounds) {
+      res.status(400).json({ ok: false, error: 'Choose a start date and an end date within one year.' });
+      return;
+    }
+    const range = requested === 'custom' ? 'custom' : (isTrackingPreset(requested) ? requested : 'this_month');
+    const [traffic, sales] = await Promise.all([
+      loadGa4Traffic(bounds.start, bounds.end),
+      loadTrackingSales(bounds.start, bounds.end),
+    ]);
+    res.json({ ok: true, data: { range, start: bounds.start, end: bounds.end, traffic, sales } });
+  } catch (err) {
+    next(err);
   }
 });
 
