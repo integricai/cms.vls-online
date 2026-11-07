@@ -4,6 +4,18 @@ const LONDON = 'Europe/London';
 
 export type DashboardRange = 'this_month' | 'last_month' | 'last_7_days' | 'last_30_days';
 
+/** Presets for the sales list. Custom means the start and end dates were edited by hand. */
+export type SalesListRange =
+  | 'today'
+  | 'yesterday'
+  | 'this_week'
+  | 'last_week'
+  | 'last_month'
+  | 'last_3_months'
+  | 'last_6_months'
+  | 'last_year'
+  | 'custom';
+
 export function londonToday(now = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: LONDON,
@@ -32,6 +44,43 @@ export function shiftMonth(isoDate: string, deltaMonths: number): string {
   const clamped = Math.min(day, lastDay);
   const nextMonth = target.getUTCMonth() + 1;
   return `${target.getUTCFullYear()}-${String(nextMonth).padStart(2, '0')}-${String(clamped).padStart(2, '0')}`;
+}
+
+/** Monday of the week that contains this calendar date. Weeks start on Monday. */
+export function weekStartMonday(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const utcDay = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  const daysSinceMonday = utcDay === 0 ? 6 : utcDay - 1;
+  return addIsoDays(isoDate, -daysSinceMonday);
+}
+
+/**
+ * Inclusive London dates for a sales-list preset.
+ * Last 3 and last 6 months include the current month: on 31 Oct 2026 that is
+ * 1 Aug–31 Oct and 1 May–31 Oct. Last year is the previous calendar year.
+ */
+export function salesListRangeBounds(
+  range: Exclude<SalesListRange, 'custom'>,
+  today = londonToday(),
+): { start: string; end: string } {
+  if (range === 'today') return { start: today, end: today };
+  if (range === 'yesterday') {
+    const yesterday = addIsoDays(today, -1);
+    return { start: yesterday, end: yesterday };
+  }
+  if (range === 'this_week') return { start: weekStartMonday(today), end: today };
+  if (range === 'last_week') {
+    const end = addIsoDays(weekStartMonday(today), -1);
+    return { start: weekStartMonday(end), end };
+  }
+  if (range === 'last_month') {
+    const endLast = addIsoDays(monthStart(today), -1);
+    return { start: monthStart(endLast), end: endLast };
+  }
+  if (range === 'last_3_months') return { start: monthStart(shiftMonth(today, -2)), end: today };
+  if (range === 'last_6_months') return { start: monthStart(shiftMonth(today, -5)), end: today };
+  const year = Number(today.slice(0, 4)) - 1;
+  return { start: `${year}-01-01`, end: `${year}-12-31` };
 }
 
 export function dashboardRangeBounds(
