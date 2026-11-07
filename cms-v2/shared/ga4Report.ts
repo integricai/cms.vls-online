@@ -114,20 +114,6 @@ export function ga4BatchBody(start: string, end: string): { requests: unknown[] 
       },
       {
         dateRanges,
-        dimensions: [{ name: 'sessionDefaultChannelGroup' }],
-        metrics: [{ name: 'sessions' }],
-        orderBys: byMetric('sessions'),
-        limit: 50,
-      },
-      {
-        dateRanges,
-        dimensions: [{ name: 'date' }, { name: 'sessionDefaultChannelGroup' }],
-        metrics: [{ name: 'sessions' }],
-        orderBys: [{ dimension: { dimensionName: 'date' } }],
-        limit: 10000,
-      },
-      {
-        dateRanges,
         dimensions: [{ name: 'landingPage' }],
         metrics: [{ name: 'sessions' }],
         orderBys: byMetric('sessions'),
@@ -149,6 +135,13 @@ export function ga4BatchBody(start: string, end: string): { requests: unknown[] 
             stringFilter: { matchType: 'CONTAINS', value: '/checkout' },
           },
         },
+      },
+      {
+        dateRanges,
+        dimensions: [{ name: 'date' }, { name: 'sessionDefaultChannelGroup' }],
+        metrics: [{ name: 'sessions' }],
+        orderBys: [{ dimension: { dimensionName: 'date' } }],
+        limit: 10000,
       },
     ],
   };
@@ -226,9 +219,8 @@ function channelTotals(days: Ga4ChannelDay[]): Ga4Count[] {
 }
 
 export function assembleGa4Traffic(reports: Ga4RawReport[], start: string, end: string): Ga4Traffic {
-  const [summary, channels, landingPages, pages, checkout, daily] = reports;
+  const [summary, landingPages, pages, checkout, daily] = reports;
   const channelDays = assembleChannelDays(start, end, daily);
-  const fromDays = channelTotals(channelDays);
   return {
     configured: true,
     error: null,
@@ -236,7 +228,7 @@ export function assembleGa4Traffic(reports: Ga4RawReport[], start: string, end: 
     engagedSessions: metricAt(summary, 'engagedSessions'),
     pageViews: metricAt(summary, 'screenPageViews'),
     checkoutViews: metricAt(checkout, 'screenPageViews'),
-    channels: fromDays.length > 0 ? fromDays : dimensionRows(channels, 'sessions'),
+    channels: channelTotals(channelDays),
     channelDays,
     landingPages: dimensionRows(landingPages, 'sessions'),
     pages: contentPages(dimensionRows(pages, 'screenPageViews')),

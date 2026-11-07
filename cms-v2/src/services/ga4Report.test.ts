@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import {
   assembleGa4Traffic,
   contentPages,
+  ga4BatchBody,
   ga4PropertyId,
   paidOrderChannel,
   summarizePaidOrders,
@@ -85,7 +86,6 @@ run('service account assertion is a signed jwt', () => {
 run('traffic keeps sessions, channels, and content pages', () => {
   const traffic = assembleGa4Traffic([
     report(['sessions', 'engagedSessions', 'screenPageViews'], [{ values: ['40', '25', '90'] }]),
-    report(['sessions'], [{ dimension: 'Organic Search', values: ['30'] }, { dimension: 'Paid Search', values: ['10'] }]),
     report(['sessions'], [{ dimension: '/acca', values: ['18'] }]),
     report(['screenPageViews'], [
       { dimension: '/', values: ['50'] },
@@ -109,6 +109,7 @@ run('traffic keeps sessions, channels, and content pages', () => {
   assert.strictEqual(traffic.channelDays[1]?.channels['Paid Search'], 2);
   assert.deepStrictEqual(traffic.channelDays[2]?.channels, {});
   assert.deepStrictEqual(traffic.channels.map(row => row.label), ['Organic Search', 'Paid Search']);
+  assert.strictEqual(ga4BatchBody('2026-11-01', '2026-11-03').requests.length, 5);
 });
 
 run('content pages drop checkout and the home page', () => {
