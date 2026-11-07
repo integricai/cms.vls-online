@@ -75,27 +75,132 @@ function formatMoney(amount: number, currency: string): string {
   }
 }
 
+const CHART_WIDTH = 800;
+const CHART_HEIGHT = 220;
+const PLOT_LEFT = 68;
+const PLOT_RIGHT = 18;
+const PLOT_TOP = 16;
+const PLOT_BOTTOM = 30;
+
+function chartAxis(peak: number): { max: number; ticks: number[] } {
+  if (peak <= 4) return { max: 4, ticks: [0, 1, 2, 3, 4] };
+  const rough = peak / 4;
+  const power = 10 ** Math.floor(Math.log10(rough));
+  const fraction = rough / power;
+  const nice = fraction <= 1.5 ? 1 : fraction <= 3 ? 2 : fraction <= 7 ? 5 : 10;
+  const step = nice * power;
+  const max = Math.ceil(peak / step) * step;
+  const count = Math.round(max / step);
+  return {
+    max,
+    ticks: Array.from({ length: count + 1 }, (_, index) => Math.round(index * step * 1000) / 1000),
+  };
+}
+
+function formatAxis(value: number): string {
+  return Number.isInteger(value)
+    ? value.toLocaleString('en-GB')
+    : value.toLocaleString('en-GB', { maximumFractionDigits: 1 });
+}
+
 function VisitorsChart({ days }: { days: TrackingReport['days'] }) {
-  const width = 640;
-  const height = 180;
-  const max = Math.max(...days.map(day => day.visitors), 1);
-  const step = days.length > 1 ? width / (days.length - 1) : 0;
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  useEffect(() => setActiveIndex(null), [days]);
+  const peak = Math.max(0, ...days.map(day => day.visitors));
+  const axis = chartAxis(peak);
+  const plotWidth = CHART_WIDTH - PLOT_LEFT - PLOT_RIGHT;
+  const plotHeight = CHART_HEIGHT - PLOT_TOP - PLOT_BOTTOM;
   const coords = days.map((day, index) => {
-    const x = days.length === 1 ? width / 2 : index * step;
-    const y = height - 18 - (day.visitors / max) * (height - 36);
+    const x = days.length === 1 ? PLOT_LEFT + plotWidth / 2 : PLOT_LEFT + (index * plotWidth) / (days.length - 1);
+    const y = PLOT_TOP + plotHeight - (day.visitors / axis.max) * plotHeight;
     return { x, y, ...day };
   });
   const line = coords.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ');
+  const active = activeIndex === null ? null : coords[activeIndex] ?? null;
+  const showDots = days.length <= 31;
+
+  function nearestIndex(clientX: number, clientY: number, svg: SVGSVGElement): number | null {
+    const rect = svg.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return null;
+    const x = ((clientX - rect.left) / rect.width) * CHART_WIDTH;
+    const y = ((clientY - rect.top) / rect.height) * CHART_HEIGHT;
+    if (x < PLOT_LEFT - 8 || x > CHART_WIDTH - PLOT_RIGHT + 8 || y < PLOT_TOP - 12 || y > CHART_HEIGHT - 4) return null;
+    let nearest = 0;
+    let best = Infinity;
+    coords.forEach((point, index) => {
+      const distance = Math.abs(point.x - x);
+      if (distance < best) {
+        best = distance;
+        nearest = index;
+      }
+    });
+    return nearest;
+  }
+
+  if (days.length === 0) return <p className="text-sm text-slate-400">No visits yet.</p>;
+
+  const tooltipAlign = !active ? 'center' : active.x < PLOT_LEFT + 80 ? 'left' : active.x > CHART_WIDTH - PLOT_RIGHT - 80 ? 'right' : 'center';
+  const tooltipAbove = !active || active.y > 56;
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="h-48 w-full" role="img" aria-label="Visitors over the selected period">
-      {line ? <path d={line} fill="none" stroke="#4f46e5" strokeWidth="2.5" /> : null}
-      {coords.filter((_, index) => days.length <= 8 || index % Math.ceil(days.length / 6) === 0 || index === coords.length - 1).map(point => (
-        <text key={point.date} x={point.x} y={height - 2} textAnchor="middle" fill="#94a3b8" fontSize="11">
-          {formatDay(point.date)}
-        </text>
-      ))}
-    </svg>
+    <div className="relative w-full" style={{ aspectRatio: `${CHART_WIDTH} / ${CHART_HEIGHT}` }}>
+      <svg
+        viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+        className="h-full w-full"
+        role="group"
+        aria-label="Visitors over the selected period"
+        onPointerMove={event => {
+          const nearest = nearestIndex(event.clientX, event.clientY, event.currentTarget);
+          setActiveIndex(current => current === nearest ? current : nearest);
+        }}
+        onPointerLeave={() => setActiveIndex(null)}
+      >
+        {axis.ticks.map(tick => {
+          const y = PLOT_TOP + plotHeight - (tick / axis.max) * plotHeight;
+          return (
+            <g key={tick}>
+              <line x1={PLOT_LEFT} y1={y} x2={CHART_WIDTH - PLOT_RIGHT} y2={y} stroke="#e2e8f0" strokeWidth="1" />
+              <text x={PLOT_LEFT - 8} y={y + 4} textAnchor="end" fill="#64748b" fontSize="12">
+                {formatAxis(tick)}
+              </text>
+            </g>
+          );
+        })}
+        {coords.length > 1 ? (
+          <path d={line} fill="none" stroke="#4f46e5" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+        ) : null}
+        {showDots ? coords.map(point => (
+          <circle key={point.date} cx={point.x} cy={point.y} r={coords.length === 1 ? 5 : 3} fill="#4f46e5" />
+        )) : null}
+        {active ? (
+          <g>
+            <line x1={active.x} y1={PLOT_TOP} x2={active.x} y2={PLOT_TOP + plotHeight} stroke="#c7d2fe" strokeWidth="1" />
+            <circle cx={active.x} cy={active.y} r="5.5" fill="#ffffff" stroke="#4f46e5" strokeWidth="2.5" />
+          </g>
+        ) : null}
+        {coords.filter((_, index) => days.length <= 8 || index % Math.ceil(days.length / 6) === 0 || index === coords.length - 1).map(point => {
+          const anchor = point.x <= PLOT_LEFT + 1 ? 'start' : point.x >= PLOT_LEFT + plotWidth - 1 ? 'end' : 'middle';
+          return (
+            <text key={point.date} x={point.x} y={CHART_HEIGHT - 8} textAnchor={anchor} fill="#64748b" fontSize="12">
+              {formatDay(point.date)}
+            </text>
+          );
+        })}
+      </svg>
+      {active ? (
+        <div
+          className="pointer-events-none absolute z-10 rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs text-white shadow-lg"
+          style={{
+            left: `${(active.x / CHART_WIDTH) * 100}%`,
+            top: `${(active.y / CHART_HEIGHT) * 100}%`,
+            transform: `${tooltipAlign === 'left' ? 'translate(0, 0)' : tooltipAlign === 'right' ? 'translate(-100%, 0)' : 'translate(-50%, 0)'} ${tooltipAbove ? 'translateY(calc(-100% - 12px))' : 'translateY(12px)'}`,
+          }}
+        >
+          <p className="font-medium">{formatDay(active.date)}</p>
+          <p className="tabular-nums text-slate-200">{active.visitors.toLocaleString('en-GB')}</p>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
