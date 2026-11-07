@@ -338,8 +338,20 @@ export default function Tracking() {
         {report ? (
           <>
             <section className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-3xl font-semibold tracking-tight text-slate-900">{report.visitors.toLocaleString('en-GB')}</p>
-              <p className="text-sm text-slate-500">Visitors from {report.start} to {report.end}</p>
+              <div className="flex flex-wrap gap-x-10 gap-y-4">
+                <div>
+                  <p className="text-3xl font-semibold tracking-tight text-slate-900">{report.visitors.toLocaleString('en-GB')}</p>
+                  <p className="text-sm text-slate-500">Visitors from {report.start} to {report.end}</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-semibold tracking-tight text-slate-900">{report.uniqueVisits.toLocaleString('en-GB')}</p>
+                  <p className="text-sm text-slate-500">Unique visits</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-semibold tracking-tight text-slate-900">{report.returningVisits.toLocaleString('en-GB')}</p>
+                  <p className="text-sm text-slate-500">Returning visits</p>
+                </div>
+              </div>
               <div className="mt-4">
                 <VisitorsChart days={report.days} />
               </div>

@@ -44,6 +44,8 @@ export type TrackingReport = {
   start: string;
   end: string;
   visitors: number;
+  uniqueVisits: number;
+  returningVisits: number;
   days: TrackingDay[];
   channels: TrackingCount[];
   campaigns: TrackingCount[];
