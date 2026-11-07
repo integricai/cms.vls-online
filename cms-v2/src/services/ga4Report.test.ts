@@ -21,12 +21,13 @@ function run(name: string, fn: () => void): void {
   }
 }
 
-function report(metrics: string[], rows: Array<{ dimension?: string; values: string[] }>): Ga4RawReport {
+function report(metrics: string[], rows: Array<{ dimension?: string; dimensions?: string[]; values: string[] }>): Ga4RawReport {
+  const width = Math.max(0, ...rows.map(row => row.dimensions?.length ?? (row.dimension ? 1 : 0)));
   return {
-    dimensionHeaders: rows.some(row => row.dimension) ? [{ name: 'dimension' }] : [],
+    dimensionHeaders: Array.from({ length: width }, () => ({ name: 'dimension' })),
     metricHeaders: metrics.map(name => ({ name })),
     rows: rows.map(row => ({
-      dimensionValues: row.dimension ? [{ value: row.dimension }] : [],
+      dimensionValues: (row.dimensions ?? (row.dimension ? [row.dimension] : [])).map(value => ({ value })),
       metricValues: row.values.map(value => ({ value })),
     })),
   };
@@ -93,12 +94,21 @@ run('traffic keeps sessions, channels, and content pages', () => {
       { dimension: '/payment-success', values: ['4'] },
     ]),
     report(['screenPageViews'], [{ values: ['9'] }]),
-  ]);
+    report(['sessions'], [
+      { dimensions: ['20261101', 'Organic Search'], values: ['4'] },
+      { dimensions: ['20261102', 'Paid Search'], values: ['2'] },
+    ]),
+  ], '2026-11-01', '2026-11-03');
   assert.strictEqual(traffic.sessions, 40);
   assert.strictEqual(traffic.engagedSessions, 25);
   assert.strictEqual(traffic.checkoutViews, 9);
   assert.strictEqual(traffic.channels[0]?.label, 'Organic Search');
   assert.deepStrictEqual(traffic.pages, [{ label: '/courses/acca-fa', value: 12 }]);
+  assert.strictEqual(traffic.channelDays.length, 3);
+  assert.strictEqual(traffic.channelDays[0]?.channels['Organic Search'], 4);
+  assert.strictEqual(traffic.channelDays[1]?.channels['Paid Search'], 2);
+  assert.deepStrictEqual(traffic.channelDays[2]?.channels, {});
+  assert.deepStrictEqual(traffic.channels.map(row => row.label), ['Organic Search', 'Paid Search']);
 });
 
 run('content pages drop checkout and the home page', () => {

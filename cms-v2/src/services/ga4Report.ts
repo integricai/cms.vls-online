@@ -102,7 +102,7 @@ export async function loadGa4Traffic(start: string, end: string): Promise<Ga4Tra
       error?: { message?: string; status?: string };
     };
     if (!response.ok) return emptyGa4Traffic(true, ga4ErrorMessage(payload.error));
-    return assembleGa4Traffic(payload.reports ?? []);
+    return assembleGa4Traffic(payload.reports ?? [], start, end);
   } catch (err) {
     console.error('[ga4]', err instanceof Error ? err.message : err);
     return emptyGa4Traffic(true, 'Could not reach Google Analytics.');

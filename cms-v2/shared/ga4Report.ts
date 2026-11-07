@@ -1,6 +1,7 @@
 import type { TrackingRange } from './siteTracking';
 
 export type Ga4Count = { label: string; value: number };
+export type Ga4ChannelDay = { date: string; channels: Record<string, number> };
 
 export type Ga4Traffic = {
   configured: boolean;
@@ -10,6 +11,7 @@ export type Ga4Traffic = {
   pageViews: number;
   checkoutViews: number;
   channels: Ga4Count[];
+  channelDays: Ga4ChannelDay[];
   landingPages: Ga4Count[];
   pages: Ga4Count[];
 };
@@ -76,6 +78,7 @@ export function emptyGa4Traffic(configured: boolean, error: string | null): Ga4T
     pageViews: 0,
     checkoutViews: 0,
     channels: [],
+    channelDays: [],
     landingPages: [],
     pages: [],
   };
@@ -114,7 +117,14 @@ export function ga4BatchBody(start: string, end: string): { requests: unknown[] 
         dimensions: [{ name: 'sessionDefaultChannelGroup' }],
         metrics: [{ name: 'sessions' }],
         orderBys: byMetric('sessions'),
-        limit: 12,
+        limit: 50,
+      },
+      {
+        dateRanges,
+        dimensions: [{ name: 'date' }, { name: 'sessionDefaultChannelGroup' }],
+        metrics: [{ name: 'sessions' }],
+        orderBys: [{ dimension: { dimensionName: 'date' } }],
+        limit: 10000,
       },
       {
         dateRanges,
@@ -167,8 +177,58 @@ export function contentPages(rows: Ga4Count[], limit = 12): Ga4Count[] {
     .slice(0, limit);
 }
 
-export function assembleGa4Traffic(reports: Ga4RawReport[]): Ga4Traffic {
-  const [summary, channels, landingPages, pages, checkout] = reports;
+function isoDays(start: string, end: string): string[] {
+  const [startYear, startMonth, startDay] = start.split('-').map(Number);
+  const [endYear, endMonth, endDay] = end.split('-').map(Number);
+  const first = Date.UTC(startYear, startMonth - 1, startDay);
+  const last = Date.UTC(endYear, endMonth - 1, endDay);
+  const days: string[] = [];
+  for (let time = first; time <= last; time += 86_400_000) {
+    days.push(new Date(time).toISOString().slice(0, 10));
+  }
+  return days;
+}
+
+function isoFromGa4Date(value: string): string {
+  const digits = value.trim();
+  if (/^\d{8}$/.test(digits)) return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+  return digits.slice(0, 10);
+}
+
+export function assembleChannelDays(start: string, end: string, report: Ga4RawReport | undefined): Ga4ChannelDay[] {
+  const metricIndex = report?.metricHeaders?.findIndex(header => header.name === 'sessions') ?? -1;
+  const byDate = new Map<string, Record<string, number>>();
+  if (metricIndex >= 0) {
+    for (const row of report?.rows ?? []) {
+      const date = isoFromGa4Date(row.dimensionValues?.[0]?.value ?? '');
+      const channel = row.dimensionValues?.[1]?.value?.trim() || '(not set)';
+      const sessions = Number(row.metricValues?.[metricIndex]?.value) || 0;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || sessions <= 0) continue;
+      const bucket = byDate.get(date) ?? {};
+      bucket[channel] = (bucket[channel] ?? 0) + sessions;
+      byDate.set(date, bucket);
+    }
+  }
+  return isoDays(start, end).map(date => ({ date, channels: byDate.get(date) ?? {} }));
+}
+
+function channelTotals(days: Ga4ChannelDay[]): Ga4Count[] {
+  const totals = new Map<string, number>();
+  for (const day of days) {
+    for (const [label, value] of Object.entries(day.channels)) {
+      totals.set(label, (totals.get(label) ?? 0) + value);
+    }
+  }
+  return [...totals.entries()]
+    .map(([label, value]) => ({ label, value }))
+    .filter(row => row.value > 0)
+    .sort((left, right) => right.value - left.value || left.label.localeCompare(right.label));
+}
+
+export function assembleGa4Traffic(reports: Ga4RawReport[], start: string, end: string): Ga4Traffic {
+  const [summary, channels, landingPages, pages, checkout, daily] = reports;
+  const channelDays = assembleChannelDays(start, end, daily);
+  const fromDays = channelTotals(channelDays);
   return {
     configured: true,
     error: null,
@@ -176,7 +236,8 @@ export function assembleGa4Traffic(reports: Ga4RawReport[]): Ga4Traffic {
     engagedSessions: metricAt(summary, 'engagedSessions'),
     pageViews: metricAt(summary, 'screenPageViews'),
     checkoutViews: metricAt(checkout, 'screenPageViews'),
-    channels: dimensionRows(channels, 'sessions'),
+    channels: fromDays.length > 0 ? fromDays : dimensionRows(channels, 'sessions'),
+    channelDays,
     landingPages: dimensionRows(landingPages, 'sessions'),
     pages: contentPages(dimensionRows(pages, 'screenPageViews')),
   };
