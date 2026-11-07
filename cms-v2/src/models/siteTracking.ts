@@ -7,6 +7,7 @@ import type { ClassifiedTrackingVisit } from '../services/siteTracking';
 type CountRow = { label: string | null; visitors: number };
 type SourceRow = { source: string | null; medium: string | null; visitors: number };
 type DayRow = { date: string | Date; visitors: number };
+type AudienceRow = { unique_visits: number; returning_visits: number };
 type EnrolmentRow = { campaign: string | null; currency: string | null; orders: number; amount: string | number };
 
 function isoDay(value: string | Date): string {
@@ -61,7 +62,7 @@ export async function buildTrackingReport(
   range: TrackingRange,
   bounds: { start: string; end: string },
 ): Promise<TrackingReport> {
-  const [dayRows, channelRows, campaignRows, landingRows, countryRows, sourceRows, deviceRows, localeRows, enrolmentRows] = await Promise.all([
+  const [dayRows, audienceRows, channelRows, campaignRows, landingRows, countryRows, sourceRows, deviceRows, localeRows, enrolmentRows] = await Promise.all([
     sql`
       SELECT visited_on::text AS date, COUNT(*)::int AS visitors
       FROM site_tracking_visits
@@ -69,6 +70,26 @@ export async function buildTrackingReport(
         AND visited_on <= CAST(${bounds.end} AS date)
       GROUP BY visited_on
       ORDER BY visited_on
+    `,
+    sql`
+      SELECT
+        COUNT(*)::int AS unique_visits,
+        COUNT(*) FILTER (WHERE day_count > 1 OR has_earlier)::int AS returning_visits
+      FROM (
+        SELECT
+          visits.visitor_key,
+          COUNT(*)::int AS day_count,
+          EXISTS (
+            SELECT 1
+            FROM site_tracking_visits earlier
+            WHERE earlier.visitor_key = visits.visitor_key
+              AND earlier.visited_on < CAST(${bounds.start} AS date)
+          ) AS has_earlier
+        FROM site_tracking_visits visits
+        WHERE visits.visited_on >= CAST(${bounds.start} AS date)
+          AND visits.visited_on <= CAST(${bounds.end} AS date)
+        GROUP BY visits.visitor_key
+      ) people
     `,
     sql`
       SELECT channel AS label, COUNT(*)::int AS visitors
@@ -155,12 +176,15 @@ export async function buildTrackingReport(
     date,
     visitors: byDay.get(date) ?? 0,
   }));
+  const audience = (audienceRows as AudienceRow[])[0];
 
   return {
     range,
     start: bounds.start,
     end: bounds.end,
     visitors: days.reduce((sum, day) => sum + day.visitors, 0),
+    uniqueVisits: Number(audience?.unique_visits) || 0,
+    returningVisits: Number(audience?.returning_visits) || 0,
     days,
     channels: counts(channelRows as CountRow[], 'Direct'),
     campaigns: counts(campaignRows as CountRow[], 'No campaign'),
