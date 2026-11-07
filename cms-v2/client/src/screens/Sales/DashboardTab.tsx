@@ -105,14 +105,16 @@ function Metric({
   value,
   detail,
   hint,
+  className = '',
 }: {
   label: string;
   value: string;
   detail?: string | null;
   hint: string;
+  className?: string;
 }) {
   return (
-    <div className="border-b border-slate-100 py-4 last:border-b-0" title={hint}>
+    <div className={`py-4 ${className}`} title={hint}>
       <div className="text-2xl font-semibold tracking-tight text-slate-900">{value}</div>
       <div className="mt-1 text-sm text-slate-500">{label}</div>
       {detail ? <div className="mt-1 text-xs text-slate-400">{detail}</div> : null}
@@ -225,50 +227,55 @@ export default function DashboardTab() {
                 </select>
               </label>
             </div>
-            <div className="grid gap-3 xl:grid-cols-[220px_minmax(0,1fr)_280px]">
+            <section className="rounded-2xl border border-slate-200 bg-white p-4">
+              <h2 className="mb-3 text-sm font-semibold text-slate-800">Sales</h2>
+              <div className="grid gap-3 lg:grid-cols-[180px_minmax(0,1fr)]">
+                <div className="rounded-xl bg-slate-950 px-4 py-4 text-white">
+                  <p className="text-2xl font-semibold">{formatMoney(dashboard.totalSales, dashboard.currency, true)}</p>
+                  <p className="text-xs text-slate-300">Total sales</p>
+                  <dl className="mt-4 space-y-2 text-sm">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <dt className="text-indigo-200">One-time</dt>
+                      <dd>{formatMoney(dashboard.oneTime, dashboard.currency, true)}</dd>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <dt className="text-amber-200">Subscriptions</dt>
+                      <dd>{formatMoney(dashboard.subscriptions, dashboard.currency, true)}</dd>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <dt className="text-emerald-200">Others</dt>
+                      <dd>{formatMoney(dashboard.others, dashboard.currency, true)}</dd>
+                    </div>
+                  </dl>
+                </div>
+                <SalesChart points={dashboard.series} currency={dashboard.currency} />
+              </div>
+            </section>
+
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,1fr)]">
               <section className="rounded-2xl border border-slate-200 bg-white p-4">
                 <h2 className="text-sm font-semibold text-slate-800">Overview</h2>
-                <Metric
-                  label="Visitors"
-                  value={dashboard.visitors.toLocaleString('en-GB')}
-                  hint="Unique visitors on vls-online.com during the selected period."
-                />
-                <Metric
-                  label="Leads"
-                  value={dashboard.leads.toLocaleString('en-GB')}
-                  detail={leadRate == null ? null : `${leadRate}% lead conversion`}
-                  hint="Enquiry form submissions and Zenler funnel leads during the selected period."
-                />
-                <Metric
-                  label="Course enrolments"
-                  value={dashboard.enrollments.toLocaleString('en-GB')}
-                  detail={enrolmentRate == null ? null : `${enrolmentRate}% enrolment conversion`}
-                  hint="Paid course sales during the selected period. Refunds are not included."
-                />
-              </section>
-
-              <section className="rounded-2xl border border-slate-200 bg-white p-4">
-                <h2 className="mb-3 text-sm font-semibold text-slate-800">Sales</h2>
-                <div className="grid gap-3 lg:grid-cols-[160px_minmax(0,1fr)]">
-                  <div className="rounded-xl bg-slate-950 px-4 py-4 text-white">
-                    <p className="text-2xl font-semibold">{formatMoney(dashboard.totalSales, dashboard.currency, true)}</p>
-                    <p className="text-xs text-slate-300">Total sales</p>
-                    <dl className="mt-4 space-y-2 text-sm">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <dt className="text-indigo-200">One-time</dt>
-                        <dd>{formatMoney(dashboard.oneTime, dashboard.currency, true)}</dd>
-                      </div>
-                      <div className="flex items-baseline justify-between gap-2">
-                        <dt className="text-amber-200">Subscriptions</dt>
-                        <dd>{formatMoney(dashboard.subscriptions, dashboard.currency, true)}</dd>
-                      </div>
-                      <div className="flex items-baseline justify-between gap-2">
-                        <dt className="text-emerald-200">Others</dt>
-                        <dd>{formatMoney(dashboard.others, dashboard.currency, true)}</dd>
-                      </div>
-                    </dl>
-                  </div>
-                  <SalesChart points={dashboard.series} currency={dashboard.currency} />
+                <div className="mt-1 grid sm:grid-cols-3 sm:divide-x sm:divide-slate-100">
+                  <Metric
+                    className="sm:pr-6"
+                    label="Visitors"
+                    value={dashboard.visitors.toLocaleString('en-GB')}
+                    hint="Unique visitors on vls-online.com during the selected period."
+                  />
+                  <Metric
+                    className="sm:px-6"
+                    label="Leads"
+                    value={dashboard.leads.toLocaleString('en-GB')}
+                    detail={leadRate == null ? null : `${leadRate}% lead conversion`}
+                    hint="Enquiry form submissions and Zenler funnel leads during the selected period."
+                  />
+                  <Metric
+                    className="sm:px-6"
+                    label="Course enrolments"
+                    value={dashboard.enrollments.toLocaleString('en-GB')}
+                    detail={enrolmentRate == null ? null : `${enrolmentRate}% enrolment conversion`}
+                    hint="Paid course sales during the selected period. Refunds are not included."
+                  />
                 </div>
               </section>
 
