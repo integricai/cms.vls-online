@@ -16,6 +16,7 @@ import { BANK_FX_NOTE, convertUsdAmount, currencyForCountry, localizeDisplayMone
 import { getUsdRates, rateForCurrency } from './fxRates';
 import { normalizeExamSession } from '../../shared/sessionAccess';
 import { signPriceQuote } from './priceQuote';
+import type { ServerTiming } from '../utils/serverTiming';
 
 /** ACCA exam sittings fallback when no qualification offer rule is configured. */
 export const ACCA_EXAM_MONTHS = [3, 6, 9, 12] as const;
@@ -319,6 +320,8 @@ export async function buildCourseDisplayPricing(
     ignoreVpnBlock?: boolean;
     /** Injected USD FX rates for tests. Production fetches and caches rates. */
     fxRates?: Record<string, number> | null;
+    /** Records how long the offer rule, Evendeals and FX steps take. */
+    timing?: ServerTiming;
   },
   now: Date = new Date(),
 ): Promise<PublishedCoursePricing | null> {
@@ -327,9 +330,11 @@ export async function buildCourseDisplayPricing(
 
   const sorted = [...active].sort((a, b) => planDurationSortKey(a) - planDurationSortKey(b));
 
+  const ruleStartedAt = performance.now();
   const rule = input.offerRule !== undefined
     ? input.offerRule
     : await getQualificationOfferRuleByQualification(input.qualification ?? null);
+  input.timing?.add('offer-rule', ruleStartedAt, 'offer rule DB');
 
   const courseId = input.courseId
     ?? sorted.find(p => p.courseId != null)?.courseId
@@ -369,35 +374,38 @@ export async function buildCourseDisplayPricing(
     }
   }
 
-  // Quote once per distinct Evendeals product id (plans may use different deals).
+  // Quote once per distinct Evendeals product id (plans may use different deals), all at once.
   const sourcePrices = sorted.length === 1 ? [sorted[0]!] : sorted.slice(0, 2);
-  const quoteCache = new Map<string, EvenDealsQuote | null>();
-  const ignoreVpnBlock = input.ignoreVpnBlock === true;
-  const resolvedPlans: PublishedCoursePricePlan[] = [];
-
-  for (let index = 0; index < plans.length; index += 1) {
-    const plan = plans[index]!;
-    const price = sourcePrices[index] ?? sourcePrices[0]!;
+  const planPrices = plans.map((_plan, index) => sourcePrices[index] ?? sourcePrices[0]!);
+  const quoteLookups = new Map<string, Promise<EvenDealsQuote | null>>();
+  for (const price of planPrices) {
     const productKey = resolveEvenDealsProductId(price.evenDeals) ?? '';
-
-    if (!quoteCache.has(productKey)) {
-      quoteCache.set(productKey, await fetchEvenDealsQuote(input.ipAddress, price.evenDeals));
+    if (!quoteLookups.has(productKey)) {
+      quoteLookups.set(productKey, fetchEvenDealsQuote(input.ipAddress, price.evenDeals));
     }
-
-    const quote = quoteCache.get(productKey) ?? null;
-    resolvedPlans.push(applyVisitorDealToPlan(
-      plan,
-      quote,
-      input.countryCode ?? null,
-      ignoreVpnBlock,
-    ));
   }
+  const quotesStartedAt = performance.now();
+  const quotes = new Map<string, EvenDealsQuote | null>();
+  await Promise.all([...quoteLookups].map(async ([productKey, lookup]) => {
+    quotes.set(productKey, await lookup);
+  }));
+  input.timing?.add('evendeals', quotesStartedAt, `Evendeals x${quoteLookups.size}`);
 
+  const ignoreVpnBlock = input.ignoreVpnBlock === true;
+  const resolvedPlans = plans.map((plan, index) => applyVisitorDealToPlan(
+    plan,
+    quotes.get(resolveEvenDealsProductId(planPrices[index]!.evenDeals) ?? '') ?? null,
+    input.countryCode ?? null,
+    ignoreVpnBlock,
+  ));
+
+  const fxStartedAt = performance.now();
   plans = await applyLocalDisplayCurrency(
     resolvedPlans,
     resolveDisplayCountry(input.countryCode, resolvedPlans),
     input.fxRates,
   );
+  input.timing?.add('fx', fxStartedAt, 'FX rates');
   plans = plans.map((plan) => {
     const session = normalizeExamSession(plan.sessionMonth, plan.sessionYear);
     const priceQuote = signPriceQuote({

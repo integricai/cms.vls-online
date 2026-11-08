@@ -36,6 +36,7 @@ import systemLogsRouter from './routes/systemLogs';
 import contactRouter from './routes/contact';
 import analyticsRouter from './routes/analytics';
 import { sendErrorAlert } from './utils/errorAlert';
+import { createServerTiming } from './utils/serverTiming';
 import { freeEnrolEmailRateLimit, freeEnrolIpRateLimit } from './middleware/rateLimit';
 import { getContent, upsertContent } from './models/content';
 import { listBlogPosts } from './models/blog';
@@ -205,15 +206,19 @@ app.options('/api/publish-course-pricing/:zenlerCourseId', (_req, res) => {
 
 app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Expose-Headers', 'Server-Timing');
   // Country/IP-specific — never share across visitors at the CDN edge.
   res.setHeader('Cache-Control', 'private, no-store');
+  const timing = createServerTiming();
   try {
     const zenlerCourseId = String(req.params.zenlerCourseId ?? '').trim();
     if (!zenlerCourseId) {
       return res.status(400).json({ ok: false, error: 'zenlerCourseId is required' });
     }
 
+    const courseStartedAt = performance.now();
     const course = await listActiveGeoPricesByZenlerCourseId(zenlerCourseId);
+    timing.add('db', courseStartedAt, 'course prices DB');
     if (!course) {
       return res.status(404).json({ ok: false, error: 'No active prices found for this course' });
     }
@@ -233,6 +238,7 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
       countryCode: geo.countryCode,
       ipAddress: clientIp,
       ignoreVpnBlock: parityTest,
+      timing,
     });
 
     if (!pricing) {
@@ -244,6 +250,8 @@ app.get('/api/publish-course-pricing/:zenlerCourseId', async (req, res, next) =>
       ...plan,
       checkoutPath: `/courses/${slug}/buy/plan/${plan.coursePriceId}`,
     }));
+
+    res.setHeader('Server-Timing', timing.header());
 
     return res.json({
       ok: true,

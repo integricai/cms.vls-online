@@ -137,17 +137,43 @@ async function requestEvenDealsQuote(
   return parseQuoteBody(body);
 }
 
+const QUOTE_CACHE_TTL_MS = 15 * 60 * 1000;
+const QUOTE_CACHE_MAX_ENTRIES = 5_000;
+
+/**
+ * Course-page quotes by IP and product, kept for 15 minutes per function instance.
+ * Each page view asks twice (vls-api and the site's VPN check), and every repeat visit
+ * asked again. Holding the in-flight promise lets the second ask share the first.
+ * Checkout still calls applyEvenDealsPricing, which never uses this cache.
+ */
+const quoteCache = new Map<string, { expiresAt: number; quote: Promise<EvenDealsQuote | null> }>();
+
 /** Course-page lookup. A failed request shows the list price so the page still loads. */
 export async function fetchEvenDealsQuote(
   ipAddress: string | null | undefined,
   productId?: string | null,
 ): Promise<EvenDealsQuote | null> {
-  try {
-    return await requestEvenDealsQuote(ipAddress, productId);
-  } catch (err) {
-    if (err instanceof EvenDealsUnavailableError) return null;
-    throw err;
+  const key = `${String(ipAddress ?? '').trim()}|${resolveEvenDealsProductId(productId) ?? ''}`;
+  const now = Date.now();
+  const cached = quoteCache.get(key);
+  if (cached && cached.expiresAt > now) return cached.quote;
+
+  const entry = {
+    expiresAt: now + QUOTE_CACHE_TTL_MS,
+    quote: requestEvenDealsQuote(ipAddress, productId).catch((err: unknown) => {
+      // Ask again next time rather than keep a failure for 15 minutes.
+      if (quoteCache.get(key) === entry) quoteCache.delete(key);
+      if (err instanceof EvenDealsUnavailableError) return null;
+      throw err;
+    }),
+  };
+  quoteCache.delete(key);
+  quoteCache.set(key, entry);
+  if (quoteCache.size > QUOTE_CACHE_MAX_ENTRIES) {
+    const oldest = quoteCache.keys().next().value;
+    if (oldest !== undefined) quoteCache.delete(oldest);
   }
+  return entry.quote;
 }
 
 export function applyEvenDealsQuote(
