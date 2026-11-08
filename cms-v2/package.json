@@ -16,6 +16,7 @@
     "test:pricing": "ts-node src/services/pricingResolver.test.ts",
     "test:regional-pricing": "ts-node src/services/pricingRegions.test.ts",
     "test:display-pricing": "ts-node src/services/courseDisplayPricing.test.ts",
+    "test:evendeals-cache": "ts-node src/services/evenDealsQuoteCache.test.ts",
     "test:display-currency": "ts-node src/services/displayCurrency.test.ts",
     "test:faq": "ts-node src/services/faqParser.test.ts",
     "test:course-scraper": "ts-node src/services/coursePageScraper.test.ts",
