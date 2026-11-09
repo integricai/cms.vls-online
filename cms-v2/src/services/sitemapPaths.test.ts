@@ -59,6 +59,9 @@ run('leaves internal and draft pages out of every sitemap', () => {
     'component-library',
     'component-library/about_us/hero',
     'pages/component-library/about_us/cta',
+    'drafts',
+    'drafts/new-post',
+    'pages/drafts/new-post',
     'test',
     'pages/test',
     'site-config',
@@ -69,6 +72,7 @@ run('leaves internal and draft pages out of every sitemap', () => {
     assert.strictEqual(resolveSitemapGroup(slug), null, slug);
   }
   assert.strictEqual(resolveSitemapGroup('blog/test-guide'), 'blog');
+  assert.strictEqual(resolveSitemapGroup('blog/drafts-guide'), 'blog');
   assert.strictEqual(resolveSitemapGroup('courses/test-course'), 'courses');
   assert.strictEqual(isExcludedFromSitemap('about-us'), false);
 });

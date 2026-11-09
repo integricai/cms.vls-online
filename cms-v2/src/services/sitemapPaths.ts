@@ -2,8 +2,10 @@ export type SitemapGroup = 'pages' | 'courses' | 'blog';
 
 /**
  * Storyblok stories that are internal or unfinished. They stay out of every sitemap.
- * `component-library` includes the folder and every nested preset page.
+ * Each folder name covers the folder itself and every nested story.
  */
+export const SITEMAP_EXCLUDED_FOLDERS = ['component-library', 'drafts'] as const;
+
 const SITEMAP_EXCLUDED_SLUGS = new Set([
   'test',
   'site-config',
@@ -23,7 +25,9 @@ export function isExcludedFromSitemap(fullSlug: string): boolean {
   const slug = fullSlug.replace(/^\/+|\/+$/g, '');
   const publicSlug = slug.startsWith('pages/') ? slug.slice('pages/'.length) : slug;
   if (!publicSlug) return false;
-  if (publicSlug === 'component-library' || publicSlug.startsWith('component-library/')) return true;
+  if (SITEMAP_EXCLUDED_FOLDERS.some((folder) => publicSlug === folder || publicSlug.startsWith(`${folder}/`))) {
+    return true;
+  }
   return SITEMAP_EXCLUDED_SLUGS.has(publicSlug);
 }
 

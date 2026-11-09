@@ -1,5 +1,9 @@
 import { sql } from '../db/client';
-import { SITEMAP_EXCLUDED_PATHS, type SitemapGroup } from '../services/sitemapPaths';
+import {
+  SITEMAP_EXCLUDED_FOLDERS,
+  SITEMAP_EXCLUDED_PATHS,
+  type SitemapGroup,
+} from '../services/sitemapPaths';
 
 export interface SiteUrlRecord {
   id: number;
@@ -298,7 +302,7 @@ export async function disableExcludedSiteUrl(input: {
 }
 
 /**
- * Turn off component-library presets and the other internal pages.
+ * Turn off internal folders and the other excluded pages.
  * Matches the public path and the Storyblok slug, including a `pages/` prefix.
  */
 export async function disableExcludedSitemapUrls(): Promise<number> {
@@ -306,18 +310,20 @@ export async function disableExcludedSitemapUrls(): Promise<number> {
     ...SITEMAP_EXCLUDED_PATHS.map((path) => path.slice(1)),
     ...SITEMAP_EXCLUDED_PATHS.map((path) => `pages${path}`),
   ];
+  const folderPaths = SITEMAP_EXCLUDED_FOLDERS.map((folder) => `/${folder}`);
+  const folderPathPrefixes = SITEMAP_EXCLUDED_FOLDERS.map((folder) => `/${folder}/%`);
+  const folderSlugs = SITEMAP_EXCLUDED_FOLDERS.flatMap((folder) => [folder, `pages/${folder}`]);
+  const folderSlugPrefixes = SITEMAP_EXCLUDED_FOLDERS.flatMap((folder) => [`${folder}/%`, `pages/${folder}/%`]);
   const rows = await sql`
     UPDATE site_urls
     SET is_enabled = FALSE, updated_at = NOW()
     WHERE is_enabled = TRUE
       AND (
-        path = '/component-library'
-        OR path LIKE '/component-library/%'
+        path = ANY(${folderPaths}::text[])
+        OR path LIKE ANY(${folderPathPrefixes}::text[])
         OR path = ANY(${[...SITEMAP_EXCLUDED_PATHS]}::text[])
-        OR storyblok_full_slug = 'component-library'
-        OR storyblok_full_slug LIKE 'component-library/%'
-        OR storyblok_full_slug = 'pages/component-library'
-        OR storyblok_full_slug LIKE 'pages/component-library/%'
+        OR storyblok_full_slug = ANY(${folderSlugs}::text[])
+        OR storyblok_full_slug LIKE ANY(${folderSlugPrefixes}::text[])
         OR storyblok_full_slug = ANY(${excludedSlugs}::text[])
       )
     RETURNING id
