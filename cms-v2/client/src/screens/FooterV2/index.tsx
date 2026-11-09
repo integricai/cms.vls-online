@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import type { FooterData, FooterLink, FooterSection, FooterSocial, FooterV2Data, HeaderConfig, TextValue } from '../../types/cms';
 import { normalize } from '../../utils/text';
-import { resolveV2LogoUrl } from '../../utils/brand';
+import { BRAND_NAME, BRAND_TAGLINE, brandTaglineText, brandTitleText, FOOTER_CREST_URL, resolveV2LogoUrl } from '../../utils/brand';
 import { generateFooterV2Html } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
@@ -40,11 +40,11 @@ function makeDefault(): FooterV2Data {
     ),
     ratingText: normalize('Rated 5.0 by students worldwide', 'footerV2Rating'),
     ratingValue: 5,
-    logoUrl: '',
+    logoUrl: FOOTER_CREST_URL,
     logoAlt: 'Vertex Learning Solutions',
     logoLink: '/',
-    siteTitle: normalize('Vertex', 'headerV2SiteTitle'),
-    subTitle: normalize('Learning Solutions', 'headerV2SubTitle'),
+    siteTitle: normalize(BRAND_NAME, 'headerV2SiteTitle'),
+    subTitle: normalize(BRAND_TAGLINE, 'headerV2SubTitle'),
     siteBaseUrl: 'https://vls-online.com',
   };
 }
@@ -76,11 +76,11 @@ function fromFooterV1(raw: FooterData, header?: HeaderConfig | null): FooterV2Da
   return {
     ...base,
     ...footer,
-    logoUrl: resolveV2LogoUrl(header?.logoUrl),
+    logoUrl: resolveV2LogoUrl(header?.logoUrl, 'footer'),
     logoAlt: header?.logoAlt || base.logoAlt,
     logoLink: header?.logoLink || base.logoLink,
-    siteTitle: header?.siteTitle ? normalize(header.siteTitle, 'headerV2SiteTitle') : base.siteTitle,
-    subTitle: header?.subTitle ? normalize(header.subTitle, 'headerV2SubTitle') : base.subTitle,
+    siteTitle: normalize(brandTitleText(header?.siteTitle), 'headerV2SiteTitle'),
+    subTitle: normalize(brandTaglineText(header?.subTitle), 'headerV2SubTitle'),
   };
 }
 
@@ -129,7 +129,14 @@ export default function FooterV2Screen() {
         ? raw
         : raw?.footer;
       if (savedV2 && (savedV2.sections || savedV2.aboutText)) {
-        setData({ ...makeDefault(), ...hydrateFooter(savedV2), ...savedV2, logoUrl: resolveV2LogoUrl(savedV2.logoUrl) });
+        setData({
+          ...makeDefault(),
+          ...hydrateFooter(savedV2),
+          ...savedV2,
+          logoUrl: resolveV2LogoUrl(savedV2.logoUrl, 'footer'),
+          siteTitle: normalize(brandTitleText(savedV2.siteTitle), 'headerV2SiteTitle'),
+          subTitle: normalize(brandTaglineText(savedV2.subTitle), 'headerV2SubTitle'),
+        });
         return;
       }
       let v1Raw = v1?.data as FooterData & { footer?: FooterData };
@@ -240,8 +247,8 @@ export default function FooterV2Screen() {
             <input className="input" value={data.siteBaseUrl}
               onChange={e => patch(d => ({ ...d, siteBaseUrl: e.target.value }))} />
           </Field>
-          <Field label="Logo image URL" hint="Leave empty to use the inverted white v mark on navy">
-            <input className="input" value={data.logoUrl} placeholder="Leave empty for the v mark"
+          <Field label="Logo image URL" hint="White crest shown beside the site name. A blank or old mark URL uses the crest.">
+            <input className="input" value={data.logoUrl} placeholder={FOOTER_CREST_URL}
               onChange={e => patch(d => ({ ...d, logoUrl: e.target.value }))} />
           </Field>
           <RichTextField label="Site title" value={asTV(data.siteTitle, 'headerV2SiteTitle')}

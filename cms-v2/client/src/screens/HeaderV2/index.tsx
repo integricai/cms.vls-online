@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import type { HeaderConfig, HeaderV2Config, TextValue } from '../../types/cms';
 import { normalize } from '../../utils/text';
-import { resolveV2LogoUrl } from '../../utils/brand';
+import { BRAND_NAME, BRAND_TAGLINE, brandTaglineText, brandTitleText, HEADER_CREST_URL, resolveV2LogoUrl } from '../../utils/brand';
 import { generateHeaderV2Html } from './generateHtml';
 import Field from '../../components/Field';
 import RichTextField from '../../components/RichTextField';
@@ -19,11 +19,11 @@ function isSignInLabel(label: string): boolean {
 
 function makeDefault(): HeaderV2Config {
   return {
-    logoUrl: '',
+    logoUrl: HEADER_CREST_URL,
     logoAlt: 'Vertex Learning Solutions',
     logoLink: '/',
-    siteTitle: normalize('Vertex', 'headerV2SiteTitle'),
-    subTitle: normalize('Learning Solutions', 'headerV2SubTitle'),
+    siteTitle: normalize(BRAND_NAME, 'headerV2SiteTitle'),
+    subTitle: normalize(BRAND_TAGLINE, 'headerV2SubTitle'),
     siteBaseUrl: 'https://vls-online.com',
     signInLabel: normalize('Sign in', 'headerV2SignIn'),
     signInUrl: '/login',
@@ -42,11 +42,11 @@ function fromHeaderV1(cfg: HeaderConfig): HeaderV2Config {
   const enrol = (cfg.ctas || []).find(c => c !== signIn) ?? (cfg.ctas || [])[0];
   return {
     ...base,
-    logoUrl: resolveV2LogoUrl(cfg.logoUrl),
+    logoUrl: resolveV2LogoUrl(cfg.logoUrl, 'header'),
     logoAlt: cfg.logoAlt || base.logoAlt,
     logoLink: cfg.logoLink || base.logoLink,
-    siteTitle: cfg.siteTitle ? normalize(cfg.siteTitle, 'headerV2SiteTitle') : base.siteTitle,
-    subTitle: cfg.subTitle ? normalize(cfg.subTitle, 'headerV2SubTitle') : base.subTitle,
+    siteTitle: normalize(brandTitleText(cfg.siteTitle), 'headerV2SiteTitle'),
+    subTitle: normalize(brandTaglineText(cfg.subTitle), 'headerV2SubTitle'),
     signInLabel: signIn ? normalize(signIn.label, 'headerV2SignIn') : base.signInLabel,
     signInUrl: signIn?.url || base.signInUrl,
     signInNewTab: signIn?.newTab ?? false,
@@ -75,7 +75,13 @@ export default function HeaderV2Screen() {
     ]).then(([v2, v1]) => {
       const savedConfig = v2?.data?.config;
       if (savedConfig && (savedConfig.logoUrl !== undefined || savedConfig.siteTitle)) {
-        setCfg({ ...makeDefault(), ...savedConfig, logoUrl: resolveV2LogoUrl(savedConfig.logoUrl) });
+        setCfg({
+          ...makeDefault(),
+          ...savedConfig,
+          logoUrl: resolveV2LogoUrl(savedConfig.logoUrl, 'header'),
+          siteTitle: normalize(brandTitleText(savedConfig.siteTitle), 'headerV2SiteTitle'),
+          subTitle: normalize(brandTaglineText(savedConfig.subTitle), 'headerV2SubTitle'),
+        });
         return;
       }
       const v1Config = v1?.data?.config;
@@ -150,8 +156,8 @@ export default function HeaderV2Screen() {
               onChange={e => update({ siteBaseUrl: e.target.value })} />
           </Field>
 
-          <Field label="Logo image URL" hint="Leave empty to use the blue rounded v mark from staging">
-            <input className="input" value={cfg.logoUrl} placeholder="Leave empty for the blue v mark"
+          <Field label="Logo image URL" hint="Dark crest shown beside the site name. A blank or old mark URL uses the crest.">
+            <input className="input" value={cfg.logoUrl} placeholder={HEADER_CREST_URL}
               onChange={e => update({ logoUrl: e.target.value })} />
           </Field>
           <Field label="Alt text">

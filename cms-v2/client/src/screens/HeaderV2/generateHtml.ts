@@ -1,5 +1,5 @@
 import type { HeaderV2Config } from '../../types/cms';
-import { useV2BrandMark } from '../../utils/brand';
+import { BRAND_NAME, BRAND_TAGLINE, brandTaglineText, brandTitleText, resolveV2LogoUrl } from '../../utils/brand';
 import { escapeHtml, normalize, textStyle } from '../../utils/text';
 
 const HEADER_V2_API_URL = 'https://api.cms.vls-online.com/api/publish-header-v2';
@@ -41,8 +41,8 @@ function anchorHtml(opts: {
 export function generateHeaderV2Html(cfg: HeaderV2Config): string {
   const liveApiUrl = q((cfg as HeaderV2Config & { liveApiUrl?: string }).liveApiUrl, HEADER_V2_API_URL);
   const siteBase = q(cfg.siteBaseUrl, 'https://vls-online.com');
-  const siteTitle = normalize(cfg.siteTitle, 'headerV2SiteTitle');
-  const subTitle = normalize(cfg.subTitle, 'headerV2SubTitle');
+  const siteTitle = normalize(brandTitleText(cfg.siteTitle), 'headerV2SiteTitle');
+  const subTitle = normalize(brandTaglineText(cfg.subTitle), 'headerV2SubTitle');
   const signIn = normalize(cfg.signInLabel, 'headerV2SignIn');
   const enrol = normalize(cfg.enrolLabel, 'headerV2Enrol');
   const logoHref = headerHref(q(cfg.logoLink), siteBase);
@@ -50,15 +50,10 @@ export function generateHeaderV2Html(cfg: HeaderV2Config): string {
   const enrolHref = headerHref(q(cfg.enrolUrl), siteBase);
   const enrolBg = escapeHtml(q(cfg.enrolBg, '#1e50c8'));
   const enrolColor = escapeHtml(q(cfg.enrolTextColor, enrol.color || '#ffffff'));
-  const brandInner = useV2BrandMark(cfg.logoUrl)
-    ? `<span class="vls-brand-mark" aria-hidden="true">V</span>`
-    : `<img src="${escapeHtml(q(cfg.logoUrl))}" alt="${escapeHtml(q(cfg.logoAlt, 'Vertex Learning Solutions'))}" class="vls-brand-img">`;
-  const nameHtml = siteTitle.text.trim()
-    ? `<span id="vls-header-name" class="vls-brand-name" style="${textStyle(siteTitle)}">${escapeHtml(siteTitle.text.trim())}</span>`
-    : '';
-  const taglineHtml = subTitle.text.trim()
-    ? `<span id="vls-header-tagline" class="vls-brand-tagline" style="${textStyle(subTitle)}">${escapeHtml(subTitle.text.trim())}</span>`
-    : '';
+  const logoUrl = resolveV2LogoUrl(cfg.logoUrl, 'header');
+  const brandInner = `<img src="${escapeHtml(logoUrl)}" alt="" aria-hidden="true" class="vls-brand-img">`;
+  const nameHtml = `<span id="vls-header-name" class="vls-brand-name" style="${textStyle(siteTitle)}">${escapeHtml(siteTitle.text.trim() || BRAND_NAME)}</span>`;
+  const taglineHtml = `<span id="vls-header-tagline" class="vls-brand-tagline" style="${textStyle(subTitle)}">${escapeHtml(subTitle.text.trim() || BRAND_TAGLINE)}</span>`;
   const brandTag = logoHref ? 'a' : 'span';
   const brandHref = logoHref ? ` href="${escapeHtml(logoHref)}"` : '';
   const signInHtml = anchorHtml({
@@ -97,11 +92,10 @@ export function generateHeaderV2Html(cfg: HeaderV2Config): string {
 .vls-header-topbar{display:flex;align-items:center;justify-content:space-between;height:74px;gap:20px;min-width:0;max-width:100%;}
 .vls-brand{display:flex;align-items:center;gap:12px;text-decoration:none!important;flex:1 1 auto;min-width:0;color:inherit;}
 .vls-brand-header{gap:14px;}
-.vls-brand-mark{width:46px;height:46px;border-radius:12px;background:#1e50c8;color:#fff;font-weight:700;font-size:23px;line-height:1;display:grid;place-items:center;box-shadow:0 4px 12px rgba(30,80,200,.3);flex-shrink:0;}
-.vls-brand-img{width:46px;height:46px;border-radius:12px;object-fit:cover;display:block;flex-shrink:0;}
+.vls-brand-img{height:54px;width:auto;border-radius:0;object-fit:contain;display:block;flex-shrink:0;}
 .vls-brand-text{display:flex;flex-direction:column;min-width:0;overflow:hidden;}
-.vls-brand-name{font-weight:700;font-size:20px;color:#0e2a57;line-height:1.15;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
-.vls-brand-tagline{display:block;font-weight:400;font-size:12.5px;line-height:1.3;color:#3d4a63;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+.vls-brand-name{font-weight:700;font-size:26px!important;color:#0e2a57;line-height:1.15;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+.vls-brand-tagline{display:block;font-weight:400!important;font-size:12.5px!important;line-height:1.3;letter-spacing:0!important;color:#3d4a63;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
 .vls-header-links{display:flex;align-items:center;gap:22px;flex-shrink:0;}
 .vls-header-signin{font-size:15px;font-weight:500;color:#0e2a57!important;text-decoration:none!important;white-space:nowrap;}
 .vls-header-signin:hover{color:#1e50c8!important;}
@@ -137,10 +131,9 @@ export function generateHeaderV2Html(cfg: HeaderV2Config): string {
 .vlshdgq0e-burger{display:flex;flex-shrink:0;}
 .vls-header-login .zl-navbar-rhs-btn,.vls-header-login .dropdown-toggle{display:none!important;}
 .vls-account-link{padding-left:24px!important;}
-.vls-brand-header .vls-brand-mark,.vls-brand-header .vls-brand-img{width:40px;height:40px;}
-.vls-brand-header .vls-brand-mark{font-size:20px;}
-.vls-brand-header .vls-brand-name{font-size:16px!important;line-height:1.15!important;letter-spacing:-.02em!important;}
-.vls-brand-tagline{font-size:11px!important;letter-spacing:0!important;}
+.vls-brand-header .vls-brand-img{height:46px;width:auto;}
+.vls-brand-header .vls-brand-name{font-size:18px!important;line-height:1.15!important;letter-spacing:-.02em!important;}
+.vls-brand-tagline{font-size:11px!important;letter-spacing:0!important;font-weight:400!important;}
 }
 </style>`;
 
@@ -168,8 +161,9 @@ var LIVE_API=${JSON.stringify(liveApiUrl)};
 var SITE_BASE=${JSON.stringify(siteBase)};
 function abs(url,base){var u=String(url||"").trim();var b=String(base||"https://vls-online.com").replace(/\\/$/,"");if(!u||u==="/")return"https://vls-online.com/";u=u.replace(/^https?:\\/\\/(?:www\\.)?vls-online\\.com/i,"");if(/^\\/(login|register|signup|mycourses|account|logout)(\\/|$|\\?)/i.test(u))return u;if(/^(https?:|mailto:|tel:|\\/\\/|#)/i.test(u))return u;if(u.charAt(0)==="/"&&b)return b+u;return u;}
 function labelText(value){if(value==null)return"";if(typeof value==="string")return value.trim();if(typeof value==="object"&&value.text!=null)return String(value.text).trim();return String(value).trim();}
-function useMark(u){u=String(u||"").trim();return !u||/vertex-learning-solutions-01|vertex-logo-mark|69e4eae99c751|favicon\\.png/i.test(u);}
-function setBrandMark(brand,url,alt){if(!brand)return;var mark=brand.querySelector(".vls-brand-mark");var logo=brand.querySelector(".vls-brand-img");if(useMark(url)){if(logo)logo.remove();if(!mark){mark=document.createElement("span");mark.className="vls-brand-mark";mark.setAttribute("aria-hidden","true");mark.textContent="V";brand.insertBefore(mark,brand.firstChild);}}else if(url){if(mark)mark.remove();if(!logo){logo=document.createElement("img");logo.className="vls-brand-img";logo.alt=alt||"Vertex Learning Solutions";brand.insertBefore(logo,brand.firstChild);}logo.src=url;if(alt)logo.alt=alt;}}
+function crestUrl(u){u=String(u||"").trim();if(!u||/vertex-learning-solutions-01|vertex-logo-mark|69e4eae99c751|favicon\\.png/i.test(u))return ${JSON.stringify('https://vls-online.com/media/vls-logo-header-mark.png')};return u;}
+function brandLine(value,oldText,nextText){var text=labelText(value);if(!text||text.toLowerCase()===oldText)return nextText;return text;}
+function setBrandMark(brand,url){if(!brand)return;var mark=brand.querySelector(".vls-brand-mark");if(mark)mark.remove();var logo=brand.querySelector(".vls-brand-img");if(!logo){logo=document.createElement("img");logo.className="vls-brand-img";logo.alt="";logo.setAttribute("aria-hidden","true");brand.insertBefore(logo,brand.firstChild);}logo.src=crestUrl(url);}
 function setText(id,parent,className,value){var text=labelText(value);var node=document.getElementById(id);if(!text){if(node)node.remove();return;}if(!node&&parent){node=document.createElement("span");node.id=id;node.className=className;parent.appendChild(node);}if(node)node.textContent=text;}
 function syncBrand(url){var brand=document.getElementById("vls-header-brand");if(!brand)return null;var href=String(url||"").trim();var next=brand;if(href&&brand.tagName!=="A"){next=document.createElement("a");}else if(!href&&brand.tagName==="A"){next=document.createElement("span");}if(next!==brand){next.id=brand.id;next.className=brand.className;while(brand.firstChild)next.appendChild(brand.firstChild);brand.replaceWith(next);}if(href&&next.tagName==="A")next.setAttribute("href",abs(href,SITE_BASE));if(!href)next.removeAttribute("href");return next;}
 function syncLink(id,parent,className,url,label,newTab,paint){var node=document.getElementById(id);var href=String(url||"").trim();var text=labelText(label);if(!href||!text){if(node)node.remove();return null;}if(!node){if(!parent)return null;node=document.createElement("a");node.id=id;node.className=className;parent.appendChild(node);}node.href=abs(href,SITE_BASE);node.textContent=text;if(newTab){node.target="_blank";node.rel="noopener";}else{node.removeAttribute("target");node.removeAttribute("rel");}if(paint)paint(node);return node;}
@@ -183,7 +177,7 @@ function toggleAccount(event){if(event){event.preventDefault();event.stopPropaga
 function renderAccount(loggedIn){var panel=document.getElementById("vls-account-panel");if(!panel)return;var items=loggedIn?[{label:"My Courses",href:zenlerHref(function(h,t){return /mycourses/i.test(h)||t==="my courses";},"/mycourses")},{label:"My Account",href:zenlerHref(function(h,t){return /\\/account(\\?|$)/i.test(h)||t==="my account";},"/account")},{label:"Logout",href:zenlerHref(function(h,t){return /logout/i.test(h)||t==="logout"||t==="log out";},"/logout"),logout:true}]:[{label:"Login",href:zenlerHref(function(h,t){return /\\/login(\\?|$)/i.test(h)||t==="login"||t==="sign in";},"/login")}];var key=items.map(function(item){return item.label+"|"+item.href;}).join(";");if(panel.getAttribute("data-vls-items")===key)return;panel.setAttribute("data-vls-items",key);panel.innerHTML="";items.forEach(function(item){var el=document.createElement(item.logout?"button":"a");el.className="vls-account-link";el.textContent=item.label;if(item.logout){el.type="button";el.addEventListener("click",function(event){event.preventDefault();var form=document.getElementById("logout-form");if(form)form.submit();else location.href=item.href;});}else{el.href=item.href;}panel.appendChild(el);});}
 function fitHeader(){var header=document.querySelector(".vls-header");if(!header)return;header.style.marginLeft="0px";header.style.width="100%";header.style.maxWidth="100%";var rect=header.getBoundingClientRect();var width=document.documentElement.clientWidth||window.innerWidth;if(Math.abs(rect.left)>1||Math.abs(rect.width-width)>2){header.style.marginLeft=(-rect.left)+"px";header.style.width=width+"px";header.style.maxWidth=width+"px";document.documentElement.style.overflowX="hidden";document.body.style.overflowX="hidden";}}
 function moveLogin(){var slot=document.getElementById("vls-header-login");var signins=[document.getElementById("vls-header-signin"),document.getElementById("vls-header-signin-mobile")];if(!slot)return false;var loggedIn=detectLoggedIn();var src=document.querySelector(".navbar-buttons.jqLoginLogout");var burger=document.querySelector(".vlshdgq0e-burger");if(burger)burger.style.removeProperty("display");renderAccount(loggedIn);fitHeader();if(!loggedIn){signins.forEach(function(node){if(node)node.style.removeProperty("display");});if(src)src.style.setProperty("display","none","important");return false;}signins.forEach(function(node){if(node)node.style.setProperty("display","none","important");});if(!src)return false;if(!slot.contains(src))slot.appendChild(src);forceLoginVisible(src);return true;}
-function applyPublishedConfig(c){if(!c||typeof c!=="object")return;if(c.siteBaseUrl)SITE_BASE=c.siteBaseUrl;var brand=document.getElementById("vls-header-brand");if(brand&&("logoLink" in c))brand=syncBrand(c.logoLink);var textWrap=brand&&brand.querySelector(".vls-brand-text");if("logoUrl" in c)setBrandMark(brand,c.logoUrl,c.logoAlt);if("siteTitle" in c)setText("vls-header-name",textWrap,"vls-brand-name",c.siteTitle);if("subTitle" in c)setText("vls-header-tagline",textWrap,"vls-brand-tagline",c.subTitle);var links=document.getElementById("vls-header-links");var login=document.getElementById("vls-header-login");var mobile=document.querySelector(".vls-header-mobile .vlshdgq0e-login-menu");if("signInUrl" in c||"signInLabel" in c){syncLink("vls-header-signin",links,"vls-header-signin",c.signInUrl,c.signInLabel,!!c.signInNewTab,function(node){if(links&&login&&node.parentNode===links&&node.nextSibling!==login)links.insertBefore(node,login);});syncLink("vls-header-signin-mobile",mobile,"vlshdgq0e-signin",c.signInUrl,c.signInLabel,!!c.signInNewTab);}if("enrolUrl" in c||"enrolLabel" in c){syncLink("vls-header-enrol",links,"vls-btn vls-btn-primary vls-header-enrol-desktop",c.enrolUrl,c.enrolLabel,!!c.enrolNewTab,function(node){if(c.enrolBg)node.style.background=hex(c.enrolBg,"#1e50c8");if(c.enrolTextColor)node.style.color=hex(c.enrolTextColor,"#ffffff");});}moveLogin();}
+function applyPublishedConfig(c){if(!c||typeof c!=="object")return;if(c.siteBaseUrl)SITE_BASE=c.siteBaseUrl;var brand=document.getElementById("vls-header-brand");if(brand&&("logoLink" in c))brand=syncBrand(c.logoLink);var textWrap=brand&&brand.querySelector(".vls-brand-text");if("logoUrl" in c)setBrandMark(brand,c.logoUrl);if("siteTitle" in c)setText("vls-header-name",textWrap,"vls-brand-name",brandLine(c.siteTitle,"vertex","Vertex Learning Solutions"));if("subTitle" in c)setText("vls-header-tagline",textWrap,"vls-brand-tagline",brandLine(c.subTitle,"learning solutions","Changing Behaviours Through Education"));var links=document.getElementById("vls-header-links");var login=document.getElementById("vls-header-login");var mobile=document.querySelector(".vls-header-mobile .vlshdgq0e-login-menu");if("signInUrl" in c||"signInLabel" in c){syncLink("vls-header-signin",links,"vls-header-signin",c.signInUrl,c.signInLabel,!!c.signInNewTab,function(node){if(links&&login&&node.parentNode===links&&node.nextSibling!==login)links.insertBefore(node,login);});syncLink("vls-header-signin-mobile",mobile,"vlshdgq0e-signin",c.signInUrl,c.signInLabel,!!c.signInNewTab);}if("enrolUrl" in c||"enrolLabel" in c){syncLink("vls-header-enrol",links,"vls-btn vls-btn-primary vls-header-enrol-desktop",c.enrolUrl,c.enrolLabel,!!c.enrolNewTab,function(node){if(c.enrolBg)node.style.background=hex(c.enrolBg,"#1e50c8");if(c.enrolTextColor)node.style.color=hex(c.enrolTextColor,"#ffffff");});}moveLogin();}
 function loadPublishedConfig(){if(!LIVE_API||window.vlsHeaderLiveLoaded)return;window.vlsHeaderLiveLoaded=true;fetch(LIVE_API+"?t="+Date.now()).then(function(r){if(!r.ok)throw new Error("Header API "+r.status);return r.json();}).then(function(data){applyPublishedConfig(data&&data.config);}).catch(function(e){console.error("VLS Header:",e.message||e);});}
 function init(){restoreZenlerDynamicBlocks();moveLogin();loadPublishedConfig();if(window.vlsAccountMenuBound)return;window.vlsAccountMenuBound=true;window.addEventListener("resize",fitHeader);document.addEventListener("click",function(event){var target=event.target;if(!target||!target.closest)return;var burger=target.closest(".vlshdgq0e-burger");var toggle=target.closest(".vls-header-login .dropdown-toggle,.vls-header-login .zl-navbar-rhs-btn");if(burger||toggle){toggleAccount(event);return;}if(target.closest(".vls-account-panel"))return;closeAccount();},true);}
 if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init);}else{init();}

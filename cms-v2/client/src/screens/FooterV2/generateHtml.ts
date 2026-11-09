@@ -1,5 +1,5 @@
 import type { FooterV2Data } from '../../types/cms';
-import { useV2BrandMark } from '../../utils/brand';
+import { BRAND_NAME, BRAND_TAGLINE, brandTaglineText, brandTitleText, resolveV2LogoUrl } from '../../utils/brand';
 import { escapeHtml, normalize, textStyle } from '../../utils/text';
 
 const SOCIAL_ICONS: Record<string, string> = {
@@ -33,12 +33,11 @@ export function buildFooterV2Markup(data: FooterV2Data, uid: string, publicFoote
   const siteBase = data.siteBaseUrl || 'https://vls-online.com';
   const about = normalize(data.aboutText, 'footerV2About');
   const rating = normalize(data.ratingText, 'footerV2Rating');
-  const siteTitle = normalize(data.siteTitle, 'headerV2SiteTitle');
-  const subTitle = normalize(data.subTitle, 'headerV2SubTitle');
+  const siteTitle = normalize(brandTitleText(data.siteTitle), 'headerV2SiteTitle');
+  const subTitle = normalize(brandTaglineText(data.subTitle), 'headerV2SubTitle');
   const logoLink = escapeHtml(absUrl(data.logoLink || '/', siteBase));
-  const brandInner = useV2BrandMark(data.logoUrl)
-    ? `<span class="vlsft2-mark" aria-hidden="true">v</span>`
-    : `<img src="${escapeHtml(data.logoUrl)}" alt="${escapeHtml(data.logoAlt || 'Vertex Learning Solutions')}" class="vlsft2-logo">`;
+  const logoUrl = resolveV2LogoUrl(data.logoUrl, 'footer');
+  const brandInner = `<img src="${escapeHtml(logoUrl)}" alt="" aria-hidden="true" class="vlsft2-logo">`;
 
   const css = `.block.footer-style.parrot.zenstyle.footer-block,.block.parrot.zenstyle.footers{display:none!important;}`
     + `.block:has(.vlsft2),.block:has(.vlsft2) .container,.block:has(.vlsft2) .row,.block:has(.vlsft2) .col-md-12,.block:has(.vlsft2) .custom-html{width:100%!important;max-width:none!important;padding-left:0!important;padding-right:0!important;margin-left:0!important;margin-right:0!important;float:none!important;}`
@@ -46,11 +45,10 @@ export function buildFooterV2Markup(data: FooterV2Data, uid: string, publicFoote
     + `.vlsft2-inner{max-width:1200px;margin:0 auto;padding:0 40px;box-sizing:border-box;}`
     + `.vlsft2-intro{margin-bottom:20px;}`
     + `.vlsft2-brand{display:flex;align-items:center;gap:12px;text-decoration:none!important;margin-bottom:12px;min-width:0;}`
-    + `.vlsft2-logo{width:38px;height:38px;border-radius:10px;object-fit:cover;display:block;flex-shrink:0;}`
-    + `.vlsft2-mark{width:38px;height:38px;border-radius:10px;background:#fff;color:#0e2a57;font-weight:700;font-size:19px;line-height:1;display:grid;place-items:center;flex-shrink:0;text-transform:none;}`
+    + `.vlsft2-logo{height:62px;width:auto;border-radius:0;object-fit:contain;display:block;flex-shrink:0;}`
     + `.vlsft2-brand-text{display:flex;flex-direction:column;min-width:0;}`
-    + `.vlsft2-name{color:#fff;font-weight:700;font-size:18px;line-height:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}`
-    + `.vlsft2-sub{color:#8399c4;font-size:9.5px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}`
+    + `.vlsft2-name{color:#fff;font-weight:700;font-size:18px;line-height:1.15;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}`
+    + `.vlsft2-sub{color:#d6e2fb;font-size:12.5px;font-weight:400;letter-spacing:0;text-transform:none;line-height:1.3;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}`
     + `.vlsft2-about{margin:0;line-height:1.65;}`
     + `.vlsft2-social-bar{display:flex;justify-content:flex-end;border-top:1px solid rgba(255,255,255,.13);padding:0 0 8px;}`
     + `.vlsft2-social{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:12px;transform:translateY(-50%);background:#0e2a57;padding-left:8px;}`
@@ -77,7 +75,8 @@ export function buildFooterV2Markup(data: FooterV2Data, uid: string, publicFoote
     + `@media(max-width:980px){.vlsft2-grid{grid-template-columns:1fr 1fr;gap:36px;}.vlsft2-inner{padding:0 24px;}}`
     + `@media(max-width:768px){`
     + `.vlsft2-inner{padding:0 16px;}`
-    + `.vlsft2-name{font-size:16px!important;}`
+    + `.vlsft2-logo{height:52px;}`
+    + `.vlsft2-sub{font-size:11px!important;}`
     + `.vlsft2-grid{display:block;}`
     + `.vlsft2-col{border-bottom:1px solid rgba(255,255,255,.12);}`
     + `.vlsft2-hdr{cursor:pointer;padding:14px 0;margin-bottom:0;}`
@@ -104,8 +103,8 @@ export function buildFooterV2Markup(data: FooterV2Data, uid: string, publicFoote
   html += `<div class="vlsft2-inner">`;
   html += `<div class="vlsft2-intro">`;
   html += `<a class="vlsft2-brand" href="${logoLink}">${brandInner}<span class="vlsft2-brand-text">`;
-  html += `<span class="vlsft2-name">${escapeHtml(siteTitle.text || 'Vertex')}</span>`;
-  html += `<span class="vlsft2-sub">${escapeHtml(subTitle.text || 'Learning Solutions')}</span>`;
+  html += `<span class="vlsft2-name">${escapeHtml(siteTitle.text || BRAND_NAME)}</span>`;
+  html += `<span class="vlsft2-sub">${escapeHtml(subTitle.text || BRAND_TAGLINE)}</span>`;
   html += `</span></a>`;
   if (about.text) html += `<p class="vlsft2-about" style="${textStyle(about)}">${escapeHtml(about.text)}</p>`;
   html += `</div>`;
