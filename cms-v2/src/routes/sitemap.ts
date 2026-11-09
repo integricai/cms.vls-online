@@ -93,7 +93,7 @@ router.get('/xml/:file', async (req: Request, res: Response, next: NextFunction)
   }
 });
 
-// Storyblok → CMS sitemap sync (separate from Next ISR revalidate)
+// Storyblok publish, unpublish, and delete. Next.js /api/revalidate forwards these.
 router.post('/webhook', async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!verifyWebhook(req)) {

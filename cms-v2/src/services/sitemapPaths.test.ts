@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { resolveSitemapGroup, storyblokSlugToPath } from './sitemapPaths';
+import { isExcludedFromSitemap, resolveSitemapGroup, storyblokSlugToPath } from './sitemapPaths';
 
 function run(name: string, fn: () => void): void {
   try {
@@ -52,4 +52,23 @@ run('leaves global chrome out of every sitemap', () => {
   assert.strictEqual(resolveSitemapGroup('global'), null);
   assert.strictEqual(resolveSitemapGroup('global/header'), null);
   assert.strictEqual(resolveSitemapGroup(''), null);
+});
+
+run('leaves internal and draft pages out of every sitemap', () => {
+  for (const slug of [
+    'component-library',
+    'component-library/about_us/hero',
+    'pages/component-library/about_us/cta',
+    'test',
+    'pages/test',
+    'site-config',
+    'announcement-bar',
+    'draft-page',
+  ]) {
+    assert.strictEqual(isExcludedFromSitemap(slug), true, slug);
+    assert.strictEqual(resolveSitemapGroup(slug), null, slug);
+  }
+  assert.strictEqual(resolveSitemapGroup('blog/test-guide'), 'blog');
+  assert.strictEqual(resolveSitemapGroup('courses/test-course'), 'courses');
+  assert.strictEqual(isExcludedFromSitemap('about-us'), false);
 });

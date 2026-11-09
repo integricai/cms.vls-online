@@ -1,5 +1,5 @@
 import { sql } from '../db/client';
-import type { SitemapGroup } from '../services/sitemapPaths';
+import { SITEMAP_EXCLUDED_PATHS, type SitemapGroup } from '../services/sitemapPaths';
 
 export interface SiteUrlRecord {
   id: number;
@@ -274,6 +274,55 @@ export async function disableSiteUrlByStoryId(storyId: number): Promise<SiteUrlR
     RETURNING *
   ` as DbRow[];
   return rows[0] ? mapRow(rows[0]) : null;
+}
+
+/** Turn off one internal URL already stored from an earlier sync. */
+export async function disableExcludedSiteUrl(input: {
+  fullSlug: string;
+  path: string;
+  storyId?: number | null;
+}): Promise<SiteUrlRecord | null> {
+  const storyId = input.storyId != null && Number.isFinite(input.storyId) ? input.storyId : null;
+  const rows = await sql`
+    UPDATE site_urls
+    SET is_enabled = FALSE, updated_at = NOW()
+    WHERE is_enabled = TRUE
+      AND (
+        path = ${input.path}
+        OR storyblok_full_slug = ${input.fullSlug}
+        OR (${storyId}::bigint IS NOT NULL AND storyblok_story_id = ${storyId})
+      )
+    RETURNING *
+  ` as DbRow[];
+  return rows[0] ? mapRow(rows[0]) : null;
+}
+
+/**
+ * Turn off component-library presets and the other internal pages.
+ * Matches the public path and the Storyblok slug, including a `pages/` prefix.
+ */
+export async function disableExcludedSitemapUrls(): Promise<number> {
+  const excludedSlugs = [
+    ...SITEMAP_EXCLUDED_PATHS.map((path) => path.slice(1)),
+    ...SITEMAP_EXCLUDED_PATHS.map((path) => `pages${path}`),
+  ];
+  const rows = await sql`
+    UPDATE site_urls
+    SET is_enabled = FALSE, updated_at = NOW()
+    WHERE is_enabled = TRUE
+      AND (
+        path = '/component-library'
+        OR path LIKE '/component-library/%'
+        OR path = ANY(${[...SITEMAP_EXCLUDED_PATHS]}::text[])
+        OR storyblok_full_slug = 'component-library'
+        OR storyblok_full_slug LIKE 'component-library/%'
+        OR storyblok_full_slug = 'pages/component-library'
+        OR storyblok_full_slug LIKE 'pages/component-library/%'
+        OR storyblok_full_slug = ANY(${excludedSlugs}::text[])
+      )
+    RETURNING id
+  ` as Array<{ id: number }>;
+  return rows.length;
 }
 
 export async function disableSiteUrlByFullSlug(fullSlug: string): Promise<SiteUrlRecord | null> {

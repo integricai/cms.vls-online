@@ -181,8 +181,10 @@ export default function SitemapScreen() {
         </p>
         {data && (
           <p className="mt-1 text-[11px] text-slate-500">
-            Storyblok webhook: <code className="rounded bg-white px-1">POST {data.webhookPath}</code> with
-            header <code className="rounded bg-white px-1">Authorization: Bearer SITEMAP_WEBHOOK_SECRET</code>
+            The public site forwards Storyblok publish, unpublish, and delete to{" "}
+            <code className="rounded bg-white px-1">POST {data.webhookPath}</code>. Set{" "}
+            <code className="rounded bg-white px-1">SITEMAP_WEBHOOK_SECRET</code> to the same value as the
+            site <code className="rounded bg-white px-1">REVALIDATE_SECRET</code>.
           </p>
         )}
       </div>

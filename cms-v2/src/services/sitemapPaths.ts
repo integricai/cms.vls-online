@@ -1,5 +1,32 @@
 export type SitemapGroup = 'pages' | 'courses' | 'blog';
 
+/**
+ * Storyblok stories that are internal or unfinished. They stay out of every sitemap.
+ * `component-library` includes the folder and every nested preset page.
+ */
+const SITEMAP_EXCLUDED_SLUGS = new Set([
+  'test',
+  'site-config',
+  'announcement-bar',
+  'draft-page',
+]);
+
+/** Public paths for {@link SITEMAP_EXCLUDED_SLUGS}. Used to turn off rows already stored. */
+export const SITEMAP_EXCLUDED_PATHS = [
+  '/test',
+  '/site-config',
+  '/announcement-bar',
+  '/draft-page',
+] as const;
+
+export function isExcludedFromSitemap(fullSlug: string): boolean {
+  const slug = fullSlug.replace(/^\/+|\/+$/g, '');
+  const publicSlug = slug.startsWith('pages/') ? slug.slice('pages/'.length) : slug;
+  if (!publicSlug) return false;
+  if (publicSlug === 'component-library' || publicSlug.startsWith('component-library/')) return true;
+  return SITEMAP_EXCLUDED_SLUGS.has(publicSlug);
+}
+
 /** Map Storyblok `full_slug` to the public Next.js path (English, no locale prefix). */
 export function storyblokSlugToPath(fullSlug: string): string {
   const slug = fullSlug.replace(/^\/+|\/+$/g, '');
@@ -15,6 +42,7 @@ export function storyblokSlugToPath(fullSlug: string): string {
 export function resolveSitemapGroup(fullSlug: string): SitemapGroup | null {
   const slug = fullSlug.replace(/^\/+|\/+$/g, '');
   if (!slug || slug === 'global' || slug.startsWith('global/')) return null;
+  if (isExcludedFromSitemap(slug)) return null;
 
   if (slug === 'courses' || slug.startsWith('courses/')) return 'courses';
   if (

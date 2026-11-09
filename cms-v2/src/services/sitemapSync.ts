@@ -1,5 +1,7 @@
 import { sql } from '../db/client';
 import {
+  disableExcludedSiteUrl,
+  disableExcludedSitemapUrls,
   disableSiteUrlByFullSlug,
   disableSiteUrlByStoryId,
   upsertSiteUrl,
@@ -14,6 +16,7 @@ import {
 import { resolveStoryblokConfigFromEnv } from './storyblokCoursePricingSync';
 import {
   extractNoIndex,
+  isExcludedFromSitemap,
   resolveSitemapGroup,
   storyblokSlugToPath,
 } from './sitemapPaths';
@@ -38,6 +41,14 @@ export async function upsertFromStoryblokStory(
 ): Promise<SiteUrlRecord | null> {
   const fullSlug = story.full_slug?.replace(/^\/+|\/+$/g, '') ?? '';
   if (!fullSlug || story.is_folder) return null;
+
+  if (isExcludedFromSitemap(fullSlug)) {
+    return disableExcludedSiteUrl({
+      fullSlug,
+      path: storyblokSlugToPath(fullSlug),
+      storyId: story.id,
+    });
+  }
 
   const group = resolveSitemapGroup(fullSlug);
   if (!group) return null;
@@ -87,6 +98,10 @@ export async function syncSiteUrlsFromStoryblok(config?: StoryblokConfig | null)
       skipped += 1;
       continue;
     }
+    if (isExcludedFromSitemap(story.full_slug ?? '')) {
+      skipped += 1;
+      continue;
+    }
 
     // Bulk sync uses list data (content/no_index applied on webhook publish).
     const row = await upsertFromStoryblokStory(story, { preserveEnabled: true });
@@ -111,6 +126,8 @@ export async function syncSiteUrlsFromStoryblok(config?: StoryblokConfig | null)
     disabled = rows.length;
   }
 
+  disabled += await disableExcludedSitemapUrls();
+
   return { scanned, upserted, skipped, disabled };
 }
 
@@ -121,6 +138,14 @@ export type StoryblokSitemapWebhookPayload = {
   story_id?: number | string;
   storyId?: number | string;
 };
+
+function sitemapWriteResult(
+  fullSlug: string | undefined,
+  row: SiteUrlRecord | null,
+): 'upserted' | 'disabled' | 'skipped' {
+  if (isExcludedFromSitemap(fullSlug ?? '')) return row ? 'disabled' : 'skipped';
+  return row ? 'upserted' : 'skipped';
+}
 
 export async function handleStoryblokSitemapWebhook(
   payload: StoryblokSitemapWebhookPayload,
@@ -159,7 +184,7 @@ export async function handleStoryblokSitemapWebhook(
     }
     // Preserve admin disables unless Storyblok SEO no_index forces off.
     const row = await upsertFromStoryblokStory(story, { preserveEnabled: true });
-    return { ok: true, result: row ? 'upserted' : 'skipped', row };
+    return { ok: true, result: sitemapWriteResult(story.full_slug, row), row };
   }
 
   if (fullSlug) {
@@ -170,7 +195,7 @@ export async function handleStoryblokSitemapWebhook(
     }
     const detailed = (await getStoryById(resolved, story.id) as StoryblokListStory | null) ?? story;
     const row = await upsertFromStoryblokStory(detailed, { preserveEnabled: true });
-    return { ok: true, result: row ? 'upserted' : 'skipped', row };
+    return { ok: true, result: sitemapWriteResult(detailed.full_slug, row), row };
   }
 
   return { ok: true, result: 'ignored_no_identity', row: null };
