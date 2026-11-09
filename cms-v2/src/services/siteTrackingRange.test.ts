@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { assembleTrackingDays, trackingCustomBounds, trackingPresetBounds } from '../../shared/siteTracking';
+import { assembleTrackingDays, campaignLabel, trackingCustomBounds, trackingPresetBounds } from '../../shared/siteTracking';
 
 function run(name: string, fn: () => void): void {
   try {
@@ -52,6 +52,27 @@ run('fills a zero for every channel on days with no visits', () => {
       { date: '2026-11-03', visitors: 0, channels: { 'Google Ads': 0, Meta: 0, Direct: 0 } },
     ],
   );
+});
+
+run('names a Meta campaign id even when an older Google click is still stored', () => {
+  assert.equal(campaignLabel('120249614819690382'), 'Meta campaign 120249614819690382');
+  assert.equal(
+    campaignLabel('120251328529880382', { google: true, fromGoogleId: true }),
+    'Meta campaign 120251328529880382',
+  );
+});
+
+run('names a Google campaign id only from a Google click or gad campaign id', () => {
+  assert.equal(campaignLabel('21782747896', { fromGoogleId: true, meta: true }), 'Google campaign 21782747896');
+  assert.equal(campaignLabel('21782747896', { google: true }), 'Google campaign 21782747896');
+  assert.equal(campaignLabel('21782747896', { meta: true }), 'Meta campaign 21782747896');
+  assert.equal(campaignLabel('21782747896'), '21782747896');
+});
+
+run('leaves campaign names and empty groups unchanged', () => {
+  assert.equal(campaignLabel('ACCA Nov 1 - Africa 2'), 'ACCA Nov 1 - Africa 2');
+  assert.equal(campaignLabel('No campaign stored', { google: true }), 'No campaign stored');
+  assert.equal(campaignLabel('Summer+Sale'), 'Summer Sale');
 });
 
 run('accepts a custom range of one year and rejects a longer one', () => {

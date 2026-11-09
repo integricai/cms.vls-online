@@ -28,7 +28,12 @@ export function trackingCustomBounds(start: string, end: string): { start: strin
   return { start, end };
 }
 
-export type TrackingCount = { label: string; visitors: number };
+export type TrackingCount = {
+  label: string;
+  visitors: number;
+  meta?: boolean;
+  google?: boolean;
+};
 export type TrackingSourceRow = { source: string; medium: string; visitors: number };
 export type TrackingDay = {
   date: string;
@@ -71,7 +76,46 @@ export type TrackingEnrolment = {
   currency: string;
   orders: number;
   amount: number;
+  /** A Meta click or Meta utm_source was stored on at least one order in the group. */
+  meta?: boolean;
+  /** A Google click, Google utm_source, or Google campaign id was stored on at least one order. */
+  google?: boolean;
+  /** The displayed id came from gad_campaign_id because utm_campaign was empty. */
+  fromGoogleId?: boolean;
 };
+
+export type CampaignNetwork = {
+  meta?: boolean;
+  google?: boolean;
+  fromGoogleId?: boolean;
+};
+
+/**
+ * Current Meta ad ids are 15–24 digits and start with 120.
+ * Google Ads campaign ids are shorter, so this does not claim those.
+ */
+export function isMetaCampaignId(value: string): boolean {
+  return /^120\d{12,21}$/.test(value);
+}
+
+/** Name a stored campaign. Numeric ids are Meta or Google only when the click says so. */
+export function campaignLabel(value: string, network: CampaignNetwork = {}): string {
+  if (value === 'No campaign' || value === 'No campaign stored') return value;
+  let text = value.trim();
+  try {
+    text = decodeURIComponent(text);
+  } catch {
+    text = value.trim();
+  }
+  text = text.replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!/^\d{3,24}$/.test(text)) return text;
+  // A long 120… id is Meta even when an older Google click is still stored on the order.
+  if (isMetaCampaignId(text)) return `Meta campaign ${text}`;
+  // Google wins over a leftover Meta click when the id itself is a Google campaign id.
+  if (network.fromGoogleId || network.google) return `Google campaign ${text}`;
+  if (network.meta) return `Meta campaign ${text}`;
+  return text;
+}
 
 export type TrackingReport = {
   range: TrackingRange;

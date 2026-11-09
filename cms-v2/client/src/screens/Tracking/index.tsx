@@ -4,6 +4,7 @@ import { api } from '../../api/client';
 import PageTabs from '../../components/PageTabs';
 import AnalyticsTab from './AnalyticsTab';
 import {
+  campaignLabel,
   trackingCustomBounds,
   type TrackingCount,
   type TrackingRange,
@@ -60,19 +61,6 @@ function CountryName({ code }: { code: string }) {
       {name}
     </span>
   );
-}
-
-function campaignLabel(value: string): string {
-  if (value === 'No campaign' || value === 'No campaign stored') return value;
-  let text = value.trim();
-  try {
-    text = decodeURIComponent(text);
-  } catch {
-    text = value.trim();
-  }
-  text = text.replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
-  if (/^\d{3,24}$/.test(text)) return `Google campaign ${text}`;
-  return text;
 }
 
 function formatMoney(amount: number, currency: string): string {
@@ -411,7 +399,7 @@ function VisitStat({ icon, tint, value, label, hint }: { icon: string; tint: str
   );
 }
 
-function CountTable({ title, rows, label }: { title: string; rows: TrackingCount[]; label: (value: string) => ReactNode }) {
+function CountTable({ title, rows, label }: { title: string; rows: TrackingCount[]; label: (value: string, row: TrackingCount) => ReactNode }) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4">
       <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
@@ -420,7 +408,7 @@ function CountTable({ title, rows, label }: { title: string; rows: TrackingCount
           <tbody>
             {rows.map(row => (
               <tr key={row.label} className="border-t border-slate-100">
-                <td className="py-2 pr-3 text-slate-700">{label(row.label)}</td>
+                <td className="py-2 pr-3 text-slate-700">{label(row.label, row)}</td>
                 <td className="py-2 text-right font-medium text-slate-900">{row.visitors.toLocaleString('en-GB')}</td>
               </tr>
             ))}
@@ -535,7 +523,11 @@ function VisitsTab({ query }: { query: string | null }) {
             </section>
             <div className="grid gap-3 lg:grid-cols-2">
               <CountTable title="Channel" rows={report.channels} label={value => <ChannelLabel name={value} />} />
-              <CountTable title="Campaign" rows={report.campaigns} label={campaignLabel} />
+              <CountTable
+                title="Campaign"
+                rows={report.campaigns}
+                label={(value, row) => campaignLabel(value, { meta: row.meta, google: row.google })}
+              />
               <CountTable title="Landing page" rows={report.landingPages} label={value => value} />
               <CountTable title="Country" rows={report.countries} label={code => <CountryName code={code} />} />
               <CountTable title="Device" rows={report.devices} label={value => value} />
@@ -559,7 +551,7 @@ function VisitsTab({ query }: { query: string | null }) {
                   <tbody>
                     {report.enrolments.map(row => (
                       <tr key={`${row.campaign}-${row.currency}`} className="border-t border-slate-100">
-                        <td className="py-2 pr-3 text-slate-700">{campaignLabel(row.campaign)}</td>
+                        <td className="py-2 pr-3 text-slate-700">{campaignLabel(row.campaign, row)}</td>
                         <td className="py-2 text-right text-slate-900">{row.orders.toLocaleString('en-GB')}</td>
                         <td className="py-2 text-right font-medium text-slate-900">{formatMoney(row.amount, row.currency)}</td>
                       </tr>

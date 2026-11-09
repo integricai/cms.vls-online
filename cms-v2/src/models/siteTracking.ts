@@ -7,7 +7,16 @@ type CountRow = { label: string | null; visitors: number };
 type SourceRow = { source: string | null; medium: string | null; visitors: number };
 type ChannelDayRow = { date: string | Date; label: string | null; visitors: number };
 type AudienceRow = { unique_visits: number; returning_visits: number };
-type EnrolmentRow = { campaign: string | null; currency: string | null; orders: number; amount: string | number };
+type EnrolmentRow = {
+  campaign: string | null;
+  currency: string | null;
+  orders: number;
+  amount: string | number;
+  meta_click: boolean;
+  google_click: boolean;
+  from_gad: boolean;
+};
+type CampaignCountRow = { label: string | null; visitors: number; meta_click: boolean; google_click: boolean };
 
 function isoDay(value: string | Date): string {
   if (value instanceof Date) return value.toISOString().slice(0, 10);
@@ -99,7 +108,11 @@ export async function buildTrackingReport(
       ORDER BY visitors DESC, channel
     `,
     sql`
-      SELECT campaign AS label, COUNT(*)::int AS visitors
+      SELECT
+        campaign AS label,
+        COUNT(*)::int AS visitors,
+        BOOL_OR(channel = 'Meta') AS meta_click,
+        BOOL_OR(channel = 'Google Ads') AS google_click
       FROM site_tracking_visits
       WHERE visited_on >= CAST(${bounds.start} AS date)
         AND visited_on <= CAST(${bounds.end} AS date)
@@ -154,17 +167,43 @@ export async function buildTrackingReport(
     `,
     sql`
       SELECT
-        COALESCE(NULLIF(BTRIM(utm_campaign), ''), NULLIF(BTRIM(gad_campaign_id), '')) AS campaign,
+        campaign,
         currency,
         COUNT(*)::int AS orders,
-        COALESCE(SUM(amount), 0) AS amount
-      FROM payment_orders
-      WHERE paid_at IS NOT NULL
-        AND checkout_environment = 'production'
-        AND COALESCE(status, 'Paid') <> 'Refunded'
-        AND (paid_at AT TIME ZONE 'Europe/London')::date >= CAST(${bounds.start} AS date)
-        AND (paid_at AT TIME ZONE 'Europe/London')::date <= CAST(${bounds.end} AS date)
-      GROUP BY 1, currency
+        COALESCE(SUM(amount), 0) AS amount,
+        BOOL_OR(meta_click) AS meta_click,
+        BOOL_OR(google_click) AS google_click,
+        BOOL_OR(from_gad) AS from_gad
+      FROM (
+        SELECT
+          COALESCE(NULLIF(BTRIM(utm_campaign), ''), NULLIF(BTRIM(gad_campaign_id), '')) AS campaign,
+          currency,
+          amount,
+          (
+            NULLIF(BTRIM(fbclid), '') IS NOT NULL
+            OR NULLIF(BTRIM(fbc), '') IS NOT NULL
+            OR LOWER(BTRIM(COALESCE(utm_source, ''))) IN ('facebook', 'fb', 'instagram', 'ig', 'meta', 'an')
+          ) AS meta_click,
+          (
+            NULLIF(BTRIM(gclid), '') IS NOT NULL
+            OR NULLIF(BTRIM(gbraid), '') IS NOT NULL
+            OR NULLIF(BTRIM(wbraid), '') IS NOT NULL
+            OR NULLIF(BTRIM(gad_source), '') IS NOT NULL
+            OR NULLIF(BTRIM(gad_campaign_id), '') IS NOT NULL
+            OR LOWER(BTRIM(COALESCE(utm_source, ''))) IN ('google', 'googleads', 'adwords', 'youtube')
+          ) AS google_click,
+          (
+            NULLIF(BTRIM(utm_campaign), '') IS NULL
+            AND NULLIF(BTRIM(gad_campaign_id), '') IS NOT NULL
+          ) AS from_gad
+        FROM payment_orders
+        WHERE paid_at IS NOT NULL
+          AND checkout_environment = 'production'
+          AND COALESCE(status, 'Paid') <> 'Refunded'
+          AND (paid_at AT TIME ZONE 'Europe/London')::date >= CAST(${bounds.start} AS date)
+          AND (paid_at AT TIME ZONE 'Europe/London')::date <= CAST(${bounds.end} AS date)
+      ) orders
+      GROUP BY campaign, currency
       ORDER BY orders DESC, campaign
       LIMIT 12
     `,
@@ -192,7 +231,12 @@ export async function buildTrackingReport(
     returningVisits: Number(audience?.returning_visits) || 0,
     days,
     channels: channelList,
-    campaigns: counts(campaignRows as CountRow[], 'No campaign'),
+    campaigns: (campaignRows as CampaignCountRow[]).map(row => ({
+      label: row.label?.trim() || 'No campaign',
+      visitors: Number(row.visitors) || 0,
+      meta: row.meta_click === true,
+      google: row.google_click === true,
+    })),
     landingPages: counts(landingRows as CountRow[], '/'),
     countries: counts(countryRows as CountRow[], 'Unknown'),
     devices: counts(deviceRows as CountRow[], 'desktop'),
@@ -207,6 +251,9 @@ export async function buildTrackingReport(
       currency: row.currency?.trim() || 'GBP',
       orders: Number(row.orders) || 0,
       amount: Number(row.amount) || 0,
+      meta: row.meta_click === true,
+      google: row.google_click === true,
+      fromGoogleId: row.from_gad === true,
     })),
   };
 }
