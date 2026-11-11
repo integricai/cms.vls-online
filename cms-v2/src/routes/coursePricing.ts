@@ -33,6 +33,7 @@ import {
   validateGeoPriceInput,
 } from '../services/courseGeoPriceValidation';
 import { detectCountryFromRequest } from '../services/geoDetection';
+import { priceWriteFailure } from '../services/coursePriceWriteError';
 import { PricingResolutionError, resolveCoursePrice } from '../services/pricingResolver';
 
 const router = Router();
@@ -52,6 +53,18 @@ function isForeignKeyViolation(err: unknown): boolean {
     && err !== null
     && 'code' in err
     && (err as { code?: string }).code === '23503';
+}
+
+function sendPriceWriteError(res: Response, err: unknown, durationDays?: number | null) {
+  console.error('[course-pricing] price write failed', err);
+  const failure = priceWriteFailure(err, durationDays);
+  return res.status(failure.status).json({ ok: false, error: failure.error });
+}
+
+function durationDaysFromBody(body: unknown): number | null {
+  if (typeof body !== 'object' || body === null || !('durationDays' in body)) return null;
+  const days = Number((body as { durationDays?: unknown }).durationDays);
+  return Number.isInteger(days) && days > 0 ? days : null;
 }
 
 function parseBodyInput(body: Record<string, unknown>, courseId: number): CourseGeoPriceInput {
@@ -285,7 +298,7 @@ router.post('/admin/courses/:courseId/prices', authGuard, requireRole('admin'), 
     const storyblokSync = await maybeSyncStoryblokForCourse(courseId, req.body ?? {});
     return res.status(201).json({ ok: true, data: price, storyblokSync });
   } catch (err) {
-    next(err);
+    return sendPriceWriteError(res, err, durationDaysFromBody(req.body));
   }
 });
 
@@ -307,7 +320,7 @@ router.put('/admin/prices/:priceId', authGuard, requireRole('admin'), async (req
     const storyblokSync = await maybeSyncStoryblokForCourse(existing.courseId, req.body ?? {});
     return res.json({ ok: true, data: price, storyblokSync });
   } catch (err) {
-    next(err);
+    return sendPriceWriteError(res, err, durationDaysFromBody(req.body));
   }
 });
 
@@ -320,7 +333,7 @@ router.post('/admin/prices/:priceId/deactivate', authGuard, requireRole('admin')
     const storyblokSync = await maybeSyncStoryblokForCourse(price.courseId, req.body ?? {});
     return res.json({ ok: true, data: price, storyblokSync });
   } catch (err) {
-    next(err);
+    return sendPriceWriteError(res, err);
   }
 });
 
@@ -335,7 +348,7 @@ router.post('/admin/courses/:courseId/prices/:priceId/set-default', authGuard, r
     const storyblokSync = await maybeSyncStoryblokForCourse(courseId, req.body ?? {});
     return res.json({ ok: true, data: price, storyblokSync });
   } catch (err) {
-    next(err);
+    return sendPriceWriteError(res, err);
   }
 });
 
