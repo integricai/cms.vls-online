@@ -22,12 +22,18 @@ import {
 } from './sitemapPaths';
 
 interface StoryblokListStory extends StoryblokStoryRecord {
+  published?: boolean;
   published_at?: string | null;
   updated_at?: string | null;
   created_at?: string | null;
 }
 
-function isPublished(story: StoryblokListStory): boolean {
+/**
+ * The Management API keeps `published_at` after a story is unpublished,
+ * so check `published` first. Fall back to `published_at` when it is missing.
+ */
+export function isPublished(story: StoryblokListStory): boolean {
+  if (typeof story.published === 'boolean') return story.published;
   return Boolean(story.published_at);
 }
 
