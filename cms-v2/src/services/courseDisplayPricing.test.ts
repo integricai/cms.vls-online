@@ -523,6 +523,98 @@ await run('VPN visitors keep the flag and lose the discount when the deal blocks
   assert.strictEqual(priced.geoPricingApplied, false);
 });
 
+await run('CMA Part 1 and Part 2 packs show One Year Access', async () => {
+  const asOf = new Date('2026-11-12T12:00:00');
+  const packPrices = [
+    geoPrice({
+      id: 1,
+      name: 'Gold Pack',
+      priceSubtitle: 'Vertex Course with Tutor Support',
+      amount: 260,
+      durationDays: 365,
+      isDefault: true,
+      courseSlug: 'cma1clp',
+      courseName: 'Complete Learning Pack - CMA Part 1',
+    }),
+    geoPrice({
+      id: 2,
+      name: 'Platinum Pack',
+      priceSubtitle: 'Vertex Course with Hock Access',
+      amount: 349,
+      durationDays: 365,
+      courseSlug: 'cma1clp',
+      courseName: 'Complete Learning Pack - CMA Part 1',
+    }),
+  ];
+
+  const part1 = await buildCourseDisplayPricing({
+    zenlerCourseId: '31679',
+    courseSlug: 'cma1clp',
+    courseName: 'Complete Learning Pack - CMA Part 1',
+    qualification: 'CMA',
+    offerRule: null,
+    prices: packPrices,
+  }, asOf);
+
+  assert.ok(part1);
+  assert.strictEqual(part1!.plans[0]!.sessionTitle, 'One Year Access');
+  assert.strictEqual(part1!.plans[0]!.planName, 'Gold Pack');
+  assert.strictEqual(part1!.plans[0]!.subtitle, 'Vertex Course with Tutor Support');
+  assert.strictEqual(part1!.plans[0]!.sessionMonth, null);
+  assert.strictEqual(part1!.plans[0]!.sessionYear, null);
+  assert.strictEqual(part1!.plans[1]!.sessionTitle, 'One Year Access');
+  assert.strictEqual(part1!.plans[1]!.planName, 'Platinum Pack');
+  assert.strictEqual(part1!.plans[1]!.subtitle, 'Vertex Course with Hock Access');
+  assert.strictEqual(part1!.plans[1]!.sessionMonth, null);
+  assert.strictEqual(part1!.plans[1]!.badge, 'Best value');
+
+  const part2 = await buildCourseDisplayPricing({
+    zenlerCourseId: '31681',
+    courseSlug: 'cma2clp',
+    courseName: 'Complete Learning Pack - CMA Part 2',
+    qualification: 'CMA',
+    offerRule: null,
+    prices: packPrices.map(price => ({
+      ...price,
+      courseSlug: 'cma2clp',
+      courseName: 'Complete Learning Pack - CMA Part 2',
+    })),
+  }, asOf);
+
+  assert.ok(part2);
+  assert.strictEqual(part2!.plans[0]!.sessionTitle, 'One Year Access');
+  assert.strictEqual(part2!.plans[1]!.sessionTitle, 'One Year Access');
+  assert.strictEqual(part2!.plans[0]!.sessionMonth, null);
+
+  const byName = await buildCourseDisplayPricing({
+    zenlerCourseId: '31679',
+    courseSlug: null,
+    courseName: 'Complete Learning Pack - CMA Part 1',
+    qualification: 'CMA',
+    offerRule: null,
+    prices: packPrices,
+  }, asOf);
+  assert.strictEqual(byName!.plans[0]!.sessionTitle, 'One Year Access');
+  assert.strictEqual(byName!.plans[1]!.sessionMonth, null);
+
+  assert.strictEqual(displayedExamSessionForPrice(packPrices, null, 1, 1, asOf), null);
+  assert.strictEqual(displayedExamSessionForPrice(packPrices, accaRule(), 1, 2, asOf), null);
+
+  const revision = await buildCourseDisplayPricing({
+    zenlerCourseId: '1',
+    courseSlug: 'cma1rev',
+    courseName: 'CMA Part 1 - Revisions Course',
+    qualification: 'CMA',
+    offerRule: null,
+    prices: [
+      geoPrice({ id: 3, name: 'Six months', amount: 80, durationDays: 180 }),
+      geoPrice({ id: 4, name: 'Annual', amount: 120, durationDays: 365, isDefault: true }),
+    ],
+  }, asOf);
+  assert.strictEqual(revision!.plans[0]!.sessionTitle, 'December 2026 session');
+  assert.strictEqual(revision!.plans[1]!.sessionTitle, 'March 2027 session');
+});
+
 await run('VPN visitors with no country discount still carry the flag', () => {
   const priced = applyVisitorDealToPlan(
     samplePlan(100),

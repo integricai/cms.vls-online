@@ -19,6 +19,27 @@ import { signPriceQuote } from './priceQuote';
 /** ACCA exam sittings fallback when no qualification offer rule is configured. */
 export const ACCA_EXAM_MONTHS = [3, 6, 9, 12] as const;
 
+/** Public title for the CMA Part 1 and Part 2 annual packs. */
+export const CMA_ANNUAL_ACCESS_TITLE = 'One Year Access';
+
+const CMA_ANNUAL_PACK_SLUGS = new Set(['cma1clp', 'cma2clp']);
+
+/**
+ * Complete Learning Pack CMA Part 1 and Part 2 are annual subscriptions.
+ * Other CMA courses (notes, mocks, revisions) are left unchanged.
+ */
+export function isCmaAnnualPackCourse(
+  courseSlug: string | null | undefined,
+  courseName?: string | null,
+): boolean {
+  const slug = String(courseSlug ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/^\/+|\/+$/g, '');
+  if (CMA_ANNUAL_PACK_SLUGS.has(slug)) return true;
+  return /^complete learning pack\s*[-–]\s*cma part\s*[12]\b/i.test(String(courseName ?? '').trim());
+}
+
 export type PublishedCoursePricePlan = {
   id: number;
   coursePriceId: number;
@@ -142,6 +163,8 @@ function buildPlanFields(
   options: {
     sessionMonth: number | null;
     sessionYear: number | null;
+    /** Used when this plan is not tied to an exam sitting. */
+    sessionTitle?: string | null;
     badge: string | null;
     countryCode?: string | null;
   },
@@ -152,7 +175,7 @@ function buildPlanFields(
 
   const sessionTitleText = options.sessionMonth != null && options.sessionYear != null
     ? formatExamSessionTitle(options.sessionMonth, options.sessionYear)
-    : price.name;
+    : (options.sessionTitle?.trim() || price.name);
 
   return {
     id: price.id,
@@ -279,6 +302,7 @@ export function displayedExamSessionForPrice(
   now: Date = new Date(),
 ): ExamSession | null {
   const active = prices.filter(price => price.isActive);
+  if (active.some(price => isCmaAnnualPackCourse(price.courseSlug, price.courseName))) return null;
   if (active.length < 2) return null;
   const planSlice = [...active]
     .sort((a, b) => planDurationSortKey(a) - planDurationSortKey(b))
@@ -334,6 +358,9 @@ export async function buildCourseDisplayPricing(
     ?? sorted.find(p => p.courseId != null)?.courseId
     ?? null;
 
+  const annualPack = isCmaAnnualPackCourse(input.courseSlug, input.courseName)
+    || sorted.some(price => isCmaAnnualPackCourse(price.courseSlug, price.courseName));
+
   let plans: PublishedCoursePricePlan[];
 
   if (sorted.length === 1) {
@@ -341,17 +368,21 @@ export async function buildCourseDisplayPricing(
     plans = [buildPlanFields(only, {
       sessionMonth: null,
       sessionYear: null,
+      sessionTitle: annualPack ? CMA_ANNUAL_ACCESS_TITLE : null,
       badge: null,
       countryCode: input.countryCode,
     })];
   } else {
     const planSlice = sorted.slice(0, 2);
-    const sessionMode = resolveSessionPlanMode(rule, now, planSlice.length, courseId);
+    const sessionMode = annualPack
+      ? { mode: 'duration' as const }
+      : resolveSessionPlanMode(rule, now, planSlice.length, courseId);
 
     if (sessionMode.mode === 'duration' || sessionMode.sessions.length === 0) {
       plans = planSlice.map((price, index) => buildPlanFields(price, {
         sessionMonth: null,
         sessionYear: null,
+        sessionTitle: annualPack ? CMA_ANNUAL_ACCESS_TITLE : null,
         badge: index === 1 ? 'Best value' : null,
         countryCode: input.countryCode,
       }));
