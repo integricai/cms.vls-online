@@ -1,6 +1,6 @@
 import { listActiveGeoPricesByZenlerCourseId } from '../models/courseGeoPrice';
 import { buildCourseDisplayPricing } from './courseDisplayPricing';
-import { loadMultiCourseStoryContent } from './multiCourseStoryblokAllowlist';
+import { isSinglePurchaseComboStory, loadMultiCourseStoryContent } from './multiCourseStoryblokAllowlist';
 
 /** Default when Storyblok combo_discount_percent is missing or invalid. */
 export const DEFAULT_COMBO_DISCOUNT_PERCENT = 35;
@@ -158,10 +158,12 @@ export function quoteComboCharge(
   courses: ComboPlanAmount[][],
   session: { month: number; year: number } | null,
   discountPercent: number = DEFAULT_COMBO_DISCOUNT_PERCENT,
+  minCourses: number = COMBO_MIN_COURSES,
 ): ComboChargeQuote {
-  if (courses.length < COMBO_MIN_COURSES) {
+  const minimum = Number.isInteger(minCourses) && minCourses >= 1 ? minCourses : COMBO_MIN_COURSES;
+  if (courses.length < minimum) {
     throw new ComboBundlePriceError(
-      `Select at least ${COMBO_MIN_COURSES} courses for this combo pack.`,
+      `Select at least ${minimum} course${minimum === 1 ? '' : 's'} for this combo pack.`,
     );
   }
 
@@ -315,13 +317,19 @@ export async function priceComboAccessSelection(input: {
   }));
 
   let discountPercent = DEFAULT_COMBO_DISCOUNT_PERCENT;
+  let minCourses = COMBO_MIN_COURSES;
   const slug = String(input.comboStorySlug ?? '').trim();
   if (slug) {
     const storyContent = await loadMultiCourseStoryContent(slug);
-    if (storyContent?.component === 'multi_course_page') {
+    const singlePurchase = isSinglePurchaseComboStory(storyContent, slug);
+    if (singlePurchase) {
+      // Notes are already the selling price. Ignore any combo discount on the story.
+      discountPercent = 0;
+      minCourses = 1;
+    } else if (storyContent?.component === 'multi_course_page') {
       discountPercent = resolveComboDiscountPercent(storyContent.combo_discount_percent);
     }
   }
 
-  return quoteComboCharge(courses, input.session, discountPercent);
+  return quoteComboCharge(courses, input.session, discountPercent, minCourses);
 }

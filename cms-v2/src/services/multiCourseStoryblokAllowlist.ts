@@ -28,6 +28,24 @@ export function normalizeComboStorySlug(raw: unknown): string {
     .replace(/\/+$/, '');
 }
 
+/** Notes packs. Matched by slug when the Storyblok flag has not been published yet. */
+const SINGLE_PURCHASE_COMBO_SLUGS = new Set([
+  'courses/acca-notes-combo-pack',
+  'acca-notes-combo-pack',
+  'courses/cima-notes-combo-pack',
+  'cima-notes-combo-pack',
+]);
+
+/** Notes are a one-time purchase at the published price. Course combos are not. */
+export function isSinglePurchaseComboStory(
+  content: Record<string, unknown> | null | undefined,
+  comboStorySlug?: string | null,
+): boolean {
+  const flag = content?.single_purchase;
+  if (flag === true || flag === 'true') return true;
+  return SINGLE_PURCHASE_COMBO_SLUGS.has(normalizeComboStorySlug(comboStorySlug));
+}
+
 /** Zenler id stored on a combo page, including Storyblok datasource option objects. */
 export function zenlerIdFromComboStoryField(value: unknown): string {
   if (typeof value === 'string' || typeof value === 'number') {
@@ -143,15 +161,23 @@ export async function loadMultiCourseStoryContent(
 
 export async function resolveMultiCourseAllowlistFromStorySlug(
   comboStorySlug: string,
-): Promise<{ allowlist: string[]; comboZenlerCourseId: string; selectionCount: number } | null> {
+): Promise<{
+  allowlist: string[];
+  comboZenlerCourseId: string;
+  selectionCount: number;
+  singlePurchase: boolean;
+} | null> {
   const content = await loadMultiCourseStoryContent(comboStorySlug);
   if (!content || content.component !== 'multi_course_page') return null;
 
   const allowlist = extractMultiCoursePaperZenlerIds(content);
   const comboZenlerCourseId = zenlerIdFromComboStoryField(content.zenler_course_id);
-  // Kept for older callers. Checkout allows any selection from 2 through the allowlist.
+  const singlePurchase = isSinglePurchaseComboStory(content, comboStorySlug);
+  // Kept for older callers. Checkout uses singlePurchase for the real minimum.
   const rawCount = Number(content.selection_count);
-  const selectionCount = Number.isInteger(rawCount) && rawCount >= 1 ? rawCount : 2;
+  const selectionCount = Number.isInteger(rawCount) && rawCount >= 1
+    ? rawCount
+    : (singlePurchase ? 1 : 2);
 
-  return { allowlist, comboZenlerCourseId, selectionCount };
+  return { allowlist, comboZenlerCourseId, selectionCount, singlePurchase };
 }

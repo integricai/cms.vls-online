@@ -164,4 +164,11 @@ run('fewer than two courses is rejected', () => {
   );
 });
 
+run('a notes pack prices one paper at the published amount', () => {
+  const quote = quoteComboCharge([[plan({ amount: 40 })]], null, 0, 1);
+  assert.strictEqual(quote.listAmountUsd, 40);
+  assert.strictEqual(quote.chargeAmountUsd, 40);
+  assert.strictEqual(quote.discountPercent, 0);
+});
+
 console.log('comboBundlePrice tests passed');

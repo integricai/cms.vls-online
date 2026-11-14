@@ -1,6 +1,7 @@
 import { COMBO_MIN_COURSES } from './comboBundlePrice';
 import { getCourseById as getCmsCourseById } from '../models/course';
 import {
+  isSinglePurchaseComboStory,
   normalizeComboStorySlug,
   resolveMultiCourseAllowlistFromStorySlug,
 } from './multiCourseStoryblokAllowlist';
@@ -74,11 +75,16 @@ export function assertBundleCheckoutHasSelection(input: {
   );
 }
 
-/** Students pick at least two papers, up to every paper configured on the combo page. */
-export function assertComboSelectionSize(count: number, allowlistLength: number): void {
-  if (count < COMBO_MIN_COURSES) {
+/** Course combos need two papers. Notes packs accept one. Both stop at the page allowlist. */
+export function assertComboSelectionSize(
+  count: number,
+  allowlistLength: number,
+  minCourses: number = COMBO_MIN_COURSES,
+): void {
+  const minimum = Number.isInteger(minCourses) && minCourses >= 1 ? minCourses : COMBO_MIN_COURSES;
+  if (count < minimum) {
     throw new MultiCourseAccessError(
-      `Select at least ${COMBO_MIN_COURSES} courses for this combo pack.`,
+      `Select at least ${minimum} course${minimum === 1 ? '' : 's'} for this combo pack.`,
       400,
     );
   }
@@ -126,7 +132,8 @@ export async function validateMultiCourseAccessSelection(input: {
   }
 
   const ids = normalizeZenlerIds(input.accessZenlerCourseIds);
-  assertComboSelectionSize(ids.length, story.allowlist.length);
+  const singlePurchase = story.singlePurchase || isSinglePurchaseComboStory(null, slug);
+  assertComboSelectionSize(ids.length, story.allowlist.length, singlePurchase ? 1 : COMBO_MIN_COURSES);
 
   const invalid = ids.filter((id) => !story.allowlist.includes(id));
   if (invalid.length) {
