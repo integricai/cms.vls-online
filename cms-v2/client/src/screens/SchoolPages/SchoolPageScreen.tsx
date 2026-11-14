@@ -6,15 +6,18 @@ export default function SchoolPageScreen({
   hint,
   sectionName,
   html,
+  previewStates,
 }: {
   title: string;
   hint: string;
   sectionName: string;
   html: string;
+  previewStates?: { id: string; label: string }[];
 }) {
   const wrapped = wrapGeneratedHtml(sectionName, html);
   const [activeTab, setActiveTab] = useState<'preview' | 'html'>('preview');
   const [copied, setCopied] = useState(false);
+  const [previewState, setPreviewState] = useState(previewStates?.[0]?.id ?? '');
 
   async function copy() {
     await navigator.clipboard.writeText(wrapped);
@@ -22,7 +25,8 @@ export default function SchoolPageScreen({
     window.setTimeout(() => setCopied(false), 1600);
   }
 
-  const previewDoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0">${wrapped}</body></html>`;
+  const stateAttr = previewState ? ` data-vls-school-state="${previewState}"` : '';
+  const previewDoc = `<!doctype html><html${stateAttr}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0">${wrapped}</body></html>`;
 
   return (
     <div className="flex h-full flex-col">
@@ -35,6 +39,22 @@ export default function SchoolPageScreen({
           {copied ? 'Copied' : 'Copy HTML'}
         </button>
       </div>
+      {previewStates && previewStates.length > 1 ? (
+        <div className="flex shrink-0 gap-2 border-b border-slate-200 bg-white px-4 py-3">
+          {previewStates.map(state => (
+            <button
+              key={state.id}
+              type="button"
+              onClick={() => { setPreviewState(state.id); setActiveTab('preview'); }}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                previewState === state.id ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {state.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="flex shrink-0 border-b border-slate-200 bg-white px-4">
         {(['preview', 'html'] as const).map(tab => (
           <button

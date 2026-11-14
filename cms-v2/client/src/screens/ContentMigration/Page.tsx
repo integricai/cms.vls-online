@@ -70,7 +70,7 @@ export default function ContentMigrationPage() {
           <SchoolPageScreen
             title="School dashboard"
             sectionName="School dashboard"
-            hint="Logged-in homepage for school.vls-online.com. Sample student shown. Courses and progress come from Zenler; access expiry and the last payment come from the vault. Paste into the Zenler logged-in home page."
+            hint="Dashboard body only. Header and footer stay in Global Header/Footer. Sample student shown. Paste into the Zenler page at /dashboard."
             html={generateSchoolDashboardHtml()}
           />
         ) : null}
@@ -78,8 +78,12 @@ export default function ContentMigrationPage() {
           <SchoolPageScreen
             title="Logged out page"
             sectionName="Logged out page"
-            hint="Shown when a student opens school.vls-online.com without a session. Sign in goes to Zenler's own login. Paste into the Zenler logged-out home page."
+            hint="No session shows the sign-in card. A live Zenler session shows Continue your studies, and that button opens /dashboard. Paste this as the school landing page."
             html={generateSchoolLoggedOutHtml()}
+            previewStates={[
+              { id: 'out', label: 'No session' },
+              { id: 'in', label: 'Session alive' },
+            ]}
           />
         ) : null}
         {activeTab === 'global' ? (

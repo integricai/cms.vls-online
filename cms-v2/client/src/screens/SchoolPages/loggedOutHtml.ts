@@ -1,4 +1,4 @@
-/** Paste-ready logged-out school page. Sign in goes to Zenler's own login. */
+/** School landing page. Signed-out students see the sign-in card. A live Zenler session shows the welcome-back card. */
 export function generateSchoolLoggedOutHtml(): string {
   return `<link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -42,6 +42,15 @@ export function generateSchoolLoggedOutHtml(): string {
   .vls-school-out .foot a{color:var(--blue);font-weight:600;}
   .vls-school-out .below{margin-top:22px;font-size:12.5px;color:#8FA3C8;text-align:center;max-width:470px;}
   .vls-school-out .below a{color:#B9CBEA;text-decoration:underline;text-underline-offset:2px;}
+  .vls-school-out .state-in{display:none;}
+  .vls-school-out.is-in .state-out{display:none;}
+  .vls-school-out.is-in .state-in{display:block;}
+  .vls-school-out .who{display:flex;align-items:center;gap:13px;background:var(--blue-50);border:1px solid var(--blue-100);border-radius:13px;padding:13px 15px;margin-top:22px;}
+  .vls-school-out .who .av{width:42px;height:42px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:600;font-size:15px;flex:none;}
+  .vls-school-out .who b{display:block;font-size:14.5px;color:var(--navy);line-height:1.25;}
+  .vls-school-out .who span{font-size:12.5px;color:var(--slate);}
+  .vls-school-out .notyou{text-align:center;font-size:13px;color:var(--slate);margin-top:14px;}
+  .vls-school-out .notyou a{color:var(--blue);font-weight:600;}
   @media(max-width:520px){
     .vls-school-out .card{padding:28px 24px 24px;}
     .vls-school-out h1{font-size:22px;}
@@ -52,27 +61,79 @@ export function generateSchoolLoggedOutHtml(): string {
     <span class="lk-mark">V</span>
     <span><span class="lk-name">Vertex Learning Solutions</span><span class="lk-sub">Changing Behaviours Through Education</span></span>
   </a>
-  <div class="card">
-    <span class="pill">Student portal</span>
-    <h1>Sign in to your school</h1>
-    <p class="sub">Your courses, progress and account live here. Use the email address you enrolled with.</p>
-    <div class="primary-wrap">
-      <a class="btn btn-primary" href="/login">
-        Sign in to my school
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </a>
+  <div class="state-out" id="vls-school-signed-out">
+    <div class="card">
+      <span class="pill">Student portal</span>
+      <h1>Sign in to your school</h1>
+      <p class="sub">Your courses, progress and account live here. Use the email address you enrolled with.</p>
+      <div class="primary-wrap">
+        <a class="btn btn-primary" href="/login">
+          Sign in to my school
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+      <div class="or">OR</div>
+      <div class="second">
+        <h2>Not enrolled yet?</h2>
+        <p>Course details, fees, exam dates and enrolment are on the main Vertex site.</p>
+        <a class="btn btn-ghost" href="https://vls-online.com">
+          Go to vls-online.com
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
+        </a>
+      </div>
+      <div class="foot">Trouble signing in? <a href="https://vls-online.com/report-an-issue">Report an issue</a> or email <a href="mailto:office@vls-online.com">office@vls-online.com</a></div>
     </div>
-    <div class="or">OR</div>
-    <div class="second">
-      <h2>Not enrolled yet?</h2>
-      <p>Course details, fees, exam dates and enrolment are on the main Vertex site.</p>
-      <a class="btn btn-ghost" href="https://vls-online.com">
-        Go to vls-online.com
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
-      </a>
+  </div>
+  <div class="state-in" id="vls-school-signed-in">
+    <div class="card">
+      <span class="pill">Welcome back</span>
+      <h1>Continue your studies</h1>
+      <p class="sub">You're still signed in on this device. Pick up where you left off.</p>
+      <div class="who">
+        <span class="av">SA</span>
+        <span><b>Sara Ahmed</b><span>ACCA SBR · 62% complete</span></span>
+      </div>
+      <div class="primary-wrap">
+        <a class="btn btn-primary" href="/dashboard">
+          Go to my dashboard
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+      <div class="or">OR</div>
+      <div class="second">
+        <h2>Browsing, not studying?</h2>
+        <p>Find more courses, exam dates and study resources on the main site.</p>
+        <a class="btn btn-ghost" href="https://vls-online.com">
+          Go to vls-online.com
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
+        </a>
+      </div>
+      <div class="notyou">Not Sara? <a href="/login">Sign in with a different account</a></div>
     </div>
-    <div class="foot">Trouble signing in? <a href="https://vls-online.com/report-an-issue">Report an issue</a> or email <a href="mailto:office@vls-online.com">office@vls-online.com</a></div>
   </div>
   <p class="below">This is the Vertex student portal. For course information and enrolment visit <a href="https://vls-online.com">vls-online.com</a>.</p>
-</div>`;
+</div>
+<script>
+(function(){
+  var gate=document.querySelector('.vls-school-out');
+  if(!gate) return;
+  function sessionAlive(){
+    var forced=document.documentElement.getAttribute('data-vls-school-state');
+    if(forced==='in'||forced==='out') return forced==='in';
+    var root=document.querySelector('.navbar-buttons.jqLoginLogout');
+    if(!root) return false;
+    var summary=Array.prototype.map.call(root.querySelectorAll('a,button'),function(node){
+      return ((node.textContent||'')+' '+(node.getAttribute('href')||''));
+    }).join(' ').toLowerCase();
+    if(/logout|log out|my account|my settings/.test(summary)) return true;
+    if(/login|log in|sign in/.test(summary)) return false;
+    return !!root.querySelector('a[href*="logout"]');
+  }
+  function apply(){ gate.classList.toggle('is-in', sessionAlive()); }
+  apply();
+  if(document.documentElement.getAttribute('data-vls-school-state')) return;
+  var tries=0;
+  var poll=setInterval(function(){ tries++; apply(); if(tries>20) clearInterval(poll); },400);
+})();
+</script>`;
 }

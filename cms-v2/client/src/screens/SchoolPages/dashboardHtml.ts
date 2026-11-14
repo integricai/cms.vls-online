@@ -23,34 +23,6 @@ export function generateSchoolDashboardHtml(): string {
   .vls-school-dash .btn-ghost{background:#fff;color:var(--navy);border-color:var(--line);}
   .vls-school-dash .btn-ghost:hover{border-color:var(--blue-200);background:var(--blue-50);}
   .vls-school-dash .btn svg{width:16px;height:16px;}
-  .vls-school-dash .appbar{position:sticky;top:0;z-index:80;background:#fff;border-bottom:1px solid var(--line);}
-  .vls-school-dash .appbar .in{display:flex;align-items:center;gap:22px;height:72px;}
-  .vls-school-dash .brand{display:flex;align-items:center;gap:12px;flex:none;}
-  .vls-school-dash .brand-mark{width:44px;height:44px;border-radius:11px;background:var(--blue);display:grid;place-items:center;color:#fff;font-weight:700;font-size:25px;flex:none;}
-  .vls-school-dash .brand-name{display:block;font-weight:600;font-size:16.5px;color:var(--navy);line-height:1.1;white-space:nowrap;}
-  .vls-school-dash .brand-sub{display:block;font-size:8.5px;font-weight:600;letter-spacing:.15em;color:var(--slate);text-transform:uppercase;margin-top:3px;white-space:nowrap;}
-  .vls-school-dash .appnav{display:flex;gap:4px;margin-left:12px;}
-  .vls-school-dash .appnav a{font-size:14.5px;font-weight:500;color:var(--slate);padding:8px 14px;border-radius:9px;}
-  .vls-school-dash .appnav a:hover,.vls-school-dash .appnav a.on{background:var(--blue-50);color:var(--navy);}
-  .vls-school-dash .appnav a.on{font-weight:600;}
-  .vls-school-dash .right{margin-left:auto;display:flex;align-items:center;gap:12px;}
-  .vls-school-dash .to-site{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--navy);background:var(--blue-50);border:1px solid var(--blue-100);padding:9px 15px;border-radius:10px;white-space:nowrap;}
-  .vls-school-dash .to-site:hover{background:var(--blue-100);border-color:var(--blue-200);}
-  .vls-school-dash .to-site svg{width:14px;height:14px;color:var(--blue);}
-  .vls-school-dash .avatar-wrap{position:relative;}
-  .vls-school-dash .avatar{width:42px;height:42px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:600;font-size:15px;cursor:pointer;border:2px solid transparent;}
-  .vls-school-dash .avatar:hover{border-color:var(--blue-200);}
-  .vls-school-dash .menu{position:absolute;right:0;top:52px;width:238px;background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow);padding:7px;display:none;}
-  .vls-school-dash .menu.open{display:block;}
-  .vls-school-dash .menu .who{padding:11px 13px 12px;border-bottom:1px solid var(--line-soft);margin-bottom:6px;}
-  .vls-school-dash .menu .who b{display:block;font-size:14.5px;color:var(--navy);}
-  .vls-school-dash .menu .who span{font-size:12.5px;color:var(--slate);}
-  .vls-school-dash .menu a{display:flex;align-items:center;gap:11px;padding:9px 13px;border-radius:9px;font-size:14px;color:var(--prose);}
-  .vls-school-dash .menu a:hover{background:var(--blue-50);color:var(--navy);}
-  .vls-school-dash .menu a svg{width:16px;height:16px;color:var(--slate);}
-  .vls-school-dash .menu .sep{height:1px;background:var(--line-soft);margin:6px 0;}
-  .vls-school-dash .menu a.out{color:#C0392B;}
-  .vls-school-dash .menu a.out svg{color:#C0392B;}
   .vls-school-dash .dash{padding:30px 0 60px;}
   .vls-school-dash .hello{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:24px;}
   .vls-school-dash .hello h1{font-size:30px;}
@@ -102,62 +74,17 @@ export function generateSchoolDashboardHtml(): string {
   .vls-school-dash .cs b{font-size:14.5px;color:var(--navy);font-weight:600;display:block;}
   .vls-school-dash .cs span{font-size:12px;color:var(--slate);}
   .vls-school-dash .cs svg{width:16px;height:16px;color:var(--blue);flex:none;}
-  .vls-school-dash .foot{background:var(--navy);color:#B9C6E0;padding:40px 0 26px;margin-top:50px;}
-  .vls-school-dash .f-top{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.1);}
-  .vls-school-dash .foot .brand-mark{background:#fff;color:var(--navy);}
-  .vls-school-dash .foot .brand-name{color:#fff;}
-  .vls-school-dash .foot .brand-sub{color:#8A9EC6;}
-  .vls-school-dash .f-cols{display:flex;gap:54px;flex-wrap:wrap;}
-  .vls-school-dash .f-col h4{color:#fff;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px;}
-  .vls-school-dash .f-col a{display:block;font-size:13.5px;color:#B9C6E0;margin-bottom:8px;}
-  .vls-school-dash .f-col a:hover{color:#fff;}
-  .vls-school-dash .f-bot{padding-top:18px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:12.5px;}
-  .vls-school-dash .f-bot a{color:#B9C6E0;margin-left:18px;}
   @media(max-width:1040px){
     .vls-school-dash .courses{grid-template-columns:repeat(2,1fr);}
     .vls-school-dash .cs-links{grid-template-columns:repeat(2,1fr);}
   }
-  @media(max-width:860px){.vls-school-dash .appnav{display:none;}}
   @media(max-width:760px){
     .vls-school-dash{--gutter:22px;}
     .vls-school-dash .courses,.vls-school-dash .lower,.vls-school-dash .resume{grid-template-columns:1fr;}
     .vls-school-dash .hello h1{font-size:25px;}
-    .vls-school-dash .brand-sub,.vls-school-dash .to-site span{display:none;}
-    .vls-school-dash .to-site{padding:9px 11px;}
   }
 </style>
 <div class="vls-school-dash">
-  <header class="appbar">
-    <div class="wrap in">
-      <a class="brand" href="https://vls-online.com">
-        <span class="brand-mark">V</span>
-        <span><span class="brand-name">Vertex Learning Solutions</span><span class="brand-sub">Changing Behaviours Through Education</span></span>
-      </a>
-      <nav class="appnav">
-        <a class="on" href="/">Dashboard</a>
-        <a href="/mycourses">My courses</a>
-        <a href="/account">Account</a>
-      </nav>
-      <div class="right">
-        <a class="to-site" href="https://vls-online.com">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
-          <span>Main site</span>
-        </a>
-        <div class="avatar-wrap">
-          <div class="avatar" id="vls-dash-avatar" role="button" tabindex="0">SA</div>
-          <div class="menu" id="vls-dash-menu">
-            <div class="who"><b>Sara Ahmed</b><span>sara@example.com</span></div>
-            <a href="/account"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg> My account</a>
-            <a href="https://vls-online.com/report-an-issue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg> Report an issue</a>
-            <div class="sep"></div>
-            <a href="https://vls-online.com"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17 17 7M8 7h9v9"/></svg> Go to main site</a>
-            <div class="sep"></div>
-            <a class="out" href="/logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Log out</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </header>
   <main class="dash">
     <div class="wrap">
       <div class="hello">
@@ -253,34 +180,5 @@ export function generateSchoolDashboardHtml(): string {
       </section>
     </div>
   </main>
-  <footer class="foot">
-    <div class="wrap">
-      <div class="f-top">
-        <a class="brand" href="https://vls-online.com">
-          <span class="brand-mark">V</span>
-          <span><span class="brand-name">Vertex Learning Solutions</span><span class="brand-sub">Changing Behaviours Through Education</span></span>
-        </a>
-        <div class="f-cols">
-          <div class="f-col"><h4>Study</h4><a href="/mycourses">My courses</a><a href="/account">My account</a></div>
-          <div class="f-col"><h4>Main site</h4><a href="https://vls-online.com">vls-online.com</a><a href="https://vls-online.com/courses">All courses</a><a href="https://vls-online.com/blog">Blog</a></div>
-          <div class="f-col"><h4>Support</h4><a href="https://vls-online.com/report-an-issue">Report an issue</a><a href="mailto:office@vls-online.com">office@vls-online.com</a><a href="https://vls-online.com/contact">Contact</a></div>
-        </div>
-      </div>
-      <div class="f-bot">
-        <span>© 2026 Vertex Learning Solutions Ltd · Registered in England &amp; Wales</span>
-        <span><a href="https://vls-online.com/terms">Terms</a><a href="https://vls-online.com/privacy">Privacy</a><a href="https://vls-online.com/cookies">Cookies</a></span>
-      </div>
-    </div>
-  </footer>
-</div>
-<script>
-(function(){
-  var avatar=document.getElementById('vls-dash-avatar');
-  var menu=document.getElementById('vls-dash-menu');
-  if(!avatar||!menu)return;
-  avatar.addEventListener('click',function(event){event.stopPropagation();menu.classList.toggle('open');});
-  document.addEventListener('click',function(){menu.classList.remove('open');});
-  menu.addEventListener('click',function(event){event.stopPropagation();});
-})();
-</script>`;
+</div>`;
 }
