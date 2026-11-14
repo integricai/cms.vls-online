@@ -75,11 +75,18 @@ function plainOrDash(value: string): string {
   return value || '—';
 }
 
-type CountryDaySeries = {
+type CountrySalePoint = {
+  time: number;
+  amount: number;
+  running: number;
+};
+
+type CountrySaleSeries = {
   code: string;
   name: string;
   total: number;
-  values: number[];
+  count: number;
+  points: CountrySalePoint[];
 };
 
 const CHART_WIDTH = 760;
@@ -89,16 +96,15 @@ const CHART_RIGHT = 16;
 const CHART_TOP = 16;
 const CHART_BOTTOM = 32;
 
-function londonIsoDate(value: Date | string | null | undefined): string | null {
+function saleInstant(value: Date | string | null | undefined): number | null {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/London',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date);
+  return Number.isNaN(date.getTime()) ? null : date.getTime();
+}
+
+function dayStartMs(isoDate: string): number {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return Date.UTC(year, month - 1, day);
 }
 
 function daysInRange(start: string, end: string): string[] {
@@ -124,35 +130,18 @@ function formatChartDay(isoDate: string): string {
   return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
-/** Daily dollar sales for every country in the selected dates. Refunds are left out. */
-function countryDailySeries(
+/** One point per sale, in time order. The running total is what the line draws. Refunds are left out. */
+function countrySaleSeries(
   rows: SaleListItem[],
-  from: string,
-  to: string,
   rates: Record<string, number> | null,
-): { days: string[]; series: CountryDaySeries[]; missingCurrencies: string[] } {
-  const live = rows.filter(sale => sale.paymentStatus !== 'Refunded');
-  let start = from;
-  let end = to;
-  if (!start || !end) {
-    const sold = live
-      .map(sale => londonIsoDate(sale.soldAt))
-      .filter((day): day is string => Boolean(day))
-      .sort();
-    start = sold[0] ?? '';
-    end = sold[sold.length - 1] ?? '';
-  }
-  if (!start || !end || start > end) return { days: [], series: [], missingCurrencies: [] };
-
-  const days = daysInRange(start, end);
-  const slot = new Map(days.map((day, index) => [day, index]));
-  const groups = new Map<string, number[]>();
+): { series: CountrySaleSeries[]; missingCurrencies: string[] } {
+  const groups = new Map<string, CountrySalePoint[]>();
   const missing = new Set<string>();
 
-  for (const sale of live) {
-    const day = londonIsoDate(sale.soldAt);
-    const index = day ? slot.get(day) : undefined;
-    if (index == null || sale.amount == null || !Number.isFinite(Number(sale.amount))) continue;
+  for (const sale of rows) {
+    if (sale.paymentStatus === 'Refunded') continue;
+    const time = saleInstant(sale.soldAt);
+    if (time == null || sale.amount == null || !Number.isFinite(Number(sale.amount))) continue;
     const currency = (sale.currency || 'USD').trim().toUpperCase() || 'USD';
     const usd = amountInUsd(Number(sale.amount), currency, rates);
     if (usd == null) {
@@ -160,25 +149,31 @@ function countryDailySeries(
       continue;
     }
     const code = sale.countryCode?.trim().toUpperCase() || 'Unknown';
-    const cents = groups.get(code) ?? Array(days.length).fill(0);
-    cents[index] += Math.round(usd * 100);
-    groups.set(code, cents);
+    const points = groups.get(code) ?? [];
+    points.push({ time, amount: usd, running: 0 });
+    groups.set(code, points);
   }
 
   const series = [...groups.entries()]
-    .map(([code, cents]) => {
-      const totalCents = cents.reduce((sum, value) => sum + value, 0);
+    .map(([code, points]) => {
+      points.sort((a, b) => a.time - b.time);
+      let cents = 0;
+      for (const point of points) {
+        cents += Math.round(point.amount * 100);
+        point.running = cents / 100;
+      }
       return {
         code,
         name: code === 'Unknown' ? 'Unknown' : countryLabel(code),
-        total: totalCents / 100,
-        values: cents.map(value => value / 100),
+        total: cents / 100,
+        count: points.length,
+        points,
       };
     })
-    .filter(country => country.total > 0)
+    .filter(country => country.count > 0)
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
 
-  return { days, series, missingCurrencies: [...missing].sort() };
+  return { series, missingCurrencies: [...missing].sort() };
 }
 
 /** Stable hue from the country code, so a country keeps its colour when the dates change. */
@@ -207,15 +202,42 @@ function CountryFlag({ code }: { code: string }) {
   );
 }
 
-function chartX(index: number, count: number): number {
-  const plot = CHART_WIDTH - CHART_LEFT - CHART_RIGHT;
-  if (count <= 1) return CHART_LEFT + plot / 2;
-  return CHART_LEFT + (index / (count - 1)) * plot;
-}
-
 function chartY(amount: number, max: number): number {
   const plot = CHART_HEIGHT - CHART_TOP - CHART_BOTTOM;
   return CHART_TOP + plot - (amount / max) * plot;
+}
+
+function timeX(time: number, start: number, end: number): number {
+  const plot = CHART_WIDTH - CHART_LEFT - CHART_RIGHT;
+  const span = Math.max(end - start, 1);
+  const ratio = Math.min(1, Math.max(0, (time - start) / span));
+  return CHART_LEFT + ratio * plot;
+}
+
+/** Spread sales that share a day so each one stays a separate dot on that day. */
+function layoutSaleXs(times: number[], start: number, end: number): number[] {
+  const plot = CHART_WIDTH - CHART_LEFT - CHART_RIGHT;
+  const dayCount = Math.max(1, Math.round((end - start) / (24 * 60 * 60 * 1000)));
+  const dayWidth = plot / dayCount;
+  const raw = times.map(time => timeX(time, start, end));
+  const xs = [...raw];
+  let cluster = 0;
+  for (let index = 1; index <= raw.length; index += 1) {
+    const split = index === raw.length || raw[index] - raw[cluster] > dayWidth * 0.85;
+    if (!split) continue;
+    const count = index - cluster;
+    if (count > 1) {
+      const center = raw[cluster];
+      const spread = Math.min(dayWidth * 0.8, 8 * (count - 1));
+      const left = Math.max(CHART_LEFT, center - spread / 2);
+      const right = Math.min(CHART_WIDTH - CHART_RIGHT, left + spread);
+      for (let offset = 0; offset < count; offset += 1) {
+        xs[cluster + offset] = left + ((right - left) * offset) / (count - 1);
+      }
+    }
+    cluster = index;
+  }
+  return xs;
 }
 
 function CountrySalesChart({
@@ -232,8 +254,12 @@ function CountrySalesChart({
   rates: Record<string, number> | null;
 }) {
   const [activeCode, setActiveCode] = useState<string | null>(null);
-  const { days, series, missingCurrencies } = countryDailySeries(rows, from, to, rates);
-  const peak = Math.max(...series.flatMap(country => country.values), 0);
+  const { series, missingCurrencies } = countrySaleSeries(rows, rates);
+  const saleTimes = series.flatMap(country => country.points.map(point => point.time));
+  const start = from ? dayStartMs(from) : (saleTimes.length > 0 ? Math.min(...saleTimes) : 0);
+  const end = to ? dayStartMs(to) + 24 * 60 * 60 * 1000 - 1 : (saleTimes.length > 0 ? Math.max(...saleTimes) : 1);
+  const days = from && to && from <= to ? daysInRange(from, to) : [];
+  const peak = Math.max(...series.map(country => country.total), 0);
   const max = peak > 0 ? peak : 1;
   const ordered = activeCode
     ? [...series.filter(country => country.code !== activeCode), ...series.filter(country => country.code === activeCode)]
@@ -250,7 +276,7 @@ function CountrySalesChart({
         <p className="px-4 py-8 text-center text-xs text-slate-500">No live sales in this date range.</p>
       ) : (
         <div className="px-4 py-3">
-          <p className="mb-2 text-xs text-slate-500">Dollars sold each day. The amount beside each flag is that country’s total for these dates.</p>
+          <p className="mb-2 text-xs text-slate-500">Each dot is one sale. The line is that country’s running total across these dates.</p>
           <svg viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} className="h-64 w-full" role="img" aria-label="Daily sales by country">
             {[0, 0.5, 1].map(tick => {
               const y = chartY(max * tick, max);
@@ -266,25 +292,31 @@ function CountrySalesChart({
             {ordered.map(country => {
               const color = countryColor(country.code);
               const dimmed = activeCode != null && activeCode !== country.code;
-              const path = country.values
-                .map((amount, index) => `${index === 0 ? 'M' : 'L'}${chartX(index, days.length).toFixed(1)},${chartY(amount, max).toFixed(1)}`)
+              const xs = layoutSaleXs(country.points.map(point => point.time), start, end);
+              const coords = [
+                { x: CHART_LEFT, y: chartY(0, max) },
+                ...country.points.map((point, index) => ({ x: xs[index], y: chartY(point.running, max) })),
+                { x: CHART_WIDTH - CHART_RIGHT, y: chartY(country.total, max) },
+              ];
+              const path = coords
+                .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)},${point.y.toFixed(1)}`)
                 .join(' ');
               return (
                 <g key={country.code} opacity={dimmed ? 0.15 : 1}>
                   <path d={path} fill="none" stroke={color} strokeWidth="2.25" strokeLinejoin="round" strokeLinecap="round">
-                    <title>{`${country.name}: ${formatMoney(country.total, 'USD')} in this date range`}</title>
+                    <title>{`${country.name}: ${country.count} sales, ${formatMoney(country.total, 'USD')} in this date range`}</title>
                   </path>
-                  {country.values.map((amount, index) => amount > 0 ? (
-                    <circle key={`${country.code}-${days[index]}`} cx={chartX(index, days.length)} cy={chartY(amount, max)} r="3" fill={color}>
-                      <title>{`${country.name} on ${formatChartDay(days[index])}: ${formatMoney(amount, 'USD')}`}</title>
+                  {country.points.map((point, index) => (
+                    <circle key={`${country.code}-${point.time}-${index}`} cx={xs[index]} cy={chartY(point.running, max)} r="3.5" fill={color}>
+                      <title>{`${country.name} · ${formatDisplayDate(new Date(point.time))} · this sale ${formatMoney(point.amount, 'USD')} · ${formatMoney(point.running, 'USD')} so far`}</title>
                     </circle>
-                  ) : null)}
+                  ))}
                 </g>
               );
             })}
             {days.map((day, index) => (
               index % labelEvery === 0 || index === days.length - 1 ? (
-                <text key={day} x={chartX(index, days.length)} y={plotBottom + 18} textAnchor="middle" fill="#94a3b8" fontSize="11">
+                <text key={day} x={timeX(dayStartMs(day), start, end)} y={plotBottom + 18} textAnchor="middle" fill="#94a3b8" fontSize="11">
                   {formatChartDay(day)}
                 </text>
               ) : null
@@ -304,7 +336,7 @@ function CountrySalesChart({
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: countryColor(country.code) }} aria-hidden="true" />
                   <CountryFlag code={country.code} />
                   <span>{country.name}</span>
-                  <span className="tabular-nums text-slate-500">{formatMoney(country.total, 'USD')}</span>
+                  <span className="tabular-nums text-slate-500">{country.count} · {formatMoney(country.total, 'USD')}</span>
                 </button>
               </li>
             ))}
