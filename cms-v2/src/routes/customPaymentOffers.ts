@@ -2,26 +2,20 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
 import { getCourseById } from '../models/courseGeoPrice';
 import { upsertCustomer } from '../models/customer';
-import {
-  attachCheckoutSession,
-  createPaymentOrder,
-} from '../models/paymentOrder';
+import { createPaymentOrder } from '../models/paymentOrder';
 import {
   createCustomPaymentOffer,
   listCustomPaymentOffers,
   markCustomPaymentOfferEmailSent,
 } from '../models/customPaymentOffer';
 import { createActivityLog } from '../models/activityLog';
-import { getPaymentProvider } from '../services/payments/registry';
 import { sendCustomPaymentOfferEmail } from '../services/paymentEmails';
-import { CustomPaymentOfferError, resendCustomPaymentOffer } from '../services/customPaymentOffer';
+import { CustomPaymentOfferError, issueCustomPaymentPayLink, resendCustomPaymentOffer } from '../services/customPaymentOffer';
 
 const router = Router();
 router.use(authGuard, requireRole('admin', 'assistant'));
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-/** Checkout success and cancel always return the student to the live site. */
-const CUSTOM_PAYMENT_SITE_ORIGIN = 'https://vls-online.com';
 const DESCRIPTION_MAX_LENGTH = 200;
 
 function hasCourseSelection(value: unknown): boolean {
@@ -50,7 +44,10 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const limit = parsePositiveInt(req.query.limit) ?? 50;
     const offers = await listCustomPaymentOffers(limit);
-    return res.json({ ok: true, data: offers });
+    return res.json({
+      ok: true,
+      data: offers.map(({ tokenHash: _tokenHash, ...offer }) => offer),
+    });
   } catch (err) {
     next(err);
   }
@@ -127,39 +124,34 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       environment: 'production',
     });
 
-    const session = await getPaymentProvider('stripe').createCheckout({
-      orderId: order.id,
-      courseId: course?.id ?? null,
-      coursePriceId: null,
-      zenlerCourseId: course?.zenlerCourseId ?? '',
-      courseTitle: paymentTitle,
-      paymentCardTitle: course ? `${course.name} — Custom / Resit offer` : paymentTitle,
-      amount,
-      currency: 'USD',
-      studentEmail: email,
-      returnOrigin: CUSTOM_PAYMENT_SITE_ORIGIN,
-      environment: 'production',
-    });
-
-    await attachCheckoutSession(order.id, {
-      provider: session.provider,
-      checkoutId: session.checkoutId,
-    });
-
-    const offer = await createCustomPaymentOffer({
-      paymentOrderId: order.id,
-      courseId: course?.id ?? null,
-      createdByUserId: req.user?.userId ?? null,
-      studentFirstName: firstName,
-      studentLastName: lastName,
-      studentEmail: email,
-      amount,
-      currency: 'USD',
-      durationDays: accessDays,
-      discountReason,
-      stripeCheckoutSessionId: session.checkoutId,
-      checkoutUrl: session.checkoutUrl,
-    });
+    let offer = null;
+    let payUrl = '';
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const link = await issueCustomPaymentPayLink();
+      payUrl = link.checkoutUrl;
+      try {
+        offer = await createCustomPaymentOffer({
+          paymentOrderId: order.id,
+          courseId: course?.id ?? null,
+          createdByUserId: req.user?.userId ?? null,
+          studentFirstName: firstName,
+          studentLastName: lastName,
+          studentEmail: email,
+          amount,
+          currency: 'USD',
+          durationDays: accessDays,
+          discountReason,
+          stripeCheckoutSessionId: null,
+          checkoutUrl: payUrl,
+          tokenHash: link.tokenHash,
+        });
+        break;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (!/duplicate|unique/i.test(message) || attempt === 4) throw err;
+      }
+    }
+    if (!offer) return res.status(500).json({ ok: false, error: 'Could not create the payment link' });
 
     let emailSent = false;
     try {
@@ -170,7 +162,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         amount,
         currency: 'USD',
         durationDays: accessDays,
-        checkoutUrl: session.checkoutUrl,
+        checkoutUrl: payUrl,
       });
       await markCustomPaymentOfferEmailSent(offer.id);
       emailSent = true;
@@ -205,8 +197,9 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       ok: true,
       data: {
         ...offer,
+        tokenHash: undefined,
         courseTitle: paymentTitle,
-        checkoutUrl: session.checkoutUrl,
+        checkoutUrl: payUrl,
         emailSent,
         orderStatus: order.status,
         orderCreatedAt: order.createdAt,

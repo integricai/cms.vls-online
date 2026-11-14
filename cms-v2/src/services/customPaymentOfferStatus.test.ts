@@ -30,7 +30,7 @@ run('marks a paid offer accepted and a refunded offer refunded', () => {
   }, now), 'Refunded');
 });
 
-run('keeps a failed payment failed and a cancelled payment expired', () => {
+run('keeps a failed payment failed and a cancelled direct Stripe link expired', () => {
   assert.equal(customPaymentOfferLinkStatus({
     orderStatus: 'Failed',
     checkoutIssuedAt: now.toISOString(),
@@ -41,7 +41,23 @@ run('keeps a failed payment failed and a cancelled payment expired', () => {
   }, now), 'Expired');
 });
 
-run('stays waiting until the Stripe session is 24 hours old', () => {
+run('keeps our own pay link waiting until the student pays', () => {
+  assert.equal(customPaymentOfferLinkStatus({
+    orderStatus: 'Pending',
+    checkoutIssuedAt: '2026-01-01T00:00:00.000Z',
+    durablePayLink: true,
+  }, now), 'Waiting');
+  assert.equal(customPaymentOfferLinkStatus({
+    orderStatus: 'Cancelled',
+    durablePayLink: true,
+  }, now), 'Waiting');
+  assert.equal(customPaymentOfferLinkStatus({
+    orderStatus: 'Paid',
+    durablePayLink: true,
+  }, now), 'Accepted');
+});
+
+run('stays waiting until a direct Stripe session is 24 hours old', () => {
   const fresh = new Date(now.getTime() - CUSTOM_PAYMENT_LINK_MS + 1000);
   const due = new Date(now.getTime() - CUSTOM_PAYMENT_LINK_MS);
   assert.equal(customPaymentOfferLinkStatus({

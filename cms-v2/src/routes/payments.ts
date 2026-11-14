@@ -62,6 +62,7 @@ import {
   openDiscountPaymentLink,
   RetakeCodeError,
 } from '../services/retakeDiscount';
+import { openCustomPaymentOfferLink } from '../services/customPaymentOffer';
 import {
   checkoutSessionRateLimit,
   freeEnrolEmailRateLimit,
@@ -1065,12 +1066,19 @@ async function paymentStatusForSession(
 
 router.post('/discount-link/open', discountLinkRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const token = String((req.body as { token?: unknown } | undefined)?.token ?? '');
     const result = await openDiscountPaymentLink({
-      token: String((req.body as { token?: unknown } | undefined)?.token ?? ''),
+      token,
       returnOrigin: parseCheckoutReturnOrigin(req),
       environment: checkoutEnvironmentForRequest(req),
     });
-    return res.json({ ok: true, ...result });
+    if (result.status !== 'invalid') return res.json({ ok: true, ...result });
+    const custom = await openCustomPaymentOfferLink(token);
+    return res.json({
+      ok: true,
+      ...custom,
+      ...(custom.status === 'valid' ? {} : { error: custom.message }),
+    });
   } catch (err) {
     if (err instanceof RetakeCodeError) {
       return res.status(err.status).json({ ok: false, error: err.message });

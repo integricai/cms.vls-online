@@ -35,6 +35,7 @@ interface SentOffer {
   emailSentAt: string | null;
   orderCreatedAt?: string | null;
   orderStatus?: string | null;
+  hasDurablePayLink?: boolean;
   emailSent?: boolean;
   emailError?: string | null;
 }
@@ -202,7 +203,7 @@ export default function CustomPaymentOffer() {
       <div className="border-b border-slate-200 bg-white px-6 py-4">
         <h1 className="text-lg font-bold text-slate-800">Customer Payment Form</h1>
         <p className="mt-0.5 text-xs text-slate-500">
-          Create a USD payment for a student. Choose a course, or describe what the payment is for, then email a live checkout link.
+          Create a USD payment for a student. Choose a course, or describe what the payment is for, then email a payment link. The link opens Stripe when the student clicks it.
         </p>
       </div>
 
@@ -377,7 +378,7 @@ export default function CustomPaymentOffer() {
             <div className="border-b border-slate-200 px-4 py-3">
               <h2 className="text-sm font-semibold text-slate-800">Sent payment requests</h2>
               <p className="mt-0.5 text-xs text-slate-500">
-                Accepted means the student has paid. A course on the request is opened after payment. A description-only request does not grant course access.
+                Accepted means the student has paid. Their link opens a new Stripe page each time they use it, until the payment is received. A course on the request is opened after payment.
               </p>
             </div>
             {notice ? <p className="px-4 pt-3 text-sm text-emerald-700">{notice}</p> : null}
@@ -401,6 +402,7 @@ export default function CustomPaymentOffer() {
                   const status = customPaymentOfferLinkStatus({
                     orderStatus: row.orderStatus,
                     checkoutIssuedAt: row.orderCreatedAt,
+                    durablePayLink: row.hasDurablePayLink === true,
                   });
                   return (
                     <tr key={row.id} className="border-t border-slate-100 align-top">
