@@ -26,14 +26,13 @@ export function discountLinkExpiresAt(from = new Date()): Date {
 }
 
 /**
- * Host of the emailed /pay link.
- * Staging is the default until the page is on the live site.
+ * Host of the emailed /pay link. Students open it on the live site.
  * DISCOUNT_PAY_BASE_URL overrides it.
  */
 export function discountPayBaseUrl(): string {
   const configured = process.env.DISCOUNT_PAY_BASE_URL?.trim();
   if (configured) return configured.replace(/\/+$/, '');
-  return 'https://staging.vls-online.com';
+  return 'https://vls-online.com';
 }
 
 export function discountPayUrl(token: string): string {
