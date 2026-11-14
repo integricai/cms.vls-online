@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/client';
 import type { SaleListItem, SalesFeeSyncResult, Tutor } from '../../../../shared/types';
-import { formatDisplayDate, formatLocalPrice, formatPlainAmount, formatUsdPlainAmount, isSalesPreset, londonToday, monthStart, salesPresetBounds, saleListSessionLabel, sumAmountsInUsd, type SalesPreset } from '../../../../shared/salesFormat';
+import { addIsoDays, amountInUsd, formatDisplayDate, formatLocalPrice, formatPlainAmount, formatUsdPlainAmount, isSalesPreset, londonToday, monthStart, salesPresetBounds, saleListSessionLabel, sumAmountsInUsd, type SalesPreset } from '../../../../shared/salesFormat';
 
 const RANGE_PRESETS: Array<{ id: SalesPreset; label: string }> = [
   { id: 'today', label: 'Today' },
@@ -75,37 +75,110 @@ function plainOrDash(value: string): string {
   return value || '—';
 }
 
-type CountrySalesBar = {
+type CountryDaySeries = {
   code: string;
   name: string;
-  count: number;
-  amounts: Array<{ currency: string; amount: number }>;
+  total: number;
+  values: number[];
 };
 
-/** One bar per country in the loaded live sales. Refunds are left out, matching the page totals. */
-function salesByCountry(rows: SaleListItem[]): CountrySalesBar[] {
-  const groups = new Map<string, { count: number; cents: Map<string, number> }>();
-  for (const sale of rows) {
-    if (sale.paymentStatus === 'Refunded') continue;
-    const code = sale.countryCode?.trim().toUpperCase() || 'Unknown';
-    const group = groups.get(code) ?? { count: 0, cents: new Map<string, number>() };
-    group.count += 1;
-    if (sale.amount != null && !Number.isNaN(Number(sale.amount))) {
-      const currency = (sale.currency || 'USD').trim().toUpperCase() || 'USD';
-      group.cents.set(currency, (group.cents.get(currency) ?? 0) + Math.round(Number(sale.amount) * 100));
-    }
-    groups.set(code, group);
+const CHART_WIDTH = 760;
+const CHART_HEIGHT = 260;
+const CHART_LEFT = 48;
+const CHART_RIGHT = 16;
+const CHART_TOP = 16;
+const CHART_BOTTOM = 32;
+
+function londonIsoDate(value: Date | string | null | undefined): string | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/London',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+function daysInRange(start: string, end: string): string[] {
+  const days: string[] = [];
+  let cursor = start;
+  while (cursor <= end && days.length < 800) {
+    days.push(cursor);
+    cursor = addIsoDays(cursor, 1);
   }
-  return [...groups.entries()]
-    .map(([code, group]) => ({
-      code,
-      name: code === 'Unknown' ? 'Unknown' : countryLabel(code),
-      count: group.count,
-      amounts: [...group.cents.entries()]
-        .map(([currency, value]) => ({ currency, amount: value / 100 }))
-        .sort((a, b) => b.amount - a.amount || a.currency.localeCompare(b.currency)),
-    }))
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  return days;
+}
+
+function formatAxisDollars(amount: number): string {
+  if (amount >= 1000) {
+    const scaled = amount / 1000;
+    return `$${scaled >= 10 ? Math.round(scaled) : scaled.toFixed(1)}k`;
+  }
+  return `$${Math.round(amount)}`;
+}
+
+function formatChartDay(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+/** Daily dollar sales for every country in the selected dates. Refunds are left out. */
+function countryDailySeries(
+  rows: SaleListItem[],
+  from: string,
+  to: string,
+  rates: Record<string, number> | null,
+): { days: string[]; series: CountryDaySeries[]; missingCurrencies: string[] } {
+  const live = rows.filter(sale => sale.paymentStatus !== 'Refunded');
+  let start = from;
+  let end = to;
+  if (!start || !end) {
+    const sold = live
+      .map(sale => londonIsoDate(sale.soldAt))
+      .filter((day): day is string => Boolean(day))
+      .sort();
+    start = sold[0] ?? '';
+    end = sold[sold.length - 1] ?? '';
+  }
+  if (!start || !end || start > end) return { days: [], series: [], missingCurrencies: [] };
+
+  const days = daysInRange(start, end);
+  const slot = new Map(days.map((day, index) => [day, index]));
+  const groups = new Map<string, number[]>();
+  const missing = new Set<string>();
+
+  for (const sale of live) {
+    const day = londonIsoDate(sale.soldAt);
+    const index = day ? slot.get(day) : undefined;
+    if (index == null || sale.amount == null || !Number.isFinite(Number(sale.amount))) continue;
+    const currency = (sale.currency || 'USD').trim().toUpperCase() || 'USD';
+    const usd = amountInUsd(Number(sale.amount), currency, rates);
+    if (usd == null) {
+      missing.add(currency);
+      continue;
+    }
+    const code = sale.countryCode?.trim().toUpperCase() || 'Unknown';
+    const cents = groups.get(code) ?? Array(days.length).fill(0);
+    cents[index] += Math.round(usd * 100);
+    groups.set(code, cents);
+  }
+
+  const series = [...groups.entries()]
+    .map(([code, cents]) => {
+      const totalCents = cents.reduce((sum, value) => sum + value, 0);
+      return {
+        code,
+        name: code === 'Unknown' ? 'Unknown' : countryLabel(code),
+        total: totalCents / 100,
+        values: cents.map(value => value / 100),
+      };
+    })
+    .filter(country => country.total > 0)
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+
+  return { days, series, missingCurrencies: [...missing].sort() };
 }
 
 /** Stable hue from the country code, so a country keeps its colour when the dates change. */
@@ -134,54 +207,114 @@ function CountryFlag({ code }: { code: string }) {
   );
 }
 
-function countrySalesSummary(country: CountrySalesBar): string {
-  const sales = `${country.count} sale${country.count === 1 ? '' : 's'}`;
-  if (country.amounts.length === 0) return sales;
-  return `${sales} · ${country.amounts.map(amount => formatMoney(amount.amount, amount.currency)).join(', ')}`;
+function chartX(index: number, count: number): number {
+  const plot = CHART_WIDTH - CHART_LEFT - CHART_RIGHT;
+  if (count <= 1) return CHART_LEFT + plot / 2;
+  return CHART_LEFT + (index / (count - 1)) * plot;
 }
 
-function CountrySalesChart({ rows, loading }: { rows: SaleListItem[]; loading: boolean }) {
-  const countries = salesByCountry(rows);
-  const max = Math.max(...countries.map(country => country.count), 1);
+function chartY(amount: number, max: number): number {
+  const plot = CHART_HEIGHT - CHART_TOP - CHART_BOTTOM;
+  return CHART_TOP + plot - (amount / max) * plot;
+}
+
+function CountrySalesChart({
+  rows,
+  loading,
+  from,
+  to,
+  rates,
+}: {
+  rows: SaleListItem[];
+  loading: boolean;
+  from: string;
+  to: string;
+  rates: Record<string, number> | null;
+}) {
+  const [activeCode, setActiveCode] = useState<string | null>(null);
+  const { days, series, missingCurrencies } = countryDailySeries(rows, from, to, rates);
+  const peak = Math.max(...series.flatMap(country => country.values), 0);
+  const max = peak > 0 ? peak : 1;
+  const ordered = activeCode
+    ? [...series.filter(country => country.code !== activeCode), ...series.filter(country => country.code === activeCode)]
+    : series;
+  const plotBottom = CHART_HEIGHT - CHART_BOTTOM;
+  const labelEvery = Math.max(1, Math.ceil(days.length / 6));
 
   return (
     <section className="mb-6 rounded-lg border border-slate-200 bg-white" aria-label="Sales by country">
       <h2 className="border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-800">Sales by country</h2>
       {loading ? (
         <p className="px-4 py-8 text-center text-xs text-slate-500">Loading…</p>
-      ) : countries.length === 0 ? (
+      ) : series.length === 0 ? (
         <p className="px-4 py-8 text-center text-xs text-slate-500">No live sales in this date range.</p>
       ) : (
-        <ul className="max-h-[28rem] space-y-2.5 overflow-auto px-4 py-3">
-          {countries.map(country => {
-            const summary = countrySalesSummary(country);
-            const width = Math.max((country.count / max) * 100, 1.5);
-            return (
-              <li
-                key={country.code}
-                className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(11rem,16rem)_minmax(0,1fr)_auto]"
-                title={summary}
-              >
-                <span className="inline-flex min-w-0 items-center gap-2 text-xs text-slate-700">
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: countryColor(country.code) }}
-                    aria-hidden="true"
-                  />
+        <div className="px-4 py-3">
+          <p className="mb-2 text-xs text-slate-500">Dollars sold each day. The amount beside each flag is that country’s total for these dates.</p>
+          <svg viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} className="h-64 w-full" role="img" aria-label="Daily sales by country">
+            {[0, 0.5, 1].map(tick => {
+              const y = chartY(max * tick, max);
+              return (
+                <g key={tick}>
+                  <line x1={CHART_LEFT} x2={CHART_WIDTH - CHART_RIGHT} y1={y} y2={y} stroke="#e2e8f0" strokeDasharray="3 4" />
+                  <text x={CHART_LEFT - 8} y={y + 4} textAnchor="end" fill="#94a3b8" fontSize="11">
+                    {formatAxisDollars(max * tick)}
+                  </text>
+                </g>
+              );
+            })}
+            {ordered.map(country => {
+              const color = countryColor(country.code);
+              const dimmed = activeCode != null && activeCode !== country.code;
+              const path = country.values
+                .map((amount, index) => `${index === 0 ? 'M' : 'L'}${chartX(index, days.length).toFixed(1)},${chartY(amount, max).toFixed(1)}`)
+                .join(' ');
+              return (
+                <g key={country.code} opacity={dimmed ? 0.15 : 1}>
+                  <path d={path} fill="none" stroke={color} strokeWidth="2.25" strokeLinejoin="round" strokeLinecap="round">
+                    <title>{`${country.name}: ${formatMoney(country.total, 'USD')} in this date range`}</title>
+                  </path>
+                  {country.values.map((amount, index) => amount > 0 ? (
+                    <circle key={`${country.code}-${days[index]}`} cx={chartX(index, days.length)} cy={chartY(amount, max)} r="3" fill={color}>
+                      <title>{`${country.name} on ${formatChartDay(days[index])}: ${formatMoney(amount, 'USD')}`}</title>
+                    </circle>
+                  ) : null)}
+                </g>
+              );
+            })}
+            {days.map((day, index) => (
+              index % labelEvery === 0 || index === days.length - 1 ? (
+                <text key={day} x={chartX(index, days.length)} y={plotBottom + 18} textAnchor="middle" fill="#94a3b8" fontSize="11">
+                  {formatChartDay(day)}
+                </text>
+              ) : null
+            ))}
+          </svg>
+          <ul className="mt-3 flex max-h-40 flex-wrap gap-x-4 gap-y-2 overflow-auto">
+            {series.map(country => (
+              <li key={country.code}>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 text-xs text-slate-700"
+                  onMouseEnter={() => setActiveCode(country.code)}
+                  onMouseLeave={() => setActiveCode(null)}
+                  onFocus={() => setActiveCode(country.code)}
+                  onBlur={() => setActiveCode(null)}
+                >
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: countryColor(country.code) }} aria-hidden="true" />
                   <CountryFlag code={country.code} />
-                  <span className="truncate">{country.name}</span>
-                </span>
-                <span className="h-2.5 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
-                  <span
-                    className="block h-full rounded-full"
-                    style={{ width: `${width}%`, backgroundColor: countryColor(country.code) }}
-                  />
-                </span>
-                <span className="text-xs tabular-nums text-slate-600 sm:text-right">{summary}</span>
+                  <span>{country.name}</span>
+                  <span className="tabular-nums text-slate-500">{formatMoney(country.total, 'USD')}</span>
+                </button>
               </li>
-            );
-          })}
-        </ul>
+            ))}
+          </ul>
+          {missingCurrencies.length > 0 ? (
+            <p className="mt-2 text-[11px] text-amber-700">
+              No dollar rate for {missingCurrencies.join(', ')}, so those amounts are not on the chart.
+            </p>
+          ) : null}
+        </div>
       )}
     </section>
   );
@@ -461,7 +594,7 @@ export default function SalesTab() {
         {error ? <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
         {message ? <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</div> : null}
 
-        <CountrySalesChart rows={sales} loading={loading} />
+        <CountrySalesChart rows={sales} loading={loading} from={from} to={to} rates={usdRates} />
 
         <h2 className="mb-2 text-sm font-semibold text-slate-800">Sales</h2>
         {renderSalesTable(sales, 'No live sales in this date range.')}
