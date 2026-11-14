@@ -6,13 +6,14 @@ import HeaderV2 from '../HeaderV2';
 import Books from '../Books';
 import SchoolPageScreen from '../SchoolPages/SchoolPageScreen';
 import { generateSchoolDashboardHtml } from '../SchoolPages/dashboardHtml';
+import { generateSchoolHomeHtml } from '../SchoolPages/homeHtml';
 import { generateSchoolLoggedOutHtml } from '../SchoolPages/loggedOutHtml';
 
-type MainTab = 'books' | 'global' | 'school-dashboard' | 'logged-out';
+type MainTab = 'books' | 'global' | 'school-dashboard' | 'logged-out' | 'home';
 type GlobalPanel = 'header' | 'footer';
 
 function resolveTab(requested: string | null, canContent: boolean): MainTab {
-  if (requested === 'school-dashboard' || requested === 'logged-out') return requested;
+  if (requested === 'school-dashboard' || requested === 'logged-out' || requested === 'home') return requested;
   if (requested === 'books' && canContent) return 'books';
   return 'global';
 }
@@ -28,7 +29,7 @@ export default function ContentMigrationPage() {
 
   function setTab(next: string) {
     const params = new URLSearchParams();
-    if (next === 'books' || next === 'school-dashboard' || next === 'logged-out' || next === 'global') {
+    if (next === 'books' || next === 'school-dashboard' || next === 'logged-out' || next === 'home' || next === 'global') {
       params.set('tab', next);
     } else {
       params.set('tab', 'global');
@@ -48,6 +49,7 @@ export default function ContentMigrationPage() {
     { id: 'global', label: 'Global Header/Footer' },
     { id: 'school-dashboard', label: 'School dashboard' },
     { id: 'logged-out', label: 'Logged out page' },
+    { id: 'home', label: 'Home page' },
     canContent ? { id: 'books', label: 'BPP Books' } : null,
   ].filter((item): item is { id: string; label: string } => item !== null);
 
@@ -83,6 +85,18 @@ export default function ContentMigrationPage() {
             previewStates={[
               { id: 'out', label: 'No session' },
               { id: 'in', label: 'Session alive' },
+            ]}
+          />
+        ) : null}
+        {activeTab === 'home' ? (
+          <SchoolPageScreen
+            title="Home page"
+            sectionName="Home page"
+            hint="Page body only. Header and footer stay in Global Header/Footer. Signed in shows Log out. Signed out shows Log in. Paste into the school home page."
+            html={generateSchoolHomeHtml()}
+            previewStates={[
+              { id: 'in', label: 'Signed in' },
+              { id: 'out', label: 'Signed out' },
             ]}
           />
         ) : null}
