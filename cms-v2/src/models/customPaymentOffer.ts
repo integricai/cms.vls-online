@@ -18,6 +18,8 @@ export interface CustomPaymentOffer {
   checkoutUrl: string | null;
   emailSentAt: Date | null;
   createdAt: Date;
+  /** When the current Stripe Checkout session was created. */
+  orderCreatedAt?: Date | null;
   orderStatus?: string | null;
 }
 
@@ -39,6 +41,7 @@ interface DbRow {
   checkout_url: string | null;
   email_sent_at: Date | null;
   created_at: Date;
+  order_created_at?: Date | null;
   order_status?: string | null;
 }
 
@@ -61,6 +64,7 @@ function rowToOffer(row: DbRow): CustomPaymentOffer {
     checkoutUrl: row.checkout_url,
     emailSentAt: row.email_sent_at,
     createdAt: row.created_at,
+    orderCreatedAt: row.order_created_at ?? null,
     orderStatus: row.order_status ?? null,
   };
 }
@@ -105,6 +109,44 @@ export async function markCustomPaymentOfferEmailSent(id: number): Promise<void>
   `;
 }
 
+export async function getCustomPaymentOfferById(id: number): Promise<CustomPaymentOffer | null> {
+  const rows = await sql`
+    SELECT
+      o.*,
+      COALESCE(c.name, po.course_title) AS course_title,
+      po.status AS order_status,
+      po.created_at AS order_created_at,
+      NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), '') AS created_by_name
+    FROM custom_payment_offers o
+    LEFT JOIN courses c ON c.id = o.course_id
+    JOIN payment_orders po ON po.id = o.payment_order_id
+    LEFT JOIN users u ON u.id = o.created_by_user_id
+    WHERE o.id = ${id}
+    LIMIT 1
+  `;
+  return rows[0] ? rowToOffer(rows[0] as DbRow) : null;
+}
+
+/** Point the offer at a new checkout. A changed or paid row is left unchanged. */
+export async function replaceCustomPaymentCheckout(id: number, input: {
+  previousPaymentOrderId: number;
+  paymentOrderId: number;
+  stripeCheckoutSessionId: string;
+  checkoutUrl: string;
+}): Promise<boolean> {
+  const rows = await sql`
+    UPDATE custom_payment_offers
+    SET payment_order_id = ${input.paymentOrderId},
+        stripe_checkout_session_id = ${input.stripeCheckoutSessionId},
+        checkout_url = ${input.checkoutUrl},
+        email_sent_at = NULL
+    WHERE id = ${id}
+      AND payment_order_id = ${input.previousPaymentOrderId}
+    RETURNING id
+  `;
+  return rows.length > 0;
+}
+
 export async function listCustomPaymentOffers(limit = 50): Promise<CustomPaymentOffer[]> {
   const safeLimit = Math.min(Math.max(limit, 1), 200);
   const rows = await sql`
@@ -112,6 +154,7 @@ export async function listCustomPaymentOffers(limit = 50): Promise<CustomPayment
       o.*,
       COALESCE(c.name, po.course_title) AS course_title,
       po.status AS order_status,
+      po.created_at AS order_created_at,
       NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), '') AS created_by_name
     FROM custom_payment_offers o
     LEFT JOIN courses c ON c.id = o.course_id

@@ -29,7 +29,7 @@
     "test:ga4-report": "ts-node src/services/ga4Report.test.ts",
     "test:meta-conversions": "ts-node src/services/metaConversions.test.ts",
     "test:site-cache": "ts-node src/services/siteCache.test.ts",
-    "test:payments": "ts-node src/services/payments/provider.test.ts && ts-node src/services/paymentEmails.test.ts",
+    "test:payments": "ts-node src/services/payments/provider.test.ts && ts-node src/services/paymentEmails.test.ts && ts-node src/services/customPaymentOfferStatus.test.ts",
     "test:notes-curriculum": "ts-node src/services/notesCurriculumBackfill.test.ts",
     "backfill-notes-curriculum": "npx tsx scripts/backfill-notes-curriculum.ts",
     "test:notes-links": "ts-node src/services/notesUrlRewrite.test.ts",

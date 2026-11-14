@@ -14,6 +14,7 @@ import {
 import { createActivityLog } from '../models/activityLog';
 import { getPaymentProvider } from '../services/payments/registry';
 import { sendCustomPaymentOfferEmail } from '../services/paymentEmails';
+import { CustomPaymentOfferError, resendCustomPaymentOffer } from '../services/customPaymentOffer';
 
 const router = Router();
 router.use(authGuard, requireRole('admin', 'assistant'));
@@ -208,9 +209,45 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         checkoutUrl: session.checkoutUrl,
         emailSent,
         orderStatus: order.status,
+        orderCreatedAt: order.createdAt,
       },
     });
   } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/:id/resend', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parsePositiveInt(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, error: 'Payment offer not found' });
+
+    const issued = await resendCustomPaymentOffer(id);
+    await createActivityLog({
+      userId: req.user?.userId ?? null,
+      userEmail: req.user?.email ?? null,
+      username: req.user?.username ?? null,
+      userRole: req.user?.role ?? null,
+      action: 'update',
+      componentKey: 'custom-payment-offer',
+      componentName: 'Custom Payment Offer',
+      summary: `Resent custom payment offer ${issued.id} to ${issued.studentEmail}`,
+      changedPaths: ['custom_payment_offers'],
+      afterJson: {
+        offerId: issued.id,
+        orderId: issued.paymentOrderId,
+        courseId: issued.courseId,
+        emailSent: issued.emailSent,
+      },
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+
+    return res.json({ ok: true, data: issued });
+  } catch (err) {
+    if (err instanceof CustomPaymentOfferError) {
+      return res.status(err.status).json({ ok: false, error: err.message });
+    }
     next(err);
   }
 });
