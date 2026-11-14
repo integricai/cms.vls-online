@@ -19,10 +19,6 @@ export function generateSchoolLoggedOutHtml(): string {
   }
   .vls-school-out *{box-sizing:border-box;}
   .vls-school-out a{text-decoration:none;color:inherit;}
-  .vls-school-out .lk{display:flex;align-items:center;gap:13px;margin-bottom:26px;}
-  .vls-school-out .lk-mark{width:50px;height:50px;border-radius:13px;background:var(--blue);display:grid;place-items:center;color:#fff;font-weight:700;font-size:28px;flex:none;box-shadow:0 6px 20px rgba(30,80,200,.45);}
-  .vls-school-out .lk-name{display:block;font-weight:600;font-size:19px;color:#fff;line-height:1.1;}
-  .vls-school-out .lk-sub{display:block;font-size:9px;font-weight:600;letter-spacing:.155em;color:#93A8CC;text-transform:uppercase;margin-top:5px;}
   .vls-school-out .card{width:100%;max-width:470px;background:#fff;border-radius:20px;box-shadow:var(--shadow);padding:36px 36px 30px;}
   .vls-school-out .pill{display:inline-flex;align-items:center;gap:7px;background:var(--blue-50);border:1px solid var(--blue-100);color:var(--blue);font-size:11.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border-radius:999px;margin-bottom:16px;}
   .vls-school-out h1{font-size:26px;color:var(--navy);font-weight:600;letter-spacing:-.015em;line-height:1.2;margin:0;}
@@ -57,10 +53,6 @@ export function generateSchoolLoggedOutHtml(): string {
   }
 </style>
 <div class="vls-school-out">
-  <a class="lk" href="https://vls-online.com">
-    <span class="lk-mark">V</span>
-    <span><span class="lk-name">Vertex Learning Solutions</span><span class="lk-sub">Changing Behaviours Through Education</span></span>
-  </a>
   <div class="state-out" id="vls-school-signed-out">
     <div class="card">
       <span class="pill">Student portal</span>
