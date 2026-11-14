@@ -4,9 +4,18 @@ import PageTabs from '../../components/PageTabs';
 import FooterV2 from '../FooterV2';
 import HeaderV2 from '../HeaderV2';
 import Books from '../Books';
+import SchoolPageScreen from '../SchoolPages/SchoolPageScreen';
+import { generateSchoolDashboardHtml } from '../SchoolPages/dashboardHtml';
+import { generateSchoolLoggedOutHtml } from '../SchoolPages/loggedOutHtml';
 
-type MainTab = 'books' | 'global';
+type MainTab = 'books' | 'global' | 'school-dashboard' | 'logged-out';
 type GlobalPanel = 'header' | 'footer';
+
+function resolveTab(requested: string | null, canContent: boolean): MainTab {
+  if (requested === 'school-dashboard' || requested === 'logged-out') return requested;
+  if (requested === 'books' && canContent) return 'books';
+  return 'global';
+}
 
 export default function ContentMigrationPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -14,14 +23,16 @@ export default function ContentMigrationPage() {
     return <Navigate to="/payments?tab=book-codes" replace />;
   }
   const canContent = canManageContent(getCurrentUser()?.role);
-  const requested = searchParams.get('tab');
-  const tab: MainTab = requested === 'books' ? 'books' : 'global';
-  const activeTab: MainTab = !canContent ? 'global' : tab;
+  const activeTab = resolveTab(searchParams.get('tab'), canContent);
   const globalPanel: GlobalPanel = searchParams.get('global') === 'footer' ? 'footer' : 'header';
 
   function setTab(next: string) {
     const params = new URLSearchParams();
-    params.set('tab', next === 'books' ? 'books' : 'global');
+    if (next === 'books' || next === 'school-dashboard' || next === 'logged-out' || next === 'global') {
+      params.set('tab', next);
+    } else {
+      params.set('tab', 'global');
+    }
     setSearchParams(params, { replace: true });
   }
 
@@ -35,6 +46,8 @@ export default function ContentMigrationPage() {
 
   const mainTabs = [
     { id: 'global', label: 'Global Header/Footer' },
+    { id: 'school-dashboard', label: 'School dashboard' },
+    { id: 'logged-out', label: 'Logged out page' },
     canContent ? { id: 'books', label: 'BPP Books' } : null,
   ].filter((item): item is { id: string; label: string } => item !== null);
 
@@ -53,6 +66,22 @@ export default function ContentMigrationPage() {
       ) : null}
       <div className="min-h-0 flex-1 overflow-hidden">
         {activeTab === 'books' ? <Books /> : null}
+        {activeTab === 'school-dashboard' ? (
+          <SchoolPageScreen
+            title="School dashboard"
+            sectionName="School dashboard"
+            hint="Logged-in homepage for school.vls-online.com. Sample student shown. Courses and progress come from Zenler; access expiry and the last payment come from the vault. Paste into the Zenler logged-in home page."
+            html={generateSchoolDashboardHtml()}
+          />
+        ) : null}
+        {activeTab === 'logged-out' ? (
+          <SchoolPageScreen
+            title="Logged out page"
+            sectionName="Logged out page"
+            hint="Shown when a student opens school.vls-online.com without a session. Sign in goes to Zenler's own login. Paste into the Zenler logged-out home page."
+            html={generateSchoolLoggedOutHtml()}
+          />
+        ) : null}
         {activeTab === 'global' ? (
           <div className="h-full">
             {globalPanel === 'header' ? <HeaderV2 /> : <FooterV2 />}
