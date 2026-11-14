@@ -75,6 +75,119 @@ function plainOrDash(value: string): string {
   return value || '—';
 }
 
+type CountrySalesBar = {
+  code: string;
+  name: string;
+  count: number;
+  amounts: Array<{ currency: string; amount: number }>;
+};
+
+/** One bar per country in the loaded live sales. Refunds are left out, matching the page totals. */
+function salesByCountry(rows: SaleListItem[]): CountrySalesBar[] {
+  const groups = new Map<string, { count: number; cents: Map<string, number> }>();
+  for (const sale of rows) {
+    if (sale.paymentStatus === 'Refunded') continue;
+    const code = sale.countryCode?.trim().toUpperCase() || 'Unknown';
+    const group = groups.get(code) ?? { count: 0, cents: new Map<string, number>() };
+    group.count += 1;
+    if (sale.amount != null && !Number.isNaN(Number(sale.amount))) {
+      const currency = (sale.currency || 'USD').trim().toUpperCase() || 'USD';
+      group.cents.set(currency, (group.cents.get(currency) ?? 0) + Math.round(Number(sale.amount) * 100));
+    }
+    groups.set(code, group);
+  }
+  return [...groups.entries()]
+    .map(([code, group]) => ({
+      code,
+      name: code === 'Unknown' ? 'Unknown' : countryLabel(code),
+      count: group.count,
+      amounts: [...group.cents.entries()]
+        .map(([currency, value]) => ({ currency, amount: value / 100 }))
+        .sort((a, b) => b.amount - a.amount || a.currency.localeCompare(b.currency)),
+    }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
+/** Stable hue from the country code, so a country keeps its colour when the dates change. */
+function countryColor(code: string): string {
+  if (code === 'Unknown') return '#94a3b8';
+  let hash = 2166136261;
+  for (let index = 0; index < code.length; index += 1) {
+    hash ^= code.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  const hue = ((hash >>> 0) * 137.508) % 360;
+  return `hsl(${hue.toFixed(1)} 62% 46%)`;
+}
+
+function CountryFlag({ code }: { code: string }) {
+  const flag = code.toLowerCase();
+  if (!/^[a-z]{2}$/.test(flag)) return null;
+  return (
+    <img
+      src={`https://flagcdn.com/w40/${flag}.png`}
+      srcSet="https://flagcdn.com/w80/${flag}.png 2x"
+      width={20}
+      height={15}
+      alt=""
+      className="h-[15px] w-5 shrink-0 rounded-sm object-cover"
+    />
+  );
+}
+
+function countrySalesSummary(country: CountrySalesBar): string {
+  const sales = `${country.count} sale${country.count === 1 ? '' : 's'}`;
+  if (country.amounts.length === 0) return sales;
+  return `${sales} · ${country.amounts.map(amount => formatMoney(amount.amount, amount.currency)).join(', ')}`;
+}
+
+function CountrySalesChart({ rows, loading }: { rows: SaleListItem[]; loading: boolean }) {
+  const countries = salesByCountry(rows);
+  const max = Math.max(...countries.map(country => country.count), 1);
+
+  return (
+    <section className="mb-6 rounded-lg border border-slate-200 bg-white" aria-label="Sales by country">
+      <h2 className="border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-800">Sales by country</h2>
+      {loading ? (
+        <p className="px-4 py-8 text-center text-xs text-slate-500">Loading…</p>
+      ) : countries.length === 0 ? (
+        <p className="px-4 py-8 text-center text-xs text-slate-500">No live sales in this date range.</p>
+      ) : (
+        <ul className="max-h-[28rem] space-y-2.5 overflow-auto px-4 py-3">
+          {countries.map(country => {
+            const summary = countrySalesSummary(country);
+            const width = Math.max((country.count / max) * 100, 1.5);
+            return (
+              <li
+                key={country.code}
+                className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(11rem,16rem)_minmax(0,1fr)_auto]"
+                title={summary}
+              >
+                <span className="inline-flex min-w-0 items-center gap-2 text-xs text-slate-700">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: countryColor(country.code) }}
+                    aria-hidden="true"
+                  />
+                  <CountryFlag code={country.code} />
+                  <span className="truncate">{country.name}</span>
+                </span>
+                <span className="h-2.5 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+                  <span
+                    className="block h-full rounded-full"
+                    style={{ width: `${width}%`, backgroundColor: countryColor(country.code) }}
+                  />
+                </span>
+                <span className="text-xs tabular-nums text-slate-600 sm:text-right">{summary}</span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function dollarTotals(
   rows: SaleListItem[],
   rates: Record<string, number> | null,
@@ -348,6 +461,8 @@ export default function SalesTab() {
 
         {error ? <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
         {message ? <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</div> : null}
+
+        <CountrySalesChart rows={sales} loading={loading} />
 
         <h2 className="mb-2 text-sm font-semibold text-slate-800">Sales</h2>
         {renderSalesTable(sales, 'No live sales in this date range.')}
