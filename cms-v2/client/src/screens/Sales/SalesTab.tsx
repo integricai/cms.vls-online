@@ -126,7 +126,6 @@ function CountryFlag({ code }: { code: string }) {
   return (
     <img
       src={`https://flagcdn.com/w40/${flag}.png`}
-      srcSet="https://flagcdn.com/w80/${flag}.png 2x"
       width={20}
       height={15}
       alt=""
