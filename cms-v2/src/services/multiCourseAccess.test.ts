@@ -3,6 +3,7 @@ import {
   comboPricingZenlerIdFromStoryContent,
   comboZenlerIdsFromEnv,
   extractMultiCoursePaperZenlerIds,
+  isSinglePurchaseComboStory,
 } from './multiCourseStoryblokAllowlist';
 import {
   assertBundleCheckoutHasSelection,
@@ -103,6 +104,18 @@ run('combo selection allows 2 through every listed course', () => {
   assert.throws(
     () => assertComboSelectionSize(7, 6),
     (err: unknown) => err instanceof MultiCourseAccessError && /up to 6/i.test(err.message),
+  );
+});
+
+run('notes packs accept a single paper', () => {
+  assert.strictEqual(isSinglePurchaseComboStory({}, 'courses/acca-notes-combo-pack'), true);
+  assert.strictEqual(isSinglePurchaseComboStory({}, 'courses/cima-notes-combo-pack'), true);
+  assert.strictEqual(isSinglePurchaseComboStory({ single_purchase: 'true' }, 'courses/acca-courses-combo-pack'), true);
+  assert.strictEqual(isSinglePurchaseComboStory({}, 'courses/cima-courses-combo-pack'), false);
+  assert.doesNotThrow(() => assertComboSelectionSize(1, 6, 1));
+  assert.throws(
+    () => assertComboSelectionSize(0, 6, 1),
+    (err: unknown) => err instanceof MultiCourseAccessError && /at least 1 course/i.test(err.message),
   );
 });
 
