@@ -17,7 +17,7 @@ export const STRIPE_RETURNING_STUDENT_MESSAGE =
   'Already a Vertex student? Use the email you log in with.';
 
 /** Stripe drops line breaks from product text, so the summary list is an image. */
-export const STRIPE_ORDER_SUMMARY_IMAGE_URL = 'https://cms.vls-online.com/stripe-order-summary-v2.png';
+export const STRIPE_ORDER_SUMMARY_IMAGE_URL = 'https://cms.vls-online.com/stripe-order-summary-v3.png';
 
 const STRIPE_BRAND_COLOR = '#0b1f3a';
 const STRIPE_BRAND_ICON_URL = 'https://vls-online.com/icon.png';
