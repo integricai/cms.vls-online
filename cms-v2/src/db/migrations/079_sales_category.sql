@@ -28,19 +28,25 @@ ALTER TABLE sales
   CHECK (expiry_date IS NULL OR expiry_date > sold_at);
 
 UPDATE sales AS s
-SET category = CASE
-  WHEN po.option_type = 'BPP Book' THEN 'BPP Book'
-  WHEN po.option_type = 'Custom payment' THEN 'Payment Order'
-  WHEN po.option_type = 'Custom / Resit offer' THEN 'Discount Order'
-  WHEN COALESCE(c.name, '') ILIKE '%notes%'
-    OR COALESCE(c.course_page_url, '') ILIKE '%notes%'
-    OR COALESCE(c.slug, '') ILIKE '%notes%'
-    THEN 'Notes'
-  ELSE 'Course'
-END
-FROM payment_orders AS po
-LEFT JOIN courses AS c ON c.id = s.course_id
-WHERE s.payment_order_id = po.id
+SET category = labelled.category
+FROM (
+  SELECT
+    sale.id,
+    CASE
+      WHEN po.option_type = 'BPP Book' THEN 'BPP Book'
+      WHEN po.option_type = 'Custom payment' THEN 'Payment Order'
+      WHEN po.option_type = 'Custom / Resit offer' THEN 'Discount Order'
+      WHEN COALESCE(c.name, '') ILIKE '%notes%'
+        OR COALESCE(c.course_page_url, '') ILIKE '%notes%'
+        OR COALESCE(c.slug, '') ILIKE '%notes%'
+        THEN 'Notes'
+      ELSE 'Course'
+    END AS category
+  FROM sales AS sale
+  JOIN payment_orders AS po ON po.id = sale.payment_order_id
+  LEFT JOIN courses AS c ON c.id = sale.course_id
+) AS labelled
+WHERE s.id = labelled.id
   AND s.category IS NULL;
 
 UPDATE sales

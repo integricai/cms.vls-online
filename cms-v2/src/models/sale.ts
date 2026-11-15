@@ -74,22 +74,39 @@ function saleCategoryFromRow(value: string | null | undefined): SaleCategory {
 /** Adds the sales category. Books and custom charges stay without a course or access length. */
 export function ensureSaleCategory(): Promise<void> {
   saleCategoryReady ??= (async () => {
+    try {
+      await applySaleCategory();
+    } catch (err) {
+      saleCategoryReady = null;
+      throw err;
+    }
+  })();
+  return saleCategoryReady;
+}
+
+async function applySaleCategory(): Promise<void> {
     await sql`ALTER TABLE sales ADD COLUMN IF NOT EXISTS category TEXT`;
     await sql`
       UPDATE sales AS s
-      SET category = CASE
-        WHEN po.option_type = 'BPP Book' THEN 'BPP Book'
-        WHEN po.option_type = 'Custom payment' THEN 'Payment Order'
-        WHEN po.option_type = 'Custom / Resit offer' THEN 'Discount Order'
-        WHEN COALESCE(c.name, '') ILIKE '%notes%'
-          OR COALESCE(c.course_page_url, '') ILIKE '%notes%'
-          OR COALESCE(c.slug, '') ILIKE '%notes%'
-          THEN 'Notes'
-        ELSE 'Course'
-      END
-      FROM payment_orders AS po
-      LEFT JOIN courses AS c ON c.id = s.course_id
-      WHERE s.payment_order_id = po.id
+      SET category = labelled.category
+      FROM (
+        SELECT
+          sale.id,
+          CASE
+            WHEN po.option_type = 'BPP Book' THEN 'BPP Book'
+            WHEN po.option_type = 'Custom payment' THEN 'Payment Order'
+            WHEN po.option_type = 'Custom / Resit offer' THEN 'Discount Order'
+            WHEN COALESCE(c.name, '') ILIKE '%notes%'
+              OR COALESCE(c.course_page_url, '') ILIKE '%notes%'
+              OR COALESCE(c.slug, '') ILIKE '%notes%'
+              THEN 'Notes'
+            ELSE 'Course'
+          END AS category
+        FROM sales AS sale
+        JOIN payment_orders AS po ON po.id = sale.payment_order_id
+        LEFT JOIN courses AS c ON c.id = sale.course_id
+      ) AS labelled
+      WHERE s.id = labelled.id
         AND s.category IS NULL
     `;
     await sql`UPDATE sales SET category = 'Course' WHERE category IS NULL`;
@@ -102,8 +119,6 @@ export function ensureSaleCategory(): Promise<void> {
     await sql`ALTER TABLE sales ALTER COLUMN category SET DEFAULT 'Course'`;
     await sql`ALTER TABLE sales ALTER COLUMN category SET NOT NULL`;
     await sql`CREATE INDEX IF NOT EXISTS sales_category_idx ON sales (category)`;
-  })();
-  return saleCategoryReady;
 }
 
 function num(value: string | number | null | undefined): number | null {

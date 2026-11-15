@@ -1,7 +1,7 @@
 import type { BookRecord } from '../../shared/types';
 import { resolveCheckoutEnvironment } from './attribution';
 import { resolveCheckoutReturnUrl } from './checkoutSiteUrl';
-import { stripePaymentMethodTypes, stripeSecretKeyForEnvironment, stripeUnitAmount } from './stripeCheckout';
+import { appendStripeAdaptivePricing, stripePaymentMethodTypes, stripeSecretKeyForEnvironment, stripeUnitAmount } from './stripeCheckout';
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
 /** The amount Stripe should charge: the discounted price when one is set, otherwise the list price. */
@@ -59,6 +59,7 @@ export async function createBookCheckoutUrl(
   params.append('line_items[0][price_data][currency]', currency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', book.title.slice(0, 250));
   params.append('line_items[0][price_data][unit_amount]', String(stripeUnitAmount(amount, currency)));
+  appendStripeAdaptivePricing(params);
   params.append('line_items[0][quantity]', '1');
   params.append('client_reference_id', String(order.id));
   params.append('metadata[orderId]', String(order.id));
