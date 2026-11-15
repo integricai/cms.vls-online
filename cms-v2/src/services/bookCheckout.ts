@@ -1,7 +1,15 @@
 import type { BookRecord } from '../../shared/types';
 import { resolveCheckoutEnvironment } from './attribution';
 import { resolveCheckoutReturnUrl } from './checkoutSiteUrl';
-import { appendStripeAdaptivePricing, stripePaymentMethodTypes, stripeSecretKeyForEnvironment, stripeUnitAmount } from './stripeCheckout';
+import {
+  appendStripeAdaptivePricing,
+  appendStripeBranding,
+  appendStripeOrderSummaryImage,
+  STRIPE_RETURNING_STUDENT_MESSAGE,
+  stripePaymentMethodTypes,
+  stripeSecretKeyForEnvironment,
+  stripeUnitAmount,
+} from './stripeCheckout';
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
 /** The amount Stripe should charge: the discounted price when one is set, otherwise the list price. */
@@ -55,9 +63,12 @@ export async function createBookCheckoutUrl(
   }
   params.append('success_url', withBookCheckoutResult(returnUrl, 'success'));
   params.append('cancel_url', withBookCheckoutResult(returnUrl, 'cancelled'));
+  params.append('custom_text[submit][message]', STRIPE_RETURNING_STUDENT_MESSAGE);
   params.append('billing_address_collection', 'required');
+  appendStripeBranding(params);
   params.append('line_items[0][price_data][currency]', currency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', book.title.slice(0, 250));
+  appendStripeOrderSummaryImage(params);
   params.append('line_items[0][price_data][unit_amount]', String(stripeUnitAmount(amount, currency)));
   appendStripeAdaptivePricing(params);
   params.append('line_items[0][quantity]', '1');
