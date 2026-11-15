@@ -1,7 +1,11 @@
 import type { BookRecord } from '../../shared/types';
 import { resolveCheckoutEnvironment } from './attribution';
 import { resolveCheckoutReturnUrl } from './checkoutSiteUrl';
-import { createStripeCheckoutSession, safeCheckoutCancelPath } from './stripeCheckout';
+import {
+  STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL,
+  createStripeCheckoutSession,
+  safeCheckoutCancelPath,
+} from './stripeCheckout';
 
 /** The amount Stripe should charge: the discounted price when one is set, otherwise the list price. */
 export function bookChargeAmount(book: Pick<BookRecord, 'price' | 'discountedPrice'>): number | null {
@@ -64,6 +68,7 @@ export async function createBookCheckoutUrl(
     returnOrigin: returnUrl,
     cancelPath: bookCancelPath(returnUrl),
     environment,
+    orderSummaryImageUrl: STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL,
   });
   if (!session.url) {
     throw new Error('Stripe did not return a checkout URL');

@@ -10,6 +10,7 @@ import {
   majorAmountFromStripeMinor,
   safeCheckoutCancelPath,
   STRIPE_RETURNING_STUDENT_MESSAGE,
+  STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL,
   STRIPE_ORDER_SUMMARY_IMAGE_URL,
   stripeMethodsForCharge,
   stripePaymentMethodTypes,
@@ -297,6 +298,36 @@ void (async () => {
       assert.strictEqual(page.get('custom_text[submit][message]'), STRIPE_RETURNING_STUDENT_MESSAGE);
     });
   }
+
+  const bookImage = new URLSearchParams();
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    for (const [key, value] of init.body as URLSearchParams) bookImage.append(key, value);
+    return new Response(JSON.stringify({ id: 'cs_stub', url: 'https://checkout.stripe.com/stub' }));
+  }) as typeof fetch;
+  process.env.STRIPE_SECRET_KEY = 'sk_test_stub';
+  try {
+    await createStripeCheckoutSession({
+      orderId: 2,
+      zenlerCourseId: '',
+      courseTitle: 'ACCA AAA - Bundle',
+      paymentCardTitle: 'ACCA AAA - Bundle',
+      amount: 44,
+      currency: 'USD',
+      studentEmail: null,
+      environment: 'staging',
+      orderSummaryImageUrl: STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL,
+    });
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  run('uses the book summary image only when a book checkout asks for it', () => {
+    assert.strictEqual(
+      bookImage.get('line_items[0][price_data][product_data][images][0]'),
+      STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL,
+    );
+    assert.notStrictEqual(STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL, STRIPE_ORDER_SUMMARY_IMAGE_URL);
+  });
 
   console.log('stripeCheckout tests passed');
 })().catch((err) => {

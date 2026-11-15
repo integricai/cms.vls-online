@@ -19,6 +19,9 @@ export const STRIPE_RETURNING_STUDENT_MESSAGE =
 /** Stripe drops line breaks from product text, so the summary list is an image. */
 export const STRIPE_ORDER_SUMMARY_IMAGE_URL = 'https://cms.vls-online.com/stripe-order-summary-v3.png';
 
+/** Book checkout uses its own summary. The course image promises tutor support and a refund. */
+export const STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL = 'https://cms.vls-online.com/stripe-order-summary-books.png';
+
 const STRIPE_BRAND_COLOR = '#0b1f3a';
 const STRIPE_BRAND_ICON_URL = 'https://vls-online.com/icon.png';
 
@@ -63,8 +66,11 @@ export function safeCheckoutCancelPath(value: string | null | undefined): string
   return path;
 }
 
-export function appendStripeOrderSummaryImage(params: URLSearchParams): void {
-  params.append('line_items[0][price_data][product_data][images][0]', STRIPE_ORDER_SUMMARY_IMAGE_URL);
+export function appendStripeOrderSummaryImage(
+  params: URLSearchParams,
+  imageUrl = STRIPE_ORDER_SUMMARY_IMAGE_URL,
+): void {
+  params.append('line_items[0][price_data][product_data][images][0]', imageUrl);
 }
 
 /** Vertex navy and icon on the order summary. */
@@ -236,6 +242,8 @@ export async function createStripeCheckoutSession(input: {
   localPresentment?: LocalPresentment | null;
   /** An emailed offer that was saved in a local currency. The amount is that offer, not today's price. */
   savedOffer?: boolean;
+  /** Product image on the Stripe summary. Courses keep the default course image. */
+  orderSummaryImageUrl?: string | null;
 }): Promise<StripeCheckoutSession> {
   if (!input.savedOffer) assertStripeUsdCharge(input.currency);
   const chargeCurrency = input.currency.toUpperCase();
@@ -271,7 +279,7 @@ export async function createStripeCheckoutSession(input: {
   // The charge and the price on the Stripe page are both USD.
   params.append('line_items[0][price_data][currency]', chargeCurrency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
-  appendStripeOrderSummaryImage(params);
+  appendStripeOrderSummaryImage(params, input.orderSummaryImageUrl || STRIPE_ORDER_SUMMARY_IMAGE_URL);
   params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
   appendStripeAdaptivePricing(params);
   params.append('line_items[0][quantity]', '1');
