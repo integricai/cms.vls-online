@@ -21,6 +21,7 @@ function emptyForm() {
     currency: 'GBP',
     stripeUrl: '',
     courseId: '',
+    courseName: '',
     isActive: true,
   };
 }
@@ -38,6 +39,7 @@ function bookToForm(book: BookRecord): BookForm {
     currency: book.currency,
     stripeUrl: book.stripeUrl,
     courseId: book.courseId ? String(book.courseId) : '',
+    courseName: book.courseName ?? '',
     isActive: book.isActive,
   };
 }
@@ -55,6 +57,13 @@ function formToPayload(form: BookForm) {
     courseId: form.courseId ? Number(form.courseId) : null,
     isActive: form.isActive,
   };
+}
+
+function courseOptionLabel(course: CourseOption, options: CourseOption[]): string {
+  const name = course.name.trim() || `Course ${course.id}`;
+  const key = name.toLowerCase();
+  const shared = options.filter(item => (item.name.trim() || `Course ${item.id}`).toLowerCase() === key).length;
+  return shared > 1 ? `${name} (#${course.id})` : name;
 }
 
 function money(book: BookRecord): string {
@@ -481,13 +490,25 @@ export default function BooksScreen() {
                       <input className="input" value={form.title} onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))} />
                     </Field>
                     <Field label="Course">
-                      <select className="input" value={form.courseId} onChange={e => setForm(prev => ({ ...prev, courseId: e.target.value }))}>
+                      <select
+                        className="input"
+                        value={form.courseId}
+                        onChange={event => {
+                          const courseId = event.target.value;
+                          const course = courses.find(item => String(item.id) === courseId);
+                          setForm(prev => ({
+                            ...prev,
+                            courseId,
+                            courseName: course?.name ?? (courseId ? prev.courseName : ''),
+                          }));
+                        }}
+                      >
                         <option value="">No course</option>
                         {form.courseId && !courses.some(course => String(course.id) === form.courseId) && (
-                          <option value={form.courseId}>{selected?.courseName || `Course ${form.courseId}`}</option>
+                          <option value={form.courseId}>{form.courseName || `Course ${form.courseId}`}</option>
                         )}
                         {courses.map(course => (
-                          <option key={course.id} value={course.id}>{course.name}</option>
+                          <option key={course.id} value={course.id}>{courseOptionLabel(course, courses)}</option>
                         ))}
                       </select>
                     </Field>

@@ -948,12 +948,14 @@ export interface BookRecord {
   currency: string;
   stripeUrl: string;
   sourceUrl: string;
+  courseId: number | null;
+  courseName?: string | null;
   lastSyncedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export type ScrapedBook = Omit<BookRecord, 'id' | 'sortOrder' | 'quantity' | 'lastSyncedAt' | 'createdAt' | 'updatedAt'>;
+export type ScrapedBook = Omit<BookRecord, 'id' | 'sortOrder' | 'quantity' | 'courseId' | 'courseName' | 'lastSyncedAt' | 'createdAt' | 'updatedAt'>;
 
 export interface BookSyncResult {
   scraped: number;
