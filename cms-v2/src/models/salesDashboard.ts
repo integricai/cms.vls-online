@@ -119,7 +119,11 @@ export async function listRecentSalesActivity(limit: number, includeRefunded: bo
         s.currency,
         po.presentment_amount,
         po.presentment_currency,
-        CASE WHEN s.course_id IS NULL THEN 'Payment Order' ELSE c.name END AS course_name,
+        CASE
+          WHEN po.option_type = 'BPP Book' THEN COALESCE(po.course_title, 'BPP Book')
+          WHEN s.course_id IS NULL THEN 'Payment Order'
+          ELSE c.name
+        END AS course_name,
         cu.first_name,
         cu.last_name,
         s.session_month,
@@ -141,7 +145,11 @@ export async function listRecentSalesActivity(limit: number, includeRefunded: bo
         s.currency,
         po.presentment_amount,
         po.presentment_currency,
-        CASE WHEN s.course_id IS NULL THEN 'Payment Order' ELSE c.name END AS course_name,
+        CASE
+          WHEN po.option_type = 'BPP Book' THEN COALESCE(po.course_title, 'BPP Book')
+          WHEN s.course_id IS NULL THEN 'Payment Order'
+          ELSE c.name
+        END AS course_name,
         cu.first_name,
         cu.last_name,
         s.session_month,

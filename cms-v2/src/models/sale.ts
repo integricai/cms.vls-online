@@ -5,15 +5,18 @@ import type {
   PaymentOrderStatus,
   Sale,
   SaleAssignmentStatus,
+  SaleCategory,
   SaleCourseSummary,
   SaleListItem,
   SaleTutorSummary,
 } from '../../shared/types';
+import { isSaleCategory } from '../services/saleCategory';
 
 export interface SaleDbRow {
   id: number;
   customer_id: number;
   course_id: number | null;
+  category: string | null;
   course_price_id: number | null;
   payment_order_id: number;
   amount: string;
@@ -62,6 +65,47 @@ interface SaleListDbRow extends SaleDbRow {
   presentment_currency: string | null;
 }
 
+let saleCategoryReady: Promise<void> | null = null;
+
+function saleCategoryFromRow(value: string | null | undefined): SaleCategory {
+  return value && isSaleCategory(value) ? value : 'Course';
+}
+
+/** Adds the sales category. Books and custom charges stay without a course or access length. */
+export function ensureSaleCategory(): Promise<void> {
+  saleCategoryReady ??= (async () => {
+    await sql`ALTER TABLE sales ADD COLUMN IF NOT EXISTS category TEXT`;
+    await sql`
+      UPDATE sales AS s
+      SET category = CASE
+        WHEN po.option_type = 'BPP Book' THEN 'BPP Book'
+        WHEN po.option_type = 'Custom payment' THEN 'Payment Order'
+        WHEN po.option_type = 'Custom / Resit offer' THEN 'Discount Order'
+        WHEN COALESCE(c.name, '') ILIKE '%notes%'
+          OR COALESCE(c.course_page_url, '') ILIKE '%notes%'
+          OR COALESCE(c.slug, '') ILIKE '%notes%'
+          THEN 'Notes'
+        ELSE 'Course'
+      END
+      FROM payment_orders AS po
+      LEFT JOIN courses AS c ON c.id = s.course_id
+      WHERE s.payment_order_id = po.id
+        AND s.category IS NULL
+    `;
+    await sql`UPDATE sales SET category = 'Course' WHERE category IS NULL`;
+    await sql`ALTER TABLE sales DROP CONSTRAINT IF EXISTS sales_category_check`;
+    await sql`
+      ALTER TABLE sales
+      ADD CONSTRAINT sales_category_check
+      CHECK (category IN ('Course', 'Notes', 'BPP Book', 'Payment Order', 'Discount Order'))
+    `;
+    await sql`ALTER TABLE sales ALTER COLUMN category SET DEFAULT 'Course'`;
+    await sql`ALTER TABLE sales ALTER COLUMN category SET NOT NULL`;
+    await sql`CREATE INDEX IF NOT EXISTS sales_category_idx ON sales (category)`;
+  })();
+  return saleCategoryReady;
+}
+
 function num(value: string | number | null | undefined): number | null {
   if (value == null) return null;
   return Number(value);
@@ -85,6 +129,7 @@ export function rowToSale(row: SaleDbRow): Sale {
     durationDays: row.duration_days,
     soldAt: row.sold_at,
     expiryDate: row.expiry_date,
+    category: saleCategoryFromRow(row.category),
     sessionMonth: row.session_month ?? null,
     sessionYear: row.session_year ?? null,
     countryCode: saleCountryCode(row.country_code),
@@ -144,21 +189,28 @@ export function computeCommissionAmount(amount: number, commissionPercent: numbe
 }
 
 export async function getSaleById(id: number): Promise<Sale | null> {
+  await ensureSaleCategory();
   const rows = await sql`SELECT * FROM sales WHERE id = ${id}`;
   return rows[0] ? rowToSale(rows[0] as SaleDbRow) : null;
 }
 
 export async function getSaleByPaymentOrderId(paymentOrderId: number): Promise<Sale | null> {
+  await ensureSaleCategory();
   const rows = await sql`SELECT * FROM sales WHERE payment_order_id = ${paymentOrderId}`;
   return rows[0] ? rowToSale(rows[0] as SaleDbRow) : null;
 }
 
 export async function getSaleListItemById(id: number): Promise<SaleListItem | null> {
   await ensurePaymentPresentmentColumns();
+  await ensureSaleCategory();
   const rows = await sql`
     SELECT
       s.*,
-      CASE WHEN s.course_id IS NULL THEN 'Payment Order' ELSE c.name END AS course_name,
+      CASE
+        WHEN po.option_type = 'BPP Book' THEN COALESCE(po.course_title, 'BPP Book')
+        WHEN s.course_id IS NULL THEN 'Payment Order'
+        ELSE c.name
+      END AS course_name,
       CASE WHEN s.course_id IS NULL THEN o.discount_reason ELSE NULL END AS payment_reason,
       cu.email AS customer_email,
       cu.first_name AS customer_first_name,
@@ -217,8 +269,10 @@ export async function createSale(data: {
   expiryDate?: Date | null;
   sessionMonth?: number | null;
   sessionYear?: number | null;
+  category: SaleCategory;
   countryCode?: string | null;
 }): Promise<Sale> {
+  await ensureSaleCategory();
   const expiryDate = data.expiryDate
     ?? (data.courseId != null && data.durationDays != null
       ? computeExpiryDate(data.soldAt, data.durationDays)
@@ -229,7 +283,7 @@ export async function createSale(data: {
       customer_id, course_id, course_price_id, payment_order_id,
       amount, currency, discount_percent, duration_days, sold_at, expiry_date,
       session_month, session_year, session_checked_at, session_from_checkout,
-      country_code, assignment_status
+      country_code, category, assignment_status
     )
     VALUES (
       ${data.customerId},
@@ -247,6 +301,7 @@ export async function createSale(data: {
       NOW(),
       ${data.sessionMonth != null && data.sessionYear != null},
       ${countryCode},
+      ${data.category},
       'AwaitingTutor'
     )
     RETURNING *
@@ -267,6 +322,7 @@ export type ListSalesFilters = {
 
 export async function listSales(filters: ListSalesFilters = {}): Promise<SaleListItem[]> {
   await ensurePaymentPresentmentColumns();
+  await ensureSaleCategory();
   const status = filters.status ?? 'All';
   const courseId = filters.courseId ?? null;
   const tutorId = filters.tutorId ?? null;
@@ -277,7 +333,11 @@ export async function listSales(filters: ListSalesFilters = {}): Promise<SaleLis
   const rows = await sql`
     SELECT
       s.*,
-      CASE WHEN s.course_id IS NULL THEN 'Payment Order' ELSE c.name END AS course_name,
+      CASE
+        WHEN po.option_type = 'BPP Book' THEN COALESCE(po.course_title, 'BPP Book')
+        WHEN s.course_id IS NULL THEN 'Payment Order'
+        ELSE c.name
+      END AS course_name,
       CASE WHEN s.course_id IS NULL THEN o.discount_reason ELSE NULL END AS payment_reason,
       cu.email AS customer_email,
       cu.first_name AS customer_first_name,
@@ -456,13 +516,18 @@ export async function getSaleDetailForInvite(saleId: number): Promise<{
   const rows = await sql`
     SELECT
       s.*,
-      CASE WHEN s.course_id IS NULL THEN 'Payment Order' ELSE c.name END AS course_name,
+      CASE
+        WHEN po.option_type = 'BPP Book' THEN COALESCE(po.course_title, 'BPP Book')
+        WHEN s.course_id IS NULL THEN 'Payment Order'
+        ELSE c.name
+      END AS course_name,
       CASE WHEN s.course_id IS NULL THEN o.discount_reason ELSE NULL END AS payment_reason,
       cu.first_name AS customer_first_name,
       cu.email AS customer_email
     FROM sales s
     LEFT JOIN courses c ON c.id = s.course_id
     LEFT JOIN custom_payment_offers o ON o.payment_order_id = s.payment_order_id
+    LEFT JOIN payment_orders po ON po.id = s.payment_order_id
     LEFT JOIN customers cu ON cu.id = s.customer_id
     WHERE s.id = ${saleId}
     LIMIT 1

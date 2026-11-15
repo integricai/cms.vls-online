@@ -18,6 +18,26 @@ function isLocalHttpHost(hostname: string): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1';
 }
 
+/** A same-site page to send the buyer back to, else the public books page. */
+export function resolveCheckoutReturnUrl(raw: unknown, fallbackPath = '/bppbooks'): string {
+  const path = fallbackPath.startsWith('/') ? fallbackPath : `/${fallbackPath}`;
+  const fallback = `${defaultCheckoutSiteUrl()}${path}`;
+  if (typeof raw !== 'string' || !raw.trim()) return fallback;
+
+  try {
+    const url = new URL(raw.trim());
+    const hostname = url.hostname.toLowerCase();
+    const httpsOk = url.protocol === 'https:';
+    const localHttpOk = url.protocol === 'http:' && isLocalHttpHost(hostname);
+    if (url.username || url.password || (!httpsOk && !localHttpOk) || !ALLOWED_CHECKOUT_RETURN_HOSTS.has(hostname)) {
+      return fallback;
+    }
+    return url.toString();
+  } catch {
+    return fallback;
+  }
+}
+
 /** Stripe/PayPal return host from the requesting site, else PUBLIC_SITE_URL. */
 export function resolveCheckoutSiteUrl(origin?: unknown): string {
   if (typeof origin !== 'string' || !origin.trim()) {

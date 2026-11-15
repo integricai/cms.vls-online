@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/client';
-import type { SaleListItem, SalesFeeSyncResult, Tutor } from '../../../../shared/types';
+import type { SaleCategory, SaleListItem, SalesFeeSyncResult, Tutor } from '../../../../shared/types';
 import { addIsoDays, amountInUsd, formatDisplayDate, formatLocalPrice, formatPlainAmount, formatUsdPlainAmount, isSalesPreset, londonToday, monthStart, salesPresetBounds, saleListSessionLabel, sumAmountsInUsd, type SalesPreset } from '../../../../shared/salesFormat';
+
+const CATEGORY_OPTIONS: Array<SaleCategory | 'All'> = [
+  'All',
+  'Course',
+  'Notes',
+  'BPP Book',
+  'Payment Order',
+  'Discount Order',
+];
 
 const RANGE_PRESETS: Array<{ id: SalesPreset; label: string }> = [
   { id: 'today', label: 'Today' },
@@ -377,6 +386,7 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
     'StripeId',
     'User Name',
     'User Email',
+    'Category',
     'Course',
     'Session',
     'Country',
@@ -392,7 +402,8 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
     sale.providerPaymentId ?? sale.stripePaymentIntentId ?? '',
     customerName(sale),
     sale.customerEmail ?? '',
-    sale.courseName || `Course #${sale.courseId}`,
+    sale.category,
+    sale.courseName || (sale.courseId != null ? `Course #${sale.courseId}` : '—'),
     saleListSessionLabel(sale.durationDays, sale.expiryDate, sale.paymentReason, sale.sessionMonth, sale.sessionYear),
     countryLabel(sale.countryCode),
     sale.paymentMethod ?? '',
@@ -416,6 +427,7 @@ export default function SalesTab() {
   const [to, setTo] = useState(() => londonToday());
   const [preset, setPreset] = useState<SalesPreset | ''>('');
   const [usdRates, setUsdRates] = useState<Record<string, number> | null>(null);
+  const [category, setCategory] = useState<SaleCategory | 'All'>('All');
   const [sales, setSales] = useState<SaleListItem[]>([]);
   const [sandboxSales, setSandboxSales] = useState<SaleListItem[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
@@ -503,7 +515,7 @@ export default function SalesTab() {
     if (sale.paymentStatus === 'Refunded') return;
     const confirmed = window.confirm(
       sale.courseId == null
-        ? `Refund ${formatMoney(sale.amount, sale.currency)} for this payment order?\n\nThis will create a full refund in ${processorLabel(sale)}.`
+        ? `Refund ${formatMoney(sale.amount, sale.currency)} for ${sale.courseName || 'this payment'}?\n\nThis will create a full refund in ${processorLabel(sale)}.`
         : `Refund ${formatMoney(sale.amount, sale.currency)} for ${sale.courseName || `course #${sale.courseId}`}?\n\nThis will create a full refund in ${processorLabel(sale)} and revoke the student's access to this course.`,
     );
     if (!confirmed) return;
@@ -529,15 +541,17 @@ export default function SalesTab() {
     return linked.length > 0 ? linked : tutors;
   }
 
-  const columnCount = 14;
-  const totals = dollarTotals(sales, usdRates);
+  const columnCount = 15;
+  const visibleSales = category === 'All' ? sales : sales.filter(sale => sale.category === category);
+  const visibleSandbox = category === 'All' ? sandboxSales : sandboxSales.filter(sale => sale.category === category);
+  const totals = dollarTotals(visibleSales, usdRates);
 
   return (
     <div className="h-full overflow-auto">
       <div className="border-b border-slate-200 bg-white px-6 py-4">
         <h1 className="text-lg font-bold text-slate-800">Sales</h1>
         <p className="mt-0.5 text-xs text-slate-500">
-          Live course sales. Staging checkouts are listed under Sandbox and tests and are not included in the dashboard or the download.
+          Live sales. Staging checkouts are listed under Sandbox and tests and are not included in the dashboard or the download.
         </p>
       </div>
       <div className="p-6">
@@ -562,6 +576,18 @@ export default function SalesTab() {
               <option value="">Custom range</option>
               {RANGE_PRESETS.map(option => (
                 <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-slate-600">
+            Category
+            <select
+              className="input mt-1 w-auto"
+              value={category}
+              onChange={event => setCategory(event.target.value as SaleCategory | 'All')}
+            >
+              {CATEGORY_OPTIONS.map(option => (
+                <option key={option} value={option}>{option}</option>
               ))}
             </select>
           </label>
@@ -596,8 +622,8 @@ export default function SalesTab() {
           <button
             type="button"
             className="btn-primary"
-            disabled={loading || sales.length === 0}
-            onClick={() => downloadSales(sales, from, to)}
+            disabled={loading || visibleSales.length === 0}
+            onClick={() => downloadSales(visibleSales, from, to)}
           >
             Download
           </button>
@@ -626,14 +652,14 @@ export default function SalesTab() {
         {error ? <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
         {message ? <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</div> : null}
 
-        <CountrySalesChart rows={sales} loading={loading} from={from} to={to} rates={usdRates} />
+        <CountrySalesChart rows={visibleSales} loading={loading} from={from} to={to} rates={usdRates} />
 
         <h2 className="mb-2 text-sm font-semibold text-slate-800">Sales</h2>
-        {renderSalesTable(sales, 'No live sales in this date range.')}
+        {renderSalesTable(visibleSales, 'No live sales in this date range.')}
 
         <h2 className="mb-1 mt-8 text-sm font-semibold text-slate-800">Sandbox and tests</h2>
         <p className="mb-2 text-xs text-slate-500">Staging checkouts. These are kept out of the sales totals.</p>
-        {renderSalesTable(sandboxSales, 'No sandbox sales in this date range.')}
+        {renderSalesTable(visibleSandbox, 'No sandbox sales in this date range.')}
       </div>
     </div>
   );
@@ -648,6 +674,7 @@ export default function SalesTab() {
                 <th className="px-3 py-2">StripeId</th>
                 <th className="px-3 py-2">User name</th>
                 <th className="px-3 py-2">User email</th>
+                <th className="px-3 py-2">Category</th>
                 <th className="px-3 py-2">Course</th>
                 <th className="px-3 py-2">Session</th>
                 <th className="px-3 py-2">Country</th>
@@ -690,7 +717,8 @@ export default function SalesTab() {
                     </td>
                     <td className="px-3 py-2">{customerName(sale)}</td>
                     <td className="px-3 py-2">{sale.customerEmail || '—'}</td>
-                    <td className="px-3 py-2">{sale.courseName || `Course #${sale.courseId}`}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{sale.category}</td>
+                    <td className="px-3 py-2">{sale.courseName || (sale.courseId != null ? `Course #${sale.courseId}` : '—')}</td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       {saleListSessionLabel(sale.durationDays, sale.expiryDate, sale.paymentReason, sale.sessionMonth, sale.sessionYear)}
                       <div className="text-[11px] text-slate-400">Sold {formatDisplayDate(sale.soldAt)}</div>
@@ -706,7 +734,7 @@ export default function SalesTab() {
                     <td className="px-3 py-2 whitespace-nowrap">{plainOrDash(formatPlainAmount(sale.netAmount))}</td>
                     <td className="px-3 py-2">
                       <div className="flex flex-col gap-1">
-                        {sale.courseId != null && sale.paymentStatus !== 'Refunded' && !sale.tutorId ? (
+                        {(sale.category === 'Course' || sale.category === 'Notes') && sale.paymentStatus !== 'Refunded' && !sale.tutorId ? (
                           <div className="flex flex-wrap items-center gap-1">
                             <select
                               className="input text-[11px]"

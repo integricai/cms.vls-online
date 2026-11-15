@@ -18,6 +18,7 @@ import {
   adminAssignSale,
   previewSaleAccept,
 } from '../services/saleAssignment';
+import { saleCategoryAssignsTutor } from '../services/saleCategory';
 import { sendStudentRefundConfirmation } from '../services/paymentEmails';
 import { getPaymentRefundProvider } from '../services/payments/registry';
 import { revokeZenlerAccessForRefundedOrder } from '../services/zenlerEnrollmentEnsure';
@@ -176,7 +177,9 @@ router.get('/:id/eligible-tutors', requireRole('admin'), async (req, res, next) 
     if (!id) return res.status(400).json({ ok: false, error: 'Invalid sale id' });
     const sale = await getSaleById(id);
     if (!sale) return res.status(404).json({ ok: false, error: 'Sale not found' });
-    if (sale.courseId == null) return res.json({ ok: true, data: [] });
+    if (sale.courseId == null || !saleCategoryAssignsTutor(sale.category)) {
+      return res.json({ ok: true, data: [] });
+    }
     const tutors = await listActiveTutorsForCourse(sale.courseId);
     return res.json({ ok: true, data: tutors });
   } catch (err) {

@@ -52,6 +52,7 @@ import { refreshGeoPricingCache } from './services/geoPricing';
 import pricingRegionsRouter from './routes/pricingRegions';
 import qualificationOfferRulesRouter from './routes/qualificationOfferRules';
 import { listPublicBooks } from './models/book';
+import { createBookCheckoutUrl } from './services/bookCheckout';
 import { mapActiveCoursesForFinder } from './services/courseFinderPublish';
 
 const app = express();
@@ -286,6 +287,25 @@ app.get('/api/publish-bpp-books', async (_req, res, next) => {
     return res.json({ books: await listPublicBooks() });
   } catch (err) {
     next(err);
+  }
+});
+
+app.get('/api/bpp-books/:id/checkout', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).type('text/plain').send('Invalid book');
+  }
+  try {
+    const url = await createBookCheckoutUrl(id, {
+      returnTo: typeof req.query.return === 'string' ? req.query.return : '',
+      origin: req.get('origin'),
+      referer: req.get('referer'),
+    });
+    if (!url) return res.status(404).type('text/plain').send('This book is not available to buy.');
+    return res.redirect(url);
+  } catch (err) {
+    console.error('[bpp-books-checkout]', err);
+    return res.status(502).type('text/plain').send('Checkout could not be started. Please try again.');
   }
 });
 

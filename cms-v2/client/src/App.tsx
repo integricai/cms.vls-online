@@ -37,6 +37,7 @@ import Payments from './screens/Payments';
 import Students from './screens/Students';
 import GoogleConversions from './screens/GoogleConversions';
 import ContentMigrationPage from './screens/ContentMigration/Page';
+import Books from './screens/Books';
 import CoursesPage from './screens/Courses/Page';
 import AcceptSale from './screens/AcceptSale';
 import ExamResult from './screens/ExamResult';
@@ -72,6 +73,10 @@ function RequirePayments({ children }: { children: React.ReactNode }) {
   return canUsePayments(getCurrentUser()?.role) ? <>{children}</> : <Navigate to={vaultHome()} replace />;
 }
 
+function RequireContent({ children }: { children: React.ReactNode }) {
+  return canManageContent(getCurrentUser()?.role) ? <>{children}</> : <Navigate to={vaultHome()} replace />;
+}
+
 function VaultHome() {
   return <Navigate to={vaultHome()} replace />;
 }
@@ -79,7 +84,7 @@ function VaultHome() {
 function LegacyContentRedirect() {
   const [params] = useSearchParams();
   const tab = params.get('tab');
-  if (tab === 'books') return <Navigate to="/content-migration?tab=books" replace />;
+  if (tab === 'books') return <Navigate to="/books" replace />;
   if (tab === 'courses') return <Navigate to="/courses" replace />;
   return <Navigate to="/content-migration" replace />;
 }
@@ -145,7 +150,7 @@ export default function App() {
           <Route path="/page-desc-with-menu"  element={<PageDescWithMenu />} />
           <Route path="/split-screen-sections" element={<Navigate to="/split-screen/left-hero" replace />} />
           <Route path="/blog-migration"    element={<Navigate to="/content-migration?tab=global" replace />} />
-          <Route path="/books"             element={<Navigate to="/content-migration?tab=books" replace />} />
+          <Route path="/books"             element={<RequireContent><Books /></RequireContent>} />
           <Route path="/courses"           element={<RequireAdmin><CoursesPage /></RequireAdmin>} />
           <Route path="/prices-configuration" element={<Navigate to="/courses?tab=configuration" replace />} />
           <Route path="/settings"          element={<RequireAdmin><SettingsPage /></RequireAdmin>} />

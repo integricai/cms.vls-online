@@ -578,6 +578,8 @@ export interface ExamEmailBulkSendResult {
   results: ExamEmailSendResult[];
 }
 
+export type SaleCategory = 'Course' | 'Notes' | 'BPP Book' | 'Payment Order' | 'Discount Order';
+
 export interface Sale {
   id: number;
   customerId: number;
@@ -590,6 +592,7 @@ export interface Sale {
   durationDays: number | null;
   soldAt: Date;
   expiryDate: Date | null;
+  category: SaleCategory;
   /** Exam sitting purchased. Null for a fixed-length plan. */
   sessionMonth: number | null;
   sessionYear: number | null;

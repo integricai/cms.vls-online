@@ -10,13 +10,16 @@ import {
   markInviteAccepted,
 } from '../models/saleTutorInvite';
 import { getTutorById, listActiveTutorsForCourse } from '../models/tutor';
+import { saleCategoryAssignsTutor } from './saleCategory';
 
 /**
  * Auto-assign the course's tutor after payment.
  * Each course has a single teacher — no claim-invite emails.
  */
 export async function autoAssignCourseTutorForSale(sale: Sale): Promise<Sale | null> {
-  if (sale.tutorId || sale.courseId == null) return sale.tutorId ? sale : null;
+  if (sale.tutorId || sale.courseId == null || !saleCategoryAssignsTutor(sale.category)) {
+    return sale.tutorId ? sale : null;
+  }
 
   const tutors = await listActiveTutorsForCourse(sale.courseId);
   if (tutors.length === 0) {
@@ -162,7 +165,9 @@ export async function adminAssignSale(saleId: number, tutorId: number): Promise<
 }> {
   const sale = await getSaleById(saleId);
   if (!sale) return { ok: false, error: 'Sale not found' };
-  if (sale.courseId == null) return { ok: false, error: 'This payment has no course to assign' };
+  if (sale.courseId == null || !saleCategoryAssignsTutor(sale.category)) {
+    return { ok: false, error: 'Only course and notes sales can be assigned to a tutor' };
+  }
   if (sale.tutorId) return { ok: false, error: 'Sale is already assigned to a tutor' };
 
   const order = await getPaymentOrder(sale.paymentOrderId);

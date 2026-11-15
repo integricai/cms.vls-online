@@ -18,6 +18,8 @@ interface DbRow {
   currency: string;
   stripe_url: string;
   source_url: string;
+  course_id: number | null;
+  course_name: string | null;
   last_synced_at: Date | null;
   created_at: Date;
   updated_at: Date;
@@ -64,8 +66,48 @@ async function ensureBookSchema(): Promise<void> {
     await sql`CREATE INDEX IF NOT EXISTS idx_books_sort_order ON books(sort_order ASC, title ASC)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_books_is_active_sort_order ON books(is_active, sort_order ASC, title ASC)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_books_updated_at ON books(updated_at DESC)`;
+    await sql`ALTER TABLE books ADD COLUMN IF NOT EXISTS course_id INTEGER`;
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_books_course_id ON books(course_id)`;
+    const courses = await sql`
+      SELECT 1 AS ok
+      FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'courses'
+      LIMIT 1
+    `;
+    if (courses.length) {
+      try {
+        await sql`
+          ALTER TABLE books
+          ADD CONSTRAINT books_course_id_fkey
+          FOREIGN KEY (course_id) REFERENCES courses(id)
+          ON DELETE SET NULL
+        `;
+      } catch (err) {
+        const code = pgErrorCode(err);
+        if (code !== '42710' && code !== '42P07') throw err;
+      }
+    }
   })();
   return schemaReady;
+}
+
+export class BookCourseLinkError extends Error {
+  constructor() {
+    super('That course is already linked to another book.');
+  }
+}
+
+function pgErrorCode(err: unknown): string {
+  if (typeof err !== 'object' || err === null) return '';
+  const error = err as { code?: string; cause?: { code?: string } };
+  return error.code || error.cause?.code || '';
+}
+
+function isCourseLinkConflict(err: unknown): boolean {
+  if (pgErrorCode(err) !== '23505') return false;
+  const error = err as { constraint?: string; message?: string; cause?: { constraint?: string; message?: string } };
+  const text = `${error.constraint ?? ''} ${error.message ?? ''} ${error.cause?.constraint ?? ''} ${error.cause?.message ?? ''}`;
+  return /course_id/i.test(text);
 }
 
 function slugForStripeReference(value: string): string {
@@ -137,6 +179,8 @@ function rowToBook(row: DbRow): BookRecord {
     currency: row.currency,
     stripeUrl: row.stripe_url,
     sourceUrl: row.source_url,
+    courseId: row.course_id ?? null,
+    courseName: row.course_name ?? null,
     lastSyncedAt: row.last_synced_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -186,9 +230,10 @@ export async function listBooks(): Promise<BookRecord[]> {
   await ensureBookSchema();
   await backfillStripeReferences();
   const rows = await sql`
-    SELECT *
+    SELECT books.*, courses.name AS course_name
     FROM books
-    ORDER BY COALESCE(sort_order, 2147483647) ASC, title ASC, id ASC
+    LEFT JOIN courses ON courses.id = books.course_id
+    ORDER BY COALESCE(books.sort_order, 2147483647) ASC, books.title ASC, books.id ASC
   `;
   return (rows as DbRow[]).map(rowToBook);
 }
@@ -197,10 +242,11 @@ export async function listPublicBooks(): Promise<BookRecord[]> {
   await ensureBookSchema();
   await backfillStripeReferences();
   const rows = await sql`
-    SELECT *
+    SELECT books.*, courses.name AS course_name
     FROM books
-    WHERE is_active = TRUE
-    ORDER BY COALESCE(sort_order, 2147483647) ASC, title ASC, id ASC
+    LEFT JOIN courses ON courses.id = books.course_id
+    WHERE books.is_active = TRUE
+    ORDER BY COALESCE(books.sort_order, 2147483647) ASC, books.title ASC, books.id ASC
   `;
   return (rows as DbRow[]).map(rowToBook);
 }
@@ -209,9 +255,10 @@ export async function getBook(id: number): Promise<BookRecord | null> {
   await ensureBookSchema();
   await backfillStripeReferences();
   const rows = await sql`
-    SELECT *
+    SELECT books.*, courses.name AS course_name
     FROM books
-    WHERE id = ${id}
+    LEFT JOIN courses ON courses.id = books.course_id
+    WHERE books.id = ${id}
   `;
   return rows[0] ? rowToBook(rows[0] as DbRow) : null;
 }
@@ -247,18 +294,24 @@ export async function reorderBooks(ids: number[]): Promise<BookRecord[]> {
 }
 
 export async function createBook(
-  data: Pick<BookRecord, 'title' | 'description' | 'imageUrl' | 'imageAltText' | 'price' | 'discountedPrice' | 'currency' | 'stripeUrl' | 'isActive'>,
+  data: Pick<BookRecord, 'title' | 'description' | 'imageUrl' | 'imageAltText' | 'price' | 'discountedPrice' | 'currency' | 'stripeUrl' | 'isActive' | 'courseId'>,
 ): Promise<BookRecord> {
   await ensureBookSchema();
-  const rows = await sql`
-    INSERT INTO books
-      (title, description, image_url, image_alt_text, price, discounted_price, currency, stripe_url, source_url, sort_order, is_active)
-    VALUES
-      (${data.title}, ${data.description}, ${data.imageUrl}, ${data.imageAltText}, ${data.price},
-       ${data.discountedPrice}, ${data.currency}, ${data.stripeUrl}, 'manual',
-       COALESCE((SELECT MAX(sort_order) + 1 FROM books), 1), ${data.isActive})
-    RETURNING *
-  `;
+  let rows;
+  try {
+    rows = await sql`
+      INSERT INTO books
+        (title, description, image_url, image_alt_text, price, discounted_price, currency, stripe_url, source_url, course_id, sort_order, is_active)
+      VALUES
+        (${data.title}, ${data.description}, ${data.imageUrl}, ${data.imageAltText}, ${data.price},
+         ${data.discountedPrice}, ${data.currency}, ${data.stripeUrl}, 'manual', ${data.courseId},
+         COALESCE((SELECT MAX(sort_order) + 1 FROM books), 1), ${data.isActive})
+      RETURNING *
+    `;
+  } catch (err) {
+    if (isCourseLinkConflict(err)) throw new BookCourseLinkError();
+    throw err;
+  }
   const inserted = rowToBook(rows[0] as DbRow);
   const stripeUrl = stripeUrlWithBookReference(inserted.stripeUrl, inserted);
   if (stripeUrl !== inserted.stripeUrl) {
@@ -273,7 +326,7 @@ export async function createBook(
 
 export async function updateBook(
   id: number,
-  data: Partial<Pick<BookRecord, 'title' | 'description' | 'imageUrl' | 'imageAltText' | 'price' | 'discountedPrice' | 'currency' | 'stripeUrl' | 'isActive'>>,
+  data: Partial<Pick<BookRecord, 'title' | 'description' | 'imageUrl' | 'imageAltText' | 'price' | 'discountedPrice' | 'currency' | 'stripeUrl' | 'isActive' | 'courseId'>>,
 ): Promise<BookRecord | null> {
   await ensureBookSchema();
   const existing = await getBook(id);
@@ -284,20 +337,26 @@ export async function updateBook(
     title: nextTitle,
   });
 
-  await sql`
-    UPDATE books
-    SET title = ${nextTitle},
-        description = ${data.description ?? existing.description},
-        image_url = ${data.imageUrl ?? existing.imageUrl},
-        image_alt_text = ${data.imageAltText ?? existing.imageAltText},
-        price = ${data.price ?? existing.price},
-        discounted_price = ${data.discountedPrice !== undefined ? data.discountedPrice : existing.discountedPrice},
-        currency = ${data.currency ?? existing.currency},
-        stripe_url = ${nextStripeUrl},
-        is_active = ${data.isActive ?? existing.isActive},
-        updated_at = NOW()
-    WHERE id = ${id}
-  `;
+  try {
+    await sql`
+      UPDATE books
+      SET title = ${nextTitle},
+          description = ${data.description ?? existing.description},
+          image_url = ${data.imageUrl ?? existing.imageUrl},
+          image_alt_text = ${data.imageAltText ?? existing.imageAltText},
+          price = ${data.price ?? existing.price},
+          discounted_price = ${data.discountedPrice !== undefined ? data.discountedPrice : existing.discountedPrice},
+          currency = ${data.currency ?? existing.currency},
+          stripe_url = ${nextStripeUrl},
+          course_id = ${data.courseId !== undefined ? data.courseId : existing.courseId},
+          is_active = ${data.isActive ?? existing.isActive},
+          updated_at = NOW()
+      WHERE id = ${id}
+    `;
+  } catch (err) {
+    if (isCourseLinkConflict(err)) throw new BookCourseLinkError();
+    throw err;
+  }
 
   return getBook(id);
 }

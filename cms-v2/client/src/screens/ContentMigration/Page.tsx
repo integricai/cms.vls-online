@@ -1,20 +1,17 @@
 import { Navigate, useSearchParams } from 'react-router-dom';
-import { canManageContent, getCurrentUser } from '../../api/client';
 import PageTabs from '../../components/PageTabs';
 import FooterV2 from '../FooterV2';
 import HeaderV2 from '../HeaderV2';
-import Books from '../Books';
 import SchoolPageScreen from '../SchoolPages/SchoolPageScreen';
 import { generateSchoolDashboardHtml } from '../SchoolPages/dashboardHtml';
 import { generateSchoolHomeHtml } from '../SchoolPages/homeHtml';
 import { generateSchoolLoggedOutHtml } from '../SchoolPages/loggedOutHtml';
 
-type MainTab = 'books' | 'global' | 'school-dashboard' | 'logged-out' | 'home';
+type MainTab = 'global' | 'school-dashboard' | 'logged-out' | 'home';
 type GlobalPanel = 'header' | 'footer';
 
-function resolveTab(requested: string | null, canContent: boolean): MainTab {
+function resolveTab(requested: string | null): MainTab {
   if (requested === 'school-dashboard' || requested === 'logged-out' || requested === 'home') return requested;
-  if (requested === 'books' && canContent) return 'books';
   return 'global';
 }
 
@@ -23,13 +20,15 @@ export default function ContentMigrationPage() {
   if (searchParams.get('booksTab') === 'discounts') {
     return <Navigate to="/payments?tab=book-codes" replace />;
   }
-  const canContent = canManageContent(getCurrentUser()?.role);
-  const activeTab = resolveTab(searchParams.get('tab'), canContent);
+  if (searchParams.get('tab') === 'books') {
+    return <Navigate to="/books" replace />;
+  }
+  const activeTab = resolveTab(searchParams.get('tab'));
   const globalPanel: GlobalPanel = searchParams.get('global') === 'footer' ? 'footer' : 'header';
 
   function setTab(next: string) {
     const params = new URLSearchParams();
-    if (next === 'books' || next === 'school-dashboard' || next === 'logged-out' || next === 'home' || next === 'global') {
+    if (next === 'school-dashboard' || next === 'logged-out' || next === 'home' || next === 'global') {
       params.set('tab', next);
     } else {
       params.set('tab', 'global');
@@ -50,8 +49,7 @@ export default function ContentMigrationPage() {
     { id: 'school-dashboard', label: 'School dashboard' },
     { id: 'logged-out', label: 'Logged out page' },
     { id: 'home', label: 'Home page' },
-    canContent ? { id: 'books', label: 'BPP Books' } : null,
-  ].filter((item): item is { id: string; label: string } => item !== null);
+  ];
 
   return (
     <div className="flex h-full flex-col">
@@ -67,7 +65,6 @@ export default function ContentMigrationPage() {
         />
       ) : null}
       <div className="min-h-0 flex-1 overflow-hidden">
-        {activeTab === 'books' ? <Books /> : null}
         {activeTab === 'school-dashboard' ? (
           <SchoolPageScreen
             title="School dashboard"

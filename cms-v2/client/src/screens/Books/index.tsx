@@ -1,7 +1,14 @@
-import { useEffect, useState } from 'react';
-import { api, getCurrentUser } from '../../api/client';
+import { useEffect, useRef, useState } from 'react';
+import { api, getCurrentUser, getToken } from '../../api/client';
 import Field from '../../components/Field';
 import type { BookRecord } from '../../../../shared/types';
+
+type CourseOption = { id: number; name: string };
+type BookImportResult = {
+  created: number;
+  updated: number;
+  errors: Array<{ rowNumber: number; message: string }>;
+};
 
 function emptyForm() {
   return {
@@ -13,6 +20,7 @@ function emptyForm() {
     discountedPrice: '',
     currency: 'GBP',
     stripeUrl: '',
+    courseId: '',
     isActive: true,
   };
 }
@@ -29,6 +37,7 @@ function bookToForm(book: BookRecord): BookForm {
     discountedPrice: book.discountedPrice != null ? String(book.discountedPrice) : '',
     currency: book.currency,
     stripeUrl: book.stripeUrl,
+    courseId: book.courseId ? String(book.courseId) : '',
     isActive: book.isActive,
   };
 }
@@ -43,6 +52,7 @@ function formToPayload(form: BookForm) {
     discountedPrice: form.discountedPrice === '' ? null : Number(form.discountedPrice),
     currency: form.currency.trim() || 'GBP',
     stripeUrl: form.stripeUrl.trim(),
+    courseId: form.courseId ? Number(form.courseId) : null,
     isActive: form.isActive,
   };
 }
@@ -65,6 +75,10 @@ export default function BooksScreen() {
   const [orderDirty, setOrderDirty] = useState(false);
   const [draggedId, setDraggedId] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [courses, setCourses] = useState<CourseOption[]>([]);
+  const [importing, setImporting] = useState(false);
+  const workbookRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = getCurrentUser()?.role === 'admin';
   const selected = books.find(book => book.id === selectedId) ?? null;
@@ -76,9 +90,12 @@ export default function BooksScreen() {
       const data = await api.get<BookRecord[]>('/books');
       setBooks(data);
       setOrderDirty(false);
-      if (data.length && selectedId == null) {
-        setSelectedId(data[0].id);
-        setForm(bookToForm(data[0]));
+      if (!creating) {
+        const current = selectedId != null ? data.find(book => book.id === selectedId) : data[0];
+        if (current) {
+          if (selectedId == null) setSelectedId(current.id);
+          setForm(bookToForm(current));
+        }
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not load books.');
@@ -87,13 +104,66 @@ export default function BooksScreen() {
     }
   }
 
-  useEffect(() => { loadBooks(); }, []);
+  useEffect(() => {
+    loadBooks();
+    api.get<CourseOption[]>('/books/course-options')
+      .then(setCourses)
+      .catch(() => setCourses([]));
+  }, []);
 
   function selectBook(book: BookRecord) {
     setSelectedId(book.id);
     setForm(bookToForm(book));
     setCreating(false);
     setError('');
+  }
+
+  async function downloadTemplate() {
+    setError('');
+    setNotice('');
+    const token = getToken();
+    const base = (import.meta.env.VITE_API_URL ?? '') + '/api';
+    const response = await fetch(`${base}/books/template`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!response.ok) {
+      setError('Could not download the template.');
+      return;
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'bpp-books-template.xlsx';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function uploadTemplate(file: File) {
+    setImporting(true);
+    setError('');
+    setNotice('');
+    try {
+      const fileBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = typeof reader.result === 'string' ? reader.result : '';
+          const comma = result.indexOf(',');
+          resolve(comma >= 0 ? result.slice(comma + 1) : result);
+        };
+        reader.onerror = () => reject(new Error('Could not read the Excel file.'));
+        reader.readAsDataURL(file);
+      });
+      const result = await api.post<BookImportResult>('/books/import', { fileBase64 });
+      await loadBooks();
+      const problems = result.errors.map(item => `Row ${item.rowNumber}: ${item.message}`);
+      setNotice(`${result.created} added, ${result.updated} updated.`);
+      setError(problems.join(' '));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Upload failed.');
+    } finally {
+      setImporting(false);
+    }
   }
 
   function addBook() {
@@ -227,8 +297,28 @@ export default function BooksScreen() {
               Books are managed directly in the CMS database. This table is the source of truth for the BPP Books component.
             </p>
           </div>
-          <button onClick={addBook} className="btn-primary shrink-0 text-xs">+ New book</button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button onClick={() => downloadTemplate().catch(() => setError('Could not download the template.'))} className="btn-ghost text-xs">
+              Download template
+            </button>
+            <button onClick={() => workbookRef.current?.click()} disabled={importing} className="btn-ghost text-xs">
+              {importing ? 'Uploading…' : 'Upload'}
+            </button>
+            <input
+              ref={workbookRef}
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              className="hidden"
+              onChange={event => {
+                const file = event.target.files?.[0];
+                event.currentTarget.value = '';
+                if (file) void uploadTemplate(file);
+              }}
+            />
+            <button onClick={addBook} className="btn-primary text-xs">+ New book</button>
+          </div>
         </div>
+        {notice && <p className="mt-3 text-xs text-slate-600">{notice}</p>}
         {error && <p className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
       </div>
 
@@ -390,6 +480,18 @@ export default function BooksScreen() {
                     <Field label="Title">
                       <input className="input" value={form.title} onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))} />
                     </Field>
+                    <Field label="Course">
+                      <select className="input" value={form.courseId} onChange={e => setForm(prev => ({ ...prev, courseId: e.target.value }))}>
+                        <option value="">No course</option>
+                        {form.courseId && !courses.some(course => String(course.id) === form.courseId) && (
+                          <option value={form.courseId}>{selected?.courseName || `Course ${form.courseId}`}</option>
+                        )}
+                        {courses.map(course => (
+                          <option key={course.id} value={course.id}>{course.name}</option>
+                        ))}
+                      </select>
+                    </Field>
+                    <p className="-mt-2 mb-3 text-[11px] text-slate-400">Optional. Each course can be linked to only one book.</p>
                     <Field label="Description">
                       <textarea className="input min-h-[120px] resize-y" value={form.description} onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))} />
                     </Field>

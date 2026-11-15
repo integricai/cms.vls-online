@@ -1,12 +1,13 @@
 import type { PaymentOrder } from '../models/paymentOrder';
 import {
   attachCustomerToPaymentOrder,
-  getPaymentOrder,
 } from '../models/paymentOrder';
 import { splitStudentName, upsertCustomer } from '../models/customer';
+import { getCourseById } from '../models/course';
 import { ensureCustomerCourseStatus } from '../models/customerCourseStatus';
 import { createSale, getSaleByPaymentOrderId } from '../models/sale';
 import { autoAssignCourseTutorForSale } from './saleAssignment';
+import { saleCategoryAssignsTutor, saleCategoryForOrder } from './saleCategory';
 import {
   normalizeExamSession,
   sessionAccessDayCount,
@@ -25,11 +26,20 @@ async function createSaleForOrder(order: PaymentOrder, customerCountryCode: stri
     return null;
   }
 
-  const paymentOrderOnly = order.courseId == null;
-  if (paymentOrderOnly && order.optionType !== 'Custom payment') {
+  const course = order.courseId ? await getCourseById(order.courseId) : null;
+  const category = saleCategoryForOrder({
+    optionType: order.optionType,
+    courseTitle: order.courseTitle,
+    courseName: course?.name,
+    coursePageUrl: course?.coursePageUrl,
+    courseSlug: course?.slug,
+  });
+  const paymentOrderOnly = category === 'BPP Book' || category === 'Payment Order';
+  if (order.courseId == null && !paymentOrderOnly) {
     console.warn('[sales] Cannot create sale for paid order', order.id, {
       courseId: order.courseId,
       optionType: order.optionType,
+      category,
     });
     return null;
   }
@@ -69,13 +79,14 @@ async function createSaleForOrder(order: PaymentOrder, customerCountryCode: stri
     discountPercent: order.discountPercent,
     durationDays: paymentOrderOnly ? null : durationDays,
     soldAt: order.paidAt,
-    expiryDate,
-    sessionMonth,
-    sessionYear,
+    category,
+    expiryDate: paymentOrderOnly ? null : expiryDate,
+    sessionMonth: paymentOrderOnly ? null : sessionMonth,
+    sessionYear: paymentOrderOnly ? null : sessionYear,
     countryCode: order.countryCode ?? customerCountryCode,
   });
 
-  if (order.courseId != null) {
+  if (order.courseId != null && !paymentOrderOnly) {
     try {
       await ensureCustomerCourseStatus(order.customerId, order.courseId);
     } catch (err) {
@@ -83,7 +94,7 @@ async function createSaleForOrder(order: PaymentOrder, customerCountryCode: stri
     }
   }
 
-  if (sale.courseId == null) return sale;
+  if (!saleCategoryAssignsTutor(category) || sale.courseId == null) return sale;
 
   try {
     const assigned = await autoAssignCourseTutorForSale(sale);
