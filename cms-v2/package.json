@@ -40,6 +40,7 @@
     "test:free-enrol": "ts-node src/services/freeEnrol.test.ts",
     "test:rate-limit": "ts-node src/middleware/rateLimit.test.ts",
     "test:experiments": "ts-node src/services/experiments.test.ts",
+    "test:worker-experiment": "node --test ../workers/experiment.test.mjs",
     "backfill-notes-links": "npx tsx scripts/backfill-notes-links.ts"
   },
   "dependencies": {

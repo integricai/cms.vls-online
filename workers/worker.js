@@ -1,3 +1,5 @@
+import { handleExperiment } from "./experiment.mjs";
+
 const PATCH_SCRIPT = `
 <script>
 (function () {
@@ -44,8 +46,9 @@ class HeadInjector {
 }
 
 export default {
-  async fetch(request) {
-    const url = new URL(request.url);
+  async fetch(request, env, ctx) {
+    const experiment = await handleExperiment(request, env, ctx);
+    const url = new URL(experiment?.fetchedUrl ?? request.url);
 
     const shouldPatch =
       url.hostname === "vls-online.com" &&
@@ -57,7 +60,7 @@ export default {
         url.pathname.includes("/products/")
       );
 
-    const response = await fetch(request);
+    const response = experiment?.response ?? await fetch(request);
 
     if (!shouldPatch) {
       return response;

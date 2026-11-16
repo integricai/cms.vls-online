@@ -302,6 +302,33 @@ export async function deleteExperiment(id: number): Promise<void> {
   await sql`DELETE FROM experiments WHERE id = ${id} AND status = 'draft'`;
 }
 
+/** One new visitor on a running test. The label must be one of that test's pages. */
+export async function recordExperimentAssignment(experimentId: number, label: string): Promise<boolean> {
+  await ensureExperimentSchema();
+  const rows = await sql`
+    SELECT v.label
+    FROM experiments e
+    INNER JOIN experiment_variants v ON v.experiment_id = e.id
+    WHERE e.id = ${experimentId}
+      AND e.status = 'running'
+      AND v.label = ${label}
+    LIMIT 1
+  ` as Array<{ label: string }>;
+  if (!rows.length) return false;
+  await sql`
+    INSERT INTO experiment_assignments (experiment_id, variant_label, day, visitors)
+    VALUES (
+      ${experimentId},
+      ${label},
+      (NOW() AT TIME ZONE 'Europe/London')::date,
+      1
+    )
+    ON CONFLICT (experiment_id, variant_label, day)
+    DO UPDATE SET visitors = experiment_assignments.visitors + 1
+  `;
+  return true;
+}
+
 export async function listRunningExperiments(): Promise<PublicExperiment[]> {
   const experiments = await listExperiments();
   return experiments

@@ -1,0 +1,7 @@
+name = "vls-online"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# The live route stays on the existing vls-online.com worker.
+# Set VLS_PROXY_SECRET in the worker environment. It is the same value the vault uses.
+# Do not add a route here. Deploying this file must not move the worker onto a new route.
