@@ -31,7 +31,7 @@ function sendExperimentError(err: unknown, res: Response, next: NextFunction): v
 
 router.get('/active', async (_req, res, next) => {
   try {
-    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.setHeader('Cache-Control', 'public, max-age=43200');
     res.json({ ok: true, data: await listRunningExperiments() });
   } catch (err) {
     next(err);

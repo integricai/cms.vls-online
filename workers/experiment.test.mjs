@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   ASSIGN_URL,
+  EXPERIMENT_CACHE_SECONDS,
   EXPERIMENTS_URL,
   handleExperiment,
   isBot,
@@ -123,6 +124,27 @@ test("assigns a new visitor, counts once, and keeps the entry address", async ()
   assert.equal(calls[1].header, "1");
   await Promise.all(pending);
   assert.equal(calls.some((call) => call.url === ASSIGN_URL && call.method === "POST"), true);
+});
+
+test("caches an empty test list for 12 hours and does not fetch the page", async () => {
+  const cache = memoryCache();
+  let pageFetches = 0;
+  const deps = {
+    cache,
+    async fetch(input) {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url === EXPERIMENTS_URL) return Response.json({ ok: true, data: [] });
+      pageFetches += 1;
+      return new Response("page");
+    },
+  };
+  const first = await handleExperiment(pageRequest("https://vls-online.com/acca"), {}, {}, deps);
+  const second = await handleExperiment(pageRequest("https://vls-online.com/cima"), {}, {}, deps);
+  const stored = await cache.match(new Request(EXPERIMENTS_URL));
+  assert.equal(first, null);
+  assert.equal(second, null);
+  assert.equal(pageFetches, 0);
+  assert.equal(stored.headers.get("cache-control"), `public, max-age=${EXPERIMENT_CACHE_SECONDS}`);
 });
 
 test("leaves a page alone when no test is running", async () => {

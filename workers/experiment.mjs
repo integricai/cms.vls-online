@@ -3,6 +3,9 @@ export const ASSIGN_URL = "https://api.cms.vls-online.com/api/experiments/assign
 export const COOKIE_NAME = "vls_exp";
 export const FETCH_HEADER = "x-vls-exp-fetch";
 export const COOKIE_MAX_AGE = 60 * 60 * 24 * 90;
+export const EXPERIMENT_CACHE_SECONDS = 12 * 60 * 60;
+const EXPERIMENT_FAILURE_CACHE_SECONDS = 60;
+const LOOKUP_TIMEOUT_MS = 1000;
 
 const BOT_UA = /bot|spider|crawl|slurp|mediapartners|facebookexternalhit|embedly|quora link preview|whatsapp|telegrambot|slackbot|discordbot|linkedinbot|pinterest|vkshare|w3c_validator|lighthouse|pagespeed|headless/i;
 
@@ -105,20 +108,36 @@ function usableExperiments(body) {
   ));
 }
 
+async function rememberExperiments(cache, key, experiments, maxAge) {
+  if (!cache) return;
+  await cache.put(key, new Response(JSON.stringify({ ok: true, data: experiments }), {
+    headers: {
+      "Cache-Control": `public, max-age=${maxAge}`,
+      "Content-Type": "application/json",
+    },
+  }));
+}
+
 async function loadExperiments(fetchImpl, cache) {
   const key = new Request(EXPERIMENTS_URL);
   const cached = cache ? await cache.match(key) : undefined;
   if (cached) return usableExperiments(await cached.json());
 
-  const response = await fetchImpl(EXPERIMENTS_URL);
-  if (!response?.ok) return [];
-  const body = await response.json();
-  const experiments = usableExperiments(body);
-  if (cache) {
-    await cache.put(key, new Response(JSON.stringify({ ok: true, data: experiments }), {
-      headers: { "Cache-Control": "public, max-age=60", "Content-Type": "application/json" },
-    }));
+  let response;
+  try {
+    response = await fetchImpl(EXPERIMENTS_URL, {
+      signal: AbortSignal.timeout(LOOKUP_TIMEOUT_MS),
+    });
+  } catch {
+    await rememberExperiments(cache, key, [], EXPERIMENT_FAILURE_CACHE_SECONDS);
+    return [];
   }
+  if (!response?.ok) {
+    await rememberExperiments(cache, key, [], EXPERIMENT_FAILURE_CACHE_SECONDS);
+    return [];
+  }
+  const experiments = usableExperiments(await response.json());
+  await rememberExperiments(cache, key, experiments, EXPERIMENT_CACHE_SECONDS);
   return experiments;
 }
 
