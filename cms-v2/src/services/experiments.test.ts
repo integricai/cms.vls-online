@@ -1,5 +1,11 @@
 import assert from 'assert';
-import { experimentUrlConflict, normalizeExperimentPath, parseExperimentInput } from '../../shared/experiments';
+import {
+  buildExperimentResults,
+  experimentUrlConflict,
+  normalizeExperimentPath,
+  parseExperimentAssignments,
+  parseExperimentInput,
+} from '../../shared/experiments';
 
 function run(name: string, fn: () => void): void {
   try {
@@ -74,6 +80,48 @@ run('rejects overlapping running entry URLs', () => {
     ),
     null,
   );
+});
+
+run('keeps a valid checkout assignment and drops a bad one', () => {
+  assert.deepStrictEqual(parseExperimentAssignments([
+    { experimentId: 4, variant: 'B' },
+    { experimentId: '9', variant: 'A' },
+    { experimentId: 4, variant: 'A' },
+    { experimentId: 0, variant: 'A' },
+    { experimentId: 3, variant: '<script>' },
+  ]), [
+    { experimentId: 4, variant: 'B' },
+    { experimentId: 9, variant: 'A' },
+  ]);
+});
+
+run('marks the page with the higher conversion as ahead', () => {
+  const rows = buildExperimentResults([
+    { label: 'A', path: '/acca', weight: 50, visitors: 100, orders: 2, revenue: 200, currency: 'USD' },
+    { label: 'B', path: '/acca-v2', weight: 50, visitors: 40, orders: 4, revenue: 80, currency: 'USD' },
+  ]);
+  assert.strictEqual(rows[0]?.ahead, false);
+  assert.strictEqual(rows[0]?.conversion, 0.02);
+  assert.strictEqual(rows[1]?.ahead, true);
+  assert.strictEqual(rows[1]?.conversion, 0.1);
+  assert.strictEqual(rows[1]?.revenuePerVisitor, 2);
+});
+
+run('does not pick a winner when the conversions match', () => {
+  const rows = buildExperimentResults([
+    { label: 'A', path: '/acca', weight: 80, visitors: 80, orders: 4, revenue: 40, currency: 'USD' },
+    { label: 'B', path: '/acca-v2', weight: 20, visitors: 20, orders: 1, revenue: 10, currency: 'USD' },
+  ]);
+  assert.strictEqual(rows.every(row => !row.ahead), true);
+});
+
+run('leaves conversion empty until a page has visitors', () => {
+  const rows = buildExperimentResults([
+    { label: 'A', path: '/acca', weight: 50, visitors: 0, orders: 0, revenue: null, currency: null },
+  ]);
+  assert.strictEqual(rows[0]?.conversion, null);
+  assert.strictEqual(rows[0]?.ahead, false);
+  assert.strictEqual(rows[0]?.revenue, 0);
 });
 
 console.log('experiment tests passed');

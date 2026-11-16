@@ -38,6 +38,28 @@ export type PublicExperiment = {
   variants: ExperimentVariantInput[];
 };
 
+/** A page the buyer was shown, taken from the vls_exp cookie at checkout. */
+export type ExperimentAssignment = {
+  experimentId: number;
+  variant: string;
+};
+
+export type ExperimentResultTotals = {
+  label: string;
+  path: string;
+  weight: number;
+  visitors: number;
+  orders: number;
+  revenue: number | null;
+  currency: string | null;
+};
+
+export type ExperimentResultRow = ExperimentResultTotals & {
+  conversion: number | null;
+  revenuePerVisitor: number | null;
+  ahead: boolean;
+};
+
 export type ExperimentUrlUse = {
   entryPath: string;
   paths: string[];
@@ -165,4 +187,62 @@ export function experimentUrlConflict(candidate: ExperimentUrlUse, running: Expe
     if (overlaps) return 'Another running test already uses that URL.';
   }
   return null;
+}
+
+const MAX_CHECKOUT_ASSIGNMENTS = 8;
+
+/** Keep only checkout pairs that name a real test id and a page label. */
+export function parseExperimentAssignments(value: unknown): ExperimentAssignment[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<number>();
+  const assignments: ExperimentAssignment[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const record = item as Record<string, unknown>;
+    const rawId = record.experimentId;
+    const experimentId = typeof rawId === 'number'
+      ? rawId
+      : typeof rawId === 'string' && /^\d+$/.test(rawId)
+        ? Number(rawId)
+        : Number.NaN;
+    const variant = cleanLabel(record.variant ?? record.label);
+    if (!Number.isInteger(experimentId) || experimentId <= 0 || experimentId > 1_000_000_000 || !variant) continue;
+    if (seen.has(experimentId)) continue;
+    seen.add(experimentId);
+    assignments.push({ experimentId, variant });
+    if (assignments.length >= MAX_CHECKOUT_ASSIGNMENTS) break;
+  }
+  return assignments;
+}
+
+/**
+ * Conversion is paid orders divided by visitors.
+ * One page is ahead when its conversion is strictly higher and it has at least one order.
+ */
+export function buildExperimentResults(rows: ExperimentResultTotals[]): ExperimentResultRow[] {
+  const scored = rows.map(row => {
+    const visitors = Number.isFinite(row.visitors) ? Math.max(0, Math.floor(row.visitors)) : 0;
+    const orders = Number.isFinite(row.orders) ? Math.max(0, Math.floor(row.orders)) : 0;
+    const reportedRevenue = row.revenue != null && Number.isFinite(row.revenue) ? row.revenue : null;
+    const revenue = orders === 0 ? 0 : reportedRevenue;
+    const conversion = visitors > 0 ? orders / visitors : null;
+    return {
+      ...row,
+      visitors,
+      orders,
+      revenue,
+      currency: revenue == null || orders === 0 ? null : row.currency,
+      conversion,
+      revenuePerVisitor: visitors > 0 && revenue != null ? revenue / visitors : null,
+      ahead: false,
+    };
+  });
+
+  const comparable = scored.filter(row => row.conversion != null && row.orders > 0);
+  if (comparable.length === 0) return scored;
+  const best = Math.max(...comparable.map(row => row.conversion ?? 0));
+  const leaders = comparable.filter(row => row.conversion === best);
+  if (leaders.length !== 1) return scored;
+  const leader = leaders[0]?.label;
+  return scored.map(row => (row.label === leader ? { ...row, ahead: true } : row));
 }

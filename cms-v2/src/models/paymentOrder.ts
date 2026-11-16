@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { sql } from '../db/client';
+import { recordPaymentOrderExperiments } from './experiment';
 import type { CheckoutAttribution, CheckoutEnvironment, ConversionUploadStatus } from '../services/attribution';
 import { parsePaymentProviderId, type PaymentProviderId } from '../services/payments/types';
 import { classifyPaidAmount } from '../services/stripeCheckout';
@@ -259,7 +260,11 @@ export async function createPaymentOrder(data: {
        ${attr?.capturedAt ?? null})
     RETURNING *
   `;
-  return rowToOrder(rows[0] as DbRow);
+  const order = rowToOrder(rows[0] as DbRow);
+  if (attr?.experiments?.length) {
+    await recordPaymentOrderExperiments(order.id, attr.experiments);
+  }
+  return order;
 }
 
 export async function attachCheckoutSession(

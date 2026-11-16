@@ -1,10 +1,13 @@
 import { sql } from '../db/client';
 import {
+  buildExperimentResults,
   experimentUrlConflict,
   isExperimentStatus,
   parseExperimentInput,
+  type ExperimentAssignment,
   type ExperimentInput,
   type ExperimentRecord,
+  type ExperimentResultRow,
   type ExperimentStatus,
   type ExperimentVariantRecord,
   type PublicExperiment,
@@ -85,6 +88,18 @@ export async function ensureExperimentSchema(): Promise<void> {
         PRIMARY KEY (experiment_id, variant_label, day),
         CONSTRAINT experiment_assignments_visitors_check CHECK (visitors >= 0)
       )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS payment_order_experiments (
+        payment_order_id INTEGER NOT NULL REFERENCES payment_orders(id) ON DELETE CASCADE,
+        experiment_id INTEGER NOT NULL REFERENCES experiments(id) ON DELETE CASCADE,
+        variant_label TEXT NOT NULL,
+        PRIMARY KEY (payment_order_id, experiment_id)
+      )
+    `;
+    await sql`
+      CREATE INDEX IF NOT EXISTS payment_order_experiments_variant_idx
+      ON payment_order_experiments (experiment_id, variant_label)
     `;
   })();
   return schemaReady;
@@ -300,6 +315,118 @@ export async function deleteExperiment(id: number): Promise<void> {
     throw new ExperimentRequestError('Only a draft can be deleted.', 400);
   }
   await sql`DELETE FROM experiments WHERE id = ${id} AND status = 'draft'`;
+}
+
+/** Store the pages this checkout was assigned to. Unknown tests and labels are ignored. */
+export async function recordPaymentOrderExperiments(
+  paymentOrderId: number,
+  assignments: ExperimentAssignment[],
+): Promise<void> {
+  if (!Number.isInteger(paymentOrderId) || paymentOrderId <= 0 || assignments.length === 0) return;
+  await ensureExperimentSchema();
+  for (const assignment of assignments) {
+    await sql`
+      INSERT INTO payment_order_experiments (payment_order_id, experiment_id, variant_label)
+      SELECT ${paymentOrderId}, v.experiment_id, v.label
+      FROM experiment_variants v
+      INNER JOIN experiments e ON e.id = v.experiment_id
+      WHERE v.experiment_id = ${assignment.experimentId}
+        AND v.label = ${assignment.variant}
+        AND e.status IN ('running', 'ended')
+      ON CONFLICT (payment_order_id, experiment_id) DO NOTHING
+    `;
+  }
+}
+
+export async function getExperimentResults(id: number): Promise<ExperimentResultRow[] | null> {
+  await ensureExperimentSchema();
+  const existing = await getExperiment(id);
+  if (!existing) return null;
+  const rows = await sql`
+    SELECT
+      v.label,
+      v.path,
+      v.weight,
+      v.position,
+      COALESCE(a.visitors, 0)::int AS visitors,
+      COALESCE(o.orders, 0)::int AS orders,
+      o.revenue,
+      o.currency
+    FROM experiment_variants v
+    LEFT JOIN (
+      SELECT variant_label, SUM(visitors)::int AS visitors
+      FROM experiment_assignments
+      WHERE experiment_id = ${id}
+      GROUP BY variant_label
+    ) a ON a.variant_label = v.label
+    LEFT JOIN (
+      SELECT
+        poe.variant_label,
+        COUNT(*)::int AS orders,
+        CASE WHEN COUNT(DISTINCT po.currency) = 1 THEN SUM(po.amount) ELSE NULL END AS revenue,
+        CASE WHEN COUNT(DISTINCT po.currency) = 1 THEN MIN(po.currency) ELSE NULL END AS currency
+      FROM payment_order_experiments poe
+      JOIN payment_orders po ON po.id = poe.payment_order_id
+      JOIN experiments e ON e.id = poe.experiment_id
+      WHERE poe.experiment_id = ${id}
+        AND po.status = 'Paid'
+        AND po.paid_at IS NOT NULL
+        AND e.started_at IS NOT NULL
+        AND po.paid_at >= e.started_at
+        AND (e.ended_at IS NULL OR po.paid_at <= e.ended_at)
+      GROUP BY poe.variant_label
+    ) o ON o.variant_label = v.label
+    WHERE v.experiment_id = ${id}
+    ORDER BY v.position
+  `;
+  return buildExperimentResults(rows.map(row => {
+    const record = row as {
+      label: string;
+      path: string;
+      weight: number;
+      visitors: number;
+      orders: number;
+      revenue: string | number | null;
+      currency: string | null;
+    };
+    const revenue = record.revenue == null || record.revenue === '' ? null : Number(record.revenue);
+    return {
+      label: record.label,
+      path: record.path,
+      weight: Number(record.weight),
+      visitors: Number(record.visitors),
+      orders: Number(record.orders),
+      revenue: revenue != null && Number.isFinite(revenue) ? revenue : null,
+      currency: record.currency,
+    };
+  }));
+}
+
+/** One new visitor on a running test. The label must be one of that test's pages. */
+export async function recordExperimentAssignment(experimentId: number, label: string): Promise<boolean> {
+  await ensureExperimentSchema();
+  const rows = await sql`
+    SELECT v.label
+    FROM experiments e
+    INNER JOIN experiment_variants v ON v.experiment_id = e.id
+    WHERE e.id = ${experimentId}
+      AND e.status = 'running'
+      AND v.label = ${label}
+    LIMIT 1
+  ` as Array<{ label: string }>;
+  if (!rows.length) return false;
+  await sql`
+    INSERT INTO experiment_assignments (experiment_id, variant_label, day, visitors)
+    VALUES (
+      ${experimentId},
+      ${label},
+      (NOW() AT TIME ZONE 'Europe/London')::date,
+      1
+    )
+    ON CONFLICT (experiment_id, variant_label, day)
+    DO UPDATE SET visitors = experiment_assignments.visitors + 1
+  `;
+  return true;
 }
 
 export async function listRunningExperiments(): Promise<PublicExperiment[]> {

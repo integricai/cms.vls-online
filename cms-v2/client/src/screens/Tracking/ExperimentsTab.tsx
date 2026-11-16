@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import ExperimentResults from './ExperimentResults';
 import {
   parseExperimentInput,
   type ExperimentInput,
@@ -451,6 +452,9 @@ export default function ExperimentsTab() {
               </button>
             ) : null}
           </div>
+          {selected && selected.status !== 'draft' ? (
+            <ExperimentResults key={`${selected.id}-${selected.status}`} experimentId={selected.id} />
+          ) : null}
           <p className="mt-4 text-xs text-slate-500">
             {selected?.status === 'running'
               ? 'Pages and weights stay fixed while the test is running.'

@@ -1,13 +1,16 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
+import { proxySecretMatches } from '../services/proxySecret';
 import {
   ExperimentRequestError,
   activateExperiment,
   createExperiment,
   deleteExperiment,
   endExperiment,
+  getExperimentResults,
   listExperiments,
   listRunningExperiments,
+  recordExperimentAssignment,
   updateExperiment,
 } from '../models/experiment';
 
@@ -29,8 +32,28 @@ function sendExperimentError(err: unknown, res: Response, next: NextFunction): v
 
 router.get('/active', async (_req, res, next) => {
   try {
-    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.setHeader('Cache-Control', 'public, max-age=43200');
     res.json({ ok: true, data: await listRunningExperiments() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/assign', async (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  if (!proxySecretMatches(req.get('x-vls-proxy-secret'))) {
+    res.status(200).json({ ok: true, recorded: false });
+    return;
+  }
+  const id = Number(req.body?.experimentId);
+  const variant = typeof req.body?.variant === 'string' ? req.body.variant.trim() : '';
+  if (!Number.isInteger(id) || id <= 0 || !variant) {
+    res.status(200).json({ ok: true, recorded: false });
+    return;
+  }
+  try {
+    const recorded = await recordExperimentAssignment(id, variant);
+    res.status(200).json({ ok: true, recorded });
   } catch (err) {
     next(err);
   }
@@ -42,6 +65,25 @@ router.get('/', requireRole('admin'), async (_req: Request, res: Response, next:
   try {
     res.setHeader('Cache-Control', 'no-store');
     res.json({ ok: true, data: await listExperiments() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/:id/results', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = experimentId(req.params.id);
+    if (!id) {
+      res.status(400).json({ ok: false, error: 'Invalid experiment id' });
+      return;
+    }
+    const results = await getExperimentResults(id);
+    if (!results) {
+      res.status(404).json({ ok: false, error: 'That experiment was not found.' });
+      return;
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ ok: true, data: results });
   } catch (err) {
     next(err);
   }

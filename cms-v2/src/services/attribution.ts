@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { parseExperimentAssignments, type ExperimentAssignment } from '../../shared/experiments';
 import type { CheckoutEnvironment, ConversionUploadStatus } from '../../shared/types';
 
 export type { CheckoutEnvironment, ConversionUploadStatus };
@@ -59,6 +60,7 @@ export type CheckoutAttribution = {
   userAgent: string | null;
   clientIp: string | null;
   environment: CheckoutEnvironment;
+  experiments: ExperimentAssignment[];
 };
 
 export function parseCheckoutEnvironment(value: unknown): CheckoutEnvironment | null {
@@ -195,6 +197,7 @@ export function parseCheckoutAttribution(
     environment: resolveCheckoutEnvironment({
       explicit: extras?.environment ?? body.environment ?? attributionRecord.environment,
     }),
+    experiments: parseExperimentAssignments(raw.experiments),
   };
 }
 

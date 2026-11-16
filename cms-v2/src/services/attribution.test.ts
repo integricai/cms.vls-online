@@ -49,6 +49,7 @@ run('parses nested attribution and request extras', () => {
     assert.strictEqual(parsed.clientIp, '203.0.113.10');
     assert.ok(parsed.capturedAt instanceof Date);
     assert.strictEqual(parsed.environment, 'staging');
+    assert.deepStrictEqual(parsed.experiments, []);
   });
 });
 
