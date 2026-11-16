@@ -1,4 +1,5 @@
 import { sql } from '../db/client';
+import { trackingLookupPath } from '../../shared/pageTracking';
 import {
   SITEMAP_EXCLUDED_FOLDERS,
   SITEMAP_EXCLUDED_PATHS,
@@ -12,6 +13,7 @@ export interface SiteUrlRecord {
   storyblokFullSlug: string;
   storyblokStoryId: number | null;
   title: string;
+  trackingName: string;
   isEnabled: boolean;
   lastmod: string | null;
   createdAt: string;
@@ -25,6 +27,7 @@ interface DbRow {
   storyblok_full_slug: string;
   storyblok_story_id: string | number | null;
   title: string;
+  tracking_name: string;
   is_enabled: boolean;
   lastmod: Date | string | null;
   created_at: Date | string;
@@ -46,6 +49,7 @@ function mapRow(row: DbRow): SiteUrlRecord {
     storyblokFullSlug: row.storyblok_full_slug,
     storyblokStoryId: storyId != null && Number.isFinite(storyId) ? storyId : null,
     title: row.title ?? '',
+    trackingName: row.tracking_name ?? '',
     isEnabled: Boolean(row.is_enabled),
     lastmod: toIso(row.lastmod),
     createdAt: toIso(row.created_at) ?? new Date().toISOString(),
@@ -82,7 +86,7 @@ export async function listSiteUrls(filters?: {
       SELECT * FROM site_urls
       WHERE sitemap_group = ${group}
         AND is_enabled = ${enabled}
-        AND (lower(path) LIKE ${`%${q}%`} OR lower(title) LIKE ${`%${q}%`} OR lower(storyblok_full_slug) LIKE ${`%${q}%`})
+        AND (lower(path) LIKE ${`%${q}%`} OR lower(title) LIKE ${`%${q}%`} OR lower(tracking_name) LIKE ${`%${q}%`} OR lower(storyblok_full_slug) LIKE ${`%${q}%`})
       ORDER BY sitemap_group ASC, path ASC
     ` as DbRow[];
   } else if (group && enabledFilter !== 'all') {
@@ -96,7 +100,7 @@ export async function listSiteUrls(filters?: {
     rows = await sql`
       SELECT * FROM site_urls
       WHERE sitemap_group = ${group}
-        AND (lower(path) LIKE ${`%${q}%`} OR lower(title) LIKE ${`%${q}%`} OR lower(storyblok_full_slug) LIKE ${`%${q}%`})
+        AND (lower(path) LIKE ${`%${q}%`} OR lower(title) LIKE ${`%${q}%`} OR lower(tracking_name) LIKE ${`%${q}%`} OR lower(storyblok_full_slug) LIKE ${`%${q}%`})
       ORDER BY sitemap_group ASC, path ASC
     ` as DbRow[];
   } else if (enabledFilter !== 'all' && q) {
@@ -104,7 +108,7 @@ export async function listSiteUrls(filters?: {
     rows = await sql`
       SELECT * FROM site_urls
       WHERE is_enabled = ${enabled}
-        AND (lower(path) LIKE ${`%${q}%`} OR lower(title) LIKE ${`%${q}%`} OR lower(storyblok_full_slug) LIKE ${`%${q}%`})
+        AND (lower(path) LIKE ${`%${q}%`} OR lower(title) LIKE ${`%${q}%`} OR lower(tracking_name) LIKE ${`%${q}%`} OR lower(storyblok_full_slug) LIKE ${`%${q}%`})
       ORDER BY sitemap_group ASC, path ASC
     ` as DbRow[];
   } else if (group) {
@@ -125,6 +129,7 @@ export async function listSiteUrls(filters?: {
       SELECT * FROM site_urls
       WHERE lower(path) LIKE ${`%${q}%`}
          OR lower(title) LIKE ${`%${q}%`}
+         OR lower(tracking_name) LIKE ${`%${q}%`}
          OR lower(storyblok_full_slug) LIKE ${`%${q}%`}
       ORDER BY sitemap_group ASC, path ASC
     ` as DbRow[];
@@ -258,6 +263,33 @@ export async function upsertSiteUrl(input: UpsertSiteUrlInput): Promise<SiteUrlR
   ` as DbRow[];
 
   return mapRow(rows[0]);
+}
+
+export async function setSiteUrlTrackingName(id: number, trackingName: string): Promise<SiteUrlRecord | null> {
+  const rows = await sql`
+    UPDATE site_urls
+    SET tracking_name = ${trackingName}, updated_at = NOW()
+    WHERE id = ${id}
+    RETURNING *
+  ` as DbRow[];
+  return rows[0] ? mapRow(rows[0]) : null;
+}
+
+/** Paths that have a tracking name. Storyblok sync does not clear these. */
+export async function listTrackingNames(): Promise<Record<string, string>> {
+  const rows = await sql`
+    SELECT path, tracking_name
+    FROM site_urls
+    WHERE tracking_name <> ''
+    ORDER BY path
+  ` as Array<{ path: string; tracking_name: string }>;
+  const names: Record<string, string> = {};
+  for (const row of rows) {
+    const path = trackingLookupPath(row.path);
+    const name = row.tracking_name.trim();
+    if (path && name) names[path] = name;
+  }
+  return names;
 }
 
 export async function setSiteUrlEnabled(id: number, isEnabled: boolean): Promise<SiteUrlRecord | null> {

@@ -3,6 +3,8 @@ import { authGuard, requireRole } from '../middleware/authGuard';
 import { visitIpRateLimit } from '../middleware/rateLimit';
 import { isTrackingPreset, trackingCustomBounds, trackingPresetBounds } from '../../shared/siteTracking';
 import { buildTrackingReport, recordTrackingVisit } from '../models/siteTracking';
+import { listTrackingNames } from '../models/siteUrl';
+import { applyPageTrackingNames } from '../../shared/pageTracking';
 import { loadTrackingSales } from '../models/trackingSales';
 import { loadGa4Traffic } from '../services/ga4Report';
 import { recordSiteVisitor } from '../models/siteAnalytics';
@@ -88,6 +90,21 @@ router.get('/ga4', authGuard, requireRole('admin'), async (req, res, next) => {
   }
 });
 
+async function namedLandingPages<T extends { landingPages: { label: string; visitors: number }[] }>(report: T): Promise<T> {
+  try {
+    const names = await listTrackingNames();
+    if (Object.keys(names).length === 0) return report;
+    const named = applyPageTrackingNames(
+      report.landingPages.map(row => ({ label: row.label, value: row.visitors })),
+      names,
+    );
+    return { ...report, landingPages: named.map(row => ({ label: row.label, visitors: row.value })) };
+  } catch (err) {
+    console.error('[tracking-names]', err instanceof Error ? err.message : err);
+    return report;
+  }
+}
+
 router.get('/tracking', authGuard, requireRole('admin'), async (req, res, next) => {
   try {
     const requested = String(req.query.range ?? 'this_month');
@@ -98,11 +115,11 @@ router.get('/tracking', authGuard, requireRole('admin'), async (req, res, next) 
         res.status(400).json({ ok: false, error: 'Choose a start date and an end date within one year.' });
         return;
       }
-      res.json({ ok: true, data: await buildTrackingReport('custom', bounds) });
+      res.json({ ok: true, data: await namedLandingPages(await buildTrackingReport('custom', bounds)) });
       return;
     }
     const range = isTrackingPreset(requested) ? requested : 'this_month';
-    res.json({ ok: true, data: await buildTrackingReport(range, trackingPresetBounds(range)) });
+    res.json({ ok: true, data: await namedLandingPages(await buildTrackingReport(range, trackingPresetBounds(range))) });
   } catch (err) {
     next(err);
   }

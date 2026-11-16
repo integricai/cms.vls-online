@@ -1006,6 +1006,7 @@ export interface SiteUrlRecord {
   storyblokFullSlug: string;
   storyblokStoryId: number | null;
   title: string;
+  trackingName: string;
   isEnabled: boolean;
   lastmod: string | null;
   createdAt: string;

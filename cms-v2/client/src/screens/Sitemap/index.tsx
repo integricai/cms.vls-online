@@ -31,6 +31,7 @@ export default function SitemapScreen() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [savingId, setSavingId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [previewBase, setPreviewBase] = useState('');
@@ -106,6 +107,30 @@ export default function SitemapScreen() {
     }
   }
 
+  async function saveTrackingName(row: SiteUrlRecord, value: string) {
+    const trackingName = value.trim().replace(/\s+/g, ' ');
+    if (trackingName === (row.trackingName ?? '')) return;
+    setSavingId(row.id);
+    setError('');
+    setMessage('');
+    try {
+      const updated = await api.patch<SiteUrlRecord & { cacheWarning?: string | null; cacheRefreshed?: boolean }>(
+        `/sitemap/${row.id}/tracking-name`,
+        { trackingName },
+      );
+      setUrls(current => current.map(item => (item.id === updated.id ? { ...item, ...updated } : item)));
+      setMessage(updated.cacheWarning
+        ? `Saved ${row.path}. ${updated.cacheWarning}`
+        : updated.cacheRefreshed
+          ? `Saved the tracking name for ${row.path}. The live page will send it after the cache refresh.`
+          : `Saved the tracking name for ${row.path}. Refresh that page's cache for the site to send it.`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not save the tracking name.');
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   function search(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -119,6 +144,7 @@ export default function SitemapScreen() {
           <h2 className="mb-1 text-sm font-bold text-slate-700">Sitemap</h2>
           <p className="max-w-2xl text-xs text-slate-500">
             Manage which published Storyblok pages are included in the search sitemaps.
+            A tracking name is sent to Analytics as the page title. It is not written into the sitemap file.
             Use staging site origin below to verify XML before production.
           </p>
         </div>
@@ -220,7 +246,7 @@ export default function SitemapScreen() {
           <input
             value={q}
             onChange={e => setQ(e.target.value)}
-            placeholder="Path, title, or Storyblok slug"
+            placeholder="Path, title, tracking name, or Storyblok slug"
             className="rounded border border-slate-300 bg-white px-2 py-1.5 text-xs"
           />
         </label>
@@ -246,6 +272,7 @@ export default function SitemapScreen() {
                 <th className="px-3 py-2 font-semibold">Group</th>
                 <th className="px-3 py-2 font-semibold">Path</th>
                 <th className="px-3 py-2 font-semibold">Title</th>
+                <th className="px-3 py-2 font-semibold">Tracking name</th>
                 <th className="px-3 py-2 font-semibold">Storyblok</th>
                 <th className="px-3 py-2 font-semibold">Lastmod</th>
               </tr>
@@ -253,7 +280,7 @@ export default function SitemapScreen() {
             <tbody>
               {urls.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-slate-500">
+                  <td colSpan={7} className="px-3 py-6 text-center text-slate-500">
                     No URLs yet. Run “Sync from Storyblok” or publish a page to the sitemap webhook.
                   </td>
                 </tr>
@@ -277,6 +304,20 @@ export default function SitemapScreen() {
                     <td className="px-3 py-2 text-slate-600">{GROUP_LABELS[row.sitemapGroup]}</td>
                     <td className="px-3 py-2 font-mono text-slate-800">{row.path}</td>
                     <td className="px-3 py-2 text-slate-700">{row.title || '—'}</td>
+                    <td className="px-3 py-2">
+                      <input
+                        key={`${row.id}:${row.trackingName}`}
+                        defaultValue={row.trackingName ?? ''}
+                        disabled={savingId === row.id}
+                        aria-label={`Tracking name for ${row.path}`}
+                        placeholder="[home]"
+                        onBlur={event => void saveTrackingName(row, event.target.value)}
+                        onKeyDown={event => {
+                          if (event.key === 'Enter') event.currentTarget.blur();
+                        }}
+                        className="w-full min-w-[140px] rounded border border-slate-300 bg-white px-2 py-1 font-mono text-[11px] text-slate-800 disabled:opacity-50"
+                      />
+                    </td>
                     <td className="px-3 py-2 font-mono text-slate-500">{row.storyblokFullSlug}</td>
                     <td className="px-3 py-2 text-slate-500">{formatDate(row.lastmod)}</td>
                   </tr>

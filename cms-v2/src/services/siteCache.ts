@@ -85,6 +85,24 @@ export function resolvePagePath(page: string): string {
   }
 }
 
+/**
+ * Refresh one public page on every site whose revalidate secret is set.
+ * Returns null when nothing was configured, or when every refresh succeeded.
+ */
+export async function refreshCachedPage(path: string): Promise<string | null> {
+  const targets = listSiteCacheTargets().filter(target => target.configured);
+  if (targets.length === 0) return null;
+  const warnings: string[] = [];
+  for (const target of targets) {
+    try {
+      await purgeSiteCache({ environment: target.id, purgeAll: false, page: path });
+    } catch (err) {
+      warnings.push(err instanceof Error ? err.message : `${target.label} cache refresh failed`);
+    }
+  }
+  return warnings.length ? warnings.join(' ') : null;
+}
+
 export async function purgeSiteCache(input: {
   environment: SiteCacheEnvironment;
   purgeAll: boolean;

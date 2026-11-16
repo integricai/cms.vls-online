@@ -8,6 +8,8 @@ import {
   type Ga4RawReport,
   type Ga4Traffic,
 } from '../../shared/ga4Report';
+import { listTrackingNames } from '../models/siteUrl';
+import { applyPageTrackingNames } from '../../shared/pageTracking';
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -80,6 +82,15 @@ async function accessToken(config: Ga4Config): Promise<string> {
   return payload.access_token;
 }
 
+async function readTrackingNames(): Promise<Record<string, string>> {
+  try {
+    return await listTrackingNames();
+  } catch (err) {
+    console.error('[tracking-names]', err instanceof Error ? err.message : err);
+    return {};
+  }
+}
+
 export async function loadGa4Traffic(start: string, end: string): Promise<Ga4Traffic> {
   const config = readGa4Config();
   if (!config) return emptyGa4Traffic(false, null);
@@ -102,7 +113,13 @@ export async function loadGa4Traffic(start: string, end: string): Promise<Ga4Tra
       error?: { message?: string; status?: string };
     };
     if (!response.ok) return emptyGa4Traffic(true, ga4ErrorMessage(payload.error));
-    return assembleGa4Traffic(payload.reports ?? [], start, end);
+    const traffic = assembleGa4Traffic(payload.reports ?? [], start, end);
+    const names = await readTrackingNames();
+    return {
+      ...traffic,
+      landingPages: applyPageTrackingNames(traffic.landingPages, names),
+      pages: applyPageTrackingNames(traffic.pages, names),
+    };
   } catch (err) {
     console.error('[ga4]', err instanceof Error ? err.message : err);
     return emptyGa4Traffic(true, 'Could not reach Google Analytics.');

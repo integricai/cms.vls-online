@@ -4,9 +4,13 @@ import {
   countSiteUrlsByGroup,
   listEnabledSiteUrls,
   listSiteUrls,
+  listTrackingNames,
   setSiteUrlEnabled,
+  setSiteUrlTrackingName,
   type SiteUrlRecord,
 } from '../models/siteUrl';
+import { normalizeTrackingName } from '../../shared/pageTracking';
+import { listSiteCacheTargets, refreshCachedPage } from '../services/siteCache';
 import type { SitemapGroup } from '../services/sitemapPaths';
 import { normalizeSiteOrigin } from '../services/sitemapPaths';
 import { handleStoryblokSitemapWebhook, syncSiteUrlsFromStoryblok } from '../services/sitemapSync';
@@ -42,6 +46,22 @@ function verifyWebhook(req: Request): boolean {
 }
 
 // ── Public feed (Next.js / staging verification) ─────────────────
+
+router.get('/tracking-names', async (_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+  try {
+    const names = await listTrackingNames();
+    return res.json({
+      ok: true,
+      data: {
+        names: Object.entries(names).map(([path, name]) => ({ path, name })),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.get('/feed', async (req: Request, res: Response, next: NextFunction) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -148,6 +168,32 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         webhookPath: '/api/sitemap/webhook',
       },
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/:id/tracking-name', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ ok: false, error: 'Invalid id' });
+    }
+    const trackingName = normalizeTrackingName(req.body?.trackingName);
+    if (trackingName === null) {
+      return res.status(400).json({ ok: false, error: 'Use a tracking name of up to 120 characters, without quotes.' });
+    }
+    const row = await setSiteUrlTrackingName(id, trackingName);
+    if (!row) return res.status(404).json({ ok: false, error: 'URL not found' });
+    let cacheWarning: string | null = null;
+    let cacheRefreshed = false;
+    try {
+      cacheWarning = await refreshCachedPage(row.path);
+      cacheRefreshed = cacheWarning === null && listSiteCacheTargets().some(target => target.configured);
+    } catch (err) {
+      cacheWarning = err instanceof Error ? err.message : 'The name was saved. The live page was not refreshed.';
+    }
+    return res.json({ ok: true, data: { ...row, cacheWarning, cacheRefreshed } });
   } catch (err) {
     next(err);
   }
