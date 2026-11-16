@@ -35,6 +35,7 @@ import siteCacheRouter from './routes/siteCache';
 import systemLogsRouter from './routes/systemLogs';
 import contactRouter from './routes/contact';
 import analyticsRouter from './routes/analytics';
+import experimentsRouter from './routes/experiments';
 import { sendErrorAlert } from './utils/errorAlert';
 import { createServerTiming } from './utils/serverTiming';
 import { freeEnrolEmailRateLimit, freeEnrolIpRateLimit } from './middleware/rateLimit';
@@ -339,6 +340,7 @@ app.get('/api/turnstile-site-key', (_req, res) => {
 
 app.use('/api/submit-form', contactRouter);
 app.use('/api/analytics', analyticsRouter);
+app.use('/api/experiments', experimentsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/snippets', snippetsRouter);
 app.use('/api/content', contentRouter);

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import PageTabs from '../../components/PageTabs';
 import AnalyticsTab from './AnalyticsTab';
+import ExperimentsTab from './ExperimentsTab';
 import {
   campaignLabel,
   trackingCustomBounds,
@@ -575,7 +576,8 @@ function trackingPath(base: string, range: TrackingRange, start: string, end: st
 
 export default function Tracking() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get('tab') === 'analytics' ? 'analytics' : 'visits';
+  const requestedTab = searchParams.get('tab');
+  const tab = requestedTab === 'analytics' || requestedTab === 'experiments' ? requestedTab : 'visits';
   const [range, setRange] = useState<TrackingRange>('this_month');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
@@ -594,6 +596,7 @@ export default function Tracking() {
         tabs={[
           { id: 'visits', label: 'Visits' },
           { id: 'analytics', label: 'Analytics' },
+          { id: 'experiments', label: 'Experiment A/B' },
         ]}
         value={tab}
         onChange={setTab}
@@ -604,11 +607,14 @@ export default function Tracking() {
             <div>
               <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Tracking</h1>
               <p className="mt-1 text-sm text-slate-500">
-                {tab === 'analytics'
-                  ? 'Sessions and pages come from GA4. Orders and revenue come from production payments.'
-                  : 'One person a day. Channel, campaign, and landing page come from the address they opened.'}
+                {tab === 'experiments'
+                  ? 'Set the entry URL, the pages, and how much traffic each page gets.'
+                  : tab === 'analytics'
+                    ? 'Sessions and pages come from GA4. Orders and revenue come from production payments.'
+                    : 'One person a day. Channel, campaign, and landing page come from the address they opened.'}
               </p>
             </div>
+            {tab === 'experiments' ? null : (
             <div className="flex flex-wrap items-end gap-3">
               <label className="text-xs font-semibold text-slate-500">
                 Period
@@ -647,9 +653,12 @@ export default function Tracking() {
                 </>
               ) : null}
             </div>
+            )}
           </div>
-          {range === 'custom' && !visitsQuery ? <p className="text-sm text-slate-500">Choose a start date and an end date within one year.</p> : null}
-          {tab === 'visits' ? <VisitsTab query={visitsQuery} /> : <AnalyticsTab query={analyticsQuery} />}
+          {tab !== 'experiments' && range === 'custom' && !visitsQuery ? <p className="text-sm text-slate-500">Choose a start date and an end date within one year.</p> : null}
+          {tab === 'visits' ? <VisitsTab query={visitsQuery} /> : null}
+          {tab === 'analytics' ? <AnalyticsTab query={analyticsQuery} /> : null}
+          {tab === 'experiments' ? <ExperimentsTab /> : null}
         </div>
       </div>
     </div>

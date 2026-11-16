@@ -39,6 +39,7 @@
     "test:sales-page-urls": "ts-node src/services/courseSalesPageUrlSync.test.ts",
     "test:free-enrol": "ts-node src/services/freeEnrol.test.ts",
     "test:rate-limit": "ts-node src/middleware/rateLimit.test.ts",
+    "test:experiments": "ts-node src/services/experiments.test.ts",
     "backfill-notes-links": "npx tsx scripts/backfill-notes-links.ts"
   },
   "dependencies": {
