@@ -54,7 +54,7 @@ function emptyRule(sortOrder: number): RuleDraft {
     offerType: 'exam_sessions',
     durationDaysText: '90, 180',
     examMonths: [3, 6, 9, 12],
-    cutoffDay: '12',
+    cutoffDay: '5',
     courseIds: [],
     isActive: true,
     sortOrder,
@@ -334,7 +334,7 @@ export default function QualificationOfferRulesTab() {
                       updateRule(index, {
                         offerType,
                         examMonths: offerType === 'exam_sessions' ? (rule.examMonths.length ? rule.examMonths : [3, 6, 9, 12]) : [],
-                        cutoffDay: offerType === 'exam_sessions' ? (rule.cutoffDay || '12') : '',
+                        cutoffDay: offerType === 'exam_sessions' ? (rule.cutoffDay || '5') : '',
                         courseIds: offerType === 'exam_sessions' ? rule.courseIds : [],
                         durationDaysText: offerType === 'open' && !rule.durationDaysText.trim()
                           ? '180, 365'
@@ -367,13 +367,13 @@ export default function QualificationOfferRulesTab() {
                     min={1}
                     max={28}
                     className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 text-sm disabled:bg-slate-50"
-                    placeholder="12"
+                    placeholder="5"
                     disabled={rule.offerType !== 'exam_sessions'}
                     value={rule.cutoffDay}
                     onChange={event => updateRule(index, { cutoffDay: event.target.value })}
                   />
                   <span className="mt-1 block text-[11px] text-slate-400">
-                    Last day of prior month to sell the next sitting
+                    Day of the sitting month when that sitting drops off. 5 drops December on 5 December
                   </span>
                 </label>
               </div>
