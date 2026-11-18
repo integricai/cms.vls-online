@@ -25,8 +25,8 @@ export function formatDurationLabel(durationDays: number): string {
 }
 
 /**
- * Enrollment for a sitting closes at end of `cutoffDay` in the previous calendar month.
- * E.g. Sep 2026 with cutoff 12 → last offer day is 12 Aug 2026.
+ * A sitting stays on sale until the cutoff day of its own month.
+ * Cutoff 5 → December is offered through 4 December and drops on 5 December.
  * When cutoffDay is null, the sitting stays open until its calendar month begins.
  */
 export function isExamSessionOpen(
@@ -34,16 +34,13 @@ export function isExamSessionOpen(
   cutoffDay: number | null,
   now: Date = new Date(),
 ): boolean {
-  let cutoffMonth = session.month - 1;
-  let cutoffYear = session.year;
-  if (cutoffMonth < 1) {
-    cutoffMonth = 12;
-    cutoffYear -= 1;
+  if (cutoffDay == null) {
+    const sessionStart = new Date(session.year, session.month - 1, 1, 0, 0, 0, 0);
+    return now.getTime() < sessionStart.getTime();
   }
 
-  const day = cutoffDay ?? new Date(cutoffYear, cutoffMonth, 0).getDate();
-  const cutoffEnd = new Date(cutoffYear, cutoffMonth - 1, day, 23, 59, 59, 999);
-  return now.getTime() <= cutoffEnd.getTime();
+  const cutoffStart = new Date(session.year, session.month - 1, cutoffDay, 0, 0, 0, 0);
+  return now.getTime() < cutoffStart.getTime();
 }
 
 /** Upcoming open exam sittings for configured months + cutoff. */
@@ -68,9 +65,6 @@ export function getNextOpenExamSessions(
     for (const month of months) {
       const session = { month, year };
       if (!isExamSessionOpen(session, cutoffDay, now)) continue;
-      // Skip sittings whose month has already started (enrollment window is pre-month).
-      const sessionStart = new Date(year, month - 1, 1, 0, 0, 0, 0);
-      if (now.getTime() >= sessionStart.getTime()) continue;
       sessions.push(session);
       if (sessions.length >= count) break;
     }
