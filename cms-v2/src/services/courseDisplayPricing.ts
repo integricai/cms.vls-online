@@ -19,6 +19,21 @@ import { signPriceQuote } from './priceQuote';
 /** ACCA exam sittings fallback when no qualification offer rule is configured. */
 export const ACCA_EXAM_MONTHS = [3, 6, 9, 12] as const;
 
+/** A course card lists at most this many active vault prices, shortest access first. */
+const MAX_VISIBLE_PRICE_PLANS = 3;
+
+const DEFAULT_PLAN_SUBTITLE = 'complete course with tutor support';
+
+function visiblePlanSubtitle(price: CourseGeoPrice): string {
+  const subtitle = price.priceSubtitle?.trim() ?? '';
+  if (subtitle.toLowerCase() === DEFAULT_PLAN_SUBTITLE) return '';
+  return subtitle;
+}
+
+function visiblePlanBadge(index: number, count: number): string | null {
+  return count > 1 && index === count - 1 ? 'Best value' : null;
+}
+
 /** Public title for the CMA Part 1 and Part 2 annual packs. */
 export const CMA_ANNUAL_ACCESS_TITLE = 'One Year Access';
 
@@ -184,7 +199,7 @@ function buildPlanFields(
     sessionTitle: sessionTitleText,
     sessionMonth: options.sessionMonth,
     sessionYear: options.sessionYear,
-    subtitle: price.priceSubtitle?.trim() || 'Complete course with tutor support',
+    subtitle: visiblePlanSubtitle(price),
     amount: price.amount,
     compareAt,
     discountPercent: null,
@@ -306,7 +321,7 @@ export function displayedExamSessionForPrice(
   if (active.length < 2) return null;
   const planSlice = [...active]
     .sort((a, b) => planDurationSortKey(a) - planDurationSortKey(b))
-    .slice(0, 2);
+    .slice(0, MAX_VISIBLE_PRICE_PLANS);
   const index = planSlice.findIndex(price => price.id === coursePriceId);
   if (index < 0) return null;
   const sessionMode = resolveSessionPlanMode(rule, now, planSlice.length, courseId);
@@ -373,7 +388,7 @@ export async function buildCourseDisplayPricing(
       countryCode: input.countryCode,
     })];
   } else {
-    const planSlice = sorted.slice(0, 2);
+    const planSlice = sorted.slice(0, MAX_VISIBLE_PRICE_PLANS);
     const sessionMode = annualPack
       ? { mode: 'duration' as const }
       : resolveSessionPlanMode(rule, now, planSlice.length, courseId);
@@ -383,7 +398,7 @@ export async function buildCourseDisplayPricing(
         sessionMonth: null,
         sessionYear: null,
         sessionTitle: annualPack ? CMA_ANNUAL_ACCESS_TITLE : null,
-        badge: index === 1 ? 'Best value' : null,
+        badge: visiblePlanBadge(index, planSlice.length),
         countryCode: input.countryCode,
       }));
     } else {
@@ -392,7 +407,7 @@ export async function buildCourseDisplayPricing(
         return buildPlanFields(price, {
           sessionMonth: session.month,
           sessionYear: session.year,
-          badge: index === 1 ? 'Best value' : null,
+          badge: visiblePlanBadge(index, planSlice.length),
           countryCode: input.countryCode,
         });
       });
@@ -400,7 +415,7 @@ export async function buildCourseDisplayPricing(
   }
 
   // Quote once per distinct Evendeals product id (plans may use different deals).
-  const sourcePrices = sorted.length === 1 ? [sorted[0]!] : sorted.slice(0, 2);
+  const sourcePrices = sorted.slice(0, MAX_VISIBLE_PRICE_PLANS);
   const quoteCache = new Map<string, EvenDealsQuote | null>();
   const ignoreVpnBlock = input.ignoreVpnBlock === true;
   const resolvedPlans: PublishedCoursePricePlan[] = [];

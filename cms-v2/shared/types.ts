@@ -721,8 +721,9 @@ export interface QualificationOfferRule {
   /** Calendar months when exams sit (1–12). Empty for open/subscription quals. */
   examMonths: number[];
   /**
-   * Last calendar day of the month before a sitting on which that sitting is still offered.
-   * E.g. 12 → Sep sitting closes after 12 Aug. Null = no early cutoff.
+   * Day of the sitting month on which that sitting drops off the price card.
+   * E.g. 5 → December stays through 4 December and drops on 5 December.
+   * Null = the sitting stays open until its calendar month begins.
    */
   cutoffDay: number | null;
   /**
