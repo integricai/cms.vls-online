@@ -373,7 +373,7 @@ export default function QualificationOfferRulesTab() {
                     onChange={event => updateRule(index, { cutoffDay: event.target.value })}
                   />
                   <span className="mt-1 block text-[11px] text-slate-400">
-                    Day of the sitting month when that sitting drops off. 5 drops December on 5 December
+                    Two prices close a sitting on this day of the previous month. 5 closes December at the end of 5 November. Three or more prices keep the nearest sitting until the 1st of its month.
                   </span>
                 </label>
               </div>
