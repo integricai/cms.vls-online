@@ -9,7 +9,7 @@ import { listActiveGeoPricesForCourse } from '../models/courseGeoPrice';
 import { getQualificationOfferRuleByQualification } from '../models/qualificationOfferRule';
 import {
   formatExamSessionTitle,
-  getNextOpenExamSessions,
+  getNextPriceCardSessions,
   type ExamSession,
 } from './qualificationOfferSessions';
 import { BANK_FX_NOTE, convertUsdAmount, currencyForCountry, localizeDisplayMoney } from './displayCurrency';
@@ -18,9 +18,6 @@ import { signPriceQuote } from './priceQuote';
 
 /** ACCA exam sittings fallback when no qualification offer rule is configured. */
 export const ACCA_EXAM_MONTHS = [3, 6, 9, 12] as const;
-
-/** A course card lists at most this many active vault prices, shortest access first. */
-const MAX_VISIBLE_PRICE_PLANS = 3;
 
 const DEFAULT_PLAN_SUBTITLE = 'complete course with tutor support';
 
@@ -294,7 +291,7 @@ function resolveSessionPlanMode(
     }
     return {
       mode: 'sessions',
-      sessions: getNextOpenExamSessions(rule.examMonths, rule.cutoffDay, now, planCount),
+      sessions: getNextPriceCardSessions(rule.examMonths, rule.cutoffDay, now, planCount),
     };
   }
 
@@ -320,8 +317,7 @@ export function displayedExamSessionForPrice(
   if (active.some(price => isCmaAnnualPackCourse(price.courseSlug, price.courseName))) return null;
   if (active.length < 2) return null;
   const planSlice = [...active]
-    .sort((a, b) => planDurationSortKey(a) - planDurationSortKey(b))
-    .slice(0, MAX_VISIBLE_PRICE_PLANS);
+    .sort((a, b) => planDurationSortKey(a) - planDurationSortKey(b));
   const index = planSlice.findIndex(price => price.id === coursePriceId);
   if (index < 0) return null;
   const sessionMode = resolveSessionPlanMode(rule, now, planSlice.length, courseId);
@@ -388,7 +384,7 @@ export async function buildCourseDisplayPricing(
       countryCode: input.countryCode,
     })];
   } else {
-    const planSlice = sorted.slice(0, MAX_VISIBLE_PRICE_PLANS);
+    const planSlice = sorted;
     const sessionMode = annualPack
       ? { mode: 'duration' as const }
       : resolveSessionPlanMode(rule, now, planSlice.length, courseId);
@@ -415,7 +411,7 @@ export async function buildCourseDisplayPricing(
   }
 
   // Quote once per distinct Evendeals product id (plans may use different deals).
-  const sourcePrices = sorted.slice(0, MAX_VISIBLE_PRICE_PLANS);
+  const sourcePrices = sorted;
   const quoteCache = new Map<string, EvenDealsQuote | null>();
   const ignoreVpnBlock = input.ignoreVpnBlock === true;
   const resolvedPlans: PublishedCoursePricePlan[] = [];
