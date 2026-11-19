@@ -21,6 +21,16 @@ class BookRequestError extends Error {
   }
 }
 
+function requestedDiscountPercent(value: unknown): number | null | undefined {
+  if (value === undefined) return undefined;
+  if (value == null || value === '') return null;
+  const percent = Number(value);
+  if (!Number.isInteger(percent) || percent < 1 || percent > 100) {
+    throw new BookRequestError(400, 'Discount percent must be a whole number from 1 to 100.');
+  }
+  return percent;
+}
+
 async function requestedCourseId(value: unknown): Promise<number | null> {
   if (value == null || value === '') return null;
   const id = Number(value);
@@ -181,6 +191,7 @@ router.post('/', requireRole('admin', 'assistant'), async (req: Request, res: Re
     const discountedPrice = req.body.discountedPrice == null || req.body.discountedPrice === ''
       ? null
       : Number(req.body.discountedPrice);
+    const discountPercent = requestedDiscountPercent(req.body.discountPercent);
     const title = typeof req.body.title === 'string' ? req.body.title.trim() : '';
 
     if (!title) return res.status(400).json({ ok: false, error: 'Title is required' });
@@ -196,6 +207,7 @@ router.post('/', requireRole('admin', 'assistant'), async (req: Request, res: Re
       imageAltText: typeof req.body.imageAltText === 'string' ? req.body.imageAltText.trim() : '',
       price,
       discountedPrice,
+      discountPercent: discountPercent ?? null,
       currency: typeof req.body.currency === 'string' ? req.body.currency.trim() || 'GBP' : 'GBP',
       stripeUrl: typeof req.body.stripeUrl === 'string' ? req.body.stripeUrl.trim() : '',
       isActive: req.body.isActive !== false,
@@ -218,6 +230,7 @@ router.put('/:id', requireRole('admin', 'assistant'), async (req: Request, res: 
     const discountedPrice = req.body.discountedPrice == null || req.body.discountedPrice === ''
       ? null
       : Number(req.body.discountedPrice);
+    const discountPercent = requestedDiscountPercent(req.body.discountPercent);
 
     const book = await updateBook(id, {
       title: typeof req.body.title === 'string' ? req.body.title.trim() : undefined,
@@ -226,6 +239,7 @@ router.put('/:id', requireRole('admin', 'assistant'), async (req: Request, res: 
       imageAltText: typeof req.body.imageAltText === 'string' ? req.body.imageAltText.trim() : undefined,
       price: Number.isFinite(price) ? price : undefined,
       discountedPrice: discountedPrice == null || Number.isFinite(discountedPrice) ? discountedPrice : undefined,
+      discountPercent,
       currency: typeof req.body.currency === 'string' ? req.body.currency.trim() || 'GBP' : undefined,
       stripeUrl: typeof req.body.stripeUrl === 'string' ? req.body.stripeUrl.trim() : undefined,
       isActive: typeof req.body.isActive === 'boolean' ? req.body.isActive : undefined,

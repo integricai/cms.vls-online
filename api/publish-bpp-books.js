@@ -14,6 +14,7 @@ function rowToBook(row) {
     imageAltText: row.image_alt_text,
     price: Number(row.price),
     discountedPrice: row.discounted_price == null ? null : Number(row.discounted_price),
+    discountPercent: row.discount_percent == null ? null : Number(row.discount_percent),
     currency: row.currency,
     stripeUrl: row.stripe_url,
     sourceUrl: row.source_url,
@@ -40,6 +41,7 @@ export default async function handler(req, res) {
   try {
     const sql = neon(dbUrl);
     await sql`ALTER TABLE books ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`;
+    await sql`ALTER TABLE books ADD COLUMN IF NOT EXISTS discount_percent INTEGER`;
     const rows = await sql`
       SELECT *
       FROM books

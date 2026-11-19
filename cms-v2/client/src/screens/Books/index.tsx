@@ -18,6 +18,7 @@ function emptyForm() {
     imageAltText: '',
     price: '',
     discountedPrice: '',
+    discountPercent: '',
     currency: 'GBP',
     stripeUrl: '',
     courseId: '',
@@ -36,6 +37,7 @@ function bookToForm(book: BookRecord): BookForm {
     imageAltText: book.imageAltText,
     price: String(book.price),
     discountedPrice: book.discountedPrice != null ? String(book.discountedPrice) : '',
+    discountPercent: book.discountPercent != null ? String(book.discountPercent) : '',
     currency: book.currency,
     stripeUrl: book.stripeUrl,
     courseId: book.courseId ? String(book.courseId) : '',
@@ -52,6 +54,7 @@ function formToPayload(form: BookForm) {
     imageAltText: form.imageAltText.trim(),
     price: Number(form.price),
     discountedPrice: form.discountedPrice === '' ? null : Number(form.discountedPrice),
+    discountPercent: form.discountPercent === '' ? null : Number(form.discountPercent),
     currency: form.currency.trim() || 'GBP',
     stripeUrl: form.stripeUrl.trim(),
     courseId: form.courseId ? Number(form.courseId) : null,
@@ -194,6 +197,13 @@ export default function BooksScreen() {
     }
     if (payload.discountedPrice != null && (!Number.isFinite(payload.discountedPrice) || payload.discountedPrice < 0)) {
       setError('Discounted price must be a valid number.');
+      return;
+    }
+    if (
+      payload.discountPercent != null
+      && (!Number.isInteger(payload.discountPercent) || payload.discountPercent < 1 || payload.discountPercent > 100)
+    ) {
+      setError('Discount percent must be a whole number from 1 to 100.');
       return;
     }
 
@@ -540,6 +550,19 @@ export default function BooksScreen() {
                         <input type="number" min={0} step="0.01" className="input" value={form.discountedPrice} onChange={e => setForm(prev => ({ ...prev, discountedPrice: e.target.value }))} />
                       </Field>
                     </div>
+                    <Field label="Discount %">
+                      <input
+                        type="number"
+                        min={1}
+                        max={100}
+                        step={1}
+                        className="input"
+                        value={form.discountPercent}
+                        onChange={e => setForm(prev => ({ ...prev, discountPercent: e.target.value }))}
+                        placeholder="50"
+                      />
+                    </Field>
+                    <p className="-mt-2 mb-3 text-[11px] text-slate-400">Shown on the book cover, for example 50% off. Leave blank to hide it.</p>
 
                     <p className="section-label">Checkout</p>
                     <Field label="Stripe URL">
