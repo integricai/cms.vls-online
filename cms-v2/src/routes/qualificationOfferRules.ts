@@ -7,7 +7,7 @@ import {
 } from '../models/qualificationOfferRule';
 import type { QualificationOfferRuleInput } from '../../shared/types';
 import {
-  getNextOpenExamSessions,
+  getNextPriceCardSessions,
   previewQualificationOffers,
 } from '../services/qualificationOfferSessions';
 
@@ -94,7 +94,7 @@ router.get('/sessions', authGuard, requireRole('admin'), async (req, res, next) 
       return res.status(400).json({ ok: false, error: 'Invalid asOf date' });
     }
 
-    const data = getNextOpenExamSessions(months, cutoffDay, asOf, count);
+    const data = getNextPriceCardSessions(months, cutoffDay, asOf, count);
     return res.json({ ok: true, data });
   } catch (err) {
     next(err);

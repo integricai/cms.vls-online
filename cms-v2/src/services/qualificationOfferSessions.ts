@@ -43,19 +43,21 @@ export function isExamSessionOpen(
   return now.getTime() < cutoffStart.getTime();
 }
 
-/** Upcoming open exam sittings for configured months + cutoff. */
-export function getNextOpenExamSessions(
-  examMonths: number[],
-  cutoffDay: number | null,
-  now: Date = new Date(),
-  count = 2,
-): ExamSession[] {
-  const months = [...new Set(
+function normalizedExamMonths(examMonths: number[]): number[] {
+  return [...new Set(
     examMonths
       .map(Number)
       .filter(n => Number.isInteger(n) && n >= 1 && n <= 12),
   )].sort((a, b) => a - b);
+}
 
+function collectOpenSessions(
+  examMonths: number[],
+  now: Date,
+  count: number,
+  isOpen: (session: ExamSession) => boolean,
+): ExamSession[] {
+  const months = normalizedExamMonths(examMonths);
   if (months.length === 0 || count <= 0) return [];
 
   const sessions: ExamSession[] = [];
@@ -64,13 +66,71 @@ export function getNextOpenExamSessions(
   for (let year = startYear; year <= startYear + 3 && sessions.length < count; year += 1) {
     for (const month of months) {
       const session = { month, year };
-      if (!isExamSessionOpen(session, cutoffDay, now)) continue;
+      if (!isOpen(session)) continue;
       sessions.push(session);
       if (sessions.length >= count) break;
     }
   }
 
   return sessions;
+}
+
+/** Upcoming open exam sittings for configured months + cutoff. */
+export function getNextOpenExamSessions(
+  examMonths: number[],
+  cutoffDay: number | null,
+  now: Date = new Date(),
+  count = 2,
+): ExamSession[] {
+  return collectOpenSessions(
+    examMonths,
+    now,
+    count,
+    session => isExamSessionOpen(session, cutoffDay, now),
+  );
+}
+
+/**
+ * Two price cards close a sitting on `cutoffDay` of the previous month.
+ * Cutoff 12 → December 2026 stays through 12 November and then drops.
+ * Three or more cards keep the nearest sitting until the 1st of its month.
+ */
+function isExamSessionOpenPreviousMonth(
+  session: ExamSession,
+  cutoffDay: number | null,
+  now: Date,
+): boolean {
+  let cutoffMonth = session.month - 1;
+  let cutoffYear = session.year;
+  if (cutoffMonth < 1) {
+    cutoffMonth = 12;
+    cutoffYear -= 1;
+  }
+
+  const day = cutoffDay ?? new Date(cutoffYear, cutoffMonth, 0).getDate();
+  const cutoffEnd = new Date(cutoffYear, cutoffMonth - 1, day, 23, 59, 59, 999);
+  if (now.getTime() > cutoffEnd.getTime()) return false;
+
+  const sessionStart = new Date(session.year, session.month - 1, 1, 0, 0, 0, 0);
+  return now.getTime() < sessionStart.getTime();
+}
+
+/** Sittings for the price cards, based on how many prices are enabled. */
+export function getNextPriceCardSessions(
+  examMonths: number[],
+  cutoffDay: number | null,
+  now: Date = new Date(),
+  count = 2,
+): ExamSession[] {
+  if (count >= 3) {
+    return getNextOpenExamSessions(examMonths, null, now, count);
+  }
+  return collectOpenSessions(
+    examMonths,
+    now,
+    count,
+    session => isExamSessionOpenPreviousMonth(session, cutoffDay, now),
+  );
 }
 
 export type OfferPreviewPlan = {
@@ -107,7 +167,7 @@ export function previewQualificationOffers(
     };
   }
 
-  const sessions = getNextOpenExamSessions(
+  const sessions = getNextPriceCardSessions(
     rule.examMonths,
     rule.cutoffDay,
     asOf,
