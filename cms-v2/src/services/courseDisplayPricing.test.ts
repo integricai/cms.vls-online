@@ -14,6 +14,7 @@ import {
 import type { EvenDealsQuote } from './evenDeals';
 import {
   getNextOpenExamSessions,
+  getNextPriceCardSessions,
   isExamSessionOpen,
   previewQualificationOffers,
 } from './qualificationOfferSessions';
@@ -161,10 +162,10 @@ await run('preview ACCA as of Aug 1 → Sep + Dec', () => {
   assert.strictEqual(preview.plans[1]!.sessionTitle, 'December 2026 session');
 });
 
-await run('preview ACCA as of Aug 13 still offers September until the 12th', () => {
+await run('preview ACCA as of Aug 13 has rolled past September', () => {
   const preview = previewQualificationOffers(accaRule(12), new Date('2026-08-13T12:00:00'));
-  assert.strictEqual(preview.plans[0]!.sessionTitle, 'September 2026 session');
-  assert.strictEqual(preview.plans[1]!.sessionTitle, 'December 2026 session');
+  assert.strictEqual(preview.plans[0]!.sessionTitle, 'December 2026 session');
+  assert.strictEqual(preview.plans[1]!.sessionTitle, 'March 2027 session');
 });
 
 await run('preview CIMA uses duration labels', () => {
@@ -245,7 +246,7 @@ await run('FA1 with ACCA cutoff 12 on Aug 12: Sep + Dec use list amount (no CMS/
   assert.strictEqual(session2.badge, 'Best value');
 });
 
-await run('FA1 with ACCA cutoff 12 on Aug 15 still offers September until 12 Sep', async () => {
+await run('FA1 with ACCA cutoff 12 on Aug 15 has rolled to December and March', async () => {
   const result = await buildCourseDisplayPricing({
     zenlerCourseId: '71086',
     courseSlug: 'fa1',
@@ -275,12 +276,12 @@ await run('FA1 with ACCA cutoff 12 on Aug 15 still offers September until 12 Sep
 
   assert.ok(result);
   const session1 = result!.plans[0]!;
-  assert.strictEqual(session1.sessionTitle, 'September 2026 session');
+  assert.strictEqual(session1.sessionTitle, 'December 2026 session');
   assert.strictEqual(session1.effectiveAmount, 120);
   assert.strictEqual(session1.lateEnrollmentDiscount, false);
 
   const session2 = result!.plans[1]!;
-  assert.strictEqual(session2.sessionTitle, 'December 2026 session');
+  assert.strictEqual(session2.sessionTitle, 'March 2027 session');
   assert.strictEqual(session2.badge, 'Best value');
 });
 
@@ -319,8 +320,118 @@ await run('a third active price adds the third sitting, and two prices stay at t
   }, asOf);
   assert.ok(two);
   assert.strictEqual(two!.plans.length, 2);
-  assert.strictEqual(two!.plans[0]!.sessionTitle, 'December 2026 session');
-  assert.strictEqual(two!.plans[1]!.sessionTitle, 'March 2027 session');
+  assert.strictEqual(two!.plans[0]!.sessionTitle, 'March 2027 session');
+  assert.strictEqual(two!.plans[1]!.sessionTitle, 'June 2027 session');
+});
+
+await run('two prices on 19 Nov stay on March and June', async () => {
+  const result = await buildCourseDisplayPricing({
+    zenlerCourseId: '71086',
+    courseSlug: 'fa1',
+    courseName: 'ACCA FA1',
+    offerRule: accaRule(12),
+    prices: [
+      geoPrice({ id: 1, name: 'Six months', amount: 180, durationDays: 180, isDefault: true }),
+      geoPrice({ id: 2, name: 'Three months', amount: 120, durationDays: 90 }),
+    ],
+  }, new Date('2026-11-19T12:00:00'));
+
+  assert.ok(result);
+  assert.strictEqual(result!.plans[0]!.sessionTitle, 'March 2027 session');
+  assert.strictEqual(result!.plans[1]!.sessionTitle, 'June 2027 session');
+  assert.deepStrictEqual(
+    getNextPriceCardSessions([3, 6, 9, 12], 12, new Date('2026-11-19T12:00:00'), 2),
+    [{ month: 3, year: 2027 }, { month: 6, year: 2027 }],
+  );
+});
+
+await run('three prices on 19 Nov show December, March and June', async () => {
+  const asOf = new Date('2026-11-19T12:00:00');
+  const prices = [
+    geoPrice({ id: 1, name: 'Nine months', amount: 240, durationDays: 270 }),
+    geoPrice({ id: 2, name: 'Six months', amount: 180, durationDays: 180, isDefault: true }),
+    geoPrice({ id: 3, name: 'Three months', amount: 120, durationDays: 90 }),
+  ];
+  const result = await buildCourseDisplayPricing({
+    zenlerCourseId: '71086',
+    courseSlug: 'fa1',
+    courseName: 'ACCA FA1',
+    offerRule: accaRule(12),
+    prices,
+  }, asOf);
+
+  assert.ok(result);
+  assert.deepStrictEqual(result!.plans.map(plan => plan.sessionTitle), [
+    'December 2026 session',
+    'March 2027 session',
+    'June 2027 session',
+  ]);
+  assert.deepStrictEqual(
+    displayedExamSessionForPrice(prices, accaRule(12), 1, 3, asOf),
+    { month: 12, year: 2026 },
+  );
+});
+
+await run('three prices roll to the next three on 1 December', async () => {
+  const result = await buildCourseDisplayPricing({
+    zenlerCourseId: '71086',
+    courseSlug: 'fa1',
+    courseName: 'ACCA FA1',
+    offerRule: accaRule(5),
+    prices: [
+      geoPrice({ id: 1, name: 'Nine months', amount: 240, durationDays: 270 }),
+      geoPrice({ id: 2, name: 'Six months', amount: 180, durationDays: 180, isDefault: true }),
+      geoPrice({ id: 3, name: 'Three months', amount: 120, durationDays: 90 }),
+    ],
+  }, new Date('2026-12-01T00:00:00'));
+
+  assert.ok(result);
+  assert.deepStrictEqual(result!.plans.map(plan => plan.sessionTitle), [
+    'March 2027 session',
+    'June 2027 session',
+    'September 2027 session',
+  ]);
+});
+
+await run('two prices on 1 December stay on March and June', async () => {
+  const result = await buildCourseDisplayPricing({
+    zenlerCourseId: '71086',
+    courseSlug: 'fa1',
+    courseName: 'ACCA FA1',
+    offerRule: accaRule(12),
+    prices: [
+      geoPrice({ id: 1, name: 'Six months', amount: 180, durationDays: 180, isDefault: true }),
+      geoPrice({ id: 2, name: 'Three months', amount: 120, durationDays: 90 }),
+    ],
+  }, new Date('2026-12-01T00:00:00'));
+
+  assert.ok(result);
+  assert.strictEqual(result!.plans[0]!.sessionTitle, 'March 2027 session');
+  assert.strictEqual(result!.plans[1]!.sessionTitle, 'June 2027 session');
+});
+
+await run('four prices on 19 Nov show the next four sittings', async () => {
+  const result = await buildCourseDisplayPricing({
+    zenlerCourseId: '71086',
+    courseSlug: 'fa1',
+    courseName: 'ACCA FA1',
+    offerRule: accaRule(12),
+    prices: [
+      geoPrice({ id: 1, name: 'Twelve months', amount: 300, durationDays: 365 }),
+      geoPrice({ id: 2, name: 'Nine months', amount: 240, durationDays: 270 }),
+      geoPrice({ id: 3, name: 'Six months', amount: 180, durationDays: 180, isDefault: true }),
+      geoPrice({ id: 4, name: 'Three months', amount: 120, durationDays: 90 }),
+    ],
+  }, new Date('2026-11-19T12:00:00'));
+
+  assert.ok(result);
+  assert.deepStrictEqual(result!.plans.map(plan => plan.sessionTitle), [
+    'December 2026 session',
+    'March 2027 session',
+    'June 2027 session',
+    'September 2027 session',
+  ]);
+  assert.strictEqual(result!.plans[3]!.badge, 'Best value');
 });
 
 await run('the stock tutor-support line is hidden, including a stored copy', async () => {
@@ -352,7 +463,7 @@ await run('the stock tutor-support line is hidden, including a stored copy', asy
   assert.strictEqual(result!.plans[1]!.subtitle, '');
 });
 
-await run('four active prices still show only the three shortest', async () => {
+await run('four active prices all stay on the card', async () => {
   const result = await buildCourseDisplayPricing({
     zenlerCourseId: '1',
     courseSlug: 'open-course',
@@ -367,9 +478,9 @@ await run('four active prices still show only the three shortest', async () => {
   }, new Date('2026-11-18T12:00:00'));
 
   assert.ok(result);
-  assert.strictEqual(result!.plans.length, 3);
-  assert.deepStrictEqual(result!.plans.map(plan => plan.planName), ['30 days', '90 days', '180 days']);
-  assert.strictEqual(result!.plans[2]!.badge, 'Best value');
+  assert.strictEqual(result!.plans.length, 4);
+  assert.deepStrictEqual(result!.plans.map(plan => plan.planName), ['30 days', '90 days', '180 days', '365 days']);
+  assert.strictEqual(result!.plans[3]!.badge, 'Best value');
 });
 
 await run('CIMA dual plans keep duration labels', async () => {
