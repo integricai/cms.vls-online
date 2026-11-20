@@ -46,7 +46,16 @@ function formatAmount(order: PaymentOrder): string {
   return amount;
 }
 
-async function sendEmail(input: { to: string; subject: string; text: string; html: string }): Promise<void> {
+async function sendEmail(input: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  replyTo?: string | null;
+  /** Overrides only the display name of EMAIL_FROM. */
+  fromName?: string;
+  headers?: Array<{ name: string; value: string }>;
+}): Promise<void> {
   const apiKey = process.env.MAILERSEND_API_KEY;
   if (!apiKey) {
     if (process.env.NODE_ENV !== 'production') {
@@ -64,11 +73,15 @@ async function sendEmail(input: { to: string; subject: string; text: string; htm
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: parseSender(process.env.EMAIL_FROM),
+      from: input.fromName
+        ? { ...parseSender(process.env.EMAIL_FROM), name: input.fromName }
+        : parseSender(process.env.EMAIL_FROM),
       to: [{ email: input.to }],
       subject: input.subject,
       text: input.text,
       html: input.html,
+      ...(input.replyTo ? { reply_to: { email: input.replyTo } } : {}),
+      ...(input.headers?.length ? { headers: input.headers } : {}),
     }),
   });
 
@@ -745,4 +758,128 @@ Payment date/time: ${order.paidAt?.toISOString() ?? ''}`;
 <p><strong>Payment date/time:</strong> ${esc(order.paidAt?.toISOString())}</p>`,
   });
   return true;
+}
+
+export type CheckoutFollowupStep = 1 | 2 | 3;
+
+export interface CheckoutFollowupEmailInput {
+  step: CheckoutFollowupStep;
+  courseTitle: string;
+  /** Course page on the website, e.g. https://vls-online.com/courses/acca-fr-financial-reporting */
+  courseUrl: string;
+  unsubscribeUrl: string;
+  /** Digits with country code, e.g. 447700900000. Omitted from the email when not set. */
+  whatsappNumber?: string | null;
+}
+
+function withEmailUtm(url: string, step: CheckoutFollowupStep): string {
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set('utm_source', 'email');
+    parsed.searchParams.set('utm_medium', 'checkout_followup');
+    parsed.searchParams.set('utm_campaign', `checkout_followup_${step}`);
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+export function checkoutFollowupMessage(input: CheckoutFollowupEmailInput): { subject: string; text: string; html: string } {
+  const course = input.courseTitle.replace(/\s+/g, ' ').trim();
+  const link = withEmailUtm(input.courseUrl, input.step);
+  const digits = (input.whatsappNumber ?? '').replace(/\D/g, '');
+  const whatsappUrl = digits ? `https://wa.me/${digits}` : null;
+
+  const helpText = whatsappUrl
+    ? `Questions, or trouble paying? Reply to this email or message us on WhatsApp: ${whatsappUrl}`
+    : 'Questions, or trouble paying? Just reply to this email and our team will help.';
+  const helpHtml = whatsappUrl
+    ? p(`Questions, or trouble paying? Reply to this email or <a href="${esc(whatsappUrl)}" style="color:${BRAND.navySoft};font-weight:600;">message us on WhatsApp</a>.`)
+    : p('Questions, or trouble paying? Just reply to this email and our team will help.');
+
+  const copy = {
+    1: {
+      subject: `You didn't finish enrolling in ${course}`,
+      title: 'Your enrolment is not finished',
+      preheader: `Pick up where you left off with ${course}.`,
+      lines: [
+        `You started enrolling in ${course}, but the checkout closed before payment went through. Nothing has been charged.`,
+        'You can pick up where you left off from the course page.',
+      ],
+      button: 'Continue enrolling',
+      extra: 'If your card was declined, your bank may be blocking an international online payment. Trying another card usually works, or reply and we can help you pay another way.',
+    },
+    2: {
+      subject: `Still thinking about ${course}?`,
+      title: 'Still thinking it over?',
+      preheader: `Any questions about ${course}? We're happy to help.`,
+      lines: [
+        `You recently started enrolling in ${course}.`,
+        'If something held you back, such as which exam session to choose, what the course includes, or how to pay, tell us and we will answer it.',
+      ],
+      button: 'View the course',
+      extra: null,
+    },
+    3: {
+      subject: `Last reminder: ${course}`,
+      title: 'One last reminder',
+      preheader: `Your ${course} enrolment is still open.`,
+      lines: [
+        `This is our last email about ${course}.`,
+        'If you are still preparing for your exam, you can enrol from the course page at any time.',
+      ],
+      button: 'Enrol now',
+      extra: null,
+    },
+  }[input.step];
+
+  const unsubscribeText = `Don't want these reminders? Unsubscribe: ${input.unsubscribeUrl}`;
+  const text = [
+    'Hello,',
+    '',
+    ...copy.lines.flatMap(line => [line, '']),
+    `${copy.button}: ${link}`,
+    '',
+    ...(copy.extra ? [copy.extra, ''] : []),
+    helpText,
+    '',
+    'Kind regards,',
+    'VLS Online',
+    '',
+    unsubscribeText,
+  ].join('\n');
+
+  const html = renderBrandedEmail({
+    title: copy.title,
+    preheader: copy.preheader,
+    bodyHtml: `
+${p('Hello,')}
+${copy.lines.map(line => p(esc(line))).join('\n')}
+${ctaButton(link, copy.button)}
+${copy.extra ? p(esc(copy.extra)) : ''}
+${helpHtml}
+<p style="margin:24px 0 8px;font-family:${BRAND.font};font-size:12px;line-height:1.6;color:${BRAND.muted};">
+  Don't want these reminders? <a href="${esc(input.unsubscribeUrl)}" style="color:${BRAND.muted};">Unsubscribe</a>.
+</p>`,
+  });
+
+  return { subject: copy.subject, text, html };
+}
+
+export async function sendCheckoutFollowupEmail(input: CheckoutFollowupEmailInput & { to: string }): Promise<void> {
+  const message = checkoutFollowupMessage(input);
+  await sendEmail({
+    to: input.to,
+    ...message,
+    // Replies go to the address on the Contact us page, not to noreply@.
+    replyTo: process.env.CHECKOUT_FOLLOWUP_REPLY_TO?.trim() || 'office@vls-online.com',
+    fromName: 'VLS Online',
+    // MailerSend only accepts custom headers on some plans, so this is opt-in.
+    headers: process.env.CHECKOUT_FOLLOWUP_LIST_UNSUBSCRIBE === 'on'
+      ? [
+          { name: 'List-Unsubscribe', value: `<${input.unsubscribeUrl}>` },
+          { name: 'List-Unsubscribe-Post', value: 'List-Unsubscribe=One-Click' },
+        ]
+      : undefined,
+  });
 }

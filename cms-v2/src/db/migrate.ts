@@ -112,7 +112,14 @@ async function main() {
   await bootstrapExistingSchema(files);
 
   const applied = await getAppliedMigrations();
-  const pending = files.filter(file => !applied.has(file));
+  // `npm run migrate -- 083_x.sql` runs only the named files that are not applied yet.
+  const only = process.argv.slice(2);
+  const unknown = only.filter(file => !files.includes(file));
+  if (unknown.length > 0) {
+    console.error(`Unknown migration file(s): ${unknown.join(', ')}`);
+    process.exit(1);
+  }
+  const pending = files.filter(file => !applied.has(file) && (only.length === 0 || only.includes(file)));
 
   if (pending.length === 0) {
     console.log('No pending migrations.');

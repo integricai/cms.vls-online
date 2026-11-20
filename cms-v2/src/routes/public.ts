@@ -5,6 +5,7 @@ import { getContent } from '../models/content';
 import { listPublicBooks } from '../models/book';
 import { getBppBookDiscountPercent } from '../services/bppBookDiscount';
 import type { BlogPost } from '../models/blog';
+import { unsubscribeCheckoutFollowups } from '../models/checkoutFollowup';
 
 const router = Router();
 
@@ -268,6 +269,40 @@ router.options('/newsletter/subscribe', (_req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
   res.status(204).end();
 });
+
+function unsubscribePage(title: string, message: string): string {
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${title}</title></head>
+<body style="margin:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#334155;">
+<div style="max-width:480px;margin:48px auto;padding:32px 24px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;">
+<h1 style="margin:0 0 12px;font-size:20px;color:#0f1e3c;">${title}</h1>
+<p style="margin:0 0 20px;line-height:1.6;">${message}</p>
+<a href="https://vls-online.com/" style="color:#204280;">Go to vls-online.com</a>
+</div></body></html>`;
+}
+
+// One link stops every checkout reminder to that address. POST is for one-click unsubscribe in mail apps.
+async function handleCheckoutFollowupUnsubscribe(req: Request, res: Response): Promise<void> {
+  const token = String(req.query.token ?? '').trim();
+  res.setHeader('Cache-Control', 'no-store');
+  if (!token || token.length > 100) {
+    res.status(400).type('html').send(unsubscribePage('Link not recognised', 'This unsubscribe link is incomplete. Please use the full link from the email.'));
+    return;
+  }
+  try {
+    const found = await unsubscribeCheckoutFollowups(token);
+    if (!found) {
+      res.status(404).type('html').send(unsubscribePage('Link not recognised', 'We could not find this reminder. You will not receive further reminders from this link.'));
+      return;
+    }
+    res.status(200).type('html').send(unsubscribePage('You are unsubscribed', 'You will not receive any more checkout reminders from VLS Online.'));
+  } catch (err) {
+    console.error('[public/checkout-followups/unsubscribe]', err);
+    res.status(500).type('html').send(unsubscribePage('Something went wrong', 'Please try the link again in a few minutes, or reply to the email and we will remove you.'));
+  }
+}
+
+router.get('/checkout-followups/unsubscribe', handleCheckoutFollowupUnsubscribe);
+router.post('/checkout-followups/unsubscribe', handleCheckoutFollowupUnsubscribe);
 
 router.post('/newsletter/subscribe', async (req: Request, res: Response) => {
   try {

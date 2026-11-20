@@ -5,6 +5,7 @@ import { drainCourseUrlChanges, publishCourseRedirects } from '../services/cours
 import { summarizeCourseUrlChanges } from '../models/courseUrlChange';
 import { reconcileIncompletePaidOrders } from '../services/payments/fulfillment';
 import { expireDueSessionEnrollments } from '../services/sessionAccessExpiry';
+import { runCheckoutFollowups } from '../services/checkoutFollowups';
 
 const router = Router();
 
@@ -25,6 +26,8 @@ router.get('/payment-reconciliation', handlePaymentReconciliation);
 router.post('/payment-reconciliation', handlePaymentReconciliation);
 router.get('/session-expiry', handleSessionExpiry);
 router.post('/session-expiry', handleSessionExpiry);
+router.get('/checkout-followups', handleCheckoutFollowups);
+router.post('/checkout-followups', handleCheckoutFollowups);
 
 async function handlePurchaseUpload(req: Request, res: Response): Promise<void> {
   if (!cronAuthorized(req)) {
@@ -73,6 +76,23 @@ async function handleSessionExpiry(req: Request, res: Response): Promise<void> {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Session expiry failed';
     console.error('[cron/session-expiry]', err);
+    res.status(500).json({ ok: false, error: message });
+  }
+}
+
+async function handleCheckoutFollowups(req: Request, res: Response): Promise<void> {
+  if (!cronAuthorized(req)) {
+    res.status(401).json({ ok: false, error: 'Unauthorized' });
+    return;
+  }
+
+  try {
+    const result = await runCheckoutFollowups();
+    const ok = result.failed === 0;
+    res.status(ok ? 200 : 502).json({ ok, data: result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Checkout follow-ups failed';
+    console.error('[cron/checkout-followups]', err);
     res.status(500).json({ ok: false, error: message });
   }
 }
