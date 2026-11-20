@@ -1,3 +1,5 @@
+import { emailBrandLogoHtml } from './emailBrandLogo';
+
 const BRAND = {
   navy: '#0f1e3c',
   text: '#334155',
@@ -84,7 +86,7 @@ export function buildDiscountPayEmail(input: {
     <tr><td align="center">
       <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:${BRAND.white};border:1px solid ${BRAND.border};border-radius:12px;">
         <tr><td style="padding:24px 28px 8px;">
-          <div style="width:38px;height:38px;background:${BRAND.logoBlue};border-radius:10px;color:${BRAND.white};font-weight:700;line-height:38px;text-align:center;">V</div>
+          ${emailBrandLogoHtml('light')}
         </td></tr>
         <tr><td style="padding:8px 28px 28px;">
           <h1 style="margin:0 0 12px;font-size:22px;color:${BRAND.navy};">Pay for your course</h1>

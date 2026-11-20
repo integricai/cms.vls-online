@@ -2,6 +2,7 @@ import type { PaymentOrder } from '../models/paymentOrder';
 import type { ZenlerEnrollmentEmailContext } from './zenlerEnrollmentEnsure';
 import { formatDisplayMoney } from './displayCurrency';
 import { orderHasSchoolCourse, VLS_SCHOOL_LOGIN_URL, VLS_SCHOOL_PASSWORD_RESET_URL } from './schoolAccess';
+import { emailBrandLogoHtml } from './emailBrandLogo';
 
 const VLS_SITE_URL = 'https://vls-online.com';
 const BRAND = {
@@ -18,15 +19,8 @@ const BRAND = {
   font: "Poppins, Arial, Helvetica, sans-serif",
 };
 
-/** Email-safe logo mark (no external image — avoids 404/SVG/client image blocking). */
 function brandLogoMarkHtml(): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
-    <tr>
-      <td width="38" height="38" align="center" valign="middle" style="width:38px;height:38px;background-color:${BRAND.logoBlue};border-radius:10px;font-family:${BRAND.font};font-size:19px;font-weight:700;line-height:38px;color:${BRAND.white};text-align:center;">
-        V
-      </td>
-    </tr>
-  </table>`;
+  return emailBrandLogoHtml('dark');
 }
 
 function parseSender(value: string | undefined) {

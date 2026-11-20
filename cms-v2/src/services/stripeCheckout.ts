@@ -307,7 +307,11 @@ export async function createStripeCheckoutSession(input: {
     params.append('custom_text[submit][message]', STRIPE_RETURNING_STUDENT_MESSAGE);
     params.append('metadata[flow]', 'standard');
   }
-  params.append('billing_address_collection', 'required');
+  // The website popup already asked for the student's name, so skip the billing
+  // address block (it repeats the name). Stripe still asks for the cardholder name
+  // and, where the card needs it, country and postcode. Regional pricing uses the
+  // card's country, not this address.
+  params.append('billing_address_collection', input.studentName?.trim() ? 'auto' : 'required');
   appendStripeBranding(params);
   params.append('client_reference_id', String(input.orderId));
   if (input.closeUnpaidSoon) params.append('expires_at', String(stripeCheckoutExpiresAt()));

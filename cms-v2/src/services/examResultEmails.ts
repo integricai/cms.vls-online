@@ -1,3 +1,5 @@
+import { emailBrandLogoHtml } from './emailBrandLogo';
+
 const VLS_SITE_URL = 'https://vls-online.com';
 const BRAND = {
   navy: '#0f1e3c',
@@ -44,13 +46,7 @@ function ctaButton(url: string, label: string, color = BRAND.logoBlue): string {
 }
 
 function brandLogoMarkHtml(): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
-    <tr>
-      <td width="38" height="38" align="center" valign="middle" style="width:38px;height:38px;background-color:${BRAND.logoBlue};border-radius:10px;font-family:${BRAND.font};font-size:19px;font-weight:700;line-height:38px;color:${BRAND.white};text-align:center;">
-        V
-      </td>
-    </tr>
-  </table>`;
+  return emailBrandLogoHtml('dark');
 }
 
 function renderBrandedEmail(input: { title: string; preheader?: string; bodyHtml: string }): string {
