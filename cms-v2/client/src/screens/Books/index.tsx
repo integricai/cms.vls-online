@@ -18,7 +18,6 @@ function emptyForm() {
     imageAltText: '',
     price: '',
     discountedPrice: '',
-    discountPercent: '',
     currency: 'GBP',
     stripeUrl: '',
     courseId: '',
@@ -37,7 +36,6 @@ function bookToForm(book: BookRecord): BookForm {
     imageAltText: book.imageAltText,
     price: String(book.price),
     discountedPrice: book.discountedPrice != null ? String(book.discountedPrice) : '',
-    discountPercent: book.discountPercent != null ? String(book.discountPercent) : '',
     currency: book.currency,
     stripeUrl: book.stripeUrl,
     courseId: book.courseId ? String(book.courseId) : '',
@@ -54,7 +52,6 @@ function formToPayload(form: BookForm) {
     imageAltText: form.imageAltText.trim(),
     price: Number(form.price),
     discountedPrice: form.discountedPrice === '' ? null : Number(form.discountedPrice),
-    discountPercent: form.discountPercent === '' ? null : Number(form.discountPercent),
     currency: form.currency.trim() || 'GBP',
     stripeUrl: form.stripeUrl.trim(),
     courseId: form.courseId ? Number(form.courseId) : null,
@@ -90,6 +87,8 @@ export default function BooksScreen() {
   const [notice, setNotice] = useState('');
   const [courses, setCourses] = useState<CourseOption[]>([]);
   const [importing, setImporting] = useState(false);
+  const [ribbonPercent, setRibbonPercent] = useState('');
+  const [savingRibbon, setSavingRibbon] = useState(false);
   const workbookRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = getCurrentUser()?.role === 'admin';
@@ -121,7 +120,29 @@ export default function BooksScreen() {
     api.get<CourseOption[]>('/books/course-options')
       .then(setCourses)
       .catch(() => setCourses([]));
+    api.get<{ percent: number | null }>('/books/discount-percentage')
+      .then(row => setRibbonPercent(row.percent != null ? String(row.percent) : ''))
+      .catch(() => setRibbonPercent(''));
   }, []);
+
+  async function saveRibbon() {
+    const percent = ribbonPercent.trim() === '' ? null : Number(ribbonPercent);
+    if (percent != null && (!Number.isInteger(percent) || percent < 1 || percent > 100)) {
+      setError('BPP Book Discount Percentage must be a whole number from 1 to 100.');
+      return;
+    }
+    setSavingRibbon(true);
+    setError('');
+    try {
+      const saved = await api.put<{ percent: number | null }>('/books/discount-percentage', { percent });
+      setRibbonPercent(saved.percent != null ? String(saved.percent) : '');
+      setNotice('BPP Book Discount Percentage saved.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not save the discount percentage.');
+    } finally {
+      setSavingRibbon(false);
+    }
+  }
 
   function selectBook(book: BookRecord) {
     setSelectedId(book.id);
@@ -197,13 +218,6 @@ export default function BooksScreen() {
     }
     if (payload.discountedPrice != null && (!Number.isFinite(payload.discountedPrice) || payload.discountedPrice < 0)) {
       setError('Discounted price must be a valid number.');
-      return;
-    }
-    if (
-      payload.discountPercent != null
-      && (!Number.isInteger(payload.discountPercent) || payload.discountPercent < 1 || payload.discountPercent > 100)
-    ) {
-      setError('Discount percent must be a whole number from 1 to 100.');
       return;
     }
 
@@ -315,6 +329,24 @@ export default function BooksScreen() {
             <p className="mt-0.5 text-xs text-slate-400">
               Books are managed directly in the CMS database. This table is the source of truth for the BPP Books component.
             </p>
+            <div className="mt-3 flex max-w-md items-end gap-2">
+              <Field label="BPP Book Discount Percentage">
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  step={1}
+                  className="input"
+                  value={ribbonPercent}
+                  placeholder="50"
+                  onChange={event => setRibbonPercent(event.target.value)}
+                />
+              </Field>
+              <button onClick={() => { void saveRibbon(); }} disabled={savingRibbon} className="btn-primary mb-3 text-xs">
+                {savingRibbon ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+            <p className="-mt-2 text-[11px] text-slate-400">Shown on every book cover, for example 50% off. Leave blank to hide the ribbon. Book prices stay unchanged.</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <button onClick={() => downloadTemplate().catch(() => setError('Could not download the template.'))} className="btn-ghost text-xs">
@@ -550,19 +582,6 @@ export default function BooksScreen() {
                         <input type="number" min={0} step="0.01" className="input" value={form.discountedPrice} onChange={e => setForm(prev => ({ ...prev, discountedPrice: e.target.value }))} />
                       </Field>
                     </div>
-                    <Field label="Discount %">
-                      <input
-                        type="number"
-                        min={1}
-                        max={100}
-                        step={1}
-                        className="input"
-                        value={form.discountPercent}
-                        onChange={e => setForm(prev => ({ ...prev, discountPercent: e.target.value }))}
-                        placeholder="50"
-                      />
-                    </Field>
-                    <p className="-mt-2 mb-3 text-[11px] text-slate-400">Shown on the book cover, for example 50% off. Leave blank to hide it.</p>
 
                     <p className="section-label">Checkout</p>
                     <Field label="Stripe URL">

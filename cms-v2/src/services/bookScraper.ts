@@ -194,7 +194,6 @@ async function itemToBook(
     imageAltText: title,
     price,
     discountedPrice: discountedPrice || null,
-    discountPercent: null,
     currency: parseCurrency(descriptionText),
     stripeUrl,
     sourceUrl: BOOKS_URL,

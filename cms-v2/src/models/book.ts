@@ -15,7 +15,6 @@ interface DbRow {
   image_alt_text: string;
   price: string;
   discounted_price: string | null;
-  discount_percent: number | string | null;
   currency: string;
   stripe_url: string;
   source_url: string;
@@ -37,7 +36,6 @@ async function ensureBookSchema(): Promise<void> {
         image_alt_text TEXT NOT NULL DEFAULT '',
         price NUMERIC(10,2) NOT NULL DEFAULT 0,
         discounted_price NUMERIC(10,2),
-        discount_percent INTEGER,
         currency VARCHAR(8) NOT NULL DEFAULT 'GBP',
         stripe_url TEXT NOT NULL DEFAULT '',
         source_url TEXT NOT NULL DEFAULT 'https://vls-online.com/bppbooks',
@@ -68,7 +66,6 @@ async function ensureBookSchema(): Promise<void> {
     await sql`CREATE INDEX IF NOT EXISTS idx_books_sort_order ON books(sort_order ASC, title ASC)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_books_is_active_sort_order ON books(is_active, sort_order ASC, title ASC)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_books_updated_at ON books(updated_at DESC)`;
-    await sql`ALTER TABLE books ADD COLUMN IF NOT EXISTS discount_percent INTEGER`;
     await sql`ALTER TABLE books ADD COLUMN IF NOT EXISTS course_id INTEGER`;
     await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_books_course_id ON books(course_id)`;
     const courses = await sql`
@@ -179,7 +176,6 @@ function rowToBook(row: DbRow): BookRecord {
     imageAltText: row.image_alt_text,
     price: Number(row.price),
     discountedPrice: row.discounted_price != null ? Number(row.discounted_price) : null,
-    discountPercent: row.discount_percent != null ? Number(row.discount_percent) : null,
     currency: row.currency,
     stripeUrl: row.stripe_url,
     sourceUrl: row.source_url,
@@ -298,19 +294,17 @@ export async function reorderBooks(ids: number[]): Promise<BookRecord[]> {
 }
 
 export async function createBook(
-  data: Pick<BookRecord, 'title' | 'description' | 'imageUrl' | 'imageAltText' | 'price' | 'discountedPrice' | 'currency' | 'stripeUrl' | 'isActive' | 'courseId'> & {
-    discountPercent?: number | null;
-  },
+  data: Pick<BookRecord, 'title' | 'description' | 'imageUrl' | 'imageAltText' | 'price' | 'discountedPrice' | 'currency' | 'stripeUrl' | 'isActive' | 'courseId'>,
 ): Promise<BookRecord> {
   await ensureBookSchema();
   let rows;
   try {
     rows = await sql`
       INSERT INTO books
-        (title, description, image_url, image_alt_text, price, discounted_price, discount_percent, currency, stripe_url, source_url, course_id, sort_order, is_active)
+        (title, description, image_url, image_alt_text, price, discounted_price, currency, stripe_url, source_url, course_id, sort_order, is_active)
       VALUES
         (${data.title}, ${data.description}, ${data.imageUrl}, ${data.imageAltText}, ${data.price},
-         ${data.discountedPrice}, ${data.discountPercent ?? null}, ${data.currency}, ${data.stripeUrl}, 'manual', ${data.courseId},
+         ${data.discountedPrice}, ${data.currency}, ${data.stripeUrl}, 'manual', ${data.courseId},
          COALESCE((SELECT MAX(sort_order) + 1 FROM books), 1), ${data.isActive})
       RETURNING *
     `;
@@ -332,7 +326,7 @@ export async function createBook(
 
 export async function updateBook(
   id: number,
-  data: Partial<Pick<BookRecord, 'title' | 'description' | 'imageUrl' | 'imageAltText' | 'price' | 'discountedPrice' | 'discountPercent' | 'currency' | 'stripeUrl' | 'isActive' | 'courseId'>>,
+  data: Partial<Pick<BookRecord, 'title' | 'description' | 'imageUrl' | 'imageAltText' | 'price' | 'discountedPrice' | 'currency' | 'stripeUrl' | 'isActive' | 'courseId'>>,
 ): Promise<BookRecord | null> {
   await ensureBookSchema();
   const existing = await getBook(id);
@@ -352,7 +346,6 @@ export async function updateBook(
           image_alt_text = ${data.imageAltText ?? existing.imageAltText},
           price = ${data.price ?? existing.price},
           discounted_price = ${data.discountedPrice !== undefined ? data.discountedPrice : existing.discountedPrice},
-          discount_percent = ${data.discountPercent !== undefined ? data.discountPercent : existing.discountPercent},
           currency = ${data.currency ?? existing.currency},
           stripe_url = ${nextStripeUrl},
           course_id = ${data.courseId !== undefined ? data.courseId : existing.courseId},

@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { put } from '@vercel/blob';
 import { authGuard, requireRole } from '../middleware/authGuard';
 import { BookCourseLinkError, createBook, deleteBook, listBooks, reorderBooks, updateBook } from '../models/book';
+import { getBppBookDiscountPercent, saveBppBookDiscountPercent } from '../services/bppBookDiscount';
 import { getCourseById, listActiveCourses } from '../models/course';
 import type { BookRecord } from '../../shared/types';
 import {
@@ -19,16 +20,6 @@ class BookRequestError extends Error {
     super(message);
     this.status = status;
   }
-}
-
-function requestedDiscountPercent(value: unknown): number | null | undefined {
-  if (value === undefined) return undefined;
-  if (value == null || value === '') return null;
-  const percent = Number(value);
-  if (!Number.isInteger(percent) || percent < 1 || percent > 100) {
-    throw new BookRequestError(400, 'Discount percent must be a whole number from 1 to 100.');
-  }
-  return percent;
 }
 
 async function requestedCourseId(value: unknown): Promise<number | null> {
@@ -60,6 +51,26 @@ async function coursesForTemplate(books: BookRecord[]): Promise<BookTemplateCour
 const router = Router();
 
 router.use(authGuard);
+
+router.get('/discount-percentage', requireRole('admin', 'assistant'), async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    return res.json({ ok: true, data: { percent: await getBppBookDiscountPercent() } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/discount-percentage', requireRole('admin', 'assistant'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const percent = await saveBppBookDiscountPercent(req.body?.percent, req.user?.userId);
+    return res.json({ ok: true, data: { percent } });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'BppBookDiscountError') {
+      return res.status(400).json({ ok: false, error: err.message });
+    }
+    next(err);
+  }
+});
 
 router.get('/', requireRole('admin', 'assistant'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
@@ -191,7 +202,6 @@ router.post('/', requireRole('admin', 'assistant'), async (req: Request, res: Re
     const discountedPrice = req.body.discountedPrice == null || req.body.discountedPrice === ''
       ? null
       : Number(req.body.discountedPrice);
-    const discountPercent = requestedDiscountPercent(req.body.discountPercent);
     const title = typeof req.body.title === 'string' ? req.body.title.trim() : '';
 
     if (!title) return res.status(400).json({ ok: false, error: 'Title is required' });
@@ -207,7 +217,6 @@ router.post('/', requireRole('admin', 'assistant'), async (req: Request, res: Re
       imageAltText: typeof req.body.imageAltText === 'string' ? req.body.imageAltText.trim() : '',
       price,
       discountedPrice,
-      discountPercent: discountPercent ?? null,
       currency: typeof req.body.currency === 'string' ? req.body.currency.trim() || 'GBP' : 'GBP',
       stripeUrl: typeof req.body.stripeUrl === 'string' ? req.body.stripeUrl.trim() : '',
       isActive: req.body.isActive !== false,
@@ -230,8 +239,6 @@ router.put('/:id', requireRole('admin', 'assistant'), async (req: Request, res: 
     const discountedPrice = req.body.discountedPrice == null || req.body.discountedPrice === ''
       ? null
       : Number(req.body.discountedPrice);
-    const discountPercent = requestedDiscountPercent(req.body.discountPercent);
-
     const book = await updateBook(id, {
       title: typeof req.body.title === 'string' ? req.body.title.trim() : undefined,
       description: typeof req.body.description === 'string' ? req.body.description.trim() : undefined,
@@ -239,7 +246,6 @@ router.put('/:id', requireRole('admin', 'assistant'), async (req: Request, res: 
       imageAltText: typeof req.body.imageAltText === 'string' ? req.body.imageAltText.trim() : undefined,
       price: Number.isFinite(price) ? price : undefined,
       discountedPrice: discountedPrice == null || Number.isFinite(discountedPrice) ? discountedPrice : undefined,
-      discountPercent,
       currency: typeof req.body.currency === 'string' ? req.body.currency.trim() || 'GBP' : undefined,
       stripeUrl: typeof req.body.stripeUrl === 'string' ? req.body.stripeUrl.trim() : undefined,
       isActive: typeof req.body.isActive === 'boolean' ? req.body.isActive : undefined,

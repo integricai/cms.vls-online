@@ -3,6 +3,16 @@
 
 import { neon } from '@neondatabase/serverless';
 
+function ribbonPercent(data) {
+  let value = data;
+  if (typeof value === 'string') {
+    try { value = JSON.parse(value); } catch (e) { return null; }
+  }
+  const percent = Number(value && value.percent);
+  if (!Number.isInteger(percent) || percent < 1 || percent > 100) return null;
+  return percent;
+}
+
 function rowToBook(row) {
   return {
     id: row.id,
@@ -14,7 +24,6 @@ function rowToBook(row) {
     imageAltText: row.image_alt_text,
     price: Number(row.price),
     discountedPrice: row.discounted_price == null ? null : Number(row.discounted_price),
-    discountPercent: row.discount_percent == null ? null : Number(row.discount_percent),
     currency: row.currency,
     stripeUrl: row.stripe_url,
     sourceUrl: row.source_url,
@@ -41,14 +50,20 @@ export default async function handler(req, res) {
   try {
     const sql = neon(dbUrl);
     await sql`ALTER TABLE books ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`;
-    await sql`ALTER TABLE books ADD COLUMN IF NOT EXISTS discount_percent INTEGER`;
     const rows = await sql`
       SELECT *
       FROM books
       WHERE COALESCE(is_active, TRUE) = TRUE
       ORDER BY COALESCE(sort_order, 2147483647) ASC, title ASC, id ASC
     `;
-    return res.status(200).json({ books: rows.map(rowToBook) });
+    let discountPercent = null;
+    try {
+      const saved = await sql`SELECT data FROM cms_content WHERE key = 'vls-bpp-book-discount' LIMIT 1`;
+      discountPercent = saved[0] ? ribbonPercent(saved[0].data) : null;
+    } catch (e) {
+      discountPercent = null;
+    }
+    return res.status(200).json({ books: rows.map(rowToBook), discountPercent });
   } catch (err) {
     console.error('[publish-bpp-books]', err);
     return res.status(500).json({ books: [] });

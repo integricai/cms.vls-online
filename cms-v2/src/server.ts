@@ -53,6 +53,7 @@ import { refreshGeoPricingCache } from './services/geoPricing';
 import pricingRegionsRouter from './routes/pricingRegions';
 import qualificationOfferRulesRouter from './routes/qualificationOfferRules';
 import { listPublicBooks } from './models/book';
+import { getBppBookDiscountPercent } from './services/bppBookDiscount';
 import { createBookCheckoutUrl } from './services/bookCheckout';
 import { mapActiveCoursesForFinder } from './services/courseFinderPublish';
 
@@ -285,7 +286,10 @@ app.get('/api/publish-bpp-books', async (_req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'no-store');
   try {
-    return res.json({ books: await listPublicBooks() });
+    return res.json({
+      books: await listPublicBooks(),
+      discountPercent: await getBppBookDiscountPercent(),
+    });
   } catch (err) {
     next(err);
   }

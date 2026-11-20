@@ -946,8 +946,6 @@ export interface BookRecord {
   imageAltText: string;
   price: number;
   discountedPrice: number | null;
-  /** Whole-number cover ribbon, 1–100. Null hides the ribbon. */
-  discountPercent: number | null;
   currency: string;
   stripeUrl: string;
   sourceUrl: string;

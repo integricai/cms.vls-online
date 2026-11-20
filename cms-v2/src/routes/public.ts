@@ -3,6 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { getContent } from '../models/content';
 import { listPublicBooks } from '../models/book';
+import { getBppBookDiscountPercent } from '../services/bppBookDiscount';
 import type { BlogPost } from '../models/blog';
 
 const router = Router();
@@ -252,7 +253,10 @@ router.get('/bpp-books', async (_req: Request, res: Response, next: NextFunction
   try {
     allowPublicCors(res);
     setPublicJsonCache(res);
-    return res.json({ books: await listPublicBooks() });
+    return res.json({
+      books: await listPublicBooks(),
+      discountPercent: await getBppBookDiscountPercent(),
+    });
   } catch (err) {
     next(err);
   }
