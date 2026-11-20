@@ -4,7 +4,7 @@ import {
   releaseFollowupClaim,
   stopPurchasedFollowups,
 } from '../models/checkoutFollowup';
-import { sendCheckoutFollowupEmail } from './paymentEmails';
+import { checkoutFollowupMessage, sendCheckoutFollowupEmail } from './paymentEmails';
 
 const SITE_URL = 'https://vls-online.com';
 const API_URL = 'https://api.cms.vls-online.com';
@@ -75,4 +75,21 @@ export async function runCheckoutFollowups(): Promise<CheckoutFollowupRunResult>
     }
   }
   return result;
+}
+
+/** Sends all three emails for a sample course to one address. Writes nothing to the database. */
+export async function sendCheckoutFollowupSamples(to: string): Promise<string[]> {
+  const subjects: string[] = [];
+  for (const step of [1, 2, 3] as const) {
+    const input = {
+      step,
+      courseTitle: 'ACCA FR (F7) - Financial Reporting',
+      courseUrl: followupCourseUrl('/courses/acca-fr-financial-reporting'),
+      unsubscribeUrl: followupUnsubscribeUrl('sample'),
+      whatsappNumber: process.env.CHECKOUT_FOLLOWUP_WHATSAPP?.trim() || DEFAULT_FOLLOWUP_WHATSAPP,
+    };
+    await sendCheckoutFollowupEmail({ ...input, to });
+    subjects.push(checkoutFollowupMessage(input).subject);
+  }
+  return subjects;
 }

@@ -4,9 +4,26 @@ import { upsertCourse, getCourseByZenlerCourseId } from '../models/course';
 import { createPaymentCard, updatePaymentCard } from '../models/coursePaymentCard';
 import { fetchZenlerCourses } from '../services/zenlerCourseService';
 import { createActivityLog } from '../models/activityLog';
+import { sendCheckoutFollowupSamples } from '../services/checkoutFollowups';
 
 const router = Router();
 router.use(authGuard, requireRole('admin'));
+
+// Sends the three checkout follow-up emails for a sample course, so the copy can be checked before going live.
+router.post('/checkout-followups/samples', async (req: Request, res: Response) => {
+  const to = String(req.body?.to ?? req.user?.email ?? '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    res.status(400).json({ ok: false, error: 'A valid "to" email is required' });
+    return;
+  }
+  try {
+    const subjects = await sendCheckoutFollowupSamples(to);
+    res.json({ ok: true, data: { to, subjects } });
+  } catch (err) {
+    console.error('[admin/checkout-followups/samples]', err);
+    res.status(502).json({ ok: false, error: err instanceof Error ? err.message : 'Sample send failed' });
+  }
+});
 
 function price(value: unknown): number {
   return typeof value === 'number' ? value : Number(value);
