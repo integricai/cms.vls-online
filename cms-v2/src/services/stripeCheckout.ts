@@ -145,20 +145,40 @@ export function majorAmountFromStripeMinor(amountMinor: number, currency: string
   return amountMinor / 100;
 }
 
-/** Lock Checkout to this email. A prefilled customer_email can still be edited. */
+/**
+ * Lock Checkout to this email. A prefilled customer_email can still be edited.
+ * The name goes on the Stripe customer for receipts and the Dashboard; hosted
+ * Checkout only prefills a name from a saved card, so the page still asks for it.
+ */
 export async function stripeCustomerIdForEmail(
   email: string,
   environment?: CheckoutEnvironment | null,
+  name?: string | null,
 ): Promise<string> {
   const secretKey = stripeSecretKeyForEnvironment(environment);
   const query = new URLSearchParams({ email, limit: '1' });
   const listed = await stripeApiRequest(secretKey, `/customers?${query.toString()}`, { method: 'GET' });
-  const customers = Array.isArray(listed.data) ? listed.data as Array<{ id?: string; email?: string }> : [];
+  const customers = Array.isArray(listed.data)
+    ? listed.data as Array<{ id?: string; email?: string; name?: string | null }>
+    : [];
   const match = customers.find((customer) => customer.email?.trim().toLowerCase() === email.toLowerCase());
-  if (match?.id) return match.id;
+  const fullName = name?.trim().slice(0, 256) || '';
+  if (match?.id) {
+    // Fill a missing name only; never rename an existing customer.
+    if (fullName && !match.name?.trim()) {
+      const update = new URLSearchParams({ name: fullName });
+      await stripeApiRequest(secretKey, `/customers/${encodeURIComponent(match.id)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: update,
+      }).catch((err) => console.error('[stripe] could not save the customer name', err instanceof Error ? err.message : err));
+    }
+    return match.id;
+  }
 
   const params = new URLSearchParams();
   params.set('email', email);
+  if (fullName) params.set('name', fullName);
   const created = await stripeApiRequest(secretKey, '/customers', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -244,6 +264,7 @@ export async function createStripeCheckoutSession(input: {
   amount: number;
   currency: string;
   studentEmail: string | null;
+  studentName?: string | null;
   countryCode?: string | null;
   paymentMethodTypes?: string[];
   returnOrigin?: string | null;
@@ -299,7 +320,7 @@ export async function createStripeCheckoutSession(input: {
   params.append('line_items[0][quantity]', '1');
   if (input.studentEmail) {
     try {
-      const customerId = await stripeCustomerIdForEmail(input.studentEmail, environment);
+      const customerId = await stripeCustomerIdForEmail(input.studentEmail, environment, input.studentName);
       params.append('customer', customerId);
     } catch (err) {
       console.error('[stripe] could not lock the checkout email', err instanceof Error ? err.message : err);

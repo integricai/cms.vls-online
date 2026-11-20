@@ -15,6 +15,8 @@ export interface CreateCheckoutInput {
   amount: number;
   currency: string;
   studentEmail: string | null;
+  /** Name from the website popup. Saved on the Stripe customer; Stripe can't show it on the payment page. */
+  studentName?: string | null;
   countryCode?: string | null;
   returnOrigin?: string | null;
   /** Same-site path opened when the student leaves Checkout. */
