@@ -84,6 +84,7 @@ import {
   saveStudentPassword,
 } from '../services/studentPassword';
 import { sendErrorAlert } from '../utils/errorAlert';
+import { verifyTurnstileToken } from '../utils/turnstile';
 
 const router = Router();
 
@@ -475,8 +476,33 @@ router.post('/checkout-quote', schoolAccountRateLimit, async (req: Request, res:
   }
 });
 
+/**
+ * The website's email popup sends a Turnstile token with the email. A token that
+ * is sent is always checked. CHECKOUT_REQUIRE_TURNSTILE=on also refuses popup-style
+ * requests (an email but no school password) that come without one; leave it off
+ * until every live site sends tokens, because staging and production share this CMS.
+ */
+async function rejectFailedCheckoutCaptcha(req: Request, res: Response): Promise<boolean> {
+  const body = req.body ?? {};
+  const token = typeof body.turnstileToken === 'string' ? body.turnstileToken.trim() : '';
+  if (!token) {
+    const required = process.env.CHECKOUT_REQUIRE_TURNSTILE === 'on'
+      && typeof body.studentEmail === 'string'
+      && body.studentEmail.trim() !== ''
+      && body.collectSchoolPassword !== true;
+    if (!required) return false;
+    res.status(400).json({ ok: false, error: 'captcha_failed', message: 'Please complete the security check.' });
+    return true;
+  }
+  const captcha = await verifyTurnstileToken(token, req);
+  if (captcha.ok) return false;
+  res.status(400).json({ ok: false, error: 'captcha_failed', message: captcha.error });
+  return true;
+}
+
 router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   try {
+    if (await rejectFailedCheckoutCaptcha(req, res)) return;
     const courseId = parsePositiveInt(req.body?.courseId);
     const coursePriceId = parsePositiveInt(req.body?.coursePriceId);
     if (courseId || coursePriceId) {

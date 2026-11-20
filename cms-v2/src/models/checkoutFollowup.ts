@@ -24,7 +24,7 @@ export async function recordAbandonedCheckouts(): Promise<number> {
     WITH closed AS (
       SELECT DISTINCT ON (email, course_id) email, course_id, order_id
       FROM (
-        SELECT lower(trim(COALESCE(po.provider_customer_email, po.stripe_customer_email))) AS email,
+        SELECT lower(trim(COALESCE(po.provider_customer_email, po.stripe_customer_email, po.student_email))) AS email,
                po.course_id,
                po.id AS order_id
         FROM payment_orders po
@@ -32,7 +32,8 @@ export async function recordAbandonedCheckouts(): Promise<number> {
           AND po.course_id IS NOT NULL
           AND po.checkout_environment = 'production'
           AND po.created_at >= ${CHECKOUT_FOLLOWUPS_START}::timestamptz
-          AND COALESCE(po.provider_customer_email, po.stripe_customer_email) LIKE '%@%'
+          -- student_email comes from the website's email popup, before Stripe.
+          AND COALESCE(po.provider_customer_email, po.stripe_customer_email, po.student_email) LIKE '%@%'
       ) candidates
       ORDER BY email, course_id, order_id DESC
     )
