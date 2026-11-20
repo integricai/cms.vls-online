@@ -1,5 +1,5 @@
 import { sql } from '../db/client';
-import { assembleTrackingDays, type TrackingRange, type TrackingReport } from '../../shared/siteTracking';
+import { assembleTrackingDays, summarizeEnrolments, type TrackingRange, type TrackingReport } from '../../shared/siteTracking';
 import { siteVisitorKey } from './siteAnalytics';
 import type { ClassifiedTrackingVisit } from '../services/siteTracking';
 
@@ -9,9 +9,10 @@ type ChannelDayRow = { date: string | Date; label: string | null; visitors: numb
 type AudienceRow = { unique_visits: number; returning_visits: number };
 type EnrolmentRow = {
   campaign: string | null;
+  source: string | null;
+  medium: string | null;
   currency: string | null;
-  orders: number;
-  amount: string | number;
+  amount: string | number | null;
   meta_click: boolean;
   google_click: boolean;
   from_gad: boolean;
@@ -167,48 +168,47 @@ export async function buildTrackingReport(
     `,
     sql`
       SELECT
-        campaign,
+        COALESCE(NULLIF(BTRIM(utm_campaign), ''), NULLIF(BTRIM(gad_campaign_id), '')) AS campaign,
+        NULLIF(BTRIM(utm_source), '') AS source,
+        NULLIF(BTRIM(utm_medium), '') AS medium,
         currency,
-        COUNT(*)::int AS orders,
-        COALESCE(SUM(amount), 0) AS amount,
-        BOOL_OR(meta_click) AS meta_click,
-        BOOL_OR(google_click) AS google_click,
-        BOOL_OR(from_gad) AS from_gad
-      FROM (
-        SELECT
-          COALESCE(NULLIF(BTRIM(utm_campaign), ''), NULLIF(BTRIM(gad_campaign_id), '')) AS campaign,
-          currency,
-          amount,
-          (
-            NULLIF(BTRIM(fbclid), '') IS NOT NULL
-            OR NULLIF(BTRIM(fbc), '') IS NOT NULL
-            OR LOWER(BTRIM(COALESCE(utm_source, ''))) IN ('facebook', 'fb', 'instagram', 'ig', 'meta', 'an')
-          ) AS meta_click,
-          (
-            NULLIF(BTRIM(gclid), '') IS NOT NULL
-            OR NULLIF(BTRIM(gbraid), '') IS NOT NULL
-            OR NULLIF(BTRIM(wbraid), '') IS NOT NULL
-            OR NULLIF(BTRIM(gad_source), '') IS NOT NULL
-            OR NULLIF(BTRIM(gad_campaign_id), '') IS NOT NULL
-            OR LOWER(BTRIM(COALESCE(utm_source, ''))) IN ('google', 'googleads', 'adwords', 'youtube')
-          ) AS google_click,
-          (
-            NULLIF(BTRIM(utm_campaign), '') IS NULL
-            AND NULLIF(BTRIM(gad_campaign_id), '') IS NOT NULL
-          ) AS from_gad
-        FROM payment_orders
-        WHERE paid_at IS NOT NULL
-          AND checkout_environment = 'production'
-          AND COALESCE(status, 'Paid') <> 'Refunded'
-          AND (paid_at AT TIME ZONE 'Europe/London')::date >= CAST(${bounds.start} AS date)
-          AND (paid_at AT TIME ZONE 'Europe/London')::date <= CAST(${bounds.end} AS date)
-      ) orders
-      GROUP BY campaign, currency
-      ORDER BY orders DESC, campaign
-      LIMIT 12
+        amount,
+        (
+          NULLIF(BTRIM(fbclid), '') IS NOT NULL
+          OR NULLIF(BTRIM(fbc), '') IS NOT NULL
+          OR LOWER(BTRIM(COALESCE(utm_source, ''))) IN ('facebook', 'fb', 'instagram', 'ig', 'meta', 'an')
+        ) AS meta_click,
+        (
+          NULLIF(BTRIM(gclid), '') IS NOT NULL
+          OR NULLIF(BTRIM(gbraid), '') IS NOT NULL
+          OR NULLIF(BTRIM(wbraid), '') IS NOT NULL
+          OR NULLIF(BTRIM(gad_source), '') IS NOT NULL
+          OR NULLIF(BTRIM(gad_campaign_id), '') IS NOT NULL
+          OR LOWER(BTRIM(COALESCE(utm_source, ''))) IN ('google', 'googleads', 'adwords', 'youtube')
+        ) AS google_click,
+        (
+          NULLIF(BTRIM(utm_campaign), '') IS NULL
+          AND NULLIF(BTRIM(gad_campaign_id), '') IS NOT NULL
+        ) AS from_gad
+      FROM payment_orders
+      WHERE paid_at IS NOT NULL
+        AND checkout_environment = 'production'
+        AND COALESCE(status, 'Paid') <> 'Refunded'
+        AND (paid_at AT TIME ZONE 'Europe/London')::date >= CAST(${bounds.start} AS date)
+        AND (paid_at AT TIME ZONE 'Europe/London')::date <= CAST(${bounds.end} AS date)
     `,
   ]);
 
+  const enrolmentSummary = summarizeEnrolments((enrolmentRows as EnrolmentRow[]).map(row => ({
+    campaign: row.campaign,
+    source: row.source,
+    medium: row.medium,
+    currency: row.currency,
+    amount: Number(row.amount) || 0,
+    metaClick: row.meta_click === true,
+    googleClick: row.google_click === true,
+    fromGoogleId: row.from_gad === true,
+  })));
   const channelList = counts(channelRows as CountRow[], 'Direct');
   const days = assembleTrackingDays(
     bounds.start,
@@ -246,14 +246,7 @@ export async function buildTrackingReport(
       medium: row.medium?.trim() || 'Not set',
       visitors: Number(row.visitors) || 0,
     })),
-    enrolments: (enrolmentRows as EnrolmentRow[]).map(row => ({
-      campaign: row.campaign?.trim() || 'No campaign stored',
-      currency: row.currency?.trim() || 'GBP',
-      orders: Number(row.orders) || 0,
-      amount: Number(row.amount) || 0,
-      meta: row.meta_click === true,
-      google: row.google_click === true,
-      fromGoogleId: row.from_gad === true,
-    })),
+    enrolments: enrolmentSummary.enrolments,
+    enrolmentChannels: enrolmentSummary.channels,
   };
 }

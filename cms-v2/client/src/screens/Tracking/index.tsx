@@ -6,7 +6,13 @@ import AnalyticsTab from './AnalyticsTab';
 import ExperimentsTab from './ExperimentsTab';
 import {
   campaignLabel,
+  ENROLMENT_CHANNELS,
+  enrolmentCampaignLabel,
   trackingCustomBounds,
+  trackingSourceName,
+  type EnrolmentChannel,
+  type TrackingEnrolment,
+  type TrackingEnrolmentChannel,
   type TrackingCount,
   type TrackingRange,
   type TrackingReport,
@@ -436,7 +442,12 @@ function SourceTable({ rows }: { rows: TrackingSourceRow[] }) {
           <tbody>
             {rows.map(row => (
               <tr key={`${row.source}-${row.medium}`} className="border-t border-slate-100">
-                <td className="py-2 pr-3 text-slate-700">{row.source}</td>
+                <td className="py-2 pr-3 text-slate-700">
+                  {row.source}
+                  {trackingSourceName(row.source) ? (
+                    <span className="ml-2 text-xs text-slate-400">{trackingSourceName(row.source)}</span>
+                  ) : null}
+                </td>
                 <td className="py-2 pr-3 text-slate-500">{row.medium}</td>
                 <td className="py-2 text-right font-medium text-slate-900">{row.visitors.toLocaleString('en-GB')}</td>
               </tr>
@@ -445,6 +456,149 @@ function SourceTable({ rows }: { rows: TrackingSourceRow[] }) {
         </table>
       )}
     </section>
+  );
+}
+
+const META_CHANNELS: EnrolmentChannel[] = ['meta_tagged', 'meta_untagged'];
+
+function moneyList(rows: Array<{ currency: string; amount: number }>): string {
+  const totals = new Map<string, number>();
+  for (const row of rows) totals.set(row.currency, (totals.get(row.currency) ?? 0) + row.amount);
+  if (totals.size === 0) return formatMoney(0, 'USD');
+  return [...totals].map(([currency, amount]) => formatMoney(amount, currency)).join(' + ');
+}
+
+function orderCount(rows: Array<{ orders: number }>): number {
+  return rows.reduce((sum, row) => sum + row.orders, 0);
+}
+
+function PaidEnrolments({ channels, rows }: { channels: TrackingEnrolmentChannel[]; rows: TrackingEnrolment[] }) {
+  const total = orderCount(channels);
+  const meta = channels.filter(row => META_CHANNELS.includes(row.channel));
+  const google = channels.filter(row => row.channel === 'google');
+  const metaTagged = orderCount(channels.filter(row => row.channel === 'meta_tagged'));
+  const metaUntagged = orderCount(channels.filter(row => row.channel === 'meta_untagged'));
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-4">
+      <h2 className="text-sm font-semibold text-slate-800">Paid enrolments by source</h2>
+      <p className="mt-1 text-xs text-slate-500">
+        Each enrolment is credited to the last ad click we recorded on the device the buyer paid with.
+      </p>
+      {total === 0 ? <p className="mt-3 text-sm text-slate-400">No paid enrolments in this period.</p> : (
+        <>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <SummaryTile label="Paid enrolments" orders={total} amount={moneyList(channels)} />
+            <SummaryTile
+              label="From Meta (Facebook / Instagram)"
+              orders={orderCount(meta)}
+              amount={moneyList(meta)}
+              note={`${metaTagged} with a campaign tag, ${metaUntagged} without`}
+              accent="text-blue-700"
+            />
+            <SummaryTile
+              label="From Google Ads"
+              orders={orderCount(google)}
+              amount={moneyList(google)}
+              accent="text-emerald-700"
+            />
+          </div>
+
+          <table className="mt-4 w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-slate-400">
+                <th className="pb-2 font-medium">Where they came from</th>
+                <th className="pb-2 text-right font-medium">Orders</th>
+                <th className="pb-2 text-right font-medium">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ENROLMENT_CHANNELS.map(def => {
+                const channelRows = channels.filter(row => row.channel === def.id);
+                if (channelRows.length === 0) return null;
+                return (
+                  <ChannelGroup
+                    key={def.id}
+                    label={def.label}
+                    help={def.help}
+                    totals={channelRows}
+                    campaigns={rows.filter(row => row.channel === def.id)}
+                  />
+                );
+              })}
+            </tbody>
+          </table>
+
+          <div className="mt-4 rounded-xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-600">
+            <p className="font-semibold text-slate-700">Why Meta Ads Manager shows more sales than this</p>
+            <ul className="mt-1 list-disc space-y-1 pl-4">
+              <li>
+                Meta counts a sale if the buyer <strong>clicked an ad in the last 7 days, or only saw one in the last day</strong>.
+                It matches buyers by email and phone. This page only counts a click we actually recorded.
+              </li>
+              <li>
+                Meta also counts buyers who clicked on their phone and paid on another device, or whose Instagram
+                in-app browser lost the click before checkout.
+              </li>
+              <li>
+                For the closest match, set Ads Manager attribution to <strong>1-day click</strong> and compare it
+                with the Meta total above.
+              </li>
+              <li>
+                Ads without URL parameters land under "Meta click, no campaign tag". To see every campaign here, add
+                <code className="mx-1 rounded bg-white px-1">{'utm_source=fb&utm_medium=paid&utm_campaign={{campaign.id}}'}</code>
+                to the URL parameters of every ad and boosted post.
+              </li>
+            </ul>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function SummaryTile({ label, orders, amount, note, accent = 'text-slate-900' }: {
+  label: string;
+  orders: number;
+  amount: string;
+  note?: string;
+  accent?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 p-3">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold ${accent}`}>{orders.toLocaleString('en-GB')}</p>
+      <p className="text-xs text-slate-500">{amount}</p>
+      {note ? <p className="mt-1 text-xs text-slate-400">{note}</p> : null}
+    </div>
+  );
+}
+
+function ChannelGroup({ label, help, totals, campaigns }: {
+  label: string;
+  help: string;
+  totals: TrackingEnrolmentChannel[];
+  campaigns: TrackingEnrolment[];
+}) {
+  const showCampaigns = campaigns.some(row => row.campaign || row.source);
+  return (
+    <>
+      <tr className="border-t border-slate-200 align-top">
+        <td className="pb-1 pr-3 pt-3">
+          <p className="font-medium text-slate-800">{label}</p>
+          <p className="text-xs text-slate-400">{help}</p>
+        </td>
+        <td className="pt-3 text-right font-semibold text-slate-900">{orderCount(totals).toLocaleString('en-GB')}</td>
+        <td className="pt-3 text-right font-semibold text-slate-900">{moneyList(totals)}</td>
+      </tr>
+      {showCampaigns ? campaigns.map(row => (
+        <tr key={`${row.channel}-${row.campaign}-${row.source}-${row.currency}`} className="text-slate-600">
+          <td className="py-1 pl-4 pr-3 text-xs">{enrolmentCampaignLabel(row)}</td>
+          <td className="py-1 text-right text-xs">{row.orders.toLocaleString('en-GB')}</td>
+          <td className="py-1 text-right text-xs">{formatMoney(row.amount, row.currency)}</td>
+        </tr>
+      )) : null}
+    </>
   );
 }
 
@@ -535,32 +689,7 @@ function VisitsTab({ query }: { query: string | null }) {
               <CountTable title="Language" rows={report.locales} label={value => value === 'ar' ? 'Arabic' : 'English'} />
             </div>
             <SourceTable rows={report.sources} />
-            <section className="rounded-2xl border border-slate-200 bg-white p-4">
-              <h2 className="text-sm font-semibold text-slate-800">Paid enrolments</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Campaign names are saved when the buyer allowed marketing cookies. Enrolments with nothing stored are grouped together.
-              </p>
-              {report.enrolments.length === 0 ? <p className="mt-3 text-sm text-slate-400">No paid enrolments in this period.</p> : (
-                <table className="mt-3 w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-slate-400">
-                      <th className="pb-2 font-medium">Campaign</th>
-                      <th className="pb-2 text-right font-medium">Orders</th>
-                      <th className="pb-2 text-right font-medium">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.enrolments.map(row => (
-                      <tr key={`${row.campaign}-${row.currency}`} className="border-t border-slate-100">
-                        <td className="py-2 pr-3 text-slate-700">{campaignLabel(row.campaign, row)}</td>
-                        <td className="py-2 text-right text-slate-900">{row.orders.toLocaleString('en-GB')}</td>
-                        <td className="py-2 text-right font-medium text-slate-900">{formatMoney(row.amount, row.currency)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </section>
+            <PaidEnrolments channels={report.enrolmentChannels ?? []} rows={report.enrolments} />
           </>
         ) : null}
     </>
