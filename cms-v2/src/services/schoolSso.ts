@@ -31,8 +31,9 @@ export function schoolSsoUrl(input: {
 
   const url = new URL(`${VLS_SCHOOL_BASE_URL}/api/sso/v1`);
   url.searchParams.set('token', token);
-  // A full school URL is ignored and Zenler sends the student to the home page.
-  url.searchParams.set('return_to', '/mycourses');
+  // No return_to: with '/mycourses' Zenler redirected to its internal host
+  // (school.vls-online.com.prd.esyexpress.net), a dead page. Found 20 Nov 2026.
+  // Without it the student lands signed in on the school home page.
   if (input.errorUrl?.trim()) url.searchParams.set('error_url', input.errorUrl.trim());
   return url.toString();
 }
