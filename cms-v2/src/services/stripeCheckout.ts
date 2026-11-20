@@ -222,6 +222,17 @@ export async function readStripeCheckoutSession(
   return { status: body.status ?? '', url: body.url ?? null };
 }
 
+/**
+ * Unpaid checkouts close after 2-3 hours instead of Stripe's 24, so the expired
+ * webhook (and any follow-up) arrives while the student still remembers.
+ * Rounded to the hour so a retry under the same Idempotency-Key sends the same value.
+ */
+export function stripeCheckoutExpiresAt(nowMs: number = Date.now()): number {
+  const hourMs = 60 * 60 * 1000;
+  const hourStart = Math.floor(nowMs / hourMs) * hourMs;
+  return Math.floor((hourStart + 3 * hourMs) / 1000);
+}
+
 export async function createStripeCheckoutSession(input: {
   orderId: number;
   paymentOptionId?: number | null;
@@ -244,6 +255,8 @@ export async function createStripeCheckoutSession(input: {
   savedOffer?: boolean;
   /** Product image on the Stripe summary. Courses keep the default course image. */
   orderSummaryImageUrl?: string | null;
+  /** Website enrol checkouts close after 2-3 hours. Emailed links keep Stripe's 24 hours. */
+  closeUnpaidSoon?: boolean;
 }): Promise<StripeCheckoutSession> {
   if (!input.savedOffer) assertStripeUsdCharge(input.currency);
   const chargeCurrency = input.currency.toUpperCase();
@@ -276,6 +289,7 @@ export async function createStripeCheckoutSession(input: {
   params.append('billing_address_collection', 'required');
   appendStripeBranding(params);
   params.append('client_reference_id', String(input.orderId));
+  if (input.closeUnpaidSoon) params.append('expires_at', String(stripeCheckoutExpiresAt()));
   // The charge and the price on the Stripe page are both USD.
   params.append('line_items[0][price_data][currency]', chargeCurrency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);

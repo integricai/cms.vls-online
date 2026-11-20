@@ -687,10 +687,19 @@ export async function rememberPresentedCharge(
 export async function closePendingPaymentOrder(data: {
   orderId: number;
   status: 'Failed' | 'Cancelled';
+  /** Email typed on the payment page; kept so the abandoned checkout can be followed up. */
+  customerEmail?: string | null;
 }): Promise<PaymentOrder> {
+  const customerEmail = data.customerEmail ?? null;
   const rows = await sql`
     UPDATE payment_orders
-    SET status = ${data.status}
+    SET status = ${data.status},
+        provider_customer_email = COALESCE(provider_customer_email, ${customerEmail}),
+        stripe_customer_email = CASE
+          WHEN COALESCE(provider, 'stripe') = 'stripe'
+            THEN COALESCE(stripe_customer_email, ${customerEmail})
+          ELSE stripe_customer_email
+        END
     WHERE id = ${data.orderId}
       AND status = 'Pending'
     RETURNING *

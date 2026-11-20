@@ -364,6 +364,7 @@ export async function closeAbandonedCheckout(event: CheckoutClosedEvent): Promis
   const closed = await closePendingPaymentOrder({
     orderId: existing.id,
     status: event.status,
+    customerEmail: event.customerEmail ?? null,
   });
   await releaseRetakeCodeForOrder(existing.id).catch((err: unknown) => {
     console.error('[payments] could not release the retake code', existing.id, err);

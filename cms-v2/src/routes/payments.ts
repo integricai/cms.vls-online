@@ -288,7 +288,8 @@ async function startProviderCheckout(
   input: CreateCheckoutInput,
 ): Promise<{ checkoutUrl: string; checkoutId: string; provider: PaymentProviderId }> {
   const provider = getPaymentProvider(providerId);
-  const session = await provider.createCheckout(input);
+  // Only the site's Enrol checkout; emailed offers call the provider directly.
+  const session = await provider.createCheckout({ ...input, closeUnpaidSoon: true });
   await attachCheckoutSession(input.orderId, {
     provider: session.provider,
     checkoutId: session.checkoutId,

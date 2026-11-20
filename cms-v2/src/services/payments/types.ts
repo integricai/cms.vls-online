@@ -22,6 +22,8 @@ export interface CreateCheckoutInput {
   environment?: CheckoutEnvironment | null;
   /** Local amount the course page showed. Stored on the order. Stripe is charged in USD. */
   localPresentment?: { amount: number; currency: string } | null;
+  /** Website enrol checkouts close after 2-3 hours. Emailed links keep Stripe's 24 hours. */
+  closeUnpaidSoon?: boolean;
 }
 
 export interface CheckoutSessionResult {
@@ -73,6 +75,8 @@ export interface CheckoutClosedEvent {
   checkoutId: string | null;
   paymentId: string | null;
   status: 'Failed' | 'Cancelled';
+  /** Email typed on the payment page before it closed, if any. */
+  customerEmail?: string | null;
 }
 
 export interface IgnoredWebhookEvent {

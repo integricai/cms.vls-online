@@ -12,6 +12,7 @@ import {
   STRIPE_RETURNING_STUDENT_MESSAGE,
   STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL,
   STRIPE_ORDER_SUMMARY_IMAGE_URL,
+  stripeCheckoutExpiresAt,
   stripeMethodsForCharge,
   stripePaymentMethodTypes,
   stripeUnitAmount,
@@ -249,7 +250,10 @@ else process.env.STRIPE_WEBHOOK_SECRET = previous.webhook;
 if (previous.liveWebhook === undefined) delete process.env.STRIPE_WEBHOOK_SECRET_LIVE;
 else process.env.STRIPE_WEBHOOK_SECRET_LIVE = previous.liveWebhook;
 
-async function checkoutParams(environment: 'staging' | 'production'): Promise<URLSearchParams> {
+async function checkoutParams(
+  environment: 'staging' | 'production',
+  closeUnpaidSoon = true,
+): Promise<URLSearchParams> {
   process.env.STRIPE_SECRET_KEY = 'sk_test_stub';
   process.env.STRIPE_SECRET_KEY_LIVE = 'sk_live_stub';
   const realFetch = globalThis.fetch;
@@ -268,6 +272,7 @@ async function checkoutParams(environment: 'staging' | 'production'): Promise<UR
       currency: 'USD',
       studentEmail: null,
       environment,
+      closeUnpaidSoon,
     });
     return sent;
   } finally {
@@ -282,6 +287,10 @@ async function checkoutParams(environment: 'staging' | 'production'): Promise<UR
 void (async () => {
   const staging = await checkoutParams('staging');
   const live = await checkoutParams('production');
+  const emailedLink = await checkoutParams('production', false);
+  run('leaves emailed checkout links on the 24-hour Stripe default', () => {
+    assert.strictEqual(emailedLink.get('expires_at'), null);
+  });
   const orderSummaryNote = 'line_items[0][price_data][product_data][description]';
   const orderSummaryImage = 'line_items[0][price_data][product_data][images][0]';
 
@@ -296,6 +305,10 @@ void (async () => {
       assert.strictEqual(page.get('adaptive_pricing[enabled]'), 'false');
       assert.strictEqual(page.get('branding_settings[background_color]'), '#0b1f3a');
       assert.strictEqual(page.get('custom_text[submit][message]'), STRIPE_RETURNING_STUDENT_MESSAGE);
+    });
+    run(`closes an unpaid ${name} checkout within 3 hours`, () => {
+      const left = Number(page.get('expires_at')) - Date.now() / 1000;
+      assert.ok(left > 115 * 60 && left <= 180 * 60, `expires in ${left}s`);
     });
   }
 
@@ -327,6 +340,15 @@ void (async () => {
       STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL,
     );
     assert.notStrictEqual(STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL, STRIPE_ORDER_SUMMARY_IMAGE_URL);
+  });
+
+  run('unpaid checkouts close after 2-3 hours, stable within the hour', () => {
+    const at = Date.UTC(2026, 10, 20, 18, 40, 0);
+    const expires = stripeCheckoutExpiresAt(at);
+    assert.strictEqual(expires, Date.UTC(2026, 10, 20, 21, 0, 0) / 1000);
+    assert.strictEqual(stripeCheckoutExpiresAt(Date.UTC(2026, 10, 20, 18, 0, 1)), expires);
+    const minutesLeft = (expires * 1000 - at) / 60000;
+    assert.ok(minutesLeft >= 120 && minutesLeft <= 180, `expiry ${minutesLeft} min`);
   });
 
   console.log('stripeCheckout tests passed');

@@ -69,6 +69,14 @@ async function findStripeOrder(mapped: ProviderWebhookEvent): Promise<PaymentOrd
   return null;
 }
 
+/** Email from an unpaid session, so an abandoned checkout can be followed up. */
+function typedCheckoutEmail(object: Record<string, any>): string | null {
+  const raw = object.customer_details?.email ?? object.customer_email;
+  if (typeof raw !== 'string') return null;
+  const email = raw.trim().toLowerCase();
+  return email.includes('@') ? email : null;
+}
+
 function sessionOrderId(object: Record<string, any>): number | null {
   const orderId = Number(object.client_reference_id ?? object.metadata?.orderId);
   return Number.isInteger(orderId) ? orderId : null;
@@ -145,6 +153,7 @@ export function mapStripeWebhookEvent(event: unknown): ProviderWebhookEvent {
       checkoutId: typeof object.id === 'string' ? object.id : null,
       paymentId: extractStripeId(object.payment_intent),
       status: type === 'checkout.session.expired' ? 'Cancelled' : 'Failed',
+      customerEmail: typedCheckoutEmail(object),
     };
   }
 
