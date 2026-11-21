@@ -1,8 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { uploadDuePurchaseConversions } from '../services/googleAdsConversions';
 import { secretEquals } from '../utils/secretEquals';
-import { drainCourseUrlChanges, publishCourseRedirects } from '../services/courseUrlApply';
-import { summarizeCourseUrlChanges } from '../models/courseUrlChange';
 import { reconcileIncompletePaidOrders } from '../services/payments/fulfillment';
 import { expireDueSessionEnrollments } from '../services/sessionAccessExpiry';
 import { runCheckoutFollowups } from '../services/checkoutFollowups';
@@ -18,10 +16,6 @@ function cronAuthorized(req: Request): boolean {
 
 router.get('/google-ads-conversions', handlePurchaseUpload);
 router.post('/google-ads-conversions', handlePurchaseUpload);
-router.get('/course-url-changes', handleCourseUrlChanges);
-router.post('/course-url-changes', handleCourseUrlChanges);
-router.get('/course-redirects', handleCourseRedirects);
-router.post('/course-redirects', handleCourseRedirects);
 router.get('/payment-reconciliation', handlePaymentReconciliation);
 router.post('/payment-reconciliation', handlePaymentReconciliation);
 router.get('/session-expiry', handleSessionExpiry);
@@ -42,23 +36,6 @@ async function handlePurchaseUpload(req: Request, res: Response): Promise<void> 
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Conversion upload failed';
     console.error('[cron/google-ads-conversions]', err);
-    res.status(500).json({ ok: false, error: message });
-  }
-}
-
-async function handleCourseUrlChanges(req: Request, res: Response): Promise<void> {
-  if (!cronAuthorized(req)) {
-    res.status(401).json({ ok: false, error: 'Unauthorized' });
-    return;
-  }
-
-  try {
-    const drained = await drainCourseUrlChanges();
-    const summary = await summarizeCourseUrlChanges();
-    res.status(200).json({ ok: true, data: { ...drained, summary } });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Course URL update failed';
-    console.error('[cron/course-url-changes]', err);
     res.status(500).json({ ok: false, error: message });
   }
 }
@@ -110,22 +87,6 @@ async function handlePaymentReconciliation(req: Request, res: Response): Promise
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Payment reconciliation failed';
     console.error('[cron/payment-reconciliation]', err);
-    res.status(500).json({ ok: false, error: message });
-  }
-}
-
-async function handleCourseRedirects(req: Request, res: Response): Promise<void> {
-  if (!cronAuthorized(req)) {
-    res.status(401).json({ ok: false, error: 'Unauthorized' });
-    return;
-  }
-
-  try {
-    const result = await publishCourseRedirects();
-    res.status(200).json({ ok: true, data: result });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Redirect publish failed';
-    console.error('[cron/course-redirects]', err);
     res.status(500).json({ ok: false, error: message });
   }
 }

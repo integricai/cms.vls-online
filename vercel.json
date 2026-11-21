@@ -7,10 +7,6 @@
       "schedule": "*/5 * * * *"
     },
     {
-      "path": "/api/cron/course-url-changes",
-      "schedule": "*/5 * * * *"
-    },
-    {
       "path": "/api/cron/payment-reconciliation",
       "schedule": "*/5 * * * *"
     },
