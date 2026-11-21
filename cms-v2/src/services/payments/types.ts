@@ -27,6 +27,11 @@ export interface CreateCheckoutInput {
   environment?: CheckoutEnvironment | null;
   /** Local amount the course page showed. Stored on the order. Stripe is charged in USD. */
   localPresentment?: { amount: number; currency: string } | null;
+  /** Second Stripe line. The course line stays input.amount. */
+  extraLineItem?: { name: string; amount: number } | null;
+  /** Ask Stripe for a shipping address. Used when the book is posted. */
+  collectShipping?: boolean;
+  bookId?: number | null;
 }
 
 export interface CheckoutSessionResult {

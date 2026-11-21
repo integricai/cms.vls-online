@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { getPaymentCard } from '../models/coursePaymentCard';
 import { getGeoPriceById } from '../models/courseGeoPrice';
 import { getCourseById as getCmsCourseById } from '../models/course';
+import { getBook } from '../models/book';
 import { splitStudentName, upsertCustomer } from '../models/customer';
 import {
   attachCheckoutSession,
@@ -27,6 +28,7 @@ import {
   type PaymentProviderId,
 } from '../services/payments/types';
 import { parseCheckoutAttribution, resolveCheckoutEnvironment } from '../services/attribution';
+import { addCheckoutMoney, checkoutBookAddon } from '../services/checkoutBookAddon';
 import { canPresentCheckoutCurrency, presentCheckoutAmount } from '../services/displayCurrency';
 import { getUsdRates, rateForCurrency } from '../services/fxRates';
 import { quoteMatchesCataloguePrice, verifyPriceQuote, type PriceQuotePayload } from '../services/priceQuote';
@@ -906,6 +908,33 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
         : null;
     }
 
+    const courseChargeAmount = chargeAmount;
+    const requestedBookId = parsePositiveInt(req.body?.bookId);
+    let bookAddon: ReturnType<typeof checkoutBookAddon> = null;
+    if (requestedBookId) {
+      if (providerId !== 'stripe') {
+        return res.status(400).json({ ok: false, error: 'The BPP book can only be added to a card payment.' });
+      }
+      bookAddon = checkoutBookAddon({
+        book: await getBook(requestedBookId),
+        courseId: course.id,
+        chargeCurrency,
+      });
+      if (!bookAddon) {
+        return res.status(400).json({ ok: false, error: 'This book cannot be added to this course.' });
+      }
+      chargeAmount = addCheckoutMoney(chargeAmount, bookAddon.amount);
+      if (localPresentment) {
+        const bookLocal = await presentmentFromFx(bookAddon.amount, quotedCountryCode);
+        if (bookLocal && bookLocal.currency === localPresentment.currency) {
+          localPresentment = {
+            amount: addCheckoutMoney(localPresentment.amount, bookLocal.amount),
+            currency: localPresentment.currency,
+          };
+        }
+      }
+    }
+
     const order = await createPaymentOrder({
       paymentOptionId: null,
       courseId: course.id,
@@ -960,7 +989,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
         zenlerCourseId: course.zenlerCourseId,
         courseTitle: course.name,
         paymentCardTitle: `${course.name} — ${optionType}`,
-        amount: chargeAmount,
+        amount: courseChargeAmount,
         currency: chargeCurrency,
         studentEmail: schoolPassword.email,
         skipStudentNameFields: Boolean(customerInput.firstName && customerInput.lastName),
@@ -970,6 +999,9 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
         cancelPath: typeof req.body?.cancelPath === 'string' ? req.body.cancelPath : null,
         environment,
         localPresentment: providerId === 'stripe' ? localPresentment : null,
+        extraLineItem: bookAddon ? { name: bookAddon.title, amount: bookAddon.amount } : null,
+        collectShipping: Boolean(bookAddon),
+        bookId: bookAddon?.bookId ?? null,
       });
     } catch (err) {
       if (retakeQuote) {
