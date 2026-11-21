@@ -16,14 +16,15 @@ function appendParam(params: URLSearchParams, key: string, value: string | numbe
 export const STRIPE_RETURNING_STUDENT_MESSAGE =
   'Already a Vertex student? Use the email you log in with.';
 
-/** Stripe drops line breaks from product text, so the summary list is an image. */
+/** Retired course summary image. Books still send their own image. */
 export const STRIPE_ORDER_SUMMARY_IMAGE_URL = 'https://cms.vls-online.com/stripe-order-summary-v3.png';
 
-/** Book checkout uses its own summary. The course image promises tutor support and a refund. */
+/** Book checkout uses its own summary image. Course checkout does not. */
 export const STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL = 'https://cms.vls-online.com/stripe-order-summary-books.png';
 
-const STRIPE_BRAND_COLOR = '#0b1f3a';
-const STRIPE_BRAND_ICON_URL = 'https://vls-online.com/icon.png';
+const STRIPE_PANEL_COLOR = '#ffffff';
+const STRIPE_BUTTON_COLOR = '#0b1f3a';
+const STRIPE_BRAND_ICON_URL = 'https://vls-online.com/media/vls-logo-footer-mark.png';
 
 /** Card already surfaces Apple Pay and Google Pay. Link is added only when Stripe collects the email. */
 export function stripePaymentMethodTypes(paymentFirst: boolean, currency = 'USD'): string[] {
@@ -66,17 +67,16 @@ export function safeCheckoutCancelPath(value: string | null | undefined): string
   return path;
 }
 
-export function appendStripeOrderSummaryImage(
-  params: URLSearchParams,
-  imageUrl = STRIPE_ORDER_SUMMARY_IMAGE_URL,
-): void {
-  params.append('line_items[0][price_data][product_data][images][0]', imageUrl);
+export function appendStripeOrderSummaryImage(params: URLSearchParams, imageUrl: string): void {
+  const url = imageUrl.trim();
+  if (!url) return;
+  params.append('line_items[0][price_data][product_data][images][0]', url);
 }
 
-/** Vertex navy and icon on the order summary. */
+/** White order panel, dark pay button, and the black emblem. */
 export function appendStripeBranding(params: URLSearchParams): void {
-  params.append('branding_settings[background_color]', STRIPE_BRAND_COLOR);
-  params.append('branding_settings[button_color]', STRIPE_BRAND_COLOR);
+  params.append('branding_settings[background_color]', STRIPE_PANEL_COLOR);
+  params.append('branding_settings[button_color]', STRIPE_BUTTON_COLOR);
   params.append('branding_settings[icon][type]', 'url');
   params.append('branding_settings[icon][url]', STRIPE_BRAND_ICON_URL);
 }
@@ -274,7 +274,7 @@ export async function createStripeCheckoutSession(input: {
   localPresentment?: LocalPresentment | null;
   /** An emailed offer that was saved in a local currency. The amount is that offer, not today's price. */
   savedOffer?: boolean;
-  /** Product image on the Stripe summary. Courses keep the default course image. */
+  /** Product image on the Stripe summary. Courses omit it. Books pass their own. */
   orderSummaryImageUrl?: string | null;
   /** Website enrol checkouts close after 2-3 hours. Emailed links keep Stripe's 24 hours. */
   closeUnpaidSoon?: boolean;
@@ -318,7 +318,9 @@ export async function createStripeCheckoutSession(input: {
   // The charge and the price on the Stripe page are both USD.
   params.append('line_items[0][price_data][currency]', chargeCurrency.toLowerCase());
   params.append('line_items[0][price_data][product_data][name]', input.paymentCardTitle || input.courseTitle);
-  appendStripeOrderSummaryImage(params, input.orderSummaryImageUrl || STRIPE_ORDER_SUMMARY_IMAGE_URL);
+  if (input.orderSummaryImageUrl?.trim()) {
+    appendStripeOrderSummaryImage(params, input.orderSummaryImageUrl);
+  }
   params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
   appendStripeAdaptivePricing(params);
   params.append('line_items[0][quantity]', '1');

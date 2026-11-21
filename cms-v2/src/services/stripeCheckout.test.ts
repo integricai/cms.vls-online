@@ -295,15 +295,21 @@ void (async () => {
   const orderSummaryImage = 'line_items[0][price_data][product_data][images][0]';
 
   for (const [name, page] of [['staging', staging], ['live', live]] as const) {
-    run(`gives ${name} one Stripe name box, the left pane image, and the branded page`, () => {
+    run(`gives ${name} the course name and price on a white panel`, () => {
       assert.strictEqual(page.get('custom_fields[0][key]'), null);
       assert.strictEqual(page.get(orderSummaryNote), null);
-      assert.strictEqual(page.get(orderSummaryImage), STRIPE_ORDER_SUMMARY_IMAGE_URL);
+      assert.strictEqual(page.get(orderSummaryImage), null);
+      assert.strictEqual(page.get('line_items[0][price_data][product_data][name]'), 'ACCA FBT');
       assert.strictEqual(page.get('custom_text[after_submit][message]'), null);
       assert.ok(page.getAll('payment_method_types[]').includes('card'));
       assert.ok(!page.getAll('payment_method_types[]').includes('klarna'));
       assert.strictEqual(page.get('adaptive_pricing[enabled]'), 'false');
-      assert.strictEqual(page.get('branding_settings[background_color]'), '#0b1f3a');
+      assert.strictEqual(page.get('branding_settings[background_color]'), '#ffffff');
+      assert.strictEqual(page.get('branding_settings[button_color]'), '#0b1f3a');
+      assert.strictEqual(
+        page.get('branding_settings[icon][url]'),
+        'https://vls-online.com/media/vls-logo-footer-mark.png',
+      );
       assert.strictEqual(page.get('custom_text[submit][message]'), STRIPE_RETURNING_STUDENT_MESSAGE);
     });
     run(`closes an unpaid ${name} checkout within 3 hours`, () => {
