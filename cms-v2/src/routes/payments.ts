@@ -54,7 +54,7 @@ import {
   validateMultiCourseAccessSelection,
 } from '../services/multiCourseAccess';
 import { resolveConfiguredComboZenlerCourseIds } from '../services/multiCourseStoryblokAllowlist';
-import { ComboBundlePriceError, priceComboAccessSelection } from '../services/comboBundlePrice';
+import { ComboBundlePriceError, priceComboAccessSelection, type ComboChargeLine } from '../services/comboBundlePrice';
 import { examSessionForCoursePrice } from '../services/courseDisplayPricing';
 import { normalizeExamSession, sessionAccessEndsAt, sessionSaleLabel } from '../../shared/sessionAccess';
 import {
@@ -469,6 +469,19 @@ router.post('/checkout-quote', schoolAccountRateLimit, async (req: Request, res:
       chargeAmount,
       currency: priced.chargeCurrency,
       retakeApplied,
+      // A combo lists each paper at its catalogue price. The amounts add up to
+      // listAmount, and discountPercent comes off that total to give chargeAmount.
+      ...(priced.comboLines?.length
+        ? {
+          items: priced.comboLines.map(line => ({
+            zenlerCourseId: line.zenlerCourseId,
+            title: line.courseName,
+            planName: line.planTitle,
+            listAmount: line.listAmountUsd,
+          })),
+          discountPercent: priced.discountPercent,
+        }
+        : {}),
     });
   } catch (err) {
     if (err instanceof RetakeCodeError || err instanceof MultiCourseAccessError || err instanceof ComboBundlePriceError) {
@@ -638,6 +651,8 @@ type CheckoutPricing = {
   clientIp: string | null;
   /** Local amount already shown on the course page. Null when checkout stays in one currency. */
   localPresentment: { amount: number; currency: string } | null;
+  /** The papers in a combo, each at the price that went into listAmount. Null for a single course. */
+  comboLines: ComboChargeLine[] | null;
 };
 
 const PRICING_UNAVAILABLE = 'Pricing is temporarily unavailable. Please refresh the page and try again.';
@@ -769,6 +784,7 @@ async function priceCheckoutSelection(
   let discountPercent = computeDiscountPercent(listAmount, chargeAmount);
   let optionType = resolved.price.name;
   let examSession: { month: number; year: number } | null = null;
+  let comboLines: ComboChargeLine[] | null = null;
   const requestedAccessIds = parseAccessZenlerCourseIds(req.body ?? {});
   const comboStorySlug = parseComboStorySlug(req.body ?? {});
   const configuredComboZenlerCourseIds = await resolveConfiguredComboZenlerCourseIds();
@@ -798,6 +814,7 @@ async function priceCheckoutSelection(
     listAmount = comboQuote.listAmountUsd;
     chargeCurrency = 'USD';
     discountPercent = comboQuote.discountPercent;
+    comboLines = comboQuote.lines;
     if (comboQuote.sessionTitle) optionType = comboQuote.sessionTitle;
     if (comboQuote.sessionMonth != null && comboQuote.sessionYear != null) {
       examSession = { month: comboQuote.sessionMonth, year: comboQuote.sessionYear };
@@ -839,6 +856,7 @@ async function priceCheckoutSelection(
     quotedCountryCode,
     clientIp,
     localPresentment,
+    comboLines,
   };
 }
 

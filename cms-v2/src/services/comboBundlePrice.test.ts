@@ -171,4 +171,26 @@ run('a notes pack prices one paper at the published amount', () => {
   assert.strictEqual(quote.discountPercent, 0);
 });
 
+run('each selected course is listed at the price that went into the total', () => {
+  const quote = quoteComboCharge([
+    [
+      plan({ amount: 149, sessionTitle: 'Six Months Access', zenlerCourseId: '157180', courseName: ' CIMA BA2 ', isDefault: true }),
+      plan({ amount: 200, sessionTitle: '1 Year Access', zenlerCourseId: '157180', courseName: ' CIMA BA2 ', isDefault: false }),
+    ],
+    // Evendeals lowers effectiveAmount. The line still shows the catalogue price.
+    [plan({ amount: 149, effectiveAmount: 75, sessionTitle: 'Six Months Access', zenlerCourseId: '137233', courseName: 'CIMA BA3' })],
+  ], null);
+  assert.deepStrictEqual(quote.lines, [
+    { zenlerCourseId: '157180', courseName: 'CIMA BA2', planTitle: 'Six Months Access', listAmountUsd: 149 },
+    { zenlerCourseId: '137233', courseName: 'CIMA BA3', planTitle: 'Six Months Access', listAmountUsd: 149 },
+  ]);
+  assert.strictEqual(quote.lines.reduce((sum, line) => sum + line.listAmountUsd, 0), quote.listAmountUsd);
+  assert.strictEqual(quote.chargeAmountUsd, 193.7);
+});
+
+run('a line without a course name is still listed with its price', () => {
+  const quote = quoteComboCharge([[plan({ amount: 40 })], [plan({ amount: 60 })]], null);
+  assert.deepStrictEqual(quote.lines.map(line => [line.courseName, line.listAmountUsd]), [[null, 40], [null, 60]]);
+});
+
 console.log('comboBundlePrice tests passed');

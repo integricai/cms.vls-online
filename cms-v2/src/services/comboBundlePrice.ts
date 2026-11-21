@@ -39,6 +39,17 @@ export type ComboPlanAmount = {
   sessionTitle: string;
   isDefault: boolean;
   coursePriceId?: number | null;
+  /** Course this plan belongs to. Shown on the checkout breakdown. */
+  zenlerCourseId?: string | null;
+  courseName?: string | null;
+};
+
+/** One selected course and the catalogue price that went into the list total. */
+export type ComboChargeLine = {
+  zenlerCourseId: string | null;
+  courseName: string | null;
+  planTitle: string | null;
+  listAmountUsd: number;
 };
 
 export type ComboChargeQuote = {
@@ -56,6 +67,8 @@ export type ComboChargeQuote = {
   sessionTitle: string | null;
   sessionMonth: number | null;
   sessionYear: number | null;
+  /** The selected courses in order. Their amounts add up to listAmountUsd. */
+  lines: ComboChargeLine[];
 };
 
 export function roundComboMoney(amount: number): number {
@@ -220,6 +233,12 @@ export function quoteComboCharge(
     sessionTitle,
     sessionMonth: chosenSession?.month ?? null,
     sessionYear: chosenSession?.year ?? null,
+    lines: chosen.map(plan => ({
+      zenlerCourseId: plan.zenlerCourseId?.trim() || null,
+      courseName: plan.courseName?.trim() || null,
+      planTitle: plan.sessionTitle?.trim() || null,
+      listAmountUsd: roundComboMoney(plan.amount),
+    })),
   };
 }
 
@@ -313,6 +332,8 @@ export async function priceComboAccessSelection(input: {
       sessionTitle: plan.sessionTitle,
       isDefault: plan.isDefault,
       coursePriceId: plan.coursePriceId,
+      zenlerCourseId: course.zenlerCourseId,
+      courseName: course.courseName,
     }));
   }));
 
