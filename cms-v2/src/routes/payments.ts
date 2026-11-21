@@ -932,7 +932,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       }
       bookAddon = checkoutBookAddon({
         book: await getBook(requestedBookId),
-        courseId: course.id,
+        courseTitle: course.name,
         chargeCurrency,
       });
       if (!bookAddon) {
