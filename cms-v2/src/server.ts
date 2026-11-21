@@ -32,6 +32,7 @@ import sitemapRouter from './routes/sitemap';
 import cronRouter from './routes/cron';
 import googleConversionsRouter from './routes/googleConversions';
 import siteCacheRouter from './routes/siteCache';
+import healthCheckRouter from './routes/healthCheck';
 import systemLogsRouter from './routes/systemLogs';
 import contactRouter from './routes/contact';
 import analyticsRouter from './routes/analytics';
@@ -380,6 +381,7 @@ app.use('/api/public', publicRouter);
 app.use('/api/cron', cronRouter);
 app.use('/api/google-conversions', googleConversionsRouter);
 app.use('/api/site-cache', siteCacheRouter);
+app.use('/api/health-check', healthCheckRouter);
 
 app.get('/blog', async (_req, res, next) => {
   try {

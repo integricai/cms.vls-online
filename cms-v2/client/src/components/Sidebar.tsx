@@ -18,6 +18,7 @@ const MAIN_LINKS: VaultLink[] = [
   { to: '/tracking', label: 'Tracking', access: 'admin' },
   { to: '/students', label: 'Students', access: 'admin' },
   { to: '/google-conversions', label: 'Google Conversions', access: 'admin' },
+  { to: '/health-check', label: 'Health check', access: 'admin' },
 ];
 
 function canSee(access: Access, isAdmin: boolean, canPay: boolean): boolean {
@@ -89,6 +90,13 @@ function MenuIcon({ name }: { name: string }) {
     return (
       <svg viewBox="0 0 20 20" fill="currentColor" className={common}>
         <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+      </svg>
+    );
+  }
+  if (name === 'Health check') {
+    return (
+      <svg viewBox="0 0 20 20" fill="currentColor" className={common}>
+        <path fillRule="evenodd" d="M3.17 5.42A4.5 4.5 0 0110 4.1a4.5 4.5 0 016.83 6.08L10 17l-6.83-6.82a4.5 4.5 0 010-4.76zM6.5 9a.75.75 0 000 1.5h1.2l.9 1.8a.75.75 0 001.3.06l1.2-1.86h1.4a.75.75 0 000-1.5h-1.8a.75.75 0 00-.63.34l-.7 1.1-.6-1.2A.75.75 0 008.1 9H6.5z" clipRule="evenodd" />
       </svg>
     );
   }

@@ -36,6 +36,7 @@ import Tracking from './screens/Tracking';
 import Payments from './screens/Payments';
 import Students from './screens/Students';
 import GoogleConversions from './screens/GoogleConversions';
+import HealthCheck from './screens/HealthCheck';
 import ContentMigrationPage from './screens/ContentMigration/Page';
 import Books from './screens/Books';
 import CoursesPage from './screens/Courses/Page';
@@ -168,6 +169,7 @@ export default function App() {
           <Route path="/tracking"         element={<RequireAdmin><Tracking /></RequireAdmin>} />
           <Route path="/students"         element={<RequireAdmin><Students /></RequireAdmin>} />
           <Route path="/google-conversions" element={<RequireAdmin><GoogleConversions /></RequireAdmin>} />
+          <Route path="/health-check" element={<RequireAdmin><HealthCheck /></RequireAdmin>} />
           <Route path="/billing/custom-offer" element={<Navigate to="/payments?tab=custom-offer" replace />} />
           <Route path="/billing/offers"       element={<Navigate to="/sales?tab=sales" replace />} />
           <Route path="/settings/courses" element={<Navigate to="/courses" replace />} />

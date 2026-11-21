@@ -4,6 +4,7 @@ import { secretEquals } from '../utils/secretEquals';
 import { reconcileIncompletePaidOrders } from '../services/payments/fulfillment';
 import { expireDueSessionEnrollments } from '../services/sessionAccessExpiry';
 import { runCheckoutFollowups } from '../services/checkoutFollowups';
+import { runUrlHealthCheck } from '../services/urlHealthCheck';
 
 const router = Router();
 
@@ -22,6 +23,24 @@ router.get('/session-expiry', handleSessionExpiry);
 router.post('/session-expiry', handleSessionExpiry);
 router.get('/checkout-followups', handleCheckoutFollowups);
 router.post('/checkout-followups', handleCheckoutFollowups);
+router.get('/health-check', handleHealthCheck);
+router.post('/health-check', handleHealthCheck);
+
+async function handleHealthCheck(req: Request, res: Response): Promise<void> {
+  if (!cronAuthorized(req)) {
+    res.status(401).json({ ok: false, error: 'Unauthorized' });
+    return;
+  }
+
+  try {
+    const result = await runUrlHealthCheck();
+    res.status(result.errors.length ? 502 : 200).json({ ok: result.errors.length === 0, data: result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Health check failed';
+    console.error('[cron/health-check]', err);
+    res.status(500).json({ ok: false, error: message });
+  }
+}
 
 async function handlePurchaseUpload(req: Request, res: Response): Promise<void> {
   if (!cronAuthorized(req)) {
