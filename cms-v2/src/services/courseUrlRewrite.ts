@@ -60,6 +60,28 @@ export type CourseUrlPlan = {
   errors: string[];
 };
 
+/**
+ * Why a queued rename should not run any more, or null when it is still wanted.
+ * A queued row can sit for weeks; renaming from it then reverts live pages, so
+ * the course's current URL and the story's current path must still match it.
+ */
+export function staleCourseUrlChangeReason(input: {
+  fromPath: string;
+  toPath: string;
+  coursePageUrl: string | null | undefined;
+  storyPath: string;
+}): string | null {
+  const wanted = normalizePublicCoursePath(input.coursePageUrl);
+  if (wanted !== input.toPath) {
+    return `Course page URL is now ${wanted ?? 'empty'}, not ${input.toPath}`;
+  }
+  const current = normalizePublicCoursePath(input.storyPath);
+  if (current !== input.fromPath && current !== input.toPath) {
+    return `Storyblok page moved to ${current ?? input.storyPath} after this change was queued`;
+  }
+  return null;
+}
+
 export function courseSlugFromPath(path: string): string | null {
   const match = path.match(/^\/courses\/([a-z0-9]+(?:-[a-z0-9]+)*)$/);
   return match?.[1] ?? null;

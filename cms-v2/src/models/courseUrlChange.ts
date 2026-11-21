@@ -199,6 +199,17 @@ export async function markCourseUrlChangeFailed(id: number, error: string): Prom
   `;
 }
 
+/** Closes a queued change that no longer matches the course; it never renames or redirects. */
+export async function markCourseUrlChangeSuperseded(id: number, reason: string): Promise<void> {
+  await sql`
+    UPDATE course_url_changes
+    SET status = 'superseded',
+        error = ${reason.slice(0, 2000)},
+        updated_at = NOW()
+    WHERE id = ${id}
+  `;
+}
+
 export async function markRewritingCourseUrlChangesReady(linksUpdated: number): Promise<number> {
   const rows = await sql`
     UPDATE course_url_changes

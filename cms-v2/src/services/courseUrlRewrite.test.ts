@@ -6,6 +6,7 @@ import {
   planCourseUrlChanges,
   replaceCourseHref,
   rewriteCourseLinksInContent,
+  staleCourseUrlChangeReason,
 } from './courseUrlRewrite';
 
 assert.equal(normalizePublicCoursePath('https://www.vls-online.com/courses/fa1?ref=1'), '/courses/fa1');
@@ -98,6 +99,44 @@ assert.deepEqual(
       targetUrl: 'https://vls-online.com/courses/fa1-2027',
     },
   ],
+);
+
+// A rename queued in September must not run after the course URL changed back.
+assert.match(
+  staleCourseUrlChangeReason({
+    fromPath: '/courses/acca-sbl-strategic-business-leader',
+    toPath: '/courses/strategic-business-leader-sbl',
+    coursePageUrl: '/courses/acca-sbl-strategic-business-leader',
+    storyPath: '/courses/acca-sbl-strategic-business-leader',
+  }) ?? '',
+  /Course page URL is now \/courses\/acca-sbl-strategic-business-leader/,
+);
+assert.match(
+  staleCourseUrlChangeReason({
+    fromPath: '/courses/sbl',
+    toPath: '/courses/acca-sbl',
+    coursePageUrl: 'https://vls-online.com/courses/acca-sbl/',
+    storyPath: '/courses/something-else',
+  }) ?? '',
+  /moved to \/courses\/something-else/,
+);
+assert.equal(
+  staleCourseUrlChangeReason({
+    fromPath: '/courses/sbl',
+    toPath: '/courses/acca-sbl',
+    coursePageUrl: 'https://vls-online.com/courses/acca-sbl/',
+    storyPath: '/courses/sbl',
+  }),
+  null,
+);
+assert.equal(
+  staleCourseUrlChangeReason({
+    fromPath: '/courses/sbl',
+    toPath: '/courses/acca-sbl',
+    coursePageUrl: '/courses/acca-sbl',
+    storyPath: '/courses/acca-sbl',
+  }),
+  null,
 );
 
 console.log('courseUrlRewrite tests passed');

@@ -1,10 +1,11 @@
-import { listCourses } from '../models/course';
+import { getCourseById, listCourses } from '../models/course';
 import {
   getCourseUrlRewriteState,
   insertCourseUrlChange,
   listCourseUrlChangesByStatus,
   listOpenCourseUrlChanges,
   markCourseUrlChangeFailed,
+  markCourseUrlChangeSuperseded,
   markCourseUrlChangeRewriting,
   markCourseUrlChangesPublished,
   markRewritingCourseUrlChangesReady,
@@ -20,6 +21,7 @@ import {
 } from './cloudflareRedirects';
 import {
   courseSlugFromPath,
+  staleCourseUrlChangeReason,
   planCourseUrlChanges,
   rewriteCourseLinksInContent,
   type CourseUrlStoryRef,
@@ -202,6 +204,17 @@ async function renameQueuedChange(change: CourseUrlChange): Promise<'renamed' | 
     }
 
     const currentPath = `/${fullSlug}`.replace(/\/+$/, '');
+    const course = await getCourseById(change.courseId);
+    const staleReason = staleCourseUrlChangeReason({
+      fromPath: change.fromPath,
+      toPath: change.toPath,
+      coursePageUrl: course?.coursePageUrl,
+      storyPath: currentPath,
+    });
+    if (staleReason) {
+      await markCourseUrlChangeSuperseded(change.id, staleReason);
+      return 'failed';
+    }
     if (currentPath !== change.toPath) {
       let parentId = parentIdOf(story);
       if (!parentId) {
