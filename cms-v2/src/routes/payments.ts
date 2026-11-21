@@ -469,6 +469,10 @@ router.post('/checkout-quote', schoolAccountRateLimit, async (req: Request, res:
       chargeAmount,
       currency: priced.chargeCurrency,
       retakeApplied,
+      // The checkout page picks its "what you get" list from these three.
+      qualification: priced.course.qualification ?? '',
+      courseLevels: priced.course.courseLevels ?? [],
+      courseOption: priced.course.courseOption ?? '',
       // A combo lists each paper at its catalogue price. The amounts add up to
       // listAmount, and discountPercent comes off that total to give chargeAmount.
       ...(priced.comboLines?.length
