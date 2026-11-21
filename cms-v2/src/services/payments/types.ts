@@ -26,6 +26,11 @@ export interface CreateCheckoutInput {
   localPresentment?: { amount: number; currency: string } | null;
   /** Website enrol checkouts close after 2-3 hours. Emailed links keep Stripe's 24 hours. */
   closeUnpaidSoon?: boolean;
+  /** Second Stripe line. The course line stays input.amount. */
+  extraLineItem?: { name: string; amount: number } | null;
+  /** Ask Stripe for a shipping address. Used when the book is posted. */
+  collectShipping?: boolean;
+  bookId?: number | null;
 }
 
 export interface CheckoutSessionResult {

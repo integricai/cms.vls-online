@@ -81,6 +81,15 @@ export function appendStripeBranding(params: URLSearchParams): void {
   params.append('branding_settings[icon][url]', STRIPE_BRAND_ICON_URL);
 }
 
+/** Countries a posted book can be shipped to. Stripe rejects a code that is not on its list. */
+const STRIPE_SHIPPING_COUNTRIES = [
+  'AE', 'AR', 'AT', 'AU', 'BD', 'BE', 'BG', 'BH', 'BR', 'CA', 'CH', 'CL', 'CO', 'CY', 'CZ',
+  'DE', 'DK', 'EE', 'EG', 'ES', 'FI', 'FR', 'GB', 'GH', 'GR', 'HK', 'HR', 'HU', 'ID', 'IE',
+  'IL', 'IN', 'IT', 'JO', 'JP', 'KE', 'KR', 'KW', 'LK', 'LT', 'LU', 'LV', 'MA', 'MT', 'MX',
+  'MY', 'NG', 'NL', 'NO', 'NP', 'NZ', 'OM', 'PE', 'PH', 'PK', 'PL', 'PT', 'QA', 'RO', 'SA',
+  'SE', 'SG', 'SI', 'SK', 'TH', 'TR', 'TW', 'US', 'VN', 'ZA',
+];
+
 /** Checkout shows only the dollar price, even if the dashboard toggle is on. */
 export function appendStripeAdaptivePricing(params: URLSearchParams): void {
   params.append('adaptive_pricing[enabled]', 'false');
@@ -278,6 +287,10 @@ export async function createStripeCheckoutSession(input: {
   orderSummaryImageUrl?: string | null;
   /** Website enrol checkouts close after 2-3 hours. Emailed links keep Stripe's 24 hours. */
   closeUnpaidSoon?: boolean;
+  /** A posted book added to the same card payment. */
+  extraLineItem?: { name: string; amount: number } | null;
+  collectShipping?: boolean;
+  bookId?: number | null;
 }): Promise<StripeCheckoutSession> {
   if (!input.savedOffer) assertStripeUsdCharge(input.currency);
   const chargeCurrency = input.currency.toUpperCase();
@@ -324,6 +337,19 @@ export async function createStripeCheckoutSession(input: {
   params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
   appendStripeAdaptivePricing(params);
   params.append('line_items[0][quantity]', '1');
+  if (input.extraLineItem) {
+    const bookAmount = stripeUnitAmount(input.extraLineItem.amount, chargeCurrency);
+    params.append('line_items[1][price_data][currency]', chargeCurrency.toLowerCase());
+    params.append('line_items[1][price_data][product_data][name]', input.extraLineItem.name.slice(0, 250));
+    params.append('line_items[1][price_data][product_data][images][0]', STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL);
+    params.append('line_items[1][price_data][unit_amount]', String(bookAmount));
+    params.append('line_items[1][quantity]', '1');
+  }
+  if (input.collectShipping) {
+    for (const country of STRIPE_SHIPPING_COUNTRIES) {
+      params.append('shipping_address_collection[allowed_countries][]', country);
+    }
+  }
   if (input.studentEmail) {
     try {
       const customerId = await stripeCustomerIdForEmail(input.studentEmail, environment, input.studentName);
@@ -343,6 +369,8 @@ export async function createStripeCheckoutSession(input: {
   params.append('metadata[courseTitle]', input.courseTitle);
   appendParam(params, 'metadata[studentEmail]', input.studentEmail);
   appendParam(params, 'metadata[countryCode]', input.countryCode);
+  appendParam(params, 'metadata[bookId]', input.bookId);
+  appendParam(params, 'metadata[bookTitle]', input.extraLineItem?.name);
 
   const response = await fetchWithTimeout('https://api.stripe.com/v1/checkout/sessions', {
     method: 'POST',

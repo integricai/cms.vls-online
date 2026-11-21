@@ -348,6 +348,42 @@ void (async () => {
     assert.notStrictEqual(STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL, STRIPE_ORDER_SUMMARY_IMAGE_URL);
   });
 
+  const realFetchForBook = globalThis.fetch;
+  let bookLine = new URLSearchParams();
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    bookLine = init.body as URLSearchParams;
+    return new Response(JSON.stringify({ id: 'cs_book', url: 'https://checkout.stripe.com/book' }));
+  }) as typeof fetch;
+  try {
+    await createStripeCheckoutSession({
+      orderId: 9,
+      zenlerCourseId: '88',
+      courseTitle: 'FA1',
+      paymentCardTitle: 'FA1 — One year',
+      amount: 494,
+      currency: 'USD',
+      studentEmail: 'student@example.com',
+      environment: 'staging',
+      extraLineItem: { name: 'FA1 Study Text', amount: 42.25 },
+      collectShipping: true,
+      bookId: 12,
+    });
+  } finally {
+    globalThis.fetch = realFetchForBook;
+  }
+  run('adds the BPP book as a second line and asks for a shipping address', () => {
+    assert.strictEqual(bookLine.get('line_items[0][price_data][unit_amount]'), '49400');
+    assert.strictEqual(bookLine.get('line_items[1][price_data][product_data][name]'), 'FA1 Study Text');
+    assert.strictEqual(bookLine.get('line_items[1][price_data][unit_amount]'), '4225');
+    assert.strictEqual(bookLine.get('line_items[1][price_data][currency]'), 'usd');
+    assert.strictEqual(
+      bookLine.get('line_items[1][price_data][product_data][images][0]'),
+      STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL,
+    );
+    assert.strictEqual(bookLine.get('metadata[bookId]'), '12');
+    assert.ok(bookLine.getAll('shipping_address_collection[allowed_countries][]').includes('GB'));
+  });
+
   run('unpaid checkouts close after 2-3 hours, stable within the hour', () => {
     const at = Date.UTC(2026, 10, 20, 18, 40, 0);
     const expires = stripeCheckoutExpiresAt(at);
