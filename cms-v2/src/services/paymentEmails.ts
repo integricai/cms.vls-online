@@ -40,7 +40,7 @@ function formatAmount(order: PaymentOrder): string {
   return amount;
 }
 
-async function sendEmail(input: {
+export async function sendEmail(input: {
   to: string;
   subject: string;
   text: string;

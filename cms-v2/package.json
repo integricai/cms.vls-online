@@ -35,6 +35,7 @@
     "backfill-notes-curriculum": "npx tsx scripts/backfill-notes-curriculum.ts",
     "test:notes-links": "ts-node src/services/notesUrlRewrite.test.ts",
     "test:course-urls": "ts-node src/services/courseUrlRewrite.test.ts",
+    "test:url-health": "ts-node src/services/urlHealthRules.test.ts",
     "test:course-workbook": "ts-node src/services/courseWorkbook.test.ts",
     "test:course-price-workbook": "ts-node src/services/coursePriceWorkbook.test.ts",
     "test:sales-page-urls": "ts-node src/services/courseSalesPageUrlSync.test.ts",
