@@ -4,6 +4,7 @@ import { api } from '../../api/client';
 import PageTabs from '../../components/PageTabs';
 import AnalyticsTab from './AnalyticsTab';
 import ExperimentsTab from './ExperimentsTab';
+import FailedPaymentsTab from './FailedPaymentsTab';
 import {
   campaignLabel,
   ENROLMENT_CHANNELS,
@@ -706,12 +707,15 @@ function trackingPath(base: string, range: TrackingRange, start: string, end: st
 export default function Tracking() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab');
-  const tab = requestedTab === 'analytics' || requestedTab === 'experiments' ? requestedTab : 'visits';
+  const tab = requestedTab === 'analytics' || requestedTab === 'experiments' || requestedTab === 'failed-payments'
+    ? requestedTab
+    : 'visits';
   const [range, setRange] = useState<TrackingRange>('this_month');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const visitsQuery = trackingPath('/analytics/tracking', range, start, end);
   const analyticsQuery = trackingPath('/analytics/ga4', range, start, end);
+  const failedPaymentsQuery = trackingPath('/analytics/failed-payments', range, start, end);
 
   function setTab(next: string) {
     const params = new URLSearchParams();
@@ -726,12 +730,13 @@ export default function Tracking() {
           { id: 'visits', label: 'Visits' },
           { id: 'analytics', label: 'Analytics' },
           { id: 'experiments', label: 'Experiment A/B' },
+          { id: 'failed-payments', label: 'Failed Payments' },
         ]}
         value={tab}
         onChange={setTab}
       />
       <div className="min-h-0 flex-1 overflow-auto bg-slate-50">
-        <div className="mx-auto max-w-7xl space-y-4 p-6">
+        <div className={`mx-auto space-y-4 p-6 ${tab === 'failed-payments' ? 'max-w-[90rem]' : 'max-w-7xl'}`}>
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Tracking</h1>
@@ -740,7 +745,9 @@ export default function Tracking() {
                   ? 'Set the entry URL, the pages, and how much traffic each page gets.'
                   : tab === 'analytics'
                     ? 'Sessions and pages come from GA4. Orders and revenue come from production payments.'
-                    : 'One person a day. Channel, campaign, and landing page come from the address they opened.'}
+                    : tab === 'failed-payments'
+                      ? 'Checkouts that closed without payment, and the reminders sent afterwards.'
+                      : 'One person a day. Channel, campaign, and landing page come from the address they opened.'}
               </p>
             </div>
             {tab === 'experiments' ? null : (
@@ -788,6 +795,7 @@ export default function Tracking() {
           {tab === 'visits' ? <VisitsTab query={visitsQuery} /> : null}
           {tab === 'analytics' ? <AnalyticsTab query={analyticsQuery} /> : null}
           {tab === 'experiments' ? <ExperimentsTab /> : null}
+          {tab === 'failed-payments' ? <FailedPaymentsTab query={failedPaymentsQuery} /> : null}
         </div>
       </div>
     </div>

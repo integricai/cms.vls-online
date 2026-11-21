@@ -79,6 +79,8 @@ export interface CheckoutClosedEvent {
   status: 'Failed' | 'Cancelled';
   /** Email typed on the payment page before it closed, if any. */
   customerEmail?: string | null;
+  /** Name typed on the payment page before it closed, if any. */
+  customerName?: string | null;
 }
 
 export interface IgnoredWebhookEvent {

@@ -7,6 +7,7 @@ import { listTrackingNames } from '../models/siteUrl';
 import { applyPageTrackingNames } from '../../shared/pageTracking';
 import { loadTrackingSales } from '../models/trackingSales';
 import { loadGa4Traffic } from '../services/ga4Report';
+import { CheckoutFollowupResendError, listFailedPaymentsForVault, resendFailedPaymentEmail } from '../services/checkoutFollowups';
 import { recordSiteVisitor } from '../models/siteAnalytics';
 import { detectClientIpFromRequest, detectCountryFromRequest } from '../services/geoDetection';
 import { proxySecretMatches } from '../services/proxySecret';
@@ -121,6 +122,48 @@ router.get('/tracking', authGuard, requireRole('admin'), async (req, res, next) 
     const range = isTrackingPreset(requested) ? requested : 'this_month';
     res.json({ ok: true, data: await namedLandingPages(await buildTrackingReport(range, trackingPresetBounds(range))) });
   } catch (err) {
+    next(err);
+  }
+});
+
+function failedPaymentBounds(query: { range?: unknown; start?: unknown; end?: unknown }): { start: string; end: string } | null {
+  const requested = String(query.range ?? 'this_month');
+  if (requested === 'custom') {
+    return trackingCustomBounds(String(query.start ?? ''), String(query.end ?? ''));
+  }
+  const range = isTrackingPreset(requested) ? requested : 'this_month';
+  return trackingPresetBounds(range);
+}
+
+router.get('/failed-payments', authGuard, requireRole('admin'), async (req, res, next) => {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    const bounds = failedPaymentBounds(req.query);
+    if (!bounds) {
+      res.status(400).json({ ok: false, error: 'Choose a start date and an end date within one year.' });
+      return;
+    }
+    const rows = await listFailedPaymentsForVault(bounds.start, bounds.end);
+    res.json({ ok: true, data: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/failed-payments/:id/resend', authGuard, requireRole('admin'), async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ ok: false, error: 'That failed payment could not be found.' });
+    return;
+  }
+  try {
+    const row = await resendFailedPaymentEmail(id);
+    res.json({ ok: true, data: row });
+  } catch (err) {
+    if (err instanceof CheckoutFollowupResendError) {
+      res.status(err.status).json({ ok: false, error: err.message });
+      return;
+    }
     next(err);
   }
 });

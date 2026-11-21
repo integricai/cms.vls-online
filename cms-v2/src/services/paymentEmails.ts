@@ -758,6 +758,8 @@ export type CheckoutFollowupStep = 1 | 2 | 3;
 
 export interface CheckoutFollowupEmailInput {
   step: CheckoutFollowupStep;
+  /** Used in the greeting. Omitted when the checkout never captured a name. */
+  firstName?: string | null;
   courseTitle: string;
   /** Course page on the website, e.g. https://vls-online.com/courses/acca-fr-financial-reporting */
   courseUrl: string;
@@ -778,8 +780,14 @@ function withEmailUtm(url: string, step: CheckoutFollowupStep): string {
   }
 }
 
+function followupGreeting(firstName: string | null | undefined): string {
+  const name = firstName?.replace(/\s+/g, ' ').trim();
+  return name ? `Hello ${name},` : 'Hello,';
+}
+
 export function checkoutFollowupMessage(input: CheckoutFollowupEmailInput): { subject: string; text: string; html: string } {
   const course = input.courseTitle.replace(/\s+/g, ' ').trim();
+  const greeting = followupGreeting(input.firstName);
   const link = withEmailUtm(input.courseUrl, input.step);
   const digits = (input.whatsappNumber ?? '').replace(/\D/g, '');
   const whatsappUrl = digits ? `https://wa.me/${digits}` : null;
@@ -829,7 +837,7 @@ export function checkoutFollowupMessage(input: CheckoutFollowupEmailInput): { su
 
   const unsubscribeText = `Don't want these reminders? Unsubscribe: ${input.unsubscribeUrl}`;
   const text = [
-    'Hello,',
+    greeting,
     '',
     ...copy.lines.flatMap(line => [line, '']),
     `${copy.button}: ${link}`,
@@ -847,7 +855,7 @@ export function checkoutFollowupMessage(input: CheckoutFollowupEmailInput): { su
     title: copy.title,
     preheader: copy.preheader,
     bodyHtml: `
-${p('Hello,')}
+${p(esc(greeting))}
 ${copy.lines.map(line => p(esc(line))).join('\n')}
 ${ctaButton(link, copy.button)}
 ${copy.extra ? p(esc(copy.extra)) : ''}

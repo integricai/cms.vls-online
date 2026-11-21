@@ -1,10 +1,15 @@
 import {
   claimDueFollowups,
+  claimFollowupStep,
+  getFailedPayment,
+  listFailedPayments,
   recordAbandonedCheckouts,
   releaseFollowupClaim,
   stopPurchasedFollowups,
+  touchFollowupStep,
+  type FailedPaymentRecord,
 } from '../models/checkoutFollowup';
-import { checkoutFollowupMessage, sendCheckoutFollowupEmail } from './paymentEmails';
+import { checkoutFollowupMessage, sendCheckoutFollowupEmail, type CheckoutFollowupStep } from './paymentEmails';
 
 const SITE_URL = 'https://vls-online.com';
 const API_URL = 'https://api.cms.vls-online.com';
@@ -60,6 +65,7 @@ export async function runCheckoutFollowups(): Promise<CheckoutFollowupRunResult>
       await sendCheckoutFollowupEmail({
         to: followup.email,
         step: followup.step,
+        firstName: followup.firstName,
         courseTitle: followup.courseTitle,
         courseUrl: followupCourseUrl(followup.coursePageUrl),
         unsubscribeUrl: followupUnsubscribeUrl(followup.unsubscribeToken),
@@ -92,4 +98,103 @@ export async function sendCheckoutFollowupSamples(to: string): Promise<string[]>
     subjects.push(checkoutFollowupMessage(input).subject);
   }
   return subjects;
+}
+
+export interface FailedPaymentRow {
+  id: number;
+  abandonedAt: string;
+  courseTitle: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  emailSentAt: string | null;
+  secondEmailSentAt: string | null;
+  thirdEmailSentAt: string | null;
+  purchased: boolean;
+  canResend: boolean;
+}
+
+export class CheckoutFollowupResendError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'CheckoutFollowupResendError';
+    this.status = status;
+  }
+}
+
+function iso(value: Date | null): string | null {
+  return value ? value.toISOString() : null;
+}
+
+export function toFailedPaymentRow(row: FailedPaymentRecord): FailedPaymentRow {
+  return {
+    id: row.id,
+    abandonedAt: row.abandonedAt.toISOString(),
+    courseTitle: row.courseTitle,
+    email: row.email,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    emailSentAt: iso(row.followup1SentAt),
+    secondEmailSentAt: iso(row.followup2SentAt),
+    thirdEmailSentAt: iso(row.followup3SentAt),
+    purchased: row.purchased,
+    canResend: row.canResend,
+  };
+}
+
+/** The next reminder that has not gone out. The third is sent again once all three have. */
+export function nextManualFollowupStep(row: {
+  followup1SentAt: Date | null;
+  followup2SentAt: Date | null;
+  followup3SentAt: Date | null;
+}): CheckoutFollowupStep {
+  if (!row.followup1SentAt) return 1;
+  if (!row.followup2SentAt) return 2;
+  return 3;
+}
+
+/** Records new closed checkouts, stops anyone who has paid, then lists the period. */
+export async function listFailedPaymentsForVault(start: string, end: string): Promise<FailedPaymentRow[]> {
+  await recordAbandonedCheckouts();
+  await stopPurchasedFollowups();
+  const rows = await listFailedPayments(start, end);
+  return rows.map(toFailedPaymentRow);
+}
+
+export async function resendFailedPaymentEmail(id: number): Promise<FailedPaymentRow> {
+  const row = await getFailedPayment(id);
+  if (!row) throw new CheckoutFollowupResendError('That failed payment could not be found.', 404);
+  if (!row.canResend) {
+    throw new CheckoutFollowupResendError('This reminder has stopped.', 409);
+  }
+  const step = nextManualFollowupStep(row);
+  const resending = step === 3 && row.followup3SentAt != null;
+  if (!resending) {
+    const claimed = await claimFollowupStep(id, step);
+    if (!claimed) throw new CheckoutFollowupResendError('That reminder was just sent. Refresh the list.', 409);
+  }
+  try {
+    await sendCheckoutFollowupEmail({
+      to: row.email,
+      step,
+      firstName: row.firstName,
+      courseTitle: row.courseTitle,
+      courseUrl: followupCourseUrl(row.coursePageUrl),
+      unsubscribeUrl: followupUnsubscribeUrl(row.unsubscribeToken),
+      whatsappNumber: process.env.CHECKOUT_FOLLOWUP_WHATSAPP?.trim() || DEFAULT_FOLLOWUP_WHATSAPP,
+    });
+  } catch (err) {
+    if (!resending) {
+      await releaseFollowupClaim(id, step).catch(releaseErr => {
+        console.error(`[checkout-followups] could not release row ${id}`, releaseErr);
+      });
+    }
+    throw err;
+  }
+  if (resending) await touchFollowupStep(id, step);
+  const updated = await getFailedPayment(id);
+  if (!updated) throw new CheckoutFollowupResendError('That failed payment could not be found.', 404);
+  return toFailedPaymentRow(updated);
 }

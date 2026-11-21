@@ -366,13 +366,29 @@ export async function closeAbandonedCheckout(event: CheckoutClosedEvent): Promis
     status: event.status,
     customerEmail: event.customerEmail ?? null,
   });
+  const stripeName = event.customerName?.trim() ?? '';
+  let order = closed;
+  if (stripeName && !existing.studentName?.trim()) {
+    order = await rememberPaymentOrderStudentName(existing.id, stripeName);
+    const email = paymentOrderPayerEmail(order) ?? event.customerEmail ?? null;
+    if (email) {
+      const { firstName, lastName } = splitStudentName(stripeName);
+      await upsertCustomer({
+        email: String(email).trim().toLowerCase(),
+        firstName,
+        lastName,
+        countryCode: order.countryCode,
+        source: customerSourceForProvider(event.provider),
+      });
+    }
+  }
   await releaseRetakeCodeForOrder(existing.id).catch((err: unknown) => {
     console.error('[payments] could not release the retake code', existing.id, err);
   });
   await clearStudentPassword(existing.id).catch((err: unknown) => {
     console.error('[payments] could not clear the stored password', existing.id, err);
   });
-  return closed;
+  return order;
 }
 
 export async function fulfillRefund(event: RefundCompletedEvent): Promise<PaymentOrder | null> {

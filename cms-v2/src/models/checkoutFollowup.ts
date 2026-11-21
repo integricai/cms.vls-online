@@ -8,8 +8,25 @@ export interface DueCheckoutFollowup {
   id: number;
   step: CheckoutFollowupStep;
   email: string;
+  firstName: string | null;
   courseId: number;
   courseTitle: string;
+  coursePageUrl: string | null;
+  unsubscribeToken: string;
+}
+
+export interface FailedPaymentRecord {
+  id: number;
+  abandonedAt: Date;
+  courseTitle: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  followup1SentAt: Date | null;
+  followup2SentAt: Date | null;
+  followup3SentAt: Date | null;
+  purchased: boolean;
+  canResend: boolean;
   coursePageUrl: string | null;
   unsubscribeToken: string;
 }
@@ -57,7 +74,53 @@ export async function recordAbandonedCheckouts(): Promise<number> {
         AND COALESCE(checkout_followups.last_order_id, 0) < EXCLUDED.last_order_id
     RETURNING (xmax = 0) AS inserted
   `;
+  await fillCheckoutFollowupNames();
   return (rows as Array<{ inserted: boolean }>).filter(row => row.inserted).length;
+}
+
+/**
+ * Copies a missing first or last name from the customer, then from the name
+ * stored on the order. A one-word order name fills both, matching splitStudentName.
+ */
+async function fillCheckoutFollowupNames(): Promise<void> {
+  await sql`
+    UPDATE checkout_followups f
+    SET first_name = COALESCE(f.first_name, src.first_name),
+        last_name = COALESCE(f.last_name, src.last_name),
+        updated_at = NOW()
+    FROM (
+      SELECT f2.id,
+        CASE
+          WHEN NULLIF(btrim(cu.first_name), '') IS NOT NULL THEN NULLIF(btrim(cu.first_name), '')
+          WHEN NULLIF(btrim(po.student_name), '') IS NULL THEN NULL
+          ELSE split_part(btrim(po.student_name), ' ', 1)
+        END AS first_name,
+        CASE
+          WHEN NULLIF(btrim(cu.first_name), '') IS NOT NULL THEN NULLIF(btrim(cu.last_name), '')
+          WHEN NULLIF(btrim(po.student_name), '') IS NULL THEN NULL
+          WHEN position(' ' IN btrim(po.student_name)) = 0 THEN btrim(po.student_name)
+          ELSE btrim(substr(btrim(po.student_name), position(' ' IN btrim(po.student_name)) + 1))
+        END AS last_name
+      FROM checkout_followups f2
+      JOIN payment_orders po ON po.id = f2.last_order_id
+      LEFT JOIN LATERAL (
+        SELECT c2.first_name, c2.last_name
+        FROM customers c2
+        WHERE c2.id = po.customer_id
+           OR (
+             po.customer_id IS NULL
+             AND lower(c2.email) = lower(trim(COALESCE(
+               po.provider_customer_email, po.stripe_customer_email, po.student_email
+             )))
+           )
+        ORDER BY CASE WHEN c2.id = po.customer_id THEN 0 ELSE 1 END
+        LIMIT 1
+      ) cu ON true
+      WHERE f2.first_name IS NULL OR f2.last_name IS NULL
+    ) src
+    WHERE f.id = src.id
+      AND (src.first_name IS NOT NULL OR src.last_name IS NOT NULL)
+  `;
 }
 
 /**
@@ -151,13 +214,14 @@ export async function claimDueFollowups(limit: number): Promise<DueCheckoutFollo
     WHERE f.id = picked.id
       AND c.id = f.course_id
       AND f.stopped_at IS NULL
-    RETURNING f.id, picked.step, f.email, f.course_id, c.name AS course_title,
+    RETURNING f.id, picked.step, f.email, f.first_name, f.course_id, c.name AS course_title,
               c.course_page_url, f.unsubscribe_token
   `;
   return (rows as Array<Record<string, unknown>>).map(row => ({
     id: Number(row.id),
     step: Number(row.step) as CheckoutFollowupStep,
     email: String(row.email),
+    firstName: nullableText(row.first_name),
     courseId: Number(row.course_id),
     courseTitle: String(row.course_title ?? ''),
     coursePageUrl: row.course_page_url ? String(row.course_page_url) : null,
@@ -173,6 +237,99 @@ export async function releaseFollowupClaim(id: number, step: CheckoutFollowupSte
         followup_3_sent_at = CASE WHEN ${step}::int = 3 THEN NULL ELSE followup_3_sent_at END,
         updated_at = NOW()
     WHERE id = ${id}
+  `;
+}
+
+function nullableText(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  return text || null;
+}
+
+function asDate(value: unknown): Date | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function rowToFailedPayment(row: Record<string, unknown>): FailedPaymentRecord {
+  const abandonedAt = asDate(row.abandoned_at) ?? new Date(0);
+  return {
+    id: Number(row.id),
+    abandonedAt,
+    courseTitle: String(row.course_title ?? ''),
+    email: String(row.email ?? ''),
+    firstName: nullableText(row.first_name),
+    lastName: nullableText(row.last_name),
+    followup1SentAt: asDate(row.followup_1_sent_at),
+    followup2SentAt: asDate(row.followup_2_sent_at),
+    followup3SentAt: asDate(row.followup_3_sent_at),
+    purchased: row.stop_reason === 'purchased',
+    canResend: row.stopped_at == null,
+    coursePageUrl: row.course_page_url ? String(row.course_page_url) : null,
+    unsubscribeToken: String(row.unsubscribe_token ?? ''),
+  };
+}
+
+export async function listFailedPayments(start: string, end: string): Promise<FailedPaymentRecord[]> {
+  const rows = await sql`
+    SELECT f.id, f.abandoned_at, c.name AS course_title, f.email, f.first_name, f.last_name,
+           f.followup_1_sent_at, f.followup_2_sent_at, f.followup_3_sent_at,
+           f.stop_reason, f.stopped_at, c.course_page_url, f.unsubscribe_token
+    FROM checkout_followups f
+    JOIN courses c ON c.id = f.course_id
+    WHERE (f.abandoned_at AT TIME ZONE 'Europe/London')::date >= CAST(${start} AS date)
+      AND (f.abandoned_at AT TIME ZONE 'Europe/London')::date <= CAST(${end} AS date)
+    ORDER BY f.abandoned_at DESC
+    LIMIT 1000
+  `;
+  return (rows as Array<Record<string, unknown>>).map(rowToFailedPayment);
+}
+
+export async function getFailedPayment(id: number): Promise<FailedPaymentRecord | null> {
+  const rows = await sql`
+    SELECT f.id, f.abandoned_at, c.name AS course_title, f.email, f.first_name, f.last_name,
+           f.followup_1_sent_at, f.followup_2_sent_at, f.followup_3_sent_at,
+           f.stop_reason, f.stopped_at, c.course_page_url, f.unsubscribe_token
+    FROM checkout_followups f
+    JOIN courses c ON c.id = f.course_id
+    WHERE f.id = ${id}
+    LIMIT 1
+  `;
+  const row = (rows as Array<Record<string, unknown>>)[0];
+  return row ? rowToFailedPayment(row) : null;
+}
+
+/** Sets the step's sent time only when it is still empty and the sequence is active. */
+export async function claimFollowupStep(id: number, step: CheckoutFollowupStep): Promise<boolean> {
+  const rows = await sql`
+    UPDATE checkout_followups
+    SET followup_1_sent_at = CASE WHEN ${step}::int = 1 THEN NOW() ELSE followup_1_sent_at END,
+        followup_2_sent_at = CASE WHEN ${step}::int = 2 THEN NOW() ELSE followup_2_sent_at END,
+        followup_3_sent_at = CASE WHEN ${step}::int = 3 THEN NOW() ELSE followup_3_sent_at END,
+        updated_at = NOW()
+    WHERE id = ${id}
+      AND stopped_at IS NULL
+      AND (
+        (${step}::int = 1 AND followup_1_sent_at IS NULL)
+        OR (${step}::int = 2 AND followup_2_sent_at IS NULL)
+        OR (${step}::int = 3 AND followup_3_sent_at IS NULL)
+      )
+    RETURNING id
+  `;
+  return rows.length > 0;
+}
+
+/** Moves an already-sent step's timestamp to now, after a manual resend succeeds. */
+export async function touchFollowupStep(id: number, step: CheckoutFollowupStep): Promise<void> {
+  await sql`
+    UPDATE checkout_followups
+    SET followup_1_sent_at = CASE WHEN ${step}::int = 1 THEN NOW() ELSE followup_1_sent_at END,
+        followup_2_sent_at = CASE WHEN ${step}::int = 2 THEN NOW() ELSE followup_2_sent_at END,
+        followup_3_sent_at = CASE WHEN ${step}::int = 3 THEN NOW() ELSE followup_3_sent_at END,
+        updated_at = NOW()
+    WHERE id = ${id}
+      AND stopped_at IS NULL
   `;
 }
 

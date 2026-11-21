@@ -154,6 +154,7 @@ export function mapStripeWebhookEvent(event: unknown): ProviderWebhookEvent {
       paymentId: extractStripeId(object.payment_intent),
       status: type === 'checkout.session.expired' ? 'Cancelled' : 'Failed',
       customerEmail: typedCheckoutEmail(object),
+      customerName: stripeCheckoutStudentName(object),
     };
   }
 

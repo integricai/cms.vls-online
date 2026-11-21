@@ -194,6 +194,7 @@ run('maps Stripe async payment success, failure, and expiry', () => {
     paymentId: 'pi_async',
     status: 'Failed',
     customerEmail: null,
+    customerName: null,
   });
 
   const expired = mapStripeWebhookEvent({
@@ -214,6 +215,7 @@ run('maps Stripe async payment success, failure, and expiry', () => {
     paymentId: null,
     status: 'Cancelled',
     customerEmail: null,
+    customerName: null,
   });
 
   const expiredWithEmail = mapStripeWebhookEvent({
@@ -232,6 +234,27 @@ run('maps Stripe async payment success, failure, and expiry', () => {
     'student@example.com',
     'an abandoned checkout keeps the email typed on the Stripe page',
   );
+});
+
+run('an abandoned checkout keeps the name typed on the Stripe page', () => {
+  const expiredWithName = mapStripeWebhookEvent({
+    type: 'checkout.session.expired',
+    data: {
+      object: {
+        id: 'cs_expired_name',
+        client_reference_id: '43',
+        customer_details: { email: 'ada@example.com', name: 'Cardholder Name' },
+        custom_fields: [
+          { key: 'first_name', type: 'text', text: { value: ' Ada ' } },
+          { key: 'last_name', type: 'text', text: { value: 'Lovelace' } },
+        ],
+      },
+    },
+  });
+  assert.equal(expiredWithName.type, 'checkout.closed');
+  if (expiredWithName.type !== 'checkout.closed') return;
+  assert.equal(expiredWithName.customerEmail, 'ada@example.com');
+  assert.equal(expiredWithName.customerName, 'Ada Lovelace');
 });
 
 run('matches Stripe livemode to the order environment', () => {
