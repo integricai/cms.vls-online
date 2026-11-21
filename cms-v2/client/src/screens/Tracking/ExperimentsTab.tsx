@@ -123,11 +123,12 @@ export default function ExperimentsTab() {
   const [selectedId, setSelectedId] = useState<number | 'new' | null>(null);
   const [draft, setDraft] = useState<EditorDraft>(emptyDraft);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const selected = selectedId === 'new'
     ? null
     : experiments.find(experiment => experiment.id === selectedId) ?? null;
-  const locked = selected != null && selected.status !== 'draft';
+  const locked = selected != null && selected.status !== 'draft' && !(selected.status === 'running' && editing);
 
   useEffect(() => {
     let cancelled = false;
@@ -148,14 +149,30 @@ export default function ExperimentsTab() {
 
   function openNew() {
     setFormError('');
+    setEditing(false);
     setSelectedId('new');
     setDraft(emptyDraft());
   }
 
   function openRecord(record: ExperimentRecord) {
     setFormError('');
+    setEditing(false);
     setSelectedId(record.id);
     setDraft(draftFromRecord(record));
+  }
+
+  function beginEdit(record: ExperimentRecord) {
+    setFormError('');
+    setSelectedId(record.id);
+    setDraft(draftFromRecord(record));
+    setEditing(true);
+  }
+
+  function cancelEdit() {
+    if (!selected) return;
+    setFormError('');
+    setDraft(draftFromRecord(selected));
+    setEditing(false);
   }
 
   function replaceRecord(record: ExperimentRecord) {
@@ -165,6 +182,7 @@ export default function ExperimentsTab() {
     });
     setSelectedId(record.id);
     setDraft(draftFromRecord(record));
+    setEditing(false);
   }
 
   function setEntryPath(value: string) {
@@ -249,13 +267,13 @@ export default function ExperimentsTab() {
     }
   }
 
-  async function endTest() {
-    if (!selected || selected.status !== 'running') return;
+  async function endTest(record: ExperimentRecord) {
+    if (record.status !== 'running') return;
     if (!window.confirm('End this test? The entry URL will stop splitting traffic.')) return;
     setSaving(true);
     setFormError('');
     try {
-      replaceRecord(await api.post<ExperimentRecord>(`/experiments/${selected.id}/end`, {}));
+      replaceRecord(await api.post<ExperimentRecord>(`/experiments/${record.id}/end`, {}));
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Could not end the experiment');
     } finally {
@@ -297,13 +315,11 @@ export default function ExperimentsTab() {
         ) : null}
         <ul className="divide-y divide-slate-100">
           {experiments.map(experiment => (
-            <li key={experiment.id}>
+            <li key={experiment.id} className={selectedId === experiment.id ? 'bg-blue-50' : ''}>
               <button
                 type="button"
                 onClick={() => openRecord(experiment)}
-                className={`block w-full px-4 py-3 text-left transition hover:bg-slate-50 ${
-                  selectedId === experiment.id ? 'bg-blue-50' : ''
-                }`}
+                className="block w-full px-4 py-3 text-left transition hover:bg-slate-50"
               >
                 <span className="flex items-center justify-between gap-2">
                   <span className="truncate text-sm font-medium text-slate-900">{experiment.name}</span>
@@ -316,6 +332,26 @@ export default function ExperimentsTab() {
                   {experiment.variants.map(variant => `${variant.label} ${variant.weight}%`).join(' · ')}
                 </span>
               </button>
+              {experiment.status === 'running' ? (
+                <div className="flex gap-2 px-4 pb-3">
+                  <button
+                    type="button"
+                    className="btn-ghost px-3 py-1 text-xs"
+                    disabled={saving}
+                    onClick={() => beginEdit(experiment)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost px-3 py-1 text-xs"
+                    disabled={saving}
+                    onClick={() => void endTest(experiment)}
+                  >
+                    End
+                  </button>
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -431,9 +467,19 @@ export default function ExperimentsTab() {
           {formError ? <p className="mt-4 text-sm text-red-600">{formError}</p> : null}
 
           <div className="mt-5 flex flex-wrap gap-2">
+            {selected?.status === 'running' && !editing ? (
+              <button type="button" className="btn-primary" disabled={saving} onClick={() => beginEdit(selected)}>
+                Edit
+              </button>
+            ) : null}
             {!locked ? (
               <button type="button" className="btn-primary" disabled={saving} onClick={() => void save()}>
-                {saving ? 'Saving…' : 'Save draft'}
+                {saving ? 'Saving…' : selected?.status === 'running' ? 'Save changes' : 'Save draft'}
+              </button>
+            ) : null}
+            {selected?.status === 'running' && editing ? (
+              <button type="button" className="btn-ghost" disabled={saving} onClick={cancelEdit}>
+                Cancel
               </button>
             ) : null}
             {selected?.status === 'draft' ? (
@@ -442,8 +488,8 @@ export default function ExperimentsTab() {
               </button>
             ) : null}
             {selected?.status === 'running' ? (
-              <button type="button" className="btn-ghost" disabled={saving} onClick={() => void endTest()}>
-                End test
+              <button type="button" className="btn-ghost" disabled={saving} onClick={() => void endTest(selected)}>
+                End
               </button>
             ) : null}
             {selected?.status === 'draft' ? (
@@ -457,7 +503,9 @@ export default function ExperimentsTab() {
           ) : null}
           <p className="mt-4 text-xs text-slate-500">
             {selected?.status === 'running'
-              ? 'Pages and weights stay fixed while the test is running.'
+              ? editing
+                ? 'Saving updates the split for new visitors. People already assigned keep their page.'
+                : 'Edit changes this test while it is running. End stops the split.'
               : selected?.status === 'ended'
                 ? 'This test has ended. Create a new test to run another split.'
                 : 'Traffic splits after the Cloudflare worker is connected. Until then, activating stores the test.'}

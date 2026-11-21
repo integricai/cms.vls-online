@@ -216,20 +216,43 @@ export async function updateExperiment(id: number, body: unknown): Promise<Exper
   await ensureExperimentSchema();
   const existing = await getExperiment(id);
   if (!existing) throw new ExperimentRequestError('That experiment was not found.', 404);
-  if (existing.status !== 'draft') {
-    throw new ExperimentRequestError('Only a draft can be edited.', 400);
+  if (existing.status === 'ended') {
+    throw new ExperimentRequestError('An ended test cannot be edited.', 400);
   }
   const input = readInput(body);
-  const updated = await sql`
-    UPDATE experiments
-    SET name = ${input.name},
-        entry_path = ${input.entryPath},
-        updated_at = NOW()
-    WHERE id = ${id}
-      AND status = 'draft'
-    RETURNING id
-  ` as Array<{ id: number }>;
-  if (!updated.length) throw new ExperimentRequestError('Only a draft can be edited.', 400);
+  if (existing.status === 'running') {
+    const running = await listExperiments();
+    const conflict = experimentUrlConflict(
+      { entryPath: input.entryPath, paths: input.variants.map(variant => variant.path) },
+      running
+        .filter(experiment => experiment.status === 'running' && experiment.id !== id)
+        .map(experiment => ({
+          entryPath: experiment.entryPath,
+          paths: experiment.variants.map(variant => variant.path),
+        })),
+    );
+    if (conflict) throw new ExperimentRequestError(conflict, 400);
+  }
+  let updated: Array<{ id: number }>;
+  try {
+    updated = await sql`
+      UPDATE experiments
+      SET name = ${input.name},
+          entry_path = ${input.entryPath},
+          updated_at = NOW()
+      WHERE id = ${id}
+        AND status IN ('draft', 'running')
+      RETURNING id
+    ` as Array<{ id: number }>;
+  } catch (err) {
+    const code = typeof err === 'object' && err && 'code' in err ? String((err as { code?: unknown }).code) : '';
+    const message = err instanceof Error ? err.message : '';
+    if (code === '23505' || message.includes('experiments_one_running_entry')) {
+      throw new ExperimentRequestError('Another running test already uses that URL.', 400);
+    }
+    throw err;
+  }
+  if (!updated.length) throw new ExperimentRequestError('An ended test cannot be edited.', 400);
   await replaceVariants(id, input);
   const saved = await getExperiment(id);
   if (!saved) throw new ExperimentRequestError('That experiment was not found.', 404);
