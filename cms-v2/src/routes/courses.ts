@@ -23,8 +23,6 @@ import {
 import { listCoursePrices, upsertCoursePrices, upsertScrapedCoursePrices } from '../models/coursePrice';
 import { syncCourseSalesPageUrlsFromStoryblok } from '../services/courseSalesPageUrlSync';
 import { scrapeActiveCoursePrices } from '../services/coursePriceScraper';
-import { applyCourseUrlChanges, publishCourseRedirects } from '../services/courseUrlApply';
-import { getCourseUrlRewriteState, listRecentCourseUrlFailures, summarizeCourseUrlChanges } from '../models/courseUrlChange';
 
 const router = Router();
 
@@ -207,41 +205,6 @@ router.post('/import-page-urls', requireRole('admin'), async (req: Request, res:
     return res.json({ ok: true, data: result });
   } catch (err) {
     next(err);
-  }
-});
-
-router.get('/url-changes', requireRole('admin'), async (_req: Request, res: Response, next: NextFunction) => {
-  try {
-    const [summary, failures, rewrite] = await Promise.all([
-      summarizeCourseUrlChanges(),
-      listRecentCourseUrlFailures(),
-      getCourseUrlRewriteState(),
-    ]);
-    return res.json({ ok: true, data: { summary, failures, lastError: rewrite.lastError } });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.post('/url-changes/apply', requireRole('admin'), async (_req: Request, res: Response, next: NextFunction) => {
-  try {
-    const result = await applyCourseUrlChanges();
-    return res.json({ ok: true, data: result });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Course URL update failed';
-    console.error('[course-url/apply]', err);
-    return res.status(502).json({ ok: false, error: message });
-  }
-});
-
-router.post('/url-changes/publish-redirects', requireRole('admin'), async (_req: Request, res: Response, next: NextFunction) => {
-  try {
-    const result = await publishCourseRedirects();
-    return res.json({ ok: true, data: result });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Redirect publish failed';
-    console.error('[course-url/publish-redirects]', err);
-    return res.status(502).json({ ok: false, error: message });
   }
 });
 
