@@ -7,7 +7,9 @@ import {
   appendStripeOrderSummaryNote,
   appendStripeStudentNameFields,
   assertStripeUsdCharge,
+  STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL,
   classifyPaidAmount,
+  createStripeCheckoutSession,
   majorAmountFromStripeMinor,
   resolveStripeStudentNameDefaults,
   safeCheckoutCancelPath,
@@ -309,4 +311,43 @@ else process.env.STRIPE_WEBHOOK_SECRET = previous.webhook;
 if (previous.liveWebhook === undefined) delete process.env.STRIPE_WEBHOOK_SECRET_LIVE;
 else process.env.STRIPE_WEBHOOK_SECRET_LIVE = previous.liveWebhook;
 
-console.log('stripeCheckout tests passed');
+void (async () => {
+  process.env.STRIPE_SECRET_KEY = "sk_test_stub";
+  const realFetch = globalThis.fetch;
+  let bookLine = new URLSearchParams();
+  globalThis.fetch = (async (_url, init) => {
+    bookLine = init.body;
+    return new Response(JSON.stringify({ id: "cs_book", url: "https://checkout.stripe.com/book" }));
+  });
+  try {
+    await createStripeCheckoutSession({
+      orderId: 9,
+      zenlerCourseId: "88",
+      courseTitle: "FA1",
+      paymentCardTitle: "FA1",
+      amount: 494,
+      currency: "USD",
+      studentEmail: "student@example.com",
+      environment: "staging",
+      extraLineItem: { name: "FA1 Study Text", amount: 42.25 },
+      collectShipping: true,
+      bookId: 12,
+    });
+  } finally {
+    globalThis.fetch = realFetch;
+    if (previous.secret === undefined) delete process.env.STRIPE_SECRET_KEY;
+    else process.env.STRIPE_SECRET_KEY = previous.secret;
+  }
+  run("adds the BPP book as a second line and asks for a shipping address", () => {
+    assert.strictEqual(bookLine.get("line_items[0][price_data][unit_amount]"), "49400");
+    assert.strictEqual(bookLine.get("line_items[1][price_data][product_data][name]"), "FA1 Study Text");
+    assert.strictEqual(bookLine.get("line_items[1][price_data][unit_amount]"), "4225");
+    assert.strictEqual(bookLine.get("line_items[1][price_data][product_data][images][0]"), STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL);
+    assert.strictEqual(bookLine.get("metadata[bookId]"), "12");
+    assert.ok(bookLine.getAll("shipping_address_collection[allowed_countries][]").includes("GB"));
+  });
+  console.log("stripeCheckout tests passed");
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
