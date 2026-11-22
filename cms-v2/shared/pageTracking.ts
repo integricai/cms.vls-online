@@ -19,6 +19,42 @@ export function trackingLookupPath(value: string): string {
   return lower;
 }
 
+/**
+ * Page name for a public path, using the names already saved in the vault.
+ * `/` is `vls:[home]`. A top-level page is `vls:[slug]`.
+ * A nested page keeps each folder outside the brackets: `vls:blog:[slug]`.
+ * Returns '' when the path cannot be named within the storage limit.
+ */
+export function pageTrackingNameFromPath(value: string): string {
+  const path = trackingLookupPath(value);
+  if (!path.startsWith('/')) return '';
+  const segments = path.split('/').filter(Boolean);
+  if (segments.some(segment => /[\u0000-\u001f<>"'`\\]/.test(segment))) return '';
+  const leaf = segments[segments.length - 1];
+  const name = segments.length === 0
+    ? 'vls:[home]'
+    : segments.length === 1
+      ? `vls:[${leaf}]`
+      : `vls:${segments.slice(0, -1).join(':')}:[${leaf}]`;
+  return name.length > TRACKING_NAME_MAX ? '' : name;
+}
+
+/**
+ * Name to store for a new or renamed page.
+ * Null leaves a hand-edited name unchanged.
+ */
+export function autoTrackingName(
+  current: { path: string; trackingName: string } | null,
+  nextPath: string,
+): string | null {
+  const generated = pageTrackingNameFromPath(nextPath);
+  if (!generated) return null;
+  if (!current) return generated;
+  const existing = current.trackingName.trim();
+  if (!existing || existing === pageTrackingNameFromPath(current.path)) return generated;
+  return null;
+}
+
 /** Empty clears the name. Null means the value cannot be stored. */
 export function normalizeTrackingName(value: unknown): string | null {
   if (typeof value !== 'string') return null;

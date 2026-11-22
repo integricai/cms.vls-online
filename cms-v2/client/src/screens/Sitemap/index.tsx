@@ -145,6 +145,7 @@ export default function SitemapScreen() {
           <p className="max-w-2xl text-xs text-slate-500">
             Manage which published Storyblok pages are included in the search sitemaps.
             A tracking name is sent to Analytics as the page title. It is not written into the sitemap file.
+            A new public page is named from its path, for example vls:[home] or vls:blog:[slug]. A name you edit is kept.
             Use staging site origin below to verify XML before production.
           </p>
         </div>
@@ -310,7 +311,7 @@ export default function SitemapScreen() {
                         defaultValue={row.trackingName ?? ''}
                         disabled={savingId === row.id}
                         aria-label={`Tracking name for ${row.path}`}
-                        placeholder="[home]"
+                        placeholder="vls:[home]"
                         onBlur={event => void saveTrackingName(row, event.target.value)}
                         onKeyDown={event => {
                           if (event.key === 'Enter') event.currentTarget.blur();

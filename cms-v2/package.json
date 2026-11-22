@@ -42,7 +42,8 @@
     "test:free-enrol": "ts-node src/services/freeEnrol.test.ts",
     "test:rate-limit": "ts-node src/middleware/rateLimit.test.ts",
     "test:experiments": "ts-node src/services/experiments.test.ts",
-    "backfill-notes-links": "npx tsx scripts/backfill-notes-links.ts"
+    "backfill-notes-links": "npx tsx scripts/backfill-notes-links.ts",
+    "fill-page-names": "ts-node scripts/fill-page-tracking-names.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.9.5",
