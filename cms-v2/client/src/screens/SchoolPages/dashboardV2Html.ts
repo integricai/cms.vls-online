@@ -28,6 +28,7 @@ export function generateSchoolDashboardV2Html(): string {
   .vls-school-dash2 .d2-who{display:flex;align-items:center;gap:14px;}
   .vls-school-dash2 .d2-welcome h1{font-size:30px;}
   .vls-school-dash2 .d2-welcome p{color:var(--slate);margin:6px 0 0;font-size:15px;}
+  .vls-school-dash2 #vls-dash2-summary a{color:var(--blue);font-weight:600;text-decoration:underline;text-underline-offset:2px;}
   .vls-school-dash2 .d2-avatar{width:46px;height:46px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:600;font-size:16px;flex:none;}
   .vls-school-dash2 .d2-resume{background:linear-gradient(135deg,var(--navy),#1B4484);border-radius:18px;padding:24px 26px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:22px;flex-wrap:wrap;margin:18px 0 22px;}
   .vls-school-dash2 .d2-k{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#9FB4DA;}
@@ -79,7 +80,7 @@ export function generateSchoolDashboardV2Html(): string {
     <div class="d2-welcome">
       <div class="d2-who">
         <span class="d2-avatar" id="vls-dash2-initials"></span>
-        <div><h1 id="vls-dash2-hello">Welcome back</h1><p id="vls-dash2-summary">Your courses load here once you are signed in.</p></div>
+        <div><h1 id="vls-dash2-hello">Welcome back</h1><p id="vls-dash2-summary">You don't have a course yet. Visit the <a href="https://vls-online.com" target="_blank" rel="noopener">VLS website</a> and enrol in a course first.</p></div>
       </div>
       <button class="d2-btn d2-btn-quiet" type="button" id="vls-school-dash2-logout">Log out</button>
     </div>
@@ -140,6 +141,19 @@ export function generateSchoolDashboardV2Html(): string {
     });
   }
   function text(id, value){ var node=document.getElementById(id); if(node) node.textContent=value; }
+  function showEnrol(){
+    var node=document.getElementById('vls-dash2-summary');
+    if(!node) return;
+    node.textContent='';
+    node.appendChild(document.createTextNode("You don't have a course yet. Visit the "));
+    var link=document.createElement('a');
+    link.href='https://vls-online.com';
+    link.target='_blank';
+    link.rel='noopener';
+    link.textContent='VLS website';
+    node.appendChild(link);
+    node.appendChild(document.createTextNode(' and enrol in a course first.'));
+  }
   function initials(name){
     var parts=String(name||'').trim().split(/\\s+/).filter(Boolean);
     if(!parts.length) return '';
@@ -162,7 +176,7 @@ export function generateSchoolDashboardV2Html(): string {
     var list=document.getElementById('vls-dash2-courses');
     if(list) list.textContent='';
     if(!courses.length){
-      text('vls-dash2-summary', name?'You have no courses on this account yet.':'Your courses load here once you are signed in.');
+      showEnrol();
       return;
     }
     var counted=courses.filter(function(course){ return typeof course.percent==='number'; }).length;
