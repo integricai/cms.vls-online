@@ -658,41 +658,46 @@ export async function sendFreeEnrolConfirmation(input: {
   accessUrl: string;
   isNewZenlerUser: boolean;
   temporaryPassword: string | null;
+  /** "quizzes" for free quiz hubs, "course" for free papers. */
+  accessNoun?: 'quizzes' | 'course';
 }): Promise<boolean> {
   const to = input.studentEmail.trim();
   if (!to) return false;
 
   const name = input.studentName.trim() || 'Student';
   const loginUrl = input.accessUrl || VLS_SCHOOL_LOGIN_URL;
+  const noun = input.accessNoun === 'course' ? 'course' : 'quizzes';
+  const accessLabel = noun === 'course' ? 'your course' : 'your quizzes';
+  const emailTitle = noun === 'course' ? 'Free enrolment' : 'Free quiz enrolment';
 
   let accessText = '';
   let accessHtml = '';
 
   if (input.isNewZenlerUser && input.temporaryPassword) {
     accessText = `
-Access your quizzes at: ${loginUrl}
+Access ${accessLabel} at: ${loginUrl}
 Email: ${to}
 Temporary password: ${input.temporaryPassword}
 
-Please log in and change your password after your first sign-in. Your free quizzes will appear under My Courses.
+Please log in and change your password after your first sign-in. Your free ${noun} will appear under My Courses.
 
 `;
     accessHtml = `
-${p(`Please use the button below to access your free quizzes.`)}
-${ctaButton(loginUrl, 'Access your quizzes')}
+${p(`Please use the button below to access ${accessLabel}.`)}
+${ctaButton(loginUrl, `Access ${accessLabel}`)}
 ${p(`<strong style="color:${BRAND.navy};">Email:</strong> ${esc(to)}<br>
 <strong style="color:${BRAND.navy};">Temporary password:</strong> ${esc(input.temporaryPassword)}`)}
-${p(`Please log in and change your password after your first sign-in. Your free quizzes will appear under <strong>My Courses</strong>.`)}`;
+${p(`Please log in and change your password after your first sign-in. Your free ${noun} will appear under <strong>My Courses</strong>.`)}`;
   } else {
     accessText = `
-Access your quizzes at: ${loginUrl}
-Sign in with your existing VLS school account. Your free quizzes will appear under My Courses.
+Access ${accessLabel} at: ${loginUrl}
+Sign in with your existing VLS school account. Your free ${noun} will appear under My Courses.
 
 `;
     accessHtml = `
-${p(`Please use the button below to access your free quizzes.`)}
-${ctaButton(loginUrl, 'Access your quizzes')}
-${p(`Sign in with your existing VLS school account. Your free quizzes will appear under <strong>My Courses</strong>.`)}`;
+${p(`Please use the button below to access ${accessLabel}.`)}
+${ctaButton(loginUrl, `Access ${accessLabel}`)}
+${p(`Sign in with your existing VLS school account. Your free ${noun} will appear under <strong>My Courses</strong>.`)}`;
   }
 
   const text = `Hi ${name},
@@ -712,7 +717,7 @@ ${accessHtml}`;
     subject: `You're enrolled — ${input.courseTitle}`,
     text,
     html: renderBrandedEmail({
-      title: 'Free quiz enrolment',
+      title: emailTitle,
       preheader: `You are enrolled on ${input.courseTitle}`,
       bodyHtml,
     }),

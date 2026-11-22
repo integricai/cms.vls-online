@@ -8,6 +8,8 @@ import {
 assert.equal(isFreeQuizCourseId('24794'), true);
 assert.equal(isFreeQuizCourseId('186586'), true);
 assert.equal(isFreeQuizCourseId('191070'), true);
+assert.equal(isFreeQuizCourseId('46991'), true);
+assert.equal(isFreeQuizCourseId(' 46991 '), true);
 assert.equal(isFreeQuizCourseId(' 24794 '), true);
 assert.equal(isFreeQuizCourseId('71086'), false);
 assert.equal(isFreeQuizCourseId(''), false);

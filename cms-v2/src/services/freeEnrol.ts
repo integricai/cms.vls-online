@@ -5,10 +5,11 @@ import { enrollStudentInZenlerCourse } from './zenlerEnrollment';
 import { sendFreeEnrolConfirmation } from './paymentEmails';
 import { courseAccessUrlForEnrollment } from './schoolAccess';
 
-export const FREE_QUIZ_COURSES: Record<string, { slug: string; name: string }> = {
-  '24794': { slug: 'quizzes', name: 'ACCA Free Quizzes' },
-  '186586': { slug: 'cimatests', name: 'CIMA Free Quizzes' },
-  '191070': { slug: 'cmaquizzes', name: 'CMA Free Quizzes' },
+export const FREE_QUIZ_COURSES: Record<string, { slug: string; name: string; accessNoun: 'quizzes' | 'course' }> = {
+  '24794': { slug: 'quizzes', name: 'ACCA Free Quizzes', accessNoun: 'quizzes' },
+  '186586': { slug: 'cimatests', name: 'CIMA Free Quizzes', accessNoun: 'quizzes' },
+  '191070': { slug: 'cmaquizzes', name: 'CMA Free Quizzes', accessNoun: 'quizzes' },
+  '46991': { slug: 'pastpapers', name: 'ACCA Past Exam Papers', accessNoun: 'course' },
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -113,6 +114,7 @@ export async function enrolFreeQuiz(input: {
       accessUrl,
       isNewZenlerUser: enrollment.isNewZenlerUser,
       temporaryPassword: enrollment.temporaryPassword,
+      accessNoun: catalog.accessNoun,
     });
   } catch (err) {
     console.error('[free-enrol] confirmation email failed', err);
