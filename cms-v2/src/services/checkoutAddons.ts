@@ -35,6 +35,31 @@ function money(amount: number): number {
   return addCheckoutMoney(amount, 0);
 }
 
+/** Percent from the checkout C story. 40 means 40% off. Empty or 0 leaves the vault price. */
+export function parseUpsellDiscountPercent(value: unknown): number {
+  const parsed = typeof value === 'number' ? value : Number(String(value ?? '').trim());
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+  return Math.min(100, Math.round(parsed * 100) / 100);
+}
+
+/** Takes the percent off the price the course would charge on its own. */
+export function applyUpsellCourseDiscount(
+  offers: CheckoutUpsellOffer[],
+  percent: number,
+): CheckoutUpsellOffer[] {
+  if (!(percent > 0)) return offers;
+  const rate = percent / 100;
+  return offers.map((offer) => {
+    const chargeAmount = money(offer.chargeAmount * (1 - rate));
+    return {
+      ...offer,
+      listAmount: offer.chargeAmount,
+      chargeAmount,
+      saveAmount: money(offer.chargeAmount - chargeAmount),
+    };
+  });
+}
+
 /** UpSell Courses saved on this course, priced the way the course page prices them. */
 export async function listCheckoutUpsellOffers(input: {
   courseId: number;
