@@ -1,6 +1,7 @@
 import { sql } from '../db/client';
-import { trackingLookupPath } from '../../shared/pageTracking';
+import { autoTrackingName, trackingLookupPath } from '../../shared/pageTracking';
 import {
+  isExcludedFromSitemap,
   SITEMAP_EXCLUDED_FOLDERS,
   SITEMAP_EXCLUDED_PATHS,
   type SitemapGroup,
@@ -67,6 +68,20 @@ export interface UpsertSiteUrlInput {
   lastmod?: Date | string | null;
   /** When true, do not overwrite an existing admin `is_enabled` choice. */
   preserveEnabled?: boolean;
+}
+
+/** Automatic page name for a public page, or null when the stored name should stay. */
+function trackingAssignment(existing: DbRow | null, path: string, fullSlug: string): string | null {
+  if (isExcludedFromSitemap(fullSlug) || isExcludedFromSitemap(path)) return null;
+  const next = autoTrackingName(
+    existing
+      ? { path: existing.path, trackingName: existing.tracking_name ?? '' }
+      : null,
+    path,
+  );
+  if (next == null) return null;
+  if (existing && next === (existing.tracking_name ?? '').trim()) return null;
+  return next;
 }
 
 export async function listSiteUrls(filters?: {
@@ -180,6 +195,7 @@ export async function upsertSiteUrl(input: UpsertSiteUrlInput): Promise<SiteUrlR
     ` as DbRow[];
 
     if (existing[0]) {
+      const assignedName = trackingAssignment(existing[0], input.path, input.storyblokFullSlug);
       const rows = await sql`
         UPDATE site_urls
         SET
@@ -187,6 +203,7 @@ export async function upsertSiteUrl(input: UpsertSiteUrlInput): Promise<SiteUrlR
           sitemap_group = ${input.sitemapGroup},
           storyblok_full_slug = ${input.storyblokFullSlug},
           title = CASE WHEN ${title} = '' THEN title ELSE ${title} END,
+          tracking_name = CASE WHEN ${assignedName != null} THEN ${assignedName ?? ''} ELSE tracking_name END,
           is_enabled = CASE WHEN ${preserveEnabled} THEN is_enabled ELSE ${isEnabled} END,
           lastmod = COALESCE(${lastmodIso}::timestamptz, lastmod),
           updated_at = NOW()
@@ -202,6 +219,7 @@ export async function upsertSiteUrl(input: UpsertSiteUrlInput): Promise<SiteUrlR
   ` as DbRow[];
 
   if (bySlug[0]) {
+    const assignedName = trackingAssignment(bySlug[0], input.path, input.storyblokFullSlug);
     const rows = await sql`
       UPDATE site_urls
       SET
@@ -209,6 +227,7 @@ export async function upsertSiteUrl(input: UpsertSiteUrlInput): Promise<SiteUrlR
         sitemap_group = ${input.sitemapGroup},
         storyblok_story_id = COALESCE(${storyId}, storyblok_story_id),
         title = CASE WHEN ${title} = '' THEN title ELSE ${title} END,
+        tracking_name = CASE WHEN ${assignedName != null} THEN ${assignedName ?? ''} ELSE tracking_name END,
         is_enabled = CASE WHEN ${preserveEnabled} THEN is_enabled ELSE ${isEnabled} END,
         lastmod = COALESCE(${lastmodIso}::timestamptz, lastmod),
         updated_at = NOW()
@@ -224,6 +243,7 @@ export async function upsertSiteUrl(input: UpsertSiteUrlInput): Promise<SiteUrlR
   ` as DbRow[];
 
   if (byPath[0]) {
+    const assignedName = trackingAssignment(byPath[0], input.path, input.storyblokFullSlug);
     const rows = await sql`
       UPDATE site_urls
       SET
@@ -231,6 +251,7 @@ export async function upsertSiteUrl(input: UpsertSiteUrlInput): Promise<SiteUrlR
         storyblok_full_slug = ${input.storyblokFullSlug},
         storyblok_story_id = COALESCE(${storyId}, storyblok_story_id),
         title = CASE WHEN ${title} = '' THEN title ELSE ${title} END,
+        tracking_name = CASE WHEN ${assignedName != null} THEN ${assignedName ?? ''} ELSE tracking_name END,
         is_enabled = CASE WHEN ${preserveEnabled} THEN is_enabled ELSE ${isEnabled} END,
         lastmod = COALESCE(${lastmodIso}::timestamptz, lastmod),
         updated_at = NOW()
@@ -240,6 +261,7 @@ export async function upsertSiteUrl(input: UpsertSiteUrlInput): Promise<SiteUrlR
     return mapRow(rows[0]);
   }
 
+  const assignedName = trackingAssignment(null, input.path, input.storyblokFullSlug) ?? '';
   const rows = await sql`
     INSERT INTO site_urls (
       path,
@@ -247,6 +269,7 @@ export async function upsertSiteUrl(input: UpsertSiteUrlInput): Promise<SiteUrlR
       storyblok_full_slug,
       storyblok_story_id,
       title,
+      tracking_name,
       is_enabled,
       lastmod
     )
@@ -256,6 +279,7 @@ export async function upsertSiteUrl(input: UpsertSiteUrlInput): Promise<SiteUrlR
       ${input.storyblokFullSlug},
       ${storyId},
       ${title},
+      ${assignedName},
       ${isEnabled},
       ${lastmodIso}
     )
@@ -273,6 +297,40 @@ export async function setSiteUrlTrackingName(id: number, trackingName: string): 
     RETURNING *
   ` as DbRow[];
   return rows[0] ? mapRow(rows[0]) : null;
+}
+
+/** Fill blank page names on public sitemap rows. Internal pages and edited names stay as they are. */
+export async function fillBlankPublicTrackingNames(): Promise<{ updated: number; skipped: number }> {
+  const rows = await sql`
+    SELECT id, path, storyblok_full_slug
+    FROM site_urls
+    WHERE tracking_name = ''
+    ORDER BY id
+  ` as Array<{ id: number; path: string; storyblok_full_slug: string }>;
+
+  const ids: number[] = [];
+  const names: string[] = [];
+  let skipped = 0;
+  for (const row of rows) {
+    const name = trackingAssignment(null, row.path, row.storyblok_full_slug ?? '');
+    if (!name) {
+      skipped += 1;
+      continue;
+    }
+    ids.push(Number(row.id));
+    names.push(name);
+  }
+  if (!ids.length) return { updated: 0, skipped };
+
+  const updated = await sql`
+    UPDATE site_urls AS site
+    SET tracking_name = incoming.name, updated_at = NOW()
+    FROM unnest(${ids}::int[], ${names}::text[]) AS incoming(id, name)
+    WHERE site.id = incoming.id
+      AND site.tracking_name = ''
+    RETURNING site.id
+  ` as Array<{ id: number }>;
+  return { updated: updated.length, skipped };
 }
 
 /** Paths that have a tracking name. Storyblok sync does not clear these. */

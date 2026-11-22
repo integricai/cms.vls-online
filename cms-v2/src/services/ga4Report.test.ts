@@ -11,6 +11,7 @@ import {
   type PaidOrderFact,
 } from '../../shared/ga4Report';
 import { buildServiceAccountAssertion, normalizeGa4PrivateKey, readGa4Config } from './ga4Report';
+import { autoTrackingName, pageTrackingNameFromPath } from '../../shared/pageTracking';
 
 function run(name: string, fn: () => void): void {
   try {
@@ -110,6 +111,35 @@ run('traffic keeps sessions, channels, and content pages', () => {
   assert.deepStrictEqual(traffic.channelDays[2]?.channels, {});
   assert.deepStrictEqual(traffic.channels.map(row => row.label), ['Organic Search', 'Paid Search']);
   assert.strictEqual(ga4BatchBody('2026-11-01', '2026-11-03').requests.length, 5);
+});
+
+run('page names follow the vault path rule', () => {
+  assert.strictEqual(pageTrackingNameFromPath('/'), 'vls:[home]');
+  assert.strictEqual(pageTrackingNameFromPath('/about-us'), 'vls:[about-us]');
+  assert.strictEqual(pageTrackingNameFromPath('/blog'), 'vls:[blog]');
+  assert.strictEqual(pageTrackingNameFromPath('/blog/acca-study-plan'), 'vls:blog:[acca-study-plan]');
+  assert.strictEqual(
+    pageTrackingNameFromPath('/courses/acca-aa-audit-and-assurance'),
+    'vls:courses:[acca-aa-audit-and-assurance]',
+  );
+  assert.strictEqual(
+    pageTrackingNameFromPath('/knowledge-base/acca-applied-skills/aa-audit-and-assurance'),
+    'vls:knowledge-base:acca-applied-skills:[aa-audit-and-assurance]',
+  );
+  assert.strictEqual(pageTrackingNameFromPath('/AR/About-Us/'), 'vls:[about-us]');
+  assert.strictEqual(autoTrackingName(null, '/privacy-policy'), 'vls:[privacy-policy]');
+  assert.strictEqual(
+    autoTrackingName({ path: '/about-us', trackingName: '' }, '/about-us'),
+    'vls:[about-us]',
+  );
+  assert.strictEqual(
+    autoTrackingName({ path: '/blog/old', trackingName: 'vls:blog:[old]' }, '/blog/new'),
+    'vls:blog:[new]',
+  );
+  assert.strictEqual(
+    autoTrackingName({ path: '/about-us', trackingName: 'vls:[custom]' }, '/about-us'),
+    null,
+  );
 });
 
 run('content pages drop checkout and the home page', () => {
