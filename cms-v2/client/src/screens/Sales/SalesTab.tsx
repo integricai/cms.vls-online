@@ -383,6 +383,7 @@ function dollarTotals(
 function downloadSales(rows: SaleListItem[], from: string, to: string) {
   const header = [
     'SaleId',
+    'Sold at',
     'User Name',
     'User Email',
     'Category',
@@ -395,11 +396,11 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
     'Amount paid',
     'Transaction Fee in $',
     'Net Payment $',
-    'Sold at',
     'StripeId',
   ];
   const lines = rows.map(sale => [
     String(sale.id),
+    formatDisplayDateTime(sale.soldAt),
     customerName(sale),
     sale.customerEmail ?? '',
     sale.category,
@@ -412,7 +413,6 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
     formatLocalPrice(sale),
     formatUsdPlainAmount(sale.processorFee, sale.settlementCurrency || sale.currency),
     formatPlainAmount(sale.netAmount),
-    formatDisplayDateTime(sale.soldAt),
     sale.providerPaymentId ?? sale.stripePaymentIntentId ?? '',
   ].map(csvCell).join(','));
   const blob = new Blob([`\uFEFF${header.join(',')}\n${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' });
@@ -673,6 +673,7 @@ export default function SalesTab() {
             <thead className="bg-slate-50 text-slate-500">
               <tr>
                 <th className="px-3 py-2">SaleId</th>
+                <th className="px-3 py-2">Sold at</th>
                 <th className="px-3 py-2">User name</th>
                 <th className="px-3 py-2">User email</th>
                 <th className="px-3 py-2">Category</th>
@@ -685,7 +686,6 @@ export default function SalesTab() {
                 <th className="px-3 py-2">Amount paid</th>
                 <th className="px-3 py-2">Transaction Fee in $</th>
                 <th className="px-3 py-2">Net Payment $</th>
-                <th className="px-3 py-2">Sold at</th>
                 <th className="px-3 py-2">StripeId</th>
                 <th className="px-3 py-2">Actions</th>
               </tr>
@@ -703,6 +703,7 @@ export default function SalesTab() {
                 return (
                   <tr key={sale.id} className="border-t border-slate-100 align-top">
                     <td className="px-3 py-2 font-medium text-slate-800">{sale.id}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{formatDisplayDateTime(sale.soldAt)}</td>
                     <td className="px-3 py-2">{customerName(sale)}</td>
                     <td className="px-3 py-2">{sale.customerEmail || '—'}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{sale.category}</td>
@@ -720,7 +721,6 @@ export default function SalesTab() {
                     <td className="px-3 py-2 whitespace-nowrap">{formatLocalPrice(sale)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{plainOrDash(formatUsdPlainAmount(sale.processorFee, sale.settlementCurrency || sale.currency))}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{plainOrDash(formatPlainAmount(sale.netAmount))}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{formatDisplayDateTime(sale.soldAt)}</td>
                     <td className="px-3 py-2">
                       {paymentId && paymentUrl ? (
                         <a
