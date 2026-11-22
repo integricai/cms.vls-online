@@ -6,6 +6,8 @@ import { listPublicBooks } from '../models/book';
 import { getBppBookDiscountPercent } from '../services/bppBookDiscount';
 import type { BlogPost } from '../models/blog';
 import { unsubscribeCheckoutFollowups } from '../models/checkoutFollowup';
+import { rateLimit } from '../middleware/rateLimit';
+import { loadSchoolDashboard } from '../services/schoolDashboard';
 
 const router = Router();
 
@@ -303,6 +305,30 @@ async function handleCheckoutFollowupUnsubscribe(req: Request, res: Response): P
 
 router.get('/checkout-followups/unsubscribe', handleCheckoutFollowupUnsubscribe);
 router.post('/checkout-followups/unsubscribe', handleCheckoutFollowupUnsubscribe);
+
+const schoolDashboardRateLimit = rateLimit({
+  name: 'school-dashboard',
+  limit: 20,
+  windowMs: 15 * 60 * 1000,
+});
+
+router.options('/school-dashboard', (_req, res) => {
+  allowPublicCors(res);
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.status(204).end();
+});
+
+router.post('/school-dashboard', schoolDashboardRateLimit, async (req: Request, res: Response, next: NextFunction) => {
+  allowPublicCors(res);
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const dashboard = await loadSchoolDashboard(req.body?.email);
+    return res.json({ ok: true, ...dashboard });
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.post('/newsletter/subscribe', async (req: Request, res: Response) => {
   try {
