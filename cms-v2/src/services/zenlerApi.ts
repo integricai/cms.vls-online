@@ -404,6 +404,29 @@ export async function unenrollZenlerUserFromCourse(input: {
   }
 }
 
+/**
+ * One page of Zenler's course-progress report for a single email.
+ * courseIds narrows the report to enrolments we already know about.
+ */
+export async function fetchZenlerCourseProgressPage(input: {
+  email: string;
+  page: number;
+  courseIds?: string[];
+}): Promise<unknown> {
+  const query = new URLSearchParams({
+    start_date: '2018-01-01',
+    end_date: new Date().toISOString().slice(0, 10),
+    limit: '100',
+    page: String(Math.max(1, input.page)),
+    af_v: '1',
+  });
+  query.append('email_is[]', input.email.trim().toLowerCase());
+  for (const courseId of input.courseIds ?? []) {
+    if (/^\d+$/.test(courseId)) query.append('course_id[]', courseId);
+  }
+  return zenlerFetch<unknown>(`/reports/course-progress/detailed?${query.toString()}`);
+}
+
 interface ZenlerFunnelListData {
   items?: Array<{ id: number }>;
 }

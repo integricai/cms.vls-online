@@ -181,6 +181,35 @@ export async function listZenlerRoster(filters: {
   return { items, page, pageSize, total, totalPages };
 }
 
+export async function listActiveRosterCoursesForEmail(email: string): Promise<Array<{
+  zenlerCourseId: string;
+  courseName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+}>> {
+  await ensureZenlerRoster();
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return [];
+  const rows = await sql`
+    SELECT zenler_course_id, course_name, first_name, last_name
+    FROM zenler_roster_enrollments
+    WHERE removed_at IS NULL
+      AND LOWER(email) = ${normalized}
+    ORDER BY enrollment_date DESC, course_name ASC
+  `;
+  return (rows as Array<{
+    zenler_course_id: string;
+    course_name: string | null;
+    first_name: string | null;
+    last_name: string | null;
+  }>).map(row => ({
+    zenlerCourseId: row.zenler_course_id,
+    courseName: row.course_name,
+    firstName: row.first_name,
+    lastName: row.last_name,
+  }));
+}
+
 export async function saveRosterDuration(input: {
   zenlerCourseId: string;
   zenlerUserId: string;
