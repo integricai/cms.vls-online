@@ -18,6 +18,7 @@ interface DbRow {
   course_level: string | null;
   course_levels?: string[];
   course_option: string | null;
+  upsell_course_ids?: number[] | null;
   course_page_url: string | null;
   last_synced_at: Date | null;
   created_at: Date;
@@ -52,11 +53,17 @@ function rowToCourse(row: DbRow): Course {
     courseLevel: row.course_level,
     courseLevels: row.course_levels ?? (row.course_level ? [row.course_level] : []),
     courseOption: row.course_option,
+    upsellCourseIds: normalizeUpsellIds(row.upsell_course_ids),
     coursePageUrl: row.course_page_url ?? null,
     lastSyncedAt: row.last_synced_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function normalizeUpsellIds(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(id => Number(id)).filter(id => Number.isInteger(id) && id > 0);
 }
 
 function rowToDropdownOption(row: DropdownOptionDbRow): CourseDropdownOption {
@@ -74,7 +81,12 @@ function rowToDropdownOption(row: DropdownOptionDbRow): CourseDropdownOption {
 export async function listCourses(): Promise<Course[]> {
   const rows = await sql`
     SELECT c.*,
-      COALESCE(array_remove(array_agg(cl.level ORDER BY cl.sort_order ASC, cl.level ASC), NULL), ARRAY[]::text[]) AS course_levels
+      COALESCE(array_remove(array_agg(cl.level ORDER BY cl.sort_order ASC, cl.level ASC), NULL), ARRAY[]::text[]) AS course_levels,
+      COALESCE((
+        SELECT array_agg(cu.upsell_course_id ORDER BY cu.sort_order ASC, cu.upsell_course_id ASC)
+        FROM course_upsells cu
+        WHERE cu.course_id = c.id
+      ), ARRAY[]::int[]) AS upsell_course_ids
     FROM courses c
     LEFT JOIN course_levels cl ON cl.course_id = c.id
     GROUP BY c.id
@@ -86,7 +98,12 @@ export async function listCourses(): Promise<Course[]> {
 export async function listActiveCourses(): Promise<Course[]> {
   const rows = await sql`
     SELECT c.*,
-      COALESCE(array_remove(array_agg(cl.level ORDER BY cl.sort_order ASC, cl.level ASC), NULL), ARRAY[]::text[]) AS course_levels
+      COALESCE(array_remove(array_agg(cl.level ORDER BY cl.sort_order ASC, cl.level ASC), NULL), ARRAY[]::text[]) AS course_levels,
+      COALESCE((
+        SELECT array_agg(cu.upsell_course_id ORDER BY cu.sort_order ASC, cu.upsell_course_id ASC)
+        FROM course_upsells cu
+        WHERE cu.course_id = c.id
+      ), ARRAY[]::int[]) AS upsell_course_ids
     FROM courses c
     LEFT JOIN course_levels cl ON cl.course_id = c.id
     WHERE c.is_active = true
@@ -99,7 +116,12 @@ export async function listActiveCourses(): Promise<Course[]> {
 export async function listBannerCourses(): Promise<Course[]> {
   const rows = await sql`
     SELECT c.*,
-      COALESCE(array_remove(array_agg(cl.level ORDER BY cl.sort_order ASC, cl.level ASC), NULL), ARRAY[]::text[]) AS course_levels
+      COALESCE(array_remove(array_agg(cl.level ORDER BY cl.sort_order ASC, cl.level ASC), NULL), ARRAY[]::text[]) AS course_levels,
+      COALESCE((
+        SELECT array_agg(cu.upsell_course_id ORDER BY cu.sort_order ASC, cu.upsell_course_id ASC)
+        FROM course_upsells cu
+        WHERE cu.course_id = c.id
+      ), ARRAY[]::int[]) AS upsell_course_ids
     FROM courses c
     LEFT JOIN course_levels cl ON cl.course_id = c.id
     WHERE c.is_active = true AND c.enable_in_banner = true
@@ -121,7 +143,12 @@ export async function getCourseByZenlerCourseId(zenlerCourseId: string): Promise
 export async function getCourseById(id: number): Promise<Course | null> {
   const rows = await sql`
     SELECT c.*,
-      COALESCE(array_remove(array_agg(cl.level ORDER BY cl.sort_order ASC, cl.level ASC), NULL), ARRAY[]::text[]) AS course_levels
+      COALESCE(array_remove(array_agg(cl.level ORDER BY cl.sort_order ASC, cl.level ASC), NULL), ARRAY[]::text[]) AS course_levels,
+      COALESCE((
+        SELECT array_agg(cu.upsell_course_id ORDER BY cu.sort_order ASC, cu.upsell_course_id ASC)
+        FROM course_upsells cu
+        WHERE cu.course_id = c.id
+      ), ARRAY[]::int[]) AS upsell_course_ids
     FROM courses c
     LEFT JOIN course_levels cl ON cl.course_id = c.id
     WHERE c.id = ${id}
@@ -168,6 +195,59 @@ export async function upsertCourse(data: {
   return { course: rowToCourse(row), wasInserted: row.was_inserted };
 }
 
+export class CourseUpsellError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CourseUpsellError';
+  }
+}
+
+async function acceptedUpsellCourseIds(courseId: number | null, upsellCourseIds: number[]): Promise<number[]> {
+  const ids = Array.from(new Set(upsellCourseIds.filter(id => Number.isInteger(id) && id > 0)));
+  if (courseId != null && ids.includes(courseId)) {
+    throw new CourseUpsellError('A course cannot be its own upsell.');
+  }
+  if (ids.length === 0) return [];
+
+  const existingRows = await sql`
+    SELECT id, is_active
+    FROM courses
+    WHERE id = ANY(${ids}::int[])
+  `;
+  const found = new Map(
+    (existingRows as Array<{ id: number; is_active: boolean }>).map(row => [Number(row.id), row.is_active === true]),
+  );
+  if (ids.some(id => !found.has(id))) {
+    throw new CourseUpsellError('One or more upsell courses do not exist.');
+  }
+
+  const already = new Set<number>();
+  if (courseId != null) {
+    const linkedRows = await sql`
+      SELECT upsell_course_id
+      FROM course_upsells
+      WHERE course_id = ${courseId}
+    `;
+    for (const row of linkedRows as Array<{ upsell_course_id: number }>) {
+      already.add(Number(row.upsell_course_id));
+    }
+  }
+  if (ids.some(id => found.get(id) !== true && !already.has(id))) {
+    throw new CourseUpsellError('Upsell courses must be enabled.');
+  }
+  return ids;
+}
+
+async function replaceCourseUpsells(courseId: number, upsellCourseIds: number[]): Promise<void> {
+  await sql`DELETE FROM course_upsells WHERE course_id = ${courseId}`;
+  for (let index = 0; index < upsellCourseIds.length; index++) {
+    await sql`
+      INSERT INTO course_upsells (course_id, upsell_course_id, sort_order)
+      VALUES (${courseId}, ${upsellCourseIds[index]}, ${(index + 1) * 10})
+    `;
+  }
+}
+
 function slugifyCourseName(name: string): string {
   const slug = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   return slug || 'course';
@@ -183,8 +263,10 @@ export async function createManualCourse(data: {
   isActive: boolean;
   enableInBanner: boolean;
   enableInNavigation: boolean;
+  upsellCourseIds?: number[];
 }): Promise<Course> {
   const levels = Array.from(new Set(data.courseLevels.map(level => level.trim()).filter(Boolean)));
+  const upsellCourseIds = await acceptedUpsellCourseIds(null, data.upsellCourseIds ?? []);
   const rows = await sql`
     INSERT INTO courses (
       zenler_course_id,
@@ -225,6 +307,11 @@ export async function createManualCourse(data: {
         SET sort_order = EXCLUDED.sort_order
     `;
   }
+  if (upsellCourseIds.includes(created.id)) {
+    await sql`DELETE FROM courses WHERE id = ${created.id}`;
+    throw new CourseUpsellError('A course cannot be its own upsell.');
+  }
+  await replaceCourseUpsells(created.id, upsellCourseIds);
   const fresh = (await listCourses()).find(course => course.id === created.id);
   return fresh ?? rowToCourse(created);
 }
@@ -241,8 +328,12 @@ export async function updateCourseAdminMetadata(
     courseLevels?: string[];
     courseOption?: string | null;
     coursePageUrl?: string | null;
+    upsellCourseIds?: number[];
   },
 ): Promise<Course | null> {
+  const upsellCourseIds = data.upsellCourseIds === undefined
+    ? undefined
+    : await acceptedUpsellCourseIds(id, data.upsellCourseIds);
   const existingRows = await sql`SELECT * FROM courses WHERE id = ${id} LIMIT 1`;
   const existing = existingRows[0] as DbRow | undefined;
   if (!existing) return null;
@@ -274,6 +365,10 @@ export async function updateCourseAdminMetadata(
           SET sort_order = EXCLUDED.sort_order
       `;
     }
+  }
+
+  if (upsellCourseIds !== undefined) {
+    await replaceCourseUpsells(id, upsellCourseIds);
   }
 
   const fresh = (await listCourses()).find(course => course.id === id);

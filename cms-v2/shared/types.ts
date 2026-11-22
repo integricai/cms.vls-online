@@ -86,6 +86,8 @@ export interface Course {
   courseLevel: string | null;
   courseLevels: string[];
   courseOption: string | null;
+  /** Other courses offered as upsells. A course is never its own upsell. */
+  upsellCourseIds: number[];
   /** Public sales-page path or URL (e.g. /courses/fa1). Not overwritten by Zenler sync. */
   coursePageUrl: string | null;
   lastSyncedAt: Date | null;
