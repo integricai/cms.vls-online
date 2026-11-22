@@ -11,7 +11,7 @@ import {
   type PaidOrderFact,
 } from '../../shared/ga4Report';
 import { buildServiceAccountAssertion, normalizeGa4PrivateKey, readGa4Config } from './ga4Report';
-import { autoTrackingName, pageTrackingNameFromPath } from '../../shared/pageTracking';
+import { autoTrackingName, applyPageTrackingNames, pageTrackingNameFromPath, withRenamedPathNames } from '../../shared/pageTracking';
 
 function run(name: string, fn: () => void): void {
   try {
@@ -140,6 +140,60 @@ run('page names follow the vault path rule', () => {
     autoTrackingName({ path: '/about-us', trackingName: 'vls:[custom]' }, '/about-us'),
     null,
   );
+});
+
+run('renamed course urls use the current page name', () => {
+  const names = withRenamedPathNames({
+    '/courses/strategic-business-reporting-sbr': 'vls:courses:[strategic-business-reporting-sbr]',
+    '/courses/acca-sbr-strategic-business-reporting-revision': 'vls:courses:[acca-sbr-strategic-business-reporting-revision]',
+    '/courses/financial-management-f9': 'vls:courses:[financial-management-f9]',
+    '/courses/advanced-financial-management-afm': 'vls:courses:[advanced-financial-management-afm]',
+    '/courses/strategic-business-leader-sbl': 'vls:courses:[strategic-business-leader-sbl]',
+  }, [
+    { fromPath: '/courses/acca-sbr-strategic-business-reporting', toPath: '/courses/strategic-business-reporting-sbr' },
+    { fromPath: '/courses/acca-sbl-strategic-business-leader', toPath: '/courses/strategic-business-leader-sbl' },
+    { fromPath: '/courses/acca-fm-financial-management', toPath: '/courses/financial-management-f9' },
+    { fromPath: '/courses/acca-afm-advanced-financial-management', toPath: '/courses/advanced-financial-management-afm' },
+    { fromPath: '/courses/acca-sbr-strategic-business-reporting-revision', toPath: '/courses/strategic-business-reporting-sbr-revision' },
+    { fromPath: '/courses/strategic-business-reporting-sbr-revision', toPath: '/courses/acca-sbr-strategic-business-reporting-revision' },
+    { fromPath: '/old', toPath: '/middle' },
+    { fromPath: '/old', toPath: '/courses/financial-management-f9' },
+  ]);
+  assert.strictEqual(
+    names['/courses/acca-sbr-strategic-business-reporting'],
+    'vls:courses:[strategic-business-reporting-sbr]',
+  );
+  assert.strictEqual(
+    names['/courses/acca-sbl-strategic-business-leader'],
+    'vls:courses:[strategic-business-leader-sbl]',
+  );
+  assert.strictEqual(
+    names['/courses/acca-fm-financial-management'],
+    'vls:courses:[financial-management-f9]',
+  );
+  assert.strictEqual(
+    names['/courses/acca-afm-advanced-financial-management'],
+    'vls:courses:[advanced-financial-management-afm]',
+  );
+  assert.strictEqual(
+    names['/courses/strategic-business-reporting-sbr'],
+    'vls:courses:[strategic-business-reporting-sbr]',
+  );
+  assert.strictEqual(
+    names['/courses/acca-sbr-strategic-business-reporting-revision'],
+    'vls:courses:[acca-sbr-strategic-business-reporting-revision]',
+  );
+  assert.strictEqual(
+    names['/courses/strategic-business-reporting-sbr-revision'],
+    'vls:courses:[acca-sbr-strategic-business-reporting-revision]',
+  );
+  assert.strictEqual(names['/old'], 'vls:courses:[financial-management-f9]');
+  assert.deepStrictEqual(applyPageTrackingNames([
+    { label: '/courses/acca-sbr-strategic-business-reporting', value: 12 },
+    { label: '/courses/strategic-business-reporting-sbr', value: 3 },
+  ], names), [
+    { label: 'vls:courses:[strategic-business-reporting-sbr]', value: 15 },
+  ]);
 });
 
 run('content pages drop checkout and the home page', () => {

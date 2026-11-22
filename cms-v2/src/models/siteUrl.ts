@@ -1,5 +1,5 @@
 import { sql } from '../db/client';
-import { autoTrackingName, trackingLookupPath } from '../../shared/pageTracking';
+import { autoTrackingName, trackingLookupPath, withRenamedPathNames } from '../../shared/pageTracking';
 import {
   isExcludedFromSitemap,
   SITEMAP_EXCLUDED_FOLDERS,
@@ -347,7 +347,21 @@ export async function listTrackingNames(): Promise<Record<string, string>> {
     const name = row.tracking_name.trim();
     if (path && name) names[path] = name;
   }
-  return names;
+  try {
+    const renames = await sql`
+      SELECT from_path, to_path
+      FROM course_url_changes
+      WHERE status IN ('published', 'superseded', 'ready')
+      ORDER BY id
+    ` as Array<{ from_path: string; to_path: string }>;
+    return withRenamedPathNames(
+      names,
+      renames.map(row => ({ fromPath: row.from_path, toPath: row.to_path })),
+    );
+  } catch (err) {
+    console.error('[tracking-names]', err instanceof Error ? err.message : err);
+    return names;
+  }
 }
 
 export async function setSiteUrlEnabled(id: number, isEnabled: boolean): Promise<SiteUrlRecord | null> {
