@@ -293,8 +293,11 @@ export async function createStripeCheckoutSession(input: {
   savedOffer?: boolean;
   /** A posted book added to the same card payment. */
   extraLineItem?: { name: string; amount: number } | null;
+  /** Checkout C books and upsell courses. Each one is its own Stripe line. */
+  extraLineItems?: Array<{ name: string; amount: number; image?: boolean }> | null;
   collectShipping?: boolean;
   bookId?: number | null;
+  bookIds?: number[] | null;
 }): Promise<StripeCheckoutSession> {
   if (!input.savedOffer) assertStripeUsdCharge(input.currency);
   const chargeCurrency = input.currency.toUpperCase();
@@ -336,14 +339,20 @@ export async function createStripeCheckoutSession(input: {
   params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
   appendStripeAdaptivePricing(params, chargeCurrency);
   params.append('line_items[0][quantity]', '1');
-  if (input.extraLineItem) {
-    const bookAmount = stripeUnitAmount(input.extraLineItem.amount, chargeCurrency);
-    params.append('line_items[1][price_data][currency]', chargeCurrency.toLowerCase());
-    params.append('line_items[1][price_data][product_data][name]', input.extraLineItem.name.slice(0, 250));
-    params.append('line_items[1][price_data][product_data][images][0]', STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL);
-    params.append('line_items[1][price_data][unit_amount]', String(bookAmount));
-    params.append('line_items[1][quantity]', '1');
-  }
+  const extraLines = [
+    ...(input.extraLineItem ? [{ name: input.extraLineItem.name, amount: input.extraLineItem.amount, image: true }] : []),
+    ...(input.extraLineItems ?? []),
+  ];
+  extraLines.forEach((item, index) => {
+    const slot = String(index + 1);
+    params.append(`line_items[${slot}][price_data][currency]`, chargeCurrency.toLowerCase());
+    params.append(`line_items[${slot}][price_data][product_data][name]`, item.name.slice(0, 250));
+    if (item.image) {
+      params.append(`line_items[${slot}][price_data][product_data][images][0]`, STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL);
+    }
+    params.append(`line_items[${slot}][price_data][unit_amount]`, String(stripeUnitAmount(item.amount, chargeCurrency)));
+    params.append(`line_items[${slot}][quantity]`, '1');
+  });
   if (input.collectShipping) {
     for (const country of STRIPE_SHIPPING_COUNTRIES) {
       params.append('shipping_address_collection[allowed_countries][]', country);
@@ -369,7 +378,8 @@ export async function createStripeCheckoutSession(input: {
   appendParam(params, 'metadata[studentEmail]', input.studentEmail);
   appendParam(params, 'metadata[countryCode]', input.countryCode);
   appendParam(params, 'metadata[bookId]', input.bookId);
-  appendParam(params, 'metadata[bookTitle]', input.extraLineItem?.name);
+  appendParam(params, 'metadata[bookIds]', input.bookIds?.length ? input.bookIds.join(',') : null);
+  appendParam(params, 'metadata[bookTitle]', input.extraLineItem?.name ?? extraLines.find((item) => item.image)?.name);
 
   const response = await fetchWithTimeout('https://api.stripe.com/v1/checkout/sessions', {
     method: 'POST',

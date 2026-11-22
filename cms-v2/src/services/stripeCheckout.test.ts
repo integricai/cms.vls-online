@@ -346,6 +346,44 @@ void (async () => {
     assert.strictEqual(bookLine.get("metadata[bookId]"), "12");
     assert.ok(bookLine.getAll("shipping_address_collection[allowed_countries][]").includes("GB"));
   });
+  const realFetchForAddons = globalThis.fetch;
+  let addonLine = new URLSearchParams();
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    addonLine = init.body as URLSearchParams;
+    return new Response(JSON.stringify({ id: "cs_addons", url: "https://checkout.stripe.com/addons" }));
+  }) as typeof fetch;
+  try {
+    await createStripeCheckoutSession({
+      orderId: 11,
+      zenlerCourseId: "88",
+      courseTitle: "FA1",
+      paymentCardTitle: "FA1",
+      amount: 494,
+      currency: "USD",
+      studentEmail: "student@example.com",
+      environment: "staging",
+      extraLineItems: [
+        { name: "FA1 Course Book", amount: 19.5, image: true },
+        { name: "MS Excel for Finance Professionals", amount: 89.4 },
+      ],
+      bookIds: [10],
+    });
+  } finally {
+    globalThis.fetch = realFetchForAddons;
+  }
+  run("adds each ticked book and course as its own Stripe line", () => {
+    assert.strictEqual(addonLine.get("line_items[1][price_data][product_data][name]"), "FA1 Course Book");
+    assert.strictEqual(addonLine.get("line_items[1][price_data][unit_amount]"), "1950");
+    assert.strictEqual(
+      addonLine.get("line_items[1][price_data][product_data][images][0]"),
+      STRIPE_BOOK_ORDER_SUMMARY_IMAGE_URL,
+    );
+    assert.strictEqual(addonLine.get("line_items[2][price_data][product_data][name]"), "MS Excel for Finance Professionals");
+    assert.strictEqual(addonLine.get("line_items[2][price_data][unit_amount]"), "8940");
+    assert.strictEqual(addonLine.get("line_items[2][price_data][product_data][images][0]"), null);
+    assert.strictEqual(addonLine.get("metadata[bookIds]"), "10");
+  });
+
   console.log("stripeCheckout tests passed");
 })().catch((err) => {
   console.error(err);

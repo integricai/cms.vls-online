@@ -24,9 +24,12 @@ function zenlerCourseIdsForAccess(order: PaymentOrder): string[] {
   const access = (order.accessZenlerCourseIds ?? [])
     .map((id) => String(id).trim())
     .filter((id) => /^\d+$/.test(id));
-  if (access.length) return access;
   const primary = String(order.zenlerCourseId ?? '').trim();
-  return /^\d+$/.test(primary) ? [primary] : [];
+  const base = access.length ? access : (/^\d+$/.test(primary) ? [primary] : []);
+  const upsells = (order.upsellZenlerCourseIds ?? [])
+    .map((id) => String(id).trim())
+    .filter((id) => /^\d+$/.test(id));
+  return Array.from(new Set([...base, ...upsells]));
 }
 
 export function orderUsesZenlerAccess(order: PaymentOrder): boolean {

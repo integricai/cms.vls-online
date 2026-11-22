@@ -29,9 +29,12 @@ export interface CreateCheckoutInput {
   localPresentment?: { amount: number; currency: string } | null;
   /** Second Stripe line. The course line stays input.amount. */
   extraLineItem?: { name: string; amount: number } | null;
+  /** Further Stripe lines for checkout C books and upsell courses. */
+  extraLineItems?: Array<{ name: string; amount: number; image?: boolean }> | null;
   /** Ask Stripe for a shipping address. Used when the book is posted. */
   collectShipping?: boolean;
   bookId?: number | null;
+  bookIds?: number[] | null;
 }
 
 export interface CheckoutSessionResult {
