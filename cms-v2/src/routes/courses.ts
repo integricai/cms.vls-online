@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
 import {
+  CourseUpsellError,
   createManualCourse,
   getCourseByZenlerCourseId,
   listActiveCourses,
@@ -227,6 +228,18 @@ function requiredText(value: unknown): string {
   return String(value ?? '').trim();
 }
 
+function readUpsellCourseIds(value: unknown): number[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    throw new CourseUpsellError('Upsell courses must be a list of course ids.');
+  }
+  const ids = value.map(id => Number(id));
+  if (ids.some(id => !Number.isInteger(id) || id <= 0)) {
+    throw new CourseUpsellError('Upsell courses must be a list of course ids.');
+  }
+  return Array.from(new Set(ids));
+}
+
 function isUniqueViolation(err: unknown): boolean {
   const error = err as { code?: string; cause?: { code?: string } };
   return error.code === '23505' || error.cause?.code === '23505';
@@ -273,9 +286,13 @@ router.post('/', requireRole('admin'), async (req: Request, res: Response, next:
       isActive: req.body.isActive !== false,
       enableInBanner: req.body.enableInBanner === true,
       enableInNavigation: req.body.enableInNavigation === true,
+      upsellCourseIds: readUpsellCourseIds(req.body.upsellCourseIds) ?? [],
     });
     return res.status(201).json({ ok: true, data: course });
   } catch (err) {
+    if (err instanceof CourseUpsellError) {
+      return res.status(400).json({ ok: false, error: err.message });
+    }
     if (isUniqueViolation(err)) {
       return res.status(409).json({ ok: false, error: 'A course with this Zenler ID already exists' });
     }
@@ -306,11 +323,15 @@ router.put('/:id', requireRole('admin'), async (req: Request, res: Response, nex
       coursePageUrl: req.body.coursePageUrl === undefined
         ? undefined
         : normalizeCoursePageUrl(req.body.coursePageUrl),
+      upsellCourseIds: readUpsellCourseIds(req.body.upsellCourseIds),
     });
 
     if (!course) return res.status(404).json({ ok: false, error: 'Course not found' });
     return res.json({ ok: true, data: course });
   } catch (err) {
+    if (err instanceof CourseUpsellError) {
+      return res.status(400).json({ ok: false, error: err.message });
+    }
     next(err);
   }
 });

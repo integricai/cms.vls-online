@@ -90,6 +90,24 @@ export function formatDisplayDate(value: Date | string | null | undefined): stri
   }).format(date);
 }
 
+/** London date and time of a sale, for example "22 Nov 2026, 14:32". */
+export function formatDisplayDateTime(value: Date | string | null | undefined): string {
+  if (!value) return '—';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: LONDON,
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(item => item.type === type)?.value ?? '';
+  return `${part('day')} ${part('month')} ${part('year')}, ${part('hour')}:${part('minute')}`;
+}
+
 /**
  * Session cell for a sale row.
  * A payment order uses the reason the form was created. A course sale uses the sitting or the access length.

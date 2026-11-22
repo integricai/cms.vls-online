@@ -64,6 +64,7 @@ function course(partial: Pick<Course, 'zenlerCourseId' | 'name' | 'coursePageUrl
     courseLevel: null,
     courseLevels: [],
     courseOption: null,
+    upsellCourseIds: [],
     lastSyncedAt: null,
     createdAt: new Date(0),
     updatedAt: new Date(0),

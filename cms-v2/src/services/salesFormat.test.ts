@@ -6,6 +6,7 @@ import {
   percentChange,
   foldTotalsToUsd,
   amountInUsd,
+  formatDisplayDateTime,
   formatLocalPrice,
   formatPlainAmount,
   formatUsdPlainAmount,
@@ -198,6 +199,12 @@ run('a report query matches email, course, country, or session', () => {
   assert.strictEqual(matchesSaleReportQuery('om', fields), true);
   assert.strictEqual(matchesSaleReportQuery('apr 2027', fields), true);
   assert.strictEqual(matchesSaleReportQuery('belgium', fields), false);
+});
+
+run('sold at shows the London date and time', () => {
+  assert.strictEqual(formatDisplayDateTime('2026-11-22T14:32:00.000Z'), '22 Nov 2026, 14:32');
+  assert.strictEqual(formatDisplayDateTime(null), '—');
+  assert.strictEqual(formatDisplayDateTime('not-a-date'), '—');
 });
 
 run('plain export amounts keep two decimals and drop the currency sign', () => {

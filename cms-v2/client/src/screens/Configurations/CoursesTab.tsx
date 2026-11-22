@@ -14,6 +14,7 @@ type Course = {
   courseLevel: string | null;
   courseLevels: string[];
   courseOption: string | null;
+  upsellCourseIds: number[];
   coursePageUrl: string | null;
   lastSyncedAt: string | null;
 };
@@ -35,6 +36,7 @@ type NewCourseDraft = {
   qualification: string;
   courseLevels: string[];
   courseOption: string;
+  upsellCourseIds: number[];
   isActive: boolean;
   enableInBanner: boolean;
   enableInNavigation: boolean;
@@ -84,6 +86,7 @@ function emptyNewCourse(): NewCourseDraft {
     qualification: '',
     courseLevels: [],
     courseOption: '',
+    upsellCourseIds: [],
     isActive: true,
     enableInBanner: false,
     enableInNavigation: false,
@@ -215,6 +218,7 @@ function CoursesTab() {
         courseLevel: newCourse.courseLevels[0],
         courseLevels: newCourse.courseLevels,
         courseOption: newCourse.courseOption.trim(),
+        upsellCourseIds: newCourse.upsellCourseIds,
         isActive: newCourse.isActive,
         enableInBanner: newCourse.enableInBanner,
         enableInNavigation: newCourse.enableInNavigation,
@@ -270,6 +274,7 @@ function CoursesTab() {
         courseLevels: course.courseLevels || [],
         courseOption: course.courseOption,
         coursePageUrl: course.coursePageUrl,
+        upsellCourseIds: course.upsellCourseIds || [],
       });
       patchCourse(course.id, saved);
     } catch (e) {
@@ -293,6 +298,7 @@ function CoursesTab() {
         courseLevel: course.courseLevel,
         courseLevels: course.courseLevels || [],
         courseOption: course.courseOption,
+        upsellCourseIds: course.upsellCourseIds || [],
       });
       patchCourse(course.id, saved);
     } catch (e) {
@@ -317,6 +323,7 @@ function CoursesTab() {
         courseLevel: course.courseLevel,
         courseLevels: course.courseLevels || [],
         courseOption: course.courseOption,
+        upsellCourseIds: course.upsellCourseIds || [],
       });
       patchCourse(course.id, saved);
     } catch (e) {
@@ -341,6 +348,7 @@ function CoursesTab() {
         courseLevel: course.courseLevel,
         courseLevels: course.courseLevels || [],
         courseOption: course.courseOption,
+        upsellCourseIds: course.upsellCourseIds || [],
       });
       patchCourse(course.id, saved);
     } catch (e) {
@@ -422,6 +430,37 @@ function CoursesTab() {
 
   function selectedValues(select: HTMLSelectElement): string[] {
     return Array.from(select.selectedOptions).map(option => option.value).filter(Boolean);
+  }
+
+  function selectedCourseIds(select: HTMLSelectElement): number[] {
+    return Array.from(select.selectedOptions)
+      .map(option => Number(option.value))
+      .filter(id => Number.isInteger(id) && id > 0);
+  }
+
+  function upsellOptions(excludeId: number | null, selected: number[]): Course[] {
+    const selectedIds = new Set(selected);
+    return courses.filter(course => course.id !== excludeId && (course.isActive || selectedIds.has(course.id)));
+  }
+
+  function renderUpsellSelect(excludeId: number | null, selected: number[], onChange: (ids: number[]) => void) {
+    return (
+      <>
+        <select
+          multiple
+          className="input min-h-20 min-w-52 py-1 text-xs"
+          value={selected.map(String)}
+          onChange={event => onChange(selectedCourseIds(event.currentTarget))}
+        >
+          {upsellOptions(excludeId, selected).map(course => (
+            <option key={course.id} value={course.id}>
+              {course.isActive ? course.name : `${course.name} (disabled)`}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-[10px] text-slate-400">Enabled courses. Hold Ctrl/Cmd to select multiple.</span>
+      </>
+    );
   }
 
   function renderOptionsEditor(kind: CourseDropdownKind, label: string) {
@@ -554,7 +593,7 @@ function CoursesTab() {
         {loading ? 'Loading courses…' : `${courses.length} Course${courses.length !== 1 ? 's' : ''}`}
       </h3>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-xs text-slate-500">Drag rows to sort. Enabled, banner, and navigation toggles save immediately; save each row after changing dropdowns.</p>
+        <p className="text-xs text-slate-500">Drag rows to sort. Enabled, banner, and navigation toggles save immediately; save each row after changing dropdowns or upsell courses.</p>
         <div className="flex flex-wrap gap-2">
           {canEdit && (
             <button
@@ -616,6 +655,10 @@ function CoursesTab() {
                 {options.course_option.map(value => <option key={value} value={value}>{value}</option>)}
               </select>
             </label>
+            <label className="text-xs text-slate-600">
+              UpSell Courses
+              {renderUpsellSelect(null, newCourse.upsellCourseIds, upsellCourseIds => patchNewCourse({ upsellCourseIds }))}
+            </label>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-700">
             <label className="flex items-center gap-2">
@@ -650,7 +693,7 @@ function CoursesTab() {
       )}
       {!loading && courses.length > 0 && (
         <div className="overflow-auto rounded-lg border border-slate-200 bg-white">
-          <table className="min-w-[1280px] w-full text-xs">
+          <table className="min-w-[1480px] w-full text-xs">
             <thead className="bg-slate-50">
               <tr className="border-b border-slate-200 text-left text-slate-500">
                 <th className="px-3 py-2 font-semibold">Sort</th>
@@ -664,6 +707,7 @@ function CoursesTab() {
                 <th className="px-3 py-2 font-semibold">Qualification</th>
                 <th className="px-3 py-2 font-semibold">Level</th>
                 <th className="px-3 py-2 font-semibold">Course Option</th>
+                <th className="px-3 py-2 font-semibold">UpSell Courses</th>
                 <th className="px-3 py-2 font-semibold">Last synced</th>
                 <th className="px-3 py-2 font-semibold">Save</th>
               </tr>
@@ -760,6 +804,9 @@ function CoursesTab() {
                       <option value="">Select...</option>
                       {options.course_option.map(value => <option key={value} value={value}>{value}</option>)}
                     </select>
+                  </td>
+                  <td className="px-3 py-2">
+                    {renderUpsellSelect(c.id, c.upsellCourseIds || [], upsellCourseIds => patchCourse(c.id, { upsellCourseIds }))}
                   </td>
                   <td className="px-3 py-2 text-slate-400">
                     {c.lastSyncedAt ? new Date(c.lastSyncedAt).toLocaleString() : '—'}
