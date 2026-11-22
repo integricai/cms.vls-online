@@ -16,6 +16,8 @@ export interface PaymentOrder {
   customerId: number | null;
   zenlerCourseId: string;
   accessZenlerCourseIds: string[];
+  /** Upsell courses ticked on checkout C. Enrolled with the course that was purchased. */
+  upsellZenlerCourseIds?: string[];
   courseTitle: string;
   optionType: string | null;
   studentName: string | null;
@@ -82,6 +84,7 @@ interface DbRow {
   customer_id: number | null;
   zenler_course_id: string;
   access_zenler_course_ids: string[] | null;
+  upsell_zenler_course_ids?: string[] | null;
   course_title: string;
   option_type: string | null;
   student_name: string | null;
@@ -149,6 +152,7 @@ function rowToOrder(row: DbRow): PaymentOrder {
     customerId: row.customer_id ?? null,
     zenlerCourseId: row.zenler_course_id,
     accessZenlerCourseIds: row.access_zenler_course_ids ?? [],
+    upsellZenlerCourseIds: row.upsell_zenler_course_ids ?? [],
     courseTitle: row.course_title,
     optionType: row.option_type,
     studentName: row.student_name,
@@ -265,6 +269,17 @@ export async function createPaymentOrder(data: {
     await recordPaymentOrderExperiments(order.id, attr.experiments);
   }
   return order;
+}
+
+/** Courses ticked on checkout C. Fulfilment enrols these with the purchased course. */
+export async function savePaymentOrderUpsells(orderId: number, zenlerCourseIds: string[]): Promise<void> {
+  const ids = Array.from(new Set(zenlerCourseIds.map((id) => id.trim()).filter((id) => /^\d+$/.test(id))));
+  if (!ids.length) return;
+  await sql`
+    UPDATE payment_orders
+    SET upsell_zenler_course_ids = ${ids}
+    WHERE id = ${orderId}
+  `;
 }
 
 export async function attachCheckoutSession(

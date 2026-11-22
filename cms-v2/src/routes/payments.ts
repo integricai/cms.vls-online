@@ -2,7 +2,6 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { getPaymentCard } from '../models/coursePaymentCard';
 import { getGeoPriceById } from '../models/courseGeoPrice';
 import { getCourseById as getCmsCourseById } from '../models/course';
-import { getBook } from '../models/book';
 import { splitStudentName, upsertCustomer } from '../models/customer';
 import {
   attachCheckoutSession,
@@ -10,6 +9,7 @@ import {
   getPaymentOrder,
   getPaymentOrderByCheckoutId,
   saveOfferedPresentment,
+  savePaymentOrderUpsells,
   type PaymentOrder,
 } from '../models/paymentOrder';
 import {
@@ -29,7 +29,15 @@ import {
   type PaymentProviderId,
 } from '../services/payments/types';
 import { parseCheckoutAttribution, resolveCheckoutEnvironment } from '../services/attribution';
-import { addCheckoutMoney, checkoutBookAddon } from '../services/checkoutBookAddon';
+import { addCheckoutMoney } from '../services/checkoutBookAddon';
+import {
+  CheckoutAddonError,
+  applyUpsellCourseDiscount,
+  checkoutBookLineItems,
+  listCheckoutUpsellOffers,
+  parseUpsellDiscountPercent,
+  selectedUpsellOffers,
+} from '../services/checkoutAddons';
 import { canPresentCheckoutCurrency, presentCheckoutAmount } from '../services/displayCurrency';
 import { getUsdRates, rateForCurrency } from '../services/fxRates';
 import { quoteMatchesCataloguePrice, verifyPriceQuote, type PriceQuotePayload } from '../services/priceQuote';
@@ -118,6 +126,16 @@ function parsePaymentOptionId(value: unknown): number | null {
 function parsePositiveInt(value: unknown): number | null {
   const id = Number(value);
   return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function parseIdList(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  const ids: number[] = [];
+  for (const item of value) {
+    const id = parsePositiveInt(item);
+    if (id && !ids.includes(id)) ids.push(id);
+  }
+  return ids;
 }
 
 function parseOptionalText(value: unknown): string | null {
@@ -491,6 +509,32 @@ router.post('/checkout-quote', schoolAccountRateLimit, async (req: Request, res:
     if (err instanceof RetakeCodeError || err instanceof MultiCourseAccessError || err instanceof ComboBundlePriceError) {
       return res.status(err.status).json({ ok: false, error: err.message });
     }
+    next(err);
+  }
+});
+
+/** Upsell courses for checkout C. Prices follow the same vault offer as the course page. */
+router.post('/checkout-addons', schoolAccountRateLimit, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const courseId = parsePositiveInt(req.body?.courseId);
+    if (!courseId) return res.status(400).json({ ok: false, error: 'courseId is required' });
+    const course = await getCmsCourseById(courseId);
+    if (!course || !course.isActive) {
+      return res.status(404).json({ ok: false, error: 'Course not found or inactive' });
+    }
+    const geo = detectCountryFromRequest(req);
+    const courses = await listCheckoutUpsellOffers({
+      courseId,
+      countryCode: geo.countryCode,
+      ipAddress: detectClientIpFromRequest(req),
+      ignoreVpnBlock: isParityDealsTestAllowed() && (
+        isParityDealsTestRequest(req)
+        || req.body?.parityDealsTest === true
+        || String(req.body?.test ?? '').toLowerCase() === 'true'
+      ),
+    });
+    return res.json({ ok: true, courses });
+  } catch (err) {
     next(err);
   }
 });
@@ -946,31 +990,58 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
     }
 
     const courseChargeAmount = chargeAmount;
-    const requestedBookId = parsePositiveInt(req.body?.bookId);
-    let bookAddon: ReturnType<typeof checkoutBookAddon> = null;
-    if (requestedBookId) {
-      if (providerId !== 'stripe') {
-        return res.status(400).json({ ok: false, error: 'The BPP book can only be added to a card payment.' });
-      }
-      bookAddon = checkoutBookAddon({
-        book: await getBook(requestedBookId),
+    const listedBookIds = parseIdList(req.body?.bookIds);
+    const legacyBookId = parsePositiveInt(req.body?.bookId);
+    const requestedBookIds = listedBookIds.length ? listedBookIds : (legacyBookId ? [legacyBookId] : []);
+    const requestedUpsellIds = parseIdList(req.body?.upsellCourseIds);
+    if ((requestedBookIds.length || requestedUpsellIds.length) && providerId !== 'stripe') {
+      return res.status(400).json({ ok: false, error: 'Books and extra courses can only be added to a card payment.' });
+    }
+    if (requestedUpsellIds.length && accessZenlerCourseIds?.length) {
+      return res.status(400).json({ ok: false, error: 'Extra courses cannot be added to a combo checkout.' });
+    }
+    const bookAddons = requestedBookIds.length
+      ? await checkoutBookLineItems({
+        bookIds: requestedBookIds,
         courseTitle: course.name,
         chargeCurrency,
-      });
-      if (!bookAddon) {
-        return res.status(400).json({ ok: false, error: 'This book cannot be added to this course.' });
-      }
-      chargeAmount = addCheckoutMoney(chargeAmount, bookAddon.amount);
+      })
+      : [];
+    const upsellPercent = proxySecretMatches(req.get('x-vls-proxy-secret'))
+      ? parseUpsellDiscountPercent(req.body?.upsellDiscountPercent)
+      : 0;
+    const upsellOffers = requestedUpsellIds.length
+      ? applyUpsellCourseDiscount(
+        selectedUpsellOffers(
+          await listCheckoutUpsellOffers({
+            courseId: course.id,
+            countryCode: quotedCountryCode,
+            ipAddress: detectClientIpFromRequest(req),
+            ignoreVpnBlock: isParityDealsTestAllowed() && (
+              isParityDealsTestRequest(req)
+              || req.body?.parityDealsTest === true
+              || String(req.body?.test ?? '').toLowerCase() === 'true'
+            ),
+          }),
+          requestedUpsellIds,
+        ),
+        upsellPercent,
+      )
+      : [];
+    for (const addon of [...bookAddons, ...upsellOffers]) {
+      const addonAmount = 'amount' in addon ? addon.amount : addon.chargeAmount;
+      chargeAmount = addCheckoutMoney(chargeAmount, addonAmount);
       if (localPresentment) {
-        const bookLocal = await presentmentFromFx(bookAddon.amount, quotedCountryCode);
-        if (bookLocal && bookLocal.currency === localPresentment.currency) {
+        const addonLocal = await presentmentFromFx(addonAmount, quotedCountryCode);
+        if (addonLocal && addonLocal.currency === localPresentment.currency) {
           localPresentment = {
-            amount: addCheckoutMoney(localPresentment.amount, bookLocal.amount),
+            amount: addCheckoutMoney(localPresentment.amount, addonLocal.amount),
             currency: localPresentment.currency,
           };
         }
       }
     }
+    const legacyBook = listedBookIds.length === 0 ? bookAddons[0] ?? null : null;
 
     const order = await createPaymentOrder({
       paymentOptionId: null,
@@ -995,6 +1066,9 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       environment,
       provider: providerId,
     });
+    if (upsellOffers.length) {
+      await savePaymentOrderUpsells(order.id, upsellOffers.map((offer) => offer.zenlerCourseId));
+    }
     if (localPresentment && providerId === 'stripe') {
       await saveOfferedPresentment(order.id, localPresentment.amount, localPresentment.currency);
     }
@@ -1028,9 +1102,16 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
         cancelPath: typeof req.body?.cancelPath === 'string' ? req.body.cancelPath : null,
         environment,
         localPresentment: providerId === 'stripe' ? localPresentment : null,
-        extraLineItem: bookAddon ? { name: bookAddon.title, amount: bookAddon.amount } : null,
-        collectShipping: Boolean(bookAddon),
-        bookId: bookAddon?.bookId ?? null,
+        extraLineItem: legacyBook ? { name: legacyBook.title, amount: legacyBook.amount } : null,
+        extraLineItems: listedBookIds.length || upsellOffers.length
+          ? [
+            ...bookAddons.map((book) => ({ name: book.title, amount: book.amount, image: true })),
+            ...upsellOffers.map((course) => ({ name: course.title, amount: course.chargeAmount })),
+          ]
+          : null,
+        collectShipping: Boolean(legacyBook),
+        bookId: bookAddons[0]?.bookId ?? null,
+        bookIds: bookAddons.map((book) => book.bookId),
       });
     } catch (err) {
       if (retakeQuote) {
@@ -1054,7 +1135,7 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
       matchReason: resolved.matchReason,
     });
   } catch (err) {
-    if (err instanceof MultiCourseAccessError || err instanceof ComboBundlePriceError) {
+    if (err instanceof MultiCourseAccessError || err instanceof ComboBundlePriceError || err instanceof CheckoutAddonError) {
       return res.status(err.status).json({ ok: false, error: err.message });
     }
     next(err);
