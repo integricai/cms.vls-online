@@ -32,8 +32,10 @@ import { parseCheckoutAttribution, resolveCheckoutEnvironment } from '../service
 import { addCheckoutMoney } from '../services/checkoutBookAddon';
 import {
   CheckoutAddonError,
+  applyUpsellCourseDiscount,
   checkoutBookLineItems,
   listCheckoutUpsellOffers,
+  parseUpsellDiscountPercent,
   selectedUpsellOffers,
 } from '../services/checkoutAddons';
 import { canPresentCheckoutCurrency, presentCheckoutAmount } from '../services/displayCurrency';
@@ -1005,19 +1007,25 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
         chargeCurrency,
       })
       : [];
+    const upsellPercent = proxySecretMatches(req.get('x-vls-proxy-secret'))
+      ? parseUpsellDiscountPercent(req.body?.upsellDiscountPercent)
+      : 0;
     const upsellOffers = requestedUpsellIds.length
-      ? selectedUpsellOffers(
-        await listCheckoutUpsellOffers({
-          courseId: course.id,
-          countryCode: quotedCountryCode,
-          ipAddress: detectClientIpFromRequest(req),
-          ignoreVpnBlock: isParityDealsTestAllowed() && (
-            isParityDealsTestRequest(req)
-            || req.body?.parityDealsTest === true
-            || String(req.body?.test ?? '').toLowerCase() === 'true'
-          ),
-        }),
-        requestedUpsellIds,
+      ? applyUpsellCourseDiscount(
+        selectedUpsellOffers(
+          await listCheckoutUpsellOffers({
+            courseId: course.id,
+            countryCode: quotedCountryCode,
+            ipAddress: detectClientIpFromRequest(req),
+            ignoreVpnBlock: isParityDealsTestAllowed() && (
+              isParityDealsTestRequest(req)
+              || req.body?.parityDealsTest === true
+              || String(req.body?.test ?? '').toLowerCase() === 'true'
+            ),
+          }),
+          requestedUpsellIds,
+        ),
+        upsellPercent,
       )
       : [];
     for (const addon of [...bookAddons, ...upsellOffers]) {
