@@ -220,15 +220,14 @@ export function quoteComboCharge(
     throw new ComboBundlePriceError('Pricing is unavailable for this selection.');
   }
 
-  const local = localComboCharge(chosen, discountPercent);
   return {
     listAmountUsd,
     chargeAmountUsd,
     chargeAmount: chargeAmountUsd,
     chargeCurrency: 'USD',
     listAmount: listAmountUsd,
-    presentmentAmount: local?.amount ?? null,
-    presentmentCurrency: local?.currency ?? null,
+    presentmentAmount: null,
+    presentmentCurrency: null,
     discountPercent,
     sessionTitle,
     sessionMonth: chosenSession?.month ?? null,
@@ -240,44 +239,6 @@ export function quoteComboCharge(
       listAmountUsd: roundComboMoney(plan.amount),
     })),
   };
-}
-
-/** Stripe zero-decimal currencies. Payment confirmation treats minor units as cents. */
-const ZERO_DECIMAL = new Set([
-  'BIF', 'CLP', 'DJF', 'GNF', 'ISK', 'JPY', 'KMF', 'KRW', 'PYG', 'RWF',
-  'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
-]);
-
-/** Local catalogue price: Evendeals is ignored, then the same FX rate is applied to the list price. */
-function catalogueLocalAmount(plan: ComboPlanAmount): number | null {
-  if (plan.displayAmount == null || !Number.isFinite(plan.displayAmount)) return null;
-  const currency = (plan.displayCurrency || 'USD').toUpperCase();
-  if (currency === 'USD' || ZERO_DECIMAL.has(currency)) return null;
-  const effective = plan.effectiveAmount ?? plan.amount;
-  if (effective > 0 && effective < plan.amount) {
-    return roundComboMoney(plan.amount * (plan.displayAmount / effective));
-  }
-  return plan.displayAmount;
-}
-
-function localComboCharge(
-  chosen: ComboPlanAmount[],
-  discountPercent: number,
-): { amount: number; list: number; currency: string } | null {
-  const currencies = new Set(chosen.map(plan => (plan.displayCurrency || 'USD').toUpperCase()));
-  if (currencies.size !== 1) return null;
-  const currency = [...currencies][0]!;
-  if (currency === 'USD' || ZERO_DECIMAL.has(currency)) return null;
-  let list = 0;
-  for (const plan of chosen) {
-    const local = catalogueLocalAmount(plan);
-    if (local == null) return null;
-    list += local;
-  }
-  list = roundComboMoney(list);
-  const amount = comboDiscountedAmount(list, discountPercent);
-  if (!(amount > 0)) return null;
-  return { amount, list, currency };
 }
 
 export async function priceComboAccessSelection(input: {

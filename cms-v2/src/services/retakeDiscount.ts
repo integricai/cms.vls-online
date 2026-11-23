@@ -37,7 +37,6 @@ import {
   type DiscountLinkStatus,
 } from './discountPayLink';
 import { formatDisplayMoney, normalizeCountryCode } from './displayCurrency';
-import { getUsdRates } from './fxRates';
 import { sendRetakeDiscountCodeEmail } from './retakeDiscountEmail';
 import {
   createStripeCheckoutSession,
@@ -149,6 +148,18 @@ function offerEmailPrices(input: {
 }
 
 function savedPrice(row: RetakeDiscountCode): { fullAmount: number; finalAmount: number; currency: string } | null {
+  if (
+    row.usdFinalAmount != null
+    && row.usdFinalAmount > 0
+    && row.usdFullAmount != null
+    && row.usdFullAmount > 0
+  ) {
+    return {
+      fullAmount: row.usdFullAmount,
+      finalAmount: row.usdFinalAmount,
+      currency: 'USD',
+    };
+  }
   if (row.finalAmount == null || row.fullAmount == null) return null;
   return {
     fullAmount: row.fullAmount,
@@ -217,7 +228,7 @@ export async function issueRetakeDiscountCode(input: {
   const price = presentDiscountPrices({
     ...catalogue,
     countryCode,
-    rates: await getUsdRates(),
+    rates: null,
   });
   const expiresAt = discountLinkExpiresAt();
 

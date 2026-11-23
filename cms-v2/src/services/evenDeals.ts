@@ -1,6 +1,5 @@
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 import { roundMoney } from './courseGeoPriceValidation';
-import { roundUpToFive } from './displayCurrency';
 
 export type EvenDealsQuote = {
   discountPercentage: number;
@@ -201,8 +200,7 @@ export function applyEvenDealsQuote(
   }
 
   const discounted = roundMoney(campaignAmount * (1 - quote.discountPercentage / 100));
-  const lifted = roundUpToFive(discounted);
-  const effectiveAmount = Math.max(0.5, Math.min(campaignAmount, lifted));
+  const effectiveAmount = Math.max(0.5, Math.min(campaignAmount, discounted));
 
   return {
     effectiveAmount,

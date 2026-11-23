@@ -1,10 +1,6 @@
 import assert from 'assert';
 import {
-  BANK_FX_NOTE,
-  convertUsdAmount,
-  roundUpToFive,
   currencyForCountry,
-  formatChargedAsUsd,
   formatDisplayMoney,
   localizeDisplayMoney,
   normalizeCountryCode,
@@ -35,18 +31,8 @@ run('maps India and Pakistan to local currency', () => {
   assert.strictEqual(currencyForCountry(null), 'USD');
 });
 
-run('rounds money up to the next multiple of 5', () => {
-  assert.strictEqual(roundUpToFive(82.5), 85);
-  assert.strictEqual(roundUpToFive(97.1), 100);
-  assert.strictEqual(roundUpToFive(112.04), 115);
-  assert.strictEqual(roundUpToFive(100), 100);
-  assert.strictEqual(roundUpToFive(80), 80);
-});
-
-run('converts and formats INR without paise', () => {
-  const amount = convertUsdAmount(89, 83);
-  assert.strictEqual(amount, 7390);
-  const formatted = formatDisplayMoney(amount, 'INR');
+run('formats INR without paise when a local amount is already known', () => {
+  const formatted = formatDisplayMoney(7390, 'INR');
   assert.match(formatted, /7,390/);
   assert.ok(!formatted.includes('.'), formatted);
 });
@@ -56,34 +42,30 @@ run('keeps USD cents when present', () => {
   assert.strictEqual(formatDisplayMoney(89, 'USD'), '$89');
 });
 
-run('localizeDisplayMoney keeps USD when rate is missing', () => {
-  const localized = localizeDisplayMoney(89, 120, 'INR', null);
-  assert.strictEqual(localized.displayCurrency, 'USD');
-  assert.strictEqual(localized.fxApplied, false);
-  assert.strictEqual(localized.formattedChargeUsd, null);
-  assert.strictEqual(localized.formatted, '$89');
-  assert.strictEqual(localized.formattedCompareAt, '$120');
+run('localizeDisplayMoney keeps the dollar amount for every country', () => {
+  const missing = localizeDisplayMoney(89, 120, 'INR', null);
+  assert.strictEqual(missing.displayCurrency, 'USD');
+  assert.strictEqual(missing.fxApplied, false);
+  assert.strictEqual(missing.formattedChargeUsd, null);
+  assert.strictEqual(missing.fxNote, null);
+  assert.strictEqual(missing.formatted, '$89');
+  assert.strictEqual(missing.formattedCompareAt, '$120');
+
+  const india = localizeDisplayMoney(89.5, 120, 'INR', 83);
+  assert.strictEqual(india.displayCurrency, 'USD');
+  assert.strictEqual(india.fxApplied, false);
+  assert.strictEqual(india.formatted, '$89.50');
+  assert.strictEqual(india.formattedCompareAt, '$120');
 });
 
-run('localizeDisplayMoney shows local price plus charged-as USD', () => {
-  const localized = localizeDisplayMoney(89, 120, 'INR', 83);
-  assert.strictEqual(localized.displayCurrency, 'INR');
-  assert.strictEqual(localized.fxApplied, true);
-  assert.strictEqual(localized.fxNote, BANK_FX_NOTE);
-  assert.strictEqual(localized.formattedChargeUsd, formatChargedAsUsd(89));
-  assert.strictEqual(localized.formattedChargeUsd, 'Charged as $89 USD');
-  assert.match(localized.formatted, /7,390|₹/);
-  assert.match(localized.formattedCompareAt ?? '', /9,960|₹/);
-});
-
-run('converts a discount link into the visitor currency', () => {
+run('keeps a checkout amount in its catalogue currency', () => {
   const gbp = presentCheckoutAmount({
     amount: 220,
     currency: 'USD',
     countryCode: 'GB',
     rates: { GBP: 0.8 },
   });
-  assert.deepStrictEqual(gbp, { amount: 180, currency: 'GBP' });
+  assert.deepStrictEqual(gbp, { amount: 220, currency: 'USD' });
 
   const usd = presentCheckoutAmount({
     amount: 220,

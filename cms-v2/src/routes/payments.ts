@@ -38,7 +38,6 @@ import {
   parseUpsellDiscountPercent,
   selectedUpsellOffers,
 } from '../services/checkoutAddons';
-import { canPresentCheckoutCurrency, presentCheckoutAmount } from '../services/displayCurrency';
 import { getUsdRates, rateForCurrency } from '../services/fxRates';
 import { quoteMatchesCataloguePrice, verifyPriceQuote, type PriceQuotePayload } from '../services/priceQuote';
 import {
@@ -592,13 +591,11 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
     }
     const cardCurrency = (option.currency || 'GBP').toUpperCase();
     let amount = cardAmount;
-    let localPresentment: { amount: number; currency: string } | null = null;
     if (cardCurrency !== 'USD') {
       const rate = rateForCurrency(await getUsdRates(), cardCurrency);
       if (rate == null) {
         return res.status(503).json({ ok: false, error: 'Pricing is unavailable' });
       }
-      localPresentment = { amount: cardAmount, currency: cardCurrency };
       amount = Math.round((cardAmount / rate) * 100) / 100;
     }
 
@@ -647,9 +644,6 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       provider: providerId,
     });
     if (schoolPassword.password) await saveStudentPassword(order.id, schoolPassword.password);
-    if (localPresentment && providerId === 'stripe') {
-      await saveOfferedPresentment(order.id, localPresentment.amount, localPresentment.currency);
-    }
 
     const session = await startProviderCheckout(providerId, {
       orderId: order.id,
@@ -662,7 +656,7 @@ router.post('/create-checkout-session', checkoutSessionRateLimit, async (req: Re
       currency: 'USD',
       studentEmail: schoolPassword.email,
       studentName: customerInput.studentName,
-      localPresentment: providerId === 'stripe' ? localPresentment : null,
+      localPresentment: null,
       returnOrigin: parseCheckoutReturnOrigin(req),
       cancelPath: typeof req.body?.cancelPath === 'string' ? req.body.cancelPath : null,
       environment,
@@ -706,24 +700,16 @@ type CheckoutPricing = {
 const PRICING_UNAVAILABLE = 'Pricing is temporarily unavailable. Please refresh the page and try again.';
 
 function presentmentFromQuote(
-  quote: PriceQuotePayload,
+  _quote: PriceQuotePayload,
 ): { amount: number; currency: string } | null {
-  const currency = quote.displayCurrency.toUpperCase();
-  if (currency === 'USD' || !canPresentCheckoutCurrency(currency)) return null;
-  return { amount: quote.displayAmount, currency };
+  return null;
 }
 
 async function presentmentFromFx(
-  amountUsd: number,
-  countryCode: string | null,
+  _amountUsd: number,
+  _countryCode: string | null,
 ): Promise<{ amount: number; currency: string } | null> {
-  const presented = presentCheckoutAmount({
-    amount: amountUsd,
-    currency: 'USD',
-    countryCode,
-    rates: await getUsdRates(),
-  });
-  return presented.currency === 'USD' ? null : presented;
+  return null;
 }
 
 async function priceCheckoutSelection(
@@ -867,9 +853,7 @@ async function priceCheckoutSelection(
     if (comboQuote.sessionMonth != null && comboQuote.sessionYear != null) {
       examSession = { month: comboQuote.sessionMonth, year: comboQuote.sessionYear };
     }
-    localPresentment = comboQuote.presentmentAmount != null && comboQuote.presentmentCurrency
-      ? { amount: comboQuote.presentmentAmount, currency: comboQuote.presentmentCurrency }
-      : null;
+    localPresentment = null;
   } else if (usedPageQuote) {
     // The signed quote says whether the page showed a sitting for this price.
     examSession = quotedSession;

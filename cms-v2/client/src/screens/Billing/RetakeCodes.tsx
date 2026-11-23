@@ -144,7 +144,7 @@ export default function RetakeCodes() {
         <h1 className="text-lg font-bold text-slate-800">Single course Discount</h1>
         <p className="mt-0.5 text-xs text-slate-500">
           Send one student a payment link for one course.
-          Prices use the student's country, the link expires after 14 days, and it is marked used after payment.
+          The link is charged in US dollars, it expires after 14 days, and it is marked used after payment.
         </p>
       </div>
 

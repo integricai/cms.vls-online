@@ -1,5 +1,4 @@
 import crypto from 'crypto';
-import { presentCheckoutAmount } from './displayCurrency';
 import { applyRetakeDiscount, type RetakeDiscountType } from './retakeDiscountMath';
 
 export const DISCOUNT_LINK_DAYS = 14;
@@ -60,37 +59,19 @@ export function quoteDiscountedPrice(
   return applyRetakeDiscount(listAmount, type, value);
 }
 
-/**
- * Lock the full price and the payable price in the student's currency.
- * Both use the same conversion as the course page. An unsupported currency stays in the catalogue currency.
- */
+/** Staff discount links keep the catalogue amounts. Those amounts are US dollars. */
 export function presentDiscountPrices(input: {
   fullAmount: number;
   finalAmount: number;
   currency: string;
-  countryCode: string;
-  rates: Record<string, number> | null;
+  countryCode?: string;
+  rates?: Record<string, number> | null;
 }): { fullAmount: number; finalAmount: number; currency: string } {
-  const full = presentCheckoutAmount({
-    amount: input.fullAmount,
-    currency: input.currency,
-    countryCode: input.countryCode,
-    rates: input.rates,
-  });
-  const payable = presentCheckoutAmount({
-    amount: input.finalAmount,
-    currency: input.currency,
-    countryCode: input.countryCode,
-    rates: input.rates,
-  });
-  if (full.currency !== payable.currency) {
-    return {
-      fullAmount: input.fullAmount,
-      finalAmount: input.finalAmount,
-      currency: (input.currency || 'USD').toUpperCase(),
-    };
-  }
-  return { fullAmount: full.amount, finalAmount: payable.amount, currency: full.currency };
+  return {
+    fullAmount: input.fullAmount,
+    finalAmount: input.finalAmount,
+    currency: (input.currency || 'USD').toUpperCase(),
+  };
 }
 
 /**
@@ -107,7 +88,7 @@ export function offeredStripeCharge(input: {
     return {
       amount: input.usdFinalAmount,
       currency: 'USD',
-      presentment: currency === 'USD' ? null : { amount: input.finalAmount, currency },
+      presentment: null,
     };
   }
   return { amount: input.finalAmount, currency, presentment: null };

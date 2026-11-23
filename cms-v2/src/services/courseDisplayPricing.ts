@@ -12,8 +12,6 @@ import {
   getNextPriceCardSessions,
   type ExamSession,
 } from './qualificationOfferSessions';
-import { BANK_FX_NOTE, convertUsdAmount, currencyForCountry, localizeDisplayMoney } from './displayCurrency';
-import { getUsdRates, rateForCurrency } from './fxRates';
 import { normalizeExamSession } from '../../shared/sessionAccess';
 import { signPriceQuote } from './priceQuote';
 import type { ServerTiming } from '../utils/serverTiming';
@@ -160,16 +158,6 @@ function strikethroughAmount(listAmount: number, compareAt: number | null, effec
   const crossed = compareAt ?? listAmount;
   if (crossed > effective) return crossed;
   return null;
-}
-
-/** Prefer the Evendeals quoted country when a regional discount was applied. */
-export function resolveDisplayCountry(
-  headerCountry: string | null | undefined,
-  plans: Array<{ geoRegionCode: string | null }>,
-): string | null {
-  return plans.find(plan => plan.geoRegionCode)?.geoRegionCode
-    ?? headerCountry
-    ?? null;
 }
 
 function buildPlanFields(
@@ -441,14 +429,7 @@ export async function buildCourseDisplayPricing(
     ignoreVpnBlock,
   ));
 
-  const fxStartedAt = performance.now();
-  plans = await applyLocalDisplayCurrency(
-    resolvedPlans,
-    resolveDisplayCountry(input.countryCode, resolvedPlans),
-    input.fxRates,
-  );
-  input.timing?.add('fx', fxStartedAt, 'FX rates');
-  plans = plans.map((plan) => {
+  plans = resolvedPlans.map((plan) => {
     const session = normalizeExamSession(plan.sessionMonth, plan.sessionYear);
     const priceQuote = signPriceQuote({
       coursePriceId: plan.coursePriceId,
@@ -469,8 +450,8 @@ export async function buildCourseDisplayPricing(
     courseName: input.courseName,
     currency: 'USD',
     displayCurrency: defaultPlan.displayCurrency,
-    fxApplied: defaultPlan.fxApplied,
-    fxNote: defaultPlan.fxApplied ? BANK_FX_NOTE : null,
+    fxApplied: false,
+    fxNote: null,
     formattedChargeUsd: defaultPlan.formattedChargeUsd,
     displayAmount: defaultPlan.displayAmount,
     plans,
@@ -480,30 +461,4 @@ export async function buildCourseDisplayPricing(
     formattedCompareAt: defaultPlan.formattedCompareAt,
     priceQuote: defaultPlan.priceQuote ?? null,
   };
-}
-
-async function applyLocalDisplayCurrency(
-  plans: PublishedCoursePricePlan[],
-  countryCode: string | null | undefined,
-  injectedRates?: Record<string, number> | null,
-): Promise<PublishedCoursePricePlan[]> {
-  const displayCurrency = currencyForCountry(countryCode);
-  if (displayCurrency === 'USD') return plans;
-
-  const rates = injectedRates !== undefined ? injectedRates : await getUsdRates();
-  const rate = rateForCurrency(rates, displayCurrency);
-  if (rate == null) return plans;
-
-  return plans.map(plan => {
-    const localized = localizeDisplayMoney(plan.effectiveAmount, plan.compareAt, displayCurrency, rate);
-    return {
-      ...plan,
-      formatted: localized.formatted,
-      formattedCompareAt: localized.formattedCompareAt,
-      formattedChargeUsd: localized.formattedChargeUsd,
-      displayAmount: convertUsdAmount(plan.effectiveAmount, rate),
-      displayCurrency: localized.displayCurrency,
-      fxApplied: localized.fxApplied,
-    };
-  });
 }

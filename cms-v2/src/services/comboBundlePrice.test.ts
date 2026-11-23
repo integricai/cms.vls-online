@@ -67,8 +67,8 @@ run('Evendeals is ignored and 35% comes off the catalogue price', () => {
   assert.strictEqual(quote.listAmount, 260);
   assert.strictEqual(quote.chargeAmount, 169);
   assert.strictEqual(quote.chargeCurrency, 'USD');
-  assert.strictEqual(quote.presentmentAmount, 127.84);
-  assert.strictEqual(quote.presentmentCurrency, 'GBP');
+  assert.strictEqual(quote.presentmentAmount, null);
+  assert.strictEqual(quote.presentmentCurrency, null);
 });
 
 run('courses without sessions sum their default prices', () => {
