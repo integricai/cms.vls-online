@@ -66,14 +66,21 @@ run('snapshots the discounted catalogue price in the same currency', () => {
   assert.equal(quoteDiscountedPrice(10, 'fixed', 9.6), null);
 });
 
-run('locks the full price and the payable price in the student currency', () => {
+run('keeps a staff discount in US dollars for every country', () => {
   assert.deepEqual(presentDiscountPrices({
     fullAmount: 100,
     finalAmount: 70,
     currency: 'USD',
     countryCode: 'GB',
     rates: { GBP: 0.8 },
-  }), { fullAmount: 80, finalAmount: 56, currency: 'GBP' });
+  }), { fullAmount: 100, finalAmount: 70, currency: 'USD' });
+  assert.deepEqual(presentDiscountPrices({
+    fullAmount: 100,
+    finalAmount: 70.5,
+    currency: 'USD',
+    countryCode: 'PK',
+    rates: { PKR: 278 },
+  }), { fullAmount: 100, finalAmount: 70.5, currency: 'USD' });
 });
 
 run('keeps US dollars when the local currency cannot be charged', () => {
@@ -94,7 +101,7 @@ run('charges the dollar amount saved with the offer, not a later catalogue price
   }), {
     amount: 150,
     currency: 'USD',
-    presentment: { amount: 120, currency: 'GBP' },
+    presentment: null,
   });
   assert.deepEqual(offeredStripeCharge({
     finalAmount: 150,

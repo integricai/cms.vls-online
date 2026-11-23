@@ -101,19 +101,6 @@ export function discountCountryOptions(): Array<{ code: string; name: string; cu
     .sort((a, b) => a.name.localeCompare(b.name, 'en'));
 }
 
-/** Round up to the next multiple of 5. 82.50 → 85, 97.10 → 100, 112.04 → 115. Exact multiples stay put. */
-export function roundUpToFive(amount: number): number {
-  if (!Number.isFinite(amount) || amount <= 0) return amount;
-  const cents = Math.round(amount * 100);
-  const step = 500;
-  return (Math.ceil(cents / step) * step) / 100;
-}
-
-export function convertUsdAmount(amountUsd: number, rate: number): number {
-  const converted = Math.round(amountUsd * rate * 100) / 100;
-  return roundUpToFive(converted);
-}
-
 export function formatDisplayMoney(amount: number, currency: string): string {
   const code = currency.toUpperCase();
   const zeroDecimal = ZERO_DECIMAL_CURRENCIES.has(code);
@@ -146,32 +133,20 @@ export type DisplayMoney = {
   fxNote: string | null;
 };
 
+/** Catalogue prices are shown in US dollars. Country and rate are ignored. */
 export function localizeDisplayMoney(
   amountUsd: number,
   compareAtUsd: number | null,
-  displayCurrency: string,
-  rate: number | null,
+  _displayCurrency: string,
+  _rate: number | null,
 ): DisplayMoney {
-  if (displayCurrency === 'USD' || rate == null) {
-    return {
-      displayCurrency: 'USD',
-      formatted: formatDisplayMoney(amountUsd, 'USD'),
-      formattedCompareAt: compareAtUsd != null ? formatDisplayMoney(compareAtUsd, 'USD') : null,
-      formattedChargeUsd: null,
-      fxApplied: false,
-      fxNote: null,
-    };
-  }
-
   return {
-    displayCurrency,
-    formatted: formatDisplayMoney(convertUsdAmount(amountUsd, rate), displayCurrency),
-    formattedCompareAt: compareAtUsd != null
-      ? formatDisplayMoney(convertUsdAmount(compareAtUsd, rate), displayCurrency)
-      : null,
-    formattedChargeUsd: formatChargedAsUsd(amountUsd),
-    fxApplied: true,
-    fxNote: BANK_FX_NOTE,
+    displayCurrency: 'USD',
+    formatted: formatDisplayMoney(amountUsd, 'USD'),
+    formattedCompareAt: compareAtUsd != null ? formatDisplayMoney(compareAtUsd, 'USD') : null,
+    formattedChargeUsd: null,
+    fxApplied: false,
+    fxNote: null,
   };
 }
 
@@ -187,30 +162,16 @@ export function canPresentCheckoutCurrency(currency: string): boolean {
 }
 
 /**
- * The local amount the course page showed for a US dollar catalogue price.
- * Direct checkout keeps the dollar amount and also sends this local amount to Stripe,
- * so the pound price matches the page and the dollar price stays available.
+ * Checkout uses the catalogue currency. A dollar price stays in dollars for every country.
  */
 export function presentCheckoutAmount(input: {
   amount: number;
   currency: string;
-  countryCode: string | null | undefined;
-  rates: Record<string, number> | null;
+  countryCode?: string | null;
+  rates?: Record<string, number> | null;
 }): { amount: number; currency: string } {
-  const currency = (input.currency || 'USD').toUpperCase();
-  if (currency !== 'USD') return { amount: input.amount, currency };
-  const local = currencyForCountry(input.countryCode);
-  const rate = input.rates?.[local];
-  if (
-    local === 'USD'
-    || !CHECKOUT_PRESENTMENT.has(local)
-    || rate == null
-    || !(rate > 0)
-  ) {
-    return { amount: input.amount, currency: 'USD' };
-  }
-  const converted = convertUsdAmount(input.amount, rate);
-  const amount = ZERO_DECIMAL_CURRENCIES.has(local) ? Math.round(converted) : converted;
-  if (!Number.isFinite(amount) || amount <= 0) return { amount: input.amount, currency: 'USD' };
-  return { amount, currency: local };
+  return {
+    amount: input.amount,
+    currency: (input.currency || 'USD').toUpperCase(),
+  };
 }

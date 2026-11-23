@@ -8,7 +8,6 @@ import {
   getNextAccaExamSessions,
   monthsUntilExamSession,
   planDurationSortKey,
-  resolveDisplayCountry,
   type PublishedCoursePricePlan,
 } from './courseDisplayPricing';
 import type { EvenDealsQuote } from './evenDeals';
@@ -594,7 +593,7 @@ await run('planDurationSortKey prefers duration_days', () => {
     > planDurationSortKey(geoPrice({ id: 2, name: 'Three months', amount: 1, durationDays: 90 })));
 });
 
-await run('India visitor sees INR with charged-as USD; amount stays USD', async () => {
+await run('a visitor outside the US still sees the dollar price', async () => {
   const result = await buildCourseDisplayPricing({
     zenlerCourseId: '1',
     courseSlug: 'cima',
@@ -603,21 +602,22 @@ await run('India visitor sees INR with charged-as USD; amount stays USD', async 
     countryCode: 'IN',
     fxRates: { INR: 83 },
     prices: [
-      geoPrice({ id: 10, name: 'Full access', amount: 89, durationDays: 365 }),
+      geoPrice({ id: 10, name: 'Full access', amount: 89.5, durationDays: 365 }),
     ],
   }, new Date('2026-08-15T12:00:00'));
 
   assert.ok(result);
   assert.strictEqual(result!.currency, 'USD');
-  assert.strictEqual(result!.amount, 89);
-  assert.strictEqual(result!.displayCurrency, 'INR');
-  assert.strictEqual(result!.fxApplied, true);
-  assert.strictEqual(result!.formattedChargeUsd, 'Charged as $89 USD');
-  assert.match(result!.formatted, /7,390|₹/);
-  assert.strictEqual(result!.plans[0]!.effectiveAmount, 89);
+  assert.strictEqual(result!.amount, 89.5);
+  assert.strictEqual(result!.displayCurrency, 'USD');
+  assert.strictEqual(result!.fxApplied, false);
+  assert.strictEqual(result!.fxNote, null);
+  assert.strictEqual(result!.formattedChargeUsd, null);
+  assert.strictEqual(result!.formatted, '$89.50');
+  assert.strictEqual(result!.plans[0]!.effectiveAmount, 89.5);
 });
 
-await run('Pakistan visitor sees PKR; US visitor stays on USD', async () => {
+await run('Pakistan and US visitors both see dollars', async () => {
   const pk = await buildCourseDisplayPricing({
     zenlerCourseId: '1',
     courseSlug: 'cima',
@@ -629,9 +629,10 @@ await run('Pakistan visitor sees PKR; US visitor stays on USD', async () => {
   }, new Date('2026-08-15T12:00:00'));
 
   assert.ok(pk);
-  assert.strictEqual(pk!.displayCurrency, 'PKR');
-  assert.strictEqual(pk!.fxApplied, true);
-  assert.strictEqual(pk!.formattedChargeUsd, 'Charged as $89 USD');
+  assert.strictEqual(pk!.displayCurrency, 'USD');
+  assert.strictEqual(pk!.fxApplied, false);
+  assert.strictEqual(pk!.formattedChargeUsd, null);
+  assert.strictEqual(pk!.formatted, '$89');
   assert.strictEqual(pk!.amount, 89);
 
   const us = await buildCourseDisplayPricing({
@@ -649,29 +650,6 @@ await run('Pakistan visitor sees PKR; US visitor stays on USD', async () => {
   assert.strictEqual(us!.fxApplied, false);
   assert.strictEqual(us!.formattedChargeUsd, null);
   assert.strictEqual(us!.formatted, '$89');
-});
-
-await run('missing FX rate falls back to USD', async () => {
-  const result = await buildCourseDisplayPricing({
-    zenlerCourseId: '1',
-    courseSlug: 'cima',
-    courseName: 'CIMA',
-    offerRule: null,
-    countryCode: 'IN',
-    fxRates: {},
-    prices: [geoPrice({ id: 10, name: 'Full access', amount: 89, durationDays: 365 })],
-  }, new Date('2026-08-15T12:00:00'));
-
-  assert.ok(result);
-  assert.strictEqual(result!.displayCurrency, 'USD');
-  assert.strictEqual(result!.fxApplied, false);
-  assert.strictEqual(result!.formatted, '$89');
-});
-
-await run('resolveDisplayCountry prefers Evendeals quoted country', () => {
-  assert.strictEqual(resolveDisplayCountry('US', [{ geoRegionCode: 'PK' }]), 'PK');
-  assert.strictEqual(resolveDisplayCountry('IN', [{ geoRegionCode: null }]), 'IN');
-  assert.strictEqual(resolveDisplayCountry(null, [{ geoRegionCode: null }]), null);
 });
 
 function samplePlan(amount = 100): PublishedCoursePricePlan {
@@ -714,14 +692,15 @@ function dealQuote(partial: Partial<EvenDealsQuote>): EvenDealsQuote {
   };
 }
 
-await run('discounted dollar price rounds up to the next multiple of 5', () => {
+await run('discounted dollar price keeps the exact percentage', () => {
   const priced = applyVisitorDealToPlan(
     samplePlan(150),
     dealQuote({ discountPercentage: 45 }),
     'TR',
     false,
   );
-  assert.strictEqual(priced.effectiveAmount, 85);
+  assert.strictEqual(priced.effectiveAmount, 82.5);
+  assert.strictEqual(priced.formatted, '$82.50');
   assert.strictEqual(priced.discountPercent, 45);
   assert.strictEqual(priced.compareAt, 150);
 });
