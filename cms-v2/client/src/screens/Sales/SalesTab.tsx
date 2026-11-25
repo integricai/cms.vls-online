@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/client';
 import type { SaleCategory, SaleListItem, SalesFeeSyncResult, Tutor } from '../../../../shared/types';
-import { addIsoDays, amountInUsd, formatDisplayDate, formatDisplayDateTime, formatLocalPrice, formatPlainAmount, formatUsdPlainAmount, isSalesPreset, londonToday, monthStart, salesPresetBounds, saleListSessionLabel, sumAmountsInUsd, type SalesPreset } from '../../../../shared/salesFormat';
+import { addIsoDays, amountInUsd, formatDisplayDate, formatDisplayDateTime, formatLocalPrice, formatPlainAmount, formatUsdPlainAmount, isSalesPreset, londonToday, monthStart, salesPresetBounds, saleAddonLabels, saleCourseExportLabel, saleListSessionLabel, sumAmountsInUsd, type SalesPreset } from '../../../../shared/salesFormat';
 
 const CATEGORY_OPTIONS: Array<SaleCategory | 'All'> = [
   'All',
@@ -66,6 +66,10 @@ function shortProcessorId(id: string | null | undefined): string {
 
 function processorLabel(sale: SaleListItem): string {
   return sale.provider === 'paypal' ? 'PayPal' : 'Stripe';
+}
+
+function courseTitle(sale: SaleListItem): string {
+  return sale.courseName || (sale.courseId != null ? `Course #${sale.courseId}` : '—');
 }
 
 function processorPaymentUrl(sale: SaleListItem): string | null {
@@ -404,7 +408,7 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
     customerName(sale),
     sale.customerEmail ?? '',
     sale.category,
-    sale.courseName || (sale.courseId != null ? `Course #${sale.courseId}` : '—'),
+    saleCourseExportLabel(courseTitle(sale), sale),
     saleListSessionLabel(sale.durationDays, sale.expiryDate, sale.paymentReason, sale.sessionMonth, sale.sessionYear),
     countryLabel(sale.countryCode),
     sale.paymentMethod ?? '',
@@ -700,6 +704,7 @@ export default function SalesTab() {
               {!loading && rows.map(sale => {
                 const paymentId = sale.providerPaymentId ?? sale.stripePaymentIntentId;
                 const paymentUrl = processorPaymentUrl(sale);
+                const addons = saleAddonLabels(sale);
                 return (
                   <tr key={sale.id} className="border-t border-slate-100 align-top">
                     <td className="px-3 py-2 font-medium text-slate-800">{sale.id}</td>
@@ -707,7 +712,12 @@ export default function SalesTab() {
                     <td className="px-3 py-2">{customerName(sale)}</td>
                     <td className="px-3 py-2">{sale.customerEmail || '—'}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{sale.category}</td>
-                    <td className="px-3 py-2">{sale.courseName || (sale.courseId != null ? `Course #${sale.courseId}` : '—')}</td>
+                    <td className="px-3 py-2">
+                      <div>{courseTitle(sale)}</div>
+                      {addons.length ? (
+                        <div className="text-[11px] text-slate-500">{addons.join(', ')}</div>
+                      ) : null}
+                    </td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       {saleListSessionLabel(sale.durationDays, sale.expiryDate, sale.paymentReason, sale.sessionMonth, sale.sessionYear)}
                       <div className="text-[11px] text-slate-400">Sold {formatDisplayDate(sale.soldAt)}</div>

@@ -642,6 +642,10 @@ export interface SaleListItem extends Sale {
   /** Local price the student saw, when it differs from the dollar charge. */
   presentmentAmount: number | null;
   presentmentCurrency: string | null;
+  /** A checkout C book was bought with this course. */
+  boughtBook: boolean;
+  /** A checkout C upsell course was bought with this course. */
+  boughtUpsellCourse: boolean;
 }
 
 export interface SaleCourseSummary {

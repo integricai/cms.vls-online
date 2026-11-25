@@ -1,5 +1,5 @@
 import { sql } from '../db/client';
-import { ensurePaymentPresentmentColumns } from './paymentOrder';
+import { ensurePaymentOrderBookIds, ensurePaymentPresentmentColumns } from './paymentOrder';
 import { isValidIsoCountryCode, normalizeCountryCode } from '../utils/isoCountryCodes';
 import type {
   PaymentOrderStatus,
@@ -63,6 +63,8 @@ interface SaleListDbRow extends SaleDbRow {
   checkout_environment: string | null;
   presentment_amount: string | null;
   presentment_currency: string | null;
+  bought_book: boolean | null;
+  bought_upsell_course: boolean | null;
 }
 
 let saleCategoryReady: Promise<void> | null = null;
@@ -190,6 +192,8 @@ function rowToSaleListItem(row: SaleListDbRow): SaleListItem {
         : null,
     presentmentAmount: row.presentment_amount != null ? Number(row.presentment_amount) : null,
     presentmentCurrency: row.presentment_currency ?? null,
+    boughtBook: row.bought_book === true,
+    boughtUpsellCourse: row.bought_upsell_course === true,
   };
 }
 
@@ -217,6 +221,7 @@ export async function getSaleByPaymentOrderId(paymentOrderId: number): Promise<S
 
 export async function getSaleListItemById(id: number): Promise<SaleListItem | null> {
   await ensurePaymentPresentmentColumns();
+  await ensurePaymentOrderBookIds();
   await ensureSaleCategory();
   const rows = await sql`
     SELECT
@@ -250,7 +255,9 @@ export async function getSaleListItemById(id: number): Promise<SaleListItem | nu
       po.checkout_environment,
       po.presentment_amount,
       po.presentment_currency,
-      po.settlement_currency
+      po.settlement_currency,
+      COALESCE(cardinality(po.book_ids), 0) > 0 AS bought_book,
+      COALESCE(cardinality(po.upsell_zenler_course_ids), 0) > 0 AS bought_upsell_course
     FROM sales s
     LEFT JOIN courses c ON c.id = s.course_id
     LEFT JOIN custom_payment_offers o ON o.payment_order_id = s.payment_order_id
@@ -337,6 +344,7 @@ export type ListSalesFilters = {
 
 export async function listSales(filters: ListSalesFilters = {}): Promise<SaleListItem[]> {
   await ensurePaymentPresentmentColumns();
+  await ensurePaymentOrderBookIds();
   await ensureSaleCategory();
   const status = filters.status ?? 'All';
   const courseId = filters.courseId ?? null;
@@ -377,7 +385,9 @@ export async function listSales(filters: ListSalesFilters = {}): Promise<SaleLis
       po.checkout_environment,
       po.presentment_amount,
       po.presentment_currency,
-      po.settlement_currency
+      po.settlement_currency,
+      COALESCE(cardinality(po.book_ids), 0) > 0 AS bought_book,
+      COALESCE(cardinality(po.upsell_zenler_course_ids), 0) > 0 AS bought_upsell_course
     FROM sales s
     LEFT JOIN courses c ON c.id = s.course_id
     LEFT JOIN custom_payment_offers o ON o.payment_order_id = s.payment_order_id
