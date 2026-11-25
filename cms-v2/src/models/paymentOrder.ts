@@ -18,6 +18,8 @@ export interface PaymentOrder {
   accessZenlerCourseIds: string[];
   /** Upsell courses ticked on checkout C. Enrolled with the course that was purchased. */
   upsellZenlerCourseIds?: string[];
+  /** Books ticked on checkout C, bought with the course. */
+  bookIds?: number[];
   courseTitle: string;
   optionType: string | null;
   studentName: string | null;
@@ -85,6 +87,7 @@ interface DbRow {
   zenler_course_id: string;
   access_zenler_course_ids: string[] | null;
   upsell_zenler_course_ids?: string[] | null;
+  book_ids?: number[] | null;
   course_title: string;
   option_type: string | null;
   student_name: string | null;
@@ -153,6 +156,7 @@ function rowToOrder(row: DbRow): PaymentOrder {
     zenlerCourseId: row.zenler_course_id,
     accessZenlerCourseIds: row.access_zenler_course_ids ?? [],
     upsellZenlerCourseIds: row.upsell_zenler_course_ids ?? [],
+    bookIds: bookIdList(row.book_ids),
     courseTitle: row.course_title,
     optionType: row.option_type,
     studentName: row.student_name,
@@ -278,6 +282,38 @@ export async function savePaymentOrderUpsells(orderId: number, zenlerCourseIds: 
   await sql`
     UPDATE payment_orders
     SET upsell_zenler_course_ids = ${ids}
+    WHERE id = ${orderId}
+  `;
+}
+
+function bookIdList(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(Number).filter((id) => Number.isInteger(id) && id > 0);
+}
+
+let paymentOrderBookIdsReady: Promise<void> | null = null;
+
+/** Adds the checkout C book list so a sale can show that a book was bought with the course. */
+export function ensurePaymentOrderBookIds(): Promise<void> {
+  paymentOrderBookIdsReady ??= (async () => {
+    try {
+      await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS book_ids INTEGER[]`;
+    } catch (err) {
+      paymentOrderBookIdsReady = null;
+      throw err;
+    }
+  })();
+  return paymentOrderBookIdsReady;
+}
+
+/** Books ticked on checkout C. The sales list reads this with the purchased course. */
+export async function savePaymentOrderBooks(orderId: number, bookIds: number[]): Promise<void> {
+  const ids = bookIdList(bookIds);
+  if (!ids.length) return;
+  await ensurePaymentOrderBookIds();
+  await sql`
+    UPDATE payment_orders
+    SET book_ids = ${ids}::int[]
     WHERE id = ${orderId}
   `;
 }

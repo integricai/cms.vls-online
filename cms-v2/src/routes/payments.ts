@@ -9,6 +9,7 @@ import {
   getPaymentOrder,
   getPaymentOrderByCheckoutId,
   saveOfferedPresentment,
+  savePaymentOrderBooks,
   savePaymentOrderUpsells,
   type PaymentOrder,
 } from '../models/paymentOrder';
@@ -1052,6 +1053,9 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
     });
     if (upsellOffers.length) {
       await savePaymentOrderUpsells(order.id, upsellOffers.map((offer) => offer.zenlerCourseId));
+    }
+    if (bookAddons.length) {
+      await savePaymentOrderBooks(order.id, bookAddons.map((book) => book.bookId));
     }
     if (localPresentment && providerId === 'stripe') {
       await saveOfferedPresentment(order.id, localPresentment.amount, localPresentment.currency);

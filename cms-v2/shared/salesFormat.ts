@@ -108,6 +108,27 @@ export function formatDisplayDateTime(value: Date | string | null | undefined): 
   return `${part('day')} ${part('month')} ${part('year')}, ${part('hour')}:${part('minute')}`;
 }
 
+export type SaleAddonSource = {
+  category?: string | null;
+  boughtBook?: boolean;
+  boughtUpsellCourse?: boolean;
+};
+
+/** Book and upsell course bought with a course. A standalone book sale is left as the book title. */
+export function saleAddonLabels(sale: SaleAddonSource): string[] {
+  const labels: string[] = [];
+  if (sale.boughtBook && sale.category !== 'BPP Book') labels.push('Book');
+  if (sale.boughtUpsellCourse) labels.push('Upsell course');
+  return labels;
+}
+
+/** Course column for the sales download. Add-ons sit in brackets after the course name. */
+export function saleCourseExportLabel(courseName: string, sale: SaleAddonSource): string {
+  const labels = saleAddonLabels(sale);
+  if (!labels.length) return courseName;
+  return `${courseName} (${labels.join(', ')})`;
+}
+
 /**
  * Session cell for a sale row.
  * A payment order uses the reason the form was created. A course sale uses the sitting or the access length.

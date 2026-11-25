@@ -14,6 +14,8 @@ import {
   formatVaultPrice,
   sumAmountsInUsd,
   pickDashboardCurrency,
+  saleAddonLabels,
+  saleCourseExportLabel,
   saleListSessionLabel,
   saleSessionLabel,
   salesPresetBounds,
@@ -275,6 +277,22 @@ run('session label keeps the month length and the valid-to date', () => {
   assert.strictEqual(
     saleSessionLabel(120, '2027-02-25T12:00:00.000Z'),
     '4 months · valid to 25 Feb 2027',
+  );
+});
+
+run('a course sale names a book, an upsell course, or both', () => {
+  assert.deepStrictEqual(saleAddonLabels({ category: 'Course' }), []);
+  assert.deepStrictEqual(saleAddonLabels({ category: 'Course', boughtBook: true }), ['Book']);
+  assert.deepStrictEqual(saleAddonLabels({ category: 'Course', boughtUpsellCourse: true }), ['Upsell course']);
+  assert.deepStrictEqual(
+    saleAddonLabels({ category: 'Notes', boughtBook: true, boughtUpsellCourse: true }),
+    ['Book', 'Upsell course'],
+  );
+  assert.deepStrictEqual(saleAddonLabels({ category: 'BPP Book', boughtBook: true }), []);
+  assert.strictEqual(saleCourseExportLabel('MA2', { category: 'Course' }), 'MA2');
+  assert.strictEqual(
+    saleCourseExportLabel('MA2', { category: 'Course', boughtBook: true, boughtUpsellCourse: true }),
+    'MA2 (Book, Upsell course)',
   );
 });
 
