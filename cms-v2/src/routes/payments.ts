@@ -10,6 +10,7 @@ import {
   getPaymentOrderByCheckoutId,
   saveOfferedPresentment,
   savePaymentOrderBooks,
+  savePaymentOrderCheckoutLines,
   savePaymentOrderUpsells,
   type PaymentOrder,
 } from '../models/paymentOrder';
@@ -1056,6 +1057,13 @@ async function createGeoPriceCheckout(req: Request, res: Response, next: NextFun
     }
     if (bookAddons.length) {
       await savePaymentOrderBooks(order.id, bookAddons.map((book) => book.bookId));
+    }
+    if (bookAddons.length || upsellOffers.length) {
+      await savePaymentOrderCheckoutLines(order.id, [
+        { kind: 'course', name: course.name, amount: courseChargeAmount },
+        ...bookAddons.map((book) => ({ kind: 'book' as const, name: book.title, amount: book.amount })),
+        ...upsellOffers.map((offer) => ({ kind: 'upsell' as const, name: offer.title, amount: offer.chargeAmount })),
+      ]);
     }
     if (localPresentment && providerId === 'stripe') {
       await saveOfferedPresentment(order.id, localPresentment.amount, localPresentment.currency);

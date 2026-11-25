@@ -1,5 +1,5 @@
 import { sql } from '../db/client';
-import { ensurePaymentOrderBookIds, ensurePaymentPresentmentColumns } from './paymentOrder';
+import { ensurePaymentOrderBookIds, ensurePaymentOrderCheckoutLines, ensurePaymentPresentmentColumns } from './paymentOrder';
 import { isValidIsoCountryCode, normalizeCountryCode } from '../utils/isoCountryCodes';
 import type {
   PaymentOrderStatus,
@@ -65,6 +65,8 @@ interface SaleListDbRow extends SaleDbRow {
   presentment_currency: string | null;
   bought_book: boolean | null;
   bought_upsell_course: boolean | null;
+  checkout_lines: unknown;
+  upsell_course_names: string[] | string | null;
 }
 
 let saleCategoryReady: Promise<void> | null = null;
@@ -194,7 +196,36 @@ function rowToSaleListItem(row: SaleListDbRow): SaleListItem {
     presentmentCurrency: row.presentment_currency ?? null,
     boughtBook: row.bought_book === true,
     boughtUpsellCourse: row.bought_upsell_course === true,
+    bookNames: checkoutLineNames(row.checkout_lines, 'book'),
+    upsellCourseNames: checkoutLineNames(row.checkout_lines, 'upsell').length
+      ? checkoutLineNames(row.checkout_lines, 'upsell')
+      : textList(row.upsell_course_names),
+    checkoutLines: checkoutLineList(row.checkout_lines),
   };
+}
+
+function textList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(item => String(item).trim()).filter(Boolean);
+  return [];
+}
+
+function checkoutLineList(value: unknown): SaleListItem['checkoutLines'] {
+  if (!Array.isArray(value)) return [];
+  const lines: SaleListItem['checkoutLines'] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as { kind?: unknown; name?: unknown; amount?: unknown };
+    if (row.kind !== 'course' && row.kind !== 'book' && row.kind !== 'upsell') continue;
+    const amount = Number(row.amount);
+    const name = String(row.name ?? '').trim();
+    if (!name || !Number.isFinite(amount)) continue;
+    lines.push({ kind: row.kind, name, amount });
+  }
+  return lines;
+}
+
+function checkoutLineNames(value: unknown, kind: 'book' | 'upsell'): string[] {
+  return checkoutLineList(value).filter(line => line.kind === kind).map(line => line.name);
 }
 
 export function computeExpiryDate(soldAt: Date, durationDays: number): Date {
@@ -222,6 +253,7 @@ export async function getSaleByPaymentOrderId(paymentOrderId: number): Promise<S
 export async function getSaleListItemById(id: number): Promise<SaleListItem | null> {
   await ensurePaymentPresentmentColumns();
   await ensurePaymentOrderBookIds();
+  await ensurePaymentOrderCheckoutLines();
   await ensureSaleCategory();
   const rows = await sql`
     SELECT
@@ -257,7 +289,17 @@ export async function getSaleListItemById(id: number): Promise<SaleListItem | nu
       po.presentment_currency,
       po.settlement_currency,
       COALESCE(cardinality(po.book_ids), 0) > 0 AS bought_book,
-      COALESCE(cardinality(po.upsell_zenler_course_ids), 0) > 0 AS bought_upsell_course
+      COALESCE(cardinality(po.upsell_zenler_course_ids), 0) > 0 AS bought_upsell_course,
+      po.checkout_lines,
+      COALESCE((
+        SELECT array_agg(named.name ORDER BY named.ord)
+        FROM (
+          SELECT extra.name, MIN(picked.ord) AS ord
+          FROM unnest(po.upsell_zenler_course_ids) WITH ORDINALITY AS picked(zenler_id, ord)
+          JOIN courses AS extra ON extra.zenler_course_id = picked.zenler_id
+          GROUP BY extra.name
+        ) AS named
+      ), ARRAY[]::text[]) AS upsell_course_names
     FROM sales s
     LEFT JOIN courses c ON c.id = s.course_id
     LEFT JOIN custom_payment_offers o ON o.payment_order_id = s.payment_order_id
@@ -345,6 +387,7 @@ export type ListSalesFilters = {
 export async function listSales(filters: ListSalesFilters = {}): Promise<SaleListItem[]> {
   await ensurePaymentPresentmentColumns();
   await ensurePaymentOrderBookIds();
+  await ensurePaymentOrderCheckoutLines();
   await ensureSaleCategory();
   const status = filters.status ?? 'All';
   const courseId = filters.courseId ?? null;
@@ -387,7 +430,17 @@ export async function listSales(filters: ListSalesFilters = {}): Promise<SaleLis
       po.presentment_currency,
       po.settlement_currency,
       COALESCE(cardinality(po.book_ids), 0) > 0 AS bought_book,
-      COALESCE(cardinality(po.upsell_zenler_course_ids), 0) > 0 AS bought_upsell_course
+      COALESCE(cardinality(po.upsell_zenler_course_ids), 0) > 0 AS bought_upsell_course,
+      po.checkout_lines,
+      COALESCE((
+        SELECT array_agg(named.name ORDER BY named.ord)
+        FROM (
+          SELECT extra.name, MIN(picked.ord) AS ord
+          FROM unnest(po.upsell_zenler_course_ids) WITH ORDINALITY AS picked(zenler_id, ord)
+          JOIN courses AS extra ON extra.zenler_course_id = picked.zenler_id
+          GROUP BY extra.name
+        ) AS named
+      ), ARRAY[]::text[]) AS upsell_course_names
     FROM sales s
     LEFT JOIN courses c ON c.id = s.course_id
     LEFT JOIN custom_payment_offers o ON o.payment_order_id = s.payment_order_id

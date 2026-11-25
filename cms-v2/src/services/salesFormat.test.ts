@@ -15,6 +15,8 @@ import {
   sumAmountsInUsd,
   pickDashboardCurrency,
   saleAddonLabels,
+  saleAmountExportLabel,
+  saleAmountParts,
   saleCourseExportLabel,
   saleListSessionLabel,
   saleSessionLabel,
@@ -280,19 +282,60 @@ run('session label keeps the month length and the valid-to date', () => {
   );
 });
 
-run('a course sale names a book, an upsell course, or both', () => {
+run('a course sale names a book and the upsell course by name', () => {
   assert.deepStrictEqual(saleAddonLabels({ category: 'Course' }), []);
   assert.deepStrictEqual(saleAddonLabels({ category: 'Course', boughtBook: true }), ['Book']);
-  assert.deepStrictEqual(saleAddonLabels({ category: 'Course', boughtUpsellCourse: true }), ['Upsell course']);
   assert.deepStrictEqual(
-    saleAddonLabels({ category: 'Notes', boughtBook: true, boughtUpsellCourse: true }),
-    ['Book', 'Upsell course'],
+    saleAddonLabels({ category: 'Course', upsellCourseNames: ['MS Excel for Finance Professionals'] }),
+    ['MS Excel for Finance Professionals'],
+  );
+  assert.deepStrictEqual(
+    saleAddonLabels({
+      category: 'Notes',
+      boughtBook: true,
+      upsellCourseNames: ['MS Excel for Finance Professionals', '  ', 'MS Excel for Finance Professionals'],
+    }),
+    ['Book', 'MS Excel for Finance Professionals'],
   );
   assert.deepStrictEqual(saleAddonLabels({ category: 'BPP Book', boughtBook: true }), []);
   assert.strictEqual(saleCourseExportLabel('MA2', { category: 'Course' }), 'MA2');
   assert.strictEqual(
-    saleCourseExportLabel('MA2', { category: 'Course', boughtBook: true, boughtUpsellCourse: true }),
-    'MA2 (Book, Upsell course)',
+    saleCourseExportLabel('MA2', {
+      category: 'Course',
+      boughtBook: true,
+      upsellCourseNames: ['MS Excel for Finance Professionals'],
+    }),
+    'MA2 (Book, MS Excel for Finance Professionals)',
+  );
+  assert.deepStrictEqual(
+    saleAddonLabels({
+      category: 'Course',
+      bookNames: ['FA2 Course Book'],
+      upsellCourseNames: ['Financial Modelling in MS Excel'],
+    }),
+    ['FA2 Course Book', 'Financial Modelling in MS Excel'],
+  );
+});
+
+run('amount paid splits the course and the add-ons', () => {
+  assert.deepStrictEqual(saleAmountParts([]), []);
+  assert.deepStrictEqual(saleAmountParts([{ kind: 'course', name: 'MA2', amount: 80 }]), []);
+  assert.deepStrictEqual(
+    saleAmountParts([
+      { kind: 'course', name: 'DipIFR', amount: 59.6 },
+      { kind: 'upsell', name: 'Financial Modelling in MS Excel', amount: 16 },
+    ]),
+    [
+      { label: 'Course', amount: 59.6 },
+      { label: 'Financial Modelling in MS Excel', amount: 16 },
+    ],
+  );
+  assert.strictEqual(
+    saleAmountExportLabel('75.60', [
+      { kind: 'course', name: 'DipIFR', amount: 59.6 },
+      { kind: 'upsell', name: 'Financial Modelling in MS Excel', amount: 16 },
+    ]),
+    '75.60 (Course 59.60, Financial Modelling in MS Excel 16.00)',
   );
 });
 

@@ -318,6 +318,45 @@ export async function savePaymentOrderBooks(orderId: number, bookIds: number[]):
   `;
 }
 
+export type PaymentCheckoutLine = {
+  kind: 'course' | 'book' | 'upsell';
+  name: string;
+  amount: number;
+};
+
+let paymentOrderCheckoutLinesReady: Promise<void> | null = null;
+
+/** Adds the course and add-on prices so the sales list can split the amount paid. */
+export function ensurePaymentOrderCheckoutLines(): Promise<void> {
+  paymentOrderCheckoutLinesReady ??= (async () => {
+    try {
+      await sql`ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS checkout_lines JSONB`;
+    } catch (err) {
+      paymentOrderCheckoutLinesReady = null;
+      throw err;
+    }
+  })();
+  return paymentOrderCheckoutLinesReady;
+}
+
+/** Course price and add-on prices charged together. Saved only when the payment has an extra. */
+export async function savePaymentOrderCheckoutLines(orderId: number, lines: PaymentCheckoutLine[]): Promise<void> {
+  const clean = lines.flatMap((line) => {
+    const name = line.name.trim();
+    const amount = Math.round(line.amount * 100) / 100;
+    if (!name || !Number.isFinite(amount)) return [];
+    if (line.kind !== 'course' && line.kind !== 'book' && line.kind !== 'upsell') return [];
+    return [{ kind: line.kind, name, amount }];
+  });
+  if (!clean.some(line => line.kind !== 'course')) return;
+  await ensurePaymentOrderCheckoutLines();
+  await sql`
+    UPDATE payment_orders
+    SET checkout_lines = ${JSON.stringify(clean)}::jsonb
+    WHERE id = ${orderId}
+  `;
+}
+
 export async function attachCheckoutSession(
   orderId: number,
   data: { provider: PaymentProviderId; checkoutId: string },

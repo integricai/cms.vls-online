@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/client';
 import type { SaleCategory, SaleListItem, SalesFeeSyncResult, Tutor } from '../../../../shared/types';
-import { addIsoDays, amountInUsd, formatDisplayDate, formatDisplayDateTime, formatLocalPrice, formatPlainAmount, formatUsdPlainAmount, isSalesPreset, londonToday, monthStart, salesPresetBounds, saleAddonLabels, saleCourseExportLabel, saleListSessionLabel, sumAmountsInUsd, type SalesPreset } from '../../../../shared/salesFormat';
+import { addIsoDays, amountInUsd, formatDisplayDate, formatDisplayDateTime, formatLocalPrice, formatPlainAmount, formatUsdPlainAmount, isSalesPreset, londonToday, monthStart, salesPresetBounds, saleAddonLabels, saleAmountExportLabel, saleAmountParts, saleCourseExportLabel, saleListSessionLabel, sumAmountsInUsd, type SalesPreset } from '../../../../shared/salesFormat';
 
 const CATEGORY_OPTIONS: Array<SaleCategory | 'All'> = [
   'All',
@@ -413,7 +413,7 @@ function downloadSales(rows: SaleListItem[], from: string, to: string) {
     countryLabel(sale.countryCode),
     sale.paymentMethod ?? '',
     processorLabel(sale),
-    formatUsdPlainAmount(sale.amount, sale.currency),
+    saleAmountExportLabel(formatUsdPlainAmount(sale.amount, sale.currency), sale.checkoutLines),
     formatLocalPrice(sale),
     formatUsdPlainAmount(sale.processorFee, sale.settlementCurrency || sale.currency),
     formatPlainAmount(sale.netAmount),
@@ -727,7 +727,14 @@ export default function SalesTab() {
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">{sale.paymentMethod || '—'}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{processorLabel(sale)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{plainOrDash(formatUsdPlainAmount(sale.amount, sale.currency))}</td>
+                    <td className="px-3 py-2">
+                      <div className="whitespace-nowrap">{plainOrDash(formatUsdPlainAmount(sale.amount, sale.currency))}</div>
+                      {saleAmountParts(sale.checkoutLines).map(part => (
+                        <div key={`${part.label}-${part.amount}`} className="text-[11px] text-slate-500">
+                          {part.label} {formatPlainAmount(part.amount)}
+                        </div>
+                      ))}
+                    </td>
                     <td className="px-3 py-2 whitespace-nowrap">{formatLocalPrice(sale)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{plainOrDash(formatUsdPlainAmount(sale.processorFee, sale.settlementCurrency || sale.currency))}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{plainOrDash(formatPlainAmount(sale.netAmount))}</td>

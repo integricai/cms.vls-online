@@ -646,6 +646,12 @@ export interface SaleListItem extends Sale {
   boughtBook: boolean;
   /** A checkout C upsell course was bought with this course. */
   boughtUpsellCourse: boolean;
+  /** Book titles bought with this course. */
+  bookNames: string[];
+  /** Names of the upsell courses bought with this course. */
+  upsellCourseNames: string[];
+  /** Course price and add-on prices charged on this payment. Empty when the payment is a single price. */
+  checkoutLines: Array<{ kind: 'course' | 'book' | 'upsell'; name: string; amount: number }>;
 }
 
 export interface SaleCourseSummary {

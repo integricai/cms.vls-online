@@ -108,18 +108,65 @@ export function formatDisplayDateTime(value: Date | string | null | undefined): 
   return `${part('day')} ${part('month')} ${part('year')}, ${part('hour')}:${part('minute')}`;
 }
 
+export type SaleCheckoutLine = {
+  kind: 'course' | 'book' | 'upsell';
+  name: string;
+  amount: number;
+};
+
 export type SaleAddonSource = {
   category?: string | null;
   boughtBook?: boolean;
-  boughtUpsellCourse?: boolean;
+  /** Book titles bought with this course. */
+  bookNames?: string[] | null;
+  /** Names of the upsell courses bought with this course. */
+  upsellCourseNames?: string[] | null;
 };
 
-/** Book and upsell course bought with a course. A standalone book sale is left as the book title. */
+function uniqueNames(names: string[] | null | undefined): string[] {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const name of names ?? []) {
+    const trimmed = name.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    labels.push(trimmed);
+  }
+  return labels;
+}
+
+/** Book titles and upsell course names bought with a course. A standalone book sale is left as the book title. */
 export function saleAddonLabels(sale: SaleAddonSource): string[] {
   const labels: string[] = [];
-  if (sale.boughtBook && sale.category !== 'BPP Book') labels.push('Book');
-  if (sale.boughtUpsellCourse) labels.push('Upsell course');
+  const books = uniqueNames(sale.bookNames);
+  if (books.length) labels.push(...books);
+  else if (sale.boughtBook && sale.category !== 'BPP Book') labels.push('Book');
+  labels.push(...uniqueNames(sale.upsellCourseNames));
   return labels;
+}
+
+/** Course price and each add-on, shown under the amount when the payment included extras. */
+export function saleAmountParts(lines: SaleCheckoutLine[] | null | undefined): Array<{ label: string; amount: number }> {
+  if (!lines?.length) return [];
+  const addons = lines.filter(line => line.kind === 'book' || line.kind === 'upsell');
+  if (!addons.length) return [];
+  const parts: Array<{ label: string; amount: number }> = [];
+  const course = lines.find(line => line.kind === 'course' && Number.isFinite(line.amount));
+  if (course) parts.push({ label: 'Course', amount: course.amount });
+  for (const line of addons) {
+    if (!Number.isFinite(line.amount)) continue;
+    const label = line.name.trim();
+    if (!label) continue;
+    parts.push({ label, amount: line.amount });
+  }
+  return parts.length > 1 ? parts : [];
+}
+
+/** Amount cell for the sales download, with the course and add-on prices after the total. */
+export function saleAmountExportLabel(total: string, lines: SaleCheckoutLine[] | null | undefined): string {
+  const parts = saleAmountParts(lines);
+  if (!total || !parts.length) return total;
+  return `${total} (${parts.map(part => `${part.label} ${formatPlainAmount(part.amount)}`).join(', ')})`;
 }
 
 /** Course column for the sales download. Add-ons sit in brackets after the course name. */
