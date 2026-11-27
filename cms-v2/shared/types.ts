@@ -4,7 +4,7 @@ export interface JwtPayload {
   userId: number;
   email: string;
   username: string;
-  role: 'admin' | 'assistant' | 'editor' | 'viewer';
+  role: 'admin' | 'assistant' | 'analyst' | 'editor' | 'viewer';
   deployId?: string;
 }
 
@@ -40,7 +40,7 @@ export interface User {
   firstName: string;
   lastName: string;
   passwordHash: string;
-  role: 'admin' | 'assistant' | 'editor' | 'viewer';
+  role: 'admin' | 'assistant' | 'analyst' | 'editor' | 'viewer';
   isBlocked: boolean;
   resetToken: string | null;
   resetTokenExpiresAt: Date | null;
@@ -50,7 +50,7 @@ export interface User {
 
 export type PublicUser = Pick<User, 'id' | 'email' | 'username' | 'firstName' | 'lastName' | 'role' | 'isBlocked' | 'createdAt'>;
 
-export type AccessLevel = 'admin' | 'assistant' | 'editor' | 'viewer';
+export type AccessLevel = 'admin' | 'assistant' | 'analyst' | 'editor' | 'viewer';
 
 // ── Snippets ──────────────────────────────────────────────────────
 

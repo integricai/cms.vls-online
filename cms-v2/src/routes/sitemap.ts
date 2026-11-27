@@ -125,7 +125,7 @@ router.post('/webhook', async (req: Request, res: Response, next: NextFunction) 
 
 // ── Admin ────────────────────────────────────────────────────────
 
-router.use(authGuard, requireRole('admin'));
+router.use(authGuard, requireRole('admin', 'analyst'));
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {

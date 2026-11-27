@@ -6,6 +6,7 @@ import { buildTrackingReport, recordTrackingVisit } from '../models/siteTracking
 import { listTrackingNames } from '../models/siteUrl';
 import { applyPageTrackingNames } from '../../shared/pageTracking';
 import { loadTrackingSales } from '../models/trackingSales';
+import type { TrackingSales } from '../../shared/ga4Report';
 import { loadGa4Traffic } from '../services/ga4Report';
 import { CheckoutFollowupResendError, listFailedPaymentsForVault, resendFailedPaymentEmail } from '../services/checkoutFollowups';
 import { recordSiteVisitor } from '../models/siteAnalytics';
@@ -19,6 +20,15 @@ import {
 } from '../services/siteTracking';
 
 const router = Router();
+const EMPTY_SALES: TrackingSales = { orders: 0, totals: [], products: [], channels: [] };
+
+function withoutSalesFigures<T extends { enrolments: unknown[]; enrolmentChannels: unknown[] }>(
+  role: string | undefined,
+  report: T,
+): T {
+  if (role === 'admin') return report;
+  return { ...report, enrolments: [], enrolmentChannels: [] };
+}
 
 function allowVisitCors(res: { setHeader: (name: string, value: string) => void }): void {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -69,7 +79,7 @@ router.post('/track', visitIpRateLimit, async (req, res) => {
   }
 });
 
-router.get('/ga4', authGuard, requireRole('admin'), async (req, res, next) => {
+router.get('/ga4', authGuard, requireRole('admin', 'analyst'), async (req, res, next) => {
   try {
     const requested = String(req.query.range ?? 'this_month');
     res.setHeader('Cache-Control', 'no-store');
@@ -81,9 +91,10 @@ router.get('/ga4', authGuard, requireRole('admin'), async (req, res, next) => {
       return;
     }
     const range = requested === 'custom' ? 'custom' : (isTrackingPreset(requested) ? requested : 'this_month');
+    const includeSales = req.user?.role === 'admin';
     const [traffic, sales] = await Promise.all([
       loadGa4Traffic(bounds.start, bounds.end),
-      loadTrackingSales(bounds.start, bounds.end),
+      includeSales ? loadTrackingSales(bounds.start, bounds.end) : Promise.resolve(EMPTY_SALES),
     ]);
     res.json({ ok: true, data: { range, start: bounds.start, end: bounds.end, traffic, sales } });
   } catch (err) {
@@ -106,7 +117,7 @@ async function namedLandingPages<T extends { landingPages: { label: string; visi
   }
 }
 
-router.get('/tracking', authGuard, requireRole('admin'), async (req, res, next) => {
+router.get('/tracking', authGuard, requireRole('admin', 'analyst'), async (req, res, next) => {
   try {
     const requested = String(req.query.range ?? 'this_month');
     res.setHeader('Cache-Control', 'no-store');
@@ -116,11 +127,13 @@ router.get('/tracking', authGuard, requireRole('admin'), async (req, res, next) 
         res.status(400).json({ ok: false, error: 'Choose a start date and an end date within one year.' });
         return;
       }
-      res.json({ ok: true, data: await namedLandingPages(await buildTrackingReport('custom', bounds)) });
+      const report = await namedLandingPages(await buildTrackingReport('custom', bounds));
+      res.json({ ok: true, data: withoutSalesFigures(req.user?.role, report) });
       return;
     }
     const range = isTrackingPreset(requested) ? requested : 'this_month';
-    res.json({ ok: true, data: await namedLandingPages(await buildTrackingReport(range, trackingPresetBounds(range))) });
+    const report = await namedLandingPages(await buildTrackingReport(range, trackingPresetBounds(range)));
+    res.json({ ok: true, data: withoutSalesFigures(req.user?.role, report) });
   } catch (err) {
     next(err);
   }

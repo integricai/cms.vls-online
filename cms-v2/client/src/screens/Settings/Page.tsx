@@ -1,4 +1,5 @@
 import { useSearchParams } from 'react-router-dom';
+import { getCurrentUser } from '../../api/client';
 import PageTabs from '../../components/PageTabs';
 import SitemapScreen from '../Sitemap';
 import UserManagement from '../UserManagement';
@@ -21,7 +22,10 @@ function isTab(value: string | null): value is Tab {
 export default function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requested = searchParams.get('tab');
-  const tab: Tab = isTab(requested) ? requested : 'logs';
+  const tabs = getCurrentUser()?.role === 'analyst'
+    ? TABS.filter(item => item.id === 'logs' || item.id === 'sitemap')
+    : TABS;
+  const tab: Tab = isTab(requested) && tabs.some(item => item.id === requested) ? requested : 'logs';
 
   function setTab(next: string) {
     const params = new URLSearchParams();
@@ -31,7 +35,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <PageTabs tabs={TABS} value={tab} onChange={setTab} />
+      <PageTabs tabs={tabs} value={tab} onChange={setTab} />
       <div className="min-h-0 flex-1 overflow-auto">
         {tab === 'logs' ? <SystemLogs /> : null}
         {tab === 'cache' ? <SiteCache /> : null}

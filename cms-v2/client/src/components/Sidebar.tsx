@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
-import { canUsePayments, clearToken, getCurrentUser } from '../api/client';
+import { canUsePayments, clearToken, getCurrentUser, type AccessLevel } from '../api/client';
 
-type Access = 'all' | 'payments' | 'admin';
+type Access = 'all' | 'payments' | 'admin' | 'analyst';
 
 type VaultLink = {
   to: string;
@@ -15,15 +15,17 @@ const MAIN_LINKS: VaultLink[] = [
   { to: '/courses', label: 'Courses', access: 'admin' },
   { to: '/payments', label: 'Payments', access: 'payments' },
   { to: '/sales', label: 'Sales', access: 'admin' },
-  { to: '/tracking', label: 'Tracking', access: 'admin' },
+  { to: '/tracking', label: 'Tracking', access: 'analyst' },
   { to: '/students', label: 'Students', access: 'admin' },
-  { to: '/google-conversions', label: 'Google Conversions', access: 'admin' },
-  { to: '/health-check', label: 'Health check', access: 'admin' },
+  { to: '/google-conversions', label: 'Google Conversions', access: 'analyst' },
+  { to: '/health-check', label: 'Health check', access: 'analyst' },
 ];
 
-function canSee(access: Access, isAdmin: boolean, canPay: boolean): boolean {
-  if (access === 'admin') return isAdmin;
-  if (access === 'payments') return canPay;
+function canSee(access: Access, role: AccessLevel | undefined): boolean {
+  if (role === 'admin') return true;
+  if (role === 'analyst') return access === 'analyst';
+  if (access === 'payments') return canUsePayments(role);
+  if (access === 'admin' || access === 'analyst') return false;
   return true;
 }
 
@@ -124,10 +126,9 @@ interface Props {
 }
 
 export default function Sidebar({ isOpen, onClose }: Props) {
-  const currentUser = getCurrentUser();
-  const isAdmin = currentUser?.role === 'admin';
-  const canPay = canUsePayments(currentUser?.role);
-  const mainLinks = MAIN_LINKS.filter(item => canSee(item.access, isAdmin, canPay));
+  const role = getCurrentUser()?.role;
+  const showSettings = role === 'admin' || role === 'analyst';
+  const mainLinks = MAIN_LINKS.filter(item => canSee(item.access, role));
 
   return (
     <aside
@@ -162,7 +163,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
       </nav>
 
       <div className="min-w-[256px] border-t border-slate-700 px-2 py-3">
-        {isAdmin ? (
+        {showSettings ? (
           <NavLink to="/settings" end className={({ isActive }) => linkClass(isActive)}>
             <MenuIcon name="Settings" />
             Settings

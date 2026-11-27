@@ -6,7 +6,7 @@ import type { UrlHealthOverview } from '../../shared/urlHealth';
 
 const router = Router();
 router.use(authGuard);
-router.use(requireRole('admin'));
+router.use(requireRole('admin', 'analyst'));
 
 const iso = (value: Date | null) => (value ? new Date(value).toISOString() : null);
 

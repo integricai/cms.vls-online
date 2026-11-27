@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { canManageContent, canUsePayments, getCurrentUser, getToken } from './api/client';
 import Layout from './components/Layout';
 import Dashboard from './screens/Dashboard';
@@ -61,13 +61,31 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 function vaultHome(): string {
-  return canManageContent(getCurrentUser()?.role)
+  const role = getCurrentUser()?.role;
+  if (role === 'analyst') return '/tracking';
+  return canManageContent(role)
     ? '/content-migration'
     : '/content-migration?tab=global';
 }
 
 function RequireAdmin({ children }: { children: React.ReactNode }) {
   return getCurrentUser()?.role === 'admin' ? <>{children}</> : <Navigate to={vaultHome()} replace />;
+}
+
+function RequireOps({ children }: { children: React.ReactNode }) {
+  const role = getCurrentUser()?.role;
+  return role === 'admin' || role === 'analyst' ? <>{children}</> : <Navigate to={vaultHome()} replace />;
+}
+
+function AnalystPath({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  if (getCurrentUser()?.role !== 'analyst') return <>{children}</>;
+  const allowed = pathname === '/tracking'
+    || pathname === '/google-conversions'
+    || pathname === '/health-check'
+    || pathname === '/settings'
+    || pathname.startsWith('/settings/');
+  return allowed ? <>{children}</> : <Navigate to="/tracking" replace />;
 }
 
 function RequirePayments({ children }: { children: React.ReactNode }) {
@@ -101,7 +119,9 @@ export default function App() {
         <Route
           element={
             <RequireAuth>
-              <Layout />
+              <AnalystPath>
+                <Layout />
+              </AnalystPath>
             </RequireAuth>
           }
         >
@@ -154,7 +174,7 @@ export default function App() {
           <Route path="/books"             element={<RequireContent><Books /></RequireContent>} />
           <Route path="/courses"           element={<RequireAdmin><CoursesPage /></RequireAdmin>} />
           <Route path="/prices-configuration" element={<Navigate to="/courses?tab=configuration" replace />} />
-          <Route path="/settings"          element={<RequireAdmin><SettingsPage /></RequireAdmin>} />
+          <Route path="/settings"          element={<RequireOps><SettingsPage /></RequireOps>} />
           <Route path="/settings/logs"     element={<Navigate to="/settings?tab=logs" replace />} />
           <Route path="/settings/cache"    element={<Navigate to="/settings?tab=cache" replace />} />
           <Route path="/settings/sitemap"  element={<Navigate to="/settings?tab=sitemap" replace />} />
@@ -166,10 +186,10 @@ export default function App() {
           <Route path="/sales/payments"   element={<Navigate to="/payments" replace />} />
           <Route path="/payments"         element={<RequirePayments><Payments /></RequirePayments>} />
           <Route path="/sales"            element={<RequireAdmin><Sales /></RequireAdmin>} />
-          <Route path="/tracking"         element={<RequireAdmin><Tracking /></RequireAdmin>} />
+          <Route path="/tracking"         element={<RequireOps><Tracking /></RequireOps>} />
           <Route path="/students"         element={<RequireAdmin><Students /></RequireAdmin>} />
-          <Route path="/google-conversions" element={<RequireAdmin><GoogleConversions /></RequireAdmin>} />
-          <Route path="/health-check" element={<RequireAdmin><HealthCheck /></RequireAdmin>} />
+          <Route path="/google-conversions" element={<RequireOps><GoogleConversions /></RequireOps>} />
+          <Route path="/health-check" element={<RequireOps><HealthCheck /></RequireOps>} />
           <Route path="/billing/custom-offer" element={<Navigate to="/payments?tab=custom-offer" replace />} />
           <Route path="/billing/offers"       element={<Navigate to="/sales?tab=sales" replace />} />
           <Route path="/settings/courses" element={<Navigate to="/courses" replace />} />

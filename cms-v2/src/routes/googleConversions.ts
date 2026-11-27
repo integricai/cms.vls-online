@@ -15,7 +15,7 @@ import {
 
 const router = Router();
 router.use(authGuard);
-router.use(requireRole('admin'));
+router.use(requireRole('admin', 'analyst'));
 
 function parseId(value: unknown): number | null {
   const id = Number(value);

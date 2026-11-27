@@ -12,6 +12,7 @@ type FormState = {
 const ACCESS_OPTIONS: Array<{ value: AccessLevel; label: string }> = [
   { value: 'admin', label: 'Admin' },
   { value: 'assistant', label: 'Assistant' },
+  { value: 'analyst', label: 'Analyst' },
 ];
 
 const EMPTY_FORM: FormState = {

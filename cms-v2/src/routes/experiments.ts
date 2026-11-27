@@ -61,7 +61,7 @@ router.post('/assign', async (req, res, next) => {
 
 router.use(authGuard);
 
-router.get('/', requireRole('admin'), async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/', requireRole('admin', 'analyst'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
     res.json({ ok: true, data: await listExperiments() });
@@ -70,7 +70,7 @@ router.get('/', requireRole('admin'), async (_req: Request, res: Response, next:
   }
 });
 
-router.get('/:id/results', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:id/results', requireRole('admin', 'analyst'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = experimentId(req.params.id);
     if (!id) {
@@ -89,7 +89,7 @@ router.get('/:id/results', requireRole('admin'), async (req: Request, res: Respo
   }
 });
 
-router.post('/', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', requireRole('admin', 'analyst'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     res.status(201).json({ ok: true, data: await createExperiment(req.body) });
   } catch (err) {
@@ -97,7 +97,7 @@ router.post('/', requireRole('admin'), async (req: Request, res: Response, next:
   }
 });
 
-router.put('/:id', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id', requireRole('admin', 'analyst'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = experimentId(req.params.id);
     if (!id) {
@@ -110,7 +110,7 @@ router.put('/:id', requireRole('admin'), async (req: Request, res: Response, nex
   }
 });
 
-router.post('/:id/activate', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/:id/activate', requireRole('admin', 'analyst'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = experimentId(req.params.id);
     if (!id) {
@@ -123,7 +123,7 @@ router.post('/:id/activate', requireRole('admin'), async (req: Request, res: Res
   }
 });
 
-router.post('/:id/end', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/:id/end', requireRole('admin', 'analyst'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = experimentId(req.params.id);
     if (!id) {
@@ -136,7 +136,7 @@ router.post('/:id/end', requireRole('admin'), async (req: Request, res: Response
   }
 });
 
-router.delete('/:id', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/:id', requireRole('admin', 'analyst'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = experimentId(req.params.id);
     if (!id) {

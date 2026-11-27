@@ -5,8 +5,8 @@ import { createUser, deleteUser, findUserByUsername, listUsers, updateUser } fro
 import type { AccessLevel } from '../../shared/types';
 
 const router = Router();
-const CREATABLE_ACCESS_LEVELS: AccessLevel[] = ['admin', 'assistant'];
-const ACCESS_LEVELS: AccessLevel[] = ['admin', 'assistant', 'viewer'];
+const CREATABLE_ACCESS_LEVELS: AccessLevel[] = ['admin', 'assistant', 'analyst'];
+const ACCESS_LEVELS: AccessLevel[] = ['admin', 'assistant', 'analyst', 'viewer'];
 
 router.use(authGuard);
 router.use(requireRole('admin'));
@@ -84,7 +84,7 @@ router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => 
       return res.status(400).json({ ok: false, error: 'Invalid access_level' });
     }
 
-    if (req.user!.userId === userId && (is_blocked === true || access_level === 'assistant' || access_level === 'editor' || access_level === 'viewer')) {
+    if (req.user!.userId === userId && (is_blocked === true || (access_level != null && access_level !== 'admin'))) {
       return res.status(400).json({ ok: false, error: 'You cannot block or demote your own user' });
     }
 

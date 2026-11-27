@@ -1,6 +1,6 @@
 const BASE = (import.meta.env.VITE_API_URL ?? '') + '/api';
 
-export type AccessLevel = 'admin' | 'assistant' | 'editor' | 'viewer';
+export type AccessLevel = 'admin' | 'assistant' | 'analyst' | 'editor' | 'viewer';
 
 export interface CurrentUser {
   id: number;

@@ -4,7 +4,7 @@ import { listSystemLogs, type SystemLogLevel } from '../models/systemLog';
 
 const router = Router();
 router.use(authGuard);
-router.use(requireRole('admin'));
+router.use(requireRole('admin', 'analyst'));
 
 function parseLevel(value: unknown): SystemLogLevel | null {
   const text = String(value ?? '').trim().toLowerCase();

@@ -298,7 +298,7 @@ function MoneyTable({
   );
 }
 
-export default function AnalyticsTab({ query }: { query: string | null }) {
+export default function AnalyticsTab({ query, showSales }: { query: string | null; showSales: boolean }) {
   const [report, setReport] = useState<AnalyticsReport | null>(null);
   const [error, setError] = useState('');
 
@@ -366,39 +366,43 @@ export default function AnalyticsTab({ query }: { query: string | null }) {
         </div>
       ) : null}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4">
-        <h2 className="text-sm font-semibold text-slate-800">Sales</h2>
-        <p className="mt-1 text-xs text-slate-500">
-          Production payments for this period, in London time. Refunds are excluded. Amounts are what was taken, not the GA4 purchase event.
-        </p>
-        {sales.orders === 0 ? <p className="mt-3 text-sm text-slate-400">No paid orders in this period.</p> : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat value={sales.orders.toLocaleString('en-GB')} label="Paid orders" />
-            {sales.totals.map(row => (
-              <Stat
-                key={row.currency}
-                value={formatMoney(row.amount, row.currency)}
-                label={`Revenue ${row.currency}`}
-                hint={`${row.orders.toLocaleString('en-GB')} orders`}
-              />
-            ))}
+      {showSales ? (
+        <>
+          <section className="rounded-2xl border border-slate-200 bg-white p-4">
+            <h2 className="text-sm font-semibold text-slate-800">Sales</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Production payments for this period, in London time. Refunds are excluded. Amounts are what was taken, not the GA4 purchase event.
+            </p>
+            {sales.orders === 0 ? <p className="mt-3 text-sm text-slate-400">No paid orders in this period.</p> : (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Stat value={sales.orders.toLocaleString('en-GB')} label="Paid orders" />
+                {sales.totals.map(row => (
+                  <Stat
+                    key={row.currency}
+                    value={formatMoney(row.amount, row.currency)}
+                    label={`Revenue ${row.currency}`}
+                    hint={`${row.orders.toLocaleString('en-GB')} orders`}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <MoneyTable
+              title="Product"
+              hint="The course or pack named on the payment."
+              rows={sales.products}
+              label={row => ('name' in row ? row.name : row.channel)}
+            />
+            <MoneyTable
+              title="Sales channel"
+              hint="Taken from the campaign data stored on the order when the buyer allowed marketing cookies."
+              rows={sales.channels}
+              label={row => ('channel' in row ? row.channel : row.name)}
+            />
           </div>
-        )}
-      </section>
-      <div className="grid gap-3 lg:grid-cols-2">
-        <MoneyTable
-          title="Product"
-          hint="The course or pack named on the payment."
-          rows={sales.products}
-          label={row => ('name' in row ? row.name : row.channel)}
-        />
-        <MoneyTable
-          title="Sales channel"
-          hint="Taken from the campaign data stored on the order when the buyer allowed marketing cookies."
-          rows={sales.channels}
-          label={row => ('channel' in row ? row.channel : row.name)}
-        />
-      </div>
+        </>
+      ) : null}
     </>
   );
 }

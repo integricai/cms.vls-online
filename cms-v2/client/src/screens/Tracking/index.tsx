@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { api } from '../../api/client';
+import { api, getCurrentUser } from '../../api/client';
 import PageTabs from '../../components/PageTabs';
 import AnalyticsTab from './AnalyticsTab';
 import ExperimentsTab from './ExperimentsTab';
@@ -603,7 +603,7 @@ function ChannelGroup({ label, help, totals, campaigns }: {
   );
 }
 
-function VisitsTab({ query }: { query: string | null }) {
+function VisitsTab({ query, showSales }: { query: string | null; showSales: boolean }) {
   const [report, setReport] = useState<TrackingReport | null>(null);
   const [error, setError] = useState('');
 
@@ -690,7 +690,7 @@ function VisitsTab({ query }: { query: string | null }) {
               <CountTable title="Language" rows={report.locales} label={value => value === 'ar' ? 'Arabic' : 'English'} />
             </div>
             <SourceTable rows={report.sources} />
-            <PaidEnrolments channels={report.enrolmentChannels ?? []} rows={report.enrolments} />
+            {showSales ? <PaidEnrolments channels={report.enrolmentChannels ?? []} rows={report.enrolments} /> : null}
           </>
         ) : null}
     </>
@@ -705,14 +705,21 @@ function trackingPath(base: string, range: TrackingRange, start: string, end: st
 }
 
 export default function Tracking() {
+  const showSales = getCurrentUser()?.role === 'admin';
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab');
-  const tab = requestedTab === 'analytics' || requestedTab === 'experiments' || requestedTab === 'failed-payments'
+  const tab = requestedTab === 'analytics' || requestedTab === 'experiments' || (showSales && requestedTab === 'failed-payments')
     ? requestedTab
     : 'visits';
   const [range, setRange] = useState<TrackingRange>('this_month');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
+  useEffect(() => {
+    if (!showSales && requestedTab === 'failed-payments') {
+      setSearchParams(new URLSearchParams(), { replace: true });
+    }
+  }, [showSales, requestedTab, setSearchParams]);
+
   const visitsQuery = trackingPath('/analytics/tracking', range, start, end);
   const analyticsQuery = trackingPath('/analytics/ga4', range, start, end);
   const failedPaymentsQuery = trackingPath('/analytics/failed-payments', range, start, end);
@@ -730,7 +737,7 @@ export default function Tracking() {
           { id: 'visits', label: 'Visits' },
           { id: 'analytics', label: 'Analytics' },
           { id: 'experiments', label: 'Experiment A/B' },
-          { id: 'failed-payments', label: 'Failed Payments' },
+          ...(showSales ? [{ id: 'failed-payments', label: 'Failed Payments' }] : []),
         ]}
         value={tab}
         onChange={setTab}
@@ -744,7 +751,9 @@ export default function Tracking() {
                 {tab === 'experiments'
                   ? 'Set the entry URL, the pages, and how much traffic each page gets.'
                   : tab === 'analytics'
-                    ? 'Sessions and pages come from GA4. Orders and revenue come from production payments.'
+                    ? (showSales
+                      ? 'Sessions and pages come from GA4. Orders and revenue come from production payments.'
+                      : 'Sessions and pages come from GA4.')
                     : tab === 'failed-payments'
                       ? 'Checkouts that closed without payment, and the reminders sent afterwards.'
                       : 'One person a day. Channel, campaign, and landing page come from the address they opened.'}
@@ -792,10 +801,10 @@ export default function Tracking() {
             )}
           </div>
           {tab !== 'experiments' && range === 'custom' && !visitsQuery ? <p className="text-sm text-slate-500">Choose a start date and an end date within one year.</p> : null}
-          {tab === 'visits' ? <VisitsTab query={visitsQuery} /> : null}
-          {tab === 'analytics' ? <AnalyticsTab query={analyticsQuery} /> : null}
+          {tab === 'visits' ? <VisitsTab query={visitsQuery} showSales={showSales} /> : null}
+          {tab === 'analytics' ? <AnalyticsTab query={analyticsQuery} showSales={showSales} /> : null}
           {tab === 'experiments' ? <ExperimentsTab /> : null}
-          {tab === 'failed-payments' ? <FailedPaymentsTab query={failedPaymentsQuery} /> : null}
+          {tab === 'failed-payments' && showSales ? <FailedPaymentsTab query={failedPaymentsQuery} /> : null}
         </div>
       </div>
     </div>
