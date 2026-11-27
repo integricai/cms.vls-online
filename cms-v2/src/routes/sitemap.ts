@@ -13,6 +13,7 @@ import { normalizeTrackingName } from '../../shared/pageTracking';
 import { listSiteCacheTargets, refreshCachedPage } from '../services/siteCache';
 import type { SitemapGroup } from '../services/sitemapPaths';
 import { normalizeSiteOrigin } from '../services/sitemapPaths';
+import { isSitemapWebhookRequestAuthorized, webhookRawBody } from '../services/sitemapWebhookAuth';
 import { handleStoryblokSitemapWebhook, syncSiteUrlsFromStoryblok } from '../services/sitemapSync';
 import { buildSitemapIndexXml, buildUrlSetXml, SITEMAP_GROUP_FILES } from '../services/sitemapXml';
 
@@ -36,13 +37,8 @@ function sendXml(res: Response, xml: string) {
   return res.status(200).send(xml);
 }
 
-function verifyWebhook(req: Request): boolean {
-  const expected = process.env.SITEMAP_WEBHOOK_SECRET?.trim();
-  if (!expected) return false;
-  const header = req.headers.authorization;
-  if (header === `Bearer ${expected}`) return true;
-  const custom = req.headers['x-sitemap-secret'];
-  return custom === expected;
+function verifyWebhook(req: Request & { rawBody?: Buffer }): boolean {
+  return isSitemapWebhookRequestAuthorized(req.headers, webhookRawBody(req));
 }
 
 // ── Public feed (Next.js / staging verification) ─────────────────
@@ -113,7 +109,8 @@ router.get('/xml/:file', async (req: Request, res: Response, next: NextFunction)
   }
 });
 
-// Storyblok publish, unpublish, and delete. Next.js /api/revalidate forwards these.
+// Storyblok publish, unpublish, and delete.
+// Storyblok signs the raw body (webhook-signature). Next.js forwards with Bearer.
 router.post('/webhook', async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!verifyWebhook(req)) {

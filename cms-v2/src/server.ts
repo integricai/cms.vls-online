@@ -73,7 +73,12 @@ app.post('/api/payments/webhook/stripe', express.raw({ type: 'application/json' 
 app.post('/api/payments/webhook/paypal', express.raw({ type: 'application/json' }), paypalWebhookHandler);
 app.post('/api/autoseo/webhook', express.raw({ type: () => true, limit: '5mb' }), autoseoWebhookHandler);
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({
+  limit: '10mb',
+  verify: (req, _res, buf) => {
+    (req as express.Request & { rawBody?: Buffer }).rawBody = buf;
+  },
+}));
 
 // ── Routes ────────────────────────────────────────────────────────
 
