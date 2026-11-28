@@ -12,5 +12,5 @@
     "skipLibCheck": true
   },
   "include": ["src", "../shared"],
-  "exclude": ["../shared/trustpilotDefaults.ts"]
+  "exclude": ["../shared/trustpilotDefaults.ts", "../shared/**/*.test.ts"]
 }
