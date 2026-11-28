@@ -1,9 +1,5 @@
-/** Same UK and EEA set as the website consent bootstrap. */
-export const TRACKING_CONSENT_REGIONS = [
-  'AT', 'BE', 'BG', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB',
-  'GR', 'HR', 'HU', 'IE', 'IS', 'IT', 'LI', 'LT', 'LU', 'LV', 'MT', 'NL',
-  'NO', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK',
-] as const;
+/** Countries that must accept analytics before a session is stored. The UK only. */
+export const TRACKING_CONSENT_REGIONS = ['GB'] as const;
 
 export const TRACKING_CHANNELS = [
   'Google Ads',
@@ -19,9 +15,19 @@ export type TrackingDevice = 'mobile' | 'tablet' | 'desktop';
 export type TrackingLocale = 'en' | 'ar';
 export type TrackingConsent = 'granted' | 'unknown' | 'denied';
 
+const SESSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+/** A browser session id, or null when the value is not a version-4 UUID. */
+export function cleanSessionId(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim().toLowerCase();
+  return SESSION_ID.test(trimmed) ? trimmed : null;
+}
+
 export type TrackingVisitInput = {
   consent: TrackingConsent;
   landingPath: string;
+  sessionId: string | null;
   source: string | null;
   medium: string | null;
   campaign: string | null;
@@ -119,6 +125,7 @@ export function parseTrackingVisit(body: unknown): TrackingVisitInput {
   return {
     consent: asConsent(record.consent),
     landingPath: cleanLandingPath(record.landingPath),
+    sessionId: cleanSessionId(record.sessionId),
     source: cleanText(record.source, 80),
     medium: cleanText(record.medium, 80),
     campaign: cleanText(record.campaign, 120),
@@ -132,7 +139,7 @@ export function parseTrackingVisit(body: unknown): TrackingVisitInput {
   };
 }
 
-/** Consent was granted, or the visitor is outside the UK and EEA and has not rejected. */
+/** Consent was granted, or the visitor is outside the UK and has not rejected. */
 export function trackingAllowed(
   consent: TrackingConsent,
   country: string | null,

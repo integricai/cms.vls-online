@@ -211,6 +211,13 @@ export const visitIpRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000,
 });
 
+/** One bucket per visitor. A session sends a row for every page, so this sits above the daily visit limit. */
+export const trackPageRateLimit = rateLimit({
+  name: 'site-track',
+  limit: 600,
+  windowMs: 60 * 60 * 1000,
+});
+
 export const contactIpRateLimit = rateLimit({
   name: 'contact',
   limit: 5,

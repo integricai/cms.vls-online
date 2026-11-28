@@ -5,6 +5,7 @@ import PageTabs from '../../components/PageTabs';
 import AnalyticsTab from './AnalyticsTab';
 import ExperimentsTab from './ExperimentsTab';
 import FailedPaymentsTab from './FailedPaymentsTab';
+import PathTab from './PathTab';
 import {
   campaignLabel,
   ENROLMENT_CHANNELS,
@@ -708,7 +709,7 @@ export default function Tracking() {
   const showSales = getCurrentUser()?.role === 'admin';
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab');
-  const tab = requestedTab === 'analytics' || requestedTab === 'experiments' || (showSales && requestedTab === 'failed-payments')
+  const tab = requestedTab === 'analytics' || requestedTab === 'path' || requestedTab === 'experiments' || (showSales && requestedTab === 'failed-payments')
     ? requestedTab
     : 'visits';
   const [range, setRange] = useState<TrackingRange>('this_month');
@@ -721,6 +722,7 @@ export default function Tracking() {
   }, [showSales, requestedTab, setSearchParams]);
 
   const visitsQuery = trackingPath('/analytics/tracking', range, start, end);
+  const pathsQuery = trackingPath('/analytics/paths', range, start, end);
   const analyticsQuery = trackingPath('/analytics/ga4', range, start, end);
   const failedPaymentsQuery = trackingPath('/analytics/failed-payments', range, start, end);
 
@@ -735,6 +737,7 @@ export default function Tracking() {
       <PageTabs
         tabs={[
           { id: 'visits', label: 'Visits' },
+          { id: 'path', label: 'Path' },
           { id: 'analytics', label: 'Analytics' },
           { id: 'experiments', label: 'Experiment A/B' },
           ...(showSales ? [{ id: 'failed-payments', label: 'Failed Payments' }] : []),
@@ -750,6 +753,8 @@ export default function Tracking() {
               <p className="mt-1 text-sm text-slate-500">
                 {tab === 'experiments'
                   ? 'Set the entry URL, the pages, and how much traffic each page gets.'
+                  : tab === 'path'
+                    ? 'Each session is listed on its own, in the order the pages were opened. The score shows where people leave without buying.'
                   : tab === 'analytics'
                     ? (showSales
                       ? 'Sessions and pages come from GA4. Orders and revenue come from production payments.'
@@ -802,6 +807,7 @@ export default function Tracking() {
           </div>
           {tab !== 'experiments' && range === 'custom' && !visitsQuery ? <p className="text-sm text-slate-500">Choose a start date and an end date within one year.</p> : null}
           {tab === 'visits' ? <VisitsTab query={visitsQuery} showSales={showSales} /> : null}
+          {tab === 'path' ? <PathTab query={pathsQuery} /> : null}
           {tab === 'analytics' ? <AnalyticsTab query={analyticsQuery} showSales={showSales} /> : null}
           {tab === 'experiments' ? <ExperimentsTab /> : null}
           {tab === 'failed-payments' && showSales ? <FailedPaymentsTab query={failedPaymentsQuery} /> : null}

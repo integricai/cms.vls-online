@@ -14,6 +14,13 @@ export function siteVisitorKey(ip: string, userAgent: string): string {
     .digest('hex');
 }
 
+/** Hash of the browser session id. The raw id is not stored. */
+export function siteSessionKey(sessionId: string): string {
+  return createHmac('sha256', visitorSecret())
+    .update(`session\n${sessionId}`)
+    .digest('hex');
+}
+
 /** Count a person once per London day. Repeats are ignored. */
 export async function recordSiteVisitor(ip: string, userAgent: string, now = new Date()): Promise<void> {
   const visitedOn = londonToday(now);
