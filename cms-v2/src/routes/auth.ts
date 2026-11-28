@@ -103,7 +103,7 @@ router.post('/login', loginIpRateLimit, loginIdentityRateLimit, async (req: Requ
     const token = jwt.sign(
       { userId: user.id, email: user.email, username: user.username, role: user.role, deployId },
       secret,
-      { expiresIn: '8h' },
+      { expiresIn: '24h' },
     );
 
     return res.json({ ok: true, data: { token, user: toPublicUser(user) } });
