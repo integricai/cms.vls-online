@@ -1,12 +1,11 @@
 import assert from 'assert';
-import { classifyTrackingVisit, parseTrackingVisit, trackingAllowed, TRACKING_CONSENT_REGIONS, type TrackingVisitInput } from './siteTracking';
-
-const REQUIRED = ['GB', 'DE', 'FR'];
+import { classifyTrackingVisit, cleanSessionId, parseTrackingVisit, trackingAllowed, TRACKING_CONSENT_REGIONS, type TrackingVisitInput } from './siteTracking';
 
 function visit(overrides: Partial<TrackingVisitInput> = {}): TrackingVisitInput {
   return {
     consent: 'granted',
     landingPath: '/acca',
+    sessionId: null,
     source: null,
     medium: null,
     campaign: null,
@@ -83,16 +82,21 @@ run('parser drops click ids and unsafe text', () => {
   assert.strictEqual(parsed.device, 'desktop');
 });
 
-run('uk and eea wait for accept', () => {
-  assert.strictEqual(TRACKING_CONSENT_REGIONS.length, 31);
-  assert.strictEqual(TRACKING_CONSENT_REGIONS.includes('GB'), true);
-  assert.strictEqual((TRACKING_CONSENT_REGIONS as readonly string[]).includes('US'), false);
-  assert.strictEqual(trackingAllowed('unknown', 'GB', REQUIRED), false);
-  assert.strictEqual(trackingAllowed('unknown', 'DE', REQUIRED), false);
-  assert.strictEqual(trackingAllowed('unknown', null, REQUIRED), false);
-  assert.strictEqual(trackingAllowed('unknown', 'IN', REQUIRED), true);
-  assert.strictEqual(trackingAllowed('granted', 'GB', REQUIRED), true);
-  assert.strictEqual(trackingAllowed('denied', 'IN', REQUIRED), false);
+run('session id is a version-4 uuid', () => {
+  assert.strictEqual(cleanSessionId(' 550E8400-E29B-41D4-A716-446655440000 '), '550e8400-e29b-41d4-a716-446655440000');
+  assert.strictEqual(cleanSessionId('550e8400-e29b-11d4-a716-446655440000'), null);
+  assert.strictEqual(cleanSessionId('not-a-session'), null);
+  assert.strictEqual(parseTrackingVisit({ sessionId: '550e8400-e29b-41d4-a716-446655440000' }).sessionId, '550e8400-e29b-41d4-a716-446655440000');
+});
+
+run('only the uk waits for accept', () => {
+  assert.deepStrictEqual([...TRACKING_CONSENT_REGIONS], ['GB']);
+  assert.strictEqual(trackingAllowed('unknown', 'GB', TRACKING_CONSENT_REGIONS), false);
+  assert.strictEqual(trackingAllowed('unknown', 'DE', TRACKING_CONSENT_REGIONS), true);
+  assert.strictEqual(trackingAllowed('unknown', 'IN', TRACKING_CONSENT_REGIONS), true);
+  assert.strictEqual(trackingAllowed('unknown', null, TRACKING_CONSENT_REGIONS), false);
+  assert.strictEqual(trackingAllowed('granted', 'GB', TRACKING_CONSENT_REGIONS), true);
+  assert.strictEqual(trackingAllowed('denied', 'DE', TRACKING_CONSENT_REGIONS), false);
 });
 
 console.log('siteTracking.test.ts ok');

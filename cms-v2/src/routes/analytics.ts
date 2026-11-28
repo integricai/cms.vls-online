@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { authGuard, requireRole } from '../middleware/authGuard';
-import { visitIpRateLimit } from '../middleware/rateLimit';
+import { trackPageRateLimit, visitIpRateLimit } from '../middleware/rateLimit';
 import { isTrackingPreset, trackingCustomBounds, trackingPresetBounds } from '../../shared/siteTracking';
 import { buildTrackingReport, recordTrackingVisit } from '../models/siteTracking';
+import { buildPathReport, recordSessionPage } from '../models/sitePath';
 import { listTrackingNames } from '../models/siteUrl';
-import { applyPageTrackingNames } from '../../shared/pageTracking';
+import { applyPageTrackingNames, trackingLookupPath } from '../../shared/pageTracking';
+import { isPathOutcome, type PathOutcome, type PathReport } from '../../shared/pathScore';
 import { loadTrackingSales } from '../models/trackingSales';
 import type { TrackingSales } from '../../shared/ga4Report';
 import { loadGa4Traffic } from '../services/ga4Report';
@@ -57,7 +59,7 @@ router.post('/visit', visitIpRateLimit, async (req, res) => {
   res.status(204).end();
 });
 
-router.post('/track', visitIpRateLimit, async (req, res) => {
+router.post('/track', trackPageRateLimit, async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (!proxySecretMatches(req.get('x-vls-proxy-secret'))) {
     res.status(200).json({ ok: true, recorded: false });
@@ -71,7 +73,10 @@ router.post('/track', visitIpRateLimit, async (req, res) => {
     return;
   }
   try {
-    await recordTrackingVisit(ip, String(req.get('user-agent') ?? ''), classifyTrackingVisit(visit), country);
+    const classified = classifyTrackingVisit(visit);
+    const userAgent = String(req.get('user-agent') ?? '');
+    await recordTrackingVisit(ip, userAgent, classified, country);
+    await recordSessionPage(ip, userAgent, visit.sessionId, classified, country);
     res.status(200).json({ ok: true, recorded: true });
   } catch (err) {
     console.error('[analytics] track record failed', err instanceof Error ? err.message : err);
@@ -116,6 +121,67 @@ async function namedLandingPages<T extends { landingPages: { label: string; visi
     return report;
   }
 }
+
+function pageLabel(path: string, names: Record<string, string>): string {
+  const key = trackingLookupPath(path);
+  return (key && names[key]) || path;
+}
+
+router.get('/paths', authGuard, requireRole('admin', 'analyst'), async (req, res, next) => {
+  try {
+    const requested = String(req.query.range ?? 'this_month');
+    res.setHeader('Cache-Control', 'no-store');
+    const bounds = requested === 'custom'
+      ? trackingCustomBounds(String(req.query.start ?? ''), String(req.query.end ?? ''))
+      : trackingPresetBounds(isTrackingPreset(requested) ? requested : 'this_month');
+    if (!bounds) {
+      res.status(400).json({ ok: false, error: 'Choose a start date and an end date within one year.' });
+      return;
+    }
+    const range = requested === 'custom' ? 'custom' : (isTrackingPreset(requested) ? requested : 'this_month');
+    const requestedOutcome = String(req.query.outcome ?? 'all');
+    const outcome: PathOutcome = isPathOutcome(requestedOutcome) ? requestedOutcome : 'all';
+    const requestedPage = Number(req.query.page);
+    const page = Number.isInteger(requestedPage) && requestedPage >= 1 && requestedPage <= 10000 ? requestedPage : 1;
+    const report = await buildPathReport(bounds, outcome, page);
+    let names: Record<string, string> = {};
+    try {
+      names = await listTrackingNames();
+    } catch (err) {
+      console.error('[tracking-names]', err instanceof Error ? err.message : err);
+    }
+    const data: PathReport = {
+      range,
+      start: bounds.start,
+      end: bounds.end,
+      sessions: report.sessions,
+      paid: report.paid,
+      dropped: report.dropped,
+      scores: report.scores.map(row => ({ ...row, label: pageLabel(row.path, names) })),
+      rows: report.rows.map(row => {
+        const exitPath = row.converted ? null : (row.pages[row.pages.length - 1] ?? null);
+        return {
+          id: row.id,
+          startedAt: row.startedAt,
+          channel: row.channel,
+          country: row.country,
+          device: row.device,
+          locale: row.locale,
+          pages: row.pages.map(path => ({ path, label: pageLabel(path, names) })),
+          converted: row.converted,
+          exitPath,
+          exitLabel: exitPath ? pageLabel(exitPath, names) : null,
+        };
+      }),
+      page: report.page,
+      pageSize: report.pageSize,
+      total: report.total,
+    };
+    res.json({ ok: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.get('/tracking', authGuard, requireRole('admin', 'analyst'), async (req, res, next) => {
   try {
