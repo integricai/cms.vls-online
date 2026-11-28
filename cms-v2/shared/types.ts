@@ -6,17 +6,26 @@ export interface JwtPayload {
   username: string;
   role: 'admin' | 'assistant' | 'analyst' | 'editor' | 'viewer';
   deployId?: string;
+  /** Short-lived sign-in step. Never a Vault session. */
+  purpose?: 'vault-totp';
 }
 
 export interface LoginRequest {
   email?: string;
   username?: string;
-  password: string;
+  password?: string;
+  turnstileToken?: string;
+  loginTicket?: string;
+  totpCode?: string;
 }
 
 export interface LoginResponse {
-  token: string;
-  user: PublicUser;
+  user?: PublicUser;
+  totpRequired?: boolean;
+  totpSetupRequired?: boolean;
+  loginTicket?: string;
+  totpSecret?: string;
+  otpauthUrl?: string;
 }
 
 export interface PasswordResetRequest {
@@ -44,6 +53,8 @@ export interface User {
   isBlocked: boolean;
   resetToken: string | null;
   resetTokenExpiresAt: Date | null;
+  totpSecret: string | null;
+  totpEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

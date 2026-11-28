@@ -12,6 +12,8 @@ type DbRow = {
   is_blocked?: boolean;
   reset_token: string | null;
   reset_token_expires_at: string | null;
+  totp_secret?: string | null;
+  totp_enabled?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -35,6 +37,8 @@ function rowToUser(row: DbRow): User {
     isBlocked: row.is_blocked ?? false,
     resetToken: row.reset_token,
     resetTokenExpiresAt: row.reset_token_expires_at ? new Date(row.reset_token_expires_at) : null,
+    totpSecret: row.totp_secret ?? null,
+    totpEnabled: row.totp_enabled === true,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };
@@ -77,6 +81,25 @@ export async function findUserByResetToken(token: string): Promise<User | null> 
     LIMIT 1
   `;
   return rows[0] ? rowToUser(rows[0] as DbRow) : null;
+}
+
+export async function saveTotpSecret(userId: number, sealed: string): Promise<void> {
+  await sql`
+    UPDATE users
+    SET totp_secret = ${sealed},
+        totp_enabled = FALSE,
+        updated_at = NOW()
+    WHERE id = ${userId}
+  `;
+}
+
+export async function enableTotp(userId: number): Promise<void> {
+  await sql`
+    UPDATE users
+    SET totp_enabled = TRUE,
+        updated_at = NOW()
+    WHERE id = ${userId}
+  `;
 }
 
 export async function updatePasswordHash(userId: number, hash: string): Promise<void> {

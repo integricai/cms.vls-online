@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, getToken } from '../../api/client';
+import { api, API_BASE } from '../../api/client';
 import {
   MANUAL_ACCESS_DURATIONS,
   type ActiveEnrollment,
@@ -117,14 +117,10 @@ export default function ActiveStudentsTab() {
     setDownloading(true);
     setError('');
     try {
-      const token = getToken();
-      const base = (import.meta.env.VITE_API_URL ?? '') + '/api';
       const params = new URLSearchParams();
       if (search.trim()) params.set('search', search.trim());
       const suffix = params.toString() ? `?${params.toString()}` : '';
-      const res = await fetch(`${base}/students/active/export${suffix}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await fetch(`${API_BASE}/students/active/export${suffix}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to download the spreadsheet');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

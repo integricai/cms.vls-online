@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, canManageContent, getCurrentUser, getToken } from '../../api/client';
+import { api, API_BASE, canManageContent, getCurrentUser } from '../../api/client';
 
 type Course = {
   id: number;
@@ -114,11 +114,7 @@ function downloadBlob(filename: string, blob: Blob): void {
 }
 
 async function downloadCoursesWorkbook(): Promise<void> {
-  const token = getToken();
-  const base = (import.meta.env.VITE_API_URL ?? '') + '/api';
-  const res = await fetch(`${base}/courses/export-workbook`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const res = await fetch(`${API_BASE}/courses/export-workbook`, { credentials: 'include' });
   if (!res.ok) throw new Error('Failed to download the course workbook');
   downloadBlob('cms-courses.xlsx', await res.blob());
 }

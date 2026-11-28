@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { canUsePayments, clearToken, getCurrentUser, type AccessLevel } from '../api/client';
+import { canUsePayments, getCurrentUser, signOut, type AccessLevel } from '../api/client';
 
 type Access = 'all' | 'payments' | 'admin' | 'analyst';
 
@@ -171,8 +171,9 @@ export default function Sidebar({ isOpen, onClose }: Props) {
         ) : null}
         <button
           onClick={() => {
-            clearToken();
-            window.location.href = '/login';
+            void signOut().finally(() => {
+              window.location.href = '/login';
+            });
           }}
           className="w-full rounded-lg px-3 py-2 text-left text-sm text-slate-400 transition hover:bg-slate-800 hover:text-white"
         >
