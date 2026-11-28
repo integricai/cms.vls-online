@@ -1,5 +1,7 @@
 const BASE = (import.meta.env.VITE_API_URL ?? '') + '/api';
 
+export const API_BASE = BASE;
+
 export type AccessLevel = 'admin' | 'assistant' | 'analyst' | 'editor' | 'viewer';
 
 export interface CurrentUser {
@@ -13,12 +15,10 @@ export interface CurrentUser {
   createdAt: string;
 }
 
-export function getToken(): string | null {
-  return localStorage.getItem('cms_token');
-}
-
-export function setToken(token: string): void {
-  localStorage.setItem('cms_token', token);
+try {
+  localStorage.removeItem('cms_token');
+} catch {
+  /* Storage can be unavailable in private mode. The session cookie does not depend on it. */
 }
 
 export function getCurrentUser(): CurrentUser | null {
@@ -49,14 +49,20 @@ export function clearToken(): void {
   localStorage.removeItem('cms_user');
 }
 
+export async function signOut(): Promise<void> {
+  try {
+    await fetch(`${BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
+  } catch {
+    /* The cookie clear is best-effort. The page still returns to the sign-in screen. */
+  }
+  clearToken();
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const token = getToken();
   const res = await fetch(BASE + path, {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
@@ -68,8 +74,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
 
   if (res.status === 401 && !path.startsWith('/auth/')) {
-    localStorage.removeItem('cms_token');
-    localStorage.removeItem('cms_user');
+    clearToken();
     window.location.href = '/login';
     throw new Error(json?.error ?? 'Session expired — please log in again');
   }

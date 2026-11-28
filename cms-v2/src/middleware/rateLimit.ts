@@ -169,6 +169,12 @@ export const loginIpRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
 });
 
+export const totpIpRateLimit = rateLimit({
+  name: 'login-totp',
+  limit: 12,
+  windowMs: 15 * 60 * 1000,
+});
+
 export const loginIdentityRateLimit = rateLimit({
   name: 'login-id',
   limit: 8,

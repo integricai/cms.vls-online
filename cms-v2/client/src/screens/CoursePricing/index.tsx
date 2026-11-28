@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { api, getToken } from '../../api/client';
+import { api, API_BASE } from '../../api/client';
 import type {
   CourseGeoPrice,
   CoursePriceImportPreview,
@@ -101,11 +101,7 @@ function downloadText(filename: string, content: string, mime = 'text/csv;charse
 }
 
 async function downloadCsvFromApi(path: string, filename: string): Promise<void> {
-  const token = getToken();
-  const base = (import.meta.env.VITE_API_URL ?? '') + '/api';
-  const res = await fetch(`${base}${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const res = await fetch(`${API_BASE}${path}`, { credentials: 'include' });
   if (!res.ok) throw new Error(`Failed to download ${filename}`);
   const text = await res.text();
   downloadText(filename, text);
@@ -129,11 +125,7 @@ function downloadBlob(filename: string, blob: Blob): void {
 }
 
 async function downloadPriceWorkbook(): Promise<void> {
-  const token = getToken();
-  const base = (import.meta.env.VITE_API_URL ?? '') + '/api';
-  const res = await fetch(`${base}/course-pricing/admin/export-workbook`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const res = await fetch(`${API_BASE}/course-pricing/admin/export-workbook`, { credentials: 'include' });
   if (!res.ok) throw new Error('Failed to download the price workbook');
   downloadBlob('course-prices.xlsx', await res.blob());
 }

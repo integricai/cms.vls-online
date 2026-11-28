@@ -61,10 +61,21 @@ import { mapActiveCoursesForFinder } from './services/courseFinderPublish';
 const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
 
+function isAllowedVaultOrigin(origin: string | undefined): boolean {
+  if (!origin) return true;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+  const configured = (process.env.CORS_ORIGIN ?? '*').trim();
+  if (configured === '*') return true;
+  const allowed = configured.split(',').map(item => item.trim()).filter(Boolean);
+  return allowed.includes(origin);
+}
+
 // ── Middleware ────────────────────────────────────────────────────
 
 app.use(cors({
-  origin: process.env.CORS_ORIGIN ?? '*',
+  origin(origin, callback) {
+    callback(null, isAllowedVaultOrigin(origin));
+  },
   credentials: true,
 }));
 

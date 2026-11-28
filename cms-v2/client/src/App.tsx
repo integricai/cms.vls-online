@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom';
-import { canManageContent, canUsePayments, getCurrentUser, getToken } from './api/client';
+import { api, canManageContent, canUsePayments, clearToken, getCurrentUser, setCurrentUser, type CurrentUser } from './api/client';
 import Layout from './components/Layout';
 import Dashboard from './screens/Dashboard';
 import Login from './screens/Login';
@@ -57,7 +58,30 @@ import PageDescWithMenu from './screens/PageDescWithMenu';
 
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  return getToken() ? <>{children}</> : <Navigate to="/login" replace />;
+  const [state, setState] = useState<'loading' | 'ready' | 'signed-out'>('loading');
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get<CurrentUser>('/auth/me')
+      .then(user => {
+        if (cancelled) return;
+        setCurrentUser(user);
+        setState('ready');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        clearToken();
+        setState('signed-out');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (state === 'loading') {
+    return <div className="min-h-screen bg-slate-900" />;
+  }
+  return state === 'ready' ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
 function vaultHome(): string {

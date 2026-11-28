@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, getCurrentUser, getToken } from '../../api/client';
+import { api, API_BASE, getCurrentUser } from '../../api/client';
 import Field from '../../components/Field';
 import type { BookRecord } from '../../../../shared/types';
 
@@ -154,11 +154,7 @@ export default function BooksScreen() {
   async function downloadTemplate() {
     setError('');
     setNotice('');
-    const token = getToken();
-    const base = (import.meta.env.VITE_API_URL ?? '') + '/api';
-    const response = await fetch(`${base}/books/template`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await fetch(`${API_BASE}/books/template`, { credentials: 'include' });
     if (!response.ok) {
       setError('Could not download the template.');
       return;
